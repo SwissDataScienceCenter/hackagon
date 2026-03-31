@@ -1,0 +1,37 @@
+name: quitsh
+version: 1.17.0
+language: go
+
+inputs:
+  srcs:
+    patterns:
+      - "^.*$"
+
+targets:
+  test:
+    inputs: &ins ["self"]
+    # TODO:: Results in an error in nix build: We dont have the full file-tree in nix.
+    # and checking the input names in quitsh is not lazy yet.
+
+    steps:
+      - runner: go
+      - runner: go-bin
+        config:
+          # Build everything instrumented.
+          # Execute the binaries via a `go test` provided in the following
+          # pkg and with tags.
+          testPkg: test
+          buildTags: ["integration"]
+          testTags: ["integration"]
+
+      - runner: coverage-upload
+
+  build:
+    inputs: *ins
+    steps:
+      - runner: go
+
+  lint:
+    inputs: *ins
+    steps:
+      - runner: go

@@ -1,0 +1,16 @@
+# Quitsh settings: See all of them `quitsh config write --output test.yaml`.
+commands:
+  root:
+    logLevel: info
+    globalOutput: true
+
+nix:
+  cache:
+    ssh:
+      enable: true
+
+      hostName: nix-cache.swisscustodian.ch
+      hostPublicKey: |-
+        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMP4u5o2KC6f2OpO4b1GRQzhdcBheLENmS++xw1y5JvY
+      write:
+        privateKeyEnv: NIX_CACHE_SSH_WRITE_KEY

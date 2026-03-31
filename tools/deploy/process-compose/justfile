@@ -1,0 +1,51 @@
+set positional-arguments
+set fallback := true
+set shell := ["bash", "-cue"]
+set dotenv-path := "../../.env"
+
+comp_dir := justfile_directory()
+root_dir := `git rev-parse --show-toplevel`
+flake_dir := root_dir / "tools/nix"
+
+# TODO: Change that to include all services once ready.
+shell := "test-services"
+installable := "custodian.shells." + shell
+socket_file := comp_dir / (".socket-path-" + shell)
+
+default:
+    just --list --unsorted
+
+# Start processes.
+up *args:
+    #!/usr/bin/env bash
+    set -eu
+
+    if echo "$(just proc-comp process list 2>/dev/null)" | grep -q "keycloak"; then
+        echo "Process compose stack seems alrady running!"
+        echo "Attach with 'just proc-comp attach'"
+        exit 0
+    fi
+
+    just quitsh process-compose start \
+        --flake-dir "{{flake_dir}}" \
+        --wait-for "keycloak" \
+        --socket-path-file "{{socket_file}}" \
+        "$@" \
+        "{{installable}}"
+
+# Stop processes.
+down *args:
+    just proc-comp down "$@" || true
+    rm -rf "{{socket_file}}"
+
+
+# Run commands on the socket created on `just up`.
+proc-comp *args:
+    #!/usr/bin/env bash
+    set -eu
+    if [ ! -f "{{socket_file}}" ]; then
+        echo "Socket file '{{socket_file}}' does not exist."
+        echo "Start the services first with 'just up'."
+        exit 1
+    fi
+    process-compose --unix-socket "$(cat "{{socket_file}}")" "$@"

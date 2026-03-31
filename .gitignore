@@ -1,0 +1,27 @@
+# Direnv Tooling.
+.direnv
+# Devenv Tooling.
+.devenv
+
+# Top-Level Config files setup with
+# `just setup-development`
+go.work
+go.work.sum
+.golangci.yaml
+.prettierrc.yaml
+.typos.toml
+.yamllint.yaml
+
+# General Outputs
+result
+.build
+.output
+
+# Merge files
+*.orig
+
+## Sensitive Information ======================================================
+# All .env files
+.env
+.env.yaml
+## ============================================================================

@@ -1,0 +1,7 @@
+name: nix
+language: "nix"
+
+inputs:
+  srcs:
+    patterns:
+      - "^.*$"

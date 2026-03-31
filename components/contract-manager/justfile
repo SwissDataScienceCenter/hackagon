@@ -1,0 +1,7 @@
+set positional-arguments
+set shell := ["bash", "-cue"]
+set fallback := true
+comp_dir := justfile_directory()
+
+default:
+    just --list --unsorted

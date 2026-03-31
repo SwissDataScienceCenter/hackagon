@@ -1,0 +1,14 @@
+# Settings for codecov.
+codecov: {}
+
+ignore:
+  - "**/gen/**/*" # glob accepted
+
+coverage:
+  status:
+    project:
+      default:
+        informational: True
+    patch:
+      default:
+        informational: True
