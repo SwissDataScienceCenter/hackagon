@@ -1,14 +1,13 @@
 package config
 
 import (
-	custodianregistry "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/custodian/registry"
-
 	"github.com/sdsc-ordes/quitsh/pkg/errors"
 	"github.com/sdsc-ordes/quitsh/pkg/exec/git"
 	"github.com/sdsc-ordes/quitsh/pkg/image"
 	"github.com/sdsc-ordes/quitsh/pkg/registry"
 	"github.com/sdsc-ordes/quitsh/pkg/secret"
 )
+
 
 type ImageSettings struct {
 	Build ImageSettingsBuild `yaml:"build"`
@@ -77,7 +76,7 @@ type (
 
 // SetDefaults implements the `defaults.Setter` interface.
 func (s *ImageSettingsPush) SetDefaults() {
-	s.RegistryDomain, s.RegistryBasePathFmt = custodianregistry.NewRegistryBaseName()
+	s.RegistryDomain, s.RegistryBasePathFmt =  "ghcr.github.io",  "swissdatasciencecenter/hackathon/nix-%s"
 
 	s.UseHTTPS = true
 }

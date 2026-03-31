@@ -35,7 +35,6 @@ func main() {
 			"build",
 			"test",
 			"image",
-			"manifest",
 			"deploy",
 			"aux"),
 		cli.WithTargetToStageMapperDefault(),

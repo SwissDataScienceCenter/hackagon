@@ -54,10 +54,6 @@ type (
 		// - `custodian::image-containerfile`
 		Image cnConfig.ImageSettings `yaml:"image"`
 
-		// The manifest settings which get copied and injected into the runners:
-		// - `custodian::manifest-ytt`
-		Manifest cnConfig.ManifestSettings `yaml:"manifest"`
-
 		// The CI settings.
 		CI CISettings `yaml:"ci"`
 	}
