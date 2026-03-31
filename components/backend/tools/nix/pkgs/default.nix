@@ -1,6 +1,6 @@
 args:
 let
-  compName = "contract-manager";
+  compName = "backend";
 
   service = args.pkgs.callPackage ./service (args // { inherit compName; });
   service-dev = args.pkgs.callPackage ./service (

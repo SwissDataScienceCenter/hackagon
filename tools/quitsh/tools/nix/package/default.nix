@@ -34,7 +34,7 @@ buildGo125Module rec {
   # then build
   # or use:
   # https://github.com/msteen/nix-prefetch/issues/3
-  vendorHash = "sha256-bxCleggiHNL27S9st0olTuAjnUuRjtrgi/N3lJWDWiQ=";
+  vendorHash = "sha256-2Zmec2YsSqyo+c9+8DxgqoQGqpP/wJVqmFoz9YwVgUs=";
   proxyVendor = true;
 
   nativeBuildInputs = [ installShellFiles ];
