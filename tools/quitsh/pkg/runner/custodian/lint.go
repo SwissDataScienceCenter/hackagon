@@ -1,18 +1,10 @@
 package custodianrunner
 
 import (
-	"maps"
-	"os"
-	"regexp"
-
-	"deedles.dev/xiter"
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
 
 	"github.com/sdsc-ordes/quitsh/pkg/common"
-	"github.com/sdsc-ordes/quitsh/pkg/common/set"
 	"github.com/sdsc-ordes/quitsh/pkg/debug"
-	"github.com/sdsc-ordes/quitsh/pkg/errors"
-	fs "github.com/sdsc-ordes/quitsh/pkg/filesystem"
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
