@@ -14,7 +14,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const SymlinkLintRunnerID = "custodian::lint-symlinks"
+const SymlinkLintRunnerID = "hackagon::lint-symlinks"
 
 type (
 	SymlinkLintRunner struct {

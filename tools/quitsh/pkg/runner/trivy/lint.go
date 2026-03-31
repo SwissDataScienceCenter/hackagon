@@ -13,7 +13,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const TrivyLintRunnerID = "custodian::trivy-lint"
+const TrivyLintRunnerID = "hackagon::trivy-lint"
 
 type (
 	TrivyLintRunner struct {

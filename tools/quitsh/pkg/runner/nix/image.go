@@ -21,7 +21,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const NixImageRunnerID = "custodian::image-nix"
+const NixImageRunnerID = "hackagon::image-nix"
 
 type NixImageRunner struct {
 	flakeDirRel string

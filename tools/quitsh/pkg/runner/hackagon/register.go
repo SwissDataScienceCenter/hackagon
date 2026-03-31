@@ -1,4 +1,4 @@
-package custodianrunner
+package hackagonrunner
 
 import (
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"

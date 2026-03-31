@@ -346,8 +346,8 @@ let
           quitsh.config = "tools/configs/quitsh/config-ci.yaml";
 
           packages = [
-            pkgs.custodian.bootstrap
-            pkgs.custodian.quitsh
+            pkgs.hackagon.bootstrap
+            pkgs.hackagon.quitsh
             pkgs.podman
 
             pkgs.openssh # SSH agent

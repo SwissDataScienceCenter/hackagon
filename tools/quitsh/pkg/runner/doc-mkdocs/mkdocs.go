@@ -6,7 +6,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const DocMkDocsRunnerID = "custodian::doc-mkdocs"
+const DocMkDocsRunnerID = "hackagon::doc-mkdocs"
 
 type DocMkDocsRunner struct{}
 

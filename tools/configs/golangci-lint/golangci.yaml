@@ -109,7 +109,7 @@ linters:
             - "**/lib-common/**/*"
           deny:
             - &no-quitsh
-              pkg: "gitlab.com/data-custodian/custodian/tools/quitsh"
+              pkg: "github.com/swissdatasciencecenter/hackathon/tools/quitsh"
               desc: should not include quitsh - if the dependency is needed, add a rule to the 'gitlabci-lint' configuration
 
             - &no-quitsh-core
@@ -117,10 +117,10 @@ linters:
               desc: should not include quitsh core
 
             - &no-other-component
-              pkg: "gitlab.com/data-custodian/custodian/components"
+              pkg: "github.com/swissdatasciencecenter/hackathon/components"
               desc: should not include any other component - if the dependency is needed, add a rule to the 'gitlabci-lint' configuration
           allow:
-            - "gitlab.com/data-custodian/custodian/components/lib-common"
+            - "github.com/swissdatasciencecenter/hackathon/components/lib-common"
 
         # Acts as a safeguard for newly added components in the repository.
         # By default, all dependencies are denied unless explicitly allowed.
@@ -148,17 +148,17 @@ linters:
             - *no-quitsh-core
             - *no-other-component
           allow:
-            - "gitlab.com/data-custodian/custodian/components/lib-common"
-            - "gitlab.com/data-custodian/custodian/components/contract-manager"
+            - "github.com/swissdatasciencecenter/hackathon/components/lib-common"
+            - "github.com/swissdatasciencecenter/hackathon/components/contract-manager"
 
         quitsh:
           list-mode: lax
           files:
             - "**/tools/quitsh/**/*"
           allow:
-            - "gitlab.com/data-custodian/custodian/components/contract-manager/pkg/ontology"
+            - "github.com/swissdatasciencecenter/hackathon/components/contract-manager/pkg/ontology"
           deny:
-            - pkg: "gitlab.com/data-custodian/custodian/components"
+            - pkg: "github.com/swissdatasciencecenter/hackathon/components"
               desc: should not include any other component
 
     errcheck:

@@ -5,8 +5,8 @@
   go,
   cacert,
   git,
-  # Our common custodian stuff:
-  libComponent, # An instance of the custodian 'components' library.
+  # Our common hackagon stuff:
+  libComponent, # An instance of the hackagon 'components' library.
   quitsh, # The quitsh derivation.
 }:
 {

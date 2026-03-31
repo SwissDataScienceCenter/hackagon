@@ -1,4 +1,4 @@
-package custodianrunner
+package hackagonrunner
 
 import (
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
@@ -8,7 +8,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const GeneralLintRunnerID = "custodian::lint-general"
+const GeneralLintRunnerID = "hackagon::lint-general"
 
 type (
 	GeneralLintRunner struct {

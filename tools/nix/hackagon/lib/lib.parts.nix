@@ -19,7 +19,7 @@ let
     inherit inputs lib;
   };
 
-  # Make the full custodian library,
+  # Make the full hackagon library,
   # by instantiating it with `rootDir` and `rootFileset`.
   mkExtendedLib =
     {

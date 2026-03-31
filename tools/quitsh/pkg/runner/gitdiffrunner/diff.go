@@ -15,7 +15,7 @@ import (
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
 )
 
-const GitDiffRunnerID = "custodian::git-diff"
+const GitDiffRunnerID = "hackagon::git-diff"
 
 type GitDiffRunner struct {
 	config   *RunnerDiffConfig

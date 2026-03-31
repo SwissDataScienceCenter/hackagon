@@ -7,7 +7,7 @@
       ...
     }:
     let
-      cnLib = config.custodian.lib;
+      cnLib = config.hackagon.lib;
 
       # The tool which acts as a helper to build stuff.
       quitsh = pkgs.callPackage ../../../quitsh/tools/nix/package {
@@ -16,6 +16,6 @@
       };
     in
     {
-      custodian.pkgs = { inherit quitsh; };
+      hackagon.pkgs = { inherit quitsh; };
     };
 }

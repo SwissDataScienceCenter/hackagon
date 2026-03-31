@@ -1,5 +1,5 @@
 {
-  description = "custodian";
+  description = "hackagon";
 
   nixConfig = {
     extra-trusted-substituters = [

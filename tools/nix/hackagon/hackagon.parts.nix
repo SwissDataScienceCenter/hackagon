@@ -13,11 +13,11 @@ in
       ...
     }:
     let
-      cn = config.custodian;
+      cn = config.hackagon;
     in
     {
       options = {
-        custodian = {
+        hackagon = {
           lib = lib.mkOption {
             type = lib.types.lazyAttrsOf lib.types.raw;
             default = { };
@@ -48,12 +48,12 @@ in
       };
 
       config = {
-        # The whole custodian attribute set.
+        # The whole hackagon attribute set.
         # Note: in `legacyPackages` just for debugging.
-        legacyPackages.custodian = cn;
+        legacyPackages.hackagon = cn;
 
         packages = {
-          inherit (config.custodian) quitsh;
+          inherit (config.hackagon) quitsh;
         }
         // cn.components.packages-flat
         // cn.pkgs;

@@ -14,7 +14,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const CoverageUploadRunnerID = "custodian::coverage-upload"
+const CoverageUploadRunnerID = "hackathon::coverage-upload"
 
 type (
 	CoverageUpload struct {

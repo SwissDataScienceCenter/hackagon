@@ -9,7 +9,7 @@
         ...
       }:
       let
-        cn = config.custodian;
+        cn = config.hackagon;
 
         # Add the build support stuff to the library.
         cnLib = cn.lib // {
@@ -26,8 +26,8 @@
         comp-pkgs-flattened = cnLib.common.attrset.flattenDrvs comp-packages;
       in
       {
-        # All custodian components packages.
-        custodian = {
+        # All hackagon components packages.
+        hackagon = {
           components = {
             packages = comp-packages;
             packages-flat = comp-pkgs-flattened;
