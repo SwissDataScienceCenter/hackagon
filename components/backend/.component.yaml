@@ -1,5 +1,5 @@
-name: contract-manager
-version: 0.7.0
+name: backend
+version: 0.1.0
 language: go
 
 targets:

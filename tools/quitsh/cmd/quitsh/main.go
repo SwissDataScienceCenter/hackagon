@@ -8,7 +8,7 @@ import (
 	cnConfig "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/config"
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/exec/nix"
 
-	// cnRunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner"
+	cnRunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner"
 
 	"github.com/sdsc-ordes/quitsh/pkg/cli"
 	"github.com/sdsc-ordes/quitsh/pkg/common"
@@ -53,14 +53,14 @@ func main() {
 
 	// Enhance the CLI with our commands and runners.
 	cnCmd.AddCommands(cli, &args)
-	// cnRunner.RegisterAll(
-	// 	&args.Build,
-	// 	&args.Lint,
-	// 	&args.Test,
-	// 	&args.Image,
-	// 	&args.Manifest,
-	// 	&args.Nix,
-	// 	cli.RunnerFactory())
+	cnRunner.RegisterAll(
+		&args.Build,
+		&args.Lint,
+		&args.Test,
+		&args.Image,
+		&args.Manifest,
+		&args.Nix,
+		cli.RunnerFactory())
 
 	// Run the app.
 	err = cli.Run()
