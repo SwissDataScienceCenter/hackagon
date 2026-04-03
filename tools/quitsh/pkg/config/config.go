@@ -38,20 +38,20 @@ type (
 		Nix cnConfig.NixSettings `yaml:"nix"`
 
 		// The build settings which get copied and injected into the runners:
-		// - `custodian::build-go`
+		// - `hackathon::build-go`
 		Build cnConfig.BuildSettings `yaml:"build"`
 
 		// The lint settings which get copied and injected into the runners:
-		// - `custodian::lint-go`
+		// - `hackathon::lint-go`
 		Lint cnConfig.LintSettings `yaml:"lint"`
 
 		// The test settings which get copied and injected into the runners:
-		// - `custodian::test-go`
+		// - `hackathon::test-go`
 		Test cnConfig.TestSettings `yaml:"test"`
 
 		// The images settings which get copied and injected into the runners:
-		// - `custodian::image-nix`
-		// - `custodian::image-containerfile`
+		// - `hackathon::image-nix`
+		// - `hackathon::image-containerfile`
 		Image cnConfig.ImageSettings `yaml:"image"`
 
 		// The CI settings.
@@ -69,7 +69,7 @@ func (c *CISettings) SetDefaults() {
 	c.PipelineSettingsFile = DefaultPipelineSettingsFile()
 }
 
-// New returns a Custodian quitsh [config.IConfig] with default values.
+// New returns a hackathon quitsh [config.IConfig] with default values.
 func New() (args Config) {
 	// Fields which are also flags will be initialized
 	// by the flags default values.

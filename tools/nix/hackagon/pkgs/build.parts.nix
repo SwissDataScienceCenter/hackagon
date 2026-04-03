@@ -11,7 +11,7 @@
       ...
     }:
     let
-      cn = config.custodian;
+      cn = config.hackagon;
 
       codecov-cli =
         let
@@ -31,7 +31,7 @@
       };
     in
     {
-      custodian = {
+      hackagon = {
         build = {
           # All pinned packages.
           pinned = pkgsPinned;

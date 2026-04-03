@@ -7,7 +7,7 @@
       # to install over `nix profile install` before
       # using `nix develop` which is the primary
       # thing used here.
-      custodian.pkgs = {
+      hackagon.pkgs = {
         bootstrap = pkgs.buildEnv {
           name = "bootstrap";
           paths = [

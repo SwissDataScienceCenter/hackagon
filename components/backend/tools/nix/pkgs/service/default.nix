@@ -25,7 +25,7 @@ cnLib.build.buildGoModule {
 
   meta = {
     description = compName;
-    homepage = "https://gitlab.com/data-custodian/custodian";
+    homepage = "https://github.com/swissdatasciencecenter/hackagon";
     license = lib.licenses.agpl3Plus;
     maintainers = [ "sdcs-ordes" ];
     mainProgram = compName;

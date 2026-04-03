@@ -7,7 +7,7 @@
       treefmt = treefmtEval.config.build.wrapper;
     in
     {
-      custodian.pkgs = {
+      hackagon.pkgs = {
         inherit treefmt;
       };
       formatter = treefmt;

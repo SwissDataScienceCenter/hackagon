@@ -19,7 +19,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const ContainerfileRunnerID = "custodian::image-containerfile"
+const ContainerfileRunnerID = "hackathon::image-containerfile"
 
 type ContainerfileBuildRunner struct {
 	config   *RunnerConfigContainerfile

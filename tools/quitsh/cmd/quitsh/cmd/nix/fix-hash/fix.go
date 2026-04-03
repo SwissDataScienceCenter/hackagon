@@ -102,7 +102,7 @@ func AddCmd(cli cli.ICLI, parent *cobra.Command, nixSetts *config.NixSettings) {
 //
 //		let
 //		  f = builtins.getFlake
-//	       "git+file:///persist/repos/custodian?dir=tools/nix&ref=$(git branch --show)" +
+//	       "git+file:///persist/repos/hackathon?dir=tools/nix&ref=$(git branch --show)" +
 //	       "&rev=$(git rev-parse HEAD)";
 //
 //		  drv = f.outputs.packages.x86_64-linux.quitsh;
@@ -118,7 +118,7 @@ func AddCmd(cli cli.ICLI, parent *cobra.Command, nixSetts *config.NixSettings) {
 //
 //		let
 //		  f = builtins.getFlake
-//	       "git+file:///persist/repos/custodian?dir=tools/nix&ref=$(git branch --show)" +
+//	       "git+file:///persist/repos/hackathon?dir=tools/nix&ref=$(git branch --show)" +
 //	       "&rev=$(git rev-parse HEAD)";
 //
 //		  drv = f.outputs.packages.x86_64-linux.quitsh;

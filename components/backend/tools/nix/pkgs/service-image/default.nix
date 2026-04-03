@@ -4,7 +4,7 @@
   ...
 }:
 pkgs.dockerTools.buildLayeredImage {
-  name = "custodian/${service.pname}-service";
+  name = "hackagon/${service.pname}-service";
   tag = service.version;
 
   contents = [
@@ -35,7 +35,7 @@ pkgs.dockerTools.buildLayeredImage {
       "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
     ];
     Labels = {
-      "org.opencontainers.image.source" = "https://gitlab.com/data-custodian/custodian";
+      "org.opencontainers.image.source" = "https://github.com/swissdatasciencecenter/hackagon";
       "org.opencontainers.image.description" = service.meta.description;
       "org.opencontainers.image.license" = service.meta.license.shortName;
       "org.opencontainers.image.version" = service.version;

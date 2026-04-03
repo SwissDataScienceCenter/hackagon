@@ -6,7 +6,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const DocSphinxRunnerID = "custodian::doc-sphinx"
+const DocSphinxRunnerID = "hackagon::doc-sphinx"
 
 type DocSphinxRunner struct{}
 

@@ -1,4 +1,4 @@
-package custodianrunner
+package hackagonrunner
 
 import (
 	"github.com/creasty/defaults"

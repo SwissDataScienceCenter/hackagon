@@ -15,8 +15,8 @@ in
       buildSystem = pkgs.stdenv.buildPlatform.system;
     in
     {
-      # The custodian library with root fileset and components.
-      custodian.lib = self.lib.mkExtendedLib {
+      # The hackagon library with root fileset and components.
+      hackagon.lib = self.lib.mkExtendedLib {
         inherit buildSystem rootDir rootFileset;
       };
     };

@@ -10,11 +10,11 @@ in
   perSystem =
     { config, pkgs, ... }:
     let
-      cn = config.custodian;
+      cn = config.hackagon;
 
-      # Add all custodian package.
+      # Add all hackagon package.
       pkgsEx = pkgs // {
-        custodian = cn.pkgs;
+        hackagon = cn.pkgs;
       };
 
       devenvs = cn.lib.toolchain.createDevenvModules {
@@ -35,6 +35,6 @@ in
       ) devenvs;
     in
     {
-      custodian = { inherit shells; };
+      hackagon = { inherit shells; };
     };
 }

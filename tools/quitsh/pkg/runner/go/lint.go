@@ -22,7 +22,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
-const GoLintRunnerID = "custodian::lint-go"
+const GoLintRunnerID = "hackagon::lint-go"
 
 type (
 	GoLintRunner struct {

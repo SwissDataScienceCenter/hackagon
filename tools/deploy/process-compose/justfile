@@ -9,7 +9,7 @@ flake_dir := root_dir / "tools/nix"
 
 # TODO: Change that to include all services once ready.
 shell := "test-services"
-installable := "custodian.shells." + shell
+installable := "hackagon.shells." + shell
 socket_file := comp_dir / (".socket-path-" + shell)
 
 default:

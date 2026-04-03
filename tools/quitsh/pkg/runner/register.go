@@ -4,11 +4,11 @@ import (
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
 	containerfilerunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/containerfile"
 	coveragerunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/coverage"
-	custodianrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/custodian"
 	docmkdocsrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/doc-mkdocs"
 	docsphinxrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/doc-sphinx"
 	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/gitdiffrunner"
 	gorunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/go"
+	hackagonrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/hackagon"
 	nixrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/nix"
 	symlinkrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/symlinks"
 	trivyrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/trivy"
@@ -53,7 +53,7 @@ func RegisterAll(
 		e = symlinkrunner.Register(lintSettings, factory)
 		err = errors.Combine(err, e)
 
-		e = custodianrunner.Register(lintSettings, factory)
+		e = hackagonrunner.Register(lintSettings, factory)
 		err = errors.Combine(err, e)
 	}
 
