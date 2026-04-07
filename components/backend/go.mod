@@ -1,3 +1,3 @@
-module github.com/swissdatasciencecenter/hackathon/components/backend
+module github.com/swissdatasciencecenter/hackagon/components/backend
 
 go 1.25

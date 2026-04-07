@@ -7,8 +7,8 @@ import (
 	"path"
 	"slices"
 
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/setup"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/setup"
 
 	"github.com/sdsc-ordes/quitsh/pkg/common"
 	"github.com/sdsc-ordes/quitsh/pkg/component"

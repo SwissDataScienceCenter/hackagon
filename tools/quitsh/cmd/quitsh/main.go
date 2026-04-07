@@ -3,12 +3,12 @@ package main
 import (
 	"os"
 
-	cnCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/build"
-	cnConfig "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/config"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/exec/nix"
+	cnCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/build"
+	cnConfig "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/exec/nix"
 
-	cnRunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner"
+	cnRunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner"
 
 	"github.com/sdsc-ordes/quitsh/pkg/cli"
 	"github.com/sdsc-ordes/quitsh/pkg/common"

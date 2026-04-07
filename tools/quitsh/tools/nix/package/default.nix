@@ -42,7 +42,7 @@ buildGo125Module rec {
 
   ldflags =
     let
-      modulePath = "github.com/swissdatasciencecenter/hackathon/tools/quitsh";
+      modulePath = "github.com/swissdatasciencecenter/hackagon/tools/quitsh";
     in
     [
       "-s"
@@ -65,7 +65,7 @@ buildGo125Module rec {
 
   meta = with lib; {
     description = "Tool to build/test/lint/deploy components in a monorepo - quit using `sh`.";
-    homepage = "https://github.com/swissdatasciencecenter/hackathon";
+    homepage = "https://github.com/swissdatasciencecenter/hackagon";
     license = licenses.agpl3Plus;
     maintainers = [ "gabyx" ];
     mainProgram = "quitsh";

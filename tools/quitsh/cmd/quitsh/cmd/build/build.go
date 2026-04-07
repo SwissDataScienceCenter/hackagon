@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 
 	"github.com/sdsc-ordes/quitsh/pkg/cli"
 	"github.com/sdsc-ordes/quitsh/pkg/cli/general"

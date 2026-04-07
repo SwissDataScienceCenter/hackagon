@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 	"gopkg.in/yaml.v3"
 
 	"carvel.dev/imgpkg/pkg/imgpkg/lockconfig"
@@ -232,7 +232,7 @@ func processPackages(
 		cmd := []string{"--insecure-policy", src, dest}
 
 		// TODO: Sign the image with cosign
-		// https://github.com/swissdatasciencecenter/hackathon/-/issues/200
+		// https://github.com/swissdatasciencecenter/hackagon/-/issues/200
 		// https://docs.gitlab.com/ee/ci/yaml/signing_examples.html
 		// https://docs.sigstore.dev/cosign/signing/signing_with_containers/
 		e := cpCtx.Check(cmd...)

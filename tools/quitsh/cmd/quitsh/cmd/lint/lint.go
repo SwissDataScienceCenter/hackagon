@@ -8,7 +8,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/component/stage"
 	"github.com/sdsc-ordes/quitsh/pkg/dag"
 	"github.com/sdsc-ordes/quitsh/pkg/toolchain"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 
 	"github.com/spf13/cobra"
 )

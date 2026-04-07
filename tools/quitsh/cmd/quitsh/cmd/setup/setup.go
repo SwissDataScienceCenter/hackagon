@@ -1,8 +1,8 @@
 package setup
 
 import (
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
-	setup "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/setup"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
+	setup "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/setup"
 
 	"github.com/spf13/cobra"
 )

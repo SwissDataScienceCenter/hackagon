@@ -11,8 +11,8 @@ import (
 	fs "github.com/sdsc-ordes/quitsh/pkg/filesystem"
 	"github.com/sdsc-ordes/quitsh/pkg/log"
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/format"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/format"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 )
 
 const GitDiffRunnerID = "hackagon::git-diff"

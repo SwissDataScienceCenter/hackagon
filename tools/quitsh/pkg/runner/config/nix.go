@@ -1,6 +1,6 @@
 package config
 
-import "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/exec/nix"
+import "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/exec/nix"
 
 // DefaultFlakeDirRel is the relative directory to the root dir
 // where the `flake.nix` file is located.

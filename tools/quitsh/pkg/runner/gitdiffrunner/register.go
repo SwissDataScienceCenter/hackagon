@@ -6,7 +6,7 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/log"
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 	"github.com/sdsc-ordes/quitsh/pkg/runner/factory"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 )
 
 func Register(
