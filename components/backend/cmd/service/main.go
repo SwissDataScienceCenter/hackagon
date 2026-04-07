@@ -6,20 +6,17 @@ import (
 	"net"
 	"os"
 
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/proto"
 	"google.golang.org/grpc"
 )
 
-const (
-	defaultPort = "8080"
-)
-
 func main() {
-	// Get port from environment or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	// Create health service
@@ -32,13 +29,13 @@ func main() {
 	proto.RegisterHealthServer(server, healthService)
 
 	// Listen
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	fmt.Printf("Starting gRPC server on port %s...\n", port)
-	fmt.Printf("Health check endpoint: grpc://localhost:%s\n", port)
+	fmt.Printf("Starting gRPC server on port %s...\n", cfg.Server.Port)
+	fmt.Printf("Health check endpoint: grpc://localhost:%s\n", cfg.Server.Port)
 
 	// Serve
 	if err := server.Serve(lis); err != nil {

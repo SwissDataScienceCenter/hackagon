@@ -110,7 +110,7 @@ const file_proto_health_proto_rawDesc = "" +
 	"\x13HealthCheckResponse\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2J\n" +
 	"\x06Health\x12@\n" +
-	"\x05Check\x12\x1a.health.HealthCheckRequest\x1a\x1b.health.HealthCheckResponseBFZDgithub.com/swissdatasciencecenter/hackathon/components/backend/protob\x06proto3"
+	"\x05Check\x12\x1a.health.HealthCheckRequest\x1a\x1b.health.HealthCheckResponseBFZDgithub.com/swissdatasciencecenter/hackagon/components/backend/protob\x06proto3"
 
 var (
 	file_proto_health_proto_rawDescOnce sync.Once
