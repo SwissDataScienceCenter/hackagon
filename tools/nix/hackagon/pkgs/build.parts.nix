@@ -28,6 +28,8 @@
         go = pkgs.go_1_25;
         python = pkgs.python314;
         inherit codecov-cli;
+        nodejs = pkgs.nodejs_22;
+        pnpm = pkgs.pnpm_10.override { nodejs = pkgs.nodejs_22; };
       };
     in
     {

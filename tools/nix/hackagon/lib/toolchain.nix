@@ -86,6 +86,16 @@ let
         }
       ];
 
+      build-node-pnpm = [
+        {
+          quitsh.toolchains = [ "build-node-pnpm" ];
+          packages = [
+            pkgsPinned.nodejs
+            pkgsPinned.pnpm
+          ];
+        }
+      ];
+
       test-services =
         let
           realm-file = "./tools/configs/keycloak/realm-hackagon.json";
@@ -143,9 +153,7 @@ let
               keycloak = {
                 enable = true;
                 settings.http-port = 8080;
-
                 database.type = "dev-file";
-
                 realms = {
                   hackagon = {
                     path = "${realm-file}";
@@ -275,6 +283,7 @@ let
         ci
         ++ build-go
         ++ dev-go
+        ++ build-node-pnpm
         ++ manifest-ytt
         ++ quitsh-direct
         ++ [
@@ -315,6 +324,8 @@ let
           )
         ];
 
+      frontend = ci ++ build-node-pnpm ++ quitsh-direct;
+
       ci = [
         {
           quitsh.toolchains = [
@@ -337,12 +348,14 @@ let
     {
       # Main shells:
       default = addSetup default;
+      frontend = addSetup frontend;
       ci = addSetup ci;
 
       # Toolchains:
       inherit
         # General CI ---------
         build-go
+        build-node-pnpm
         lint-go
         lint-trivy
         lint-jsonschema
