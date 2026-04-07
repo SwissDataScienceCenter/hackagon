@@ -88,56 +88,58 @@ let
 
       test-services =
         let
-          realm-file = "./tools/configs/keycloak/realm-data-custodian.json";
+          realm-file = "./tools/configs/keycloak/realm-hackagon.json";
+          createProcCompLog = service: ".output/run/process-compose/${service}-log";
         in
         [
           {
             process.managers.process-compose = {
               package = pkgs.process-compose;
+              settings = {
+                log_level = "info";
+                log_location = ".output/run/process-compose/log";
+                log_configuration = {
+                  no_metadata = false;
+                  flush_each_line = true;
+                  add_timestamp = true;
+                  disable_json = true;
+                };
+              };
             };
 
-            services = {
-              minio = {
-                enable = true;
+            processes = {
+              keycloak.process-compose.log_location = createProcCompLog "keycloak";
 
-                listenAddress = "127.0.0.1:9050";
-                consoleAddress = "127.0.0.1:9051";
+              keycloak-realm-export-all = {
+                process-compose = {
+                  log_location = createProcCompLog "keycloak-realm-export-all";
+                  disabled = true;
+                };
+              };
 
-                buckets = [
-                  "attachments"
-                  "attachments-temporary"
-
-                  "blobstorage-test"
-                  "blobstorage-test-temp"
-                ];
-
-                accessKey = "minioadmin"; # This is the username in S3 terms.
-                secretKey = "minioadmin";
-
-                # TODO: Life-cycle management only works if `minio` module start the service
-                # with `minio server /data1 /data2 /data3` to be in
-                # erasure-coded (EC) mode.
-                afterStart = ''
-                  # Minimum life-time is 1 day.
-                  # mc ilm add attachments-temporary --expire-days 1
-
-                  # Encryption not supported for filesystem.
-                  # mc encrypt set sse-s3 attachments
-                  # mc encrypt set sse-s3 attachments-temporary
+              format-realm-export = {
+                exec = ''
+                  set -eu
+                  echo "Formatting realm export ..."
+                  ${pkgs.jq}/bin/jq --sort-keys . "${realm-file}" > "${realm-file}.mod"
+                  mv "${realm-file}.mod" "${realm-file}"
+                  ${pkgs.nodePackages_latest.prettier}/bin/prettier -w "${realm-file}"
+                  echo "Restart keycloak..."
+                  ${pkgs.process-compose}/bin/process-compose \
+                    --unix-socket "$PC_SOCKET_PATH" process start keycloak
                 '';
-
-                browser = true;
+                process-compose = {
+                  disabled = true;
+                  depends_on = {
+                    keycloak-realm-export-all = {
+                      condition = "process_completed_successfully";
+                    };
+                  };
+                };
+              };
               };
 
-              mongodb = {
-                enable = true;
-
-                initDatabaseUsername = "admin";
-                initDatabasePassword = "admin";
-
-                additionalArgs = [ ];
-              };
-
+            services = {
               keycloak = {
                 enable = true;
                 settings.http-port = 8080;
@@ -145,7 +147,7 @@ let
                 database.type = "dev-file";
 
                 realms = {
-                  data-custodian = {
+                  hackagon = {
                     path = "${realm-file}";
                     export = true;
                     import = true;
@@ -201,18 +203,6 @@ let
         }
       ];
 
-      dev-ontology = [
-        {
-          languages.python = {
-            enable = true;
-            package = pkgsPinned.python;
-            uv.enable = true;
-          };
-
-          quitsh.toolchains = [ "dev-ontology" ];
-        }
-      ];
-
       run-python = [
         {
           languages.python = {
@@ -222,18 +212,6 @@ let
           };
 
           quitsh.toolchains = [ "run-python" ];
-        }
-      ];
-
-      python-playground = [
-        {
-          quitsh.toolchains = [ "python-playground" ];
-
-          packages = [
-            pkgs.git
-            pkgs.uv
-            pkgsPinned.python
-          ];
         }
       ];
 
@@ -360,7 +338,6 @@ let
       # Main shells:
       default = addSetup default;
       ci = addSetup ci;
-      python-playground = addSetup python-playground;
 
       # Toolchains:
       inherit
@@ -386,7 +363,6 @@ let
 
         # General Development --
         dev-go
-        dev-ontology
         # ----------------------
         ;
 
