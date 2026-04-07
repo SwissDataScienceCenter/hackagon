@@ -1,0 +1,14 @@
+log:
+  forceDevLog: true
+
+backend:
+  hostname: localhost
+  port: 3000
+
+cookies:
+  useSecure: false
+
+oidc:
+  issuer: http://localhost:8080/realms/hackagon
+  clientId: hackagon-frontend
+  audience: hackagon-backend

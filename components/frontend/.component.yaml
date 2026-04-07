@@ -1,0 +1,39 @@
+name: frontend
+version: 0.7.0
+language: typescript
+
+targets:
+  test-unittest:
+    steps:
+      - runner: node-pnpm
+        config:
+          tool: "vitest"
+          toolEnv:
+            - TEST_CONFIG_DIR=data/test/config
+
+    inputs: ["self", "backend"]
+
+  build:
+    steps:
+      - runner: node-pnpm
+      - runner: git-diff
+        config:
+          paths:
+            - src
+    inputs: ["self"]
+
+  lint:
+    steps:
+      - runner: node-pnpm
+    inputs: ["self"]
+
+  image:
+    steps:
+      - runner: nix
+    inputs: ["self", "backend"]
+
+  build-nix:
+    stage: aux
+    steps:
+      - runner: node-pnpm
+    inputs: ["self", "backend"]

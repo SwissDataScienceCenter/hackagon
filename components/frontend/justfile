@@ -1,0 +1,77 @@
+set positional-arguments
+set shell := ["bash", "-cue"]
+set fallback := true
+set dotenv-load := true
+
+root_dir := `git rev-parse --show-toplevel`
+comp_dir := justfile_directory()
+flake_dir := root_dir / "tools/nix"
+
+config_dir := env("HACKAGON_CONFIG_DIR", "./data/test/config")
+data_dir := env("HACKAGON_DATA_DIR", "./data/test")
+
+# Default target if you do not specify a target.
+default:
+    just --list
+
+# Lint the project.
+[group('general')]
+lint *args:
+    just quitsh lint --component-dir "$(pwd)"
+
+# Build the project (executes 'generate-backend-client' by default).
+[group('general')]
+build *args:
+    just quitsh build --component-dir  "$(pwd)"
+
+# Test the project.
+[group('general')]
+test *args:
+    just quitsh test --component-dir "$(pwd)"
+
+# Format the project.
+[group('general')]
+format *args: init
+    pnpm run format
+
+# Serve the page.
+[group('general')]
+serve *args: init
+    pnpm run dev -- --config-dir "{{config_dir}}" --data-dir "{{data_dir}}" "$@"
+
+# Run the build from the build folder.
+[group('general')]
+run *args: init build
+    #!/usr/bin/env bash
+    build_dir=$(quitsh list --component-dir "." --format "{{{{ (index . 0).OutBuildDir }}")
+    just run-service node "$build_dir/share/service"
+
+# Run the Nix build.
+[group('general')]
+run-nix *args:
+    # Stage everything to be current.
+    git -C "{{root_dir}}" add .
+    just nix::package frontend-service-dev
+    just run-service "{{root_dir}}/.output/package/frontend-service-dev/bin/frontend"
+
+# Run the service executable `cmd`.
+[group('ci')]
+run-service *cmd:
+    #!/usr/bin/env bash
+    # FIXME:
+    # This env variable is ugly. We need `server.ts` with a custom main.
+    ORIGIN=http://localhost:8081 \
+    PORT=8081 \
+    "$@" --config-dir "{{config_dir}}" --data-dir "{{data_dir}}"
+
+# Clean the build.
+[group('general')]
+clean *args:
+    rm -rf node_modules
+    rm -rf .output
+
+[private]
+init:
+    #!/usr/bin/env bash
+    set -eu
+    pnpm install
