@@ -10,6 +10,7 @@ import (
 	gorunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/go"
 	hackagonrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/hackagon"
 	nixrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/nix"
+	pnpmrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/pnpm"
 	symlinkrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/symlinks"
 	trivyrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/trivy"
 
@@ -32,6 +33,11 @@ func RegisterAll(
 
 	if buildSettings != nil {
 		e := gorunnerQuitsh.RegisterBuild(buildSettings.WrapToIBuildSettings(), factory, true)
+		err = errors.Combine(err, e)
+		e = pnpmrunner.RegisterAll(
+			buildSettings.WrapToIBuildSettings(),
+			testSettings.WrapToITestSettings(),
+			factory, true)
 		err = errors.Combine(err, e)
 	}
 
