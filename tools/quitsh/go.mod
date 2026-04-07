@@ -1,4 +1,4 @@
-module github.com/swissdatasciencecenter/hackathon/tools/quitsh
+module github.com/swissdatasciencecenter/hackagon/tools/quitsh
 
 go 1.25
 

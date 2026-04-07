@@ -3,7 +3,7 @@ package config
 import (
 	"path"
 
-	cnConfig "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	cnConfig "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 
 	"github.com/creasty/defaults"
 	"github.com/go-playground/validator/v10"

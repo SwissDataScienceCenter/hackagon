@@ -1,17 +1,17 @@
 package runner
 
 import (
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
-	containerfilerunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/containerfile"
-	coveragerunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/coverage"
-	docmkdocsrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/doc-mkdocs"
-	docsphinxrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/doc-sphinx"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/gitdiffrunner"
-	gorunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/go"
-	hackagonrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/hackagon"
-	nixrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/nix"
-	symlinkrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/symlinks"
-	trivyrunner "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/trivy"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
+	containerfilerunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/containerfile"
+	coveragerunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/coverage"
+	docmkdocsrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/doc-mkdocs"
+	docsphinxrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/doc-sphinx"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/gitdiffrunner"
+	gorunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/go"
+	hackagonrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/hackagon"
+	nixrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/nix"
+	symlinkrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/symlinks"
+	trivyrunner "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/trivy"
 
 	"github.com/sdsc-ordes/quitsh/pkg/errors"
 	"github.com/sdsc-ordes/quitsh/pkg/log"

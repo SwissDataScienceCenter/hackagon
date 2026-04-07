@@ -5,9 +5,9 @@ import (
 	"os"
 	"path"
 
-	cnNix "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/exec/nix"
-	cnImages "github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/image"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	cnNix "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/exec/nix"
+	cnImages "github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/image"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 
 	"github.com/sdsc-ordes/quitsh/pkg/common"
 	"github.com/sdsc-ordes/quitsh/pkg/component/step"

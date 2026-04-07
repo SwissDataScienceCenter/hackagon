@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	cnBuildCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/build"
-	cnFormatCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/format"
-	cnImageCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/image"
-	cnLintCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/lint"
-	cnNix "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/nix"
-	cnSetupCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/setup"
-	cnTestCmd "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/test"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/config"
+	cnBuildCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/build"
+	cnFormatCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/format"
+	cnImageCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/image"
+	cnLintCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/lint"
+	cnNix "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/nix"
+	cnSetupCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/setup"
+	cnTestCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/test"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/config"
 
 	"github.com/sdsc-ordes/quitsh/pkg/cli"
 	cleanCmd "github.com/sdsc-ordes/quitsh/pkg/cli/cmd/clean"

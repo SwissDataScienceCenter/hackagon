@@ -3,9 +3,9 @@ package nix
 import (
 	"errors"
 
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/nix/cache"
-	fixhash "github.com/swissdatasciencecenter/hackathon/tools/quitsh/cmd/quitsh/cmd/nix/fix-hash"
-	"github.com/swissdatasciencecenter/hackathon/tools/quitsh/pkg/runner/config"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/nix/cache"
+	fixhash "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/nix/fix-hash"
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/runner/config"
 
 	"github.com/sdsc-ordes/quitsh/pkg/cli"
 

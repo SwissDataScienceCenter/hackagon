@@ -109,7 +109,7 @@ linters:
             - "**/lib-common/**/*"
           deny:
             - &no-quitsh
-              pkg: "github.com/swissdatasciencecenter/hackathon/tools/quitsh"
+              pkg: "github.com/swissdatasciencecenter/hackagon/tools/quitsh"
               desc: should not include quitsh - if the dependency is needed, add a rule to the 'gitlabci-lint' configuration
 
             - &no-quitsh-core
@@ -117,10 +117,10 @@ linters:
               desc: should not include quitsh core
 
             - &no-other-component
-              pkg: "github.com/swissdatasciencecenter/hackathon/components"
+              pkg: "github.com/swissdatasciencecenter/hackagon/components"
               desc: should not include any other component - if the dependency is needed, add a rule to the 'gitlabci-lint' configuration
           allow:
-            - "github.com/swissdatasciencecenter/hackathon/components/lib-common"
+            - "github.com/swissdatasciencecenter/hackagon/components/lib-common"
 
         # Acts as a safeguard for newly added components in the repository.
         # By default, all dependencies are denied unless explicitly allowed.
@@ -148,17 +148,17 @@ linters:
             - *no-quitsh-core
             - *no-other-component
           allow:
-            - "github.com/swissdatasciencecenter/hackathon/components/lib-common"
-            - "github.com/swissdatasciencecenter/hackathon/components/contract-manager"
+            - "github.com/swissdatasciencecenter/hackagon/components/lib-common"
+            - "github.com/swissdatasciencecenter/hackagon/components/contract-manager"
 
         quitsh:
           list-mode: lax
           files:
             - "**/tools/quitsh/**/*"
           allow:
-            - "github.com/swissdatasciencecenter/hackathon/components/contract-manager/pkg/ontology"
+            - "github.com/swissdatasciencecenter/hackagon/components/contract-manager/pkg/ontology"
           deny:
-            - pkg: "github.com/swissdatasciencecenter/hackathon/components"
+            - pkg: "github.com/swissdatasciencecenter/hackagon/components"
               desc: should not include any other component
 
     errcheck:

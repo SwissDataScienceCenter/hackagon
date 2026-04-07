@@ -8,7 +8,6 @@ import (
 	"github.com/sdsc-ordes/quitsh/pkg/secret"
 )
 
-
 type ImageSettings struct {
 	Build ImageSettingsBuild `yaml:"build"`
 	Push  ImageSettingsPush  `yaml:"push"`
@@ -76,7 +75,7 @@ type (
 
 // SetDefaults implements the `defaults.Setter` interface.
 func (s *ImageSettingsPush) SetDefaults() {
-	s.RegistryDomain, s.RegistryBasePathFmt =  "ghcr.github.io",  "swissdatasciencecenter/hackathon/nix-%s"
+	s.RegistryDomain, s.RegistryBasePathFmt = "ghcr.github.io", "swissdatasciencecenter/hackagon/nix-%s"
 
 	s.UseHTTPS = true
 }
