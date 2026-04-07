@@ -2,11 +2,9 @@ set positional-arguments
 set fallback := true
 set shell := ["bash", "-cue"]
 set dotenv-path := "../../.env"
-
 comp_dir := justfile_directory()
 root_dir := `git rev-parse --show-toplevel`
 flake_dir := root_dir / "tools/nix"
-
 # TODO: Change that to include all services once ready.
 shell := "test-services"
 installable := "hackagon.shells." + shell
@@ -19,13 +17,11 @@ default:
 up *args:
     #!/usr/bin/env bash
     set -eu
-
     if echo "$(just proc-comp process list 2>/dev/null)" | grep -q "keycloak"; then
-        echo "Process compose stack seems alrady running!"
+        echo "Process compose stack seems already running!"
         echo "Attach with 'just proc-comp attach'"
         exit 0
     fi
-
     just quitsh process-compose start \
         --flake-dir "{{flake_dir}}" \
         --wait-for "keycloak" \
@@ -35,9 +31,14 @@ up *args:
 
 # Stop processes.
 down *args:
-    just proc-comp down "$@" || true
+    #!/usr/bin/env bash
+    pkill -f "process-compose" 2>/dev/null || true
+    sleep 1
+    pkill -f "keycloak" 2>/dev/null || true
+    sleep 1
+    kill $(lsof -ti :8080) 2>/dev/null || true
     rm -rf "{{socket_file}}"
-
+    echo "All processes stopped."
 
 # Run commands on the socket created on `just up`.
 proc-comp *args:
@@ -49,3 +50,34 @@ proc-comp *args:
         exit 1
     fi
     process-compose --unix-socket "$(cat "{{socket_file}}")" "$@"
+
+# Retrieve an access token for testing purposes.
+get-access-token user password:
+    just get-all-tokens "{{user}}" "{{password}}" | jq -r ".access_token"
+
+# Retrieve an ID token for testing purposes.
+get-id-token user password:
+    just get-all-tokens "{{user}}" "{{password}}" | jq -r ".id_token"
+
+# Get all tokens for a user (for testing).
+get-all-tokens user password:
+    #!/usr/bin/env bash
+    curl -s -X POST \
+      "http://localhost:8080/realms/hackagon/protocol/openid-connect/token" \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d client_id="hackagon-backend" \
+      -d username="{{user}}" \
+      -d password="{{password}}" \
+      -d grant_type="password" \
+      -d scope="openid profile"
+
+# Save the current realm settings from keycloak back to the JSON file.
+save-keycloak:
+    #!/usr/bin/env bash
+    set -eu
+    just -f "{{source_file()}}" down
+    just -f "{{source_file()}}" up
+    sleep 20
+    just -f "{{source_file()}}" proc-comp process start keycloak-realm-export-all
+    sleep 15
+    echo "Realm saved to tools/configs/keycloak/realm-hackagon.json"
