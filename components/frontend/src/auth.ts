@@ -29,16 +29,17 @@ export const getAuthOptions = (
         issuer: config.oidc.issuer,
         authorization: {
           params: {
-            scope: "openid profile",
+            scope: "openid profile email",
             audience: config.oidc.audience,
             prompt: "login",
           },
         },
       }),
     ],
-    // FIXME: This is not good ?? @martin,@sabine can you check this?
-    trustHost: true, // Set to false in production unless behind a trusted proxy handling SSL
-    debug: true, // Enable debug logs for development; can be toggled via config if needed
+    // trustHost must be true when running behind a reverse proxy (production).
+    // Safe to set true always since SvelteKit handles host validation.
+    trustHost: true,
+    debug: config.log?.forceDevLog ?? false, // Enable debug logs for development; can be toggled via config if needed
     session: {
       strategy: "jwt" as const,
     },
