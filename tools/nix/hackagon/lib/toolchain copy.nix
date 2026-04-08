@@ -106,9 +106,9 @@ let
       [
         (
           { config, ... }:
-        let
-          realm-file = "./tools/configs/keycloak/realm-hackagon.json";
-        in
+          let
+            realm-file = "./tools/configs/keycloak/realm-hackagon.json";
+          in
           {
             process.managers.process-compose = {
               package = pkgs.process-compose;
@@ -183,7 +183,7 @@ let
                   };
                 };
               };
-              };
+            };
 
             services = {
               keycloak = {
@@ -202,7 +202,7 @@ let
             };
           }
         )
-        ];
+      ];
 
       test-services = createTestingHackagon {
         isCI = false;
