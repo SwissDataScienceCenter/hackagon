@@ -9,6 +9,6 @@ cookies:
   useSecure: false
 
 oidc:
-  issuer: http://localhost:8080/realms/hackagon
+  issuer: http://localhost:8180/realms/hackagon
   clientId: hackagon-frontend
   audience: hackagon-backend

@@ -188,7 +188,7 @@ let
             services = {
               keycloak = {
                 enable = true;
-                settings.http-port = 8080;
+                settings.http-port = 8180;
                 settings.http-host = "0.0.0.0";
                 database.type = "dev-file";
                 realms = {
