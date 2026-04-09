@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -15,6 +16,16 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+func skipAuth(ctx context.Context, method string) bool {
+	// Methods to skip auth for.
+	fmt.Printf("%s", method)
+	if method == "/health.Health/Check" {
+		return true
+	}
+
+	return false
+}
+
 func main() {
 	// Load configuration
 	fmt.Println("starting backend service")
@@ -27,7 +38,7 @@ func main() {
 	healthService := service.NewHealthService()
 
 	// Create gRPC server
-	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(*cfg))
+	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(*cfg, skipAuth))
 	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)))
 
 	// Register health service

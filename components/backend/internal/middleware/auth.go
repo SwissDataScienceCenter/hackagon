@@ -12,18 +12,22 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+type SkipFn func(ctx context.Context, method string) bool
+
 type JWTValidator struct {
 	JwksUrl   string
 	Algorithm jwt.SigningMethod
 	Issuer    string
+	Skip      SkipFn
 }
 
-func NewJWTValidator(cfg config.Config) *JWTValidator {
+func NewJWTValidator(cfg config.Config, skip SkipFn) *JWTValidator {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
 		Issuer:    cfg.Oidc.IssuerUrl,
+		Skip:      skip,
 	}
 }
 
@@ -74,6 +78,10 @@ type claimsKey struct{}
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
 	// Get raw token from grpc metadata
+	method_name, ok := ctx.Value(methodNameKey{}).(string)
+	if ok && svc.Skip != nil && svc.Skip(ctx, method_name) {
+		return ctx, nil
+	}
 	tokenString, err := extractToken(ctx)
 	if err != nil {
 		return nil, handleJwtError(err)
@@ -102,8 +110,11 @@ func GetClaims(ctx context.Context) (jwt.MapClaims, bool) {
 	return val, ok
 }
 
+type methodNameKey struct{}
+
 func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		ctx = context.WithValue(ctx, methodNameKey{}, info.FullMethod)
 		ctx, err := validator.AuthFunc()(ctx)
 		if err != nil {
 			return nil, err
