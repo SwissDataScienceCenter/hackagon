@@ -368,6 +368,7 @@ let
         ];
 
       frontend = ci ++ build-node-pnpm ++ quitsh-direct;
+      backend = ci ++ build-go ++ dev-go ++ quitsh-direct;
 
       ci = [
         {
@@ -392,6 +393,7 @@ let
       # Main shells:
       default = addSetup default;
       frontend = addSetup frontend;
+      backend = addSetup backend;
       ci = addSetup ci;
 
       # Toolchains:

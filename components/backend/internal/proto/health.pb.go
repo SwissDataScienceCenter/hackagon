@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.34.1
-// source: proto/health.proto
+// source: internal/proto/health.proto
 
 package proto
 
@@ -29,7 +29,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_proto_health_proto_msgTypes[0]
+	mi := &file_internal_proto_health_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_health_proto_msgTypes[0]
+	mi := &file_internal_proto_health_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_proto_health_proto_rawDescGZIP(), []int{0}
+	return file_internal_proto_health_proto_rawDescGZIP(), []int{0}
 }
 
 type HealthCheckResponse struct {
@@ -66,7 +66,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_proto_health_proto_msgTypes[1]
+	mi := &file_internal_proto_health_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_health_proto_msgTypes[1]
+	mi := &file_internal_proto_health_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_proto_health_proto_rawDescGZIP(), []int{1}
+	return file_internal_proto_health_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *HealthCheckResponse) GetMessage() string {
@@ -101,35 +101,35 @@ func (x *HealthCheckResponse) GetMessage() string {
 	return ""
 }
 
-var File_proto_health_proto protoreflect.FileDescriptor
+var File_internal_proto_health_proto protoreflect.FileDescriptor
 
-const file_proto_health_proto_rawDesc = "" +
+const file_internal_proto_health_proto_rawDesc = "" +
 	"\n" +
-	"\x12proto/health.proto\x12\x06health\"\x14\n" +
+	"\x1binternal/proto/health.proto\x12\x06health\"\x14\n" +
 	"\x12HealthCheckRequest\"/\n" +
 	"\x13HealthCheckResponse\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage2J\n" +
 	"\x06Health\x12@\n" +
-	"\x05Check\x12\x1a.health.HealthCheckRequest\x1a\x1b.health.HealthCheckResponseBFZDgithub.com/swissdatasciencecenter/hackagon/components/backend/protob\x06proto3"
+	"\x05Check\x12\x1a.health.HealthCheckRequest\x1a\x1b.health.HealthCheckResponseBEZCgithub.com/swissdatasciencecenter/hackagon/components/backend/protob\x06proto3"
 
 var (
-	file_proto_health_proto_rawDescOnce sync.Once
-	file_proto_health_proto_rawDescData []byte
+	file_internal_proto_health_proto_rawDescOnce sync.Once
+	file_internal_proto_health_proto_rawDescData []byte
 )
 
-func file_proto_health_proto_rawDescGZIP() []byte {
-	file_proto_health_proto_rawDescOnce.Do(func() {
-		file_proto_health_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_health_proto_rawDesc), len(file_proto_health_proto_rawDesc)))
+func file_internal_proto_health_proto_rawDescGZIP() []byte {
+	file_internal_proto_health_proto_rawDescOnce.Do(func() {
+		file_internal_proto_health_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_proto_health_proto_rawDesc), len(file_internal_proto_health_proto_rawDesc)))
 	})
-	return file_proto_health_proto_rawDescData
+	return file_internal_proto_health_proto_rawDescData
 }
 
-var file_proto_health_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_proto_health_proto_goTypes = []any{
+var file_internal_proto_health_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_internal_proto_health_proto_goTypes = []any{
 	(*HealthCheckRequest)(nil),  // 0: health.HealthCheckRequest
 	(*HealthCheckResponse)(nil), // 1: health.HealthCheckResponse
 }
-var file_proto_health_proto_depIdxs = []int32{
+var file_internal_proto_health_proto_depIdxs = []int32{
 	0, // 0: health.Health.Check:input_type -> health.HealthCheckRequest
 	1, // 1: health.Health.Check:output_type -> health.HealthCheckResponse
 	1, // [1:2] is the sub-list for method output_type
@@ -139,26 +139,26 @@ var file_proto_health_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto_health_proto_init() }
-func file_proto_health_proto_init() {
-	if File_proto_health_proto != nil {
+func init() { file_internal_proto_health_proto_init() }
+func file_internal_proto_health_proto_init() {
+	if File_internal_proto_health_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_health_proto_rawDesc), len(file_proto_health_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_proto_health_proto_rawDesc), len(file_internal_proto_health_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_health_proto_goTypes,
-		DependencyIndexes: file_proto_health_proto_depIdxs,
-		MessageInfos:      file_proto_health_proto_msgTypes,
+		GoTypes:           file_internal_proto_health_proto_goTypes,
+		DependencyIndexes: file_internal_proto_health_proto_depIdxs,
+		MessageInfos:      file_internal_proto_health_proto_msgTypes,
 	}.Build()
-	File_proto_health_proto = out.File
-	file_proto_health_proto_goTypes = nil
-	file_proto_health_proto_depIdxs = nil
+	File_internal_proto_health_proto = out.File
+	file_internal_proto_health_proto_goTypes = nil
+	file_internal_proto_health_proto_depIdxs = nil
 }

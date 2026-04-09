@@ -15,7 +15,6 @@ import (
 type JWTValidator struct {
 	JwksUrl   string
 	Algorithm jwt.SigningMethod
-	CacheTTL  time.Duration
 	Issuer    string
 }
 
@@ -24,7 +23,6 @@ func NewJWTValidator(cfg config.Config) *JWTValidator {
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
-		CacheTTL:  cfg.Oidc.CacheTTL,
 		Issuer:    cfg.Oidc.IssuerUrl,
 	}
 }

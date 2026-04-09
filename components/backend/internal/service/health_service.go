@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/swissdatasciencecenter/hackagon/components/backend/proto"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
 )
 
 type HealthService struct {

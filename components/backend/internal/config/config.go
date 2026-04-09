@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
@@ -22,10 +21,9 @@ type ServerConfig struct {
 }
 
 type OidcConfig struct {
-	JwksUrl   string        `yaml:"jwks_url"`
-	IssuerUrl string        `yaml:"issuer_url"`
-	Algorithm string        `yaml:"algorithm"`
-	CacheTTL  time.Duration `yaml:"cache_ttl"`
+	JwksUrl   string `yaml:"jwksurl"`
+	IssuerUrl string `yaml:"issuerurl"`
+	Algorithm string `yaml:"algorithm"`
 }
 
 func Load() (*Config, error) {
@@ -37,10 +35,9 @@ func Load() (*Config, error) {
 			"port": "3000",
 		},
 		"oidc": map[string]interface{}{
-			"jwks_url":   "http://localhost:8180/realms/hackagon/jwks",
-			"issuer_url": "http://localhost:8180/realms/hackagon/",
-			"algorithm":  "RS256",
-			"cache_ttl":  "3600s",
+			"jwksurl":   "http://localhost:8180/realms/hackagon/jwks",
+			"issuerurl": "http://localhost:8180/realms/hackagon/",
+			"algorithm": "RS256",
 		},
 	}
 	if err := k.Load(confmap.Provider(defaults, ""), nil); err != nil {

@@ -1,2 +1,6 @@
 server:
   port: "3000"
+oidc:
+  jwks_url: "http://localhost:8180/realms/hackagon/jwks"
+  issuer_url: "http://localhost:8180/realms/hackagon/"
+  algorithm: "RS256"

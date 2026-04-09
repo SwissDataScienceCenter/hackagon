@@ -9,13 +9,15 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
 	// Load configuration
+	fmt.Println("starting backend service")
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
@@ -30,6 +32,8 @@ func main() {
 
 	// Register health service
 	proto.RegisterHealthServer(server, healthService)
+
+	reflection.Register(server)
 
 	// Listen
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
