@@ -14,7 +14,7 @@ let
     attrset = import ./attrset.nix { inherit lib; };
   };
   build = import ./build { };
-  toolchain = import ./toolchain.nix { };
+  toolchain = import ./toolchain.nix { inherit lib; };
   shell = (import ./shell.nix) {
     inherit inputs lib;
   };

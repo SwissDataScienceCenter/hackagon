@@ -29,6 +29,10 @@ up *args:
         "$@" \
         "{{installable}}"
 
+# Attach to the process-compose TUI.
+attach:
+    just proc-comp attach
+
 # Stop processes.
 down *args:
     #!/usr/bin/env bash
@@ -36,7 +40,7 @@ down *args:
     sleep 1
     pkill -f "keycloak" 2>/dev/null || true
     sleep 1
-    kill $(lsof -ti :8080) 2>/dev/null || true
+    kill $(lsof -ti :8180) 2>/dev/null || true
     rm -rf "{{socket_file}}"
     echo "All processes stopped."
 
@@ -63,7 +67,7 @@ get-id-token user password:
 get-all-tokens user password:
     #!/usr/bin/env bash
     curl -s -X POST \
-      "http://localhost:8080/realms/hackagon/protocol/openid-connect/token" \
+      "http://localhost:8180/realms/hackagon/protocol/openid-connect/token" \
       -H "Content-Type: application/x-www-form-urlencoded" \
       -d client_id="hackagon-backend" \
       -d username="{{user}}" \

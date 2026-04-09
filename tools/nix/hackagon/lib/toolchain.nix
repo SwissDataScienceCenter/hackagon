@@ -1,4 +1,4 @@
-{ }:
+{ lib, ... }:
 let
   # Create Devenv modules where `pkgs` is the normal packages from `nixpkgs`,
   # and `pinnedPkgs` contains packages which are pinned.
@@ -11,6 +11,8 @@ let
   createDevenvModules =
     { pkgs, pkgsPinned }:
     let
+      createProcCompLog = service: ".output/run/process-compose/${service}-log";
+
       quitsh-direct-drv = pkgs.writeShellApplication {
         name = "quitsh-direct";
         text = ''
@@ -96,12 +98,17 @@ let
         }
       ];
 
-      test-services =
+      createTestingHackagon =
+      {
+        isCI,
+        withFrontend ? true,
+      }:
+      [
+        (
+          { config, ... }:
         let
           realm-file = "./tools/configs/keycloak/realm-hackagon.json";
-          createProcCompLog = service: ".output/run/process-compose/${service}-log";
         in
-        [
           {
             process.managers.process-compose = {
               package = pkgs.process-compose;
@@ -120,6 +127,35 @@ let
             processes = {
               keycloak.process-compose.log_location = createProcCompLog "keycloak";
 
+              frontend = lib.mkIf withFrontend {
+                exec =
+                  if !isCI then
+                    "just develop just serve"
+                  else
+                    "just develop just run";
+                process-compose = {
+                  log_location = createProcCompLog "frontend";
+                  working_dir = "components/frontend";
+                  depends_on = {
+                    keycloak = {
+                      condition = "process_healthy";
+                    };
+                  };
+                  availability = {
+                    restart = "on_failure";
+                  };
+                  readiness_probe = {
+                    exec = {
+                      command = "${pkgs.curl}/bin/curl http://localhost:8081";
+                    };
+                    initial_delay_seconds = 10;
+                    timeout_seconds = 5;
+                    success_threshold = 1;
+                    failure_threshold = 100;
+                  };
+                };
+              };
+
               keycloak-realm-export-all = {
                 process-compose = {
                   log_location = createProcCompLog "keycloak-realm-export-all";
@@ -135,7 +171,7 @@ let
                   mv "${realm-file}.mod" "${realm-file}"
                   ${pkgs.nodePackages_latest.prettier}/bin/prettier -w "${realm-file}"
                   echo "Restart keycloak..."
-                  ${pkgs.process-compose}/bin/process-compose \
+                  ${config.process.managers.process-compose.package}/bin/process-compose \
                     --unix-socket "$PC_SOCKET_PATH" process start keycloak
                 '';
                 process-compose = {
@@ -152,7 +188,8 @@ let
             services = {
               keycloak = {
                 enable = true;
-                settings.http-port = 8080;
+                settings.http-port = 8180;
+                settings.http-host = "0.0.0.0";
                 database.type = "dev-file";
                 realms = {
                   hackagon = {
@@ -164,7 +201,13 @@ let
               };
             };
           }
+        )
         ];
+
+      test-services = createTestingHackagon {
+        isCI = false;
+        withFrontend = true;
+      };
 
       lint-go = [
         {

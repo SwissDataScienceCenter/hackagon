@@ -101,6 +101,21 @@ update-deps *args:
 proc-comp *args:
     cd ./tools/deploy/process-compose && just proc-comp "$@"
 
+# Start all services (Keycloak etc.).
+[group('general')]
+up *args:
+    cd ./tools/deploy/process-compose && just up "$@"
+
+# Attach to the process-compose TUI.
+[group('general')]
+attach:
+    cd ./tools/deploy/process-compose && just attach
+
+# Stop all services.
+[group('general')]
+down *args:
+    cd ./tools/deploy/process-compose && just down "$@"
+
 # Setup development files (default done in `devShell`).
 [private]
 setup *args:
