@@ -3,6 +3,7 @@ module github.com/swissdatasciencecenter/hackagon/components/backend
 go 1.25
 
 require (
+	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/confmap v1.0.0
 	github.com/knadh/koanf/providers/env/v2 v2.0.0
@@ -12,7 +13,10 @@ require (
 	google.golang.org/protobuf v1.36.4
 )
 
+require github.com/golang-jwt/jwt/v4 v4.4.2
+
 require (
+	github.com/MicahParks/keyfunc v1.9.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect

@@ -11,11 +11,11 @@ A gRPC-based microservice for Hackagon.
 
 ```bash
 # Start the server
-PORT=8080 go run ./cmd/service/
+PORT=3000 go run ./cmd/service/
 
 # Test health check (with grpcurl)
-grpcurl -plaintext localhost:8080 list
-grpcurl -plaintext localhost:8080 hackathon.Health/Check '{"service": "backend"}'
+grpcurl -plaintext localhost:3000 list
+grpcurl -plaintext localhost:3000 hackathon.Health/Check '{"service": "backend"}'
 ```
 
 ## Development

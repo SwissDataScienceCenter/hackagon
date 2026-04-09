@@ -6,7 +6,9 @@ import (
 	"net"
 	"os"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/proto"
 	"google.golang.org/grpc"
@@ -23,7 +25,8 @@ func main() {
 	healthService := service.NewHealthService()
 
 	// Create gRPC server
-	server := grpc.NewServer()
+	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(*cfg))
+	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)))
 
 	// Register health service
 	proto.RegisterHealthServer(server, healthService)
