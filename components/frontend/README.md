@@ -42,7 +42,7 @@ cp data/test/config/secrets.yaml.example data/test/config/secrets.yaml
 Edit `data/test/config/secrets.yaml`:
 ```yaml
 oidc:
-  clientSecret: ""          # Empty for public clients
+  clientSecret: "$(openssl rand -base64 32)"
   authSecret: "$(openssl rand -base64 32)"
 ```
 

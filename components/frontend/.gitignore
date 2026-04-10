@@ -9,4 +9,3 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 data/test/config/secrets.yaml
-
