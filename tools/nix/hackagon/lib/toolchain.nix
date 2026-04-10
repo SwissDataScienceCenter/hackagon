@@ -394,8 +394,6 @@ let
                 pkgs.git
                 pkgs.just
                 pkgs.fd
-                pkgs.grpcurl
-                pkgs.postgresql_18
 
                 # Manifests
                 # added by manifest-ytt module.
@@ -413,6 +411,15 @@ let
 
                 # Changelog
                 pkgs.git-cliff
+
+                # Psql
+                pkgs.postgresql_18
+
+                # Grpc
+                pkgs.grpcurl
+                pkgs.protobuf
+                pkgs.protoc-gen-go
+                pkgs.protoc-gen-go-grpc
               ];
             }
           )

@@ -73,8 +73,34 @@ build *args:
 test *args:
     just quitsh test "$@"
 
+# Generate Go and gRPC code from proto files.
+[group('aux')]
+generate-proto *args:
+    #!/usr/bin/env bash
+    set -eu
+    PROTO_DIR="api/proto"
+    GO_OUT="components/backend/internal/proto"
 
-## Miscellaneous ==============================================================
+    for proto in "$PROTO_DIR"/*.proto; do
+        proto_file="$(basename "$proto")"
+        echo "Processing $proto_file..."
+
+        # Copy proto to backend internal directory
+        cp "$proto" "$GO_OUT/$proto_file"
+        echo "  ✓ Copied to $GO_OUT/$proto_file"
+
+        # Generate Go code
+        protoc \
+            --go_out="$GO_OUT" \
+            --go_opt=paths=source_relative \
+            --go-grpc_out="$GO_OUT" \
+            --go-grpc_opt=paths=source_relative \
+            --proto_path="components/backend/internal/proto" \
+            "$(basename "$proto")"
+        echo "  ✓ Generated Go code"
+    done
+    echo "All protos processed."
+
 # Update dependencies to `quitsh`.
 [group('aux')]
 update-deps *args:
