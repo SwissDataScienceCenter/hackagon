@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package user;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+service User {
+  rpc List(UserListRequest) returns (UserListResponse);
+}
+
+message UserListRequest {
+}
+
+message UserListResponse {
+    repeated UserEntry users = 1;
+}
+
+message UserEntry {
+    string name = 1;
+    string keycloak_id = 2;
+    google.protobuf.Timestamp created_at = 3;
+}
+
+

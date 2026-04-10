@@ -12,12 +12,20 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig `yaml:"server"`
-	Oidc   OidcConfig   `yaml:"oidc"`
+	Server ServerConfig   `yaml:"server"`
+	DB     DatabaseConfig `yaml:"database"`
+	Oidc   OidcConfig     `yaml:"oidc"`
 }
 
 type ServerConfig struct {
 	Port string `yaml:"port"`
+}
+type DatabaseConfig struct {
+	Host     string `yaml:"host"`
+	Port     int16  `yaml:"port"`
+	DbName   string `yaml:"dbname"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 type OidcConfig struct {
@@ -33,6 +41,12 @@ func Load() (*Config, error) {
 	defaults := map[string]interface{}{
 		"server": map[string]interface{}{
 			"port": "3000",
+		},
+		"database": map[string]interface{}{
+			"host":   "localhost",
+			"port":   5432,
+			"dbname": "hackagon",
+			"user":   "postgres",
 		},
 		"oidc": map[string]interface{}{
 			"jwksurl":   "http://localhost:8180/realms/hackagon/jwks",
