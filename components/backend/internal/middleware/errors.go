@@ -3,10 +3,11 @@ package middleware
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/golang-jwt/jwt/v4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strings"
 )
 
 type GrpcAuthErrors error

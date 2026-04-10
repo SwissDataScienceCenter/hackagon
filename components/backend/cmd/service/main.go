@@ -39,7 +39,9 @@ func main() {
 
 	// Create gRPC server
 	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(*cfg, skipAuth))
-	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)))
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)),
+	)
 
 	// Register health service
 	proto.RegisterHealthServer(server, healthService)

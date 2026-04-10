@@ -4,15 +4,16 @@ A hackathon management platform built with SvelteKit, Go/gRPC, and Keycloak.
 
 ## Overview
 
-| Component | Description |
-|-----------|-------------|
-| `components/frontend/` | SvelteKit frontend with Skeleton UI |
-| `components/backend/` | Go gRPC backend service |
-| `tools/configs/keycloak/` | Keycloak realm configuration |
+| Component                 | Description                         |
+| ------------------------- | ----------------------------------- |
+| `components/frontend/`    | SvelteKit frontend with Skeleton UI |
+| `components/backend/`     | Go gRPC backend service             |
+| `tools/configs/keycloak/` | Keycloak realm configuration        |
 
 ## Quick Start
 
 ### Prerequisites
+
 - Nix (for development environment)
 
 ### Development Setup

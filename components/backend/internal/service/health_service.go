@@ -18,7 +18,10 @@ func NewHealthService() *HealthService {
 	}
 }
 
-func (s *HealthService) Check(ctx context.Context, req *proto.HealthCheckRequest) (*proto.HealthCheckResponse, error) {
+func (s *HealthService) Check(
+	ctx context.Context,
+	req *proto.HealthCheckRequest,
+) (*proto.HealthCheckResponse, error) {
 	message := "Service is healthy"
 
 	return &proto.HealthCheckResponse{
