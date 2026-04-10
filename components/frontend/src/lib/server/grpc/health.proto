@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package health;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+service Health {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {
+}
+
+message HealthCheckResponse {
+  string message = 2;
+}
+
