@@ -103,6 +103,7 @@ let
         isCI,
         withFrontend ? true,
         withBackend ? true,
+        withPostgres ? true,
       }:
       [
         (
@@ -209,7 +210,7 @@ let
                   };
                 };
               };
-              };
+            };
 
             services = {
               keycloak = {
@@ -228,12 +229,33 @@ let
             };
           }
         )
-        ];
+
+        (lib.optionalAttrs withPostgres {
+          processes = {
+            postgres.process-compose.log_location = createProcCompLog "postgres";
+          };
+          services = {
+            postgres = {
+              enable = true;
+              package = pkgs.postgresql_18;
+              port = 5432;
+              listen_addresses = "127.0.0.1";
+              initialDatabases = [
+                { name = "hackagon"; user = "postgres"; pass = "postgres"; }
+              ];
+              initialScript = ''
+                ALTER ROLE postgres CREATEDB;
+              '';
+            };
+          };
+        })
+      ];
 
       test-services = createTestingHackagon {
         isCI = false;
         withFrontend = true;
         withBackend = true;
+        withPostgres = true;
       };
 
       lint-go = [
@@ -373,6 +395,7 @@ let
                 pkgs.just
                 pkgs.fd
                 pkgs.grpcurl
+                pkgs.postgresql_18
 
                 # Manifests
                 # added by manifest-ytt module.
