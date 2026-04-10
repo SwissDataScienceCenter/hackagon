@@ -41,6 +41,7 @@ down *args:
     pkill -f "keycloak" 2>/dev/null || true
     sleep 1
     kill $(lsof -ti :8180) 2>/dev/null || true
+    kill $(lsof -ti :3000) 2>/dev/null || true
     rm -rf "{{socket_file}}"
     echo "All processes stopped."
 

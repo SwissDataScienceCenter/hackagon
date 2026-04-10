@@ -34,4 +34,5 @@ just attach
 ## Component READMEs
 
 - [Frontend](components/frontend/README.md)
+- [Backend](components/backend/README.md)
 - [Keycloak](tools/configs/keycloak/README.md)

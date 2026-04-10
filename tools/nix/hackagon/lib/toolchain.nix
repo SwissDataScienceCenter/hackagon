@@ -102,6 +102,7 @@ let
       {
         isCI,
         withFrontend ? true,
+        withBackend ? true,
       }:
       [
         (
@@ -126,6 +127,31 @@ let
 
             processes = {
               keycloak.process-compose.log_location = createProcCompLog "keycloak";
+
+              backend = lib.mkIf withBackend {
+                exec = "just develop just run";
+                process-compose = {
+                  log_location = createProcCompLog "backend";
+                  working_dir = "components/backend";
+                  depends_on = {
+                    keycloak = {
+                      condition = "process_healthy";
+                    };
+                  };
+                  availability = {
+                    restart = "on_failure";
+                  };
+                  readiness_probe = {
+                    exec = {
+                      command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 health.Health/Check";
+                    };
+                    initial_delay_seconds = 10;
+                    timeout_seconds = 5;
+                    success_threshold = 1;
+                    failure_threshold = 50;
+                  };
+                };
+              };
 
               frontend = lib.mkIf withFrontend {
                 exec =
@@ -207,6 +233,7 @@ let
       test-services = createTestingHackagon {
         isCI = false;
         withFrontend = true;
+        withBackend = true;
       };
 
       lint-go = [
@@ -345,6 +372,7 @@ let
                 pkgs.git
                 pkgs.just
                 pkgs.fd
+                pkgs.grpcurl
 
                 # Manifests
                 # added by manifest-ytt module.
@@ -368,6 +396,7 @@ let
         ];
 
       frontend = ci ++ build-node-pnpm ++ quitsh-direct;
+      backend = ci ++ build-go ++ dev-go ++ quitsh-direct;
 
       ci = [
         {
@@ -392,6 +421,7 @@ let
       # Main shells:
       default = addSetup default;
       frontend = addSetup frontend;
+      backend = addSetup backend;
       ci = addSetup ci;
 
       # Toolchains:

@@ -1,7 +1,59 @@
 set positional-arguments
 set shell := ["bash", "-cue"]
 set fallback := true
+
+root_dir := `git rev-parse --show-toplevel`
 comp_dir := justfile_directory()
+flake_dir := root_dir / "tools/nix"
+output_dir := comp_dir / ".output"
+build_dir := output_dir / "build"
+container_mgr := "podman"
+env := "development"
+build_type := "debug"
 
 default:
     just --list --unsorted
+
+# Lint the project.
+[group('general')]
+lint *args:
+    just quitsh lint --component-dir "$(pwd)" "$@"
+
+# Build the project.
+# Pass build args with `-K 'build.args: ["--tags "debug,development,auth_disable"]`
+[group('general')]
+build *args:
+    just quitsh build --component-dir "$(pwd)" "$@"
+
+# Test the project.
+[group('general')]
+test *args:
+    just quitsh test --component-dir "$(pwd)" "$@"
+
+# Run an executable.
+[group('general')]
+run  *args:
+    #!/usr/bin/env bash
+    set -eu
+    just build --global-output=false \
+        --env-type "{{env}}" \
+        --build-type "{{build_type}}" \
+        "$@"
+
+    just run-service .output/build/bin/service
+
+# Run the Nix build.
+[group('general')]
+run-nix *args:
+    # Stage everything to be current.
+    git -C "{{root_dir}}" add .
+    just nix::package backend-service-dev
+    just run-service "{{root_dir}}/.output/package/backend-service-dev/bin/backend"
+
+# Run the executable `service`.
+[group('ci')]
+run-service service:
+    "{{service}}" \
+        --config-dir data/test/config \
+        --data-dir data/test
+
