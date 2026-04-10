@@ -99,157 +99,157 @@ let
       ];
 
       createTestingHackagon =
-      {
-        isCI,
-        withFrontend ? true,
-        withBackend ? true,
-        withPostgres ? true,
-      }:
-      [
-        (
-          { config, ... }:
-        let
-          realm-file = "./tools/configs/keycloak/realm-hackagon.json";
-        in
-          {
-            process.managers.process-compose = {
-              package = pkgs.process-compose;
-              settings = {
-                log_level = "info";
-                log_location = ".output/run/process-compose/log";
-                log_configuration = {
-                  no_metadata = false;
-                  flush_each_line = true;
-                  add_timestamp = true;
-                  disable_json = true;
+        {
+          isCI,
+          withFrontend ? true,
+          withBackend ? true,
+          withPostgres ? true,
+        }:
+        [
+          (
+            { config, ... }:
+            let
+              realm-file = "./tools/configs/keycloak/realm-hackagon.json";
+            in
+            {
+              process.managers.process-compose = {
+                package = pkgs.process-compose;
+                settings = {
+                  log_level = "info";
+                  log_location = ".output/run/process-compose/log";
+                  log_configuration = {
+                    no_metadata = false;
+                    flush_each_line = true;
+                    add_timestamp = true;
+                    disable_json = true;
+                  };
                 };
               };
-            };
 
+              processes = {
+                keycloak.process-compose.log_location = createProcCompLog "keycloak";
+
+                backend = lib.mkIf withBackend {
+                  exec = "just develop just run";
+                  process-compose = {
+                    log_location = createProcCompLog "backend";
+                    working_dir = "components/backend";
+                    depends_on = {
+                      keycloak = {
+                        condition = "process_healthy";
+                      };
+                    };
+                    availability = {
+                      restart = "on_failure";
+                    };
+                    readiness_probe = {
+                      exec = {
+                        command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 health.Health/Check";
+                      };
+                      initial_delay_seconds = 10;
+                      timeout_seconds = 5;
+                      success_threshold = 1;
+                      failure_threshold = 50;
+                    };
+                  };
+                };
+
+                frontend = lib.mkIf withFrontend {
+                  exec = if !isCI then "just develop just serve" else "just develop just run";
+                  process-compose = {
+                    log_location = createProcCompLog "frontend";
+                    working_dir = "components/frontend";
+                    depends_on = {
+                      keycloak = {
+                        condition = "process_healthy";
+                      };
+                    };
+                    availability = {
+                      restart = "on_failure";
+                    };
+                    readiness_probe = {
+                      exec = {
+                        command = "${pkgs.curl}/bin/curl http://localhost:8081";
+                      };
+                      initial_delay_seconds = 10;
+                      timeout_seconds = 5;
+                      success_threshold = 1;
+                      failure_threshold = 100;
+                    };
+                  };
+                };
+
+                keycloak-realm-export-all = {
+                  process-compose = {
+                    log_location = createProcCompLog "keycloak-realm-export-all";
+                    disabled = true;
+                  };
+                };
+
+                format-realm-export = {
+                  exec = ''
+                    set -eu
+                    echo "Formatting realm export ..."
+                    ${pkgs.jq}/bin/jq --sort-keys . "${realm-file}" > "${realm-file}.mod"
+                    mv "${realm-file}.mod" "${realm-file}"
+                    ${pkgs.nodePackages_latest.prettier}/bin/prettier -w "${realm-file}"
+                    echo "Restart keycloak..."
+                    ${config.process.managers.process-compose.package}/bin/process-compose \
+                      --unix-socket "$PC_SOCKET_PATH" process start keycloak
+                  '';
+                  process-compose = {
+                    disabled = true;
+                    depends_on = {
+                      keycloak-realm-export-all = {
+                        condition = "process_completed_successfully";
+                      };
+                    };
+                  };
+                };
+              };
+
+              services = {
+                keycloak = {
+                  enable = true;
+                  settings.http-port = 8180;
+                  settings.http-host = "0.0.0.0";
+                  database.type = "dev-file";
+                  realms = {
+                    hackagon = {
+                      path = "${realm-file}";
+                      export = true;
+                      import = true;
+                    };
+                  };
+                };
+              };
+            }
+          )
+
+          (lib.optionalAttrs withPostgres {
             processes = {
-              keycloak.process-compose.log_location = createProcCompLog "keycloak";
-
-              backend = lib.mkIf withBackend {
-                exec = "just develop just run";
-                process-compose = {
-                  log_location = createProcCompLog "backend";
-                  working_dir = "components/backend";
-                  depends_on = {
-                    keycloak = {
-                      condition = "process_healthy";
-                    };
-                  };
-                  availability = {
-                    restart = "on_failure";
-                  };
-                  readiness_probe = {
-                    exec = {
-                      command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 health.Health/Check";
-                    };
-                    initial_delay_seconds = 10;
-                    timeout_seconds = 5;
-                    success_threshold = 1;
-                    failure_threshold = 50;
-                  };
-                };
-              };
-
-              frontend = lib.mkIf withFrontend {
-                exec =
-                  if !isCI then
-                    "just develop just serve"
-                  else
-                    "just develop just run";
-                process-compose = {
-                  log_location = createProcCompLog "frontend";
-                  working_dir = "components/frontend";
-                  depends_on = {
-                    keycloak = {
-                      condition = "process_healthy";
-                    };
-                  };
-                  availability = {
-                    restart = "on_failure";
-                  };
-                  readiness_probe = {
-                    exec = {
-                      command = "${pkgs.curl}/bin/curl http://localhost:8081";
-                    };
-                    initial_delay_seconds = 10;
-                    timeout_seconds = 5;
-                    success_threshold = 1;
-                    failure_threshold = 100;
-                  };
-                };
-              };
-
-              keycloak-realm-export-all = {
-                process-compose = {
-                  log_location = createProcCompLog "keycloak-realm-export-all";
-                  disabled = true;
-                };
-              };
-
-              format-realm-export = {
-                exec = ''
-                  set -eu
-                  echo "Formatting realm export ..."
-                  ${pkgs.jq}/bin/jq --sort-keys . "${realm-file}" > "${realm-file}.mod"
-                  mv "${realm-file}.mod" "${realm-file}"
-                  ${pkgs.nodePackages_latest.prettier}/bin/prettier -w "${realm-file}"
-                  echo "Restart keycloak..."
-                  ${config.process.managers.process-compose.package}/bin/process-compose \
-                    --unix-socket "$PC_SOCKET_PATH" process start keycloak
-                '';
-                process-compose = {
-                  disabled = true;
-                  depends_on = {
-                    keycloak-realm-export-all = {
-                      condition = "process_completed_successfully";
-                    };
-                  };
-                };
-              };
+              postgres.process-compose.log_location = createProcCompLog "postgres";
             };
-
             services = {
-              keycloak = {
+              postgres = {
                 enable = true;
-                settings.http-port = 8180;
-                settings.http-host = "0.0.0.0";
-                database.type = "dev-file";
-                realms = {
-                  hackagon = {
-                    path = "${realm-file}";
-                    export = true;
-                    import = true;
-                  };
-                };
+                package = pkgs.postgresql_18;
+                port = 5432;
+                listen_addresses = "127.0.0.1";
+                initialDatabases = [
+                  {
+                    name = "hackagon";
+                    user = "postgres";
+                    pass = "postgres";
+                  }
+                ];
+                initialScript = ''
+                  ALTER ROLE postgres CREATEDB;
+                '';
               };
             };
-          }
-        )
-
-        (lib.optionalAttrs withPostgres {
-          processes = {
-            postgres.process-compose.log_location = createProcCompLog "postgres";
-          };
-          services = {
-            postgres = {
-              enable = true;
-              package = pkgs.postgresql_18;
-              port = 5432;
-              listen_addresses = "127.0.0.1";
-              initialDatabases = [
-                { name = "hackagon"; user = "postgres"; pass = "postgres"; }
-              ];
-              initialScript = ''
-                ALTER ROLE postgres CREATEDB;
-              '';
-            };
-          };
-        })
-      ];
+          })
+        ];
 
       test-services = createTestingHackagon {
         isCI = false;

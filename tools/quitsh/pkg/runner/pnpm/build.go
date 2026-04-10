@@ -1,10 +1,11 @@
 package nodepnpmrunner
 
 import (
-	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/exec/pnpm"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/swissdatasciencecenter/hackagon/tools/quitsh/pkg/exec/pnpm"
 
 	"github.com/sdsc-ordes/quitsh/pkg/common"
 	"github.com/sdsc-ordes/quitsh/pkg/debug"
