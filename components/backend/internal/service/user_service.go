@@ -3,21 +3,19 @@ package service
 import (
 	"context"
 
-	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserService struct {
 	proto.UnimplementedUserServer
-	connStr string
+	dbClient *ent.Client
 }
 
-func NewUserService(cfg *config.Config) *UserService {
+func NewUserService(dbClient *ent.Client) *UserService {
 	return &UserService{
-		connStr: cfg.ConnectionStr(),
+		dbClient: dbClient,
 	}
 }
 
@@ -25,17 +23,8 @@ func (s *UserService) List(
 	ctx context.Context,
 	req *proto.UserListRequest,
 ) (*proto.UserListResponse, error) {
-	client, err := ent.Open(
-		"postgres",
-		s.connStr,
-	)
-	if err != nil {
-		return nil, err
-	}
 
-	defer client.Close()
-
-	users, err := client.User.Query().All(ctx)
+	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
 		return nil, err
 	}

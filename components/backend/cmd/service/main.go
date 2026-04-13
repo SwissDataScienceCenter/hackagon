@@ -38,10 +38,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	// migrate database
+	dbClient, err := ent.Open(
+		"postgres",
+		cfg.ConnectionStr(),
+	)
+	if err != nil {
+		log.Fatalf("failed to open database: %v", err)
+	}
+
+	defer dbClient.Close()
+	if err := dbClient.Schema.Create(context.Background()); err != nil {
+		log.Fatalf("failed creating schema resources: %v", err)
+	}
 
 	// Create services
 	healthService := service.NewHealthService()
-	userService := service.NewUserService(cfg)
+	userService := service.NewUserService(dbClient)
 
 	// Create gRPC server
 	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(*cfg, skipAuth))
@@ -54,20 +67,6 @@ func main() {
 	proto.RegisterUserServer(server, userService)
 
 	reflection.Register(server)
-
-	// migrate database
-	client, err := ent.Open(
-		"postgres",
-		cfg.ConnectionStr(),
-	)
-	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
-	}
-
-	defer client.Close()
-	if err := client.Schema.Create(context.Background()); err != nil {
-		log.Fatalf("failed creating schema resources: %v", err)
-	}
 
 	// Listen
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
