@@ -2,15 +2,10 @@ import { describe, it, expect } from "vitest"
 import { isProtectedRoute } from "./hooks.server"
 
 describe("isProtectedRoute", () => {
-  it("should protect /api/ routes by default", () => {
-    expect(isProtectedRoute("/api/user")).toBe(true)
-    expect(isProtectedRoute("/api/user/123")).toBe(true)
-    expect(isProtectedRoute("/api/some-future-route")).toBe(true)
-  })
-
-  it("should exempt /api/health from protection", () => {
-    expect(isProtectedRoute("/api/health")).toBe(false)
-    expect(isProtectedRoute("/api/health/")).toBe(false)
+  it("should protect /users routes", () => {
+    expect(isProtectedRoute("/users")).toBe(true)
+    expect(isProtectedRoute("/users/")).toBe(true)
+    expect(isProtectedRoute("/users/123")).toBe(true)
   })
 
   it("should protect /welcome", () => {
