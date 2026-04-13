@@ -25,3 +25,6 @@ result
 .env
 .env.yaml
 ## ============================================================================
+
+# Generated files
+components/backend/internal/proto
