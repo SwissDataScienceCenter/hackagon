@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/MicahParks/keyfunc"
@@ -46,13 +47,13 @@ func extractToken(ctx context.Context) (string, error) {
 	var token string
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return token, ErrMissingKey
+		return "", ErrMissingKey
 	}
 	authMetaData := md.Get(authHeader)
 	if len(authMetaData) == 0 {
 		return "", ErrMissingKey
 	} else {
-		token = authMetaData[0]
+		token = strings.TrimPrefix(authMetaData[0], "Bearer ")
 	}
 	if token == "" {
 		return token, ErrMissingKey

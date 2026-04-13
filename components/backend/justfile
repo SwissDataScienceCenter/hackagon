@@ -54,6 +54,5 @@ run-nix *args:
 [group('ci')]
 run-service service:
     "{{service}}" \
-        --config-dir data/test/config \
-        --data-dir data/test
+        --config-dir ./data/test/config/
 
