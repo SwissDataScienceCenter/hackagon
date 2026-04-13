@@ -15,7 +15,7 @@ type UserService struct {
 	db_cfg config.DatabaseConfig
 }
 
-func NewUserService(cfg config.Config) *UserService {
+func NewUserService(cfg *config.Config) *UserService {
 	return &UserService{
 		db_cfg: cfg.DB,
 	}
@@ -25,7 +25,17 @@ func (s *UserService) List(
 	ctx context.Context,
 	req *proto.UserListRequest,
 ) (*proto.UserListResponse, error) {
-	client, err := ent.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s", s.db_cfg.Host, s.db_cfg.Port, s.db_cfg.User, s.db_cfg.DbName, s.db_cfg.Password))
+	client, err := ent.Open(
+		"postgres",
+		fmt.Sprintf(
+			"host=%s port=%s user=%s dbname=%s password=%s",
+			s.db_cfg.Host,
+			s.db_cfg.Port,
+			s.db_cfg.User,
+			s.db_cfg.DbName,
+			s.db_cfg.Password,
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
