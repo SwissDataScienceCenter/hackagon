@@ -1,5 +1,5 @@
 ---
-description: Workflow and architecture for frontend API routes and testing
+description: Workflow and architecture for frontend data loading and testing
 globs: components/frontend/**/*.ts,components/frontend/**/*.svelte
 alwaysApply: false
 ---
@@ -8,36 +8,41 @@ alwaysApply: false
 
 Every change under `components/frontend/` must follow this workflow.
 
+## Data Loading Pattern
+
+Use `+page.server.ts` load functions for all data loading. Do NOT create `+server.ts` API routes -- this frontend does not expose a public API.
+
+Call gRPC directly in load functions via `callGrpc` from `$lib/server/grpc/call`:
+
+```typescript
+import { callGrpc } from "$lib/server/grpc/call"
+import { someClient } from "$lib/server/grpc/client"
+
+export const load: PageServerLoad = async () => {
+  const result = await callGrpc<ResponseType>(cb => someClient.method({}, cb))
+  return { data: result }
+}
+```
+
 ## Adding a New gRPC Service
 
 1. Add the client to `src/lib/server/grpc/client.ts` (one line using shared `address` and `credentials`).
 2. Create a gRPC contract test in `src/lib/server/grpc/<service>.test.ts` following the pattern in `health.test.ts`.
 
-## Adding a New API Route
+## Route Groups
 
-Use the shared utilities from `src/lib/server/grpc/call.ts`:
+- `(participant)` -- user-facing pages (e.g. `/welcome`)
+- `(admin)` -- admin pages (e.g. `/users`)
 
-```typescript
-import { apiHandler, callGrpc } from "$lib/server/grpc/call"
-
-export const GET = apiHandler(async () => {
-  const result = await callGrpc<ResponseType>(cb => client.method({}, cb))
-  return json(result)
-})
-```
-
-- `callGrpc` promisifies any gRPC unary call.
-- `apiHandler` wraps the route with try/catch that maps gRPC status codes to HTTP status codes.
-- Simple pass-through routes do NOT need per-route tests. The infrastructure is tested in `call.test.ts`.
-- Routes with non-trivial logic (input validation, response transformation, authorization) DO need feature-specific tests.
+Each group has a `+layout.server.ts` that loads the session. Pages within each group use `+page.server.ts` load functions to fetch data.
 
 ## Authentication
 
-All `/api/` routes are protected by default via `guardHandle` in `hooks.server.ts`. Unauthenticated API requests receive a `401` JSON response (not a redirect).
+Protected routes are listed in `PROTECTED_ROUTE_PATTERNS` in `hooks.server.ts`. Add new protected routes there. The `guardHandle` hook redirects unauthenticated users to the login page.
 
-To exempt a route (e.g. health checks), add it to `PUBLIC_ROUTE_PATTERNS` in `hooks.server.ts`.
+## Startup Health Check
 
-Never add per-route auth checks -- rely on the centralized hook guard.
+The backend health check runs at server startup in `hooks.server.ts` `init()`. It logs success or failure but does not crash the frontend if the backend is unavailable.
 
 ## Verification
 
