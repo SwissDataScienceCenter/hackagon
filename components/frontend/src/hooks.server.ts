@@ -16,16 +16,17 @@ import type { Logger } from "pino"
 let configLoader: ConfigLoader
 
 // --- CONSTANTS ---
-const PROTECTED_ROUTE_PATTERNS = [/^\/welcome($|\/)/]
+const PROTECTED_ROUTE_PATTERNS = [/^\/welcome($|\/)/, /^\/api\//]
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
   /^\/error($|\/)/,
+  /^\/api\/health($|\/)/,
 ]
 
-function isProtectedRoute(pathname: string): boolean {
+export function isProtectedRoute(pathname: string): boolean {
   if (PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))) return false
   return PROTECTED_ROUTE_PATTERNS.some((p) => p.test(pathname))
 }
@@ -133,12 +134,13 @@ const redirectHandle: Handle = async ({ event, resolve }) => {
 
 // If the route is protected, ensure the user is logged in.
 const guardHandle: Handle = async ({ event, resolve }) => {
-  // Only run the security check if the route is protected
   if (isProtectedRoute(event.url.pathname)) {
     const session = await event.locals.auth()
 
     if (!hasLoggedInUserContext(session)) {
-      // Note: This likely throws a redirect internally
+      if (event.url.pathname.startsWith("/api/")) {
+        throw error(401, "Unauthorized")
+      }
       redirectToLogin(event.url, event.locals.logger, "No user found")
     }
   }
