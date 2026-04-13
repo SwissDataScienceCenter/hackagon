@@ -22,7 +22,7 @@ This document guides AI agents and contributors building the **participant-facin
 | Framework | **Svelte 5** | Runes (`$state`, `$derived`, `$props`, etc.), Snippets, modern event handling. |
 | App shell | **SvelteKit** | File-based routing, server load/actions, `hooks.server.ts`. |
 | Styling | **Tailwind CSS v4** | Use the Vite plugin pipeline; utility-first with design tokens from Skeleton. |
-| Components & theme | **Skeleton** (`@skeletonlabs/skeleton`, `@skeletonlabs/skeleton-svelte`) | Use primitives and patterns from Skeleton; global theme imports live in `components/frontend/src/app.css` (e.g. Cerberus preset). |
+| Components & theme | **Skeleton** (`@skeletonlabs/skeleton`, `@skeletonlabs/skeleton-svelte`) | Use primitives and patterns from Skeleton; theme tokens live in `components/frontend/src/themes/hackathonsdsc.css`, imported from `app.css`; `<html data-theme="Hackathonsdsc">` in `app.html`. |
 | Icons | **lucide-svelte** | Already in the frontend package; match stroke/size to Skeleton scale. |
 | Validation | **Zod** | Shared schemas for config and, where useful, API-shaped data at boundaries. |
 | Auth | **Auth.js for SvelteKit** | Session and OIDC flows; see `components/frontend/src/auth.ts` and hooks. |
