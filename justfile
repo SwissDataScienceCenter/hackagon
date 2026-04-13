@@ -73,15 +73,17 @@ build *args:
 test *args:
     just quitsh test "$@"
 
-# Generate Go and gRPC code from proto files.
+# Generate Go and gRPC code from proto files for backend and frontend.
 [group('aux')]
 generate-proto *args:
     #!/usr/bin/env bash
     set -eu
     PROTO_DIR="api/proto"
     GO_OUT="components/backend/internal/proto"
+    FE_OUT="components/frontend/src/lib/server/grpc"
 
     mkdir -p "$GO_OUT"
+    mkdir -p "$FE_OUT"
 
     for proto in "$PROTO_DIR"/*.proto; do
         proto_file="$(basename "$proto")"
@@ -89,7 +91,7 @@ generate-proto *args:
 
         # Copy proto to backend internal directory
         cp "$proto" "$GO_OUT/$proto_file"
-        echo "  ✓ Copied to $GO_OUT/$proto_file"
+        echo "  - Copied to $GO_OUT/$proto_file"
 
         # Generate Go code
         protoc \
@@ -99,7 +101,11 @@ generate-proto *args:
             --go-grpc_opt=paths=source_relative \
             --proto_path="components/backend/internal/proto" \
             "$(basename "$proto")"
-        echo "  ✓ Generated Go code"
+        echo "  - Generated Go code"
+
+        # Copy proto to frontend internal directory
+        cp "$proto" "$FE_OUT/$proto_file"
+        echo "  - Copied to $FE_OUT/$proto_file"
     done
     echo "All protos processed."
 
