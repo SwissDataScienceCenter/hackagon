@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
 
@@ -23,5 +25,10 @@ func (User) Fields() []ent.Field {
 
 // Edges of the User.
 func (User) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("created_hackathons", Hackathon.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("modified_hackathons", Hackathon.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+	}
 }
