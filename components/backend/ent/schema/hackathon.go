@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 )
@@ -24,7 +25,6 @@ func (Hackathon) Fields() []ent.Field {
 			Immutable().
 			Default(time.Now),
 		field.Time("modified_at").
-			Immutable().
 			Default(time.Now),
 		field.Enum("visibility").
 			Values("public", "private"),
@@ -32,6 +32,7 @@ func (Hackathon) Fields() []ent.Field {
 		field.String("logo").
 			Optional(),
 		field.String("created_by").
+			Immutable().
 			NotEmpty(),
 		field.String("modified_by").
 			NotEmpty(),
@@ -40,7 +41,10 @@ func (Hackathon) Fields() []ent.Field {
 
 // Edges of the Hackathon.
 func (Hackathon) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("tracks", Track.Type),
+		edge.To("projects", Project.Type),
+	}
 }
 
 // Indexes of the Hackathon.
@@ -54,5 +58,3 @@ func (Hackathon) Indexes() []ent.Index {
 		index.Fields("modified_by"),
 	}
 }
-
-
