@@ -81,6 +81,8 @@ generate-proto *args:
     PROTO_DIR="api/proto"
     GO_OUT="components/backend/internal/proto"
 
+    mkdir -p "$GO_OUT"
+
     for proto in "$PROTO_DIR"/*.proto; do
         proto_file="$(basename "$proto")"
         echo "Processing $proto_file..."
