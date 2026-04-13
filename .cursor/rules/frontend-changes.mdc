@@ -1,0 +1,52 @@
+---
+description: Workflow and architecture for frontend API routes and testing
+globs: components/frontend/**/*.ts,components/frontend/**/*.svelte
+alwaysApply: false
+---
+
+# Frontend Change Workflow
+
+Every change under `components/frontend/` must follow this workflow.
+
+## Adding a New gRPC Service
+
+1. Add the client to `src/lib/server/grpc/client.ts` (one line using shared `address` and `credentials`).
+2. Create a gRPC contract test in `src/lib/server/grpc/<service>.test.ts` following the pattern in `health.test.ts`.
+
+## Adding a New API Route
+
+Use the shared utilities from `src/lib/server/grpc/call.ts`:
+
+```typescript
+import { apiHandler, callGrpc } from "$lib/server/grpc/call"
+
+export const GET = apiHandler(async () => {
+  const result = await callGrpc<ResponseType>(cb => client.method({}, cb))
+  return json(result)
+})
+```
+
+- `callGrpc` promisifies any gRPC unary call.
+- `apiHandler` wraps the route with try/catch that maps gRPC status codes to HTTP status codes.
+- Simple pass-through routes do NOT need per-route tests. The infrastructure is tested in `call.test.ts`.
+- Routes with non-trivial logic (input validation, response transformation, authorization) DO need feature-specific tests.
+
+## Authentication
+
+All `/api/` routes are protected by default via `guardHandle` in `hooks.server.ts`. Unauthenticated API requests receive a `401` JSON response (not a redirect).
+
+To exempt a route (e.g. health checks), add it to `PUBLIC_ROUTE_PATTERNS` in `hooks.server.ts`.
+
+Never add per-route auth checks -- rely on the centralized hook guard.
+
+## Verification
+
+From `components/frontend/`, always run in order:
+
+```bash
+TEST_CONFIG_DIR=data/test/config pnpm vitest run
+pnpm format
+pnpm lint
+```
+
+Fix any failures before proceeding to the next step.
