@@ -54,6 +54,9 @@ export const getAuthOptions = (
             { userId: profile.sub },
             "JWT Callback: Initial sign-in successful.",
           )
+          // NOTE: Roles are NOT extracted from the Keycloak token. They are
+          // context-dependent (e.g. admin on Hackathon A, participant on B)
+          // and will be resolved via the backend user database per request.
           return {
             ...token, // Preserve basic JWT fields (sub, iat, etc.)
             accessToken: account.access_token,
@@ -64,16 +67,19 @@ export const getAuthOptions = (
           }
         }
 
-        // Subsequent Requests: Token is still valid?
-        // Compare expiry (seconds) with current time (seconds)
-        // FIXME: Divide is crude here. Use a proper conversion to 1000
-        if (Date.now() / 1000 < (token.expiresAt ?? 0)) {
+        // Subsequent Requests: Refresh proactively before expiry so downstream
+        // calls (gRPC etc.) don't race against a token that expires mid-flight.
+        const REFRESH_BUFFER_SECONDS = 30
+        const nowSeconds = Math.floor(Date.now() / 1000)
+        if (nowSeconds < (token.expiresAt ?? 0) - REFRESH_BUFFER_SECONDS) {
           logger.debug("JWT Callback: Token is still valid.")
           return token
         }
 
-        // Token Expired: Attempt Refresh
-        logger.info("JWT Callback: Token expired, attempting refresh...")
+        // Token expired or about to expire: Attempt Refresh
+        logger.info(
+          "JWT Callback: Token expired or expiring soon, attempting refresh...",
+        )
         if (!token.refreshToken) {
           logger.error("JWT Callback: Refresh token request failed.")
           token.error = "RefreshTokenError"
@@ -113,11 +119,8 @@ export const getAuthOptions = (
             ...token, // Keep existing info like userId, organization, etc.
             accessToken: refreshedTokens.access_token,
             idToken: refreshedTokens.id_token, // Keycloak often sends updated id_token
-            // Calculate new expiry (seconds)
-            // FIXME: Divide is crude here. Use a proper conversion to 1000
-            expiresAt: Math.floor(
-              Date.now() / 1000 + refreshedTokens.expires_in,
-            ),
+            expiresAt:
+              Math.floor(Date.now() / 1000) + refreshedTokens.expires_in,
 
             // Keycloak might rotate refresh tokens, update if provided
             refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
@@ -139,6 +142,7 @@ export const getAuthOptions = (
         const session = params.session as CustomSession
         const customToken = params.token as CustomJWT
 
+        session.accessToken = customToken.accessToken
         session.error = customToken.error
 
         if (session.user) {

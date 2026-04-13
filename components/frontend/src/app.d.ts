@@ -2,20 +2,17 @@
 // for information about these interfaces
 import type { Logger } from "pino"
 import type { AppConfig } from "$lib/server/settings"
-import type { AuthClient } from "$lib/api/client"
+import type { AuthorizedGrpc } from "$lib/server/grpc/client"
+import type { Session } from "@auth/core/types"
 
 declare global {
   namespace App {
     // interface Error {}
     export interface Locals {
       config: AppConfig
-      user?: {
-        id: string
-        username: string
-        roles: string[]
-      }
+      session?: Omit<Session, "accessToken">
       logger: Logger
-      authClient: AuthClient
+      grpc?: AuthorizedGrpc
     }
     // interface PageData {}
     // interface PageState {}
