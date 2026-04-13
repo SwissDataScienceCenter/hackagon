@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"fmt"
 
+	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
@@ -12,12 +12,12 @@ import (
 
 type UserService struct {
 	proto.UnimplementedUserServer
-	db_cfg config.DatabaseConfig
+	connStr string
 }
 
 func NewUserService(cfg *config.Config) *UserService {
 	return &UserService{
-		db_cfg: cfg.DB,
+		connStr: cfg.ConnectionStr(),
 	}
 }
 
@@ -27,14 +27,7 @@ func (s *UserService) List(
 ) (*proto.UserListResponse, error) {
 	client, err := ent.Open(
 		"postgres",
-		fmt.Sprintf(
-			"host=%s port=%s user=%s dbname=%s password=%s",
-			s.db_cfg.Host,
-			s.db_cfg.Port,
-			s.db_cfg.User,
-			s.db_cfg.DbName,
-			s.db_cfg.Password,
-		),
+		s.connStr,
 	)
 	if err != nil {
 		return nil, err

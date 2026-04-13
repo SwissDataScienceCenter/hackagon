@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"log"
+	"path"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
@@ -12,9 +14,9 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig   `yaml:"server"`
-	DB     DatabaseConfig `yaml:"database"`
-	Oidc   OidcConfig     `yaml:"oidc"`
+	Server   ServerConfig   `yaml:"server"`
+	Database DatabaseConfig `yaml:"database"`
+	Oidc     OidcConfig     `yaml:"oidc"`
 }
 
 type ServerConfig struct {
@@ -34,7 +36,18 @@ type OidcConfig struct {
 	Algorithm string `yaml:"algorithm"`
 }
 
-func Load() (*Config, error) {
+func (c *Config) ConnectionStr() string {
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
+		c.Database.Host,
+		c.Database.Port,
+		c.Database.User,
+		c.Database.DbName,
+		c.Database.Password,
+	)
+}
+
+func Load(configDir string) (*Config, error) {
 	k := koanf.New(".")
 
 	// Load defaults from hardcoded confmap provider
@@ -49,8 +62,8 @@ func Load() (*Config, error) {
 			"user":   "postgres",
 		},
 		"oidc": map[string]interface{}{
-			"jwksurl":   "http://localhost:8180/realms/hackagon/jwks",
-			"issuerurl": "http://localhost:8180/realms/hackagon/",
+			"jwksurl":   "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs",
+			"issuerurl": "http://localhost:8180/realms/hackagon",
 			"algorithm": "RS256",
 		},
 	}
@@ -59,10 +72,12 @@ func Load() (*Config, error) {
 	}
 
 	// Override with YAML config file
-	if err := k.Load(file.Provider("config.yaml"), yaml.Parser()); err != nil {
+	configPath := path.Join(path.Dir(configDir), "config.yaml")
+	if err := k.Load(file.Provider(configPath), yaml.Parser()); err != nil {
 		if !strings.Contains(err.Error(), "no such file") {
 			return nil, err
 		}
+		log.Printf("Warn: Couldn't load config file: %v", err)
 	}
 
 	// Override with environment variables
