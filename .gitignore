@@ -28,3 +28,4 @@ result
 
 # Generated files
 components/backend/internal/proto
+components/frontend/src/lib/server/grpc/*.proto
