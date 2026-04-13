@@ -80,10 +80,8 @@ generate-proto *args:
     set -eu
     PROTO_DIR="api/proto"
     GO_OUT="components/backend/internal/proto"
-    FE_OUT="components/frontend/src/lib/server/grpc"
 
     mkdir -p "$GO_OUT"
-    mkdir -p "$FE_OUT"
 
     for proto in "$PROTO_DIR"/*.proto; do
         proto_file="$(basename "$proto")"
@@ -102,11 +100,12 @@ generate-proto *args:
             --proto_path="components/backend/internal/proto" \
             "$(basename "$proto")"
         echo "  - Generated Go code"
-
-        # Copy proto to frontend internal directory
-        cp "$proto" "$FE_OUT/$proto_file"
-        echo "  - Copied to $FE_OUT/$proto_file"
     done
+
+    # Generate TypeScript code for the frontend
+    (cd components/frontend && pnpm proto:generate)
+    echo "  - Generated TypeScript code"
+
     echo "All protos processed."
 
 # Update dependencies to `quitsh`.

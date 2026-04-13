@@ -13,13 +13,14 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
-    "lint": "eslint . && tsc --noEmit"
+    "lint": "eslint . && tsc --noEmit",
+    "proto:generate": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/lib/server/grpc/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,env=node --proto_path=../../api/proto health.proto user.proto"
   },
   "devDependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
     "@eslint/compat": "^1.4.0",
     "@eslint/js": "^9.37.0",
     "@grpc/grpc-js": "^1.14.3",
-    "@grpc/proto-loader": "^0.8.0",
     "@skeletonlabs/skeleton": "^3.2.2",
     "@skeletonlabs/skeleton-svelte": "^1.5.3",
     "@sveltejs/kit": "^2.50.1",
@@ -43,6 +44,7 @@
     "svelte-check": "^4.3.3",
     "svelte-eslint-parser": "^1.3.3",
     "tailwindcss": "^4.1.14",
+    "ts-proto": "^2.11.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1",
     "vite": "^6.4.1",
