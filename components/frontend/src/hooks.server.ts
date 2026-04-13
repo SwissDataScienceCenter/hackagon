@@ -11,19 +11,21 @@ import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
+import { callGrpc } from "$lib/server/grpc/call"
+import { healthClient } from "$lib/server/grpc/client"
+import type { HealthCheckResponse } from "$lib/server/grpc/generated/health"
 
 // Global config state for the application.
 let configLoader: ConfigLoader
 
 // --- CONSTANTS ---
-const PROTECTED_ROUTE_PATTERNS = [/^\/welcome($|\/)/, /^\/api\//]
+const PROTECTED_ROUTE_PATTERNS = [/^\/welcome($|\/)/, /^\/users($|\/)/]
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
   /^\/error($|\/)/,
-  /^\/api\/health($|\/)/,
 ]
 
 export function isProtectedRoute(pathname: string): boolean {
@@ -138,9 +140,6 @@ const guardHandle: Handle = async ({ event, resolve }) => {
     const session = await event.locals.auth()
 
     if (!hasLoggedInUserContext(session)) {
-      if (event.url.pathname.startsWith("/api/")) {
-        throw error(401, "Unauthorized")
-      }
       redirectToLogin(event.url, event.locals.logger, "No user found")
     }
   }
@@ -165,6 +164,15 @@ export const handle = sequence(
 export const init = async () => {
   configLoader = setupConfigAndLogger()
   logger.info({ env: import.meta.env }, "Node environment.")
+
+  try {
+    const health = await callGrpc<HealthCheckResponse>((cb) =>
+      healthClient.check({}, cb),
+    )
+    logger.info({ health }, "Backend health check passed.")
+  } catch (err) {
+    logger.error({ err }, "Backend health check failed on startup.")
+  }
 }
 
 // --- ERROR HANDLER ---
