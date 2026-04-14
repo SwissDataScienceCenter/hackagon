@@ -14,7 +14,7 @@
         <span class="h-4 w-px bg-surface-300 dark:bg-surface-700"></span>
         <img src="/images/logos/epfl.svg" alt="EPFL" class="h-3 dark:invert" />
     </div>
-    <nav class="text-[11px] text-surface-500 flex gap-2">
+    <nav class="text-xs text-surface-500 flex gap-2">
         <a href={resolve('/privacy')} class="no-underline hover:text-primary-500">Privacy</a>
         <span>·</span>
         <a href={resolve('/terms')} class="no-underline hover:text-primary-500">Terms</a>
@@ -23,7 +23,7 @@
         <span>·</span>
         <a href="https://github.com" class="no-underline hover:text-primary-500">GitHub</a>
     </nav>
-    <div class="text-[11px] text-surface-500">
+    <div class="text-xs text-surface-500">
         Made with ❤️ by the SDSC team
     </div>
 </footer>
