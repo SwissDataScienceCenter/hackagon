@@ -2182,14 +2182,664 @@
     },
 
     {
+      "id": "participant-card",
+      "name": "Component: Participant Card",
+      "context": "Reusable card for participant list. From Figma: avatar, name, title/role, affiliation, optional LinkedIn link, 'Check profile details' button. Maps to User entity (name, email, affiliation, description, role, skills, interests).",
+      "type": "frame",
+      "reusable": true,
+      "x": 6380, "y": 0,
+      "width": 800, "height": "fit_content",
+      "fill": "$color.surface",
+      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+      "layout": "horizontal", "gap": 16, "alignItems": "center",
+      "padding": [16, 20, 16, 20],
+      "children": [
+        { "id": "pc-avatar", "type": "ellipse", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+        {
+          "id": "pc-info",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 2,
+          "children": [
+            { "id": "pc-name", "type": "text", "content": "Carlos Vivar Rios", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+            { "id": "pc-role", "type": "text", "content": "Senior Data Scientist", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 },
+            { "id": "pc-affiliation", "type": "text", "content": "SDSC", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 },
+            { "id": "pc-linkedin", "type": "text", "content": "LinkedIn Profile", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11 }
+          ]
+        },
+        {
+          "id": "pc-btn",
+          "type": "frame", "width": 160, "height": 34,
+          "fill": "$color.primary",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+          "children": [
+            { "id": "pc-btn-text", "type": "text", "content": "Check profile details", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "proposal-card",
+      "name": "Component: Proposal Card",
+      "context": "Reusable card for proposals list. From Figma: circular project image, number + title, description paragraph, 'More Info' button. Maps to project/proposal entity with Category (track).",
+      "type": "frame",
+      "reusable": true,
+      "x": 6380, "y": 160,
+      "width": 800, "height": "fit_content",
+      "fill": "$color.surface",
+      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+      "layout": "horizontal", "gap": 16, "alignItems": "flex-start",
+      "padding": [16, 20, 16, 20],
+      "children": [
+        { "id": "prc-image", "type": "ellipse", "width": 64, "height": 64, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+        {
+          "id": "prc-info",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 6,
+          "children": [
+            { "id": "prc-title", "type": "text", "content": "16. Embedding of Pharmacokinetic and Pharmacodynamic equations", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600", "lineHeight": 1.3, "textGrowth": "fixed-width", "width": 500 },
+            { "id": "prc-desc", "type": "text", "content": "In pharma and biotech, ODEs (Ordinary Differential Equations) often follow repetitive patterns, and a copilot-like tool could streamline the equation-writing process and reduce errors.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 500 }
+          ]
+        },
+        {
+          "id": "prc-btn",
+          "type": "frame", "width": 100, "height": 34,
+          "fill": "$color.primary",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+          "children": [
+            { "id": "prc-btn-text", "type": "text", "content": "More Info", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "team-card",
+      "name": "Component: Team Card",
+      "context": "Reusable card for teams list. From Figma: circular team/project image, team number + name, project description, member avatars with names, edit icon (if own team), 'More Information' button. Maps to Team (name, description, category_id, status) and TeamParticipant (user_id, role).",
+      "type": "frame",
+      "reusable": true,
+      "x": 6380, "y": 340,
+      "width": 800, "height": "fit_content",
+      "fill": "$color.surface",
+      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+      "layout": "vertical", "gap": 12,
+      "padding": [16, 20, 16, 20],
+      "children": [
+        {
+          "id": "tc-header",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "horizontal", "gap": 16, "alignItems": "center",
+          "children": [
+            { "id": "tc-image", "type": "ellipse", "width": 64, "height": 64, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+            {
+              "id": "tc-info",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "vertical", "gap": 2,
+              "children": [
+                { "id": "tc-name", "type": "text", "content": "13. Bishorn", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 15, "fontWeight": "700" },
+                { "id": "tc-desc", "type": "text", "content": "SoDeDo: A replicated, self-updating software-defined dataset for machine learning applications", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.4, "textGrowth": "fixed-width", "width": 500 }
+              ]
+            },
+            { "id": "tc-edit", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "pencil", "width": 18, "height": 18, "fill": "$color.primary" }
+          ]
+        },
+        {
+          "id": "tc-members",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "horizontal", "gap": 16, "alignItems": "center",
+          "children": [
+            {
+              "id": "tc-member",
+              "name": "Team Member",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fit_content",
+              "layout": "vertical", "gap": 4, "alignItems": "center",
+              "children": [
+                { "id": "tcm-avatar", "type": "ellipse", "width": 36, "height": 36, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+                { "id": "tcm-name", "type": "text", "content": "John\nAnderson", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "textAlign": "center", "lineHeight": 1.2 }
+              ]
+            },
+            { "id": "tc-m2", "type": "ref", "ref": "tc-member", "descendants": { "tcm-name": { "content": "Juan" } } },
+            { "id": "tc-m3", "type": "ref", "ref": "tc-member", "descendants": { "tcm-name": { "content": "Viraj" } } }
+          ]
+        },
+        {
+          "id": "tc-btn",
+          "type": "frame", "width": 160, "height": 34,
+          "fill": "$color.primary",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+          "children": [
+            { "id": "tc-btn-text", "type": "text", "content": "More Information", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "page-participants",
+      "name": "All Participants — /hackathon/[slug]/participants",
+      "context": "List page showing all registered participants for a hackathon. Shares nav, tabs, phase bar with the logged-in hackathon page. Content is a vertical list of participant-card components. From Figma: page title 'List of participants', then a scrollable list of cards.",
+      "type": "frame",
+      "x": 7280, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+        {
+          "id": "pp-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "pp-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "pp-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "pp-tabs",
+          "name": "Sub-Nav — Participants tab active",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "pp-tab-overview",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "pp-tab-ov-text", "type": "text", "content": "Overview", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "pp-tab-active",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "pp-tab-act-text", "type": "text", "content": "Participants", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            {
+              "id": "pp-tab-other",
+              "name": "Inactive Tab",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "pp-to-text", "type": "text", "content": "Proposals", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            { "id": "pp-tab-teams", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Teams" } } },
+            { "id": "pp-tab-submissions", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Submissions" } } },
+            { "id": "pp-tab-timeline", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Timeline" } } },
+            { "id": "pp-tab-webinars", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Webinars" } } },
+            { "id": "pp-tab-photos", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Photos" } } }
+          ]
+        },
+        {
+          "id": "pp-content",
+          "name": "Page Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "children": [
+            {
+              "id": "pp-header",
+              "type": "frame", "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+              "padding": [0, 0, 20, 0],
+              "children": [
+                { "id": "pp-title", "type": "text", "content": "All Participants", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                { "id": "pp-count", "type": "text", "content": "100 registered", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 13 }
+              ]
+            },
+            {
+              "id": "pp-search",
+              "name": "Search / Filter Bar",
+              "type": "frame",
+              "width": 960, "height": 40,
+              "fill": "$color.surface",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "padding": [0, 12, 0, 12],
+              "children": [
+                { "id": "pp-search-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "search", "width": 16, "height": 16, "fill": "$color.textMuted" },
+                { "id": "pp-search-text", "type": "text", "content": "Search participants by name, affiliation…", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "pp-list",
+              "name": "Participant Cards List",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "vertical", "gap": 8,
+              "padding": [16, 0, 0, 0],
+              "children": [
+                { "id": "pp-card-1", "type": "ref", "ref": "participant-card" },
+                { "id": "pp-card-2", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Steven Flachsire" }, "pc-role": { "content": "Senior Data Scientist" }, "pc-affiliation": { "content": "Lombard Odier" }, "pc-linkedin": { "content": "" } } },
+                { "id": "pp-card-3", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Olivier Kauffmann" }, "pc-role": { "content": "Data Scientist" }, "pc-affiliation": { "content": "SDSC" } } },
+                { "id": "pp-card-4", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Ahmet Celik" }, "pc-role": { "content": "Autonomous Software Engineer" }, "pc-affiliation": { "content": "EPFL" } } },
+                { "id": "pp-card-5", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Edoardo Boldi" }, "pc-role": { "content": "HPC application expert and software developer" }, "pc-affiliation": { "content": "Swiss Federal Institute of Materials Science" }, "pc-linkedin": { "content": "" } } }
+              ]
+            },
+            {
+              "id": "pp-pagination",
+              "name": "Pagination",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "center", "gap": 4,
+              "padding": [20, 0, 0, 0],
+              "children": [
+                {
+                  "id": "pp-page-btn",
+                  "name": "Page Number",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": 32, "height": 32,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "ppb-text", "type": "text", "content": "1", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                },
+                { "id": "pp-page-2", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "2", "fill": "$color.textSecondary" } } },
+                { "id": "pp-page-3", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "3", "fill": "$color.textSecondary" } } },
+                { "id": "pp-page-4", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "…", "fill": "$color.textSecondary" } } },
+                { "id": "pp-page-5", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "10", "fill": "$color.textSecondary" } } }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pp-footer",
+          "type": "frame",
+          "width": "fill_container", "height": 56,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 24,
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            { "id": "pp-f1", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pp-f2", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pp-f3", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pp-f4", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pp-f-sep", "type": "rectangle", "width": 1, "height": 18, "fill": "$color.border" },
+            { "id": "pp-f-links", "type": "text", "content": "Privacy  ·  Terms  ·  About  ·  GitHub", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "page-proposals",
+      "name": "All Proposals — /hackathon/[slug]/proposals",
+      "context": "List page showing all project proposals for a hackathon. From Figma: page title 'List of Project Proposals', track filter chips, scrollable list of proposal-card components. Each card has image, numbered title, description, 'More Info' button.",
+      "type": "frame",
+      "x": 8820, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+        {
+          "id": "pr-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "pr-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "pr-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "pr-tabs",
+          "name": "Sub-Nav — Proposals tab active",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "pr-tab-inactive",
+              "name": "Inactive Tab",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "pr-ti-text", "type": "text", "content": "Overview", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            { "id": "pr-tab-participants", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Participants" } } },
+            {
+              "id": "pr-tab-active",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "pr-tab-act-text", "type": "text", "content": "Proposals", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            { "id": "pr-tab-teams", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Teams" } } },
+            { "id": "pr-tab-submissions", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Submissions" } } },
+            { "id": "pr-tab-timeline", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Timeline" } } },
+            { "id": "pr-tab-webinars", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Webinars" } } },
+            { "id": "pr-tab-photos", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Photos" } } }
+          ]
+        },
+        {
+          "id": "pr-content",
+          "name": "Page Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "children": [
+            {
+              "id": "pr-header",
+              "type": "frame", "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+              "padding": [0, 0, 12, 0],
+              "children": [
+                { "id": "pr-title", "type": "text", "content": "Project Proposals", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                {
+                  "id": "pr-propose-btn",
+                  "type": "frame", "width": 160, "height": 36,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "pr-propose-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "plus", "width": 14, "height": 14, "fill": "$color.onPrimary" },
+                    { "id": "pr-propose-text", "type": "text", "content": "Propose a Project", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "pr-filters",
+              "name": "Track Filter Chips",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "padding": [0, 0, 16, 0],
+              "children": [
+                {
+                  "id": "pr-filter-all",
+                  "type": "frame", "width": "fit_content", "height": 30,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "padding": [0, 14, 0, 14],
+                  "children": [
+                    { "id": "pr-fa-text", "type": "text", "content": "All (16)", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "pr-filter-ds",
+                  "type": "frame", "width": "fit_content", "height": 30,
+                  "fill": "$color.primaryMuted",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "padding": [0, 14, 0, 14],
+                  "children": [
+                    { "id": "pr-fds-text", "type": "text", "content": "Data Science (9)", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "pr-filter-rdi",
+                  "type": "frame", "width": "fit_content", "height": 30,
+                  "fill": "$color.secondaryMuted",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.secondary" },
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "padding": [0, 14, 0, 14],
+                  "children": [
+                    { "id": "pr-frdi-text", "type": "text", "content": "Research Data Infra (7)", "fill": "$color.secondary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "pr-list",
+              "name": "Proposal Cards List",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "vertical", "gap": 8,
+              "children": [
+                { "id": "pr-card-1", "type": "ref", "ref": "proposal-card" },
+                { "id": "pr-card-2", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "15. Automatic extraction of data from the literature" }, "prc-desc": { "content": "Have you ever been frustrated by having to copy data from the supplementary files of the papers? But the data is distributed across multiple pdf pages or even worse it's embedded as an image!" } } },
+                { "id": "pr-card-3", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "14. AgentSim: Browser-Based Agent Modeling with Real Trajectory Data" }, "prc-desc": { "content": "AgentSim is a browser-based application that leverages real-world trajectory data from the PNEUMA project to train agent-based models simulating urban traffic patterns." } } },
+                { "id": "pr-card-4", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "13. SoDeDo: A replicated, self-updating software-defined dataset" }, "prc-desc": { "content": "In this project we will explore the technologies for a proof-of-concept data store which simplifies collaborative dataset management for machine learning." } } },
+                { "id": "pr-card-5", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "12. A platform for semantic navigation and visualization of Neo4J graphs" }, "prc-desc": { "content": "Neo4J is a graph DB technology with powerful capabilities for graph data science and the exploration of massive knowledge graphs." } } }
+              ]
+            },
+            {
+              "id": "pr-pagination",
+              "name": "Pagination",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "center", "gap": 4,
+              "padding": [20, 0, 0, 0],
+              "children": [
+                {
+                  "id": "pr-page-1",
+                  "type": "frame", "width": 32, "height": 32,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "prp1-text", "type": "text", "content": "1", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "pr-page-2",
+                  "type": "frame", "width": 32, "height": 32,
+                  "fill": "$color.surfaceRaised",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "prp2-text", "type": "text", "content": "2", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pr-footer",
+          "type": "frame",
+          "width": "fill_container", "height": 56,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 24,
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            { "id": "pr-f1", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pr-f2", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pr-f3", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pr-f4", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "pr-f-sep", "type": "rectangle", "width": 1, "height": 18, "fill": "$color.border" },
+            { "id": "pr-f-links", "type": "text", "content": "Privacy  ·  Terms  ·  About  ·  GitHub", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "page-teams",
+      "name": "All Teams — /hackathon/[slug]/teams",
+      "context": "List page showing all teams for a hackathon. From Figma: page title 'List of Teams', then a list of team-card components. Each card has team image, number + name, project description, member avatars with names, edit icon, 'More Information' button.",
+      "type": "frame",
+      "x": 10360, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+        {
+          "id": "tm-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "tm-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "tm-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "tm-tabs",
+          "name": "Sub-Nav — Teams tab active",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "tm-tab-inactive",
+              "name": "Inactive Tab",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "tm-ti-text", "type": "text", "content": "Overview", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            { "id": "tm-tab-participants", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Participants" } } },
+            { "id": "tm-tab-proposals", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Proposals" } } },
+            {
+              "id": "tm-tab-active",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "tm-tab-act-text", "type": "text", "content": "Teams", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            { "id": "tm-tab-submissions", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Submissions" } } },
+            { "id": "tm-tab-timeline", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Timeline" } } },
+            { "id": "tm-tab-webinars", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Webinars" } } },
+            { "id": "tm-tab-photos", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Photos" } } }
+          ]
+        },
+        {
+          "id": "tm-content",
+          "name": "Page Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "children": [
+            {
+              "id": "tm-header",
+              "type": "frame", "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+              "padding": [0, 0, 12, 0],
+              "children": [
+                { "id": "tm-title", "type": "text", "content": "All Teams", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                {
+                  "id": "tm-create-btn",
+                  "name": "Create Team (admin/organizer only)",
+                  "type": "frame", "width": 140, "height": 36,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "tm-create-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "plus", "width": 14, "height": 14, "fill": "$color.onPrimary" },
+                    { "id": "tm-create-text", "type": "text", "content": "Create Team", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tm-search",
+              "name": "Search / Filter Bar",
+              "type": "frame",
+              "width": 960, "height": 40,
+              "fill": "$color.surface",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "padding": [0, 12, 0, 12],
+              "children": [
+                { "id": "tm-search-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "search", "width": 16, "height": 16, "fill": "$color.textMuted" },
+                { "id": "tm-search-text", "type": "text", "content": "Search teams by name, project…", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "tm-count",
+              "type": "text", "content": "1 team",
+              "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12,
+              "width": 960, "textAlign": "left"
+            },
+            {
+              "id": "tm-list",
+              "name": "Team Cards List",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "vertical", "gap": 12,
+              "padding": [12, 0, 0, 0],
+              "children": [
+                { "id": "tm-card-1", "type": "ref", "ref": "team-card" },
+                { "id": "tm-card-2", "type": "ref", "ref": "team-card", "descendants": { "tc-name": { "content": "14. Dufourspitze" }, "tc-desc": { "content": "Embedding of Pharmacokinetic and Pharmacodynamic equations into symbolic representation and alignment with their textual description" } } },
+                { "id": "tm-card-3", "type": "ref", "ref": "team-card", "descendants": { "tc-name": { "content": "12. Matterhorn" }, "tc-desc": { "content": "A platform for semantic navigation and visualization of Neo4J graphs using natural language queries and knowledge graph exploration" } } }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tm-footer",
+          "type": "frame",
+          "width": "fill_container", "height": 56,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 24,
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            { "id": "tm-f1", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "tm-f2", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "tm-f3", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "tm-f4", "type": "rectangle", "width": 56, "height": 22, "fill": "$color.surfaceRaised" },
+            { "id": "tm-f-sep", "type": "rectangle", "width": 1, "height": 18, "fill": "$color.border" },
+            { "id": "tm-f-links", "type": "text", "content": "Privacy  ·  Terms  ·  About  ·  GitHub", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+          ]
+        }
+      ]
+    },
+
+    {
       "id": "design-notes",
       "name": "Design Notes",
       "type": "note",
-      "x": 6280, "y": 0,
+      "x": 11900, "y": 0,
       "width": 400, "height": 1300,
       "fontSize": 13,
       "fontFamily": "Source Code Pro",
-      "content": "DESIGN REFERENCE NOTES\n========================\n\nDesign pattern: HuggingFace.co\n- Public homepage = hero + trending + features\n- Logged-in = dashboard with personal feed\n- Same nav bar, login becomes avatar\n\nContent source: sdsc-hackathons.ch\n- Hackathon events (ORD, GenAI, Climate)\n- Temporal framework (T-4 to post-event)\n- Registration -> proposals -> teams -> hack\n\nTheme: Hackathonsdsc\n- Monospace font (Source Code Pro)\n- Border radius: 0 (sharp corners)\n- Primary: #6ABF4B (green)\n- Secondary: #5A4D8A (purple)\n- Dark mode default\n\nFrames (left to right):\n1. / = Public homepage (1440px)\n2. /welcome = Dashboard (1440px)\n3. /hackathon/[slug] = Detail page (1440px)\n4. /hackathon/[slug] = Logged-in (1440px)\n\n========================\nHOMEPAGE\n========================\nHF patterns adopted:\n1. Clean centered hero, no heavy bg\n2. Tabbed trending list (not card grid)\n3. Winner showcase cards\n4. 2x2 feature grid\n5. Org logos as social proof\n6. Horizontal CTA banner\n\nConfluence req coverage:\n[x] Current Hackathons/Challenges\n[x] Project & team winners\n[x] Latest Hackathons (in tabs)\n[x] Invitation to register\n[x] Organize your hackathon CTA\n\n========================\nDASHBOARD (/welcome)\n========================\n[x] Active hackathon status + phase\n[x] Current project/team\n[x] Past hackathons & teams\n[x] Notification center\n[x] Settings link\n\n========================\nHACKATHON PAGE (PUBLIC)\n========================\nModular sections (Confluence 7.3):\nAll toggleable by organizer.\n\nSection 1: Hero\n  [x] Title (string)\n  [x] Dates (string)\n  [x] Venue (string)\n  [x] Main photo (url) — gradient bg\n\nSection 2: Organizers\n  [x] Description (string)\n  [x] Logos (list of picture URL)\n\nSection 3: Markdown\n  [x] Markdown formatted text\n  [x] Bold, lists, links, pictures\n\nSection 4: Support Events\n  [x] Titles (list of webinars)\n  [x] Speakers / logos (pictures)\n  [x] Link to more info\n\nSection 5: Highlights\n  [x] Picture (one per block)\n  [x] Message (one per block)\n\nSection 6: Video\n  [x] Title\n  [x] Caption\n  [x] Video url\n\nSection 7: Call to Action\n  [x] Button (link to registration)\n\n========================\nHACKATHON — LOGGED IN\n========================\nFigma ref (functional requirements only):\neUBPuQj0KlWAzIfKEgqpHY\n\nFunctionality extracted from existing site:\n\nNAVIGATION (sub-pages):\n[x] Overview / Home\n[x] All participants list\n[x] Project proposals list\n[x] All teams list\n[x] Submitted projects\n[x] Timeline & Agenda\n[x] Webinars\n[x] Photos\n→ Implemented as horizontal tabs\n  (not old sidebar)\n\nPHASE AWARENESS:\n[x] Phase timeline bar with states:\n    completed / active / upcoming\n[x] From data model: Phase entity\n    (id, hackathon_id, start/end, name)\n[x] Phase-aware CTAs change per step\n\nPARTICIPATION STATUS:\n[x] Registration badge\n[x] Team assignment (name, members)\n[x] Project info (title, track, status)\n[x] Next action CTA with deadline\n→ Maps to: Participant, Team,\n  TeamParticipant, Submission entities\n\nUSER ACTIONS (phase-aware):\n[x] Propose a project\n[x] Set preferences / choose prefs\n[x] Submit project\n[x] Vote for best project\n[x] View profile\n[x] Account settings\n→ Active vs disabled based on phase\n\nTEAM MANAGEMENT:\n[x] Team name + description\n[x] Member list with avatars\n[x] Member roles (owner/member)\n[x] View team page link\n→ Maps to: Team, TeamParticipant\n\nADMIN TOOLS (role-gated):\n[x] Create Hackathon\n[x] Create Team\n[x] Manage Users\n[x] Manage Projects\n[x] Manage Teams\n[x] Manage Votes\n[x] Manage Hackathons\n→ Only shown if User.role = admin\n\nUSEFUL LINKS:\n[x] Previous Hackathons\n[x] About SDSC\n[x] Contact us\n[x] Why Participate?\n\nDATA MODEL coverage:\n[x] User (profile, role, skills)\n[x] Hackathon (name, dates, visibility)\n[x] Participant (registration, waiting)\n[x] Team (name, desc, category, status)\n[x] TeamParticipant (role)\n[x] Submission (status)\n[x] Phase (timeline)\n[x] Category (tracks)\n[x] Vote (best project)\n[x] Page (content sections)\n[x] Settings (max participants, etc.)\n\nSkeleton mapping:\n- Tabs: tab-group / custom flex\n- Phase bar: stepper / custom flex\n- Participation card: card + badge\n- Action buttons: btn preset-filled\n- Team card: card + Avatar\n- Admin links: nav-list or link list\n- Icons: lucide-svelte throughout"
+      "content": "DESIGN REFERENCE NOTES\n========================\n\nDesign pattern: HuggingFace.co\n- Public homepage = hero + trending + features\n- Logged-in = dashboard with personal feed\n- Same nav bar, login becomes avatar\n\nContent source: sdsc-hackathons.ch\n- Hackathon events (ORD, GenAI, Climate)\n- Temporal framework (T-4 to post-event)\n- Registration -> proposals -> teams -> hack\n\nTheme: Hackathonsdsc\n- Monospace font (Source Code Pro)\n- Border radius: 0 (sharp corners)\n- Primary: #6ABF4B (green)\n- Secondary: #5A4D8A (purple)\n- Dark mode default\n\nFrames (left to right):\n1. / = Public homepage (1440px)\n2. /welcome = Dashboard (1440px)\n3. /hackathon/[slug] = Detail page (1440px)\n4. /hackathon/[slug] = Logged-in (1440px)\n\nComponents (top-right):\n- participant-card\n- proposal-card\n- team-card\n\nList Pages:\n5. /hackathon/[slug]/participants\n6. /hackathon/[slug]/proposals\n7. /hackathon/[slug]/teams\n\n========================\nHOMEPAGE\n========================\nHF patterns adopted:\n1. Clean centered hero, no heavy bg\n2. Tabbed trending list (not card grid)\n3. Winner showcase cards\n4. 2x2 feature grid\n5. Org logos as social proof\n6. Horizontal CTA banner\n\nConfluence req coverage:\n[x] Current Hackathons/Challenges\n[x] Project & team winners\n[x] Latest Hackathons (in tabs)\n[x] Invitation to register\n[x] Organize your hackathon CTA\n\n========================\nDASHBOARD (/welcome)\n========================\n[x] Active hackathon status + phase\n[x] Current project/team\n[x] Past hackathons & teams\n[x] Notification center\n[x] Settings link\n\n========================\nHACKATHON PAGE (PUBLIC)\n========================\nModular sections (Confluence 7.3):\nAll toggleable by organizer.\n\nSection 1: Hero\n  [x] Title (string)\n  [x] Dates (string)\n  [x] Venue (string)\n  [x] Main photo (url) — gradient bg\n\nSection 2: Organizers\n  [x] Description (string)\n  [x] Logos (list of picture URL)\n\nSection 3: Markdown\n  [x] Markdown formatted text\n  [x] Bold, lists, links, pictures\n\nSection 4: Support Events\n  [x] Titles (list of webinars)\n  [x] Speakers / logos (pictures)\n  [x] Link to more info\n\nSection 5: Highlights\n  [x] Picture (one per block)\n  [x] Message (one per block)\n\nSection 6: Video\n  [x] Title\n  [x] Caption\n  [x] Video url\n\nSection 7: Call to Action\n  [x] Button (link to registration)\n\n========================\nHACKATHON — LOGGED IN\n========================\nFigma ref (functional requirements only):\neUBPuQj0KlWAzIfKEgqpHY\n\nFunctionality extracted from existing site:\n\nNAVIGATION (sub-pages):\n[x] Overview / Home\n[x] All participants list\n[x] Project proposals list\n[x] All teams list\n[x] Submitted projects\n[x] Timeline & Agenda\n[x] Webinars\n[x] Photos\n→ Implemented as horizontal tabs\n  (not old sidebar)\n\nPHASE AWARENESS:\n[x] Phase timeline bar with states:\n    completed / active / upcoming\n[x] From data model: Phase entity\n    (id, hackathon_id, start/end, name)\n[x] Phase-aware CTAs change per step\n\nPARTICIPATION STATUS:\n[x] Registration badge\n[x] Team assignment (name, members)\n[x] Project info (title, track, status)\n[x] Next action CTA with deadline\n→ Maps to: Participant, Team,\n  TeamParticipant, Submission entities\n\nUSER ACTIONS (phase-aware):\n[x] Propose a project\n[x] Set preferences / choose prefs\n[x] Submit project\n[x] Vote for best project\n[x] View profile\n[x] Account settings\n→ Active vs disabled based on phase\n\nTEAM MANAGEMENT:\n[x] Team name + description\n[x] Member list with avatars\n[x] Member roles (owner/member)\n[x] View team page link\n→ Maps to: Team, TeamParticipant\n\nADMIN TOOLS (role-gated):\n[x] Create Hackathon\n[x] Create Team\n[x] Manage Users\n[x] Manage Projects\n[x] Manage Teams\n[x] Manage Votes\n[x] Manage Hackathons\n→ Only shown if User.role = admin\n\nUSEFUL LINKS:\n[x] Previous Hackathons\n[x] About SDSC\n[x] Contact us\n[x] Why Participate?\n\nDATA MODEL coverage:\n[x] User (profile, role, skills)\n[x] Hackathon (name, dates, visibility)\n[x] Participant (registration, waiting)\n[x] Team (name, desc, category, status)\n[x] TeamParticipant (role)\n[x] Submission (status)\n[x] Phase (timeline)\n[x] Category (tracks)\n[x] Vote (best project)\n[x] Page (content sections)\n[x] Settings (max participants, etc.)\n\nSkeleton mapping:\n- Tabs: tab-group / custom flex\n- Phase bar: stepper / custom flex\n- Participation card: card + badge\n- Action buttons: btn preset-filled\n- Team card: card + Avatar\n- Admin links: nav-list or link list\n- Icons: lucide-svelte throughout\n\n========================\nREUSABLE COMPONENTS\n========================\n\nparticipant-card:\n  [x] Avatar (circular, 56px)\n  [x] Name (User.name)\n  [x] Role/Title (User.description)\n  [x] Affiliation (User.affiliation)\n  [x] LinkedIn link (optional)\n  [x] Check profile details btn\n\nproposal-card:\n  [x] Project image (circular, 64px)\n  [x] Numbered title\n  [x] Description paragraph\n  [x] More Info btn\n\nteam-card:\n  [x] Team image (circular, 64px)\n  [x] Team number + name\n  [x] Project description\n  [x] Member avatars with names\n  [x] Edit icon (own team only)\n  [x] More Information btn\n\n========================\nLIST PAGES\n========================\n\nAll Participants:\n  [x] Page title + count\n  [x] Search/filter bar\n  [x] List of participant-card\n  [x] Pagination\n\nAll Proposals:\n  [x] Page title + Propose btn\n  [x] Track filter chips (All, DS, RDI)\n  [x] List of proposal-card\n  [x] Pagination\n\nAll Teams:\n  [x] Page title + Create Team btn\n  [x] Search/filter bar\n  [x] Count label\n  [x] List of team-card\n\nShared across all list pages:\n  [x] Nav bar (logged-in avatar)\n  [x] Sub-nav tabs (active tab varies)\n  [x] Footer with partner logos"
     }
   ]
 }
