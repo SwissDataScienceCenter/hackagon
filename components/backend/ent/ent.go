@@ -12,6 +12,15 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/teamparticipant"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 )
 
@@ -73,7 +82,16 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			user.Table: user.ValidColumn,
+			hackathon.Table:       hackathon.ValidColumn,
+			page.Table:            page.ValidColumn,
+			participant.Table:     participant.ValidColumn,
+			phase.Table:           phase.ValidColumn,
+			project.Table:         project.ValidColumn,
+			submission.Table:      submission.ValidColumn,
+			team.Table:            team.ValidColumn,
+			teamparticipant.Table: teamparticipant.ValidColumn,
+			track.Table:           track.ValidColumn,
+			user.Table:            user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

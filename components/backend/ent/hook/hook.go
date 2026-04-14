@@ -9,6 +9,114 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 )
 
+// The HackathonFunc type is an adapter to allow the use of ordinary
+// function as Hackathon mutator.
+type HackathonFunc func(context.Context, *ent.HackathonMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f HackathonFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.HackathonMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HackathonMutation", m)
+}
+
+// The PageFunc type is an adapter to allow the use of ordinary
+// function as Page mutator.
+type PageFunc func(context.Context, *ent.PageMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PageMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PageMutation", m)
+}
+
+// The ParticipantFunc type is an adapter to allow the use of ordinary
+// function as Participant mutator.
+type ParticipantFunc func(context.Context, *ent.ParticipantMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ParticipantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ParticipantMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ParticipantMutation", m)
+}
+
+// The PhaseFunc type is an adapter to allow the use of ordinary
+// function as Phase mutator.
+type PhaseFunc func(context.Context, *ent.PhaseMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PhaseFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PhaseMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PhaseMutation", m)
+}
+
+// The ProjectFunc type is an adapter to allow the use of ordinary
+// function as Project mutator.
+type ProjectFunc func(context.Context, *ent.ProjectMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProjectMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
+}
+
+// The SubmissionFunc type is an adapter to allow the use of ordinary
+// function as Submission mutator.
+type SubmissionFunc func(context.Context, *ent.SubmissionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SubmissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SubmissionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SubmissionMutation", m)
+}
+
+// The TeamFunc type is an adapter to allow the use of ordinary
+// function as Team mutator.
+type TeamFunc func(context.Context, *ent.TeamMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamMutation", m)
+}
+
+// The TeamParticipantFunc type is an adapter to allow the use of ordinary
+// function as TeamParticipant mutator.
+type TeamParticipantFunc func(context.Context, *ent.TeamParticipantMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamParticipantFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamParticipantMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamParticipantMutation", m)
+}
+
+// The TrackFunc type is an adapter to allow the use of ordinary
+// function as Track mutator.
+type TrackFunc func(context.Context, *ent.TrackMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TrackFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TrackMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TrackMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

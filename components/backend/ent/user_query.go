@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,17 +12,40 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/teamparticipant"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 )
 
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx        *QueryContext
-	order      []user.OrderOption
-	inters     []Interceptor
-	predicates []predicate.User
+	ctx                          *QueryContext
+	order                        []user.OrderOption
+	inters                       []Interceptor
+	predicates                   []predicate.User
+	withCreatedHackathons        *HackathonQuery
+	withModifiedHackathons       *HackathonQuery
+	withCreatedProjects          *ProjectQuery
+	withModifiedProjects         *ProjectQuery
+	withParticipatesInHackathons *HackathonQuery
+	withParticipatesInTeams      *TeamQuery
+	withCreatedTeams             *TeamQuery
+	withCreatedPages             *PageQuery
+	withModifiedPages            *PageQuery
+	withCreatedPhases            *PhaseQuery
+	withModifiedPhases           *PhaseQuery
+	withCreatedSubmissions       *SubmissionQuery
+	withModifiedSubmissions      *SubmissionQuery
+	withParticipations           *ParticipantQuery
+	withTeamParticipations       *TeamParticipantQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +80,336 @@ func (_q *UserQuery) Unique(unique bool) *UserQuery {
 func (_q *UserQuery) Order(o ...user.OrderOption) *UserQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryCreatedHackathons chains the current query on the "created_hackathons" edge.
+func (_q *UserQuery) QueryCreatedHackathons() *HackathonQuery {
+	query := (&HackathonClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(hackathon.Table, hackathon.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedHackathonsTable, user.CreatedHackathonsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryModifiedHackathons chains the current query on the "modified_hackathons" edge.
+func (_q *UserQuery) QueryModifiedHackathons() *HackathonQuery {
+	query := (&HackathonClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(hackathon.Table, hackathon.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedHackathonsTable, user.ModifiedHackathonsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedProjects chains the current query on the "created_projects" edge.
+func (_q *UserQuery) QueryCreatedProjects() *ProjectQuery {
+	query := (&ProjectClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedProjectsTable, user.CreatedProjectsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryModifiedProjects chains the current query on the "modified_projects" edge.
+func (_q *UserQuery) QueryModifiedProjects() *ProjectQuery {
+	query := (&ProjectClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedProjectsTable, user.ModifiedProjectsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryParticipatesInHackathons chains the current query on the "participates_in_hackathons" edge.
+func (_q *UserQuery) QueryParticipatesInHackathons() *HackathonQuery {
+	query := (&HackathonClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(hackathon.Table, hackathon.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, user.ParticipatesInHackathonsTable, user.ParticipatesInHackathonsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryParticipatesInTeams chains the current query on the "participates_in_teams" edge.
+func (_q *UserQuery) QueryParticipatesInTeams() *TeamQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, user.ParticipatesInTeamsTable, user.ParticipatesInTeamsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedTeams chains the current query on the "created_teams" edge.
+func (_q *UserQuery) QueryCreatedTeams() *TeamQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedTeamsTable, user.CreatedTeamsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedPages chains the current query on the "created_pages" edge.
+func (_q *UserQuery) QueryCreatedPages() *PageQuery {
+	query := (&PageClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(page.Table, page.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedPagesTable, user.CreatedPagesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryModifiedPages chains the current query on the "modified_pages" edge.
+func (_q *UserQuery) QueryModifiedPages() *PageQuery {
+	query := (&PageClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(page.Table, page.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedPagesTable, user.ModifiedPagesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedPhases chains the current query on the "created_phases" edge.
+func (_q *UserQuery) QueryCreatedPhases() *PhaseQuery {
+	query := (&PhaseClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(phase.Table, phase.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedPhasesTable, user.CreatedPhasesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryModifiedPhases chains the current query on the "modified_phases" edge.
+func (_q *UserQuery) QueryModifiedPhases() *PhaseQuery {
+	query := (&PhaseClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(phase.Table, phase.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedPhasesTable, user.ModifiedPhasesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedSubmissions chains the current query on the "created_submissions" edge.
+func (_q *UserQuery) QueryCreatedSubmissions() *SubmissionQuery {
+	query := (&SubmissionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(submission.Table, submission.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedSubmissionsTable, user.CreatedSubmissionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryModifiedSubmissions chains the current query on the "modified_submissions" edge.
+func (_q *UserQuery) QueryModifiedSubmissions() *SubmissionQuery {
+	query := (&SubmissionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(submission.Table, submission.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedSubmissionsTable, user.ModifiedSubmissionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryParticipations chains the current query on the "participations" edge.
+func (_q *UserQuery) QueryParticipations() *ParticipantQuery {
+	query := (&ParticipantClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(participant.Table, participant.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, user.ParticipationsTable, user.ParticipationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTeamParticipations chains the current query on the "team_participations" edge.
+func (_q *UserQuery) QueryTeamParticipations() *TeamParticipantQuery {
+	query := (&TeamParticipantClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(teamparticipant.Table, teamparticipant.UserColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, user.TeamParticipationsTable, user.TeamParticipationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first User entity from the query.
@@ -245,15 +599,195 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]user.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.User{}, _q.predicates...),
+		config:                       _q.config,
+		ctx:                          _q.ctx.Clone(),
+		order:                        append([]user.OrderOption{}, _q.order...),
+		inters:                       append([]Interceptor{}, _q.inters...),
+		predicates:                   append([]predicate.User{}, _q.predicates...),
+		withCreatedHackathons:        _q.withCreatedHackathons.Clone(),
+		withModifiedHackathons:       _q.withModifiedHackathons.Clone(),
+		withCreatedProjects:          _q.withCreatedProjects.Clone(),
+		withModifiedProjects:         _q.withModifiedProjects.Clone(),
+		withParticipatesInHackathons: _q.withParticipatesInHackathons.Clone(),
+		withParticipatesInTeams:      _q.withParticipatesInTeams.Clone(),
+		withCreatedTeams:             _q.withCreatedTeams.Clone(),
+		withCreatedPages:             _q.withCreatedPages.Clone(),
+		withModifiedPages:            _q.withModifiedPages.Clone(),
+		withCreatedPhases:            _q.withCreatedPhases.Clone(),
+		withModifiedPhases:           _q.withModifiedPhases.Clone(),
+		withCreatedSubmissions:       _q.withCreatedSubmissions.Clone(),
+		withModifiedSubmissions:      _q.withModifiedSubmissions.Clone(),
+		withParticipations:           _q.withParticipations.Clone(),
+		withTeamParticipations:       _q.withTeamParticipations.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithCreatedHackathons tells the query-builder to eager-load the nodes that are connected to
+// the "created_hackathons" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedHackathons(opts ...func(*HackathonQuery)) *UserQuery {
+	query := (&HackathonClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedHackathons = query
+	return _q
+}
+
+// WithModifiedHackathons tells the query-builder to eager-load the nodes that are connected to
+// the "modified_hackathons" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithModifiedHackathons(opts ...func(*HackathonQuery)) *UserQuery {
+	query := (&HackathonClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withModifiedHackathons = query
+	return _q
+}
+
+// WithCreatedProjects tells the query-builder to eager-load the nodes that are connected to
+// the "created_projects" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedProjects(opts ...func(*ProjectQuery)) *UserQuery {
+	query := (&ProjectClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedProjects = query
+	return _q
+}
+
+// WithModifiedProjects tells the query-builder to eager-load the nodes that are connected to
+// the "modified_projects" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithModifiedProjects(opts ...func(*ProjectQuery)) *UserQuery {
+	query := (&ProjectClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withModifiedProjects = query
+	return _q
+}
+
+// WithParticipatesInHackathons tells the query-builder to eager-load the nodes that are connected to
+// the "participates_in_hackathons" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithParticipatesInHackathons(opts ...func(*HackathonQuery)) *UserQuery {
+	query := (&HackathonClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withParticipatesInHackathons = query
+	return _q
+}
+
+// WithParticipatesInTeams tells the query-builder to eager-load the nodes that are connected to
+// the "participates_in_teams" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithParticipatesInTeams(opts ...func(*TeamQuery)) *UserQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withParticipatesInTeams = query
+	return _q
+}
+
+// WithCreatedTeams tells the query-builder to eager-load the nodes that are connected to
+// the "created_teams" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedTeams(opts ...func(*TeamQuery)) *UserQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedTeams = query
+	return _q
+}
+
+// WithCreatedPages tells the query-builder to eager-load the nodes that are connected to
+// the "created_pages" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedPages(opts ...func(*PageQuery)) *UserQuery {
+	query := (&PageClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedPages = query
+	return _q
+}
+
+// WithModifiedPages tells the query-builder to eager-load the nodes that are connected to
+// the "modified_pages" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithModifiedPages(opts ...func(*PageQuery)) *UserQuery {
+	query := (&PageClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withModifiedPages = query
+	return _q
+}
+
+// WithCreatedPhases tells the query-builder to eager-load the nodes that are connected to
+// the "created_phases" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedPhases(opts ...func(*PhaseQuery)) *UserQuery {
+	query := (&PhaseClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedPhases = query
+	return _q
+}
+
+// WithModifiedPhases tells the query-builder to eager-load the nodes that are connected to
+// the "modified_phases" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithModifiedPhases(opts ...func(*PhaseQuery)) *UserQuery {
+	query := (&PhaseClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withModifiedPhases = query
+	return _q
+}
+
+// WithCreatedSubmissions tells the query-builder to eager-load the nodes that are connected to
+// the "created_submissions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedSubmissions(opts ...func(*SubmissionQuery)) *UserQuery {
+	query := (&SubmissionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedSubmissions = query
+	return _q
+}
+
+// WithModifiedSubmissions tells the query-builder to eager-load the nodes that are connected to
+// the "modified_submissions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithModifiedSubmissions(opts ...func(*SubmissionQuery)) *UserQuery {
+	query := (&SubmissionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withModifiedSubmissions = query
+	return _q
+}
+
+// WithParticipations tells the query-builder to eager-load the nodes that are connected to
+// the "participations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithParticipations(opts ...func(*ParticipantQuery)) *UserQuery {
+	query := (&ParticipantClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withParticipations = query
+	return _q
+}
+
+// WithTeamParticipations tells the query-builder to eager-load the nodes that are connected to
+// the "team_participations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithTeamParticipations(opts ...func(*TeamParticipantQuery)) *UserQuery {
+	query := (&TeamParticipantClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTeamParticipations = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +866,25 @@ func (_q *UserQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, error) {
 	var (
-		nodes = []*User{}
-		_spec = _q.querySpec()
+		nodes       = []*User{}
+		_spec       = _q.querySpec()
+		loadedTypes = [15]bool{
+			_q.withCreatedHackathons != nil,
+			_q.withModifiedHackathons != nil,
+			_q.withCreatedProjects != nil,
+			_q.withModifiedProjects != nil,
+			_q.withParticipatesInHackathons != nil,
+			_q.withParticipatesInTeams != nil,
+			_q.withCreatedTeams != nil,
+			_q.withCreatedPages != nil,
+			_q.withModifiedPages != nil,
+			_q.withCreatedPhases != nil,
+			_q.withModifiedPhases != nil,
+			_q.withCreatedSubmissions != nil,
+			_q.withModifiedSubmissions != nil,
+			_q.withParticipations != nil,
+			_q.withTeamParticipations != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*User).scanValues(nil, columns)
@@ -341,6 +892,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &User{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +904,638 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withCreatedHackathons; query != nil {
+		if err := _q.loadCreatedHackathons(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedHackathons = []*Hackathon{} },
+			func(n *User, e *Hackathon) { n.Edges.CreatedHackathons = append(n.Edges.CreatedHackathons, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withModifiedHackathons; query != nil {
+		if err := _q.loadModifiedHackathons(ctx, query, nodes,
+			func(n *User) { n.Edges.ModifiedHackathons = []*Hackathon{} },
+			func(n *User, e *Hackathon) { n.Edges.ModifiedHackathons = append(n.Edges.ModifiedHackathons, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedProjects; query != nil {
+		if err := _q.loadCreatedProjects(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedProjects = []*Project{} },
+			func(n *User, e *Project) { n.Edges.CreatedProjects = append(n.Edges.CreatedProjects, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withModifiedProjects; query != nil {
+		if err := _q.loadModifiedProjects(ctx, query, nodes,
+			func(n *User) { n.Edges.ModifiedProjects = []*Project{} },
+			func(n *User, e *Project) { n.Edges.ModifiedProjects = append(n.Edges.ModifiedProjects, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withParticipatesInHackathons; query != nil {
+		if err := _q.loadParticipatesInHackathons(ctx, query, nodes,
+			func(n *User) { n.Edges.ParticipatesInHackathons = []*Hackathon{} },
+			func(n *User, e *Hackathon) {
+				n.Edges.ParticipatesInHackathons = append(n.Edges.ParticipatesInHackathons, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withParticipatesInTeams; query != nil {
+		if err := _q.loadParticipatesInTeams(ctx, query, nodes,
+			func(n *User) { n.Edges.ParticipatesInTeams = []*Team{} },
+			func(n *User, e *Team) { n.Edges.ParticipatesInTeams = append(n.Edges.ParticipatesInTeams, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedTeams; query != nil {
+		if err := _q.loadCreatedTeams(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedTeams = []*Team{} },
+			func(n *User, e *Team) { n.Edges.CreatedTeams = append(n.Edges.CreatedTeams, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedPages; query != nil {
+		if err := _q.loadCreatedPages(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedPages = []*Page{} },
+			func(n *User, e *Page) { n.Edges.CreatedPages = append(n.Edges.CreatedPages, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withModifiedPages; query != nil {
+		if err := _q.loadModifiedPages(ctx, query, nodes,
+			func(n *User) { n.Edges.ModifiedPages = []*Page{} },
+			func(n *User, e *Page) { n.Edges.ModifiedPages = append(n.Edges.ModifiedPages, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedPhases; query != nil {
+		if err := _q.loadCreatedPhases(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedPhases = []*Phase{} },
+			func(n *User, e *Phase) { n.Edges.CreatedPhases = append(n.Edges.CreatedPhases, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withModifiedPhases; query != nil {
+		if err := _q.loadModifiedPhases(ctx, query, nodes,
+			func(n *User) { n.Edges.ModifiedPhases = []*Phase{} },
+			func(n *User, e *Phase) { n.Edges.ModifiedPhases = append(n.Edges.ModifiedPhases, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedSubmissions; query != nil {
+		if err := _q.loadCreatedSubmissions(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedSubmissions = []*Submission{} },
+			func(n *User, e *Submission) { n.Edges.CreatedSubmissions = append(n.Edges.CreatedSubmissions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withModifiedSubmissions; query != nil {
+		if err := _q.loadModifiedSubmissions(ctx, query, nodes,
+			func(n *User) { n.Edges.ModifiedSubmissions = []*Submission{} },
+			func(n *User, e *Submission) { n.Edges.ModifiedSubmissions = append(n.Edges.ModifiedSubmissions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withParticipations; query != nil {
+		if err := _q.loadParticipations(ctx, query, nodes,
+			func(n *User) { n.Edges.Participations = []*Participant{} },
+			func(n *User, e *Participant) { n.Edges.Participations = append(n.Edges.Participations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTeamParticipations; query != nil {
+		if err := _q.loadTeamParticipations(ctx, query, nodes,
+			func(n *User) { n.Edges.TeamParticipations = []*TeamParticipant{} },
+			func(n *User, e *TeamParticipant) { n.Edges.TeamParticipations = append(n.Edges.TeamParticipations, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *UserQuery) loadCreatedHackathons(ctx context.Context, query *HackathonQuery, nodes []*User, init func(*User), assign func(*User, *Hackathon)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Hackathon(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedHackathonsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_hackathons
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_hackathons" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_hackathons" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadModifiedHackathons(ctx context.Context, query *HackathonQuery, nodes []*User, init func(*User), assign func(*User, *Hackathon)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Hackathon(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ModifiedHackathonsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_modified_hackathons
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_modified_hackathons" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_hackathons" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedProjects(ctx context.Context, query *ProjectQuery, nodes []*User, init func(*User), assign func(*User, *Project)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Project(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedProjectsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_projects
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_projects" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_projects" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadModifiedProjects(ctx context.Context, query *ProjectQuery, nodes []*User, init func(*User), assign func(*User, *Project)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Project(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ModifiedProjectsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_modified_projects
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_modified_projects" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_projects" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadParticipatesInHackathons(ctx context.Context, query *HackathonQuery, nodes []*User, init func(*User), assign func(*User, *Hackathon)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*User)
+	nids := make(map[int]map[*User]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(user.ParticipatesInHackathonsTable)
+		s.Join(joinT).On(s.C(hackathon.FieldID), joinT.C(user.ParticipatesInHackathonsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(user.ParticipatesInHackathonsPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(user.ParticipatesInHackathonsPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*User]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Hackathon](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "participates_in_hackathons" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (_q *UserQuery) loadParticipatesInTeams(ctx context.Context, query *TeamQuery, nodes []*User, init func(*User), assign func(*User, *Team)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*User)
+	nids := make(map[int]map[*User]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(user.ParticipatesInTeamsTable)
+		s.Join(joinT).On(s.C(team.FieldID), joinT.C(user.ParticipatesInTeamsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(user.ParticipatesInTeamsPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(user.ParticipatesInTeamsPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*User]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Team](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "participates_in_teams" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedTeams(ctx context.Context, query *TeamQuery, nodes []*User, init func(*User), assign func(*User, *Team)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Team(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedTeamsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_teams
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_teams" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_teams" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedPages(ctx context.Context, query *PageQuery, nodes []*User, init func(*User), assign func(*User, *Page)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Page(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedPagesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_pages
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_pages" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_pages" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadModifiedPages(ctx context.Context, query *PageQuery, nodes []*User, init func(*User), assign func(*User, *Page)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Page(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ModifiedPagesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_modified_pages
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_modified_pages" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_pages" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedPhases(ctx context.Context, query *PhaseQuery, nodes []*User, init func(*User), assign func(*User, *Phase)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Phase(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedPhasesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_phases
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_phases" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_phases" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadModifiedPhases(ctx context.Context, query *PhaseQuery, nodes []*User, init func(*User), assign func(*User, *Phase)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Phase(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ModifiedPhasesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_modified_phases
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_modified_phases" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_phases" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedSubmissions(ctx context.Context, query *SubmissionQuery, nodes []*User, init func(*User), assign func(*User, *Submission)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Submission(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedSubmissionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_submissions
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_submissions" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_submissions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadModifiedSubmissions(ctx context.Context, query *SubmissionQuery, nodes []*User, init func(*User), assign func(*User, *Submission)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Submission(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ModifiedSubmissionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_modified_submissions
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_modified_submissions" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_submissions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadParticipations(ctx context.Context, query *ParticipantQuery, nodes []*User, init func(*User), assign func(*User, *Participant)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(participant.FieldUserID)
+	}
+	query.Where(predicate.Participant(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ParticipationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadTeamParticipations(ctx context.Context, query *TeamParticipantQuery, nodes []*User, init func(*User), assign func(*User, *TeamParticipant)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(teamparticipant.FieldUserID)
+	}
+	query.Where(predicate.TeamParticipant(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.TeamParticipationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *UserQuery) sqlCount(ctx context.Context) (int, error) {

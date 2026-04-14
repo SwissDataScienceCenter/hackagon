@@ -12,6 +12,24 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Hackathon is the client for interacting with the Hackathon builders.
+	Hackathon *HackathonClient
+	// Page is the client for interacting with the Page builders.
+	Page *PageClient
+	// Participant is the client for interacting with the Participant builders.
+	Participant *ParticipantClient
+	// Phase is the client for interacting with the Phase builders.
+	Phase *PhaseClient
+	// Project is the client for interacting with the Project builders.
+	Project *ProjectClient
+	// Submission is the client for interacting with the Submission builders.
+	Submission *SubmissionClient
+	// Team is the client for interacting with the Team builders.
+	Team *TeamClient
+	// TeamParticipant is the client for interacting with the TeamParticipant builders.
+	TeamParticipant *TeamParticipantClient
+	// Track is the client for interacting with the Track builders.
+	Track *TrackClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -145,6 +163,15 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Hackathon = NewHackathonClient(tx.config)
+	tx.Page = NewPageClient(tx.config)
+	tx.Participant = NewParticipantClient(tx.config)
+	tx.Phase = NewPhaseClient(tx.config)
+	tx.Project = NewProjectClient(tx.config)
+	tx.Submission = NewSubmissionClient(tx.config)
+	tx.Team = NewTeamClient(tx.config)
+	tx.TeamParticipant = NewTeamParticipantClient(tx.config)
+	tx.Track = NewTrackClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 
@@ -155,7 +182,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: User.QueryXXX(), the query will be executed
+// applies a query, for example: Hackathon.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

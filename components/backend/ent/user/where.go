@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 )
 
@@ -237,6 +238,351 @@ func CreatedAtLT(v time.Time) predicate.User {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasCreatedHackathons applies the HasEdge predicate on the "created_hackathons" edge.
+func HasCreatedHackathons() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedHackathonsTable, CreatedHackathonsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedHackathonsWith applies the HasEdge predicate on the "created_hackathons" edge with a given conditions (other predicates).
+func HasCreatedHackathonsWith(preds ...predicate.Hackathon) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedHackathonsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasModifiedHackathons applies the HasEdge predicate on the "modified_hackathons" edge.
+func HasModifiedHackathons() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ModifiedHackathonsTable, ModifiedHackathonsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasModifiedHackathonsWith applies the HasEdge predicate on the "modified_hackathons" edge with a given conditions (other predicates).
+func HasModifiedHackathonsWith(preds ...predicate.Hackathon) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newModifiedHackathonsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreatedProjects applies the HasEdge predicate on the "created_projects" edge.
+func HasCreatedProjects() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedProjectsTable, CreatedProjectsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedProjectsWith applies the HasEdge predicate on the "created_projects" edge with a given conditions (other predicates).
+func HasCreatedProjectsWith(preds ...predicate.Project) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedProjectsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasModifiedProjects applies the HasEdge predicate on the "modified_projects" edge.
+func HasModifiedProjects() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ModifiedProjectsTable, ModifiedProjectsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasModifiedProjectsWith applies the HasEdge predicate on the "modified_projects" edge with a given conditions (other predicates).
+func HasModifiedProjectsWith(preds ...predicate.Project) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newModifiedProjectsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasParticipatesInHackathons applies the HasEdge predicate on the "participates_in_hackathons" edge.
+func HasParticipatesInHackathons() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, ParticipatesInHackathonsTable, ParticipatesInHackathonsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasParticipatesInHackathonsWith applies the HasEdge predicate on the "participates_in_hackathons" edge with a given conditions (other predicates).
+func HasParticipatesInHackathonsWith(preds ...predicate.Hackathon) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newParticipatesInHackathonsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasParticipatesInTeams applies the HasEdge predicate on the "participates_in_teams" edge.
+func HasParticipatesInTeams() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, ParticipatesInTeamsTable, ParticipatesInTeamsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasParticipatesInTeamsWith applies the HasEdge predicate on the "participates_in_teams" edge with a given conditions (other predicates).
+func HasParticipatesInTeamsWith(preds ...predicate.Team) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newParticipatesInTeamsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreatedTeams applies the HasEdge predicate on the "created_teams" edge.
+func HasCreatedTeams() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedTeamsTable, CreatedTeamsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedTeamsWith applies the HasEdge predicate on the "created_teams" edge with a given conditions (other predicates).
+func HasCreatedTeamsWith(preds ...predicate.Team) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedTeamsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreatedPages applies the HasEdge predicate on the "created_pages" edge.
+func HasCreatedPages() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedPagesTable, CreatedPagesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedPagesWith applies the HasEdge predicate on the "created_pages" edge with a given conditions (other predicates).
+func HasCreatedPagesWith(preds ...predicate.Page) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedPagesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasModifiedPages applies the HasEdge predicate on the "modified_pages" edge.
+func HasModifiedPages() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ModifiedPagesTable, ModifiedPagesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasModifiedPagesWith applies the HasEdge predicate on the "modified_pages" edge with a given conditions (other predicates).
+func HasModifiedPagesWith(preds ...predicate.Page) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newModifiedPagesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreatedPhases applies the HasEdge predicate on the "created_phases" edge.
+func HasCreatedPhases() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedPhasesTable, CreatedPhasesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedPhasesWith applies the HasEdge predicate on the "created_phases" edge with a given conditions (other predicates).
+func HasCreatedPhasesWith(preds ...predicate.Phase) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedPhasesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasModifiedPhases applies the HasEdge predicate on the "modified_phases" edge.
+func HasModifiedPhases() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ModifiedPhasesTable, ModifiedPhasesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasModifiedPhasesWith applies the HasEdge predicate on the "modified_phases" edge with a given conditions (other predicates).
+func HasModifiedPhasesWith(preds ...predicate.Phase) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newModifiedPhasesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCreatedSubmissions applies the HasEdge predicate on the "created_submissions" edge.
+func HasCreatedSubmissions() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedSubmissionsTable, CreatedSubmissionsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedSubmissionsWith applies the HasEdge predicate on the "created_submissions" edge with a given conditions (other predicates).
+func HasCreatedSubmissionsWith(preds ...predicate.Submission) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedSubmissionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasModifiedSubmissions applies the HasEdge predicate on the "modified_submissions" edge.
+func HasModifiedSubmissions() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ModifiedSubmissionsTable, ModifiedSubmissionsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasModifiedSubmissionsWith applies the HasEdge predicate on the "modified_submissions" edge with a given conditions (other predicates).
+func HasModifiedSubmissionsWith(preds ...predicate.Submission) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newModifiedSubmissionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasParticipations applies the HasEdge predicate on the "participations" edge.
+func HasParticipations() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, ParticipationsTable, ParticipationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasParticipationsWith applies the HasEdge predicate on the "participations" edge with a given conditions (other predicates).
+func HasParticipationsWith(preds ...predicate.Participant) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newParticipationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTeamParticipations applies the HasEdge predicate on the "team_participations" edge.
+func HasTeamParticipations() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, TeamParticipationsTable, TeamParticipationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTeamParticipationsWith applies the HasEdge predicate on the "team_participations" edge with a given conditions (other predicates).
+func HasTeamParticipationsWith(preds ...predicate.TeamParticipant) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newTeamParticipationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

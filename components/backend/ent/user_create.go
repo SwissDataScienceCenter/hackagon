@@ -10,6 +10,12 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 )
 
@@ -44,6 +50,201 @@ func (_c *UserCreate) SetNillableCreatedAt(v *time.Time) *UserCreate {
 		_c.SetCreatedAt(*v)
 	}
 	return _c
+}
+
+// AddCreatedHackathonIDs adds the "created_hackathons" edge to the Hackathon entity by IDs.
+func (_c *UserCreate) AddCreatedHackathonIDs(ids ...int) *UserCreate {
+	_c.mutation.AddCreatedHackathonIDs(ids...)
+	return _c
+}
+
+// AddCreatedHackathons adds the "created_hackathons" edges to the Hackathon entity.
+func (_c *UserCreate) AddCreatedHackathons(v ...*Hackathon) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedHackathonIDs(ids...)
+}
+
+// AddModifiedHackathonIDs adds the "modified_hackathons" edge to the Hackathon entity by IDs.
+func (_c *UserCreate) AddModifiedHackathonIDs(ids ...int) *UserCreate {
+	_c.mutation.AddModifiedHackathonIDs(ids...)
+	return _c
+}
+
+// AddModifiedHackathons adds the "modified_hackathons" edges to the Hackathon entity.
+func (_c *UserCreate) AddModifiedHackathons(v ...*Hackathon) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedHackathonIDs(ids...)
+}
+
+// AddCreatedProjectIDs adds the "created_projects" edge to the Project entity by IDs.
+func (_c *UserCreate) AddCreatedProjectIDs(ids ...int) *UserCreate {
+	_c.mutation.AddCreatedProjectIDs(ids...)
+	return _c
+}
+
+// AddCreatedProjects adds the "created_projects" edges to the Project entity.
+func (_c *UserCreate) AddCreatedProjects(v ...*Project) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedProjectIDs(ids...)
+}
+
+// AddModifiedProjectIDs adds the "modified_projects" edge to the Project entity by IDs.
+func (_c *UserCreate) AddModifiedProjectIDs(ids ...int) *UserCreate {
+	_c.mutation.AddModifiedProjectIDs(ids...)
+	return _c
+}
+
+// AddModifiedProjects adds the "modified_projects" edges to the Project entity.
+func (_c *UserCreate) AddModifiedProjects(v ...*Project) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedProjectIDs(ids...)
+}
+
+// AddParticipatesInHackathonIDs adds the "participates_in_hackathons" edge to the Hackathon entity by IDs.
+func (_c *UserCreate) AddParticipatesInHackathonIDs(ids ...int) *UserCreate {
+	_c.mutation.AddParticipatesInHackathonIDs(ids...)
+	return _c
+}
+
+// AddParticipatesInHackathons adds the "participates_in_hackathons" edges to the Hackathon entity.
+func (_c *UserCreate) AddParticipatesInHackathons(v ...*Hackathon) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddParticipatesInHackathonIDs(ids...)
+}
+
+// AddParticipatesInTeamIDs adds the "participates_in_teams" edge to the Team entity by IDs.
+func (_c *UserCreate) AddParticipatesInTeamIDs(ids ...int) *UserCreate {
+	_c.mutation.AddParticipatesInTeamIDs(ids...)
+	return _c
+}
+
+// AddParticipatesInTeams adds the "participates_in_teams" edges to the Team entity.
+func (_c *UserCreate) AddParticipatesInTeams(v ...*Team) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddParticipatesInTeamIDs(ids...)
+}
+
+// AddCreatedTeamIDs adds the "created_teams" edge to the Team entity by IDs.
+func (_c *UserCreate) AddCreatedTeamIDs(ids ...int) *UserCreate {
+	_c.mutation.AddCreatedTeamIDs(ids...)
+	return _c
+}
+
+// AddCreatedTeams adds the "created_teams" edges to the Team entity.
+func (_c *UserCreate) AddCreatedTeams(v ...*Team) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedTeamIDs(ids...)
+}
+
+// AddCreatedPageIDs adds the "created_pages" edge to the Page entity by IDs.
+func (_c *UserCreate) AddCreatedPageIDs(ids ...int) *UserCreate {
+	_c.mutation.AddCreatedPageIDs(ids...)
+	return _c
+}
+
+// AddCreatedPages adds the "created_pages" edges to the Page entity.
+func (_c *UserCreate) AddCreatedPages(v ...*Page) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedPageIDs(ids...)
+}
+
+// AddModifiedPageIDs adds the "modified_pages" edge to the Page entity by IDs.
+func (_c *UserCreate) AddModifiedPageIDs(ids ...int) *UserCreate {
+	_c.mutation.AddModifiedPageIDs(ids...)
+	return _c
+}
+
+// AddModifiedPages adds the "modified_pages" edges to the Page entity.
+func (_c *UserCreate) AddModifiedPages(v ...*Page) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedPageIDs(ids...)
+}
+
+// AddCreatedPhaseIDs adds the "created_phases" edge to the Phase entity by IDs.
+func (_c *UserCreate) AddCreatedPhaseIDs(ids ...int) *UserCreate {
+	_c.mutation.AddCreatedPhaseIDs(ids...)
+	return _c
+}
+
+// AddCreatedPhases adds the "created_phases" edges to the Phase entity.
+func (_c *UserCreate) AddCreatedPhases(v ...*Phase) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedPhaseIDs(ids...)
+}
+
+// AddModifiedPhaseIDs adds the "modified_phases" edge to the Phase entity by IDs.
+func (_c *UserCreate) AddModifiedPhaseIDs(ids ...int) *UserCreate {
+	_c.mutation.AddModifiedPhaseIDs(ids...)
+	return _c
+}
+
+// AddModifiedPhases adds the "modified_phases" edges to the Phase entity.
+func (_c *UserCreate) AddModifiedPhases(v ...*Phase) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedPhaseIDs(ids...)
+}
+
+// AddCreatedSubmissionIDs adds the "created_submissions" edge to the Submission entity by IDs.
+func (_c *UserCreate) AddCreatedSubmissionIDs(ids ...int) *UserCreate {
+	_c.mutation.AddCreatedSubmissionIDs(ids...)
+	return _c
+}
+
+// AddCreatedSubmissions adds the "created_submissions" edges to the Submission entity.
+func (_c *UserCreate) AddCreatedSubmissions(v ...*Submission) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedSubmissionIDs(ids...)
+}
+
+// AddModifiedSubmissionIDs adds the "modified_submissions" edge to the Submission entity by IDs.
+func (_c *UserCreate) AddModifiedSubmissionIDs(ids ...int) *UserCreate {
+	_c.mutation.AddModifiedSubmissionIDs(ids...)
+	return _c
+}
+
+// AddModifiedSubmissions adds the "modified_submissions" edges to the Submission entity.
+func (_c *UserCreate) AddModifiedSubmissions(v ...*Submission) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedSubmissionIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -135,6 +336,222 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(user.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.CreatedHackathonsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonsTable,
+			Columns: []string{user.CreatedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedHackathonsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedHackathonsTable,
+			Columns: []string{user.ModifiedHackathonsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedProjectsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedProjectsTable,
+			Columns: []string{user.CreatedProjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedProjectsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedProjectsTable,
+			Columns: []string{user.ModifiedProjectsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ParticipatesInHackathonsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   user.ParticipatesInHackathonsTable,
+			Columns: user.ParticipatesInHackathonsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &ParticipantCreate{config: _c.config, mutation: newParticipantMutation(_c.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ParticipatesInTeamsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   user.ParticipatesInTeamsTable,
+			Columns: user.ParticipatesInTeamsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &TeamParticipantCreate{config: _c.config, mutation: newTeamParticipantMutation(_c.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedTeamsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedTeamsTable,
+			Columns: []string{user.CreatedTeamsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedPagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedPagesTable,
+			Columns: []string{user.CreatedPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(page.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedPagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedPagesTable,
+			Columns: []string{user.ModifiedPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(page.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedPhasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedPhasesTable,
+			Columns: []string{user.CreatedPhasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(phase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedPhasesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedPhasesTable,
+			Columns: []string{user.ModifiedPhasesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(phase.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedSubmissionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedSubmissionsTable,
+			Columns: []string{user.CreatedSubmissionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(submission.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedSubmissionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedSubmissionsTable,
+			Columns: []string{user.ModifiedSubmissionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(submission.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

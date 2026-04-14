@@ -22,8 +22,183 @@ type User struct {
 	// KeycloakID holds the value of the "keycloak_id" field.
 	KeycloakID string `json:"keycloak_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserQuery when eager-loading is set.
+	Edges        UserEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// UserEdges holds the relations/edges for other nodes in the graph.
+type UserEdges struct {
+	// CreatedHackathons holds the value of the created_hackathons edge.
+	CreatedHackathons []*Hackathon `json:"created_hackathons,omitempty"`
+	// ModifiedHackathons holds the value of the modified_hackathons edge.
+	ModifiedHackathons []*Hackathon `json:"modified_hackathons,omitempty"`
+	// CreatedProjects holds the value of the created_projects edge.
+	CreatedProjects []*Project `json:"created_projects,omitempty"`
+	// ModifiedProjects holds the value of the modified_projects edge.
+	ModifiedProjects []*Project `json:"modified_projects,omitempty"`
+	// ParticipatesInHackathons holds the value of the participates_in_hackathons edge.
+	ParticipatesInHackathons []*Hackathon `json:"participates_in_hackathons,omitempty"`
+	// ParticipatesInTeams holds the value of the participates_in_teams edge.
+	ParticipatesInTeams []*Team `json:"participates_in_teams,omitempty"`
+	// CreatedTeams holds the value of the created_teams edge.
+	CreatedTeams []*Team `json:"created_teams,omitempty"`
+	// CreatedPages holds the value of the created_pages edge.
+	CreatedPages []*Page `json:"created_pages,omitempty"`
+	// ModifiedPages holds the value of the modified_pages edge.
+	ModifiedPages []*Page `json:"modified_pages,omitempty"`
+	// CreatedPhases holds the value of the created_phases edge.
+	CreatedPhases []*Phase `json:"created_phases,omitempty"`
+	// ModifiedPhases holds the value of the modified_phases edge.
+	ModifiedPhases []*Phase `json:"modified_phases,omitempty"`
+	// CreatedSubmissions holds the value of the created_submissions edge.
+	CreatedSubmissions []*Submission `json:"created_submissions,omitempty"`
+	// ModifiedSubmissions holds the value of the modified_submissions edge.
+	ModifiedSubmissions []*Submission `json:"modified_submissions,omitempty"`
+	// Participations holds the value of the participations edge.
+	Participations []*Participant `json:"participations,omitempty"`
+	// TeamParticipations holds the value of the team_participations edge.
+	TeamParticipations []*TeamParticipant `json:"team_participations,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [15]bool
+}
+
+// CreatedHackathonsOrErr returns the CreatedHackathons value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedHackathonsOrErr() ([]*Hackathon, error) {
+	if e.loadedTypes[0] {
+		return e.CreatedHackathons, nil
+	}
+	return nil, &NotLoadedError{edge: "created_hackathons"}
+}
+
+// ModifiedHackathonsOrErr returns the ModifiedHackathons value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ModifiedHackathonsOrErr() ([]*Hackathon, error) {
+	if e.loadedTypes[1] {
+		return e.ModifiedHackathons, nil
+	}
+	return nil, &NotLoadedError{edge: "modified_hackathons"}
+}
+
+// CreatedProjectsOrErr returns the CreatedProjects value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedProjectsOrErr() ([]*Project, error) {
+	if e.loadedTypes[2] {
+		return e.CreatedProjects, nil
+	}
+	return nil, &NotLoadedError{edge: "created_projects"}
+}
+
+// ModifiedProjectsOrErr returns the ModifiedProjects value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ModifiedProjectsOrErr() ([]*Project, error) {
+	if e.loadedTypes[3] {
+		return e.ModifiedProjects, nil
+	}
+	return nil, &NotLoadedError{edge: "modified_projects"}
+}
+
+// ParticipatesInHackathonsOrErr returns the ParticipatesInHackathons value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ParticipatesInHackathonsOrErr() ([]*Hackathon, error) {
+	if e.loadedTypes[4] {
+		return e.ParticipatesInHackathons, nil
+	}
+	return nil, &NotLoadedError{edge: "participates_in_hackathons"}
+}
+
+// ParticipatesInTeamsOrErr returns the ParticipatesInTeams value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ParticipatesInTeamsOrErr() ([]*Team, error) {
+	if e.loadedTypes[5] {
+		return e.ParticipatesInTeams, nil
+	}
+	return nil, &NotLoadedError{edge: "participates_in_teams"}
+}
+
+// CreatedTeamsOrErr returns the CreatedTeams value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedTeamsOrErr() ([]*Team, error) {
+	if e.loadedTypes[6] {
+		return e.CreatedTeams, nil
+	}
+	return nil, &NotLoadedError{edge: "created_teams"}
+}
+
+// CreatedPagesOrErr returns the CreatedPages value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedPagesOrErr() ([]*Page, error) {
+	if e.loadedTypes[7] {
+		return e.CreatedPages, nil
+	}
+	return nil, &NotLoadedError{edge: "created_pages"}
+}
+
+// ModifiedPagesOrErr returns the ModifiedPages value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ModifiedPagesOrErr() ([]*Page, error) {
+	if e.loadedTypes[8] {
+		return e.ModifiedPages, nil
+	}
+	return nil, &NotLoadedError{edge: "modified_pages"}
+}
+
+// CreatedPhasesOrErr returns the CreatedPhases value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedPhasesOrErr() ([]*Phase, error) {
+	if e.loadedTypes[9] {
+		return e.CreatedPhases, nil
+	}
+	return nil, &NotLoadedError{edge: "created_phases"}
+}
+
+// ModifiedPhasesOrErr returns the ModifiedPhases value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ModifiedPhasesOrErr() ([]*Phase, error) {
+	if e.loadedTypes[10] {
+		return e.ModifiedPhases, nil
+	}
+	return nil, &NotLoadedError{edge: "modified_phases"}
+}
+
+// CreatedSubmissionsOrErr returns the CreatedSubmissions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedSubmissionsOrErr() ([]*Submission, error) {
+	if e.loadedTypes[11] {
+		return e.CreatedSubmissions, nil
+	}
+	return nil, &NotLoadedError{edge: "created_submissions"}
+}
+
+// ModifiedSubmissionsOrErr returns the ModifiedSubmissions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ModifiedSubmissionsOrErr() ([]*Submission, error) {
+	if e.loadedTypes[12] {
+		return e.ModifiedSubmissions, nil
+	}
+	return nil, &NotLoadedError{edge: "modified_submissions"}
+}
+
+// ParticipationsOrErr returns the Participations value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ParticipationsOrErr() ([]*Participant, error) {
+	if e.loadedTypes[13] {
+		return e.Participations, nil
+	}
+	return nil, &NotLoadedError{edge: "participations"}
+}
+
+// TeamParticipationsOrErr returns the TeamParticipations value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TeamParticipationsOrErr() ([]*TeamParticipant, error) {
+	if e.loadedTypes[14] {
+		return e.TeamParticipations, nil
+	}
+	return nil, &NotLoadedError{edge: "team_participations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -87,6 +262,81 @@ func (_m *User) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *User) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryCreatedHackathons queries the "created_hackathons" edge of the User entity.
+func (_m *User) QueryCreatedHackathons() *HackathonQuery {
+	return NewUserClient(_m.config).QueryCreatedHackathons(_m)
+}
+
+// QueryModifiedHackathons queries the "modified_hackathons" edge of the User entity.
+func (_m *User) QueryModifiedHackathons() *HackathonQuery {
+	return NewUserClient(_m.config).QueryModifiedHackathons(_m)
+}
+
+// QueryCreatedProjects queries the "created_projects" edge of the User entity.
+func (_m *User) QueryCreatedProjects() *ProjectQuery {
+	return NewUserClient(_m.config).QueryCreatedProjects(_m)
+}
+
+// QueryModifiedProjects queries the "modified_projects" edge of the User entity.
+func (_m *User) QueryModifiedProjects() *ProjectQuery {
+	return NewUserClient(_m.config).QueryModifiedProjects(_m)
+}
+
+// QueryParticipatesInHackathons queries the "participates_in_hackathons" edge of the User entity.
+func (_m *User) QueryParticipatesInHackathons() *HackathonQuery {
+	return NewUserClient(_m.config).QueryParticipatesInHackathons(_m)
+}
+
+// QueryParticipatesInTeams queries the "participates_in_teams" edge of the User entity.
+func (_m *User) QueryParticipatesInTeams() *TeamQuery {
+	return NewUserClient(_m.config).QueryParticipatesInTeams(_m)
+}
+
+// QueryCreatedTeams queries the "created_teams" edge of the User entity.
+func (_m *User) QueryCreatedTeams() *TeamQuery {
+	return NewUserClient(_m.config).QueryCreatedTeams(_m)
+}
+
+// QueryCreatedPages queries the "created_pages" edge of the User entity.
+func (_m *User) QueryCreatedPages() *PageQuery {
+	return NewUserClient(_m.config).QueryCreatedPages(_m)
+}
+
+// QueryModifiedPages queries the "modified_pages" edge of the User entity.
+func (_m *User) QueryModifiedPages() *PageQuery {
+	return NewUserClient(_m.config).QueryModifiedPages(_m)
+}
+
+// QueryCreatedPhases queries the "created_phases" edge of the User entity.
+func (_m *User) QueryCreatedPhases() *PhaseQuery {
+	return NewUserClient(_m.config).QueryCreatedPhases(_m)
+}
+
+// QueryModifiedPhases queries the "modified_phases" edge of the User entity.
+func (_m *User) QueryModifiedPhases() *PhaseQuery {
+	return NewUserClient(_m.config).QueryModifiedPhases(_m)
+}
+
+// QueryCreatedSubmissions queries the "created_submissions" edge of the User entity.
+func (_m *User) QueryCreatedSubmissions() *SubmissionQuery {
+	return NewUserClient(_m.config).QueryCreatedSubmissions(_m)
+}
+
+// QueryModifiedSubmissions queries the "modified_submissions" edge of the User entity.
+func (_m *User) QueryModifiedSubmissions() *SubmissionQuery {
+	return NewUserClient(_m.config).QueryModifiedSubmissions(_m)
+}
+
+// QueryParticipations queries the "participations" edge of the User entity.
+func (_m *User) QueryParticipations() *ParticipantQuery {
+	return NewUserClient(_m.config).QueryParticipations(_m)
+}
+
+// QueryTeamParticipations queries the "team_participations" edge of the User entity.
+func (_m *User) QueryTeamParticipations() *TeamParticipantQuery {
+	return NewUserClient(_m.config).QueryTeamParticipations(_m)
 }
 
 // Update returns a builder for updating this User.
