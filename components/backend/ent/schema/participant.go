@@ -21,7 +21,7 @@ func (Participant) Fields() []ent.Field {
 		field.String("user_id").
 			NotEmpty(),
 		field.Bool("is_waiting").
-			Default(false),
+			Default(true),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),

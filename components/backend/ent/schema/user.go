@@ -35,5 +35,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)),
 		edge.To("participant_hackathons", Participant.Type),
+		edge.To("team_participations", TeamParticipant.Type),
+		edge.To("created_teams", Team.Type),
 	}
 }

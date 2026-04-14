@@ -56,6 +56,7 @@ func (Project) Edges() []ent.Edge {
 		edge.From("modifier", User.Type).
 			Ref("modified_projects").
 			Field("modified_by"),
+		edge.To("teams", Team.Type),
 	}
 }
 
