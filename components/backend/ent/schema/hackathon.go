@@ -45,6 +45,13 @@ func (Hackathon) Edges() []ent.Edge {
 		edge.To("tracks", Track.Type),
 		edge.To("projects", Project.Type),
 		edge.To("participants", Participant.Type),
+		edge.To("pages", Page.Type),
+		edge.To("phases", Phase.Type),
+		edge.From("creator", User.Type).
+			Ref("hackathons").
+			Field("created_by"),
+		edge.From("modifier", User.Type).
+			Field("modified_by"),
 	}
 }
 

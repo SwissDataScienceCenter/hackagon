@@ -17,6 +17,8 @@ func (Track) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
 			NotEmpty(),
+		field.Text("description").
+			NotEmpty(),
 		field.String("hackathon_id").
 			NotEmpty(),
 	}

@@ -47,6 +47,8 @@ func (Submission) Edges() []ent.Edge {
 		edge.From("creator", User.Type).
 			Ref("submitted_projects").
 			Field("created_by"),
+		edge.From("modifier", User.Type).
+			Field("modified_by"),
 	}
 }
 
