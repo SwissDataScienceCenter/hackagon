@@ -40,5 +40,6 @@ func (Team) Edges() []ent.Edge {
 		edge.From("creator", User.Type).
 			Ref("created_teams").
 			Field("created_by"),
+		edge.To("submissions", Submission.Type),
 	}
 }
