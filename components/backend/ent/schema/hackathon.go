@@ -44,6 +44,7 @@ func (Hackathon) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("tracks", Track.Type),
 		edge.To("projects", Project.Type),
+		edge.To("participants", Participant.Type),
 	}
 }
 
