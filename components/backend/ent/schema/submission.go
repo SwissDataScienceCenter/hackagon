@@ -17,15 +17,9 @@ type Submission struct {
 // Fields of the Submission.
 func (Submission) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("team_id").
-			NotEmpty(),
-		field.String("project_id").
-			NotEmpty(),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
-		field.String("created_by").
-			NotEmpty(),
 		field.String("result").
 			Optional(),
 		field.Enum("status").
@@ -39,22 +33,19 @@ func (Submission) Fields() []ent.Field {
 func (Submission) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("team", Team.Type).
-			Ref("submissions").
-			Field("team_id"),
+			Ref("submissions").Unique().Required(),
 		edge.From("project", Project.Type).
-			Ref("submissions").
-			Field("project_id"),
+			Ref("submissions").Unique().Required(),
 		edge.From("creator", User.Type).
-			Ref("submitted_projects").
-			Field("created_by"),
+			Ref("created_submissions").Unique().Required().Immutable(),
 		edge.From("modifier", User.Type).
-			Field("modified_by"),
+			Ref("modified_submissions").Unique(),
 	}
 }
 
 // Indexes of the Submission.
 func (Submission) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("team_id", "project_id", "version"),
+		index.Fields("version"),
 	}
 }

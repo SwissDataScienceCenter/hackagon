@@ -17,28 +17,17 @@ type Phase struct {
 // Fields of the Phase.
 func (Phase) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("hackathon_id").
-			NotEmpty(),
-		field.Time("start_date").
-			NotEmpty(),
-		field.Time("end_date").
-			NotEmpty(),
+		field.Time("start_date"),
+		field.Time("end_date"),
 		field.String("name").
 			NotEmpty(),
 		field.Text("description").
-			Optional(),
-		field.String("page_id").
 			Optional(),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
 		field.Time("modified_at").
 			Default(time.Now),
-		field.String("created_by").
-			Immutable().
-			NotEmpty(),
-		field.String("modified_by").
-			NotEmpty(),
 	}
 }
 
@@ -46,22 +35,19 @@ func (Phase) Fields() []ent.Field {
 func (Phase) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
-			Ref("phases").
-			Field("hackathon_id"),
+			Ref("phases"),
 		edge.From("page", Page.Type).
-			Ref("phase").
-			Field("page_id"),
+			Ref("phases"),
 		edge.From("creator", User.Type).
-			Field("created_by"),
+			Ref("created_phases").Unique().Required().Immutable(),
 		edge.From("modifier", User.Type).
-			Field("modified_by"),
+			Ref("modified_phases").Unique(),
 	}
 }
 
 // Indexes of the Phase.
 func (Phase) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("hackathon_id"),
 		index.Fields("start_date"),
 		index.Fields("end_date"),
 		index.Fields("name"),

@@ -17,8 +17,6 @@ type Page struct {
 // Fields of the Page.
 func (Page) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("hackathon_id").
-			NotEmpty(),
 		field.String("title").
 			NotEmpty(),
 		field.Text("content"),
@@ -30,11 +28,6 @@ func (Page) Fields() []ent.Field {
 			Default(time.Now),
 		field.Time("modified_at").
 			Default(time.Now),
-		field.String("created_by").
-			Immutable().
-			NotEmpty(),
-		field.String("modified_by").
-			NotEmpty(),
 	}
 }
 
@@ -42,19 +35,18 @@ func (Page) Fields() []ent.Field {
 func (Page) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
-			Ref("pages").
-			Field("hackathon_id"),
+			Ref("pages"),
+		edge.To("phases", Phase.Type),
 		edge.From("creator", User.Type).
-			Field("created_by"),
+			Ref("created_pages").Unique().Required().Immutable(),
 		edge.From("modifier", User.Type).
-			Field("modified_by"),
+			Ref("modified_pages").Unique(),
 	}
 }
 
 // Indexes of the Page.
 func (Page) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("hackathon_id"),
 		index.Fields("order"),
 		index.Fields("visible"),
 	}

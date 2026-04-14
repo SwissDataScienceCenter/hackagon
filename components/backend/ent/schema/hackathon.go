@@ -31,11 +31,6 @@ func (Hackathon) Fields() []ent.Field {
 		field.Text("description"),
 		field.String("logo").
 			Optional(),
-		field.String("created_by").
-			Immutable().
-			NotEmpty(),
-		field.String("modified_by").
-			NotEmpty(),
 	}
 }
 
@@ -44,14 +39,13 @@ func (Hackathon) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("tracks", Track.Type),
 		edge.To("projects", Project.Type),
-		edge.To("participants", Participant.Type),
+		edge.From("participating_users", User.Type).Ref("participates_in_hackathons").Through("participants", Participant.Type),
 		edge.To("pages", Page.Type),
 		edge.To("phases", Phase.Type),
 		edge.From("creator", User.Type).
-			Ref("hackathons").
-			Field("created_by"),
+			Ref("created_hackathons").Unique().Required().Immutable(),
 		edge.From("modifier", User.Type).
-			Field("modified_by"),
+			Ref("modified_hackathons").Unique(),
 	}
 }
 
@@ -62,7 +56,5 @@ func (Hackathon) Indexes() []ent.Index {
 		index.Fields("start_date"),
 		index.Fields("end_date"),
 		index.Fields("visibility"),
-		index.Fields("created_by"),
-		index.Fields("modified_by"),
 	}
 }

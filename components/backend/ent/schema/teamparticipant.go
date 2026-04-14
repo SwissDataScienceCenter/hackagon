@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
@@ -13,13 +14,18 @@ type TeamParticipant struct {
 	ent.Schema
 }
 
+func (TeamParticipant) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		field.ID("user_id", "team_id"),
+	}
+}
+
 // Fields of the TeamParticipant.
 func (TeamParticipant) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("team_id").
-			NotEmpty(),
-		field.String("user_id").
-			NotEmpty(),
+		field.Int("team_id"),
+
+		field.Int("user_id"),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
@@ -29,11 +35,11 @@ func (TeamParticipant) Fields() []ent.Field {
 // Edges of the TeamParticipant.
 func (TeamParticipant) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("team", Team.Type).
-			Ref("participants").
+		edge.To("team", Team.Type).
+			Unique().Required().
 			Field("team_id"),
-		edge.From("user", User.Type).
-			Ref("team_participations").
+		edge.To("user", User.Type).
+			Unique().Required().
 			Field("user_id"),
 	}
 }

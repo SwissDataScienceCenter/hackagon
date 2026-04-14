@@ -19,8 +19,6 @@ func (Track) Fields() []ent.Field {
 			NotEmpty(),
 		field.Text("description").
 			NotEmpty(),
-		field.String("hackathon_id").
-			NotEmpty(),
 	}
 }
 
@@ -29,7 +27,7 @@ func (Track) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
 			Ref("tracks").
-			Field("hackathon_id"),
+			Unique(),
 		edge.To("projects", Project.Type),
 	}
 }
@@ -38,6 +36,5 @@ func (Track) Edges() []ent.Edge {
 func (Track) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("name"),
-		index.Fields("hackathon_id"),
 	}
 }

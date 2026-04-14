@@ -19,18 +19,9 @@ func (Project) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("title").
 			NotEmpty(),
-		field.String("hackathon_id").
-			NotEmpty(),
-		field.String("track_id").
-			NotEmpty(),
-		field.String("created_by").
-			Immutable().
-			NotEmpty(),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
-		field.String("modified_by").
-			NotEmpty(),
 		field.Time("modified_at").
 			Default(time.Now),
 		field.Enum("status").
@@ -45,16 +36,13 @@ func (Project) Fields() []ent.Field {
 func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("track", Track.Type).
-			Ref("projects").
-			Field("track_id"),
+			Ref("projects").Unique().Required(),
 		edge.From("hackathon", Hackathon.Type).
-			Ref("projects").
-			Field("hackathon_id"),
+			Ref("projects").Unique().Required(),
 		edge.From("creator", User.Type).
-			Ref("created_projects").
-			Field("created_by"),
+			Ref("created_projects").Unique().Immutable().Required(),
 		edge.From("modifier", User.Type).
-			Field("modified_by"),
+			Ref("modified_projects").Unique(),
 		edge.To("teams", Team.Type),
 		edge.To("submissions", Submission.Type),
 	}
@@ -64,10 +52,6 @@ func (Project) Edges() []ent.Edge {
 func (Project) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("title"),
-		index.Fields("hackathon_id"),
-		index.Fields("track_id"),
-		index.Fields("created_by"),
-		index.Fields("modified_by"),
 		index.Fields("status"),
 	}
 }

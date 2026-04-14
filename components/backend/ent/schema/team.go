@@ -18,16 +18,11 @@ func (Team) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
 			NotEmpty(),
-		field.String("created_by").
-			Immutable().
-			NotEmpty(),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
 		field.Text("description").
 			Optional(),
-		field.String("project_id").
-			NotEmpty(),
 	}
 }
 
@@ -35,11 +30,10 @@ func (Team) Fields() []ent.Field {
 func (Team) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("project", Project.Type).
-			Ref("teams").
-			Field("project_id"),
+			Ref("teams").Unique().Required(),
 		edge.From("creator", User.Type).
-			Ref("created_teams").
-			Field("created_by"),
+			Ref("created_teams").Unique().Immutable().Required(),
 		edge.To("submissions", Submission.Type),
+		edge.From("members", User.Type).Ref("participates_in_teams").Through("team_participants", TeamParticipant.Type),
 	}
 }
