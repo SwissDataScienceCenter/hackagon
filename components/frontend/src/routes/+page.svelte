@@ -46,7 +46,7 @@
         </span>
 
         <h1 class="max-w-[700px] text-5xl font-bold leading-[1.15]">
-            The hackathon platform<br />for Swiss research.
+            SDSC Hackathon Platform
         </h1>
 
         <p class="max-w-[560px] text-base leading-relaxed text-surface-600 dark:text-surface-400">
@@ -62,7 +62,7 @@
                 Get Started
             </a>
             <a
-                href={resolve('/')}
+                href={resolve('/hackathon/ord-2026')}
                 class="btn preset-outlined-surface-200-800 no-underline"
             >
                 Browse Hackathons
@@ -96,13 +96,13 @@
 
     <div class="mt-0 divide-y divide-surface-200 dark:divide-surface-800">
         {#each [
-            { idx: '1', name: 'ORD Hackathon 2026', org: 'SDSC', meta: '24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '42', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)' },
-            { idx: '2', name: 'Generative AI for Science', org: 'SDSC', meta: '14 – 15 Nov 2026  ·  EPFL, Lausanne', badge: 'Upcoming', badgePreset: 'preset-tonal-secondary', count: '—', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)' },
-            { idx: '3', name: 'Global Wheat Challenge 2026', org: 'SDSC', meta: '1 Sep – 30 Nov 2026  ·  Online  ·  87 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '87', gradFrom: 'var(--color-warning-600)', gradTo: 'var(--color-warning-950)' },
-            { idx: '4', name: 'Climate Data Challenge 2025', org: 'SDSC', meta: '5 – 6 Jun 2025  ·  Univ. of Bern  ·  64 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '64', gradFrom: 'var(--color-tertiary-500)', gradTo: 'var(--color-tertiary-950)' },
-            { idx: '5', name: 'ORD Hackathon 2025', org: 'SDSC', meta: '18 – 19 Oct 2025  ·  ETH Zurich  ·  78 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '78', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)' },
+            { idx: '1', name: 'ORD Hackathon 2026', org: 'SDSC', meta: '24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '42', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2026' },
+            { idx: '2', name: 'Generative AI for Science', org: 'SDSC', meta: '14 – 15 Nov 2026  ·  EPFL, Lausanne', badge: 'Upcoming', badgePreset: 'preset-tonal-secondary', count: '—', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)', slug: 'genai-2026' },
+            { idx: '3', name: 'Global Wheat Challenge 2026', org: 'SDSC', meta: '1 Sep – 30 Nov 2026  ·  Online  ·  87 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '87', gradFrom: 'var(--color-warning-600)', gradTo: 'var(--color-warning-950)', slug: 'wheat-2026' },
+            { idx: '4', name: 'Climate Data Challenge 2025', org: 'SDSC', meta: '5 – 6 Jun 2025  ·  Univ. of Bern  ·  64 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '64', gradFrom: 'var(--color-tertiary-500)', gradTo: 'var(--color-tertiary-950)', slug: 'climate-2025' },
+            { idx: '5', name: 'ORD Hackathon 2025', org: 'SDSC', meta: '18 – 19 Oct 2025  ·  ETH Zurich  ·  78 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '78', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2025' },
         ] as row, i (i)}
-            <div class="flex h-[72px] items-center gap-4 px-4">
+            <a href={resolve(`/hackathon/${row.slug}`)} class="flex h-[72px] items-center gap-4 px-4 no-underline hover:bg-surface-100 dark:hover:bg-surface-900 transition-colors">
                 <span class="w-4 text-sm font-semibold text-surface-500">{row.idx}</span>
                 <div
                     class="h-12 w-12 shrink-0"
@@ -123,7 +123,7 @@
                     <Users class="h-3 w-3" />
                     <span class="text-xs">{row.count}</span>
                 </div>
-            </div>
+            </a>
         {/each}
     </div>
 </section>
