@@ -1,0 +1,2887 @@
+{
+  "version": "2.10",
+  "themes": {
+    "mode": ["dark", "light"]
+  },
+  "variables": {
+    "color.bg": {
+      "type": "color",
+      "value": [
+        { "value": "#161616", "theme": { "mode": "dark" } },
+        { "value": "#FFFFFF", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.surface": {
+      "type": "color",
+      "value": [
+        { "value": "#1E1E1E", "theme": { "mode": "dark" } },
+        { "value": "#FAFAFA", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.surfaceRaised": {
+      "type": "color",
+      "value": [
+        { "value": "#262626", "theme": { "mode": "dark" } },
+        { "value": "#F0F0F0", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.border": {
+      "type": "color",
+      "value": [
+        { "value": "#333333", "theme": { "mode": "dark" } },
+        { "value": "#E0E0E0", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.text": {
+      "type": "color",
+      "value": [
+        { "value": "#F0F0F0", "theme": { "mode": "dark" } },
+        { "value": "#161616", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.textSecondary": {
+      "type": "color",
+      "value": [
+        { "value": "#A0A0A0", "theme": { "mode": "dark" } },
+        { "value": "#6B6B6B", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.textMuted": {
+      "type": "color",
+      "value": [
+        { "value": "#666666", "theme": { "mode": "dark" } },
+        { "value": "#999999", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.primary": { "type": "color", "value": "#6ABF4B" },
+    "color.primaryMuted": {
+      "type": "color",
+      "value": [
+        { "value": "#1F3318", "theme": { "mode": "dark" } },
+        { "value": "#E8F5E0", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.primaryDark": { "type": "color", "value": "#3D8A2E" },
+    "color.secondary": { "type": "color", "value": "#5A4D8A" },
+    "color.secondaryMuted": {
+      "type": "color",
+      "value": [
+        { "value": "#1E1A2E", "theme": { "mode": "dark" } },
+        { "value": "#EEEAF5", "theme": { "mode": "light" } }
+      ]
+    },
+    "color.accent": { "type": "color", "value": "#FFD700" },
+    "color.onPrimary": { "type": "color", "value": "#0A1A06" },
+    "font.mono": { "type": "string", "value": "Source Code Pro" },
+    "size.px": { "type": "number", "value": 80 },
+    "size.contentMax": { "type": "number", "value": 1280 }
+  },
+  "children": [
+
+    {
+      "id": "nav-bar",
+      "name": "Navigation Bar (reusable)",
+      "type": "frame",
+      "reusable": true,
+      "x": 0, "y": -80,
+      "width": 1440,
+      "height": 56,
+      "fill": "$color.bg",
+      "layout": "horizontal",
+      "justifyContent": "space_between",
+      "alignItems": "center",
+      "padding": [0, 32, 0, 32],
+      "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+      "children": [
+        {
+          "id": "nav-left",
+          "type": "frame",
+          "width": "fit_content", "height": "fit_content",
+          "layout": "horizontal", "alignItems": "center", "gap": 12,
+          "children": [
+            { "id": "nav-logo", "type": "rectangle", "width": 28, "height": 28, "fill": "$color.primary" },
+            { "id": "nav-brand", "type": "text", "content": "SDSC Hackathons", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 15, "fontWeight": "700" }
+          ]
+        },
+        {
+          "id": "nav-center",
+          "type": "frame",
+          "width": "fit_content", "height": "fit_content",
+          "layout": "horizontal", "alignItems": "center", "gap": 24,
+          "children": [
+            { "id": "nav-link-hackathons", "type": "text", "content": "Hackathons", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "500" },
+            { "id": "nav-link-challenges", "type": "text", "content": "Challenges", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13 },
+            { "id": "nav-link-about", "type": "text", "content": "About", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13 }
+          ]
+        },
+        {
+          "id": "nav-right",
+          "type": "frame",
+          "width": "fit_content", "height": "fit_content",
+          "layout": "horizontal", "alignItems": "center", "gap": 12,
+          "children": [
+            {
+              "id": "nav-search",
+              "type": "frame", "width": 200, "height": 32,
+              "fill": "$color.surfaceRaised",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "alignItems": "center", "padding": [0, 10, 0, 10], "gap": 8,
+              "children": [
+                { "id": "nav-search-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "search", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                { "id": "nav-search-placeholder", "type": "text", "content": "Search hackathons...", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "nav-login-btn",
+              "type": "frame", "width": 72, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "nav-login-text", "type": "text", "content": "Log in", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "600" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "footer-main",
+      "name": "Footer with Partner Logos (reusable)",
+      "context": "Site-wide footer with SDSC, ETH Zurich, and EPFL logos on the left, text links on the right. Uses actual logo SVGs from /images/logos/.",
+      "type": "frame",
+      "reusable": true,
+      "x": 0, "y": -160,
+      "width": 1440,
+      "height": 56,
+      "fill": "$color.surface",
+      "layout": "horizontal", "justifyContent": "space_between", "alignItems": "center",
+      "padding": [0, 80, 0, 80],
+      "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+      "children": [
+        {
+          "id": "ft-logos",
+          "type": "frame", "width": "fit_content", "height": "fit_content",
+          "layout": "horizontal", "gap": 20, "alignItems": "center",
+          "children": [
+            {
+              "id": "ft-sdsc-logo",
+              "name": "SDSC Logo (/images/logos/sdsc-logo-footer.svg)",
+              "type": "rectangle", "width": 80, "height": 24,
+              "fill": "$color.surfaceRaised",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" }
+            },
+            { "id": "ft-sep-1", "type": "rectangle", "width": 1, "height": 18, "fill": "$color.border" },
+            {
+              "id": "ft-eth-logo",
+              "name": "ETH Zurich Logo (/images/logos/eth-zurich.svg)",
+              "type": "rectangle", "width": 80, "height": 24,
+              "fill": "$color.surfaceRaised",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" }
+            },
+            { "id": "ft-sep-2", "type": "rectangle", "width": 1, "height": 18, "fill": "$color.border" },
+            {
+              "id": "ft-epfl-logo",
+              "name": "EPFL Logo (/images/logos/epfl.svg)",
+              "type": "rectangle", "width": 60, "height": 24,
+              "fill": "$color.surfaceRaised",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" }
+            }
+          ]
+        },
+        { "id": "ft-links", "type": "text", "content": "Privacy  ·  Terms  ·  About  ·  GitHub", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+      ]
+    },
+
+    {
+      "id": "homepage",
+      "name": "Homepage — Public (Desktop 1440px)",
+      "context": "HuggingFace-inspired public landing page. Full-width, no sidebars. Visitors see hero, trending hackathons with tabs, winners, organization logos, feature highlights, and CTA. Logged-in users get redirected to /welcome dashboard.",
+      "type": "frame",
+      "x": 0, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+
+        { "id": "home-nav", "type": "ref", "ref": "nav-bar" },
+
+        {
+          "id": "hero",
+          "name": "Hero Section",
+          "context": "Full-width hero with background photo (/images/hackathon-ord-2024/ambiance/ambiance_1.jpg) darkened via overlay. Centered tagline, subtitle, two CTAs on top. Photo shows hackathon participants collaborating.",
+          "type": "frame",
+          "width": "fill_container", "height": 480,
+          "fill": "$color.bg",
+          "layout": "vertical", "justifyContent": "center", "alignItems": "center", "gap": 24,
+          "padding": [40, 80, 60, 80],
+          "clip": true,
+          "children": [
+            {
+              "id": "hero-bg-image",
+              "name": "Background Photo: /images/hackathon-ord-2024/ambiance/ambiance_1.jpg",
+              "context": "Full-bleed background image showing participants at tables during ORD Hackathon 2024. Represented as a gradient placeholder. In implementation, use the actual photo with object-fit: cover.",
+              "type": "rectangle",
+              "layoutPosition": "absolute",
+              "x": 0, "y": 0,
+              "width": 1440, "height": 480,
+              "fill": "$color.primaryMuted",
+              "opacity": 0.5
+            },
+            {
+              "id": "hero-overlay",
+              "name": "Theme-aware overlay — fades to $color.bg",
+              "context": "Solid fill using $color.bg so it's dark in dark mode, white in light mode. The photo shows through at reduced opacity.",
+              "type": "rectangle",
+              "layoutPosition": "absolute",
+              "x": 0, "y": 0,
+              "width": 1440, "height": 480,
+              "fill": "$color.bg",
+              "opacity": 0.65
+            },
+            {
+              "id": "hero-eyebrow",
+              "type": "frame", "width": "fit_content", "height": 26,
+              "fill": "$color.primaryMuted",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primary" },
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [4, 14, 4, 14], "gap": 6,
+              "children": [
+                { "id": "hero-eyebrow-dot", "type": "ellipse", "width": 6, "height": 6, "fill": "$color.primary" },
+                { "id": "hero-eyebrow-text", "type": "text", "content": "ORD Hackathon 2026 — Registration open", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+              ]
+            },
+            {
+              "id": "hero-title",
+              "type": "text",
+              "content": "The hackathon platform\nfor Swiss research.",
+              "fill": "$color.text",
+              "fontFamily": "$font.mono", "fontSize": 48, "fontWeight": "700",
+              "textAlign": "center", "lineHeight": 1.15,
+              "textGrowth": "fixed-width", "width": 700
+            },
+            {
+              "id": "hero-subtitle",
+              "type": "text",
+              "content": "Propose projects, form teams, and build solutions together.\nHosted by SDSC for the Swiss scientific community.",
+              "fill": "$color.textSecondary",
+              "fontFamily": "$font.mono", "fontSize": 16, "textAlign": "center", "lineHeight": 1.6,
+              "textGrowth": "fixed-width", "width": 560
+            },
+            {
+              "id": "hero-ctas",
+              "type": "frame",
+              "width": "fit_content", "height": "fit_content",
+              "layout": "horizontal", "gap": 12, "alignItems": "center",
+              "children": [
+                {
+                  "id": "hero-cta-register",
+                  "type": "frame", "width": 160, "height": 44,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "hero-cta-register-text", "type": "text", "content": "Get Started", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "hero-cta-browse",
+                  "type": "frame", "width": 200, "height": 44,
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "hero-cta-browse-text", "type": "text", "content": "Browse Hackathons", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14 },
+                    { "id": "hero-cta-browse-arrow", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "arrow-right", "width": 14, "height": 14, "fill": "$color.textSecondary" }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "trending",
+          "name": "Trending Section (HF-style tabs)",
+          "context": "Like HuggingFace 'Trending on this week' section. Tabs to switch between Hackathons, Challenges, Past Events. Shows cards for each. This replaces separate Current/Past sections.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 24,
+          "padding": [48, 80, 48, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "trending-header",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space_between", "alignItems": "center",
+              "children": [
+                {
+                  "id": "trending-title",
+                  "type": "text", "content": "Trending this month",
+                  "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700"
+                },
+                {
+                  "id": "trending-view-all",
+                  "type": "text", "content": "Browse all ->",
+                  "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 13
+                }
+              ]
+            },
+            {
+              "id": "trending-tabs",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 0,
+              "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+              "children": [
+                {
+                  "id": "tab-hackathons",
+                  "type": "frame", "width": "fit_content", "height": 36,
+                  "layout": "horizontal", "alignItems": "center",
+                  "padding": [0, 16, 0, 16],
+                  "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+                  "children": [
+                    { "id": "tab-hackathons-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "code", "width": 14, "height": 14, "fill": "$color.primary" },
+                    { "id": "tab-hackathons-label", "type": "text", "content": "  Hackathons", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "tab-challenges",
+                  "type": "frame", "width": "fit_content", "height": 36,
+                  "layout": "horizontal", "alignItems": "center",
+                  "padding": [0, 16, 0, 16],
+                  "children": [
+                    { "id": "tab-challenges-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "trophy", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                    { "id": "tab-challenges-label", "type": "text", "content": "  Challenges", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13 }
+                  ]
+                },
+                {
+                  "id": "tab-past",
+                  "type": "frame", "width": "fit_content", "height": 36,
+                  "layout": "horizontal", "alignItems": "center",
+                  "padding": [0, 16, 0, 16],
+                  "children": [
+                    { "id": "tab-past-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "archive", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                    { "id": "tab-past-label", "type": "text", "content": "  Past Events", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "trending-list",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "vertical", "gap": 0,
+              "children": [
+                {
+                  "id": "trending-row",
+                  "name": "Trending Row",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": "fill_container", "height": 72,
+                  "layout": "horizontal", "alignItems": "center", "gap": 16,
+                  "padding": [0, 16, 0, 16],
+                  "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+                  "children": [
+                    { "id": "tr-index", "type": "text", "content": "1", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+                    {
+                      "id": "tr-thumb",
+                      "type": "rectangle", "width": 48, "height": 48,
+                      "fill": {
+                        "type": "gradient", "gradientType": "linear", "rotation": 135,
+                        "colors": [ { "color": "#3D8A2E", "position": 0 }, { "color": "#1A2E14", "position": 1 } ]
+                      }
+                    },
+                    {
+                      "id": "tr-info",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "layout": "vertical", "gap": 4,
+                      "children": [
+                        {
+                          "id": "tr-title-row",
+                          "type": "frame", "width": "fit_content", "height": "fit_content",
+                          "layout": "horizontal", "gap": 8, "alignItems": "center",
+                          "children": [
+                            { "id": "tr-org", "type": "text", "content": "SDSC", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13 },
+                            { "id": "tr-slash", "type": "text", "content": "/", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 13 },
+                            { "id": "tr-name", "type": "text", "content": "ORD Hackathon 2026", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "600" }
+                          ]
+                        },
+                        { "id": "tr-meta", "type": "text", "content": "24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                      ]
+                    },
+                    {
+                      "id": "tr-badge",
+                      "type": "frame", "width": "fit_content", "height": 22,
+                      "fill": "$color.primaryMuted",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+                      "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                      "padding": [2, 10, 2, 10],
+                      "children": [
+                        { "id": "tr-badge-text", "type": "text", "content": "Registration Open", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "600" }
+                      ]
+                    },
+                    {
+                      "id": "tr-stats",
+                      "type": "frame", "width": "fit_content", "height": "fit_content",
+                      "layout": "horizontal", "gap": 12, "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "tr-participants",
+                          "type": "frame", "width": "fit_content", "height": "fit_content",
+                          "layout": "horizontal", "gap": 4, "alignItems": "center",
+                          "children": [
+                            { "id": "tr-participants-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "users", "width": 12, "height": 12, "fill": "$color.textMuted" },
+                            { "id": "tr-participants-count", "type": "text", "content": "42", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "trending-row-2",
+                  "type": "ref", "ref": "trending-row",
+                  "descendants": {
+                    "tr-index": { "content": "2" },
+                    "tr-thumb": {
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135,
+                        "colors": [ { "color": "#5A4D8A", "position": 0 }, { "color": "#2A2040", "position": 1 } ] }
+                    },
+                    "tr-name": { "content": "Generative AI for Science" },
+                    "tr-meta": { "content": "14 – 15 Nov 2026  ·  EPFL, Lausanne" },
+                    "tr-badge-text": { "content": "Upcoming" },
+                    "tr-badge": { "fill": "$color.secondaryMuted", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.secondary" } },
+                    "tr-participants-count": { "content": "—" }
+                  }
+                },
+                {
+                  "id": "trending-row-3",
+                  "type": "ref", "ref": "trending-row",
+                  "descendants": {
+                    "tr-index": { "content": "3" },
+                    "tr-thumb": {
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135,
+                        "colors": [ { "color": "#8A7A2E", "position": 0 }, { "color": "#2E2A14", "position": 1 } ] }
+                    },
+                    "tr-name": { "content": "Global Wheat Challenge 2026" },
+                    "tr-meta": { "content": "1 Sep – 30 Nov 2026  ·  Online  ·  87 registered" },
+                    "tr-participants-count": { "content": "87" }
+                  }
+                },
+                {
+                  "id": "trending-row-4",
+                  "type": "ref", "ref": "trending-row",
+                  "descendants": {
+                    "tr-index": { "content": "4" },
+                    "tr-thumb": {
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135,
+                        "colors": [ { "color": "#2E5A8A", "position": 0 }, { "color": "#142A3E", "position": 1 } ] }
+                    },
+                    "tr-name": { "content": "Climate Data Challenge 2025" },
+                    "tr-meta": { "content": "5 – 6 Jun 2025  ·  Univ. of Bern  ·  64 participants" },
+                    "tr-badge-text": { "content": "Completed" },
+                    "tr-badge": { "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    "tr-participants-count": { "content": "64" }
+                  }
+                },
+                {
+                  "id": "trending-row-5",
+                  "type": "ref", "ref": "trending-row",
+                  "descendants": {
+                    "tr-index": { "content": "5" },
+                    "tr-thumb": {
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135,
+                        "colors": [ { "color": "#3D8A2E", "position": 0 }, { "color": "#1A2E14", "position": 1 } ] }
+                    },
+                    "tr-name": { "content": "ORD Hackathon 2025" },
+                    "tr-meta": { "content": "18 – 19 Oct 2025  ·  ETH Zurich  ·  78 participants" },
+                    "tr-badge-text": { "content": "Completed" },
+                    "tr-badge": { "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    "tr-participants-count": { "content": "78" }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "winners",
+          "name": "Winners Section",
+          "context": "Like HuggingFace Spaces showcase — horizontal cards showing winning projects with trophy, team, hackathon source. Links to project details.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 24,
+          "padding": [48, 80, 48, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "winners-header",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space_between", "alignItems": "center",
+              "children": [
+                { "id": "winners-title", "type": "text", "content": "Award-winning projects", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700" },
+                { "id": "winners-see-all", "type": "text", "content": "See all ->", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 13 }
+              ]
+            },
+            {
+              "id": "winners-grid",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 16,
+              "children": [
+                {
+                  "id": "winner-card",
+                  "name": "Winner Card",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": "fill_container", "height": "fit_content",
+                  "fill": "$color.surface",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "vertical", "gap": 0,
+                  "children": [
+                    {
+                      "id": "wc-header",
+                      "type": "frame", "width": "fill_container", "height": 40,
+                      "fill": "$color.primaryMuted",
+                      "layout": "horizontal", "alignItems": "center", "justifyContent": "space_between",
+                      "padding": [0, 16, 0, 16],
+                      "children": [
+                        {
+                          "id": "wc-trophy-row",
+                          "type": "frame", "width": "fit_content", "height": "fit_content",
+                          "layout": "horizontal", "gap": 6, "alignItems": "center",
+                          "children": [
+                            { "id": "wc-trophy", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "trophy", "width": 14, "height": 14, "fill": "$color.accent" },
+                            { "id": "wc-place", "type": "text", "content": "1st Place", "fill": "$color.accent", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "700" }
+                          ]
+                        },
+                        { "id": "wc-hackathon", "type": "text", "content": "ORD Hackathon 2025", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                      ]
+                    },
+                    {
+                      "id": "wc-body",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "layout": "vertical", "gap": 8, "padding": 16,
+                      "children": [
+                        { "id": "wc-project", "type": "text", "content": "AutoORD: Automated\nResearch Data Pipelines", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600", "lineHeight": 1.3, "textGrowth": "fixed-width", "width": 360 },
+                        { "id": "wc-team", "type": "text", "content": "by Team DataFlow", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12 },
+                        { "id": "wc-summary", "type": "text", "content": "Automated pipeline for converting raw research data into FAIR-compliant open datasets.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.4, "textGrowth": "fixed-width", "width": 360 }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "winner-card-2", "type": "ref", "ref": "winner-card",
+                  "descendants": {
+                    "wc-hackathon": { "content": "GenAI Hackathon 2025" },
+                    "wc-project": { "content": "GenomeLens" },
+                    "wc-team": { "content": "by BioViz Crew" },
+                    "wc-summary": { "content": "Interactive visualization of genomic variants powered by generative models." }
+                  }
+                },
+                {
+                  "id": "winner-card-3", "type": "ref", "ref": "winner-card",
+                  "descendants": {
+                    "wc-hackathon": { "content": "Climate Data 2025" },
+                    "wc-project": { "content": "ClimateQA" },
+                    "wc-team": { "content": "by Green Bytes" },
+                    "wc-summary": { "content": "RAG-based Q&A trained on Swiss climate data, making decades of measurements queryable." }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "event-showcase",
+          "name": "Event Showcase Carousel",
+          "context": "Horizontal scrollable carousel of event photos showcasing past hackathons. Uses real photos from /images/hackathon-ord-2024/ — ambiance, teams, winners. Auto-advances, with dot indicators. Gives visitors a feel for the energy and scale of the events.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 24,
+          "padding": [48, 80, 48, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "es-header",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space_between", "alignItems": "center",
+              "children": [
+                {
+                  "id": "es-title-row",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "horizontal", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "es-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "images", "width": 18, "height": 18, "fill": "$color.primary" },
+                    { "id": "es-title", "type": "text", "content": "From our events", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700" }
+                  ]
+                },
+                {
+                  "id": "es-nav-arrows",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "horizontal", "gap": 8,
+                  "children": [
+                    {
+                      "id": "es-prev",
+                      "type": "frame", "width": 32, "height": 32,
+                      "fill": "$color.surfaceRaised",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                      "children": [
+                        { "id": "es-prev-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "chevron-left", "width": 16, "height": 16, "fill": "$color.textSecondary" }
+                      ]
+                    },
+                    {
+                      "id": "es-next",
+                      "type": "frame", "width": 32, "height": 32,
+                      "fill": "$color.surfaceRaised",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                      "children": [
+                        { "id": "es-next-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "chevron-right", "width": 16, "height": 16, "fill": "$color.textSecondary" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "es-carousel",
+              "name": "Photo Carousel Strip",
+              "context": "Horizontal scroll showing 4 visible photos at a time. Each photo is from a real hackathon event. Clicking opens a lightbox. On mobile, shows 1-2 at a time with swipe.",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 16,
+              "clip": true,
+              "children": [
+                {
+                  "id": "es-slide",
+                  "name": "Carousel Slide",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": 300, "height": 200,
+                  "fill": "$color.surface",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "vertical", "gap": 0,
+                  "clip": true,
+                  "children": [
+                    {
+                      "id": "es-slide-image",
+                      "name": "Photo: /images/hackathon-ord-2024/ambiance/ambiance_1.jpg",
+                      "type": "rectangle", "width": 300, "height": 160,
+                      "fill": {
+                        "type": "gradient", "gradientType": "linear", "rotation": 135,
+                        "colors": [ { "color": "#2E5A3A", "position": 0 }, { "color": "#1A2E14", "position": 1 } ]
+                      }
+                    },
+                    {
+                      "id": "es-slide-caption",
+                      "type": "frame", "width": "fill_container", "height": 40,
+                      "fill": "$color.surface",
+                      "layout": "horizontal", "alignItems": "center",
+                      "padding": [0, 12, 0, 12],
+                      "children": [
+                        { "id": "es-slide-text", "type": "text", "content": "ORD Hackathon 2024 — Teams collaborating", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "es-slide-2", "type": "ref", "ref": "es-slide",
+                  "descendants": {
+                    "es-slide-image": {
+                      "name": "Photo: /images/hackathon-ord-2024/ambiance/ambiance_3.jpg",
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 150, "colors": [ { "color": "#3A2E5A", "position": 0 }, { "color": "#201A2E", "position": 1 } ] }
+                    },
+                    "es-slide-text": { "content": "ORD Hackathon 2024 — Working sessions" }
+                  }
+                },
+                {
+                  "id": "es-slide-3", "type": "ref", "ref": "es-slide",
+                  "descendants": {
+                    "es-slide-image": {
+                      "name": "Photo: /images/hackathon-ord-2024/winners/winners_1.jpg",
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 120, "colors": [ { "color": "#5A4A2E", "position": 0 }, { "color": "#2E2A1A", "position": 1 } ] }
+                    },
+                    "es-slide-text": { "content": "ORD Hackathon 2024 — Award ceremony" }
+                  }
+                },
+                {
+                  "id": "es-slide-4", "type": "ref", "ref": "es-slide",
+                  "descendants": {
+                    "es-slide-image": {
+                      "name": "Photo: /images/hackathon-ord-2024/teams/teams_1.jpg",
+                      "fill": { "type": "gradient", "gradientType": "linear", "rotation": 100, "colors": [ { "color": "#2E5A8A", "position": 0 }, { "color": "#142A3E", "position": 1 } ] }
+                    },
+                    "es-slide-text": { "content": "ORD Hackathon 2024 — Team presentations" }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "es-dots",
+              "name": "Carousel Indicators",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "center", "gap": 8,
+              "children": [
+                { "id": "es-dot-1", "type": "ellipse", "width": 8, "height": 8, "fill": "$color.primary" },
+                { "id": "es-dot-2", "type": "ellipse", "width": 8, "height": 8, "fill": "$color.surfaceRaised" },
+                { "id": "es-dot-3", "type": "ellipse", "width": 8, "height": 8, "fill": "$color.surfaceRaised" },
+                { "id": "es-dot-4", "type": "ellipse", "width": 8, "height": 8, "fill": "$color.surfaceRaised" }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "features",
+          "name": "Features Section (HF-style)",
+          "context": "Like HuggingFace 'The Home of Machine Learning' section. 2x2 grid of feature cards explaining what the platform does. Maps to Skeleton card + preset-tonal-surface.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.surface",
+          "layout": "vertical", "gap": 32,
+          "padding": [64, 80, 64, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "features-header",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "vertical", "alignItems": "center", "gap": 8,
+              "children": [
+                { "id": "features-title", "type": "text", "content": "The hackathon platform for science", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 28, "fontWeight": "700", "textAlign": "center" },
+                { "id": "features-subtitle", "type": "text", "content": "Everything you need to run or participate in a hackathon.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 15, "textAlign": "center" }
+              ]
+            },
+            {
+              "id": "features-grid",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 16,
+              "children": [
+                {
+                  "id": "feat-col-1",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "layout": "vertical", "gap": 16,
+                  "children": [
+                    {
+                      "id": "feat-1",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surfaceRaised",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 12, "padding": 24,
+                      "children": [
+                        { "id": "feat-1-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "lightbulb", "width": 24, "height": 24, "fill": "$color.primary" },
+                        { "id": "feat-1-title", "type": "text", "content": "Propose & discover projects", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "600" },
+                        { "id": "feat-1-desc", "type": "text", "content": "Submit project ideas, browse proposals from other participants, and find the challenge that matches your skills.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 520 }
+                      ]
+                    },
+                    {
+                      "id": "feat-2",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surfaceRaised",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 12, "padding": 24,
+                      "children": [
+                        { "id": "feat-2-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "users", "width": 24, "height": 24, "fill": "$color.primary" },
+                        { "id": "feat-2-title", "type": "text", "content": "Smart team formation", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "600" },
+                        { "id": "feat-2-desc", "type": "text", "content": "Rank your project preferences and get matched into balanced teams. Organizers can fine-tune assignments.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 520 }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "feat-col-2",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "layout": "vertical", "gap": 16,
+                  "children": [
+                    {
+                      "id": "feat-3",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surfaceRaised",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 12, "padding": 24,
+                      "children": [
+                        { "id": "feat-3-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "upload", "width": 24, "height": 24, "fill": "$color.primary" },
+                        { "id": "feat-3-title", "type": "text", "content": "Submit & showcase work", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "600" },
+                        { "id": "feat-3-desc", "type": "text", "content": "Submit your project with links, repos, slides and demos. Draft and iterate before the final deadline.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 520 }
+                      ]
+                    },
+                    {
+                      "id": "feat-4",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surfaceRaised",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 12, "padding": 24,
+                      "children": [
+                        { "id": "feat-4-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "vote", "width": 24, "height": 24, "fill": "$color.primary" },
+                        { "id": "feat-4-title", "type": "text", "content": "Vote & leaderboard", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "600" },
+                        { "id": "feat-4-desc", "type": "text", "content": "Participants and jury vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 520 }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "orgs",
+          "name": "Organizations Section (HF-style)",
+          "context": "Like HuggingFace '50,000 organizations' social proof. Shows partner logos and names. Horizontal row.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 32, "alignItems": "center",
+          "padding": [64, 80, 64, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1 }, "fill": "$color.border" },
+          "children": [
+            { "id": "orgs-title", "type": "text", "content": "Trusted by Swiss research institutions", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700", "textAlign": "center" },
+            {
+              "id": "orgs-logos",
+              "type": "frame",
+              "width": "fit_content", "height": "fit_content",
+              "layout": "horizontal", "gap": 48, "alignItems": "center",
+              "children": [
+                {
+                  "id": "org-1",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "org-1-logo", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "org-1-name", "type": "text", "content": "SDSC", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" }
+                  ]
+                },
+                {
+                  "id": "org-2",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "org-2-logo", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "org-2-name", "type": "text", "content": "ETH Zurich", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" }
+                  ]
+                },
+                {
+                  "id": "org-3",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "org-3-logo", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "org-3-name", "type": "text", "content": "EPFL", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" }
+                  ]
+                },
+                {
+                  "id": "org-4",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "org-4-logo", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "org-4-name", "type": "text", "content": "Univ. of Bern", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" }
+                  ]
+                },
+                {
+                  "id": "org-5",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "org-5-logo", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "org-5-name", "type": "text", "content": "Univ. of Zurich", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" }
+                  ]
+                },
+                {
+                  "id": "org-6",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "org-6-logo", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "org-6-name", "type": "text", "content": "SOAD", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "cta-organize",
+          "name": "Organize CTA",
+          "context": "Call to action for potential hackathon organizers. Tonal primary background like HF enterprise section.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.primaryMuted",
+          "layout": "horizontal", "alignItems": "center", "justifyContent": "space_between",
+          "padding": [48, 80, 48, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1, "bottom": 1 }, "fill": "$color.primaryDark" },
+          "children": [
+            {
+              "id": "cta-text-block",
+              "type": "frame", "width": "fit_content", "height": "fit_content",
+              "layout": "vertical", "gap": 8,
+              "children": [
+                { "id": "cta-title", "type": "text", "content": "Want to host your own hackathon?", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                { "id": "cta-desc", "type": "text", "content": "SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 560 }
+              ]
+            },
+            {
+              "id": "cta-btn",
+              "type": "frame", "width": 160, "height": 44,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 8,
+              "children": [
+                { "id": "cta-btn-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "mail", "width": 16, "height": 16, "fill": "$color.onPrimary" },
+                { "id": "cta-btn-text", "type": "text", "content": "Contact Us", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" }
+              ]
+            }
+          ]
+        },
+
+        { "id": "home-footer", "type": "ref", "ref": "footer-main" }
+      ]
+    },
+
+    {
+      "id": "dashboard",
+      "name": "Dashboard — Logged In (/welcome, Desktop 1440px)",
+      "context": "Like HuggingFace logged-in dashboard. Shows user's active hackathons, their teams, notifications, and past participation. Replaces the public hero with a personal feed. This is the /welcome route.",
+      "type": "frame",
+      "x": 1560, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+
+        {
+          "id": "dash-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "nav-user-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "nav-user-initial", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+
+        {
+          "id": "dash-welcome",
+          "name": "Dashboard Welcome Banner",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "horizontal", "justifyContent": "space_between", "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "dash-greeting",
+              "type": "frame", "width": "fit_content", "height": "fit_content",
+              "layout": "vertical", "gap": 4,
+              "children": [
+                { "id": "dash-hello", "type": "text", "content": "Welcome back, Sabine", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 24, "fontWeight": "700" },
+                { "id": "dash-summary", "type": "text", "content": "You are registered in 1 active hackathon  ·  2 notifications", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13 }
+              ]
+            },
+            {
+              "id": "dash-settings-btn",
+              "type": "frame", "width": "fit_content", "height": 32,
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "alignItems": "center", "gap": 6,
+              "padding": [0, 12, 0, 12],
+              "children": [
+                { "id": "dash-settings-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "settings", "width": 14, "height": 14, "fill": "$color.textSecondary" },
+                { "id": "dash-settings-text", "type": "text", "content": "Settings", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "dash-body",
+          "name": "Dashboard Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "horizontal", "gap": 24,
+          "padding": [32, 80, 48, 80],
+          "children": [
+
+            {
+              "id": "dash-main",
+              "name": "Main Content Column",
+              "type": "frame",
+              "width": "fill_container", "height": "fit_content",
+              "layout": "vertical", "gap": 24,
+              "children": [
+
+                {
+                  "id": "dash-active-section",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "layout": "vertical", "gap": 16,
+                  "children": [
+                    { "id": "dash-active-title", "type": "text", "content": "Your active hackathons", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "700" },
+                    {
+                      "id": "dash-active-card",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "horizontal", "gap": 20, "padding": 20, "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "dash-active-thumb",
+                          "type": "rectangle", "width": 64, "height": 64,
+                          "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135, "colors": [ { "color": "#3D8A2E", "position": 0 }, { "color": "#1A2E14", "position": 1 } ] }
+                        },
+                        {
+                          "id": "dash-active-info",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 6,
+                          "children": [
+                            {
+                              "id": "dash-active-name-row",
+                              "type": "frame", "width": "fit_content", "height": "fit_content",
+                              "layout": "horizontal", "gap": 12, "alignItems": "center",
+                              "children": [
+                                { "id": "dash-active-name", "type": "text", "content": "ORD Hackathon 2026", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 15, "fontWeight": "600" },
+                                {
+                                  "id": "dash-active-badge",
+                                  "type": "frame", "width": "fit_content", "height": 20,
+                                  "fill": "$color.primaryMuted",
+                                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+                                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                                  "padding": [2, 8, 2, 8],
+                                  "children": [
+                                    { "id": "dash-active-badge-text", "type": "text", "content": "Project Proposals", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "600" }
+                                  ]
+                                }
+                              ]
+                            },
+                            { "id": "dash-active-meta", "type": "text", "content": "24 – 25 Oct 2026  ·  ETH Zurich  ·  Team: DataFlow (4 members)", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 },
+                            {
+                              "id": "dash-active-progress",
+                              "type": "frame", "width": "fill_container", "height": 4,
+                              "fill": "$color.surfaceRaised",
+                              "children": [
+                                { "id": "dash-active-progress-fill", "type": "rectangle", "width": 200, "height": 4, "fill": "$color.primary" }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "dash-active-go",
+                          "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "arrow-right", "width": 16, "height": 16, "fill": "$color.textMuted"
+                        }
+                      ]
+                    }
+                  ]
+                },
+
+                {
+                  "id": "dash-past-section",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "layout": "vertical", "gap": 16,
+                  "children": [
+                    { "id": "dash-past-title", "type": "text", "content": "Past participation", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "700" },
+                    {
+                      "id": "dash-past-row-1",
+                      "type": "frame", "width": "fill_container", "height": 56,
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "horizontal", "gap": 16, "padding": [0, 16, 0, 16], "alignItems": "center",
+                      "children": [
+                        { "id": "dpr1-thumb", "type": "rectangle", "width": 36, "height": 36, "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135, "colors": [ { "color": "#5A4D8A", "position": 0 }, { "color": "#2A2040", "position": 1 } ] } },
+                        {
+                          "id": "dpr1-info",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 2,
+                          "children": [
+                            { "id": "dpr1-name", "type": "text", "content": "GenAI Hackathon 2025", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "500" },
+                            { "id": "dpr1-meta", "type": "text", "content": "Nov 2025  ·  Team BioViz  ·  2nd place", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                          ]
+                        },
+                        { "id": "dpr1-arrow", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "chevron-right", "width": 14, "height": 14, "fill": "$color.textMuted" }
+                      ]
+                    },
+                    {
+                      "id": "dash-past-row-2",
+                      "type": "frame", "width": "fill_container", "height": 56,
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "horizontal", "gap": 16, "padding": [0, 16, 0, 16], "alignItems": "center",
+                      "children": [
+                        { "id": "dpr2-thumb", "type": "rectangle", "width": 36, "height": 36, "fill": { "type": "gradient", "gradientType": "linear", "rotation": 135, "colors": [ { "color": "#3D8A2E", "position": 0 }, { "color": "#1A2E14", "position": 1 } ] } },
+                        {
+                          "id": "dpr2-info",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 2,
+                          "children": [
+                            { "id": "dpr2-name", "type": "text", "content": "ORD Hackathon 2025", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "500" },
+                            { "id": "dpr2-meta", "type": "text", "content": "Oct 2025  ·  Team DataFlow  ·  1st place", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                          ]
+                        },
+                        { "id": "dpr2-arrow", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "chevron-right", "width": 14, "height": 14, "fill": "$color.textMuted" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+
+            {
+              "id": "dash-sidebar",
+              "name": "Sidebar Column",
+              "type": "frame",
+              "width": 320, "height": "fit_content",
+              "layout": "vertical", "gap": 24,
+              "children": [
+
+                {
+                  "id": "dash-notifs",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "fill": "$color.surface",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "vertical", "gap": 0,
+                  "children": [
+                    {
+                      "id": "dash-notifs-header",
+                      "type": "frame", "width": "fill_container", "height": 40,
+                      "layout": "horizontal", "alignItems": "center", "justifyContent": "space_between",
+                      "padding": [0, 16, 0, 16],
+                      "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+                      "children": [
+                        { "id": "dash-notifs-title", "type": "text", "content": "Notifications", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "600" },
+                        {
+                          "id": "dash-notifs-count",
+                          "type": "frame", "width": 20, "height": 20,
+                          "fill": "$color.primary",
+                          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                          "children": [
+                            { "id": "dash-notifs-count-text", "type": "text", "content": "2", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "700" }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "dash-notif-1",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "layout": "horizontal", "gap": 12, "padding": 16, "alignItems": "start",
+                      "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+                      "children": [
+                        { "id": "dash-n1-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "bell", "width": 14, "height": 14, "fill": "$color.primary" },
+                        {
+                          "id": "dash-n1-content",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 4,
+                          "children": [
+                            { "id": "dash-n1-text", "type": "text", "content": "Project proposals are due in 5 days for ORD Hackathon 2026.", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.4, "textGrowth": "fixed-width", "width": 240 },
+                            { "id": "dash-n1-time", "type": "text", "content": "2 hours ago", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10 }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "dash-notif-2",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "layout": "horizontal", "gap": 12, "padding": 16, "alignItems": "start",
+                      "children": [
+                        { "id": "dash-n2-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "user-plus", "width": 14, "height": 14, "fill": "$color.secondary" },
+                        {
+                          "id": "dash-n2-content",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 4,
+                          "children": [
+                            { "id": "dash-n2-text", "type": "text", "content": "You were added to Team DataFlow by Carlos.", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.4, "textGrowth": "fixed-width", "width": 240 },
+                            { "id": "dash-n2-time", "type": "text", "content": "1 day ago", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10 }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+
+                {
+                  "id": "dash-quick-links",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "fill": "$color.surface",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "vertical", "gap": 0,
+                  "children": [
+                    {
+                      "id": "dash-ql-header",
+                      "type": "frame", "width": "fill_container", "height": 40,
+                      "layout": "horizontal", "alignItems": "center",
+                      "padding": [0, 16, 0, 16],
+                      "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+                      "children": [
+                        { "id": "dash-ql-title", "type": "text", "content": "Quick Links", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "600" }
+                      ]
+                    },
+                    {
+                      "id": "dash-ql-1",
+                      "type": "frame", "width": "fill_container", "height": 36,
+                      "layout": "horizontal", "gap": 8, "alignItems": "center",
+                      "padding": [0, 16, 0, 16],
+                      "children": [
+                        { "id": "dash-ql-1-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "user", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                        { "id": "dash-ql-1-text", "type": "text", "content": "Edit Profile", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                      ]
+                    },
+                    {
+                      "id": "dash-ql-2",
+                      "type": "frame", "width": "fill_container", "height": 36,
+                      "layout": "horizontal", "gap": 8, "alignItems": "center",
+                      "padding": [0, 16, 0, 16],
+                      "children": [
+                        { "id": "dash-ql-2-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "file-text", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                        { "id": "dash-ql-2-text", "type": "text", "content": "My Submissions", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                      ]
+                    },
+                    {
+                      "id": "dash-ql-3",
+                      "type": "frame", "width": "fill_container", "height": 36,
+                      "layout": "horizontal", "gap": 8, "alignItems": "center",
+                      "padding": [0, 16, 0, 16],
+                      "children": [
+                        { "id": "dash-ql-3-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "settings", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                        { "id": "dash-ql-3-text", "type": "text", "content": "Account Settings", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        { "id": "dash-footer", "type": "ref", "ref": "footer-main" }
+      ]
+    },
+
+    {
+      "id": "hackathon-page",
+      "name": "Hackathon Detail Page — /hackathon/[slug] (Desktop 1440px)",
+      "context": "Public hackathon detail page. Composed of modular sections that organizers can toggle on/off. This wireframe shows all 7 section types from the Confluence requirements, using ORD Hackathon 2026 as sample content. Route: /hackathon/[slug]",
+      "type": "frame",
+      "x": 3200, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+
+        { "id": "hp-nav", "type": "ref", "ref": "nav-bar" },
+
+        {
+          "id": "hp-hero",
+          "name": "Section 1: Hero",
+          "context": "Confluence req: Title (string), Dates (string), Venue (string), Hackathon main photo (string, url). Full-width hero with theme-aware bg and text.",
+          "type": "frame",
+          "width": "fill_container", "height": 400,
+          "fill": "$color.primaryMuted",
+          "layout": "vertical", "justifyContent": "end", "gap": 16,
+          "padding": [0, 80, 48, 80],
+          "children": [
+            {
+              "id": "hp-hero-breadcrumb",
+              "type": "frame", "width": "fit_content", "height": "fit_content",
+              "layout": "horizontal", "gap": 6, "alignItems": "center",
+              "children": [
+                { "id": "hp-bc-home", "type": "text", "content": "Hackathons", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 },
+                { "id": "hp-bc-sep", "type": "text", "content": "/", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 },
+                { "id": "hp-bc-current", "type": "text", "content": "ORD Hackathon 2026", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "hp-hero-badge",
+              "type": "frame", "width": "fit_content", "height": 24,
+              "fill": "$color.primaryMuted",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [3, 12, 3, 12], "gap": 6,
+              "children": [
+                { "id": "hp-hero-badge-dot", "type": "ellipse", "width": 6, "height": 6, "fill": "$color.primary" },
+                { "id": "hp-hero-badge-text", "type": "text", "content": "Registration Open", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+              ]
+            },
+            {
+              "id": "hp-hero-title",
+              "type": "text",
+              "content": "Open Research Data\nHackathon 2026",
+              "fill": "$color.text",
+              "fontFamily": "$font.mono", "fontSize": 44, "fontWeight": "700", "lineHeight": 1.1,
+              "textGrowth": "fixed-width", "width": 700
+            },
+            {
+              "id": "hp-hero-meta",
+              "type": "frame", "width": "fit_content", "height": "fit_content",
+              "layout": "horizontal", "gap": 24, "alignItems": "center",
+              "children": [
+                {
+                  "id": "hp-hero-dates",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "horizontal", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "hp-hd-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "calendar", "width": 16, "height": 16, "fill": "$color.primary" },
+                    { "id": "hp-hd-text", "type": "text", "content": "24 – 25 October 2026", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 15 }
+                  ]
+                },
+                {
+                  "id": "hp-hero-venue",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "horizontal", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "hp-hv-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "map-pin", "width": 16, "height": 16, "fill": "$color.primary" },
+                    { "id": "hp-hv-text", "type": "text", "content": "ETH Zurich, Zurich", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 15 }
+                  ]
+                },
+                {
+                  "id": "hp-hero-capacity",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "horizontal", "gap": 8, "alignItems": "center",
+                  "children": [
+                    { "id": "hp-hc-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "users", "width": 16, "height": 16, "fill": "$color.primary" },
+                    { "id": "hp-hc-text", "type": "text", "content": "42 / 100 registered", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 15 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "hp-organizers",
+          "name": "Section 2: Organizers",
+          "context": "Confluence req: Description (string), Logos (List of picture URL). Horizontal layout — description text on the left, organizer logos on the right.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.surface",
+          "layout": "horizontal", "gap": 48, "alignItems": "center",
+          "padding": [40, 80, 40, 80],
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "hp-org-text",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "vertical", "gap": 12,
+              "children": [
+                { "id": "hp-org-label", "type": "text", "content": "ORGANIZED BY", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "700", "letterSpacing": 2 },
+                { "id": "hp-org-desc", "type": "text", "content": "Co-organized by the Swiss Data Science Center (SDSC) and ETH Zurich Library, this hackathon brings together researchers, developers, and data stewards to build tools that make research data more accessible and reusable.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.6, "textGrowth": "fixed-width", "width": 720 }
+              ]
+            },
+            {
+              "id": "hp-org-logos",
+              "type": "frame", "width": "fit_content", "height": "fit_content",
+              "layout": "horizontal", "gap": 24, "alignItems": "center",
+              "children": [
+                {
+                  "id": "hp-org-logo-1",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 6, "alignItems": "center",
+                  "children": [
+                    { "id": "hp-ol1-img", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "hp-ol1-name", "type": "text", "content": "SDSC", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                  ]
+                },
+                {
+                  "id": "hp-org-logo-2",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 6, "alignItems": "center",
+                  "children": [
+                    { "id": "hp-ol2-img", "type": "rectangle", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" } },
+                    { "id": "hp-ol2-name", "type": "text", "content": "ETH Zurich", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "hp-markdown",
+          "name": "Section 3: Markdown Content",
+          "context": "Confluence req: Markdown formatted text — bold, lists, links, and embedded pictures. Rendered as rich text in a centered content column. This section can appear multiple times with different content.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 0,
+          "padding": [48, 80, 48, 80],
+          "children": [
+            {
+              "id": "hp-md-content",
+              "type": "frame", "width": 860, "height": "fit_content",
+              "layout": "vertical", "gap": 20,
+              "children": [
+                { "id": "hp-md-h2", "type": "text", "content": "About the Hackathon", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 24, "fontWeight": "700" },
+                { "id": "hp-md-p1", "type": "text", "content": "The Open Research Data Hackathon is a two-day event focused on building practical tools and workflows that advance FAIR (Findable, Accessible, Interoperable, Reusable) data practices in Swiss research.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14, "lineHeight": 1.7, "textGrowth": "fixed-width", "width": 860 },
+                { "id": "hp-md-h3", "type": "text", "content": "What to expect", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 18, "fontWeight": "600" },
+                {
+                  "id": "hp-md-list",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "padding": [0, 0, 0, 16],
+                  "children": [
+                    { "id": "hp-md-li1", "type": "text", "content": "·  Day 1: Keynote talks, team formation, project kickoff, and evening apero", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 820 },
+                    { "id": "hp-md-li2", "type": "text", "content": "·  Day 2: Intensive hacking sessions, project presentations, voting, and awards", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 820 }
+                  ]
+                },
+                { "id": "hp-md-h3b", "type": "text", "content": "Who should participate", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 18, "fontWeight": "600" },
+                {
+                  "id": "hp-md-list2",
+                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                  "layout": "vertical", "gap": 8, "padding": [0, 0, 0, 16],
+                  "children": [
+                    { "id": "hp-md-li3", "type": "text", "content": "·  Researchers working with open data", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14 },
+                    { "id": "hp-md-li4", "type": "text", "content": "·  Software developers interested in research infrastructure", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14 },
+                    { "id": "hp-md-li5", "type": "text", "content": "·  Data stewards and librarians", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14 },
+                    { "id": "hp-md-li6", "type": "text", "content": "·  Students in data science, CS, or related fields", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "hp-events",
+          "name": "Section 4: Support Events (Webinars)",
+          "context": "Confluence req: Titles (list of webinars), Speakers / Companies logos (list of pictures), Link to section with more information. Shown as a row of event cards.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.surface",
+          "layout": "vertical", "gap": 24,
+          "padding": [48, 80, 48, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1, "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "hp-ev-header",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "children": [
+                { "id": "hp-ev-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "video", "width": 18, "height": 18, "fill": "$color.primary" },
+                { "id": "hp-ev-title", "type": "text", "content": "Pre-event Webinars", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700" }
+              ]
+            },
+            {
+              "id": "hp-ev-cards",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 20,
+              "children": [
+                {
+                  "id": "hp-ev-card-1",
+                  "name": "Webinar Card",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": "fill_container", "height": "fit_content",
+                  "fill": "$color.surfaceRaised",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "horizontal", "gap": 16, "padding": 20, "alignItems": "start",
+                  "children": [
+                    {
+                      "id": "ev1-icon-wrap",
+                      "type": "frame", "width": 40, "height": 40,
+                      "fill": "$color.primaryMuted",
+                      "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                      "children": [
+                        { "id": "ev1-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "presentation", "width": 20, "height": 20, "fill": "$color.primary" }
+                      ]
+                    },
+                    {
+                      "id": "ev1-info",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "layout": "vertical", "gap": 8,
+                      "children": [
+                        { "id": "ev1-title", "type": "text", "content": "Introduction to FAIR Data Principles", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+                        { "id": "ev1-speaker", "type": "text", "content": "Dr. Sarah Mueller, SDSC", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 },
+                        { "id": "ev1-date", "type": "text", "content": "10 Oct 2026, 14:00 CET", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 },
+                        {
+                          "id": "ev1-link",
+                          "type": "frame", "width": "fit_content", "height": "fit_content",
+                          "layout": "horizontal", "gap": 4, "alignItems": "center",
+                          "children": [
+                            { "id": "ev1-link-text", "type": "text", "content": "More info", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "500" },
+                            { "id": "ev1-link-arrow", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "external-link", "width": 12, "height": 12, "fill": "$color.primary" }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "hp-ev-card-2",
+                  "type": "ref", "ref": "hp-ev-card-1",
+                  "descendants": {
+                    "ev1-icon": { "iconFontName": "wrench" },
+                    "ev1-title": { "content": "Technical Setup & Tools Overview" },
+                    "ev1-speaker": { "content": "Carlos Vivar Rios, SDSC" },
+                    "ev1-date": { "content": "17 Oct 2026, 14:00 CET" }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "hp-highlights",
+          "name": "Section 5: Highlights (Goals)",
+          "context": "Confluence req: Blocks with focus on specific messages — Picture (One per block), Message (One per block). Shown as 3-column cards with image placeholder and message text.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 24,
+          "padding": [48, 80, 48, 80],
+          "children": [
+            {
+              "id": "hp-hl-header",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "children": [
+                { "id": "hp-hl-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "target", "width": 18, "height": 18, "fill": "$color.primary" },
+                { "id": "hp-hl-title", "type": "text", "content": "Goals", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700" }
+              ]
+            },
+            {
+              "id": "hp-hl-grid",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "horizontal", "gap": 20,
+              "children": [
+                {
+                  "id": "hp-hl-block-1",
+                  "name": "Highlight Block",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": "fill_container", "height": "fit_content",
+                  "fill": "$color.surface",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                  "layout": "vertical", "gap": 0,
+                  "children": [
+                    {
+                      "id": "hl1-image",
+                      "type": "rectangle", "width": "fill_container", "height": 160,
+                      "fill": {
+                        "type": "gradient", "gradientType": "linear", "rotation": 150,
+                        "colors": [ { "color": "#2E5A3A", "position": 0 }, { "color": "#1A2E20", "position": 1 } ]
+                      }
+                    },
+                    {
+                      "id": "hl1-body",
+                      "type": "frame", "width": "fill_container", "height": "fit_content",
+                      "layout": "vertical", "gap": 0, "padding": 20,
+                      "children": [
+                        { "id": "hl1-message", "type": "text", "content": "Build tools that make Swiss research data findable and reusable across institutions.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 360 }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "hp-hl-block-2",
+                  "type": "ref", "ref": "hp-hl-block-1",
+                  "descendants": {
+                    "hl1-image": { "fill": { "type": "gradient", "gradientType": "linear", "rotation": 150, "colors": [ { "color": "#3A2E5A", "position": 0 }, { "color": "#201A2E", "position": 1 } ] } },
+                    "hl1-message": { "content": "Collaborate with researchers, engineers, and data stewards from across Switzerland." }
+                  }
+                },
+                {
+                  "id": "hp-hl-block-3",
+                  "type": "ref", "ref": "hp-hl-block-1",
+                  "descendants": {
+                    "hl1-image": { "fill": { "type": "gradient", "gradientType": "linear", "rotation": 150, "colors": [ { "color": "#5A4A2E", "position": 0 }, { "color": "#2E2A1A", "position": 1 } ] } },
+                    "hl1-message": { "content": "Win prizes and gain recognition for innovative solutions to real data challenges." }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+
+        {
+          "id": "hp-video",
+          "name": "Section 6: Video",
+          "context": "Confluence req: Title, Caption, Video url. Centered video embed with title above and caption below.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.surface",
+          "layout": "vertical", "gap": 20, "alignItems": "center",
+          "padding": [48, 80, 48, 80],
+          "stroke": { "align": "inside", "thickness": { "top": 1, "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "hp-vid-header",
+              "type": "frame", "width": "fit_content", "height": "fit_content",
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "children": [
+                { "id": "hp-vid-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "play-circle", "width": 18, "height": 18, "fill": "$color.primary" },
+                { "id": "hp-vid-title", "type": "text", "content": "Highlights from ORD Hackathon 2025", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 20, "fontWeight": "700" }
+              ]
+            },
+            {
+              "id": "hp-vid-player",
+              "type": "frame", "width": 800, "height": 450,
+              "fill": "#000000",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "hp-vid-play-btn", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "play", "width": 48, "height": 48, "fill": "#FFFFFF44" },
+                {
+                  "id": "hp-vid-url-label",
+                  "type": "text",
+                  "content": "youtube.com/embed/ACDgPmRkniU",
+                  "fill": "#FFFFFF33",
+                  "fontFamily": "$font.mono", "fontSize": 12,
+                  "layoutPosition": "absolute", "x": 320, "y": 420
+                }
+              ]
+            },
+            { "id": "hp-vid-caption", "type": "text", "content": "A look back at last year's event and winning projects.", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 13 }
+          ]
+        },
+
+        {
+          "id": "hp-cta",
+          "name": "Section 7: Call to Action",
+          "context": "Confluence req: Button (Link to registration). Big centered CTA for registering. Text changes based on hackathon phase — here shown as 'Register Now' for registration_open phase.",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "fill": "$color.bg",
+          "layout": "vertical", "gap": 16, "alignItems": "center",
+          "padding": [56, 80, 56, 80],
+          "children": [
+            { "id": "hp-cta-title", "type": "text", "content": "Ready to participate?", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 24, "fontWeight": "700" },
+            { "id": "hp-cta-subtitle", "type": "text", "content": "42 of 100 spots taken. Free participation, registration mandatory.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 14 },
+            {
+              "id": "hp-cta-btn",
+              "type": "frame", "width": 220, "height": 52,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 8,
+              "children": [
+                { "id": "hp-cta-btn-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "user-plus", "width": 18, "height": 18, "fill": "$color.onPrimary" },
+                { "id": "hp-cta-btn-text", "type": "text", "content": "Register Now", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "700" }
+              ]
+            },
+            { "id": "hp-cta-note", "type": "text", "content": "Registration closes 17 Oct 2026", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+          ]
+        },
+
+        { "id": "hp-footer", "type": "ref", "ref": "footer-main" }
+      ]
+    },
+
+    {
+      "id": "hackathon-loggedin",
+      "name": "Hackathon Page — Logged In & Participating (Desktop 1440px)",
+      "context": "Logged-in participant view of a hackathon. Uses our modern single-column centered layout (not the old 3-column site). Functional requirements extracted from Figma reference (eUBPuQj0KlWAzIfKEgqpHY): hackathon sub-page navigation, phase-aware user actions, participation status, team/project management, admin tools. User 'Sabine' is participating in ORD Hackathon 2026, currently in 'Proposals' phase, on team 'Bishorn'.",
+      "type": "frame",
+      "x": 4740, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+
+        {
+          "id": "hli-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "hli-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "hli-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+
+        {
+          "id": "hli-sub-nav",
+          "name": "Hackathon Sub-Navigation Tabs",
+          "context": "FUNCTIONALITY: Navigate between hackathon sub-pages. From Figma: Home, Participants, Proposals, Teams, Submissions, Timeline, Webinars, Photos. Replaces old left sidebar with modern horizontal tabs.",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "hli-tab",
+              "name": "Tab Item",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "tab-text", "type": "text", "content": "Overview", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            { "id": "hli-tab-participants", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Participants", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } },
+            { "id": "hli-tab-proposals", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Proposals", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } },
+            { "id": "hli-tab-teams", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Teams", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } },
+            { "id": "hli-tab-submissions", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Submissions", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } },
+            { "id": "hli-tab-timeline", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Timeline", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } },
+            { "id": "hli-tab-webinars", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Webinars", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } },
+            { "id": "hli-tab-photos", "type": "ref", "ref": "hli-tab", "descendants": { "tab-text": { "content": "Photos", "fill": "$color.textSecondary" } }, "stroke": { "align": "inside", "thickness": { "bottom": 0 }, "fill": "transparent" } }
+          ]
+        },
+
+        {
+          "id": "hli-content-wrap",
+          "name": "Centered Content (max 1280px)",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "children": [
+
+            {
+              "id": "hli-hero",
+              "name": "Hero — same as public but compact",
+              "type": "frame",
+              "width": "fill_container", "height": 180,
+              "fill": "$color.primaryMuted",
+              "layout": "horizontal", "gap": 32, "alignItems": "center",
+              "padding": [0, 80, 0, 80],
+              "children": [
+                {
+                  "id": "hli-hero-image",
+                  "type": "rectangle", "width": 220, "height": 140,
+                  "fill": "$color.surfaceRaised",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" }
+                },
+                {
+                  "id": "hli-hero-info",
+                  "type": "frame", "width": "fill_container", "height": "fit_content",
+                  "layout": "vertical", "gap": 6,
+                  "children": [
+                    { "id": "hli-hero-dates", "type": "text", "content": "Oct 24 – 25, 2026", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" },
+                    { "id": "hli-hero-title", "type": "text", "content": "ORD for the Sciences", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                    { "id": "hli-hero-venue", "type": "text", "content": "BC Building, EPFL, Lausanne", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12 },
+                    {
+                      "id": "hli-hero-orgs",
+                      "type": "frame", "width": "fit_content", "height": "fit_content",
+                      "layout": "horizontal", "gap": 12, "alignItems": "center",
+                      "children": [
+                        { "id": "hli-org1", "type": "rectangle", "width": 48, "height": 20, "fill": "$color.surfaceRaised" },
+                        { "id": "hli-org2", "type": "rectangle", "width": 48, "height": 20, "fill": "$color.surfaceRaised" }
+                      ]
+                    }
+                  ]
+                },
+                { "id": "hli-hero-count", "type": "text", "content": "100 / 120\nparticipants", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12, "textAlign": "center", "lineHeight": 1.3 }
+              ]
+            },
+
+            {
+              "id": "hli-phase-bar",
+              "name": "Phase Timeline",
+              "context": "FUNCTIONALITY: Show temporal progression. Phases from data model: each hackathon has multiple Phase records (id, hackathon_id, start_date, end_date, name). Current phase highlighted. Completed phases dimmed. Future phases muted.",
+              "type": "frame",
+              "width": "fill_container", "height": 36,
+              "fill": "$color.surface",
+              "layout": "horizontal", "gap": 0, "alignItems": "center",
+              "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+              "children": [
+                {
+                  "id": "phase-done",
+                  "name": "Phase Step (completed)",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": "fill_container", "height": "fill_container",
+                  "fill": "$color.primaryDark",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "pd-check", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "check", "width": 12, "height": 12, "fill": "#FFFFFF" },
+                    { "id": "pd-text", "type": "text", "content": "Registration", "fill": "#FFFFFFCC", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "phase-current",
+                  "name": "Phase Step (active — Proposals)",
+                  "type": "frame",
+                  "width": "fill_container", "height": "fill_container",
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "pc-dot", "type": "ellipse", "width": 8, "height": 8, "fill": "$color.onPrimary" },
+                    { "id": "pc-text", "type": "text", "content": "Proposals", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700" }
+                  ]
+                },
+                {
+                  "id": "phase-future",
+                  "name": "Phase Step (upcoming)",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": "fill_container", "height": "fill_container",
+                  "fill": "$color.surfaceRaised",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "pf-text", "type": "text", "content": "Teams", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10 }
+                  ]
+                },
+                { "id": "phase-f2", "type": "ref", "ref": "phase-future", "descendants": { "pf-text": { "content": "Hackathon" } } },
+                { "id": "phase-f3", "type": "ref", "ref": "phase-future", "descendants": { "pf-text": { "content": "Voting" } } },
+                { "id": "phase-f4", "type": "ref", "ref": "phase-future", "descendants": { "pf-text": { "content": "Results" } } }
+              ]
+            },
+
+            {
+              "id": "hli-main-body",
+              "name": "Main Content Area",
+              "type": "frame",
+              "width": 1280, "height": "fit_content",
+              "layout": "horizontal", "gap": 24,
+              "padding": [24, 0, 24, 0],
+              "children": [
+
+                {
+                  "id": "hli-main-col",
+                  "name": "Primary Column",
+                  "type": "frame",
+                  "width": "fill_container", "height": "fit_content",
+                  "layout": "vertical", "gap": 24,
+                  "children": [
+
+                    {
+                      "id": "hli-participation-card",
+                      "name": "Your Participation Status",
+                      "context": "FUNCTIONALITY: Show user's participation context. From data model: Participant (hackathon_id, user_id, is_waiting), Team (name, description, category_id, status), TeamParticipant (team_id, user_id, role). Shows team, role, next action for current phase.",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.primaryMuted",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+                      "layout": "vertical", "gap": 16,
+                      "padding": 20,
+                      "children": [
+                        {
+                          "id": "hli-ps-header",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+                          "children": [
+                            { "id": "hli-ps-title", "type": "text", "content": "Your Participation", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 15, "fontWeight": "700" },
+                            {
+                              "id": "hli-ps-badge",
+                              "type": "frame", "width": "fit_content", "height": 24,
+                              "fill": "$color.primary",
+                              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                              "padding": [0, 10, 0, 10],
+                              "children": [
+                                { "id": "hli-ps-badge-text", "type": "text", "content": "REGISTERED", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700" }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "hli-ps-details",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "horizontal", "gap": 32,
+                          "children": [
+                            {
+                              "id": "hli-ps-team",
+                              "name": "Team Info",
+                              "context": "FUNCTIONALITY: View team assignment. Team has: name, description, category, status, visibility. TeamParticipant has role (owner, member).",
+                              "type": "frame", "width": "fill_container", "height": "fit_content",
+                              "layout": "vertical", "gap": 6,
+                              "children": [
+                                { "id": "hli-ps-team-label", "type": "text", "content": "TEAM", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700", "letterSpacing": 1 },
+                                { "id": "hli-ps-team-name", "type": "text", "content": "Bishorn", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+                                {
+                                  "id": "hli-ps-team-members",
+                                  "type": "frame", "width": "fit_content", "height": "fit_content",
+                                  "layout": "horizontal", "gap": -6,
+                                  "children": [
+                                    { "id": "hli-ps-m1", "type": "ellipse", "width": 24, "height": 24, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.primaryMuted" } },
+                                    { "id": "hli-ps-m2", "type": "ellipse", "width": 24, "height": 24, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.primaryMuted" } },
+                                    { "id": "hli-ps-m3", "type": "ellipse", "width": 24, "height": 24, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.primaryMuted" } }
+                                  ]
+                                },
+                                { "id": "hli-ps-team-role", "type": "text", "content": "Your role: Member", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            },
+                            {
+                              "id": "hli-ps-project",
+                              "name": "Project Info",
+                              "context": "FUNCTIONALITY: View project proposal. From Figma: users can propose projects, choose preferences, submit. Linked to Submission (team_id, hackathon_id, status).",
+                              "type": "frame", "width": "fill_container", "height": "fit_content",
+                              "layout": "vertical", "gap": 6,
+                              "children": [
+                                { "id": "hli-ps-proj-label", "type": "text", "content": "PROJECT", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700", "letterSpacing": 1 },
+                                { "id": "hli-ps-proj-name", "type": "text", "content": "SoDeDo: Replicated Dataset for ML", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+                                { "id": "hli-ps-proj-track", "type": "text", "content": "Track: Data Science", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11 },
+                                { "id": "hli-ps-proj-status", "type": "text", "content": "Status: Proposal submitted", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            },
+                            {
+                              "id": "hli-ps-next-action",
+                              "name": "Next Action (phase-aware)",
+                              "context": "FUNCTIONALITY: Phase-aware CTA. Changes per phase. From Figma: Propose project → Choose preferences → Submit → Vote. Currently in Proposals phase, so next action is 'Choose preferences'.",
+                              "type": "frame", "width": "fit_content", "height": "fit_content",
+                              "layout": "vertical", "gap": 8, "alignItems": "flex-end",
+                              "children": [
+                                { "id": "hli-ps-next-label", "type": "text", "content": "NEXT STEP", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700", "letterSpacing": 1 },
+                                {
+                                  "id": "hli-ps-next-btn",
+                                  "type": "frame", "width": 200, "height": 36,
+                                  "fill": "$color.primary",
+                                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                                  "children": [
+                                    { "id": "hli-ps-next-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "arrow-right", "width": 14, "height": 14, "fill": "$color.onPrimary" },
+                                    { "id": "hli-ps-next-text", "type": "text", "content": "Set Preferences", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                                  ]
+                                },
+                                { "id": "hli-ps-next-hint", "type": "text", "content": "Closes in 12 days", "fill": "$color.accent", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+
+                    {
+                      "id": "hli-about-section",
+                      "name": "About (markdown section — same as public)",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 12,
+                      "padding": 20,
+                      "children": [
+                        { "id": "hli-about-h2", "type": "text", "content": "About", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "700" },
+                        { "id": "hli-about-p", "type": "text", "content": "Explore the potential and impact of Open Research Data on the sciences! Co-organized by the Swiss Data Science Center and EPFL Open Science, this event brings together professionals from academia, industry, and the public sector.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 13, "lineHeight": 1.6, "textGrowth": "fixed-width", "width": 640 }
+                      ]
+                    },
+
+                    {
+                      "id": "hli-proposals-section",
+                      "name": "Project Proposals with Tracks",
+                      "context": "FUNCTIONALITY: View and propose projects. From data model: Category (id, hackathon_id, name) = tracks. From Figma: two tracks (Data Science, Research Data Infrastructure). Users can 'Propose a project' and 'More Info'. Lists proposals with title, description, image, 'More Info' button.",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 16,
+                      "padding": 20,
+                      "children": [
+                        {
+                          "id": "hli-prop-head",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+                          "children": [
+                            { "id": "hli-prop-title", "type": "text", "content": "Project Proposals", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "700" },
+                            { "id": "hli-prop-count", "type": "text", "content": "16 proposals", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+                          ]
+                        },
+                        {
+                          "id": "hli-track-cards",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "horizontal", "gap": 12,
+                          "children": [
+                            {
+                              "id": "hli-track-1",
+                              "type": "frame", "width": "fill_container", "height": "fit_content",
+                              "fill": "$color.primaryMuted",
+                              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+                              "layout": "vertical", "gap": 4, "padding": 12,
+                              "children": [
+                                { "id": "hli-t1-name", "type": "text", "content": "DATA SCIENCE", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "700" },
+                                { "id": "hli-t1-count", "type": "text", "content": "9 proposals", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            },
+                            {
+                              "id": "hli-track-2",
+                              "type": "frame", "width": "fill_container", "height": "fit_content",
+                              "fill": "$color.secondaryMuted",
+                              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.secondary" },
+                              "layout": "vertical", "gap": 4, "padding": 12,
+                              "children": [
+                                { "id": "hli-t2-name", "type": "text", "content": "RESEARCH DATA INFRA", "fill": "$color.secondary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "700" },
+                                { "id": "hli-t2-count", "type": "text", "content": "7 proposals", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "hli-prop-item",
+                          "name": "Proposal List Item (sample)",
+                          "type": "frame",
+                          "reusable": true,
+                          "width": "fill_container", "height": "fit_content",
+                          "fill": "$color.bg",
+                          "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                          "layout": "horizontal", "gap": 12, "alignItems": "center",
+                          "padding": 12,
+                          "children": [
+                            { "id": "pi-img", "type": "rectangle", "width": 48, "height": 48, "fill": "$color.surfaceRaised" },
+                            {
+                              "id": "pi-info",
+                              "type": "frame", "width": "fill_container", "height": "fit_content",
+                              "layout": "vertical", "gap": 2,
+                              "children": [
+                                { "id": "pi-num-title", "type": "text", "content": "16. Embedding of Pharmacokinetic Equations", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" },
+                                { "id": "pi-desc", "type": "text", "content": "In pharma and biotech, ODEs often follow repetitive patterns...", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            },
+                            {
+                              "id": "pi-btn",
+                              "type": "frame", "width": 80, "height": 28,
+                              "fill": "$color.primary",
+                              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                              "children": [
+                                { "id": "pi-btn-text", "type": "text", "content": "More Info", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                              ]
+                            }
+                          ]
+                        },
+                        { "id": "hli-prop-item-2", "type": "ref", "ref": "hli-prop-item", "descendants": { "pi-num-title": { "content": "15. Automatic extraction of data from literature" }, "pi-desc": { "content": "Have you ever been frustrated by having to copy data..." } } },
+                        {
+                          "id": "hli-prop-see-all",
+                          "type": "frame", "width": "fill_container", "height": 32,
+                          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                          "children": [
+                            { "id": "hli-prop-sa-text", "type": "text", "content": "View all 16 proposals →", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                          ]
+                        }
+                      ]
+                    },
+
+                    {
+                      "id": "hli-webinars-section",
+                      "name": "Webinars",
+                      "context": "FUNCTIONALITY: View and access support events (webinars). From Figma: speakers with avatars, webinar link. This is the same 'Support Events' section from the public page but with richer detail.",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 16,
+                      "padding": 20,
+                      "children": [
+                        { "id": "hli-web-title", "type": "text", "content": "Upcoming Webinars", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 16, "fontWeight": "700" },
+                        {
+                          "id": "hli-web-item",
+                          "name": "Webinar Item",
+                          "type": "frame",
+                          "width": "fill_container", "height": "fit_content",
+                          "fill": "$color.bg",
+                          "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                          "layout": "horizontal", "gap": 12, "alignItems": "center", "padding": 12,
+                          "children": [
+                            { "id": "hli-web-speaker", "type": "ellipse", "width": 40, "height": 40, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+                            {
+                              "id": "hli-web-info",
+                              "type": "frame", "width": "fill_container", "height": "fit_content",
+                              "layout": "vertical", "gap": 2,
+                              "children": [
+                                { "id": "hli-web-name", "type": "text", "content": "How to make it with Renku", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 13, "fontWeight": "600" },
+                                { "id": "hli-web-date", "type": "text", "content": "Tue Oct 19, 15:30", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 11 }
+                              ]
+                            },
+                            {
+                              "id": "hli-web-join",
+                              "type": "frame", "width": 60, "height": 28,
+                              "fill": "$color.primary",
+                              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                              "children": [
+                                { "id": "hli-web-join-text", "type": "text", "content": "Join", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+
+                {
+                  "id": "hli-side-col",
+                  "name": "Side Column — Simplified",
+                  "context": "Simplified sidebar: one card for phase-aware actions, one card for navigation links (including admin if applicable). Compact and scannable.",
+                  "type": "frame",
+                  "width": 280, "height": "fit_content",
+                  "layout": "vertical", "gap": 16,
+                  "children": [
+
+                    {
+                      "id": "hli-actions-card",
+                      "name": "Actions & Team",
+                      "context": "Merged card: phase-aware action buttons at top, team summary below. Shows the most important CTA prominently, with secondary actions muted.",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 0,
+                      "children": [
+                        {
+                          "id": "hli-ac-actions",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 6,
+                          "padding": 16,
+                          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+                          "children": [
+                            {
+                              "id": "hli-ac-primary-btn",
+                              "type": "frame", "width": "fill_container", "height": 36,
+                              "fill": "$color.primary",
+                              "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 8,
+                              "children": [
+                                { "id": "hli-ac-pb-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "list-ordered", "width": 14, "height": 14, "fill": "$color.onPrimary" },
+                                { "id": "hli-ac-pb-text", "type": "text", "content": "Set Preferences", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                              ]
+                            },
+                            {
+                              "id": "hli-ac-secondary-btn",
+                              "type": "frame", "width": "fill_container", "height": 34,
+                              "fill": "$color.surfaceRaised",
+                              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                              "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 8,
+                              "children": [
+                                { "id": "hli-ac-sb-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "file-plus", "width": 14, "height": 14, "fill": "$color.textSecondary" },
+                                { "id": "hli-ac-sb-text", "type": "text", "content": "Propose a Project", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                              ]
+                            },
+                            { "id": "hli-ac-deadline", "type": "text", "content": "Proposals close in 12 days", "fill": "$color.accent", "fontFamily": "$font.mono", "fontSize": 10, "textAlign": "center" }
+                          ]
+                        },
+                        {
+                          "id": "hli-ac-team",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 8,
+                          "padding": 16,
+                          "children": [
+                            { "id": "hli-ac-team-label", "type": "text", "content": "YOUR TEAM", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700", "letterSpacing": 1 },
+                            { "id": "hli-ac-team-name", "type": "text", "content": "Bishorn", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+                            {
+                              "id": "hli-ac-team-members",
+                              "type": "frame", "width": "fit_content", "height": "fit_content",
+                              "layout": "horizontal", "gap": -6,
+                              "children": [
+                                { "id": "hli-ac-m1", "type": "ellipse", "width": 24, "height": 24, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.surface" } },
+                                { "id": "hli-ac-m2", "type": "ellipse", "width": 24, "height": 24, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.surface" } },
+                                { "id": "hli-ac-m3", "type": "ellipse", "width": 24, "height": 24, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.surface" } }
+                              ]
+                            },
+                            { "id": "hli-ac-team-link", "type": "text", "content": "View Team Page →", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "500" }
+                          ]
+                        }
+                      ]
+                    },
+
+                    {
+                      "id": "hli-links-card",
+                      "name": "Navigation Links",
+                      "context": "Consolidated navigation: profile/settings, useful external links, and admin links (role-gated) all in one compact card with labeled sections.",
+                      "type": "frame",
+                      "width": "fill_container", "height": "fit_content",
+                      "fill": "$color.surface",
+                      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+                      "layout": "vertical", "gap": 0,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "id": "hli-lc-personal",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 2,
+                          "children": [
+                            {
+                              "id": "hli-lc-link",
+                              "name": "Link Row",
+                              "type": "frame",
+                              "reusable": true,
+                              "width": "fill_container", "height": 28,
+                              "layout": "horizontal", "gap": 8, "alignItems": "center",
+                              "children": [
+                                { "id": "lc-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "user", "width": 14, "height": 14, "fill": "$color.textMuted" },
+                                { "id": "lc-text", "type": "text", "content": "Your profile", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                              ]
+                            },
+                            { "id": "hli-lc-settings", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "settings" }, "lc-text": { "content": "Account settings" } } },
+                            { "id": "hli-lc-prev", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "archive" }, "lc-text": { "content": "Previous Hackathons" } } },
+                            { "id": "hli-lc-about", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "building" }, "lc-text": { "content": "About SDSC" } } },
+                            { "id": "hli-lc-contact", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "mail" }, "lc-text": { "content": "Contact us" } } }
+                          ]
+                        },
+                        {
+                          "id": "hli-lc-admin-sep",
+                          "type": "rectangle", "width": "fill_container", "height": 1,
+                          "fill": "$color.border"
+                        },
+                        {
+                          "id": "hli-lc-admin",
+                          "name": "Admin (role-gated)",
+                          "context": "Only visible to admin/organizer users.",
+                          "type": "frame", "width": "fill_container", "height": "fit_content",
+                          "layout": "vertical", "gap": 2, "padding": [8, 0, 0, 0],
+                          "children": [
+                            { "id": "hli-lc-admin-label", "type": "text", "content": "ADMIN", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "fontWeight": "700", "letterSpacing": 1 },
+                            { "id": "hli-lc-create-hack", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "plus-circle" }, "lc-text": { "content": "Create Hackathon" } } },
+                            { "id": "hli-lc-manage-users", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "users" }, "lc-text": { "content": "Manage Users" } } },
+                            { "id": "hli-lc-manage-proj", "type": "ref", "ref": "hli-lc-link", "descendants": { "lc-icon": { "iconFontName": "folder" }, "lc-text": { "content": "Manage Projects" } } }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+
+            { "id": "hli-footer", "type": "ref", "ref": "footer-main" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "participant-card",
+      "name": "Component: Participant Card",
+      "context": "Reusable card for participant list. From Figma: avatar, name, title/role, affiliation, optional LinkedIn link, 'Check profile details' button. Maps to User entity (name, email, affiliation, description, role, skills, interests).",
+      "type": "frame",
+      "reusable": true,
+      "x": 6380, "y": 0,
+      "width": 800, "height": "fit_content",
+      "fill": "$color.surface",
+      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+      "layout": "horizontal", "gap": 16, "alignItems": "center",
+      "padding": [16, 20, 16, 20],
+      "children": [
+        { "id": "pc-avatar", "type": "ellipse", "width": 56, "height": 56, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+        {
+          "id": "pc-info",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 2,
+          "children": [
+            { "id": "pc-name", "type": "text", "content": "Carlos Vivar Rios", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600" },
+            { "id": "pc-role", "type": "text", "content": "Senior Data Scientist", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 },
+            { "id": "pc-affiliation", "type": "text", "content": "SDSC", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 },
+            { "id": "pc-linkedin", "type": "text", "content": "LinkedIn Profile", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11 }
+          ]
+        },
+        {
+          "id": "pc-btn",
+          "type": "frame", "width": 160, "height": 34,
+          "fill": "$color.primary",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+          "children": [
+            { "id": "pc-btn-text", "type": "text", "content": "Check profile details", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "proposal-card",
+      "name": "Component: Proposal Card",
+      "context": "Reusable card for proposals list. From Figma: circular project image, number + title, description paragraph, 'More Info' button. Maps to project/proposal entity with Category (track).",
+      "type": "frame",
+      "reusable": true,
+      "x": 6380, "y": 160,
+      "width": 800, "height": "fit_content",
+      "fill": "$color.surface",
+      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+      "layout": "horizontal", "gap": 16, "alignItems": "flex-start",
+      "padding": [16, 20, 16, 20],
+      "children": [
+        { "id": "prc-image", "type": "ellipse", "width": 64, "height": 64, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+        {
+          "id": "prc-info",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 6,
+          "children": [
+            { "id": "prc-title", "type": "text", "content": "16. Embedding of Pharmacokinetic and Pharmacodynamic equations", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "600", "lineHeight": 1.3, "textGrowth": "fixed-width", "width": 500 },
+            { "id": "prc-desc", "type": "text", "content": "In pharma and biotech, ODEs (Ordinary Differential Equations) often follow repetitive patterns, and a copilot-like tool could streamline the equation-writing process and reduce errors.", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.5, "textGrowth": "fixed-width", "width": 500 }
+          ]
+        },
+        {
+          "id": "prc-btn",
+          "type": "frame", "width": 100, "height": 34,
+          "fill": "$color.primary",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+          "children": [
+            { "id": "prc-btn-text", "type": "text", "content": "More Info", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "team-card",
+      "name": "Component: Team Card",
+      "context": "Reusable card for teams list. From Figma: circular team/project image, team number + name, project description, member avatars with names, edit icon (if own team), 'More Information' button. Maps to Team (name, description, category_id, status) and TeamParticipant (user_id, role).",
+      "type": "frame",
+      "reusable": true,
+      "x": 6380, "y": 340,
+      "width": 800, "height": "fit_content",
+      "fill": "$color.surface",
+      "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+      "layout": "vertical", "gap": 12,
+      "padding": [16, 20, 16, 20],
+      "children": [
+        {
+          "id": "tc-header",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "horizontal", "gap": 16, "alignItems": "center",
+          "children": [
+            { "id": "tc-image", "type": "ellipse", "width": 64, "height": 64, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+            {
+              "id": "tc-info",
+              "type": "frame", "width": "fill_container", "height": "fit_content",
+              "layout": "vertical", "gap": 2,
+              "children": [
+                { "id": "tc-name", "type": "text", "content": "13. Bishorn", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 15, "fontWeight": "700" },
+                { "id": "tc-desc", "type": "text", "content": "SoDeDo: A replicated, self-updating software-defined dataset for machine learning applications", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12, "lineHeight": 1.4, "textGrowth": "fixed-width", "width": 500 }
+              ]
+            },
+            { "id": "tc-edit", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "pencil", "width": 18, "height": 18, "fill": "$color.primary" }
+          ]
+        },
+        {
+          "id": "tc-members",
+          "type": "frame", "width": "fill_container", "height": "fit_content",
+          "layout": "horizontal", "gap": 16, "alignItems": "center",
+          "children": [
+            {
+              "id": "tc-member",
+              "name": "Team Member",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fit_content",
+              "layout": "vertical", "gap": 4, "alignItems": "center",
+              "children": [
+                { "id": "tcm-avatar", "type": "ellipse", "width": 36, "height": 36, "fill": "$color.surfaceRaised", "stroke": { "align": "outside", "thickness": 2, "fill": "$color.border" } },
+                { "id": "tcm-name", "type": "text", "content": "John\nAnderson", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 10, "textAlign": "center", "lineHeight": 1.2 }
+              ]
+            },
+            { "id": "tc-m2", "type": "ref", "ref": "tc-member", "descendants": { "tcm-name": { "content": "Juan" } } },
+            { "id": "tc-m3", "type": "ref", "ref": "tc-member", "descendants": { "tcm-name": { "content": "Viraj" } } }
+          ]
+        },
+        {
+          "id": "tc-btn",
+          "type": "frame", "width": 160, "height": 34,
+          "fill": "$color.primary",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+          "children": [
+            { "id": "tc-btn-text", "type": "text", "content": "More Information", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "id": "page-participants",
+      "name": "All Participants — /hackathon/[slug]/participants",
+      "context": "List page showing all registered participants for a hackathon. Shares nav, tabs, phase bar with the logged-in hackathon page. Content is a vertical list of participant-card components. From Figma: page title 'List of participants', then a scrollable list of cards.",
+      "type": "frame",
+      "x": 7280, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+        {
+          "id": "pp-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "pp-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "pp-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "pp-tabs",
+          "name": "Sub-Nav — Participants tab active",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "pp-tab-overview",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "pp-tab-ov-text", "type": "text", "content": "Overview", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "pp-tab-active",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "pp-tab-act-text", "type": "text", "content": "Participants", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            {
+              "id": "pp-tab-other",
+              "name": "Inactive Tab",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "pp-to-text", "type": "text", "content": "Proposals", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            { "id": "pp-tab-teams", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Teams" } } },
+            { "id": "pp-tab-submissions", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Submissions" } } },
+            { "id": "pp-tab-timeline", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Timeline" } } },
+            { "id": "pp-tab-webinars", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Webinars" } } },
+            { "id": "pp-tab-photos", "type": "ref", "ref": "pp-tab-other", "descendants": { "pp-to-text": { "content": "Photos" } } }
+          ]
+        },
+        {
+          "id": "pp-content",
+          "name": "Page Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "children": [
+            {
+              "id": "pp-header",
+              "type": "frame", "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+              "padding": [0, 0, 20, 0],
+              "children": [
+                { "id": "pp-title", "type": "text", "content": "All Participants", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                { "id": "pp-count", "type": "text", "content": "100 registered", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 13 }
+              ]
+            },
+            {
+              "id": "pp-search",
+              "name": "Search / Filter Bar",
+              "type": "frame",
+              "width": 960, "height": 40,
+              "fill": "$color.surface",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "padding": [0, 12, 0, 12],
+              "children": [
+                { "id": "pp-search-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "search", "width": 16, "height": 16, "fill": "$color.textMuted" },
+                { "id": "pp-search-text", "type": "text", "content": "Search participants by name, affiliation…", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "pp-list",
+              "name": "Participant Cards List",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "vertical", "gap": 8,
+              "padding": [16, 0, 0, 0],
+              "children": [
+                { "id": "pp-card-1", "type": "ref", "ref": "participant-card" },
+                { "id": "pp-card-2", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Steven Flachsire" }, "pc-role": { "content": "Senior Data Scientist" }, "pc-affiliation": { "content": "Lombard Odier" }, "pc-linkedin": { "content": "" } } },
+                { "id": "pp-card-3", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Olivier Kauffmann" }, "pc-role": { "content": "Data Scientist" }, "pc-affiliation": { "content": "SDSC" } } },
+                { "id": "pp-card-4", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Ahmet Celik" }, "pc-role": { "content": "Autonomous Software Engineer" }, "pc-affiliation": { "content": "EPFL" } } },
+                { "id": "pp-card-5", "type": "ref", "ref": "participant-card", "descendants": { "pc-name": { "content": "Edoardo Boldi" }, "pc-role": { "content": "HPC application expert and software developer" }, "pc-affiliation": { "content": "Swiss Federal Institute of Materials Science" }, "pc-linkedin": { "content": "" } } }
+              ]
+            },
+            {
+              "id": "pp-pagination",
+              "name": "Pagination",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "center", "gap": 4,
+              "padding": [20, 0, 0, 0],
+              "children": [
+                {
+                  "id": "pp-page-btn",
+                  "name": "Page Number",
+                  "type": "frame",
+                  "reusable": true,
+                  "width": 32, "height": 32,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "ppb-text", "type": "text", "content": "1", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                },
+                { "id": "pp-page-2", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "2", "fill": "$color.textSecondary" } } },
+                { "id": "pp-page-3", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "3", "fill": "$color.textSecondary" } } },
+                { "id": "pp-page-4", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "…", "fill": "$color.textSecondary" } } },
+                { "id": "pp-page-5", "type": "ref", "ref": "pp-page-btn", "fill": "$color.surfaceRaised", "descendants": { "ppb-text": { "content": "10", "fill": "$color.textSecondary" } } }
+              ]
+            }
+          ]
+        },
+        { "id": "pp-footer", "type": "ref", "ref": "footer-main" }
+      ]
+    },
+
+    {
+      "id": "page-proposals",
+      "name": "All Proposals — /hackathon/[slug]/proposals",
+      "context": "List page showing all project proposals for a hackathon. From Figma: page title 'List of Project Proposals', track filter chips, scrollable list of proposal-card components. Each card has image, numbered title, description, 'More Info' button.",
+      "type": "frame",
+      "x": 8820, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+        {
+          "id": "pr-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "pr-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "pr-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "pr-tabs",
+          "name": "Sub-Nav — Proposals tab active",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "pr-tab-inactive",
+              "name": "Inactive Tab",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "pr-ti-text", "type": "text", "content": "Overview", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            { "id": "pr-tab-participants", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Participants" } } },
+            {
+              "id": "pr-tab-active",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "pr-tab-act-text", "type": "text", "content": "Proposals", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            { "id": "pr-tab-teams", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Teams" } } },
+            { "id": "pr-tab-submissions", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Submissions" } } },
+            { "id": "pr-tab-timeline", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Timeline" } } },
+            { "id": "pr-tab-webinars", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Webinars" } } },
+            { "id": "pr-tab-photos", "type": "ref", "ref": "pr-tab-inactive", "descendants": { "pr-ti-text": { "content": "Photos" } } }
+          ]
+        },
+        {
+          "id": "pr-content",
+          "name": "Page Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "children": [
+            {
+              "id": "pr-header",
+              "type": "frame", "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+              "padding": [0, 0, 12, 0],
+              "children": [
+                { "id": "pr-title", "type": "text", "content": "Project Proposals", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                {
+                  "id": "pr-propose-btn",
+                  "type": "frame", "width": 160, "height": 36,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "pr-propose-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "plus", "width": 14, "height": 14, "fill": "$color.onPrimary" },
+                    { "id": "pr-propose-text", "type": "text", "content": "Propose a Project", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "pr-filters",
+              "name": "Track Filter Chips",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "padding": [0, 0, 16, 0],
+              "children": [
+                {
+                  "id": "pr-filter-all",
+                  "type": "frame", "width": "fit_content", "height": 30,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "padding": [0, 14, 0, 14],
+                  "children": [
+                    { "id": "pr-fa-text", "type": "text", "content": "All (16)", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "pr-filter-ds",
+                  "type": "frame", "width": "fit_content", "height": 30,
+                  "fill": "$color.primaryMuted",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.primaryDark" },
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "padding": [0, 14, 0, 14],
+                  "children": [
+                    { "id": "pr-fds-text", "type": "text", "content": "Data Science (9)", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "pr-filter-rdi",
+                  "type": "frame", "width": "fit_content", "height": 30,
+                  "fill": "$color.secondaryMuted",
+                  "stroke": { "align": "inside", "thickness": 1, "fill": "$color.secondary" },
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "padding": [0, 14, 0, 14],
+                  "children": [
+                    { "id": "pr-frdi-text", "type": "text", "content": "Research Data Infra (7)", "fill": "$color.secondary", "fontFamily": "$font.mono", "fontSize": 11, "fontWeight": "600" }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "pr-list",
+              "name": "Proposal Cards List",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "vertical", "gap": 8,
+              "children": [
+                { "id": "pr-card-1", "type": "ref", "ref": "proposal-card" },
+                { "id": "pr-card-2", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "15. Automatic extraction of data from the literature" }, "prc-desc": { "content": "Have you ever been frustrated by having to copy data from the supplementary files of the papers? But the data is distributed across multiple pdf pages or even worse it's embedded as an image!" } } },
+                { "id": "pr-card-3", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "14. AgentSim: Browser-Based Agent Modeling with Real Trajectory Data" }, "prc-desc": { "content": "AgentSim is a browser-based application that leverages real-world trajectory data from the PNEUMA project to train agent-based models simulating urban traffic patterns." } } },
+                { "id": "pr-card-4", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "13. SoDeDo: A replicated, self-updating software-defined dataset" }, "prc-desc": { "content": "In this project we will explore the technologies for a proof-of-concept data store which simplifies collaborative dataset management for machine learning." } } },
+                { "id": "pr-card-5", "type": "ref", "ref": "proposal-card", "descendants": { "prc-title": { "content": "12. A platform for semantic navigation and visualization of Neo4J graphs" }, "prc-desc": { "content": "Neo4J is a graph DB technology with powerful capabilities for graph data science and the exploration of massive knowledge graphs." } } }
+              ]
+            },
+            {
+              "id": "pr-pagination",
+              "name": "Pagination",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "center", "gap": 4,
+              "padding": [20, 0, 0, 0],
+              "children": [
+                {
+                  "id": "pr-page-1",
+                  "type": "frame", "width": 32, "height": 32,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "prp1-text", "type": "text", "content": "1", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                },
+                {
+                  "id": "pr-page-2",
+                  "type": "frame", "width": 32, "height": 32,
+                  "fill": "$color.surfaceRaised",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+                  "children": [
+                    { "id": "prp2-text", "type": "text", "content": "2", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        { "id": "pr-footer", "type": "ref", "ref": "footer-main" }
+      ]
+    },
+
+    {
+      "id": "page-teams",
+      "name": "All Teams — /hackathon/[slug]/teams",
+      "context": "List page showing all teams for a hackathon. From Figma: page title 'List of Teams', then a list of team-card components. Each card has team image, number + name, project description, member avatars with names, edit icon, 'More Information' button.",
+      "type": "frame",
+      "x": 10360, "y": 0,
+      "width": 1440,
+      "height": "fit_content",
+      "fill": "$color.bg",
+      "layout": "vertical",
+      "clip": true,
+      "children": [
+        {
+          "id": "tm-nav",
+          "type": "ref", "ref": "nav-bar",
+          "descendants": {
+            "nav-login-btn": {
+              "id": "tm-avatar",
+              "type": "frame", "width": 32, "height": 32,
+              "fill": "$color.primary",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "children": [
+                { "id": "tm-avatar-text", "type": "text", "content": "S", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 14, "fontWeight": "700" }
+              ]
+            }
+          }
+        },
+        {
+          "id": "tm-tabs",
+          "name": "Sub-Nav — Teams tab active",
+          "type": "frame",
+          "width": "fill_container", "height": 44,
+          "fill": "$color.surface",
+          "layout": "horizontal", "justifyContent": "center", "alignItems": "stretch",
+          "stroke": { "align": "inside", "thickness": { "bottom": 1 }, "fill": "$color.border" },
+          "children": [
+            {
+              "id": "tm-tab-inactive",
+              "name": "Inactive Tab",
+              "type": "frame",
+              "reusable": true,
+              "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "children": [
+                { "id": "tm-ti-text", "type": "text", "content": "Overview", "fill": "$color.textSecondary", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            { "id": "tm-tab-participants", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Participants" } } },
+            { "id": "tm-tab-proposals", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Proposals" } } },
+            {
+              "id": "tm-tab-active",
+              "type": "frame", "width": "fit_content", "height": "fill_container",
+              "layout": "horizontal", "justifyContent": "center", "alignItems": "center",
+              "padding": [0, 16, 0, 16],
+              "stroke": { "align": "inside", "thickness": { "bottom": 2 }, "fill": "$color.primary" },
+              "children": [
+                { "id": "tm-tab-act-text", "type": "text", "content": "Teams", "fill": "$color.primary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+              ]
+            },
+            { "id": "tm-tab-submissions", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Submissions" } } },
+            { "id": "tm-tab-timeline", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Timeline" } } },
+            { "id": "tm-tab-webinars", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Webinars" } } },
+            { "id": "tm-tab-photos", "type": "ref", "ref": "tm-tab-inactive", "descendants": { "tm-ti-text": { "content": "Photos" } } }
+          ]
+        },
+        {
+          "id": "tm-content",
+          "name": "Page Content",
+          "type": "frame",
+          "width": "fill_container", "height": "fit_content",
+          "layout": "vertical", "gap": 0, "alignItems": "center",
+          "padding": [32, 80, 32, 80],
+          "children": [
+            {
+              "id": "tm-header",
+              "type": "frame", "width": 960, "height": "fit_content",
+              "layout": "horizontal", "justifyContent": "space-between", "alignItems": "center",
+              "padding": [0, 0, 12, 0],
+              "children": [
+                { "id": "tm-title", "type": "text", "content": "All Teams", "fill": "$color.text", "fontFamily": "$font.mono", "fontSize": 22, "fontWeight": "700" },
+                {
+                  "id": "tm-create-btn",
+                  "name": "Create Team (admin/organizer only)",
+                  "type": "frame", "width": 140, "height": 36,
+                  "fill": "$color.primary",
+                  "layout": "horizontal", "justifyContent": "center", "alignItems": "center", "gap": 6,
+                  "children": [
+                    { "id": "tm-create-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "plus", "width": 14, "height": 14, "fill": "$color.onPrimary" },
+                    { "id": "tm-create-text", "type": "text", "content": "Create Team", "fill": "$color.onPrimary", "fontFamily": "$font.mono", "fontSize": 12, "fontWeight": "600" }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "tm-search",
+              "name": "Search / Filter Bar",
+              "type": "frame",
+              "width": 960, "height": 40,
+              "fill": "$color.surface",
+              "stroke": { "align": "inside", "thickness": 1, "fill": "$color.border" },
+              "layout": "horizontal", "gap": 8, "alignItems": "center",
+              "padding": [0, 12, 0, 12],
+              "children": [
+                { "id": "tm-search-icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "search", "width": 16, "height": 16, "fill": "$color.textMuted" },
+                { "id": "tm-search-text", "type": "text", "content": "Search teams by name, project…", "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12 }
+              ]
+            },
+            {
+              "id": "tm-count",
+              "type": "text", "content": "1 team",
+              "fill": "$color.textMuted", "fontFamily": "$font.mono", "fontSize": 12,
+              "width": 960, "textAlign": "left"
+            },
+            {
+              "id": "tm-list",
+              "name": "Team Cards List",
+              "type": "frame",
+              "width": 960, "height": "fit_content",
+              "layout": "vertical", "gap": 12,
+              "padding": [12, 0, 0, 0],
+              "children": [
+                { "id": "tm-card-1", "type": "ref", "ref": "team-card" },
+                { "id": "tm-card-2", "type": "ref", "ref": "team-card", "descendants": { "tc-name": { "content": "14. Dufourspitze" }, "tc-desc": { "content": "Embedding of Pharmacokinetic and Pharmacodynamic equations into symbolic representation and alignment with their textual description" } } },
+                { "id": "tm-card-3", "type": "ref", "ref": "team-card", "descendants": { "tc-name": { "content": "12. Matterhorn" }, "tc-desc": { "content": "A platform for semantic navigation and visualization of Neo4J graphs using natural language queries and knowledge graph exploration" } } }
+              ]
+            }
+          ]
+        },
+        { "id": "tm-footer", "type": "ref", "ref": "footer-main" }
+      ]
+    },
+
+    {
+      "id": "homepage-light",
+      "name": "Homepage — Public (Light Mode, Desktop 1440px)",
+      "context": "Light mode variant of the public homepage. Uses the same layout and content as the dark mode version, but with all theme variables resolved to their light values. Place side by side with the dark version for comparison.",
+      "type": "ref",
+      "ref": "homepage",
+      "theme": { "mode": "light" },
+      "x": 12400, "y": 0
+    },
+
+    {
+      "id": "hackathon-loggedin-light",
+      "name": "Hackathon Page — Logged In (Light Mode, Desktop 1440px)",
+      "context": "Light mode variant of the logged-in hackathon page. Uses the same layout and content as the dark mode version, but with all theme variables resolved to their light values.",
+      "type": "ref",
+      "ref": "hackathon-loggedin",
+      "theme": { "mode": "light" },
+      "x": 13940, "y": 0
+    },
+
+    {
+      "id": "design-notes",
+      "name": "Design Notes",
+      "type": "note",
+      "x": 11900, "y": 0,
+      "width": 400, "height": 1300,
+      "fontSize": 13,
+      "fontFamily": "Source Code Pro",
+      "content": "DESIGN REFERENCE NOTES\n========================\n\nDesign pattern: HuggingFace.co\n- Public homepage = hero + trending + features\n- Logged-in = dashboard with personal feed\n- Same nav bar, login becomes avatar\n\nContent source: sdsc-hackathons.ch\n- Hackathon events (ORD, GenAI, Climate)\n- Temporal framework (T-4 to post-event)\n- Registration -> proposals -> teams -> hack\n\nTheme: Hackathonsdsc\n- Monospace font (Source Code Pro)\n- Border radius: 0 (sharp corners)\n- Primary: #6ABF4B (green)\n- Secondary: #5A4D8A (purple)\n- Dark mode default\n\nReusable Components (top row):\n- nav-bar\n- footer-main (SDSC + ETH + EPFL logos)\n- participant-card\n- proposal-card\n- team-card\n\nFrames (left to right):\n1. / = Public homepage (1440px, dark)\n2. /welcome = Dashboard (1440px, dark)\n3. /hackathon/[slug] = Detail page (1440px)\n4. /hackathon/[slug] = Logged-in (1440px, dark)\n5. /hackathon/[slug]/participants\n6. /hackathon/[slug]/proposals\n7. /hackathon/[slug]/teams\n8. / = Homepage (LIGHT mode)\n9. /hackathon/[slug] = Logged-in (LIGHT mode)\n\n========================\nHOMEPAGE\n========================\nSections (top to bottom):\n1. Hero — bg photo (ambiance_1.jpg)\n   with dark overlay + centered text\n2. Trending — tabbed list (HF-style)\n3. Winners — 3 showcase cards\n4. Event Showcase — photo carousel\n   (ambiance, teams, winners photos)\n5. Features — 2x2 grid\n6. Orgs — logo row (social proof)\n7. CTA — organize your hackathon\n8. Footer — SDSC + ETH + EPFL logos\n\nConfluence req coverage:\n[x] Current Hackathons/Challenges\n[x] Project & team winners\n[x] Latest Hackathons (in tabs)\n[x] Invitation to register\n[x] Organize your hackathon CTA\n[x] Event photos showcase\n\n========================\nDASHBOARD (/welcome)\n========================\n[x] Active hackathon status + phase\n[x] Current project/team\n[x] Past hackathons & teams\n[x] Notification center\n[x] Settings link\n\n========================\nHACKATHON PAGE (PUBLIC)\n========================\nModular sections (Confluence 7.3):\nAll toggleable by organizer.\n\nSection 1: Hero\n  [x] Title (string)\n  [x] Dates (string)\n  [x] Venue (string)\n  [x] Main photo (url) — gradient bg\n\nSection 2: Organizers\n  [x] Description (string)\n  [x] Logos (list of picture URL)\n\nSection 3: Markdown\n  [x] Markdown formatted text\n  [x] Bold, lists, links, pictures\n\nSection 4: Support Events\n  [x] Titles (list of webinars)\n  [x] Speakers / logos (pictures)\n  [x] Link to more info\n\nSection 5: Highlights\n  [x] Picture (one per block)\n  [x] Message (one per block)\n\nSection 6: Video\n  [x] Title\n  [x] Caption\n  [x] Video url\n\nSection 7: Call to Action\n  [x] Button (link to registration)\n\n========================\nHACKATHON — LOGGED IN\n========================\nFigma ref (functional requirements only):\neUBPuQj0KlWAzIfKEgqpHY\n\nFunctionality extracted from existing site:\n\nNAVIGATION (sub-pages):\n[x] Overview / Home\n[x] All participants list\n[x] Project proposals list\n[x] All teams list\n[x] Submitted projects\n[x] Timeline & Agenda\n[x] Webinars\n[x] Photos\n→ Implemented as horizontal tabs\n  (not old sidebar)\n\nPHASE AWARENESS:\n[x] Phase timeline bar with states:\n    completed / active / upcoming\n[x] From data model: Phase entity\n    (id, hackathon_id, start/end, name)\n[x] Phase-aware CTAs change per step\n\nPARTICIPATION STATUS:\n[x] Registration badge\n[x] Team assignment (name, members)\n[x] Project info (title, track, status)\n[x] Next action CTA with deadline\n→ Maps to: Participant, Team,\n  TeamParticipant, Submission entities\n\nUSER ACTIONS (phase-aware):\n[x] Propose a project\n[x] Set preferences / choose prefs\n[x] Submit project\n[x] Vote for best project\n[x] View profile\n[x] Account settings\n→ Active vs disabled based on phase\n\nTEAM MANAGEMENT:\n[x] Team name + description\n[x] Member list with avatars\n[x] Member roles (owner/member)\n[x] View team page link\n→ Maps to: Team, TeamParticipant\n\nADMIN TOOLS (role-gated):\n[x] Create Hackathon\n[x] Create Team\n[x] Manage Users\n[x] Manage Projects\n[x] Manage Teams\n[x] Manage Votes\n[x] Manage Hackathons\n→ Only shown if User.role = admin\n\nUSEFUL LINKS:\n[x] Previous Hackathons\n[x] About SDSC\n[x] Contact us\n[x] Why Participate?\n\nDATA MODEL coverage:\n[x] User (profile, role, skills)\n[x] Hackathon (name, dates, visibility)\n[x] Participant (registration, waiting)\n[x] Team (name, desc, category, status)\n[x] TeamParticipant (role)\n[x] Submission (status)\n[x] Phase (timeline)\n[x] Category (tracks)\n[x] Vote (best project)\n[x] Page (content sections)\n[x] Settings (max participants, etc.)\n\nSkeleton mapping:\n- Tabs: tab-group / custom flex\n- Phase bar: stepper / custom flex\n- Participation card: card + badge\n- Action buttons: btn preset-filled\n- Team card: card + Avatar\n- Admin links: nav-list or link list\n- Icons: lucide-svelte throughout\n\n========================\nREUSABLE COMPONENTS\n========================\n\nparticipant-card:\n  [x] Avatar (circular, 56px)\n  [x] Name (User.name)\n  [x] Role/Title (User.description)\n  [x] Affiliation (User.affiliation)\n  [x] LinkedIn link (optional)\n  [x] Check profile details btn\n\nproposal-card:\n  [x] Project image (circular, 64px)\n  [x] Numbered title\n  [x] Description paragraph\n  [x] More Info btn\n\nteam-card:\n  [x] Team image (circular, 64px)\n  [x] Team number + name\n  [x] Project description\n  [x] Member avatars with names\n  [x] Edit icon (own team only)\n  [x] More Information btn\n\n========================\nLIST PAGES\n========================\n\nAll Participants:\n  [x] Page title + count\n  [x] Search/filter bar\n  [x] List of participant-card\n  [x] Pagination\n\nAll Proposals:\n  [x] Page title + Propose btn\n  [x] Track filter chips (All, DS, RDI)\n  [x] List of proposal-card\n  [x] Pagination\n\nAll Teams:\n  [x] Page title + Create Team btn\n  [x] Search/filter bar\n  [x] Count label\n  [x] List of team-card\n\nShared across all list pages:\n  [x] Nav bar (logged-in avatar)\n  [x] Sub-nav tabs (active tab varies)\n  [x] Footer with partner logos\n\n========================\nFOOTER (footer-main)\n========================\nReusable component used on all pages.\nLogos (from /images/logos/):\n  - sdsc-logo-footer.svg\n  - eth-zurich.svg\n  - epfl.svg\nText links: Privacy · Terms · About · GitHub\n\n========================\nLIGHT MODE VARIANTS\n========================\nFrames 8 and 9 are ref-based copies\nof frames 1 and 4 with theme override\nto { mode: light }. All $color variables\nresolve to their light values.\n\n========================\nIMAGE ASSETS USED\n========================\nHero bg:\n  /images/hackathon-ord-2024/ambiance/\n  ambiance_1.jpg\n\nCarousel:\n  ambiance_1.jpg, ambiance_3.jpg,\n  winners_1.jpg, teams_1.jpg\n\nLogos:\n  sdsc-logo-footer.svg\n  eth-zurich.svg\n  epfl.svg"
+    }
+  ]
+}
