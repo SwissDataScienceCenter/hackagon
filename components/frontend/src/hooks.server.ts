@@ -16,7 +16,7 @@ import type { Logger } from "pino"
 let configLoader: ConfigLoader
 
 // --- CONSTANTS ---
-const PROTECTED_ROUTE_PATTERNS = [/^\/welcome($|\/)/]
+const PROTECTED_ROUTE_PATTERNS = [ /^\/dashboard($|\/)/]
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/signin($|\/)/,
@@ -110,7 +110,7 @@ const loggerHandle: Handle = async ({ event, resolve }) => {
   return response
 }
 
-// If a logged-in user visits the login page, send them to welcome page.
+// If a logged-in user visits the login page, send them to the dashboard.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
   const hasReturnTo = event.url.searchParams.has("returnTo")
@@ -122,9 +122,9 @@ const redirectHandle: Handle = async ({ event, resolve }) => {
     if (hasLoggedInUserContext(session)) {
       event.locals.logger.debug(
         { userId: session?.user?.id },
-        "HOOKS: Logged-in user on login page -> Redirecting to Welcome page.",
+        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
       )
-      throw redirect(303, "/welcome")
+      throw redirect(303, "/dashboard")
     }
   }
 
@@ -151,7 +151,7 @@ export const handle = sequence(
   setupHandle, // Setup Config and logger
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
-  redirectHandle, // Redirect users to Welcome page after login
+  redirectHandle, // Redirect logged-in users to dashboard
   guardHandle, // Redirect to login in case user is not authenticated
 )
 
