@@ -20,7 +20,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string `yaml:"port"`
+	Port       string `yaml:"port"`
+	AdminEmail string `yaml:"adminemail"`
 }
 type DatabaseConfig struct {
 	Host     string `yaml:"host"`

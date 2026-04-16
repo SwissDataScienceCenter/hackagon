@@ -1,5 +1,6 @@
 server:
   port: "3000"
+  adminemail: alice@swissdatacustodian.ch
 database:
   host: localhost
   port: 5432

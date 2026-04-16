@@ -22,7 +22,7 @@ type JWTValidator struct {
 	Skip      SkipFn
 }
 
-func NewJWTValidator(cfg config.Config, skip SkipFn) *JWTValidator {
+func NewJWTValidator(cfg *config.Config, skip SkipFn) *JWTValidator {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,

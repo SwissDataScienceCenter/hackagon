@@ -1,15 +1,14 @@
 # Backend Service
 
 <!--toc:start-->
+
 - [Backend Service](#backend-service)
   - [Features](#features)
   - [Usage](#usage)
   - [Database Schema](#database-schema)
-  - [Development](#development)
-    - [Prerequisites](#prerequisites)
-    - [Building](#building)
-    - [Running Tests](#running-tests)
-<!--toc:end-->
+  - [Development](#development) - [Prerequisites](#prerequisites) -
+  [Building](#building) - [Running Tests](#running-tests)
+  <!--toc:end-->
 
 A gRPC-based microservice for Hackagon.
 
@@ -30,9 +29,10 @@ grpcurl -plaintext localhost:3000 health.Health/Check
 ```
 
 ## Database Schema
-We use [ent](https://entgo.io/) as an ORM.
-Use `just generate-db-schema` to generate the db schema files.
-An overview of the DB schema can be found in [Schema.md](./Schema.md)
+
+We use [ent](https://entgo.io/) as an ORM. Use `just generate-db-schema` to
+generate the db schema files. An overview of the DB schema can be found in
+[Schema.md](./Schema.md)
 
 ## Development
 
