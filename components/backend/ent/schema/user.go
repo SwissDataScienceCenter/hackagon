@@ -18,8 +18,10 @@ type User struct {
 func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("username"),
-		field.String("keycloak_id"),
-		field.Time("created_at").Default(time.Now),
+		field.String("keycloak_id").NotEmpty().Unique(),
+		field.Time("created_at").Immutable().Default(time.Now),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 
@@ -36,12 +38,19 @@ func (User) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Restrict)),
 		edge.To("participates_in_hackathons", Hackathon.Type).Through("participations", Participant.Type),
 		edge.To("participates_in_teams", Team.Type).Through("team_participations", TeamParticipant.Type),
-		edge.To("created_teams", Team.Type),
-		edge.To("created_pages", Page.Type),
-		edge.To("modified_pages", Page.Type),
-		edge.To("created_phases", Phase.Type),
-		edge.To("modified_phases", Phase.Type),
-		edge.To("created_submissions", Submission.Type),
-		edge.To("modified_submissions", Submission.Type),
+		edge.To("created_teams", Team.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("modified_teams", Team.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("created_pages", Page.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("modified_pages", Page.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("created_phases", Phase.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("modified_phases", Phase.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("created_submissions", Submission.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
 	}
 }

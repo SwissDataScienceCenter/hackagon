@@ -17,8 +17,8 @@ type Phase struct {
 // Fields of the Phase.
 func (Phase) Fields() []ent.Field {
 	return []ent.Field{
-		field.Time("start_date"),
-		field.Time("end_date"),
+		field.Time("start_date").Optional().Nillable(),
+		field.Time("end_date").Optional().Nillable(),
 		field.String("name").
 			NotEmpty(),
 		field.Text("description").
@@ -27,7 +27,7 @@ func (Phase) Fields() []ent.Field {
 			Immutable().
 			Default(time.Now),
 		field.Time("modified_at").
-			Default(time.Now),
+			Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 
@@ -35,9 +35,8 @@ func (Phase) Fields() []ent.Field {
 func (Phase) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
-			Ref("phases"),
-		edge.From("page", Page.Type).
-			Ref("phases"),
+			Ref("phases").Unique().Required(),
+		edge.To("page", Page.Type).Unique(),
 		edge.From("creator", User.Type).
 			Ref("created_phases").Unique().Required().Immutable(),
 		edge.From("modifier", User.Type).

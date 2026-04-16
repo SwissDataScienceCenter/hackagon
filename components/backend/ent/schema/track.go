@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"time"
+
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
@@ -19,6 +21,9 @@ func (Track) Fields() []ent.Field {
 			NotEmpty(),
 		field.Text("description").
 			NotEmpty(),
+		field.Time("created_at").Immutable().Default(time.Now),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 
@@ -35,6 +40,6 @@ func (Track) Edges() []ent.Edge {
 // Indexes of the Track.
 func (Track) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("name"),
+		index.Fields("name").Edges("hackathon").Unique(),
 	}
 }

@@ -23,7 +23,7 @@ func (Project) Fields() []ent.Field {
 			Immutable().
 			Default(time.Now),
 		field.Time("modified_at").
-			Default(time.Now),
+			Default(time.Now).UpdateDefault(time.Now),
 		field.Enum("status").
 			Values("proposed", "approved"),
 		field.String("image").

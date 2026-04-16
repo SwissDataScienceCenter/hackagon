@@ -38,14 +38,12 @@ func (Submission) Edges() []ent.Edge {
 			Ref("submissions").Unique().Required(),
 		edge.From("creator", User.Type).
 			Ref("created_submissions").Unique().Required().Immutable(),
-		edge.From("modifier", User.Type).
-			Ref("modified_submissions").Unique(),
 	}
 }
 
 // Indexes of the Submission.
 func (Submission) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("version"),
+		index.Fields("version").Edges("project", "team").Unique(),
 	}
 }

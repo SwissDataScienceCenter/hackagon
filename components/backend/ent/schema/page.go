@@ -27,7 +27,7 @@ func (Page) Fields() []ent.Field {
 			Immutable().
 			Default(time.Now),
 		field.Time("modified_at").
-			Default(time.Now),
+			Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 
@@ -36,7 +36,7 @@ func (Page) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
 			Ref("pages"),
-		edge.To("phases", Phase.Type),
+		edge.From("phase", Phase.Type).Ref("page").Unique(),
 		edge.From("creator", User.Type).
 			Ref("created_pages").Unique().Required().Immutable(),
 		edge.From("modifier", User.Type).

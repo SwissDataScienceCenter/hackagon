@@ -18,17 +18,17 @@ type Hackathon struct {
 func (Hackathon) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
-			NotEmpty(),
-		field.Time("start_date"),
-		field.Time("end_date"),
+			NotEmpty().Unique(),
+		field.Time("start_date").Optional().Nillable(),
+		field.Time("end_date").Optional().Nillable(),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
 		field.Time("modified_at").
-			Default(time.Now),
+			Default(time.Now).UpdateDefault(time.Now),
 		field.Enum("visibility").
 			Values("public", "private"),
-		field.Text("description"),
+		field.Text("description").Optional(),
 		field.String("logo").
 			Optional(),
 	}

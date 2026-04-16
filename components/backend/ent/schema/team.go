@@ -21,6 +21,8 @@ func (Team) Fields() []ent.Field {
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now),
 		field.Text("description").
 			Optional(),
 	}
@@ -33,6 +35,8 @@ func (Team) Edges() []ent.Edge {
 			Ref("teams").Unique().Required(),
 		edge.From("creator", User.Type).
 			Ref("created_teams").Unique().Immutable().Required(),
+		edge.From("modifier", User.Type).
+			Ref("modified_teams").Unique(),
 		edge.To("submissions", Submission.Type),
 		edge.From("members", User.Type).Ref("participates_in_teams").Through("team_participants", TeamParticipant.Type),
 	}
