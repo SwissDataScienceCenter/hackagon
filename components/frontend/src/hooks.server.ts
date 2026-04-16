@@ -20,7 +20,6 @@ let configLoader: ConfigLoader
 // Routes are protected by default. Only routes matching PUBLIC_ROUTE_PATTERNS
 // are accessible without authentication.
 // --- CONSTANTS ---
-const PROTECTED_ROUTE_PATTERNS = [ /^\/dashboard($|\/)/]
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/signin($|\/)/,
