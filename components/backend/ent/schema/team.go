@@ -38,6 +38,8 @@ func (Team) Edges() []ent.Edge {
 		edge.From("modifier", User.Type).
 			Ref("modified_teams").Unique(),
 		edge.To("submissions", Submission.Type),
-		edge.From("members", User.Type).Ref("participates_in_teams").Through("team_participants", TeamParticipant.Type),
+		edge.From("members", User.Type).
+			Ref("participates_in_teams").
+			Through("team_participants", TeamParticipant.Type),
 	}
 }

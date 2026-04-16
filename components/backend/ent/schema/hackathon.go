@@ -39,7 +39,9 @@ func (Hackathon) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("tracks", Track.Type),
 		edge.To("projects", Project.Type),
-		edge.From("participating_users", User.Type).Ref("participates_in_hackathons").Through("participants", Participant.Type),
+		edge.From("participating_users", User.Type).
+			Ref("participates_in_hackathons").
+			Through("participants", Participant.Type),
 		edge.To("pages", Page.Type),
 		edge.To("phases", Phase.Type),
 		edge.From("creator", User.Type).

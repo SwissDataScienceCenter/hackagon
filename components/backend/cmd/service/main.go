@@ -51,13 +51,17 @@ func main() {
 	if err := dbClient.Schema.Create(context.Background()); err != nil {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
+	enf, err := mw.NewRBACEnforcer(cfg)
+	if err != nil {
+		log.Fatalf("failed to create RBAC enforcer: %v", err)
+	}
 
 	// Create services
 	healthService := service.NewHealthService()
-	userService := service.NewUserService(dbClient)
+	userService := service.NewUserService(dbClient, enf)
 
 	// Create gRPC server
-	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(*cfg, skipAuth))
+	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(cfg, skipAuth))
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)),
 	)
