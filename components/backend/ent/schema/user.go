@@ -52,6 +52,8 @@ func (User) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Restrict)),
 		edge.To("created_submissions", Submission.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)),
+		edge.To("modified_submissions", Submission.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)),
 		edge.To("preferred_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)),
 	}

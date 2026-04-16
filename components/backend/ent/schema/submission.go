@@ -20,6 +20,8 @@ func (Submission) Fields() []ent.Field {
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now),
 		field.String("result").
 			Optional(),
 		field.Enum("status").
@@ -38,6 +40,8 @@ func (Submission) Edges() []ent.Edge {
 			Ref("submissions").Unique().Required(),
 		edge.From("creator", User.Type).
 			Ref("created_submissions").Unique().Required().Immutable(),
+		edge.From("modifier", User.Type).
+			Ref("modified_submissions").Unique(),
 	}
 }
 

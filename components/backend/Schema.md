@@ -18,7 +18,7 @@ Hackathon:
 	| tracks              | Track       | false   |                            | O2M      | false  | true     |         |
 	| projects            | Project     | false   |                            | O2M      | false  | true     |         |
 	| participating_users | User        | true    | participates_in_hackathons | M2M      | false  | true     |         |
-	| pages               | Page        | false   |                            | M2M      | false  | true     |         |
+	| pages               | Page        | false   |                            | O2M      | false  | true     |         |
 	| phases              | Phase       | false   |                            | O2M      | false  | true     |         |
 	| creator             | User        | true    | created_hackathons         | M2O      | true   | false    |         |
 	| modifier            | User        | true    | modified_hackathons        | M2O      | true   | true     |         |
@@ -40,7 +40,7 @@ Page:
 	+-----------+-----------+---------+----------------+----------+--------+----------+---------+
 	| Edge      | Type      | Inverse | BackRef        | Relation | Unique | Optional | Comment |
 	+-----------+-----------+---------+----------------+----------+--------+----------+---------+
-	| hackathon | Hackathon | true    | pages          | M2M      | false  | true     |         |
+	| hackathon | Hackathon | true    | pages          | M2O      | true   | false    |         |
 	| phase     | Phase     | true    | page           | O2O      | true   | true     |         |
 	| creator   | User      | true    | created_pages  | M2O      | true   | false    |         |
 	| modifier  | User      | true    | modified_pages | M2O      | true   | true     |         |
@@ -108,22 +108,24 @@ Project:
 	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
 	
 Submission:
-	+------------+-------------------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
-	| Field      | Type              | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                   | Validators | Comment |
-	+------------+-------------------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
-	| id         | int               | false  | false    | false    | false   | false         | false     | json:"id,omitempty"         |          0 |         |
-	| created_at | time.Time         | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty" |          0 |         |
-	| result     | string            | false  | true     | false    | false   | false         | false     | json:"result,omitempty"     |          0 |         |
-	| status     | submission.Status | false  | false    | false    | false   | false         | false     | json:"status,omitempty"     |          0 |         |
-	| version    | int               | false  | false    | false    | false   | false         | false     | json:"version,omitempty"    |          1 |         |
-	+------------+-------------------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
-	+---------+---------+---------+---------------------+----------+--------+----------+---------+
-	| Edge    | Type    | Inverse | BackRef             | Relation | Unique | Optional | Comment |
-	+---------+---------+---------+---------------------+----------+--------+----------+---------+
-	| team    | Team    | true    | submissions         | M2O      | true   | false    |         |
-	| project | Project | true    | submissions         | M2O      | true   | false    |         |
-	| creator | User    | true    | created_submissions | M2O      | true   | false    |         |
-	+---------+---------+---------+---------------------+----------+--------+----------+---------+
+	+-------------+-------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
+	| Field       | Type              | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
+	+-------------+-------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
+	| id          | int               | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
+	| created_at  | time.Time         | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
+	| modified_at | time.Time         | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
+	| result      | string            | false  | true     | false    | false   | false         | false     | json:"result,omitempty"      |          0 |         |
+	| status      | submission.Status | false  | false    | false    | false   | false         | false     | json:"status,omitempty"      |          0 |         |
+	| version     | int               | false  | false    | false    | false   | false         | false     | json:"version,omitempty"     |          1 |         |
+	+-------------+-------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
+	+----------+---------+---------+----------------------+----------+--------+----------+---------+
+	| Edge     | Type    | Inverse | BackRef              | Relation | Unique | Optional | Comment |
+	+----------+---------+---------+----------------------+----------+--------+----------+---------+
+	| team     | Team    | true    | submissions          | M2O      | true   | false    |         |
+	| project  | Project | true    | submissions          | M2O      | true   | false    |         |
+	| creator  | User    | true    | created_submissions  | M2O      | true   | false    |         |
+	| modifier | User    | true    | modified_submissions | M2O      | true   | true     |         |
+	+----------+---------+---------+----------------------+----------+--------+----------+---------+
 	
 Team:
 	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
@@ -204,6 +206,7 @@ User:
 	| created_phases             | Phase           | false   |         | O2M      | false  | true     |         |
 	| modified_phases            | Phase           | false   |         | O2M      | false  | true     |         |
 	| created_submissions        | Submission      | false   |         | O2M      | false  | true     |         |
+	| modified_submissions       | Submission      | false   |         | O2M      | false  | true     |         |
 	| preferred_projects         | Project         | false   |         | M2M      | false  | true     |         |
 	| participations             | Participant     | true    | user    | O2M      | false  | true     |         |
 	| team_participations        | TeamParticipant | true    | user    | O2M      | false  | true     |         |

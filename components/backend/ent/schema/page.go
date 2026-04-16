@@ -35,7 +35,7 @@ func (Page) Fields() []ent.Field {
 func (Page) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
-			Ref("pages"),
+			Ref("pages").Unique().Required(),
 		edge.From("phase", Phase.Type).Ref("page").Unique(),
 		edge.From("creator", User.Type).
 			Ref("created_pages").Unique().Required().Immutable(),
