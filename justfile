@@ -73,7 +73,7 @@ build *args:
 test *args:
     just quitsh test "$@"
 
-# Generate Go and gRPC code from proto files.
+# Generate Go and gRPC code from proto files for backend and frontend.
 [group('aux')]
 generate-proto *args:
     #!/usr/bin/env bash
@@ -89,7 +89,7 @@ generate-proto *args:
 
         # Copy proto to backend internal directory
         cp "$proto" "$GO_OUT/$proto_file"
-        echo "  ✓ Copied to $GO_OUT/$proto_file"
+        echo "  - Copied to $GO_OUT/$proto_file"
 
         # Generate Go code
         protoc \
@@ -99,8 +99,14 @@ generate-proto *args:
             --go-grpc_opt=paths=source_relative \
             --proto_path="components/backend/internal/proto" \
             "$(basename "$proto")"
-        echo "  ✓ Generated Go code"
+        echo "  - Generated Go code"
     done
+
+    # Generate TypeScript code for the frontend
+    mkdir -p "components/frontend/src/lib/server/grpc/generated"
+    (cd components/frontend && pnpm install --frozen-lockfile && pnpm proto:generate)
+    echo "  - Generated TypeScript code"
+
     echo "All protos processed."
 
 # Update dependencies to `quitsh`.

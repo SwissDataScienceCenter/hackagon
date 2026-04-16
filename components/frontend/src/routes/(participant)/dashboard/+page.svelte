@@ -138,12 +138,13 @@
                 { icon: FileText, label: 'My Submissions' },
                 { icon: Settings, label: 'Account Settings' },
             ] as link, i (i)}
+                {@const Icon = link.icon}
                 <a
                     href={resolve('/dashboard')}
                     class="flex h-9 items-center gap-2 px-4 text-xs text-surface-500
                            no-underline hover:text-primary-500 transition-colors"
                 >
-                    <svelte:component this={link.icon} class="h-3.5 w-3.5" />
+                    <Icon class="h-3.5 w-3.5" />
                     {link.label}
                 </a>
             {/each}

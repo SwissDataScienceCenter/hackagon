@@ -103,6 +103,35 @@ describe("Auth.js jwt Callback", () => {
     expect(mockFetch).not.toHaveBeenCalled() // Fetch should not be called
   })
 
+  it("should proactively refresh if token expires within 30 seconds", async () => {
+    const mockToken: CustomJWT = {
+      sub: "user1",
+      accessToken: "about_to_expire_access",
+      refreshToken: "valid_refresh",
+      expiresAt: Math.floor(Date.now() / 1000) + 15, // Expires in 15s (within 30s buffer)
+      userId: "user1",
+    }
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: "refreshed_access",
+        id_token: "refreshed_id",
+        expires_in: 3600,
+        refresh_token: "rotated_refresh",
+      }),
+    } as Response)
+
+    const result = (await jwtCallback({
+      token: mockToken as JWT,
+      account: null,
+    } as JwtCallbackParams)) as CustomJWT
+
+    expect(mockFetch).toHaveBeenCalledOnce()
+    expect(result.accessToken).toBe("refreshed_access")
+    expect(result.error).toBeUndefined()
+  })
+
   it("should attempt refresh if token is expired", async () => {
     const mockToken: CustomJWT = {
       sub: "user1",

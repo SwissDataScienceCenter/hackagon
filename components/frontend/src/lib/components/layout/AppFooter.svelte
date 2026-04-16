@@ -1,7 +1,3 @@
-<script lang="ts">
-    import { resolve } from '$app/paths';
-</script>
-
 <footer
     class="flex h-14 items-center justify-between px-20
            border-t border-surface-200 dark:border-surface-800
@@ -15,11 +11,14 @@
         <img src="/images/logos/epfl.svg" alt="EPFL" class="h-3 dark:invert" />
     </div>
     <nav class="text-xs text-surface-500 flex gap-2">
-        <a href={resolve('/privacy')} class="no-underline hover:text-primary-500">Privacy</a>
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external static pages -->
+        <a href="/privacy" class="no-underline hover:text-primary-500">Privacy</a>
         <span>·</span>
-        <a href={resolve('/terms')} class="no-underline hover:text-primary-500">Terms</a>
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external static pages -->
+        <a href="/terms" class="no-underline hover:text-primary-500">Terms</a>
         <span>·</span>
-        <a href={resolve('/about')} class="no-underline hover:text-primary-500">About</a>
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external static pages -->
+        <a href="/about" class="no-underline hover:text-primary-500">About</a>
         <span>·</span>
         <a href="https://github.com" class="no-underline hover:text-primary-500">GitHub</a>
     </nav>

@@ -11,12 +11,15 @@ import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
+import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
+import type { CustomSession } from "./auth.d"
 
 // Global config state for the application.
 let configLoader: ConfigLoader
 
+// Routes are protected by default. Only routes matching PUBLIC_ROUTE_PATTERNS
+// are accessible without authentication.
 // --- CONSTANTS ---
-const PROTECTED_ROUTE_PATTERNS = [ /^\/dashboard($|\/)/]
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/signin($|\/)/,
@@ -25,9 +28,8 @@ const PUBLIC_ROUTE_PATTERNS = [
   /^\/error($|\/)/,
 ]
 
-function isProtectedRoute(pathname: string): boolean {
-  if (PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))) return false
-  return PROTECTED_ROUTE_PATTERNS.some((p) => p.test(pathname))
+export function isProtectedRoute(pathname: string): boolean {
+  return !PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))
 }
 
 function redirectToLogin(url: URL, logger: Logger, reason: string) {
@@ -110,36 +112,58 @@ const loggerHandle: Handle = async ({ event, resolve }) => {
   return response
 }
 
-// If a logged-in user visits the login page, send them to the dashboard.
-const redirectHandle: Handle = async ({ event, resolve }) => {
-  const isRootPath = event.url.pathname === "/"
-  const hasReturnTo = event.url.searchParams.has("returnTo")
+// Session + Guard + gRPC setup (single auth() call per request)
+const sessionSetupHandle: Handle = async ({ event, resolve }) => {
+  const session = (await event.locals.auth()) as CustomSession | null
 
-  // ONLY redirect users who are on the root AND don't have a returnTo param
-  if (isRootPath && !hasReturnTo) {
-    const session = await event.locals.auth()
+  // Always store sanitized session (strip accessToken for client safety)
+  if (session) {
+    const { accessToken, ...clientSession } = session
+    void accessToken
+    event.locals.session = clientSession
+  }
 
-    if (hasLoggedInUserContext(session)) {
-      event.locals.logger.debug(
-        { userId: session?.user?.id },
-        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
-      )
-      throw redirect(303, "/dashboard")
+  if (isProtectedRoute(event.url.pathname)) {
+    if (!hasLoggedInUserContext(session)) {
+      redirectToLogin(event.url, event.locals.logger, "No user found")
     }
+
+    // TODO [AUTHZ]: Role-based access control will be resolved via the backend
+    // user database (roles are context-dependent, e.g. admin on one hackathon
+    // but participant on another). When implemented, query the backend for the
+    // user's role in the current context and gate access here.
+
+    if (session?.error === "RefreshTokenError") {
+      redirectToLogin(
+        event.url,
+        event.locals.logger,
+        "Token refresh failed, re-authentication required",
+      )
+    }
+
+    if (!session?.accessToken) {
+      redirectToLogin(event.url, event.locals.logger, "No access token")
+    }
+
+    event.locals.grpc = createAuthorizedGrpc(session!.accessToken!)
+    event.locals.logger.debug("HOOKS: Authorized gRPC clients created.")
   }
 
   return resolve(event)
 }
 
-// If the route is protected, ensure the user is logged in.
-const guardHandle: Handle = async ({ event, resolve }) => {
-  // Only run the security check if the route is protected
-  if (isProtectedRoute(event.url.pathname)) {
-    const session = await event.locals.auth()
+// If a logged-in user visits the login page, send them to welcome page.
+const redirectHandle: Handle = async ({ event, resolve }) => {
+  const isRootPath = event.url.pathname === "/"
+  const hasReturnTo = event.url.searchParams.has("returnTo")
 
-    if (!hasLoggedInUserContext(session)) {
-      // Note: This likely throws a redirect internally
-      redirectToLogin(event.url, event.locals.logger, "No user found")
+  if (isRootPath && !hasReturnTo) {
+    if (event.locals.session?.user?.id) {
+      event.locals.logger.debug(
+        { userId: event.locals.session.user.id },
+        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
+      )
+      throw redirect(303, "/dashboard")
     }
   }
 
@@ -151,8 +175,8 @@ export const handle = sequence(
   setupHandle, // Setup Config and logger
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
+  sessionSetupHandle, // Sanitize session + guard protected routes + setup gRPC clients
   redirectHandle, // Redirect logged-in users to dashboard
-  guardHandle, // Redirect to login in case user is not authenticated
 )
 
 // ----------------------------------------------------------
@@ -163,6 +187,13 @@ export const handle = sequence(
 export const init = async () => {
   configLoader = setupConfigAndLogger()
   logger.info({ env: import.meta.env }, "Node environment.")
+
+  try {
+    const health = await healthClient.check({})
+    logger.info({ health }, "Backend health check passed.")
+  } catch (err) {
+    logger.error({ err }, "Backend health check failed on startup.")
+  }
 }
 
 // --- ERROR HANDLER ---

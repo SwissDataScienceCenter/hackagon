@@ -20,6 +20,9 @@ result
 # Merge files
 *.orig
 
+# Cursor CLI config (machine-specific permissions)
+.cursor/cli.json
+
 ## Sensitive Information ======================================================
 # All .env files
 .env
@@ -28,3 +31,5 @@ result
 
 # Generated files
 components/backend/internal/proto
+components/frontend/src/lib/server/grpc/*.proto
+components/frontend/src/lib/server/grpc/generated

@@ -2,11 +2,10 @@
     import { signIn, signOut } from '@auth/sveltekit/client';
     import { page } from '$app/stores';
     import { resolve } from '$app/paths';
-    import { Search } from 'lucide-svelte';
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
 
-    let { session }: { session: Session | null } = $props();
+    let { session }: { session: Omit<Session, 'accessToken'> | null } = $props();
 </script>
 
 <header

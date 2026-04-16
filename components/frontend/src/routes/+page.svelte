@@ -194,11 +194,11 @@
     </div>
 
     <div class="mt-4 flex justify-center gap-1.5">
-        {#each carouselSlides as _, i (i)}
+        {#each carouselSlides as slide, i (i)}
             <button
                 onclick={() => carouselIndex = i}
                 class="h-1.5 w-1.5 rounded-full transition-colors {i === carouselIndex ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-700'}"
-                aria-label="Go to slide {i + 1}"
+                aria-label="Go to slide: {slide.caption}"
             ></button>
         {/each}
     </div>
@@ -220,8 +220,9 @@
             { icon: Users, title: 'Smart team formation', desc: 'Rank your project preferences and get matched into balanced teams. Organizers can fine-tune assignments.' },
             { icon: Vote, title: 'Vote & leaderboard', desc: 'Participants and jury vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.' },
         ] as feat, i (i)}
+            {@const Icon = feat.icon}
             <div class="card preset-filled-surface-50-950 flex flex-col gap-3 border border-surface-200 p-6 dark:border-surface-800">
-                <svelte:component this={feat.icon} class="h-6 w-6 text-primary-500" />
+                <Icon class="h-6 w-6 text-primary-500" />
                 <h3 class="text-base font-semibold">{feat.title}</h3>
                 <p class="text-sm leading-relaxed text-surface-500">{feat.desc}</p>
             </div>

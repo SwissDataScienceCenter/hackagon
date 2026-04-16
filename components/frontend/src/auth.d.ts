@@ -8,6 +8,7 @@ import type { Session, Profile } from "@auth/core/types"
 // Augmentations
 declare module "@auth/core/types" {
   interface Session {
+    accessToken?: string
     error?: string
     user?: DefaultSession["user"] & {
       id?: string
