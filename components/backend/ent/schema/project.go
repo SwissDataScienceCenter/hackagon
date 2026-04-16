@@ -45,6 +45,7 @@ func (Project) Edges() []ent.Edge {
 			Ref("modified_projects").Unique(),
 		edge.To("teams", Team.Type),
 		edge.To("submissions", Submission.Type),
+		edge.From("preferred_by_users", User.Type).Ref("preferred_projects"),
 	}
 }
 

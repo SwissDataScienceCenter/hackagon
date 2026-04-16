@@ -95,16 +95,17 @@ Project:
 	| image       | string         | false  | true     | false    | false   | false         | false     | json:"image,omitempty"       |          0 |         |
 	| description | string         | false  | false    | false    | false   | false         | false     | json:"description,omitempty" |          0 |         |
 	+-------------+----------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+-------------+------------+---------+-------------------+----------+--------+----------+---------+
-	| Edge        | Type       | Inverse | BackRef           | Relation | Unique | Optional | Comment |
-	+-------------+------------+---------+-------------------+----------+--------+----------+---------+
-	| track       | Track      | true    | projects          | M2O      | true   | false    |         |
-	| hackathon   | Hackathon  | true    | projects          | M2O      | true   | false    |         |
-	| creator     | User       | true    | created_projects  | M2O      | true   | false    |         |
-	| modifier    | User       | true    | modified_projects | M2O      | true   | true     |         |
-	| teams       | Team       | false   |                   | O2M      | false  | true     |         |
-	| submissions | Submission | false   |                   | O2M      | false  | true     |         |
-	+-------------+------------+---------+-------------------+----------+--------+----------+---------+
+	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
+	| Edge               | Type       | Inverse | BackRef            | Relation | Unique | Optional | Comment |
+	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
+	| track              | Track      | true    | projects           | M2O      | true   | false    |         |
+	| hackathon          | Hackathon  | true    | projects           | M2O      | true   | false    |         |
+	| creator            | User       | true    | created_projects   | M2O      | true   | false    |         |
+	| modifier           | User       | true    | modified_projects  | M2O      | true   | true     |         |
+	| teams              | Team       | false   |                    | O2M      | false  | true     |         |
+	| submissions        | Submission | false   |                    | O2M      | false  | true     |         |
+	| preferred_by_users | User       | true    | preferred_projects | M2M      | false  | true     |         |
+	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
 	
 Submission:
 	+------------+-------------------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
@@ -203,6 +204,7 @@ User:
 	| created_phases             | Phase           | false   |         | O2M      | false  | true     |         |
 	| modified_phases            | Phase           | false   |         | O2M      | false  | true     |         |
 	| created_submissions        | Submission      | false   |         | O2M      | false  | true     |         |
+	| preferred_projects         | Project         | false   |         | M2M      | false  | true     |         |
 	| participations             | Participant     | true    | user    | O2M      | false  | true     |         |
 	| team_participations        | TeamParticipant | true    | user    | O2M      | false  | true     |         |
 	+----------------------------+-----------------+---------+---------+----------+--------+----------+---------+
