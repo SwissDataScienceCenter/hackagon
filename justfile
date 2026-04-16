@@ -104,7 +104,7 @@ generate-proto *args:
 
     # Generate TypeScript code for the frontend
     mkdir -p "components/frontend/src/lib/server/grpc/generated"
-    (cd components/frontend && pnpm proto:generate)
+    (cd components/frontend && pnpm install --frozen-lockfile && pnpm proto:generate)
     echo "  - Generated TypeScript code"
 
     echo "All protos processed."
