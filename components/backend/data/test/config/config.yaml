@@ -7,6 +7,6 @@ database:
   user: postgres
   password: postgres
 oidc:
-  jwks_url: "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs"
-  issuer_url: "http://localhost:8180/realms/hackagon"
+  jwksurl: "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs"
+  issuerurl: "http://localhost:8180/realms/hackagon"
   algorithm: "RS256"
