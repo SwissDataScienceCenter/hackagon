@@ -24,6 +24,7 @@ type ServerConfig struct {
 	AdminEmail string `yaml:"adminemail"`
 }
 type DatabaseConfig struct {
+	Driver   string `yaml:"driver"`
 	Host     string `yaml:"host"`
 	Port     int16  `yaml:"port"`
 	DbName   string `yaml:"dbname"`
@@ -38,14 +39,22 @@ type OidcConfig struct {
 }
 
 func (c *Config) ConnectionStr() string {
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
-		c.Database.Host,
-		c.Database.Port,
-		c.Database.User,
-		c.Database.DbName,
-		c.Database.Password,
-	)
+	switch c.Database.Driver {
+	case "sqlite3":
+		// For SQLite, use in-memory database
+		// This can be overridden for testing
+		return "file::memory:?cache=shared&_fk=true"
+	default:
+		// Default to postgres connection string
+		return fmt.Sprintf(
+			"host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
+			c.Database.Host,
+			c.Database.Port,
+			c.Database.User,
+			c.Database.DbName,
+			c.Database.Password,
+		)
+	}
 }
 
 func Load(configDir string) (*Config, error) {
@@ -57,6 +66,7 @@ func Load(configDir string) (*Config, error) {
 			"port": "3000",
 		},
 		"database": map[string]interface{}{
+			"driver": "postgres",
 			"host":   "localhost",
 			"port":   5432,
 			"dbname": "hackagon",

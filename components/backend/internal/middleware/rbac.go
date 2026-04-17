@@ -2,13 +2,18 @@ package middleware
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 
 	"github.com/casbin/casbin/v3"
+	"github.com/casbin/casbin/v3/model"
 	entadapter "github.com/casbin/ent-adapter"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 )
+
+//go:embed casbin_model.conf
+var modelFile string
 
 type Role int
 
@@ -69,11 +74,23 @@ type Enforcer struct {
 }
 
 func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
-	a, _ := entadapter.NewAdapter("postgres", cfg.ConnectionStr())
-	e, _ := casbin.NewEnforcer("data/test/config/casbin_model.conf", a)
+	a, err := entadapter.NewAdapter(cfg.Database.Driver, cfg.ConnectionStr())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create adapter: %w", err)
+	}
+
+	m, err := model.NewModelFromString(modelFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load model config: %w", err)
+	}
+
+	e, err := casbin.NewEnforcer(m, a)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create enforcer: %w", err)
+	}
 
 	// Load the policy from DB.
-	err := e.LoadPolicy()
+	err = e.LoadPolicy()
 	if err != nil {
 		return nil, err
 	}

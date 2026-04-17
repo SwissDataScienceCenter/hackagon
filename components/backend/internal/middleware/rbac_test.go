@@ -1,0 +1,305 @@
+package middleware
+
+import (
+	_ "github.com/mattn/go-sqlite3"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+)
+
+// toInterfaceSlice converts a []string to []interface{}
+func toInterfaceSlice(strs []string) []interface{} {
+	result := make([]interface{}, len(strs))
+	for i, s := range strs {
+		result[i] = s
+	}
+	return result
+}
+
+// newTestConfig creates a config with SQLite for testing
+func newTestConfig(adminEmail string) *config.Config {
+	return &config.Config{
+		Server: config.ServerConfig{
+			AdminEmail: adminEmail,
+		},
+		Database: config.DatabaseConfig{
+			Driver: "sqlite3",
+		},
+	}
+}
+
+// newTestEnforcer creates a new RBAC Enforcer with SQLite for testing
+func newTestEnforcer(t *testing.T, adminEmail string) *Enforcer {
+	t.Helper()
+
+	cfg := newTestConfig(adminEmail)
+	enf, err := NewRBACEnforcer(cfg)
+	require.NoError(t, err)
+	require.NotNil(t, enf)
+
+	// Save policy to ensure default policies are persisted
+	err = enf.enforcer.SavePolicy()
+	require.NoError(t, err)
+
+	return enf
+}
+
+// TestNewRBACEnforcer tests the enforcer creation with SQLite
+func TestNewRBACEnforcer(t *testing.T) {
+	enf := newTestEnforcer(t, "admin@test.com")
+
+	// Test: Admin user can read users
+	adminCanReadUsers, err := enf.enforcer.Enforce("admin@test.com", "any", "user", "read")
+	require.NoError(t, err)
+	assert.True(t, adminCanReadUsers, "Admin should be able to read users by default")
+}
+
+func TestEnforce(t *testing.T) {
+	enf := newTestEnforcer(t, "admin@test.com")
+
+	_, err := enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("alice", "owner", "h1")
+
+	_, err = enf.enforcer.AddGroupingPolicy("bob", "member", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("bob", "member", "h1")
+
+	_, err = enf.enforcer.AddGroupingPolicy("eve", "owner", "h2")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("eve", "owner", "h2")
+
+	testCases := []struct {
+		name       string
+		user       string
+		hackathon  string
+		objectType string
+		permission string
+		expected   bool
+	}{
+		{
+			name:       "Alice as owner can read h1",
+			user:       "alice",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Alice as owner can write h1",
+			user:       "alice",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   true,
+		},
+		{
+			name:       "Alice cannot read h2",
+			user:       "alice",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   false,
+		},
+		{
+			name:       "Bob as member can read h1",
+			user:       "bob",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Bob as member cannot write h1",
+			user:       "bob",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   false,
+		},
+		{
+			name:       "Bob cannot read h2",
+			user:       "bob",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   false,
+		},
+		{
+			name:       "Eve as owner can read h2",
+			user:       "eve",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Eve as owner can write h2",
+			user:       "eve",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   true,
+		},
+		{
+			name:       "Eve cannot read h1",
+			user:       "eve",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
+		})
+	}
+}
+
+func TestEnforcePublicHackathon(t *testing.T) {
+	enf := newTestEnforcer(t, "admin@test.com")
+
+	_, err := enf.enforcer.AddPolicy("*", "h2", "hackathon", "read")
+	require.NoError(t, err)
+	defer enf.enforcer.RemovePolicy("*", "h2", "hackathon", "read")
+
+	_, err = enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("alice", "owner", "h1")
+
+	_, err = enf.enforcer.AddGroupingPolicy("bob", "member", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("bob", "member", "h1")
+
+	_, err = enf.enforcer.AddGroupingPolicy("eve", "owner", "h2")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("eve", "owner", "h2")
+
+	testCases := []struct {
+		name       string
+		user       string
+		hackathon  string
+		objectType string
+		permission string
+		expected   bool
+	}{
+		{
+			name:       "Alice can read public h2",
+			user:       "alice",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Alice can't write public h2",
+			user:       "alice",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   true,
+		},
+		{
+			name:       "Bob can read public h2",
+			user:       "bob",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Bob can't write public h2",
+			user:       "bob",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   false,
+		},
+		{
+			name:       "Eve as owner can read h2",
+			user:       "eve",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Eve as owner can write h2",
+			user:       "eve",
+			hackathon:  "h2",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   true,
+		},
+		{
+			name:       "Eve cannot read h1",
+			user:       "eve",
+			hackathon:  "h1",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
+		})
+	}
+}
+
+// TestRBAC_AdminAccess tests admin-level access control
+func TestRBAC_AdminAccess(t *testing.T) {
+	enf := newTestEnforcer(t, "admin@test.com")
+
+	// Admin user (admin@test.com) has g2 access to admin role
+	testCases := []struct {
+		name       string
+		user       string
+		hackathon  string
+		objectType string
+		permission string
+		expected   bool
+	}{
+		{
+			name:       "Admin reads any user",
+			user:       "admin@test.com",
+			hackathon:  "any",
+			objectType: "user",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Admin reads any hackathon",
+			user:       "admin@test.com",
+			hackathon:  "any",
+			objectType: "hackathon",
+			permission: "read",
+			expected:   true,
+		},
+		{
+			name:       "Admin writes any hackathon",
+			user:       "admin@test.com",
+			hackathon:  "any",
+			objectType: "hackathon",
+			permission: "write",
+			expected:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, allowed, "Admin should have %v access to %s %s", tc.expected, tc.objectType, tc.name)
+		})
+	}
+}
