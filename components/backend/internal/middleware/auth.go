@@ -28,17 +28,23 @@ type JWTValidator struct {
 	Algorithm jwt.SigningMethod
 	Issuer    string
 	Skip      SkipFn
+	Keyfunc   jwt.Keyfunc
 }
 
-func NewJWTValidator(cfg *config.Config, skip SkipFn) *JWTValidator {
+func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 
+	jwks, err := keyfunc.NewDefault([]string{cfg.Oidc.JwksUrl})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create keyfunc: %w: %w", err, ErrJwksLoadError)
+	}
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
 		Issuer:    cfg.Oidc.IssuerUrl,
 		Skip:      skip,
-	}
+		Keyfunc:   jwks.Keyfunc,
+	}, nil
 }
 
 func (svc *JWTValidator) AuthFunc() AuthFunc {
@@ -69,17 +75,7 @@ func extractToken(ctx context.Context) (string, error) {
 }
 
 func (svc *JWTValidator) parseToken(token string) (*jwt.Token, error) {
-	jwks, err := keyfunc.NewDefault([]string{svc.JwksUrl})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create keyfunc: %w: %w", err, ErrJwksLoadError)
-	}
-
-	return jwt.Parse(
-		token,
-		jwks.Keyfunc,
-		jwt.WithValidMethods([]string{svc.Algorithm.Alg()}),
-		jwt.WithIssuer(svc.Issuer),
-	)
+	return jwt.Parse(token, svc.Keyfunc, jwt.WithValidMethods([]string{svc.Algorithm.Alg()}), jwt.WithIssuer(svc.Issuer))
 }
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
