@@ -18,7 +18,7 @@
     } = $props();
 </script>
 
-<section class="flex h-44 items-center gap-8 bg-primary-500/5 px-20 dark:bg-primary-950">
+<section class="flex h-44 items-center gap-8 bg-surface-100 px-20 dark:bg-surface-900">
     {#if imageUrl}
         <div class="h-36 w-56 shrink-0 overflow-hidden border border-surface-200 dark:border-surface-800">
             <img src={imageUrl} alt={title} class="h-full w-full object-cover" />

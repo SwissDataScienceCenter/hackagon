@@ -24,7 +24,7 @@
     } = $props();
 </script>
 
-<div class="bg-primary-500/5 p-5 dark:bg-primary-950">
+<div class="card preset-outlined-surface-200-800 p-5">
     <div class="mb-4 flex items-center justify-between">
         <h2 class="text-base font-bold">Your Participation</h2>
         <span class="badge preset-filled-primary-500 text-xs font-bold">REGISTERED</span>
@@ -36,7 +36,7 @@
             <span class="text-sm font-semibold">{teamName}</span>
             <div class="flex -space-x-1.5">
                 {#each Array(teamMemberCount) as _, i (i)}
-                    <div class="h-6 w-6 rounded-full bg-surface-200 ring-2 ring-primary-500/10 dark:bg-surface-700 dark:ring-primary-950"></div>
+                    <div class="h-6 w-6 rounded-full bg-surface-200 ring-2 ring-surface-50 dark:bg-surface-700 dark:ring-surface-900"></div>
                 {/each}
             </div>
             <span class="text-xs text-surface-500">Your role: {teamRole}</span>
