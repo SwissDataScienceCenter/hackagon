@@ -111,13 +111,7 @@ generate-proto *args:
 
 [group('aux')]
 generate-db-schema *args:
-    #!/usr/bin/env bash
-    set -eu
-    pushd components/backend > /dev/null
-    GOWORK=off go run -mod=mod entgo.io/ent/cmd/ent generate ./ent/schema/
-    GOWORK=off go run -mod=mod entgo.io/ent/cmd/ent describe ./ent/schema/ > Schema.md
-    echo "  ✓ Generated Go database schema code"
-    popd > /dev/null
+    just quitsh generate-schema
     
 # Update dependencies to `quitsh`.
 [group('aux')]

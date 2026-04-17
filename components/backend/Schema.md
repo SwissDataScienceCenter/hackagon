@@ -1,214 +1,279 @@
-Hackathon:
-	+-------------+----------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type                 | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+----------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int                  | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| name        | string               | true   | false    | false    | false   | false         | false     | json:"name,omitempty"        |          1 |         |
-	| start_date  | time.Time            | false  | true     | true     | false   | false         | false     | json:"start_date,omitempty"  |          0 |         |
-	| end_date    | time.Time            | false  | true     | true     | false   | false         | false     | json:"end_date,omitempty"    |          0 |         |
-	| created_at  | time.Time            | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time            | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	| visibility  | hackathon.Visibility | false  | false    | false    | false   | false         | false     | json:"visibility,omitempty"  |          0 |         |
-	| description | string               | false  | true     | false    | false   | false         | false     | json:"description,omitempty" |          0 |         |
-	| logo        | string               | false  | true     | false    | false   | false         | false     | json:"logo,omitempty"        |          0 |         |
-	+-------------+----------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+---------------------+-------------+---------+----------------------------+----------+--------+----------+---------+
-	| Edge                | Type        | Inverse | BackRef                    | Relation | Unique | Optional | Comment |
-	+---------------------+-------------+---------+----------------------------+----------+--------+----------+---------+
-	| tracks              | Track       | false   |                            | O2M      | false  | true     |         |
-	| projects            | Project     | false   |                            | O2M      | false  | true     |         |
-	| participating_users | User        | true    | participates_in_hackathons | M2M      | false  | true     |         |
-	| pages               | Page        | false   |                            | O2M      | false  | true     |         |
-	| phases              | Phase       | false   |                            | O2M      | false  | true     |         |
-	| creator             | User        | true    | created_hackathons         | M2O      | true   | false    |         |
-	| modifier            | User        | true    | modified_hackathons        | M2O      | true   | true     |         |
-	| participants        | Participant | true    | hackathon                  | O2M      | false  | true     |         |
-	+---------------------+-------------+---------+----------------------------+----------+--------+----------+---------+
-	
-Page:
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int       | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| title       | string    | false  | false    | false    | false   | false         | false     | json:"title,omitempty"       |          1 |         |
-	| content     | string    | false  | false    | false    | false   | false         | false     | json:"content,omitempty"     |          0 |         |
-	| visible     | bool      | false  | false    | false    | true    | false         | false     | json:"visible,omitempty"     |          0 |         |
-	| order       | int       | false  | false    | false    | false   | false         | false     | json:"order,omitempty"       |          0 |         |
-	| created_at  | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+-----------+-----------+---------+----------------+----------+--------+----------+---------+
-	| Edge      | Type      | Inverse | BackRef        | Relation | Unique | Optional | Comment |
-	+-----------+-----------+---------+----------------+----------+--------+----------+---------+
-	| hackathon | Hackathon | true    | pages          | M2O      | true   | false    |         |
-	| phase     | Phase     | true    | page           | O2O      | true   | true     |         |
-	| creator   | User      | true    | created_pages  | M2O      | true   | false    |         |
-	| modifier  | User      | true    | modified_pages | M2O      | true   | true     |         |
-	+-----------+-----------+---------+----------------+----------+--------+----------+---------+
-	
-Participant:
-	+--------------+-----------+--------+----------+----------+---------+---------------+-----------+-------------------------------+------------+---------+
-	| Field        | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                     | Validators | Comment |
-	+--------------+-----------+--------+----------+----------+---------+---------------+-----------+-------------------------------+------------+---------+
-	| hackathon_id | int       | false  | false    | false    | false   | false         | false     | json:"hackathon_id,omitempty" |          0 |         |
-	| user_id      | int       | false  | false    | false    | false   | false         | false     | json:"user_id,omitempty"      |          0 |         |
-	| is_waiting   | bool      | false  | false    | false    | true    | false         | false     | json:"is_waiting,omitempty"   |          0 |         |
-	| created_at   | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"   |          0 |         |
-	+--------------+-----------+--------+----------+----------+---------+---------------+-----------+-------------------------------+------------+---------+
-	+-----------+-----------+---------+---------+----------+--------+----------+---------+
-	| Edge      | Type      | Inverse | BackRef | Relation | Unique | Optional | Comment |
-	+-----------+-----------+---------+---------+----------+--------+----------+---------+
-	| hackathon | Hackathon | false   |         | M2O      | true   | false    |         |
-	| user      | User      | false   |         | M2O      | true   | false    |         |
-	+-----------+-----------+---------+---------+----------+--------+----------+---------+
-	
-Phase:
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int       | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| start_date  | time.Time | false  | true     | true     | false   | false         | false     | json:"start_date,omitempty"  |          0 |         |
-	| end_date    | time.Time | false  | true     | true     | false   | false         | false     | json:"end_date,omitempty"    |          0 |         |
-	| name        | string    | false  | false    | false    | false   | false         | false     | json:"name,omitempty"        |          1 |         |
-	| description | string    | false  | true     | false    | false   | false         | false     | json:"description,omitempty" |          0 |         |
-	| created_at  | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+-----------+-----------+---------+-----------------+----------+--------+----------+---------+
-	| Edge      | Type      | Inverse | BackRef         | Relation | Unique | Optional | Comment |
-	+-----------+-----------+---------+-----------------+----------+--------+----------+---------+
-	| hackathon | Hackathon | true    | phases          | M2O      | true   | false    |         |
-	| page      | Page      | false   |                 | O2O      | true   | true     |         |
-	| creator   | User      | true    | created_phases  | M2O      | true   | false    |         |
-	| modifier  | User      | true    | modified_phases | M2O      | true   | true     |         |
-	+-----------+-----------+---------+-----------------+----------+--------+----------+---------+
-	
-Project:
-	+-------------+----------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type           | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+----------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int            | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| title       | string         | false  | false    | false    | false   | false         | false     | json:"title,omitempty"       |          1 |         |
-	| created_at  | time.Time      | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time      | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	| status      | project.Status | false  | false    | false    | false   | false         | false     | json:"status,omitempty"      |          0 |         |
-	| image       | string         | false  | true     | false    | false   | false         | false     | json:"image,omitempty"       |          0 |         |
-	| description | string         | false  | false    | false    | false   | false         | false     | json:"description,omitempty" |          0 |         |
-	+-------------+----------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
-	| Edge               | Type       | Inverse | BackRef            | Relation | Unique | Optional | Comment |
-	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
-	| track              | Track      | true    | projects           | M2O      | true   | false    |         |
-	| hackathon          | Hackathon  | true    | projects           | M2O      | true   | false    |         |
-	| creator            | User       | true    | created_projects   | M2O      | true   | false    |         |
-	| modifier           | User       | true    | modified_projects  | M2O      | true   | true     |         |
-	| teams              | Team       | false   |                    | O2M      | false  | true     |         |
-	| submissions        | Submission | false   |                    | O2M      | false  | true     |         |
-	| preferred_by_users | User       | true    | preferred_projects | M2M      | false  | true     |         |
-	+--------------------+------------+---------+--------------------+----------+--------+----------+---------+
-	
-Submission:
-	+-------------+-------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type              | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+-------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int               | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| created_at  | time.Time         | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time         | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	| result      | string            | false  | true     | false    | false   | false         | false     | json:"result,omitempty"      |          0 |         |
-	| status      | submission.Status | false  | false    | false    | false   | false         | false     | json:"status,omitempty"      |          0 |         |
-	| version     | int               | false  | false    | false    | false   | false         | false     | json:"version,omitempty"     |          1 |         |
-	+-------------+-------------------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+----------+---------+---------+----------------------+----------+--------+----------+---------+
-	| Edge     | Type    | Inverse | BackRef              | Relation | Unique | Optional | Comment |
-	+----------+---------+---------+----------------------+----------+--------+----------+---------+
-	| team     | Team    | true    | submissions          | M2O      | true   | false    |         |
-	| project  | Project | true    | submissions          | M2O      | true   | false    |         |
-	| creator  | User    | true    | created_submissions  | M2O      | true   | false    |         |
-	| modifier | User    | true    | modified_submissions | M2O      | true   | true     |         |
-	+----------+---------+---------+----------------------+----------+--------+----------+---------+
-	
-Team:
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int       | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| name        | string    | false  | false    | false    | false   | false         | false     | json:"name,omitempty"        |          1 |         |
-	| created_at  | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	| description | string    | false  | true     | false    | false   | false         | false     | json:"description,omitempty" |          0 |         |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+-------------------+-----------------+---------+-----------------------+----------+--------+----------+---------+
-	| Edge              | Type            | Inverse | BackRef               | Relation | Unique | Optional | Comment |
-	+-------------------+-----------------+---------+-----------------------+----------+--------+----------+---------+
-	| project           | Project         | true    | teams                 | M2O      | true   | false    |         |
-	| creator           | User            | true    | created_teams         | M2O      | true   | false    |         |
-	| modifier          | User            | true    | modified_teams        | M2O      | true   | true     |         |
-	| submissions       | Submission      | false   |                       | O2M      | false  | true     |         |
-	| members           | User            | true    | participates_in_teams | M2M      | false  | true     |         |
-	| team_participants | TeamParticipant | true    | team                  | O2M      | false  | true     |         |
-	+-------------------+-----------------+---------+-----------------------+----------+--------+----------+---------+
-	
-TeamParticipant:
-	+------------+-----------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
-	| Field      | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                   | Validators | Comment |
-	+------------+-----------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
-	| team_id    | int       | false  | false    | false    | false   | false         | false     | json:"team_id,omitempty"    |          0 |         |
-	| user_id    | int       | false  | false    | false    | false   | false         | false     | json:"user_id,omitempty"    |          0 |         |
-	| created_at | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty" |          0 |         |
-	+------------+-----------+--------+----------+----------+---------+---------------+-----------+-----------------------------+------------+---------+
-	+------+------+---------+---------+----------+--------+----------+---------+
-	| Edge | Type | Inverse | BackRef | Relation | Unique | Optional | Comment |
-	+------+------+---------+---------+----------+--------+----------+---------+
-	| team | Team | false   |         | M2O      | true   | false    |         |
-	| user | User | false   |         | M2O      | true   | false    |         |
-	+------+------+---------+---------+----------+--------+----------+---------+
-	
-Track:
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int       | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| name        | string    | false  | false    | false    | false   | false         | false     | json:"name,omitempty"        |          1 |         |
-	| description | string    | false  | false    | false    | false   | false         | false     | json:"description,omitempty" |          1 |         |
-	| created_at  | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+-----------+-----------+---------+---------+----------+--------+----------+---------+
-	| Edge      | Type      | Inverse | BackRef | Relation | Unique | Optional | Comment |
-	+-----------+-----------+---------+---------+----------+--------+----------+---------+
-	| hackathon | Hackathon | true    | tracks  | M2O      | true   | true     |         |
-	| projects  | Project   | false   |         | O2M      | false  | true     |         |
-	+-----------+-----------+---------+---------+----------+--------+----------+---------+
-	
-User:
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| Field       | Type      | Unique | Optional | Nillable | Default | UpdateDefault | Immutable | StructTag                    | Validators | Comment |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	| id          | int       | false  | false    | false    | false   | false         | false     | json:"id,omitempty"          |          0 |         |
-	| username    | string    | false  | false    | false    | false   | false         | false     | json:"username,omitempty"    |          0 |         |
-	| keycloak_id | string    | true   | false    | false    | false   | false         | false     | json:"keycloak_id,omitempty" |          1 |         |
-	| created_at  | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"  |          0 |         |
-	| modified_at | time.Time | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty" |          0 |         |
-	+-------------+-----------+--------+----------+----------+---------+---------------+-----------+------------------------------+------------+---------+
-	+----------------------------+-----------------+---------+---------+----------+--------+----------+---------+
-	| Edge                       | Type            | Inverse | BackRef | Relation | Unique | Optional | Comment |
-	+----------------------------+-----------------+---------+---------+----------+--------+----------+---------+
-	| created_hackathons         | Hackathon       | false   |         | O2M      | false  | true     |         |
-	| modified_hackathons        | Hackathon       | false   |         | O2M      | false  | true     |         |
-	| created_projects           | Project         | false   |         | O2M      | false  | true     |         |
-	| modified_projects          | Project         | false   |         | O2M      | false  | true     |         |
-	| participates_in_hackathons | Hackathon       | false   |         | M2M      | false  | true     |         |
-	| participates_in_teams      | Team            | false   |         | M2M      | false  | true     |         |
-	| created_teams              | Team            | false   |         | O2M      | false  | true     |         |
-	| modified_teams             | Team            | false   |         | O2M      | false  | true     |         |
-	| created_pages              | Page            | false   |         | O2M      | false  | true     |         |
-	| modified_pages             | Page            | false   |         | O2M      | false  | true     |         |
-	| created_phases             | Phase           | false   |         | O2M      | false  | true     |         |
-	| modified_phases            | Phase           | false   |         | O2M      | false  | true     |         |
-	| created_submissions        | Submission      | false   |         | O2M      | false  | true     |         |
-	| modified_submissions       | Submission      | false   |         | O2M      | false  | true     |         |
-	| preferred_projects         | Project         | false   |         | M2M      | false  | true     |         |
-	| participations             | Participant     | true    | user    | O2M      | false  | true     |         |
-	| team_participations        | TeamParticipant | true    | user    | O2M      | false  | true     |         |
-	+----------------------------+-----------------+---------+---------+----------+--------+----------+---------+
-	
+# Database Schema
+
+## Hackathon
+
+A hackathon event containing tracks, projects, phases, and participants.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `name` | string | yes | yes | no | no | Display name of the hackathon, must be unique. |
+| `start_date` | time.Time | no | no | no | no | Scheduled start date; nil if not yet scheduled. |
+| `end_date` | time.Time | no | no | no | no | Scheduled end date; nil if not yet scheduled. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the hackathon was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `visibility` | enum(public, private) | yes | no | no | no | Controls whether non-participants can discover this hackathon. |
+| `description` | string | no | no | no | no | Detailed description of the hackathon, supports rich text. |
+| `logo` | string | no | no | no | no | URL or path to the hackathon logo image. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `tracks` | Track | O2M | no | no | Thematic tracks within this hackathon. |
+| `projects` | Project | O2M | no | no | Projects submitted to this hackathon. |
+| `participating_users` | User | M2M | yes | no | Users who are participating or waitlisted. |
+| `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
+| `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
+| `creator` | User | M2O | yes | yes | The user who created this hackathon. |
+| `modifier` | User | M2O | yes | no | The user who last modified this hackathon. |
+| `participants` | Participant | O2M | yes | no |  |
+
+### Indexes
+
+- `name`
+- `start_date`
+- `end_date`
+- `visibility`
+
+## Page
+
+A content page associated with a hackathon, used for information display.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `title` | string | yes | no | no | no | Title of the page. |
+| `content` | string | yes | no | no | no | Rich text content of the page. |
+| `visible` | bool | yes | no | no | yes | Whether the page is visible to participants. |
+| `order` | int | yes | no | no | no | Sort order for display; lower values appear first. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the page was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this page belongs to. |
+| `phase` | Phase | O2O | yes | no | The phase this page is linked to, if any. |
+| `creator` | User | M2O | yes | yes | The user who created this page. |
+| `modifier` | User | M2O | yes | no | The user who last modified this page. |
+
+### Indexes
+
+- `order`
+- `visible`
+
+## Participant
+
+Join table for the M2M relationship between users and hackathons, with participation metadata.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `hackathon_id` | int | yes | no | no | no | Foreign key to the hackathon. |
+| `user_id` | int | yes | no | no | no | Foreign key to the user. |
+| `is_waiting` | bool | yes | no | no | yes | Whether the participant is on the waitlist (true) or confirmed (false). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the participant joined. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | no | yes | The hackathon being participated in. |
+| `user` | User | M2O | no | yes | The participating user. |
+
+## Phase
+
+A temporal phase of a hackathon (e.g. ideation, hacking, judging).
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `start_date` | time.Time | no | no | no | no | When this phase begins; nil if not yet scheduled. |
+| `end_date` | time.Time | no | no | no | no | When this phase ends; nil if not yet scheduled. |
+| `name` | string | yes | no | no | no | Display name of the phase. |
+| `description` | string | no | no | no | no | Description of the phase and its objectives. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the phase was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this phase belongs to. |
+| `page` | Page | O2O | no | no | Content page linked to this phase. |
+| `creator` | User | M2O | yes | yes | The user who created this phase. |
+| `modifier` | User | M2O | yes | no | The user who last modified this phase. |
+
+### Indexes
+
+- `start_date`
+- `end_date`
+- `name`
+
+## Project
+
+A project proposal within a hackathon track.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `title` | string | yes | no | no | no | Title of the project. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the project was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `status` | enum(proposed, approved) | yes | no | no | no | Approval status of the project. |
+| `image` | string | no | no | no | no | URL or path to the project cover image. |
+| `description` | string | yes | no | no | no | Detailed description of the project. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `track` | Track | M2O | yes | yes | The track this project belongs to. |
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this project belongs to. |
+| `creator` | User | M2O | yes | yes | The user who proposed this project. |
+| `modifier` | User | M2O | yes | no | The user who last modified this project. |
+| `teams` | Team | O2M | no | no | Teams working on this project. |
+| `submissions` | Submission | O2M | no | no | Submissions made for this project. |
+| `preferred_by_users` | User | M2M | yes | no | Users who marked this project as preferred. |
+
+### Indexes
+
+- `title`
+- `status`
+
+## Submission
+
+A versioned submission from a team for a project.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the submission was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `result` | string | no | no | no | no | Result or output of the submission (e.g. a URL). |
+| `status` | enum(draft, final) | yes | no | no | no | Whether the submission is a draft or final. |
+| `version` | int | yes | no | no | no | Monotonically increasing version number, unique per project+team. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `team` | Team | M2O | yes | yes | The team that made this submission. |
+| `project` | Project | M2O | yes | yes | The project this submission is for. |
+| `creator` | User | M2O | yes | yes | The user who created this submission. |
+| `modifier` | User | M2O | yes | no | The user who last modified this submission. |
+
+### Indexes
+
+- `version, project_submissions, team_submissions` *(unique)*
+
+## Team
+
+A team of participants working on a project.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `name` | string | yes | no | no | no | Display name of the team. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the team was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `description` | string | no | no | no | no | Optional description of the team. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `project` | Project | M2O | yes | yes | The project this team is working on. |
+| `creator` | User | M2O | yes | yes | The user who created this team. |
+| `modifier` | User | M2O | yes | no | The user who last modified this team. |
+| `submissions` | Submission | O2M | no | no | Submissions made by this team. |
+| `members` | User | M2M | yes | no | Users who are members of this team. |
+| `team_participants` | TeamParticipant | O2M | yes | no |  |
+
+## TeamParticipant
+
+Join table for the M2M relationship between users and teams.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `team_id` | int | yes | no | no | no | Foreign key to the team. |
+| `user_id` | int | yes | no | no | no | Foreign key to the user. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the user joined the team. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `team` | Team | M2O | no | yes | The team. |
+| `user` | User | M2O | no | yes | The team member. |
+
+## Track
+
+A thematic track within a hackathon that groups related projects.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `name` | string | yes | no | no | no | Display name of the track. |
+| `description` | string | yes | no | no | no | Description of the track's theme and goals. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the track was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | no | The hackathon this track belongs to. |
+| `projects` | Project | O2M | no | no | Projects within this track. |
+
+### Indexes
+
+- `name, hackathon_tracks` *(unique)*
+
+## User
+
+An authenticated user, synced from Keycloak on first login.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `username` | string | yes | no | no | no | Display username shown in the UI. |
+| `keycloak_id` | string | yes | yes | no | no | Unique identifier from Keycloak (sub claim). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the user was first seen. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last profile update. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `created_hackathons` | Hackathon | O2M | no | no | Hackathons this user created. |
+| `modified_hackathons` | Hackathon | O2M | no | no | Hackathons this user last modified. |
+| `created_projects` | Project | O2M | no | no | Projects this user created. |
+| `modified_projects` | Project | O2M | no | no | Projects this user last modified. |
+| `participates_in_hackathons` | Hackathon | M2M | no | no | Hackathons this user participates in. |
+| `participates_in_teams` | Team | M2M | no | no | Teams this user is a member of. |
+| `created_teams` | Team | O2M | no | no | Teams this user created. |
+| `modified_teams` | Team | O2M | no | no | Teams this user last modified. |
+| `created_pages` | Page | O2M | no | no | Content pages this user created. |
+| `modified_pages` | Page | O2M | no | no | Content pages this user last modified. |
+| `created_phases` | Phase | O2M | no | no | Phases this user created. |
+| `modified_phases` | Phase | O2M | no | no | Phases this user last modified. |
+| `created_submissions` | Submission | O2M | no | no | Submissions this user created. |
+| `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
+| `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
+| `participations` | Participant | O2M | yes | no |  |
+| `team_participations` | TeamParticipant | O2M | yes | no |  |
+
