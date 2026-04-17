@@ -17,6 +17,7 @@ require (
 	github.com/casbin/casbin/v3 v3.8.1
 	github.com/casbin/ent-adapter v1.4.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/lib/pq v1.12.3
 )
@@ -24,6 +25,8 @@ require (
 require (
 	ariga.io/atlas v1.0.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/MicahParks/jwkset v0.11.0 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.8.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
@@ -45,6 +48,7 @@ require (
 	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260406210006-6f92a3bedf2d // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

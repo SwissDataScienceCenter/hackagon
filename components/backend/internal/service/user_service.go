@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 
-	"github.com/casbin/casbin/v3"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -12,10 +13,10 @@ import (
 type UserService struct {
 	proto.UnimplementedUserServer
 	dbClient *ent.Client
-	enforcer *casbin.Enforcer
+	enforcer *m.Enforcer
 }
 
-func NewUserService(dbClient *ent.Client, enf *casbin.Enforcer) *UserService {
+func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 	return &UserService{
 		dbClient: dbClient,
 		enforcer: enf,
@@ -26,6 +27,13 @@ func (s *UserService) List(
 	ctx context.Context,
 	req *proto.UserListRequest,
 ) (*proto.UserListResponse, error) {
+	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errors.New("permission denied")
+	}
 	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
 		return nil, err

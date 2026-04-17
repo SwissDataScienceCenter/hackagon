@@ -2,18 +2,26 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/MicahParks/keyfunc"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/MicahParks/keyfunc/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
+const authHeader = "authorization"
+
+type methodNameKey struct{}
+
 type SkipFn func(ctx context.Context, method string) bool
+
+type AuthFunc func(ctx context.Context) (context.Context, error)
+
+type claimsKey struct{}
 
 type JWTValidator struct {
 	JwksUrl   string
@@ -24,6 +32,7 @@ type JWTValidator struct {
 
 func NewJWTValidator(cfg *config.Config, skip SkipFn) *JWTValidator {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
+
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
@@ -32,16 +41,13 @@ func NewJWTValidator(cfg *config.Config, skip SkipFn) *JWTValidator {
 	}
 }
 
-type AuthFunc func(ctx context.Context) (context.Context, error)
-
 func (svc *JWTValidator) AuthFunc() AuthFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		ctx, err := svc.validate(ctx)
+
 		return ctx, handleError(err, true)
 	}
 }
-
-const authHeader = "authorization"
 
 func extractToken(ctx context.Context) (string, error) {
 	var token string
@@ -58,24 +64,23 @@ func extractToken(ctx context.Context) (string, error) {
 	if token == "" {
 		return token, ErrMissingKey
 	}
+
 	return token, nil
 }
 
 func (svc *JWTValidator) parseToken(token string) (*jwt.Token, error) {
-
-	jwks, err := keyfunc.Get(svc.JwksUrl, keyfunc.Options{RefreshInterval: time.Minute * 5})
+	jwks, err := keyfunc.NewDefault([]string{svc.JwksUrl})
 	if err != nil {
-		return nil, fmt.Errorf("%v: %w", err, ErrJwksLoadError)
+		return nil, fmt.Errorf("failed to create keyfunc: %w: %w", err, ErrJwksLoadError)
 	}
-	return jwt.ParseWithClaims(
+
+	return jwt.Parse(
 		token,
-		jwt.MapClaims{"iss": svc.Issuer},
 		jwks.Keyfunc,
 		jwt.WithValidMethods([]string{svc.Algorithm.Alg()}),
+		jwt.WithIssuer(svc.Issuer),
 	)
 }
-
-type claimsKey struct{}
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
 	// Get raw token from grpc metadata
@@ -93,33 +98,48 @@ func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) 
 		return nil, handleJwtError(err)
 	}
 	// Verify standard claims
-	claims := token.Claims.(jwt.MapClaims)
-	if svc.Issuer != "" {
-		ok := claims.VerifyIssuer(svc.Issuer, true)
-		if !ok {
-			return nil, handleJwtError(ErrTokenInvalidIssuer)
-		}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return ctx, nil
 	}
 	// Set claims in context
 	ctx = context.WithValue(ctx, claimsKey{}, claims)
-	return ctx, nil
 
+	return ctx, nil
 }
 
 func GetClaims(ctx context.Context) (jwt.MapClaims, bool) {
 	val, ok := ctx.Value(claimsKey{}).(jwt.MapClaims)
+
 	return val, ok
 }
 
-type methodNameKey struct{}
+func GetSubject(ctx context.Context) (string, error) {
+	claims, ok := GetClaims(ctx)
+	if !ok {
+		return "", errors.New("couldn't get claims from jwt")
+	}
+	sub, err := claims.GetSubject()
+	if err != nil {
+		return "", err
+	}
+
+	return sub, nil
+}
 
 func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return func(
+		ctx context.Context,
+		req any,
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
 		ctx = context.WithValue(ctx, methodNameKey{}, info.FullMethod)
 		ctx, err := validator.AuthFunc()(ctx)
 		if err != nil {
 			return nil, err
 		}
+
 		return handler(ctx, req)
 	}
 }
