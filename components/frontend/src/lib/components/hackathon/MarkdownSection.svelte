@@ -2,8 +2,10 @@
     let { content }: { content: string } = $props();
 </script>
 
-<section class="px-20 py-12">
-    <div class="markdown-content max-w-[860px]">
+<section class="px-4 py-12 sm:px-10 md:px-20">
+    <div class="markdown-content max-w-4xl">
+    <!-- TODO: sanitize before using with user-supplied content (XSS) -->
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {@html content}
     </div>
 </section>

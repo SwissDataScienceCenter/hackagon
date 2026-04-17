@@ -31,8 +31,11 @@
     }
 </script>
 
-<!-- Hero -->
-<section class="relative flex min-h-[480px] flex-col items-center justify-center gap-6 px-20 pb-16 pt-10 text-center overflow-hidden">
+<!-- Hero (full-bleed width) -->
+<section
+    class="relative flex min-h-[30rem] flex-col items-center justify-center gap-6 overflow-hidden
+           px-4 pt-8 pb-12 text-center sm:px-10 md:px-20"
+>
     <img
         src="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
         alt=""
@@ -46,26 +49,23 @@
             <span>ORD Hackathon 2026 — Registration open</span>
         </span>
 
-        <h1 class="max-w-[700px] text-5xl font-bold leading-[1.15]">
+        <h1 class="max-w-2xl text-5xl font-bold leading-tight">
             SDSC Hackathon Platform
         </h1>
 
-        <p class="max-w-[560px] text-base leading-relaxed text-surface-600 dark:text-surface-400">
+        <p class="max-w-xl text-base leading-relaxed text-surface-600-400">
             Propose projects, form teams, and build solutions together.
             Hosted by SDSC for the Swiss scientific community.
         </p>
 
         <div class="flex items-center gap-3">
             <a
-                href={resolve('/dashboard')}
+                href={resolve('/hackathon/ord-2026')}
                 class="btn preset-filled-primary-500 no-underline"
             >
                 Get Started
             </a>
-            <a
-                href={resolve('/hackathon/ord-2026')}
-                class="btn preset-outlined-surface-200-800 no-underline"
-            >
+            <a href="#trending" class="btn preset-outlined-surface-200-800 no-underline">
                 Browse Hackathons
                 <ArrowRight class="h-3.5 w-3.5 opacity-60" />
             </a>
@@ -73,14 +73,15 @@
     </div>
 </section>
 
+<div class="mx-auto w-full max-w-7xl">
 <!-- Trending -->
-<section class="px-20 py-12">
+<section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Trending this month</h2>
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">Browse all →</a>
     </div>
 
-    <div class="mt-6 flex gap-1 border-b border-surface-200 dark:border-surface-800">
+    <div class="mt-6 flex gap-1 border-b border-surface-200-800">
         <button class="chip preset-tonal-primary border-b-2 border-primary-500">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
@@ -95,7 +96,7 @@
         </button>
     </div>
 
-    <div class="mt-0 divide-y divide-surface-200 dark:divide-surface-800">
+    <div class="mt-0 divide-y divide-surface-200-800">
         {#each [
             { name: 'ORD Hackathon 2026', org: 'SDSC', meta: '24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '42', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2026' },
             { name: 'Generative AI for Science', org: 'SDSC', meta: '14 – 15 Nov 2026  ·  EPFL, Lausanne', badge: 'Upcoming', badgePreset: 'preset-tonal-secondary', count: '—', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)', slug: 'genai-2026' },
@@ -119,7 +120,7 @@
 </section>
 
 <!-- Winners -->
-<section class="px-20 py-12">
+<section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Award-winning projects</h2>
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">See all →</a>
@@ -131,8 +132,12 @@
             { hackathon: 'GenAI Hackathon 2025', project: 'GenomeLens', team: 'by BioViz Crew', summary: 'Interactive visualization of genomic variants powered by generative models.' },
             { hackathon: 'Climate Data 2025', project: 'ClimateQA', team: 'by Green Bytes', summary: 'RAG-based Q&A trained on Swiss climate data, making decades of measurements queryable.' },
         ] as card, i (i)}
-            <div class="card preset-filled-surface-50-950 overflow-hidden border border-surface-200 dark:border-surface-800">
-                <div class="flex h-10 items-center justify-between border-b border-surface-200 px-4 dark:border-surface-800">
+            <div
+                class="card preset-filled-surface-50-950 overflow-hidden border border-surface-200-800"
+            >
+                <div
+                    class="flex h-10 items-center justify-between border-b border-surface-200-800 px-4"
+                >
                     <div class="flex items-center gap-1.5 text-warning-500">
                         <Trophy class="h-3.5 w-3.5" />
                         <span class="text-xs font-bold">1st Place</span>
@@ -150,7 +155,7 @@
 </section>
 
 <!-- Event Showcase Carousel -->
-<section class="px-20 py-12">
+<section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Event showcase</h2>
         <div class="flex items-center gap-2">
@@ -187,7 +192,9 @@
         {#each carouselSlides as slide, i (i)}
             <button
                 onclick={() => carouselIndex = i}
-                class="h-1.5 w-1.5 rounded-full transition-colors {i === carouselIndex ? 'bg-primary-500' : 'bg-surface-300 dark:bg-surface-700'}"
+                class="h-1.5 w-1.5 rounded-full transition-colors {i === carouselIndex
+                    ? 'bg-primary-500'
+                    : 'bg-surface-300-700'}"
                 aria-label="Go to slide: {slide.caption}"
             ></button>
         {/each}
@@ -195,7 +202,7 @@
 </section>
 
 <!-- Features -->
-<section class="bg-surface-100 px-20 py-16 dark:bg-surface-900">
+<section class="bg-surface-100-900 px-4 py-12 sm:px-10 md:px-20">
     <div class="flex flex-col items-center gap-2 text-center">
         <h2 class="text-2xl font-bold">The hackathon platform for science</h2>
         <p class="text-base text-surface-500">
@@ -203,7 +210,7 @@
         </p>
     </div>
 
-    <div class="mt-8 grid grid-cols-2 gap-4">
+    <div class="mt-6 grid grid-cols-2 gap-4">
         {#each [
             { icon: Lightbulb, title: 'Propose & discover projects', desc: 'Submit project ideas, browse proposals from other participants, and find the challenge that matches your skills.' },
             { icon: Upload, title: 'Submit & showcase work', desc: 'Submit your project with links, repos, slides and demos. Draft and iterate before the final deadline.' },
@@ -211,7 +218,10 @@
             { icon: Vote, title: 'Vote & leaderboard', desc: 'Participants and jury vote on submissions. Results are aggregated into a live leaderboard with configurable scoring.' },
         ] as feat, i (i)}
             {@const Icon = feat.icon}
-            <div class="card preset-filled-surface-50-950 flex flex-col gap-3 border border-surface-200 p-6 dark:border-surface-800">
+            <div
+                class="card preset-filled-surface-50-950 flex flex-col gap-3 border
+                       border-surface-200-800 p-5"
+            >
                 <Icon class="h-6 w-6 text-primary-500" />
                 <h3 class="text-base font-semibold">{feat.title}</h3>
                 <p class="text-sm leading-relaxed text-surface-500">{feat.desc}</p>
@@ -221,7 +231,7 @@
 </section>
 
 <!-- Orgs -->
-<section class="flex flex-col items-center gap-8 px-20 py-16">
+<section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
     <h2 class="text-xl font-bold">Trusted by Swiss research institutions</h2>
     <div class="flex items-center gap-12">
         {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
@@ -239,3 +249,5 @@
     buttonLabel="Contact Us"
     buttonHref={resolve('/')}
 />
+
+</div>

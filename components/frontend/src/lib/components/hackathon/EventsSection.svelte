@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Presentation, Wrench, ExternalLink, Video } from 'lucide-svelte';
-    import type { Component } from 'svelte';
 
     let {
         events,
@@ -8,33 +7,47 @@
         events: { title: string; speaker: string; date: string; linkUrl?: string; icon?: string }[];
     } = $props();
 
-    const icons: Record<string, Component> = {
-        presentation: Presentation,
-        wrench: Wrench,
-    };
+    const iconByKey = { presentation: Presentation, wrench: Wrench } as const;
+
+    function iconFor(name?: string) {
+        if (name && name in iconByKey) {
+            return iconByKey[name as keyof typeof iconByKey];
+        }
+        return iconByKey.presentation;
+    }
 </script>
 
-<section class="bg-surface-100 px-20 py-12 dark:bg-surface-900">
+<section class="bg-surface-100-900 px-4 py-12 sm:px-10 md:px-20">
     <div class="mb-6 flex items-center gap-2">
-        <Video class="h-5 w-5 text-primary-700 dark:text-primary-500" />
+        <Video class="h-5 w-5 text-primary-700-300" />
         <h2 class="text-xl font-bold">Pre-event Webinars</h2>
     </div>
 
-    <div class="grid grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {#each events as event, i (i)}
-            <div class="card preset-filled-surface-50-950 flex items-start gap-4 border border-surface-200 p-5 dark:border-surface-800">
+            {@const EventIcon = iconFor(event.icon)}
+            <div
+                class="card preset-filled-surface-50-950 flex items-start gap-4 border
+                       border-surface-200-800 p-5"
+            >
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center preset-tonal-primary">
-                    <svelte:component this={icons[event.icon ?? 'presentation'] ?? Presentation} class="h-5 w-5" />
+                    <EventIcon class="h-5 w-5" />
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <span class="text-sm font-semibold">{event.title}</span>
-                    <span class="text-xs text-surface-700 dark:text-surface-100">{event.speaker}</span>
-                    <span class="text-xs text-surface-700 dark:text-surface-100">{event.date}</span>
+                    <span class="text-xs text-surface-700-300">{event.speaker}</span>
+                    <span class="text-xs text-surface-700-300">{event.date}</span>
                     {#if event.linkUrl}
-                        <a href={event.linkUrl} class="flex items-center gap-1 text-xs text-primary-700 dark:text-primary-500 no-underline hover:underline">
+                        <!-- eslint-disable svelte/no-navigation-without-resolve -- external event URL from data -->
+                        <a
+                            href={event.linkUrl}
+                            class="btn btn-sm w-fit inline-flex items-center gap-1 preset-tonal-surface
+                                   no-underline"
+                        >
                             More info
                             <ExternalLink class="h-3 w-3" />
                         </a>
+                        <!-- eslint-enable svelte/no-navigation-without-resolve -->
                     {/if}
                 </div>
             </div>

@@ -32,7 +32,7 @@
 
 <a
     href={resolve(href)}
-    class="flex {rowHeight} items-center gap-4 px-4 no-underline hover:bg-surface-100 dark:hover:bg-surface-900 transition-colors"
+    class="flex {rowHeight} items-center gap-4 px-4 no-underline transition-colors hover:bg-surface-100-900"
 >
     <div
         class="{thumbSize} shrink-0"
