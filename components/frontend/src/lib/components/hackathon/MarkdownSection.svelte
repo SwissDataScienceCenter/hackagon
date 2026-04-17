@@ -2,7 +2,7 @@
     let { content }: { content: string } = $props();
 </script>
 
-<section class="border-t border-surface-200 px-20 py-12 dark:border-surface-800">
+<section class="px-20 py-12">
     <div class="markdown-content max-w-[860px]">
         {@html content}
     </div>

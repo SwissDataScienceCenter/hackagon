@@ -16,7 +16,7 @@
     } = $props();
 </script>
 
-<section class="flex flex-col items-center gap-4 border-t border-surface-200 px-20 py-14 dark:border-surface-800">
+<section class="flex flex-col items-center gap-4 px-20 py-14">
     <h2 class="text-2xl font-bold">{heading}</h2>
     <p class="text-sm text-surface-700 dark:text-surface-100">{subtitle}</p>
     <a href={buttonHref} class="btn preset-filled-primary-500 no-underline">

@@ -18,7 +18,7 @@
             : videoUrl;
 </script>
 
-<section class="border-t border-surface-200 bg-surface-100 px-20 py-12 dark:border-surface-800 dark:bg-surface-900">
+<section class="bg-surface-100 px-20 py-12 dark:bg-surface-900">
     <div class="mb-6 flex items-center justify-center gap-2">
         <PlayCircle class="h-5 w-5 text-primary-700 dark:text-primary-500" />
         <h2 class="text-xl font-bold">{title}</h2>

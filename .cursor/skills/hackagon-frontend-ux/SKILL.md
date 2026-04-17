@@ -48,10 +48,11 @@ If a feature touches **auth or backend connectivity**, read the current `hooks.s
 
 ## Clean design checklist
 
+- **No section-divider borders** — Do not use `border-t` / `border-b` between page sections. Rely on alternating background colors (`bg-surface-100 dark:bg-surface-900` vs default) and spacing to separate sections visually. Borders inside cards/components (e.g. card headers, list dividers) are fine.
 - **Cohesion under density** — Prefer predictable grids, repeated spacing steps, and the same few heading/body styles so busy layouts stay scannable; when space is tight, clarity beats decoration.
 - **Skeleton theme tokens** — Use CSS variables and Skeleton component tokens for color, radius, and shadow before hard-coding hex values.
 - **Tailwind discipline** — Prefer composable utilities and `class` patterns consistent with existing files; use the Prettier Tailwind plugin ordering already configured in the frontend.
-- **Dark mode** — Respect `data-mode` / Skeleton dark variant patterns already in `app.css`.
+- **Dark mode** — Respect `data-mode` / Skeleton dark variant patterns already in `app.css`. Use `text-surface-700 dark:text-surface-100` for secondary text (not `text-surface-500` which lacks contrast in dark mode). Use `text-primary-700 dark:text-primary-500` for icons in light/dark mode.
 - **Accessibility** — Semantic labels, focus order, keyboard support, and sufficient contrast for both themes. Skeleton components help; do not remove implicit a11y for styling shortcuts.
 - **States** — Every async view: loading, success, empty, and error. Avoid layout shift; use Skeleton placeholders or subtle skeletons where appropriate.
 - **Copy** — Short, human, action-oriented strings; avoid internal jargon in user-visible text.

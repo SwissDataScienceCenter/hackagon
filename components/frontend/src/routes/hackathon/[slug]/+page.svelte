@@ -26,7 +26,7 @@
 <OrganizersSection
     description="Co-organized by the Swiss Data Science Center (SDSC) and ETH Zurich Library, this hackathon brings together researchers, developers, and data stewards to build tools that make research data more accessible and reusable."
     organizers={[
-        { name: 'SDSC', logoUrl: '/images/logos/sdsc-logo-footer.svg' },
+        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
         { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
     ]}
 />
