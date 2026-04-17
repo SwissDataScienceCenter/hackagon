@@ -9,10 +9,11 @@
         Lightbulb,
         Upload,
         Vote,
-        Mail,
         ChevronLeft,
         ChevronRight,
     } from 'lucide-svelte';
+    import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
 
     let carouselIndex = $state(0);
     const carouselSlides = [
@@ -46,7 +47,7 @@
         </span>
 
         <h1 class="max-w-[700px] text-5xl font-bold leading-[1.15]">
-            The hackathon platform<br />for Swiss research.
+            SDSC Hackathon Platform
         </h1>
 
         <p class="max-w-[560px] text-base leading-relaxed text-surface-600 dark:text-surface-400">
@@ -62,7 +63,7 @@
                 Get Started
             </a>
             <a
-                href={resolve('/')}
+                href={resolve('/hackathon/ord-2026')}
                 class="btn preset-outlined-surface-200-800 no-underline"
             >
                 Browse Hackathons
@@ -73,7 +74,7 @@
 </section>
 
 <!-- Trending -->
-<section class="border-t border-surface-200 px-20 py-12 dark:border-surface-800">
+<section class="px-20 py-12">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Trending this month</h2>
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">Browse all →</a>
@@ -96,40 +97,29 @@
 
     <div class="mt-0 divide-y divide-surface-200 dark:divide-surface-800">
         {#each [
-            { idx: '1', name: 'ORD Hackathon 2026', org: 'SDSC', meta: '24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '42', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)' },
-            { idx: '2', name: 'Generative AI for Science', org: 'SDSC', meta: '14 – 15 Nov 2026  ·  EPFL, Lausanne', badge: 'Upcoming', badgePreset: 'preset-tonal-secondary', count: '—', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)' },
-            { idx: '3', name: 'Global Wheat Challenge 2026', org: 'SDSC', meta: '1 Sep – 30 Nov 2026  ·  Online  ·  87 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '87', gradFrom: 'var(--color-warning-600)', gradTo: 'var(--color-warning-950)' },
-            { idx: '4', name: 'Climate Data Challenge 2025', org: 'SDSC', meta: '5 – 6 Jun 2025  ·  Univ. of Bern  ·  64 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '64', gradFrom: 'var(--color-tertiary-500)', gradTo: 'var(--color-tertiary-950)' },
-            { idx: '5', name: 'ORD Hackathon 2025', org: 'SDSC', meta: '18 – 19 Oct 2025  ·  ETH Zurich  ·  78 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '78', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)' },
+            { name: 'ORD Hackathon 2026', org: 'SDSC', meta: '24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '42', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2026' },
+            { name: 'Generative AI for Science', org: 'SDSC', meta: '14 – 15 Nov 2026  ·  EPFL, Lausanne', badge: 'Upcoming', badgePreset: 'preset-tonal-secondary', count: '—', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)', slug: 'genai-2026' },
+            { name: 'Global Wheat Challenge 2026', org: 'SDSC', meta: '1 Sep – 30 Nov 2026  ·  Online  ·  87 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '87', gradFrom: 'var(--color-warning-600)', gradTo: 'var(--color-warning-950)', slug: 'wheat-2026' },
+            { name: 'Climate Data Challenge 2025', org: 'SDSC', meta: '5 – 6 Jun 2025  ·  Univ. of Bern  ·  64 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '64', gradFrom: 'var(--color-tertiary-500)', gradTo: 'var(--color-tertiary-950)', slug: 'climate-2025' },
+            { name: 'ORD Hackathon 2025', org: 'SDSC', meta: '18 – 19 Oct 2025  ·  ETH Zurich  ·  78 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '78', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2025' },
         ] as row, i (i)}
-            <div class="flex h-[72px] items-center gap-4 px-4">
-                <span class="w-4 text-sm font-semibold text-surface-500">{row.idx}</span>
-                <div
-                    class="h-12 w-12 shrink-0"
-                    style="background: linear-gradient(135deg, {row.gradFrom}, {row.gradTo})"
-                ></div>
-                <div class="flex flex-1 flex-col gap-1">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-surface-500">{row.org}</span>
-                        <span class="text-sm text-surface-400">/</span>
-                        <span class="text-sm font-semibold">{row.name}</span>
-                    </div>
-                    <span class="text-xs text-surface-500">{row.meta}</span>
-                </div>
-                <span class="badge {row.badgePreset}">
-                    {row.badge}
-                </span>
-                <div class="flex items-center gap-1 text-surface-500">
-                    <Users class="h-3 w-3" />
-                    <span class="text-xs">{row.count}</span>
-                </div>
-            </div>
+            <HackathonRow
+                href="/hackathon/{row.slug}"
+                name={row.name}
+                org={row.org}
+                meta={row.meta}
+                badge={row.badge}
+                badgePreset={row.badgePreset}
+                count={row.count}
+                gradFrom={row.gradFrom}
+                gradTo={row.gradTo}
+            />
         {/each}
     </div>
 </section>
 
 <!-- Winners -->
-<section class="border-t border-surface-200 px-20 py-12 dark:border-surface-800">
+<section class="px-20 py-12">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Award-winning projects</h2>
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">See all →</a>
@@ -160,7 +150,7 @@
 </section>
 
 <!-- Event Showcase Carousel -->
-<section class="border-t border-surface-200 px-20 py-12 dark:border-surface-800">
+<section class="px-20 py-12">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Event showcase</h2>
         <div class="flex items-center gap-2">
@@ -205,7 +195,7 @@
 </section>
 
 <!-- Features -->
-<section class="border-t border-surface-200 bg-surface-100 px-20 py-16 dark:border-surface-800 dark:bg-surface-900">
+<section class="bg-surface-100 px-20 py-16 dark:bg-surface-900">
     <div class="flex flex-col items-center gap-2 text-center">
         <h2 class="text-2xl font-bold">The hackathon platform for science</h2>
         <p class="text-base text-surface-500">
@@ -231,7 +221,7 @@
 </section>
 
 <!-- Orgs -->
-<section class="flex flex-col items-center gap-8 border-t border-surface-200 px-20 py-16 dark:border-surface-800">
+<section class="flex flex-col items-center gap-8 px-20 py-16">
     <h2 class="text-xl font-bold">Trusted by Swiss research institutions</h2>
     <div class="flex items-center gap-12">
         {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
@@ -243,21 +233,9 @@
     </div>
 </section>
 
-<!-- CTA Organize -->
-<section
-    class="flex items-center justify-between border-y border-primary-500/20 bg-primary-500/5 px-20 py-12"
->
-    <div class="flex flex-col gap-2">
-        <h2 class="text-xl font-bold">Want to host your own hackathon?</h2>
-        <p class="max-w-[560px] text-sm leading-relaxed text-surface-500">
-            SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it.
-        </p>
-    </div>
-    <a
-        href={resolve('/')}
-        class="btn preset-filled-primary-500 no-underline"
-    >
-        <Mail class="h-4 w-4" />
-        Contact Us
-    </a>
-</section>
+<CtaSection
+    heading="Want to host your own hackathon?"
+    subtitle="SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it."
+    buttonLabel="Contact Us"
+    buttonHref={resolve('/')}
+/>

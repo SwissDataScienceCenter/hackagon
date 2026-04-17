@@ -6,9 +6,9 @@
     <div class="flex items-center gap-5">
         <img src="/images/logos/sdsc-logo-footer.svg" alt="SDSC" class="h-3" />
         <span class="h-4 w-px bg-surface-300 dark:bg-surface-700"></span>
-        <img src="/images/logos/eth-zurich.svg" alt="ETH Zurich" class="h-3 dark:invert" />
+        <img src="/images/logos/eth-zurich.svg" alt="ETH Zurich" class="h-3 invert dark:invert-0" />
         <span class="h-4 w-px bg-surface-300 dark:bg-surface-700"></span>
-        <img src="/images/logos/epfl.svg" alt="EPFL" class="h-3 dark:invert" />
+        <img src="/images/logos/epfl.svg" alt="EPFL" class="h-3 invert dark:invert-0" />
     </div>
     <nav class="text-xs text-surface-500 flex gap-2">
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external static pages -->

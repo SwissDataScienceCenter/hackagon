@@ -2,13 +2,12 @@
     import { resolve } from '$app/paths';
     import {
         Settings,
-        ArrowRight,
-        ChevronRight,
         Bell,
         UserPlus,
         User,
         FileText,
     } from 'lucide-svelte';
+    import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
 
     const { data } = $props();
     const userName = data.session?.user?.name ?? 'there';
@@ -16,7 +15,7 @@
 
 <!-- Welcome Banner -->
 <div
-    class="flex items-center justify-between border-b border-surface-200 px-20 py-8 dark:border-surface-800"
+    class="flex items-center justify-between px-20 py-8"
 >
     <div class="flex flex-col gap-1">
         <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
@@ -43,31 +42,17 @@
         <section class="flex flex-col gap-4">
             <h2 class="text-base font-bold">Your active hackathons</h2>
 
-            <a
-                href={resolve('/dashboard')}
-                class="card preset-outlined-surface-200-800 flex items-center gap-5
-                       p-5 no-underline hover:border-primary-500 transition-colors"
-            >
-                <div
-                    class="h-16 w-16 shrink-0"
-                    style="background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-950))"
-                ></div>
-                <div class="flex flex-1 flex-col gap-1.5">
-                    <div class="flex items-center gap-3">
-                        <span class="text-base font-semibold">ORD Hackathon 2026</span>
-                        <span class="badge preset-tonal-primary">
-                            Project Proposals
-                        </span>
-                    </div>
-                    <span class="text-xs text-surface-500">
-                        24 – 25 Oct 2026  ·  ETH Zurich  ·  Team: DataFlow (4 members)
-                    </span>
-                    <div class="mt-1 h-1 w-full bg-surface-200 dark:bg-surface-800">
-                        <div class="h-full w-1/3 bg-primary-500"></div>
-                    </div>
-                </div>
-                <ArrowRight class="h-4 w-4 shrink-0 text-surface-500" />
-            </a>
+            <div class="card preset-outlined-surface-200-800 overflow-hidden">
+                <HackathonRow
+                    href="/hackathon/ord-2026"
+                    name="ORD Hackathon 2026"
+                    meta="24 – 25 Oct 2026  ·  ETH Zurich  ·  Team: DataFlow (4 members)"
+                    badge="Project Proposals"
+                    badgePreset="preset-tonal-primary"
+                    gradFrom="var(--color-primary-700)"
+                    gradTo="var(--color-primary-950)"
+                />
+            </div>
         </section>
 
         <!-- Past participation -->
@@ -75,24 +60,19 @@
             <h2 class="text-base font-bold">Past participation</h2>
 
             {#each [
-                { name: 'GenAI Hackathon 2025', meta: 'Nov 2025  ·  Team BioViz  ·  2nd place', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)' },
-                { name: 'ORD Hackathon 2025', meta: 'Oct 2025  ·  Team DataFlow  ·  1st place', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)' },
+                { name: 'GenAI Hackathon 2025', meta: 'Nov 2025  ·  Team BioViz  ·  2nd place', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)', slug: 'genai-2025' },
+                { name: 'ORD Hackathon 2025', meta: 'Oct 2025  ·  Team DataFlow  ·  1st place', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2025' },
             ] as row, i (i)}
-                <a
-                    href={resolve('/dashboard')}
-                    class="card preset-outlined-surface-200-800 flex h-14 items-center gap-4
-                           px-4 no-underline hover:border-primary-500 transition-colors"
-                >
-                    <div
-                        class="h-9 w-9 shrink-0"
-                        style="background: linear-gradient(135deg, {row.gradFrom}, {row.gradTo})"
-                    ></div>
-                    <div class="flex flex-1 flex-col gap-0.5">
-                        <span class="text-sm font-medium">{row.name}</span>
-                        <span class="text-xs text-surface-500">{row.meta}</span>
-                    </div>
-                    <ChevronRight class="h-3.5 w-3.5 text-surface-500" />
-                </a>
+                <div class="card preset-outlined-surface-200-800 overflow-hidden">
+                    <HackathonRow
+                        href="/hackathon/{row.slug}"
+                        name={row.name}
+                        meta={row.meta}
+                        gradFrom={row.gradFrom}
+                        gradTo={row.gradTo}
+                        size="compact"
+                    />
+                </div>
             {/each}
         </section>
     </div>
