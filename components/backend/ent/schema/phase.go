@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -14,20 +15,32 @@ type Phase struct {
 	ent.Schema
 }
 
+func (Phase) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		schema.Comment("A temporal phase of a hackathon (e.g. ideation, hacking, judging)."),
+	}
+}
+
 // Fields of the Phase.
 func (Phase) Fields() []ent.Field {
 	return []ent.Field{
-		field.Time("start_date").Optional().Nillable(),
-		field.Time("end_date").Optional().Nillable(),
+		field.Time("start_date").Optional().Nillable().
+			Comment("When this phase begins; nil if not yet scheduled."),
+		field.Time("end_date").Optional().Nillable().
+			Comment("When this phase ends; nil if not yet scheduled."),
 		field.String("name").
-			NotEmpty(),
+			NotEmpty().
+			Comment("Display name of the phase."),
 		field.Text("description").
-			Optional(),
+			Optional().
+			Comment("Description of the phase and its objectives."),
 		field.Time("created_at").
 			Immutable().
-			Default(time.Now),
+			Default(time.Now).
+			Comment("Timestamp when the phase was created."),
 		field.Time("modified_at").
-			Default(time.Now).UpdateDefault(time.Now),
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last modification."),
 	}
 }
 
@@ -35,12 +48,16 @@ func (Phase) Fields() []ent.Field {
 func (Phase) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hackathon", Hackathon.Type).
-			Ref("phases").Unique().Required(),
-		edge.To("page", Page.Type).Unique(),
+			Ref("phases").Unique().Required().
+			Comment("The hackathon this phase belongs to."),
+		edge.To("page", Page.Type).Unique().
+			Comment("Content page linked to this phase."),
 		edge.From("creator", User.Type).
-			Ref("created_phases").Unique().Required().Immutable(),
+			Ref("created_phases").Unique().Required().Immutable().
+			Comment("The user who created this phase."),
 		edge.From("modifier", User.Type).
-			Ref("modified_phases").Unique(),
+			Ref("modified_phases").Unique().
+			Comment("The user who last modified this phase."),
 	}
 }
 

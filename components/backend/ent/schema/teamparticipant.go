@@ -17,18 +17,21 @@ type TeamParticipant struct {
 func (TeamParticipant) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		field.ID("user_id", "team_id"),
+		schema.Comment("Join table for the M2M relationship between users and teams."),
 	}
 }
 
 // Fields of the TeamParticipant.
 func (TeamParticipant) Fields() []ent.Field {
 	return []ent.Field{
-		field.Int("team_id"),
-
-		field.Int("user_id"),
+		field.Int("team_id").
+			Comment("Foreign key to the team."),
+		field.Int("user_id").
+			Comment("Foreign key to the user."),
 		field.Time("created_at").
 			Immutable().
-			Default(time.Now),
+			Default(time.Now).
+			Comment("Timestamp when the user joined the team."),
 	}
 }
 
@@ -37,9 +40,11 @@ func (TeamParticipant) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("team", Team.Type).
 			Unique().Required().
-			Field("team_id"),
+			Field("team_id").
+			Comment("The team."),
 		edge.To("user", User.Type).
 			Unique().Required().
-			Field("user_id"),
+			Field("user_id").
+			Comment("The team member."),
 	}
 }
