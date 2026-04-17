@@ -61,7 +61,11 @@ func main() {
 	userService := service.NewUserService(dbClient, enf)
 
 	// Create gRPC server
-	auth_middleware := mw.AuthUnaryServerInterceptor(mw.NewJWTValidator(cfg, skipAuth))
+	a, err := mw.NewJWTValidator(cfg, skipAuth)
+	if err != nil {
+		log.Fatalf("failed to create JWT validator")
+	}
+	auth_middleware := mw.AuthUnaryServerInterceptor(a)
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)),
 	)

@@ -2,6 +2,7 @@ server:
   port: "3000"
   adminemail: alice@swissdatacustodian.ch
 database:
+  driver: postgres
   host: localhost
   port: 5432
   dbname: hackagon
