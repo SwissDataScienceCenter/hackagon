@@ -7,6 +7,11 @@
     import HighlightsSection from '$lib/components/hackathon/HighlightsSection.svelte';
     import VideoSection from '$lib/components/hackathon/VideoSection.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
+
+    const organizers = [
+        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
+        { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
+    ];
 </script>
 
 <HeroSection
@@ -25,10 +30,7 @@
 
 <OrganizersSection
     description="Co-organized by the Swiss Data Science Center (SDSC) and ETH Zurich Library, this hackathon brings together researchers, developers, and data stewards to build tools that make research data more accessible and reusable."
-    organizers={[
-        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
-        { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
-    ]}
+    {organizers}
 />
 
 <MarkdownSection content={`

@@ -22,6 +22,7 @@ let configLoader: ConfigLoader
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
+  /^\/hackathon($|\/)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
