@@ -14,6 +14,7 @@ require (
 
 require (
 	entgo.io/ent v0.14.6
+	github.com/MicahParks/keyfunc/v3 v3.8.0
 	github.com/casbin/casbin/v3 v3.8.1
 	github.com/casbin/ent-adapter v1.4.0
 	github.com/golang-jwt/jwt/v4 v4.4.2
@@ -26,7 +27,6 @@ require (
 	ariga.io/atlas v1.0.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/MicahParks/jwkset v0.11.0 // indirect
-	github.com/MicahParks/keyfunc/v3 v3.8.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
@@ -57,7 +57,6 @@ require (
 replace google.golang.org/genproto => google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478
 
 require (
-	github.com/MicahParks/keyfunc v1.9.0
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
