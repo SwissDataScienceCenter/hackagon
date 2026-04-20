@@ -36,27 +36,6 @@ func userEntryFromEnt(u *ent.User) *proto.UserEntry {
 	}
 }
 
-func usernameFromClaims(claims map[string]interface{}, fallback string) string {
-	if v, ok := claims["preferred_username"].(string); ok && v != "" {
-		return v
-	}
-	return fallback
-}
-
-func displayNameFromClaims(claims map[string]interface{}) string {
-	if v, ok := claims["name"].(string); ok {
-		return v
-	}
-	return ""
-}
-
-func emailFromClaims(claims map[string]interface{}) string {
-	if v, ok := claims["email"].(string); ok {
-		return v
-	}
-	return ""
-}
-
 func (s *UserService) List(
 	ctx context.Context,
 	req *proto.UserListRequest,
@@ -83,13 +62,9 @@ func (s *UserService) WhoAmI(
 	ctx context.Context,
 	_ *proto.WhoAmIRequest,
 ) (*proto.WhoAmIResponse, error) {
-	claims, ok := m.GetClaims(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "no claims in context")
-	}
-	sub, err := claims.GetSubject()
-	if err != nil || sub == "" {
-		return nil, status.Error(codes.Unauthenticated, "missing subject claim")
+	sub, claims, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	u, err := s.dbClient.User.Query().
@@ -103,9 +78,9 @@ func (s *UserService) WhoAmI(
 	}
 
 	// Sync profile fields from Keycloak if they changed.
-	wantUsername := usernameFromClaims(claims, sub)
-	wantDisplayName := displayNameFromClaims(claims)
-	wantEmail := emailFromClaims(claims)
+	wantUsername := m.UsernameFromClaims(claims, sub)
+	wantDisplayName := m.DisplayNameFromClaims(claims)
+	wantEmail := m.EmailFromClaims(claims)
 	if u.Username != wantUsername || u.DisplayName != wantDisplayName || u.Email != wantEmail {
 		u, err = u.Update().
 			SetUsername(wantUsername).
@@ -124,13 +99,9 @@ func (s *UserService) Register(
 	ctx context.Context,
 	_ *proto.RegisterRequest,
 ) (*proto.RegisterResponse, error) {
-	claims, ok := m.GetClaims(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "no claims in context")
-	}
-	sub, err := claims.GetSubject()
-	if err != nil || sub == "" {
-		return nil, status.Error(codes.Unauthenticated, "missing subject claim")
+	sub, claims, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Idempotent: return existing user if already registered.
@@ -144,9 +115,9 @@ func (s *UserService) Register(
 		return nil, status.Errorf(codes.Internal, "check existing user: %v", err)
 	}
 
-	username := usernameFromClaims(claims, sub)
-	displayName := displayNameFromClaims(claims)
-	email := emailFromClaims(claims)
+	username := m.UsernameFromClaims(claims, sub)
+	displayName := m.DisplayNameFromClaims(claims)
+	email := m.EmailFromClaims(claims)
 
 	u, err := s.dbClient.User.Create().
 		SetKeycloakID(sub).
