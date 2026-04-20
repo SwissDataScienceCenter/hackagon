@@ -112,7 +112,8 @@ generate-proto *args:
 [group('aux')]
 generate-db-schema *args:
     just quitsh generate-schema
-    
+    just format components/backend/Schema.md
+
 # Update dependencies to `quitsh`.
 [group('aux')]
 update-deps *args:
