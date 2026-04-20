@@ -109,12 +109,12 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
-        // Owner can read owned hackathon
-		{Owner.String(), "*", Hackathon.String(), Read.String()},  
+		// Owner can read owned hackathon
+		{Owner.String(), "*", Hackathon.String(), Read.String()},
 		// Owner can write owned hackathon
-		{Owner.String(), "*", Hackathon.String(), Write.String()}, 
+		{Owner.String(), "*", Hackathon.String(), Write.String()},
 		// Member can read joined hackathon
-		{Member.String(), "*", Hackathon.String(), Read.String()}, 
+		{Member.String(), "*", Hackathon.String(), Read.String()},
 	}
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
