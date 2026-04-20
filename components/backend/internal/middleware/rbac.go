@@ -109,22 +109,34 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
-		{Owner.String(), "*", Hackathon.String(), Read.String()},  // Owner can read owned hackathon
-		{Owner.String(), "*", Hackathon.String(), Write.String()}, // Owner can write owned hackathon
-		{Member.String(), "*", Hackathon.String(), Read.String()}, // Member can read joined hackathon
+		// Owner can read owned hackathon
+		{Owner.String(), "*", Hackathon.String(), Read.String()},
+		// Owner can write owned hackathon
+		{Owner.String(), "*", Hackathon.String(), Write.String()},
+		// Member can read joined hackathon
+		{Member.String(), "*", Hackathon.String(), Read.String()},
 	}
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
 	}
 
-	if _, err := e.AddNamedGroupingPolicy("g2", []string{cfg.Server.AdminEmail, "admin"}); err != nil {
+	if _, err := e.AddNamedGroupingPolicy("g2", []string{cfg.Server.AdminKeycloakID, "admin"}); err != nil {
 		return fmt.Errorf("couldn't add default admin: %w", err)
 	}
 
 	return nil
 }
 
-func (e *Enforcer) Enforce(ctx context.Context, hackathonId string, object ObjectType, permission Permission) (bool, error) {
+func (e *Enforcer) AddRole(user, role, hackathonId string) (bool, error) {
+	return e.enforcer.AddGroupingPolicy(user, role, hackathonId)
+}
+
+func (e *Enforcer) Enforce(
+	ctx context.Context,
+	hackathonId string,
+	object ObjectType,
+	permission Permission,
+) (bool, error) {
 	sub, err := GetSubject(ctx)
 	if err != nil {
 		return false, err

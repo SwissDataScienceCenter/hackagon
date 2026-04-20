@@ -20,8 +20,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port       string `yaml:"port"`
-	AdminEmail string `yaml:"adminemail"`
+	Port            string `yaml:"port"`
+	AdminEmail      string `yaml:"adminemail"`
+	AdminKeycloakID string `yaml:"adminkeycloakid"`
 }
 type DatabaseConfig struct {
 	Driver   string `yaml:"driver"`
@@ -114,6 +115,10 @@ func Load(configDir string) (*Config, error) {
 	var cfg Config
 	if err := k.Unmarshal("", &cfg); err != nil {
 		return nil, err
+	}
+
+	if cfg.Server.AdminKeycloakID == "" {
+		return nil, fmt.Errorf("server.adminkeycloakid is required")
 	}
 
 	return &cfg, nil

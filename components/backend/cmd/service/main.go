@@ -11,6 +11,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
@@ -18,6 +19,29 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
+
+func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config) error {
+	exists, err := dbClient.User.Query().
+		Where(user.KeycloakIDEQ(cfg.Server.AdminKeycloakID)).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("check admin user: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	_, err = dbClient.User.Create().
+		SetKeycloakID(cfg.Server.AdminKeycloakID).
+		SetUsername("hackagon-admin").
+		SetDisplayName("Hackagon Admin").
+		SetEmail(cfg.Server.AdminEmail).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("create admin user: %w", err)
+	}
+	log.Printf("Seeded admin user (keycloak_id=%s)", cfg.Server.AdminKeycloakID)
+	return nil
+}
 
 func skipAuth(ctx context.Context, method string) bool {
 	// Methods to skip auth for.
@@ -50,6 +74,9 @@ func main() {
 	defer dbClient.Close()
 	if err := dbClient.Schema.Create(context.Background()); err != nil {
 		log.Fatalf("failed creating schema resources: %v", err)
+	}
+	if err := seedAdminUser(context.Background(), dbClient, cfg); err != nil {
+		log.Fatalf("failed to seed admin user: %v", err)
 	}
 	enf, err := mw.NewRBACEnforcer(cfg)
 	if err != nil {

@@ -1,6 +1,7 @@
 server:
   port: "3000"
-  adminemail: alice@swissdatacustodian.ch
+  adminemail: admin@hackagon.dev
+  adminkeycloakid: "1183370a-46a2-4dad-b8fd-dd927d083e14"
 database:
   driver: postgres
   host: localhost

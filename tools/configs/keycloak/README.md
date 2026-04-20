@@ -34,14 +34,13 @@ curl http://localhost:8180/realms/hackagon/.well-known/openid-configuration
 
 ## Test Users
 
-| Username | Password    | Role        |
-| -------- | ----------- | ----------- |
-| alice    | aliceandbob | participant |
-| bob      | aliceandbob | participant |
+| Username       | Password    | Role  |
+| -------------- | ----------- | ----- |
+| hackagon-admin | aliceandbob | admin |
 
 ```bash
 # Get an access token for testing
-just get-access-token alice aliceandbob
+just get-access-token hackagon-admin aliceandbob
 ```
 
 ## Saving Realm Changes

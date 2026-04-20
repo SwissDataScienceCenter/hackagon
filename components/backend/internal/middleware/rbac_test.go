@@ -1,9 +1,11 @@
 package middleware
 
 import (
-	_ "github.com/mattn/go-sqlite3"
+	"context"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
@@ -19,10 +21,10 @@ func toInterfaceSlice(strs []string) []interface{} {
 }
 
 // newTestConfig creates a config with SQLite for testing
-func newTestConfig(adminEmail string) *config.Config {
+func newTestConfig(adminKeycloakID string) *config.Config {
 	return &config.Config{
 		Server: config.ServerConfig{
-			AdminEmail: adminEmail,
+			AdminKeycloakID: adminKeycloakID,
 		},
 		Database: config.DatabaseConfig{
 			Driver: "sqlite3",
@@ -31,10 +33,10 @@ func newTestConfig(adminEmail string) *config.Config {
 }
 
 // newTestEnforcer creates a new RBAC Enforcer with SQLite for testing
-func newTestEnforcer(t *testing.T, adminEmail string) *Enforcer {
+func newTestEnforcer(t *testing.T, adminKeycloakID string) *Enforcer {
 	t.Helper()
 
-	cfg := newTestConfig(adminEmail)
+	cfg := newTestConfig(adminKeycloakID)
 	enf, err := NewRBACEnforcer(cfg)
 	require.NoError(t, err)
 	require.NotNil(t, enf)
@@ -48,16 +50,16 @@ func newTestEnforcer(t *testing.T, adminEmail string) *Enforcer {
 
 // TestNewRBACEnforcer tests the enforcer creation with SQLite
 func TestNewRBACEnforcer(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
 
-	// Test: Admin user can read users
-	adminCanReadUsers, err := enf.enforcer.Enforce("admin@test.com", "any", "user", "read")
+	adminCanReadUsers, err := enf.enforcer.Enforce(adminID, "any", "user", "read")
 	require.NoError(t, err)
 	assert.True(t, adminCanReadUsers, "Admin should be able to read users by default")
 }
 
 func TestEnforce(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	enf := newTestEnforcer(t, "admin-uuid")
 
 	_, err := enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
 	require.NoError(t, err)
@@ -155,7 +157,12 @@ func TestEnforce(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			allowed, err := enf.enforcer.Enforce(
+				tc.user,
+				tc.hackathon,
+				tc.objectType,
+				tc.permission,
+			)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
 		})
@@ -163,7 +170,7 @@ func TestEnforce(t *testing.T) {
 }
 
 func TestEnforcePublicHackathon(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	enf := newTestEnforcer(t, "admin-uuid")
 
 	_, err := enf.enforcer.AddPolicy("*", "h2", "hackathon", "read")
 	require.NoError(t, err)
@@ -249,7 +256,12 @@ func TestEnforcePublicHackathon(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			allowed, err := enf.enforcer.Enforce(
+				tc.user,
+				tc.hackathon,
+				tc.objectType,
+				tc.permission,
+			)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
 		})
@@ -258,9 +270,9 @@ func TestEnforcePublicHackathon(t *testing.T) {
 
 // TestRBAC_AdminAccess tests admin-level access control
 func TestRBAC_AdminAccess(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
 
-	// Admin user (admin@test.com) has g2 access to admin role
 	testCases := []struct {
 		name       string
 		user       string
@@ -271,7 +283,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 	}{
 		{
 			name:       "Admin reads any user",
-			user:       "admin@test.com",
+			user:       adminID,
 			hackathon:  "any",
 			objectType: "user",
 			permission: "read",
@@ -279,7 +291,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 		},
 		{
 			name:       "Admin reads any hackathon",
-			user:       "admin@test.com",
+			user:       adminID,
 			hackathon:  "any",
 			objectType: "hackathon",
 			permission: "read",
@@ -287,7 +299,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 		},
 		{
 			name:       "Admin writes any hackathon",
-			user:       "admin@test.com",
+			user:       adminID,
 			hackathon:  "any",
 			objectType: "hackathon",
 			permission: "write",
@@ -297,9 +309,81 @@ func TestRBAC_AdminAccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			allowed, err := enf.enforcer.Enforce(
+				tc.user,
+				tc.hackathon,
+				tc.objectType,
+				tc.permission,
+			)
 			require.NoError(t, err)
-			assert.Equal(t, tc.expected, allowed, "Admin should have %v access to %s %s", tc.expected, tc.objectType, tc.name)
+			assert.Equal(
+				t,
+				tc.expected,
+				allowed,
+				"Admin should have %v access to %s %s",
+				tc.expected,
+				tc.objectType,
+				tc.name,
+			)
+		})
+	}
+}
+
+// ctxWithClaims builds a context carrying JWT claims with the given sub.
+func ctxWithClaims(sub string) context.Context {
+	claims := jwt.MapClaims{"sub": sub}
+	return context.WithValue(context.Background(), claimsKey{}, claims)
+}
+
+// TestEnforce_AdminByKeycloakID verifies that the Enforce method resolves
+// admin access by matching the JWT subject (Keycloak ID) against g2 policies.
+func TestEnforce_AdminByKeycloakID(t *testing.T) {
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
+
+	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("uuid-alice", "owner", "h1")
+
+	testCases := []struct {
+		name      string
+		ctx       context.Context
+		hackathon string
+		object    ObjectType
+		perm      Permission
+		expected  bool
+	}{
+		{
+			name:      "Admin Keycloak ID matches g2 policy",
+			ctx:       ctxWithClaims(adminID),
+			hackathon: "any",
+			object:    User,
+			perm:      Read,
+			expected:  true,
+		},
+		{
+			name:      "Owner matched by sub UUID directly",
+			ctx:       ctxWithClaims("uuid-alice"),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			expected:  true,
+		},
+		{
+			name:      "Unknown UUID is denied",
+			ctx:       ctxWithClaims("uuid-nobody"),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			expected:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			allowed, err := enf.Enforce(tc.ctx, tc.hackathon, tc.object, tc.perm)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, allowed)
 		})
 	}
 }
