@@ -12,6 +12,7 @@ import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
 import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
+import { ClientError, Status } from "nice-grpc-common"
 import type { CustomSession } from "./auth.d"
 
 // Global config state for the application.
@@ -147,6 +148,28 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
 
     event.locals.grpc = createAuthorizedGrpc(session!.accessToken!)
     event.locals.logger.debug("HOOKS: Authorized gRPC clients created.")
+
+    try {
+      const resp = await event.locals.grpc.user.whoAmI({})
+      event.locals.platformUser = resp.user ?? undefined
+    } catch (err) {
+      if (err instanceof ClientError && err.code === Status.NOT_FOUND) {
+        event.locals.logger.info(
+          "HOOKS: User not in DB, auto-registering via Register RPC.",
+        )
+        const regResp = await event.locals.grpc.user.register({})
+        event.locals.platformUser = regResp.user ?? undefined
+      } else if (
+        err instanceof ClientError &&
+        err.code === Status.UNAVAILABLE
+      ) {
+        event.locals.logger.warn(
+          "HOOKS: Backend unavailable for WhoAmI, proceeding without platform user.",
+        )
+      } else {
+        throw err
+      }
+    }
   }
 
   return resolve(event)

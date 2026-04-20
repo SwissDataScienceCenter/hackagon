@@ -4,6 +4,7 @@ import type { Logger } from "pino"
 import type { AppConfig } from "$lib/server/settings"
 import type { AuthorizedGrpc } from "$lib/server/grpc/client"
 import type { Session } from "@auth/core/types"
+import type { UserEntry } from "$lib/server/grpc/generated/user"
 
 declare global {
   namespace App {
@@ -13,6 +14,7 @@ declare global {
       session?: Omit<Session, "accessToken">
       logger: Logger
       grpc?: AuthorizedGrpc
+      platformUser?: UserEntry
     }
     // interface PageData {}
     // interface PageState {}
