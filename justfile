@@ -8,10 +8,72 @@ flake_dir := "./tools/nix"
 mod nix "./tools/just/nix.just"
 mod ci "./tools/just/ci.just"
 
-# Default target if you do not specify a target.
 [private]
 default:
     just --list --unsorted --list-submodules
+
+# ─── Services & State ────────────────────────────────────────────────
+
+# Start Keycloak, Postgres, and the backend (via process-compose).
+[group('general')]
+up *args:
+    cd ./tools/deploy/process-compose && just up "$@"
+
+# Stop all running services.
+[group('general')]
+down *args:
+    cd ./tools/deploy/process-compose && just down "$@"
+
+# Attach to the process-compose TUI for log inspection.
+[group('general')]
+attach:
+    cd ./tools/deploy/process-compose && just attach
+
+# Wipe DB + Keycloak data. Run 'just refresh' next, or 'just up' if code is current.
+[group('general')]
+reset:
+    #!/usr/bin/env bash
+    set -eu
+    just down 2>/dev/null || true
+    just _wipe-state
+    echo "✓ Reset complete. Run 'just refresh' to regenerate code, or 'just up' if code is current."
+
+# Reset data + regenerate all code + sync deps. Run 'just up' to start services.
+[group('general')]
+refresh:
+    #!/usr/bin/env bash
+    set -eu
+    just down 2>/dev/null || true
+    just _wipe-state
+
+    echo "==> Regenerating database schema (Ent)..."
+    just generate-db-schema
+
+    echo "==> Regenerating proto stubs (Go + TypeScript)..."
+    just generate-proto
+
+    echo "==> Tidying Go modules..."
+    (cd components/backend && GOWORK=off go mod tidy)
+
+    echo "==> Syncing frontend dependencies..."
+    (cd components/frontend && pnpm install --frozen-lockfile)
+
+    echo "==> Ensuring go.work is up to date..."
+    just _setup
+
+    echo "✓ Refresh complete. Run 'just up' to start fresh services."
+
+# Send a command to the running process-compose instance.
+[group('general')]
+proc-comp *args:
+    cd ./tools/deploy/process-compose && just proc-comp "$@"
+
+# Open a psql shell to the local Hackagon database.
+[group('general')]
+db *args:
+    psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon "$@"
+
+# ─── Development ─────────────────────────────────────────────────────
 
 # Enter a Nix development shell.
 alias dev := develop
@@ -20,60 +82,49 @@ alias dev := develop
 develop *args:
     just nix::develop default "$@"
 
-# Run quitsh (by compiling it directly and executing it from the root).
-alias q := quitsh
+# Build components (accepts a component pattern).
 [group('general')]
-quitsh *args:
-    quitsh-direct "$@"
+build *args:
+    just quitsh build "$@"
 
-# Run quitsh (by compiling it directly and executing it from the current directory).
-[no-cd]
+# List all known components.
 [group('general')]
-quitsh-nocd *args:
-    quitsh-direct "$@"
+list *args:
+    just quitsh list "$@"
 
-# Cleans the whole repository and all untracked files (careful !)
-[group('general')]
+# ─── Code Quality ───────────────────────────────────────────────────
+
+# Format all code in the repository.
+[group('checks')]
+format *args:
+    just quitsh format "$@"
+
+# Lint components (accepts a component pattern).
+[group('checks')]
+lint *args:
+    just quitsh lint "$@" && \
+    just quitsh nix fix-hash
+
+# Run tests for components (accepts a component pattern).
+[group('checks')]
+test *args:
+    just quitsh test "$@"
+
+# ─── Code Generation & Cleanup ──────────────────────────────────────
+
+# DANGER: destroy ALL gitignored files (.devenv, node_modules, etc.).
+[group('aux')]
+[confirm("This will delete everything gitignored including .devenv and node_modules. Continue?")]
 clean-all *args:
     #!/usr/bin/env bash
     set -eu
+    just down 2>/dev/null || true
     if [ -d ".devenv/state/go" ]; then
         chmod -R +w .devenv/state/go
     fi
     git clean -dfX
 
-# Clean cleans the components output folders.
-[group('general')]
-clean *args:
-    just quitsh clean "$@"
-
-# Format the whole repository.
-[group('general')]
-format *args:
-    just quitsh format "$@"
-
-# List components.
-[group('general')]
-list *args:
-    just quitsh list "$@"
-
-# Lint components by pattern `comppattern`.
-[group('general')]
-lint *args:
-    just quitsh lint "$@" && \
-    just quitsh nix fix-hash
-
-# Build components by pattern `comppattern`.
-[group('general')]
-build *args:
-    just quitsh build "$@"
-
-# Test components by pattern `comppattern`.
-[group('general')]
-test *args:
-    just quitsh test "$@"
-
-# Generate Go and gRPC code from proto files for backend and frontend.
+# Regenerate Go + TypeScript gRPC stubs from api/proto/*.proto.
 [group('aux')]
 generate-proto *args:
     #!/usr/bin/env bash
@@ -87,11 +138,9 @@ generate-proto *args:
         proto_file="$(basename "$proto")"
         echo "Processing $proto_file..."
 
-        # Copy proto to backend internal directory
         cp "$proto" "$GO_OUT/$proto_file"
         echo "  - Copied to $GO_OUT/$proto_file"
 
-        # Generate Go code
         protoc \
             --go_out="$GO_OUT" \
             --go_opt=paths=source_relative \
@@ -102,13 +151,13 @@ generate-proto *args:
         echo "  - Generated Go code"
     done
 
-    # Generate TypeScript code for the frontend
     mkdir -p "components/frontend/src/lib/server/grpc/generated"
     (cd components/frontend && pnpm install --frozen-lockfile && pnpm proto:generate)
     echo "  - Generated TypeScript code"
 
     echo "All protos processed."
 
+# Regenerate Ent ORM code + Schema.md from ent/schema/*.go.
 [group('aux')]
 generate-db-schema *args:
     #!/usr/bin/env bash
@@ -118,8 +167,13 @@ generate-db-schema *args:
     GOWORK=off go run -mod=mod entgo.io/ent/cmd/ent describe ./ent/schema/ > Schema.md
     echo "  ✓ Generated Go database schema code"
     popd > /dev/null
-    
-# Update dependencies to `quitsh`.
+
+# Remove component build artifacts (.build, .output).
+[group('aux')]
+clean *args:
+    just quitsh clean "$@"
+
+# Update quitsh and all Go/Nix dependencies.
 [group('aux')]
 update-deps *args:
     #!/usr/bin/env bash
@@ -130,7 +184,6 @@ update-deps *args:
         nix flake update quitsh &&
         git add .)
 
-    # Update go.mod tidy in all modules.
     readarray -t gomods < <(find "{{root_dir}}" -name "go.mod" \
         -and -not -ipath "*.devenv*" -and -not -ipath "*.old*")
     for gomod in "${gomods[@]}"; do
@@ -140,27 +193,33 @@ update-deps *args:
 
     quitsh nix fix-hash
 
-# Run process-compose commands.
-[group('general')]
-proc-comp *args:
-    cd ./tools/deploy/process-compose && just proc-comp "$@"
+# ─── Quitsh ─────────────────────────────────────────────────────────
 
-# Start all services (Keycloak etc.).
-[group('general')]
-up *args:
-    cd ./tools/deploy/process-compose && just up "$@"
+# Run a quitsh command from the repo root.
+alias q := quitsh
+[group('aux')]
+quitsh *args:
+    quitsh-direct "$@"
 
-# Attach to the process-compose TUI.
-[group('general')]
-attach:
-    cd ./tools/deploy/process-compose && just attach
+# Run a quitsh command from the current directory.
+[no-cd]
+[group('aux')]
+quitsh-nocd *args:
+    quitsh-direct "$@"
 
-# Stop all services.
-[group('general')]
-down *args:
-    cd ./tools/deploy/process-compose && just down "$@"
+# ─── Private helpers ─────────────────────────────────────────────────
 
-# Setup development files (default done in `devShell`).
 [private]
-setup *args:
+_wipe-state:
+    #!/usr/bin/env bash
+    set -eu
+    echo "==> Wiping Postgres and Keycloak state..."
+    if [ -d ".devenv/state/postgres" ]; then
+        chmod -R +w .devenv/state/postgres 2>/dev/null || true
+        rm -rf .devenv/state/postgres
+    fi
+    rm -rf .devenv/state/keycloak
+
+[private]
+_setup *args:
     just quitsh setup "$@"
