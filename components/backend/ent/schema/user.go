@@ -25,9 +25,13 @@ func (User) Annotations() []schema.Annotation {
 func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("username").
-			Comment("Display username shown in the UI."),
+			Comment("Username in Keycloak."),
 		field.String("keycloak_id").NotEmpty().Unique().
 			Comment("Unique identifier from Keycloak (sub claim)."),
+		field.String("display_name").Optional().Default("").
+			Comment("Preferred display name of the user."),
+		field.String("email").Optional().Default("").
+			Comment("Email of the user, same as in Keycloak"),
 		field.Time("created_at").Immutable().Default(time.Now).
 			Comment("Timestamp when the user was first seen."),
 		field.Time("modified_at").

@@ -8,19 +8,32 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 service User {
   rpc List(UserListRequest) returns (UserListResponse);
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
 }
 
-message UserListRequest {
-}
+message UserListRequest {}
 
 message UserListResponse {
     repeated UserEntry users = 1;
+}
+
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+    UserEntry user = 1;
+}
+
+message RegisterRequest {}
+
+message RegisterResponse {
+    UserEntry user = 1;
 }
 
 message UserEntry {
     string name = 1;
     string keycloak_id = 2;
     google.protobuf.Timestamp created_at = 3;
+    string display_name = 4;
+    string email = 5;
 }
-
-
