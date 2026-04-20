@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -14,38 +15,59 @@ type Hackathon struct {
 	ent.Schema
 }
 
+func (Hackathon) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		schema.Comment("A hackathon event containing tracks, projects, phases, and participants."),
+	}
+}
+
 // Fields of the Hackathon.
 func (Hackathon) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").
-			NotEmpty().Unique(),
-		field.Time("start_date").Optional().Nillable(),
-		field.Time("end_date").Optional().Nillable(),
+			NotEmpty().Unique().
+			Comment("Display name of the hackathon, must be unique."),
+		field.Time("start_date").Optional().Nillable().
+			Comment("Scheduled start date; nil if not yet scheduled."),
+		field.Time("end_date").Optional().Nillable().
+			Comment("Scheduled end date; nil if not yet scheduled."),
 		field.Time("created_at").
 			Immutable().
-			Default(time.Now),
+			Default(time.Now).
+			Comment("Timestamp when the hackathon was created."),
 		field.Time("modified_at").
-			Default(time.Now).UpdateDefault(time.Now),
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last modification."),
 		field.Enum("visibility").
-			Values("public", "private"),
-		field.Text("description").Optional(),
+			Values("public", "private").
+			Comment("Controls whether non-participants can discover this hackathon."),
+		field.Text("description").Optional().
+			Comment("Detailed description of the hackathon, supports rich text."),
 		field.String("logo").
-			Optional(),
+			Optional().
+			Comment("URL or path to the hackathon logo image."),
 	}
 }
 
 // Edges of the Hackathon.
 func (Hackathon) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("tracks", Track.Type),
-		edge.To("projects", Project.Type),
-		edge.From("participating_users", User.Type).Ref("participates_in_hackathons").Through("participants", Participant.Type),
-		edge.To("pages", Page.Type),
-		edge.To("phases", Phase.Type),
+		edge.To("tracks", Track.Type).
+			Comment("Thematic tracks within this hackathon."),
+		edge.To("projects", Project.Type).
+			Comment("Projects submitted to this hackathon."),
+		edge.From("participating_users", User.Type).Ref("participates_in_hackathons").Through("participants", Participant.Type).
+			Comment("Users who are participating or waitlisted."),
+		edge.To("pages", Page.Type).
+			Comment("Content pages associated with this hackathon."),
+		edge.To("phases", Phase.Type).
+			Comment("Temporal phases (e.g. ideation, hacking, judging)."),
 		edge.From("creator", User.Type).
-			Ref("created_hackathons").Unique().Required().Immutable(),
+			Ref("created_hackathons").Unique().Required().Immutable().
+			Comment("The user who created this hackathon."),
 		edge.From("modifier", User.Type).
-			Ref("modified_hackathons").Unique(),
+			Ref("modified_hackathons").Unique().
+			Comment("The user who last modified this hackathon."),
 	}
 }
 

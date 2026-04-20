@@ -3,6 +3,7 @@ package cmd
 import (
 	cnBuildCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/build"
 	cnFormatCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/format"
+	cnGenerateSchemaCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/generate-schema"
 	cnImageCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/image"
 	cnLintCmd "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/lint"
 	cnNix "github.com/swissdatasciencecenter/hackagon/tools/quitsh/cmd/quitsh/cmd/nix"
@@ -39,4 +40,5 @@ func AddCommands(cl cli.ICLI, conf *config.Config) {
 
 	cnNix.AddCmd(cl, &conf.Nix)
 	cnFormatCmd.AddCmd(cl.RootCmd(), &conf.Nix)
+	cnGenerateSchemaCmd.AddCmd(cl.RootCmd())
 }

@@ -5,6 +5,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
@@ -14,14 +15,24 @@ type User struct {
 	ent.Schema
 }
 
+func (User) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		schema.Comment("An authenticated user, synced from Keycloak on first login."),
+	}
+}
+
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("username"),
-		field.String("keycloak_id").NotEmpty().Unique(),
-		field.Time("created_at").Immutable().Default(time.Now),
+		field.String("username").
+			Comment("Display username shown in the UI."),
+		field.String("keycloak_id").NotEmpty().Unique().
+			Comment("Unique identifier from Keycloak (sub claim)."),
+		field.Time("created_at").Immutable().Default(time.Now).
+			Comment("Timestamp when the user was first seen."),
 		field.Time("modified_at").
-			Default(time.Now).UpdateDefault(time.Now),
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last profile update."),
 	}
 }
 
@@ -29,32 +40,47 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("created_hackathons", Hackathon.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Hackathons this user created."),
 		edge.To("modified_hackathons", Hackathon.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Hackathons this user last modified."),
 		edge.To("created_projects", Project.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Projects this user created."),
 		edge.To("modified_projects", Project.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
-		edge.To("participates_in_hackathons", Hackathon.Type).Through("participations", Participant.Type),
-		edge.To("participates_in_teams", Team.Type).Through("team_participations", TeamParticipant.Type),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Projects this user last modified."),
+		edge.To("participates_in_hackathons", Hackathon.Type).Through("participations", Participant.Type).
+			Comment("Hackathons this user participates in."),
+		edge.To("participates_in_teams", Team.Type).Through("team_participations", TeamParticipant.Type).
+			Comment("Teams this user is a member of."),
 		edge.To("created_teams", Team.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Teams this user created."),
 		edge.To("modified_teams", Team.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Teams this user last modified."),
 		edge.To("created_pages", Page.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Content pages this user created."),
 		edge.To("modified_pages", Page.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Content pages this user last modified."),
 		edge.To("created_phases", Phase.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Phases this user created."),
 		edge.To("modified_phases", Phase.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Phases this user last modified."),
 		edge.To("created_submissions", Submission.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Submissions this user created."),
 		edge.To("modified_submissions", Submission.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Submissions this user last modified."),
 		edge.To("preferred_projects", Project.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)),
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Projects this user has marked as preferred."),
 	}
 }

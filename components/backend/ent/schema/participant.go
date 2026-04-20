@@ -17,19 +17,24 @@ type Participant struct {
 func (Participant) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		field.ID("user_id", "hackathon_id"),
+		schema.Comment("Join table for the M2M relationship between users and hackathons, with participation metadata."),
 	}
 }
 
 // Fields of the Participant.
 func (Participant) Fields() []ent.Field {
 	return []ent.Field{
-		field.Int("hackathon_id"),
-		field.Int("user_id"),
+		field.Int("hackathon_id").
+			Comment("Foreign key to the hackathon."),
+		field.Int("user_id").
+			Comment("Foreign key to the user."),
 		field.Bool("is_waiting").
-			Default(true),
+			Default(true).
+			Comment("Whether the participant is on the waitlist (true) or confirmed (false)."),
 		field.Time("created_at").
 			Immutable().
-			Default(time.Now),
+			Default(time.Now).
+			Comment("Timestamp when the participant joined."),
 	}
 }
 
@@ -38,9 +43,11 @@ func (Participant) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("hackathon", Hackathon.Type).
 			Unique().Required().
-			Field("hackathon_id"),
+			Field("hackathon_id").
+			Comment("The hackathon being participated in."),
 		edge.To("user", User.Type).
 			Unique().Required().
-			Field("user_id"),
+			Field("user_id").
+			Comment("The participating user."),
 	}
 }
