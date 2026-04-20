@@ -20,6 +20,7 @@ func (User) Fields() []ent.Field {
 		field.String("username"),
 		field.String("keycloak_id").NotEmpty().Unique(),
 		field.String("display_name").Optional().Default(""),
+		field.String("email").Optional().Default(""),
 		field.Time("created_at").Immutable().Default(time.Now),
 		field.Time("modified_at").
 			Default(time.Now).UpdateDefault(time.Now),

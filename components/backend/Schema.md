@@ -188,6 +188,7 @@ User:
 	| username     | string    | false  | false    | false    | false   | false         | false     | json:"username,omitempty"     |          0 |         |
 	| keycloak_id  | string    | true   | false    | false    | false   | false         | false     | json:"keycloak_id,omitempty"  |          1 |         |
 	| display_name | string    | false  | true     | false    | true    | false         | false     | json:"display_name,omitempty" |          0 |         |
+	| email        | string    | false  | true     | false    | true    | false         | false     | json:"email,omitempty"        |          0 |         |
 	| created_at   | time.Time | false  | false    | false    | true    | false         | true      | json:"created_at,omitempty"   |          0 |         |
 	| modified_at  | time.Time | false  | false    | false    | true    | true          | false     | json:"modified_at,omitempty"  |          0 |         |
 	+--------------+-----------+--------+----------+----------+---------+---------------+-----------+-------------------------------+------------+---------+

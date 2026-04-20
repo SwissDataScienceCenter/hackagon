@@ -35,4 +35,5 @@ message UserEntry {
     string keycloak_id = 2;
     google.protobuf.Timestamp created_at = 3;
     string display_name = 4;
+    string email = 5;
 }
