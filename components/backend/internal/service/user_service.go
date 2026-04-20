@@ -104,20 +104,31 @@ func (s *UserService) Register(
 		return nil, err
 	}
 
-	// Idempotent: return existing user if already registered.
+	username := m.UsernameFromClaims(claims, sub)
+	displayName := m.DisplayNameFromClaims(claims)
+	email := m.EmailFromClaims(claims)
+
+	// Idempotent: return existing user if already registered,
+	// syncing profile fields from Keycloak if they changed.
 	existing, err := s.dbClient.User.Query().
 		Where(entuser.KeycloakIDEQ(sub)).
 		Only(ctx)
 	if err == nil {
+		if existing.Username != username || existing.DisplayName != displayName || existing.Email != email {
+			existing, err = existing.Update().
+				SetUsername(username).
+				SetDisplayName(displayName).
+				SetEmail(email).
+				Save(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
+			}
+		}
 		return &proto.RegisterResponse{User: userEntryFromEnt(existing)}, nil
 	}
 	if !ent.IsNotFound(err) {
 		return nil, status.Errorf(codes.Internal, "check existing user: %v", err)
 	}
-
-	username := m.UsernameFromClaims(claims, sub)
-	displayName := m.DisplayNameFromClaims(claims)
-	email := m.EmailFromClaims(claims)
 
 	u, err := s.dbClient.User.Create().
 		SetKeycloakID(sub).
