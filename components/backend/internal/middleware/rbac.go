@@ -19,14 +19,16 @@ type Role int
 
 const (
 	Admin Role = iota
+	HackathonOrganizer
 	Owner
 	Member
 )
 
 var roleName = map[Role]string{
-	Admin:  "admin",
-	Owner:  "owner",
-	Member: "member",
+	Admin:              "admin",
+	HackathonOrganizer: "hackathon_organizer",
+	Owner:              "owner",
+	Member:             "member",
 }
 
 func (r Role) String() string {
@@ -58,11 +60,13 @@ type Permission int
 const (
 	Read Permission = iota
 	Write
+	Create
 )
 
 var permissionName = map[Permission]string{
-	Read:  "read",
-	Write: "write",
+	Create: "create",
+	Read:   "read",
+	Write:  "write",
 }
 
 func (p Permission) String() string {
@@ -109,6 +113,8 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
+		// HackathonOrganizer can create new hackathons
+		{HackathonOrganizer.String(), "*", Hackathon.String(), Create.String()},
 		// Owner can read owned hackathon
 		{Owner.String(), "*", Hackathon.String(), Read.String()},
 		// Owner can write owned hackathon

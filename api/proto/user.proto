@@ -10,6 +10,8 @@ service User {
   rpc List(UserListRequest) returns (UserListResponse);
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
   rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc AddRole(AddRoleRequest) returns (AddRoleResponse);
+  rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
 }
 
 message UserListRequest {}
@@ -31,9 +33,34 @@ message RegisterResponse {
 }
 
 message UserEntry {
-    string name = 1;
-    string keycloak_id = 2;
-    google.protobuf.Timestamp created_at = 3;
-    string display_name = 4;
-    string email = 5;
+    string id = 1;
+    string name = 2;
+    string keycloak_id = 3;
+    google.protobuf.Timestamp created_at = 4;
+    string display_name = 5;
+    string email = 6;
+    repeated GlobalRole roles = 7;
 }
+
+enum GlobalRole {
+    Admin = 0;
+    HackathonOrganizer = 1;
+}
+
+message AddRoleRequest{
+    string user_id = 1;
+    GlobalRole role = 2;
+}
+message AddRoleResponse{
+    UserEntry user = 1;
+}
+
+message RemoveRoleRequest{
+    string user_id = 1;
+    GlobalRole role = 2;
+}
+
+message RemoveRoleResponse{
+    UserEntry user = 1;
+}
+

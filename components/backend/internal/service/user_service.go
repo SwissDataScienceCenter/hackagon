@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
@@ -28,6 +29,7 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 
 func userEntryFromEnt(u *ent.User) *proto.UserEntry {
 	return &proto.UserEntry{
+		Id:          u.ID.String(),
 		Name:        u.Username,
 		KeycloakId:  u.KeycloakID,
 		DisplayName: u.DisplayName,
@@ -42,14 +44,16 @@ func (s *UserService) List(
 ) (*proto.UserListResponse, error) {
 	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
 	if err != nil {
-		return nil, err
+		log.Printf("enforce error: %w", err)
+		return nil, status.Error(codes.Internal, "authorization error")
 	}
 	if !ok {
-		return nil, errors.New("permission denied")
+		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
-		return nil, err
+		log.Printf("query user: %w", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 	entries := make([]*proto.UserEntry, 0, len(users))
 	for _, u := range users {
