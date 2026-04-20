@@ -75,7 +75,12 @@ func extractToken(ctx context.Context) (string, error) {
 }
 
 func (svc *JWTValidator) parseToken(token string) (*jwt.Token, error) {
-	return jwt.Parse(token, svc.Keyfunc, jwt.WithValidMethods([]string{svc.Algorithm.Alg()}), jwt.WithIssuer(svc.Issuer))
+	return jwt.Parse(
+		token,
+		svc.Keyfunc,
+		jwt.WithValidMethods([]string{svc.Algorithm.Alg()}),
+		jwt.WithIssuer(svc.Issuer),
+	)
 }
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
@@ -121,6 +126,17 @@ func GetSubject(ctx context.Context) (string, error) {
 	}
 
 	return sub, nil
+}
+
+func GetEmail(ctx context.Context) (string, error) {
+	claims, ok := GetClaims(ctx)
+	if !ok {
+		return "", errors.New("couldn't get claims from jwt")
+	}
+	if email, ok := claims["email"].(string); ok && email != "" {
+		return email, nil
+	}
+	return "", errors.New("no email claim in jwt")
 }
 
 func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterceptor {

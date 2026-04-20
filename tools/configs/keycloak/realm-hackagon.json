@@ -1999,11 +1999,7 @@
       "members": [
         {
           "membershipType": "UNMANAGED",
-          "username": "alice"
-        },
-        {
-          "membershipType": "UNMANAGED",
-          "username": "bob"
+          "username": "hackagon-admin"
         }
       ],
       "name": "sdsc"
@@ -2026,7 +2022,7 @@
   "quickLoginCheckMilliSeconds": 1000,
   "realm": "hackagon",
   "refreshTokenMaxReuse": 0,
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "registrationEmailAsUsername": false,
   "registrationFlow": "registration",
   "rememberMe": false,
@@ -2549,44 +2545,18 @@
         }
       ],
       "disableableCredentialTypes": [],
-      "email": "alice@swisscustodian.ch",
+      "email": "admin@hackagon.dev",
       "emailVerified": true,
       "enabled": true,
-      "firstName": "Alice",
+      "firstName": "Hackagon",
       "groups": ["/data-processor::337724a9-0875-4051-92ec-460c3bad857c"],
       "id": "1183370a-46a2-4dad-b8fd-dd927d083e14",
-      "lastName": "Wonderland",
+      "lastName": "Admin",
       "notBefore": 0,
       "realmRoles": ["default-roles-hackagon"],
       "requiredActions": [],
       "totp": false,
-      "username": "alice"
-    },
-    {
-      "createdTimestamp": 1737386440464,
-      "credentials": [
-        {
-          "createdDate": 1775330484525,
-          "credentialData": "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}",
-          "id": "62d3de63-bf08-4ad2-a5bb-07340900b13b",
-          "secretData": "{\"value\":\"jPgFCpnMKa/fUrSGXbseJQdtVwvt+dxOuTw2ZB5fZG0=\",\"salt\":\"guRQkAxJkO9qSZrqQvLvYA==\",\"additionalParameters\":{}}",
-          "type": "password",
-          "userLabel": "My password"
-        }
-      ],
-      "disableableCredentialTypes": [],
-      "email": "bob@swissdatacustodian.ch",
-      "emailVerified": true,
-      "enabled": true,
-      "firstName": "Bob",
-      "groups": ["/data-controller::e951f8f6-c19d-410a-9c7f-47f3dc354f6e"],
-      "id": "e951f8f6-c19d-410a-9c7f-47f3dc354f6e",
-      "lastName": "Wonderland",
-      "notBefore": 0,
-      "realmRoles": ["default-roles-hackagon"],
-      "requiredActions": [],
-      "totp": false,
-      "username": "bob"
+      "username": "hackagon-admin"
     }
   ],
   "verifiableCredentialsEnabled": false,

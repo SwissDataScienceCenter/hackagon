@@ -33,7 +33,12 @@ func createTestToken(t *testing.T, subject string, expiration time.Duration) str
 }
 
 // Helper function to create a test token with a custom issuer
-func createTestTokenWithIssuer(t *testing.T, subject string, expiration time.Duration, issuer string) string {
+func createTestTokenWithIssuer(
+	t *testing.T,
+	subject string,
+	expiration time.Duration,
+	issuer string,
+) string {
 	claims := jwt.MapClaims{
 		"sub": subject,
 		"exp": time.Now().Add(expiration).Unix(),
@@ -161,7 +166,12 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 		validator := newMockJWTValidator(t, skipFn)
 		_, err = validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Future nbf token should produce error")
-		assert.ErrorContains(t, err, "token is not valid yet", "Error should contain not valid yet message")
+		assert.ErrorContains(
+			t,
+			err,
+			"token is not valid yet",
+			"Error should contain not valid yet message",
+		)
 	})
 }
 
@@ -177,7 +187,12 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 		validator := newMockJWTValidator(t, skipFn)
 		_, err := validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Missing authorization header should produce error")
-		assert.ErrorContains(t, err, "authorization header missing", "Error should be ErrMissingKey")
+		assert.ErrorContains(
+			t,
+			err,
+			"authorization header missing",
+			"Error should be ErrMissingKey",
+		)
 	})
 
 	t.Run("EmptyAuthorizationHeader", func(t *testing.T) {
@@ -192,7 +207,12 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 		validator := newMockJWTValidator(t, skipFn)
 		_, err := validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Empty authorization header should produce error")
-		assert.ErrorContains(t, err, "authorization header missing", "Error should be ErrMissingKey")
+		assert.ErrorContains(
+			t,
+			err,
+			"authorization header missing",
+			"Error should be ErrMissingKey",
+		)
 	})
 
 	t.Run("MissingBearerPrefix", func(t *testing.T) {
@@ -242,7 +262,12 @@ func TestAuthMiddleware_SkipFunction(t *testing.T) {
 		// Should produce error due to missing auth
 		_, err := validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Non-health method should require auth")
-		assert.ErrorContains(t, err, "authorization header missing", "Error should be ErrMissingKey")
+		assert.ErrorContains(
+			t,
+			err,
+			"authorization header missing",
+			"Error should be ErrMissingKey",
+		)
 	})
 }
 
@@ -290,7 +315,12 @@ func TestGetSubject(t *testing.T) {
 
 		subject, err := GetSubject(ctx)
 		assert.Error(t, err, "Should produce error when no claims")
-		assert.Contains(t, err.Error(), "couldn't get claims from jwt", "Error should mention missing claims")
+		assert.Contains(
+			t,
+			err.Error(),
+			"couldn't get claims from jwt",
+			"Error should mention missing claims",
+		)
 		assert.Empty(t, subject, "Subject should be empty")
 	})
 

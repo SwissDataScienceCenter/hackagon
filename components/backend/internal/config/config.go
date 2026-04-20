@@ -20,8 +20,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port       string `yaml:"port"`
-	AdminEmail string `yaml:"adminemail"`
+	Port            string `yaml:"port"`
+	AdminEmail      string `yaml:"adminemail"`
+	AdminKeycloakID string `yaml:"adminkeycloakid"`
 }
 type DatabaseConfig struct {
 	Driver   string `yaml:"driver"`
