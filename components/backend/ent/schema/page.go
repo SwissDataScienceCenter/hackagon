@@ -68,3 +68,9 @@ func (Page) Indexes() []ent.Index {
 		index.Fields("visible"),
 	}
 }
+
+func (Page) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

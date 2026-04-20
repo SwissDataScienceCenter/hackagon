@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // TeamParticipant holds the schema definition for the TeamParticipant entity.
@@ -24,9 +25,9 @@ func (TeamParticipant) Annotations() []schema.Annotation {
 // Fields of the TeamParticipant.
 func (TeamParticipant) Fields() []ent.Field {
 	return []ent.Field{
-		field.Int("team_id").
+		field.UUID("team_id", uuid.UUID{}).
 			Comment("Foreign key to the team."),
-		field.Int("user_id").
+		field.UUID("user_id", uuid.UUID{}).
 			Comment("Foreign key to the user."),
 		field.Time("created_at").
 			Immutable().
@@ -46,5 +47,11 @@ func (TeamParticipant) Edges() []ent.Edge {
 			Unique().Required().
 			Field("user_id").
 			Comment("The team member."),
+	}
+}
+
+func (TeamParticipant) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
 	}
 }

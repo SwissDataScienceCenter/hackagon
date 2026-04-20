@@ -76,3 +76,9 @@ func (Project) Indexes() []ent.Index {
 		index.Fields("status"),
 	}
 }
+
+func (Project) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

@@ -80,3 +80,9 @@ func (Hackathon) Indexes() []ent.Index {
 		index.Fields("visibility"),
 	}
 }
+
+func (Hackathon) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

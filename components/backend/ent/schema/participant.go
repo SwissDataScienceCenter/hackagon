@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // Participant holds the schema definition for the Participant entity.
@@ -24,9 +25,9 @@ func (Participant) Annotations() []schema.Annotation {
 // Fields of the Participant.
 func (Participant) Fields() []ent.Field {
 	return []ent.Field{
-		field.Int("hackathon_id").
+		field.UUID("hackathon_id", uuid.UUID{}).
 			Comment("Foreign key to the hackathon."),
-		field.Int("user_id").
+		field.UUID("user_id", uuid.UUID{}).
 			Comment("Foreign key to the user."),
 		field.Bool("is_waiting").
 			Default(true).
@@ -49,5 +50,10 @@ func (Participant) Edges() []ent.Edge {
 			Unique().Required().
 			Field("user_id").
 			Comment("The participating user."),
+	}
+}
+func (Participant) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
 	}
 }
