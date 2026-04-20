@@ -20,19 +20,18 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config) {
+func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config) error {
 	if cfg.Server.AdminKeycloakID == "" {
-		return
+		return nil
 	}
 	exists, err := dbClient.User.Query().
 		Where(user.KeycloakIDEQ(cfg.Server.AdminKeycloakID)).
 		Exist(ctx)
 	if err != nil {
-		log.Printf("Warn: failed to check admin user: %v", err)
-		return
+		return fmt.Errorf("check admin user: %w", err)
 	}
 	if exists {
-		return
+		return nil
 	}
 	_, err = dbClient.User.Create().
 		SetKeycloakID(cfg.Server.AdminKeycloakID).
@@ -40,10 +39,10 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 		SetDisplayName("Hackagon Admin").
 		Save(ctx)
 	if err != nil {
-		log.Printf("Warn: failed to seed admin user: %v", err)
-		return
+		return fmt.Errorf("create admin user: %w", err)
 	}
 	log.Printf("Seeded admin user (keycloak_id=%s)", cfg.Server.AdminKeycloakID)
+	return nil
 }
 
 func skipAuth(ctx context.Context, method string) bool {
@@ -78,7 +77,9 @@ func main() {
 	if err := dbClient.Schema.Create(context.Background()); err != nil {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
-	seedAdminUser(context.Background(), dbClient, cfg)
+	if err := seedAdminUser(context.Background(), dbClient, cfg); err != nil {
+		log.Fatalf("failed to seed admin user: %v", err)
+	}
 	enf, err := mw.NewRBACEnforcer(cfg)
 	if err != nil {
 		log.Fatalf("failed to create RBAC enforcer: %v", err)
