@@ -117,6 +117,10 @@ func Load(configDir string) (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.Server.AdminKeycloakID == "" {
+		return nil, fmt.Errorf("server.adminkeycloakid is required")
+	}
+
 	return &cfg, nil
 }
 
