@@ -10,7 +10,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const authHeader = "authorization"
@@ -126,6 +128,39 @@ func GetSubject(ctx context.Context) (string, error) {
 	}
 
 	return sub, nil
+}
+
+func RequireSubject(ctx context.Context) (string, jwt.MapClaims, error) {
+	claims, ok := GetClaims(ctx)
+	if !ok {
+		return "", nil, status.Error(codes.Unauthenticated, "no claims in context")
+	}
+	sub, err := claims.GetSubject()
+	if err != nil || sub == "" {
+		return "", nil, status.Error(codes.Unauthenticated, "missing subject claim")
+	}
+	return sub, claims, nil
+}
+
+func UsernameFromClaims(claims map[string]interface{}, fallback string) string {
+	if v, ok := claims["preferred_username"].(string); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+func DisplayNameFromClaims(claims map[string]interface{}) string {
+	if v, ok := claims["name"].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func EmailFromClaims(claims map[string]interface{}) string {
+	if v, ok := claims["email"].(string); ok {
+		return v
+	}
+	return ""
 }
 
 func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterceptor {
