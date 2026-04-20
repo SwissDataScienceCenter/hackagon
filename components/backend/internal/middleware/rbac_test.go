@@ -1,9 +1,11 @@
 package middleware
 
 import (
-	_ "github.com/mattn/go-sqlite3"
+	"context"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
@@ -155,7 +157,12 @@ func TestEnforce(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			allowed, err := enf.enforcer.Enforce(
+				tc.user,
+				tc.hackathon,
+				tc.objectType,
+				tc.permission,
+			)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
 		})
@@ -249,7 +256,12 @@ func TestEnforcePublicHackathon(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			allowed, err := enf.enforcer.Enforce(
+				tc.user,
+				tc.hackathon,
+				tc.objectType,
+				tc.permission,
+			)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
 		})
@@ -297,9 +309,93 @@ func TestRBAC_AdminAccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(tc.user, tc.hackathon, tc.objectType, tc.permission)
+			allowed, err := enf.enforcer.Enforce(
+				tc.user,
+				tc.hackathon,
+				tc.objectType,
+				tc.permission,
+			)
 			require.NoError(t, err)
-			assert.Equal(t, tc.expected, allowed, "Admin should have %v access to %s %s", tc.expected, tc.objectType, tc.name)
+			assert.Equal(
+				t,
+				tc.expected,
+				allowed,
+				"Admin should have %v access to %s %s",
+				tc.expected,
+				tc.objectType,
+				tc.name,
+			)
+		})
+	}
+}
+
+// ctxWithClaims builds a context carrying JWT claims with the given sub and email.
+func ctxWithClaims(sub, email string) context.Context {
+	claims := jwt.MapClaims{"sub": sub}
+	if email != "" {
+		claims["email"] = email
+	}
+	return context.WithValue(context.Background(), claimsKey{}, claims)
+}
+
+// TestEnforce_DualSubEmail verifies that the Enforce method on the Enforcer
+// struct resolves admin access via the email fallback when the sub (UUID) has
+// no direct policy match.
+func TestEnforce_DualSubEmail(t *testing.T) {
+	const adminEmail = "admin@test.com"
+	enf := newTestEnforcer(t, adminEmail)
+
+	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("uuid-alice", "owner", "h1")
+
+	testCases := []struct {
+		name      string
+		ctx       context.Context
+		hackathon string
+		object    ObjectType
+		perm      Permission
+		expected  bool
+	}{
+		{
+			name:      "Admin UUID not in policy, but email matches g2",
+			ctx:       ctxWithClaims("uuid-admin-random", adminEmail),
+			hackathon: "any",
+			object:    User,
+			perm:      Read,
+			expected:  true,
+		},
+		{
+			name:      "Owner matched by sub UUID directly",
+			ctx:       ctxWithClaims("uuid-alice", "alice@example.com"),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			expected:  true,
+		},
+		{
+			name:      "Non-admin UUID with non-admin email is denied",
+			ctx:       ctxWithClaims("uuid-nobody", "nobody@example.com"),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			expected:  false,
+		},
+		{
+			name:      "Admin email without email claim in JWT is denied",
+			ctx:       ctxWithClaims("uuid-no-email", ""),
+			hackathon: "any",
+			object:    User,
+			perm:      Read,
+			expected:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			allowed, err := enf.Enforce(tc.ctx, tc.hackathon, tc.object, tc.perm)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, allowed)
 		})
 	}
 }

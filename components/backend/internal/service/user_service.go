@@ -5,8 +5,11 @@ import (
 	"errors"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -21,6 +24,29 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 		dbClient: dbClient,
 		enforcer: enf,
 	}
+}
+
+func userEntryFromEnt(u *ent.User) *proto.UserEntry {
+	return &proto.UserEntry{
+		Name:        u.Username,
+		KeycloakId:  u.KeycloakID,
+		DisplayName: u.DisplayName,
+		CreatedAt:   timestamppb.New(u.CreatedAt),
+	}
+}
+
+func usernameFromClaims(claims map[string]interface{}, fallback string) string {
+	if v, ok := claims["preferred_username"].(string); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+func displayNameFromClaims(claims map[string]interface{}) string {
+	if v, ok := claims["name"].(string); ok {
+		return v
+	}
+	return ""
 }
 
 func (s *UserService) List(
@@ -38,14 +64,87 @@ func (s *UserService) List(
 	if err != nil {
 		return nil, err
 	}
-	var users_out []*proto.UserEntry
-	for _, v := range users {
-		user := proto.UserEntry{
-			Name:       v.Username,
-			KeycloakId: v.KeycloakID,
-			CreatedAt:  timestamppb.New(v.CreatedAt),
-		}
-		users_out = append(users_out, &user)
+	entries := make([]*proto.UserEntry, 0, len(users))
+	for _, u := range users {
+		entries = append(entries, userEntryFromEnt(u))
 	}
-	return &proto.UserListResponse{Users: users_out}, nil
+	return &proto.UserListResponse{Users: entries}, nil
+}
+
+func (s *UserService) WhoAmI(
+	ctx context.Context,
+	_ *proto.WhoAmIRequest,
+) (*proto.WhoAmIResponse, error) {
+	claims, ok := m.GetClaims(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no claims in context")
+	}
+	sub, err := claims.GetSubject()
+	if err != nil || sub == "" {
+		return nil, status.Error(codes.Unauthenticated, "missing subject claim")
+	}
+
+	u, err := s.dbClient.User.Query().
+		Where(entuser.KeycloakIDEQ(sub)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Error(codes.NotFound, "user not registered on platform")
+		}
+		return nil, status.Errorf(codes.Internal, "query user: %v", err)
+	}
+
+	// Sync username and display_name from Keycloak if they changed.
+	wantUsername := usernameFromClaims(claims, sub)
+	wantDisplayName := displayNameFromClaims(claims)
+	if u.Username != wantUsername || u.DisplayName != wantDisplayName {
+		u, err = u.Update().
+			SetUsername(wantUsername).
+			SetDisplayName(wantDisplayName).
+			Save(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
+		}
+	}
+
+	return &proto.WhoAmIResponse{User: userEntryFromEnt(u)}, nil
+}
+
+func (s *UserService) Register(
+	ctx context.Context,
+	_ *proto.RegisterRequest,
+) (*proto.RegisterResponse, error) {
+	claims, ok := m.GetClaims(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no claims in context")
+	}
+	sub, err := claims.GetSubject()
+	if err != nil || sub == "" {
+		return nil, status.Error(codes.Unauthenticated, "missing subject claim")
+	}
+
+	// Idempotent: return existing user if already registered.
+	existing, err := s.dbClient.User.Query().
+		Where(entuser.KeycloakIDEQ(sub)).
+		Only(ctx)
+	if err == nil {
+		return &proto.RegisterResponse{User: userEntryFromEnt(existing)}, nil
+	}
+	if !ent.IsNotFound(err) {
+		return nil, status.Errorf(codes.Internal, "check existing user: %v", err)
+	}
+
+	username := usernameFromClaims(claims, sub)
+	displayName := displayNameFromClaims(claims)
+
+	u, err := s.dbClient.User.Create().
+		SetKeycloakID(sub).
+		SetUsername(username).
+		SetDisplayName(displayName).
+		Save(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "create user: %v", err)
+	}
+
+	return &proto.RegisterResponse{User: userEntryFromEnt(u)}, nil
 }

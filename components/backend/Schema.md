@@ -250,8 +250,9 @@ An authenticated user, synced from Keycloak on first login.
 
 | Column | Type | Required | Unique | Immutable | Default | Description |
 |--------|------|----------|--------|-----------|---------|-------------|
-| `username` | string | yes | no | no | no | Display username shown in the UI. |
+| `username` | string | yes | no | no | no | Username in Keycloak. |
 | `keycloak_id` | string | yes | yes | no | no | Unique identifier from Keycloak (sub claim). |
+| `display_name` | string | no | no | no | yes | Preferred display name of the user. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the user was first seen. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last profile update. |
 
