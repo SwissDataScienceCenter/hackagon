@@ -120,14 +120,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
 	}
 
-	if _, err := e.AddNamedGroupingPolicy("g2", []string{cfg.Server.AdminEmail, "admin"}); err != nil {
+	if _, err := e.AddNamedGroupingPolicy("g2", []string{cfg.Server.AdminKeycloakID, "admin"}); err != nil {
 		return fmt.Errorf("couldn't add default admin: %w", err)
-	}
-
-	if cfg.Server.AdminKeycloakID != "" {
-		if _, err := e.AddNamedGroupingPolicy("g2", []string{cfg.Server.AdminKeycloakID, "admin"}); err != nil {
-			return fmt.Errorf("couldn't add admin keycloak id policy: %w", err)
-		}
 	}
 
 	return nil
@@ -148,18 +142,5 @@ func (e *Enforcer) Enforce(
 		return false, err
 	}
 
-	allowed, err := e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
-	if err != nil {
-		return false, err
-	}
-	if allowed {
-		return true, nil
-	}
-
-	// Fallback: g2 admin policies are keyed by email, not UUID.
-	email, err := GetEmail(ctx)
-	if err != nil {
-		return false, nil
-	}
-	return e.enforcer.Enforce(email, hackathonId, object.String(), permission.String())
+	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
 }

@@ -21,10 +21,10 @@ func toInterfaceSlice(strs []string) []interface{} {
 }
 
 // newTestConfig creates a config with SQLite for testing
-func newTestConfig(adminEmail string) *config.Config {
+func newTestConfig(adminKeycloakID string) *config.Config {
 	return &config.Config{
 		Server: config.ServerConfig{
-			AdminEmail: adminEmail,
+			AdminKeycloakID: adminKeycloakID,
 		},
 		Database: config.DatabaseConfig{
 			Driver: "sqlite3",
@@ -33,10 +33,10 @@ func newTestConfig(adminEmail string) *config.Config {
 }
 
 // newTestEnforcer creates a new RBAC Enforcer with SQLite for testing
-func newTestEnforcer(t *testing.T, adminEmail string) *Enforcer {
+func newTestEnforcer(t *testing.T, adminKeycloakID string) *Enforcer {
 	t.Helper()
 
-	cfg := newTestConfig(adminEmail)
+	cfg := newTestConfig(adminKeycloakID)
 	enf, err := NewRBACEnforcer(cfg)
 	require.NoError(t, err)
 	require.NotNil(t, enf)
@@ -50,16 +50,16 @@ func newTestEnforcer(t *testing.T, adminEmail string) *Enforcer {
 
 // TestNewRBACEnforcer tests the enforcer creation with SQLite
 func TestNewRBACEnforcer(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
 
-	// Test: Admin user can read users
-	adminCanReadUsers, err := enf.enforcer.Enforce("admin@test.com", "any", "user", "read")
+	adminCanReadUsers, err := enf.enforcer.Enforce(adminID, "any", "user", "read")
 	require.NoError(t, err)
 	assert.True(t, adminCanReadUsers, "Admin should be able to read users by default")
 }
 
 func TestEnforce(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	enf := newTestEnforcer(t, "admin-uuid")
 
 	_, err := enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestEnforce(t *testing.T) {
 }
 
 func TestEnforcePublicHackathon(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	enf := newTestEnforcer(t, "admin-uuid")
 
 	_, err := enf.enforcer.AddPolicy("*", "h2", "hackathon", "read")
 	require.NoError(t, err)
@@ -270,9 +270,9 @@ func TestEnforcePublicHackathon(t *testing.T) {
 
 // TestRBAC_AdminAccess tests admin-level access control
 func TestRBAC_AdminAccess(t *testing.T) {
-	enf := newTestEnforcer(t, "admin@test.com")
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
 
-	// Admin user (admin@test.com) has g2 access to admin role
 	testCases := []struct {
 		name       string
 		user       string
@@ -283,7 +283,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 	}{
 		{
 			name:       "Admin reads any user",
-			user:       "admin@test.com",
+			user:       adminID,
 			hackathon:  "any",
 			objectType: "user",
 			permission: "read",
@@ -291,7 +291,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 		},
 		{
 			name:       "Admin reads any hackathon",
-			user:       "admin@test.com",
+			user:       adminID,
 			hackathon:  "any",
 			objectType: "hackathon",
 			permission: "read",
@@ -299,7 +299,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 		},
 		{
 			name:       "Admin writes any hackathon",
-			user:       "admin@test.com",
+			user:       adminID,
 			hackathon:  "any",
 			objectType: "hackathon",
 			permission: "write",
@@ -329,21 +329,17 @@ func TestRBAC_AdminAccess(t *testing.T) {
 	}
 }
 
-// ctxWithClaims builds a context carrying JWT claims with the given sub and email.
-func ctxWithClaims(sub, email string) context.Context {
+// ctxWithClaims builds a context carrying JWT claims with the given sub.
+func ctxWithClaims(sub string) context.Context {
 	claims := jwt.MapClaims{"sub": sub}
-	if email != "" {
-		claims["email"] = email
-	}
 	return context.WithValue(context.Background(), claimsKey{}, claims)
 }
 
-// TestEnforce_DualSubEmail verifies that the Enforce method on the Enforcer
-// struct resolves admin access via the email fallback when the sub (UUID) has
-// no direct policy match.
-func TestEnforce_DualSubEmail(t *testing.T) {
-	const adminEmail = "admin@test.com"
-	enf := newTestEnforcer(t, adminEmail)
+// TestEnforce_AdminByKeycloakID verifies that the Enforce method resolves
+// admin access by matching the JWT subject (Keycloak ID) against g2 policies.
+func TestEnforce_AdminByKeycloakID(t *testing.T) {
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
 
 	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
 	require.NoError(t, err)
@@ -358,8 +354,8 @@ func TestEnforce_DualSubEmail(t *testing.T) {
 		expected  bool
 	}{
 		{
-			name:      "Admin UUID not in policy, but email matches g2",
-			ctx:       ctxWithClaims("uuid-admin-random", adminEmail),
+			name:      "Admin Keycloak ID matches g2 policy",
+			ctx:       ctxWithClaims(adminID),
 			hackathon: "any",
 			object:    User,
 			perm:      Read,
@@ -367,25 +363,17 @@ func TestEnforce_DualSubEmail(t *testing.T) {
 		},
 		{
 			name:      "Owner matched by sub UUID directly",
-			ctx:       ctxWithClaims("uuid-alice", "alice@example.com"),
+			ctx:       ctxWithClaims("uuid-alice"),
 			hackathon: "h1",
 			object:    Hackathon,
 			perm:      Read,
 			expected:  true,
 		},
 		{
-			name:      "Non-admin UUID with non-admin email is denied",
-			ctx:       ctxWithClaims("uuid-nobody", "nobody@example.com"),
+			name:      "Unknown UUID is denied",
+			ctx:       ctxWithClaims("uuid-nobody"),
 			hackathon: "h1",
 			object:    Hackathon,
-			perm:      Read,
-			expected:  false,
-		},
-		{
-			name:      "Admin email without email claim in JWT is denied",
-			ctx:       ctxWithClaims("uuid-no-email", ""),
-			hackathon: "any",
-			object:    User,
 			perm:      Read,
 			expected:  false,
 		},
