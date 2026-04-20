@@ -69,3 +69,9 @@ func (Phase) Indexes() []ent.Index {
 		index.Fields("name"),
 	}
 }
+
+func (Phase) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

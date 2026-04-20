@@ -56,3 +56,9 @@ func (Track) Indexes() []ent.Index {
 		index.Fields("name").Edges("hackathon").Unique(),
 	}
 }
+
+func (Track) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

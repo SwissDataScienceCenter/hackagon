@@ -67,3 +67,9 @@ func (Submission) Indexes() []ent.Index {
 		index.Fields("version").Edges("project", "team").Unique(),
 	}
 }
+
+func (Submission) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

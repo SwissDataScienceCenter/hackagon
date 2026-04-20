@@ -57,3 +57,9 @@ func (Team) Edges() []ent.Edge {
 			Comment("Users who are members of this team."),
 	}
 }
+
+func (Team) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}

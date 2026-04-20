@@ -88,3 +88,9 @@ func (User) Edges() []ent.Edge {
 			Comment("Projects this user has marked as preferred."),
 	}
 }
+
+func (User) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		UUIDMixin{},
+	}
+}
