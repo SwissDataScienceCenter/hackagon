@@ -21,9 +21,6 @@ import (
 )
 
 func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config) error {
-	if cfg.Server.AdminKeycloakID == "" {
-		return nil
-	}
 	exists, err := dbClient.User.Query().
 		Where(user.KeycloakIDEQ(cfg.Server.AdminKeycloakID)).
 		Exist(ctx)
