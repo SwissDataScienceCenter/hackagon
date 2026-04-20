@@ -31,6 +31,7 @@ func userEntryFromEnt(u *ent.User) *proto.UserEntry {
 		Name:        u.Username,
 		KeycloakId:  u.KeycloakID,
 		DisplayName: u.DisplayName,
+		Email:       u.Email,
 		CreatedAt:   timestamppb.New(u.CreatedAt),
 	}
 }
@@ -44,6 +45,13 @@ func usernameFromClaims(claims map[string]interface{}, fallback string) string {
 
 func displayNameFromClaims(claims map[string]interface{}) string {
 	if v, ok := claims["name"].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func emailFromClaims(claims map[string]interface{}) string {
+	if v, ok := claims["email"].(string); ok {
 		return v
 	}
 	return ""
@@ -94,13 +102,15 @@ func (s *UserService) WhoAmI(
 		return nil, status.Errorf(codes.Internal, "query user: %v", err)
 	}
 
-	// Sync username and display_name from Keycloak if they changed.
+	// Sync profile fields from Keycloak if they changed.
 	wantUsername := usernameFromClaims(claims, sub)
 	wantDisplayName := displayNameFromClaims(claims)
-	if u.Username != wantUsername || u.DisplayName != wantDisplayName {
+	wantEmail := emailFromClaims(claims)
+	if u.Username != wantUsername || u.DisplayName != wantDisplayName || u.Email != wantEmail {
 		u, err = u.Update().
 			SetUsername(wantUsername).
 			SetDisplayName(wantDisplayName).
+			SetEmail(wantEmail).
 			Save(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
@@ -136,11 +146,13 @@ func (s *UserService) Register(
 
 	username := usernameFromClaims(claims, sub)
 	displayName := displayNameFromClaims(claims)
+	email := emailFromClaims(claims)
 
 	u, err := s.dbClient.User.Create().
 		SetKeycloakID(sub).
 		SetUsername(username).
 		SetDisplayName(displayName).
+		SetEmail(email).
 		Save(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create user: %v", err)

@@ -37,6 +37,7 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 		SetKeycloakID(cfg.Server.AdminKeycloakID).
 		SetUsername("hackagon-admin").
 		SetDisplayName("Hackagon Admin").
+		SetEmail(cfg.Server.AdminEmail).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("create admin user: %w", err)

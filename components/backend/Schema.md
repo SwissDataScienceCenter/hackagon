@@ -253,6 +253,7 @@ An authenticated user, synced from Keycloak on first login.
 | `username` | string | yes | no | no | no | Username in Keycloak. |
 | `keycloak_id` | string | yes | yes | no | no | Unique identifier from Keycloak (sub claim). |
 | `display_name` | string | no | no | no | yes | Preferred display name of the user. |
+| `email` | string | no | no | no | yes | Email of the user, same as in Keycloak |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the user was first seen. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last profile update. |
 
