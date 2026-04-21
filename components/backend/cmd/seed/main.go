@@ -62,11 +62,25 @@ func main() {
 }
 
 func seed(ctx context.Context, db *ent.Client, cfg *config.Config) error {
-	tx, err := db.Tx(ctx)
+	return withTx(ctx, db, func(tx *ent.Tx) error {
+		return seedInTx(ctx, tx.Client(), cfg)
+	})
+}
+
+// withTx runs fn inside a transaction, committing on success, rolling back on
+// error, and also rolling back if fn panics (re-raising the panic afterwards).
+func withTx(ctx context.Context, c *ent.Client, fn func(tx *ent.Tx) error) error {
+	tx, err := c.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	if err := seedInTx(ctx, tx.Client(), cfg); err != nil {
+	defer func() {
+		if v := recover(); v != nil {
+			_ = tx.Rollback()
+			panic(v)
+		}
+	}()
+	if err := fn(tx); err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
 			return fmt.Errorf("%w (rollback: %v)", err, rerr)
 		}
