@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
+	messages "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health/messages"
 )
 
 type HealthService struct {
@@ -20,11 +21,11 @@ func NewHealthService() *HealthService {
 
 func (s *HealthService) Check(
 	ctx context.Context,
-	req *proto.HealthCheckRequest,
-) (*proto.HealthCheckResponse, error) {
+	req *messages.HealthCheckRequest,
+) (*messages.HealthCheckResponse, error) {
 	message := "Service is healthy"
 
-	return &proto.HealthCheckResponse{
+	return &messages.HealthCheckResponse{
 		Message: message,
 	}, nil
 }

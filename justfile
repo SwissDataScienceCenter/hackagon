@@ -146,9 +146,9 @@ generate-proto *args:
     
     protoc \
         --go_out="$GO_OUT" \
-        --go_opt=module="github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto" \
+        --go_opt=paths=source_relative \
         --go-grpc_out="$GO_OUT" \
-        --go-grpc_opt=module="github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto" \
+        --go-grpc_opt=paths=source_relative \
         --proto_path="api/proto" \
         api/proto/**/*.proto
     echo "  - Generated Go code"

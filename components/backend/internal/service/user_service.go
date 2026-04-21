@@ -8,6 +8,8 @@ import (
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
+	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
+	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -26,8 +28,8 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 	}
 }
 
-func userEntryFromEnt(u *ent.User) *proto.UserEntry {
-	return &proto.UserEntry{
+func userEntryFromEnt(u *ent.User) *ents.UserEntry {
+	return &ents.UserEntry{
 		Id:          u.ID.String(),
 		Name:        u.Username,
 		KeycloakId:  u.KeycloakID,
@@ -39,8 +41,8 @@ func userEntryFromEnt(u *ent.User) *proto.UserEntry {
 
 func (s *UserService) List(
 	ctx context.Context,
-	req *proto.UserListRequest,
-) (*proto.UserListResponse, error) {
+	req *msgs.UserListRequest,
+) (*msgs.UserListResponse, error) {
 	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
 	if err != nil {
 		log.Printf("enforce error: %w", err)
@@ -54,17 +56,17 @@ func (s *UserService) List(
 		log.Printf("query user: %w", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	entries := make([]*proto.UserEntry, 0, len(users))
+	entries := make([]*ents.UserEntry, 0, len(users))
 	for _, u := range users {
 		entries = append(entries, userEntryFromEnt(u))
 	}
-	return &proto.UserListResponse{Users: entries}, nil
+	return &msgs.UserListResponse{Users: entries}, nil
 }
 
 func (s *UserService) WhoAmI(
 	ctx context.Context,
-	_ *proto.WhoAmIRequest,
-) (*proto.WhoAmIResponse, error) {
+	_ *msgs.WhoAmIRequest,
+) (*msgs.WhoAmIResponse, error) {
 	sub, claims, err := m.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
@@ -95,13 +97,13 @@ func (s *UserService) WhoAmI(
 		}
 	}
 
-	return &proto.WhoAmIResponse{User: userEntryFromEnt(u)}, nil
+	return &msgs.WhoAmIResponse{User: userEntryFromEnt(u)}, nil
 }
 
 func (s *UserService) Register(
 	ctx context.Context,
-	_ *proto.RegisterRequest,
-) (*proto.RegisterResponse, error) {
+	_ *msgs.RegisterRequest,
+) (*msgs.RegisterResponse, error) {
 	sub, claims, err := m.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
@@ -127,7 +129,7 @@ func (s *UserService) Register(
 				return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
 			}
 		}
-		return &proto.RegisterResponse{User: userEntryFromEnt(existing)}, nil
+		return &msgs.RegisterResponse{User: userEntryFromEnt(existing)}, nil
 	}
 	if !ent.IsNotFound(err) {
 		return nil, status.Errorf(codes.Internal, "check existing user: %v", err)
@@ -143,5 +145,5 @@ func (s *UserService) Register(
 		return nil, status.Errorf(codes.Internal, "create user: %v", err)
 	}
 
-	return &proto.RegisterResponse{User: userEntryFromEnt(u)}, nil
+	return &msgs.RegisterResponse{User: userEntryFromEnt(u)}, nil
 }

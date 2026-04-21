@@ -4,13 +4,11 @@ package hackathon;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
 
 message AddPageRequest {
     string title = 1;
     string content = 2;
     bool visible = 3;
     int32 order = 4;
-    google.protobuf.Timestamp created_at = 5;
-    google.protobuf.Timestamp modified_at = 6;
 }

@@ -2,6 +2,6 @@ syntax = "proto3";
 
 package user;
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages";
 
 message WhoAmIRequest {}

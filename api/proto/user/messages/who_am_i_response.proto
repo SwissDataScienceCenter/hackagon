@@ -4,7 +4,7 @@ package user;
 
 import "user/entities/user.proto";
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages";
 
 message WhoAmIResponse {
     UserEntry user = 1;
