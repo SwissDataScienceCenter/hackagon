@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package hackathon;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+enum Visibility {
+    VISIBILITY_PUBLIC = 0;
+    VISIBILITY_PRIVATE = 1;
+}

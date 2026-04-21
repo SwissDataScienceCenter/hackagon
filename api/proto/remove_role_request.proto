@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package user;
+
+import "global_role.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+message RemoveRoleRequest{
+    string user_id = 1;
+    GlobalRole role = 2;
+}

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"log"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
@@ -15,7 +14,7 @@ import (
 )
 
 type UserService struct {
-	proto.UnimplementedUserServer
+	proto.UnimplementedUserSvcServer
 	dbClient *ent.Client
 	enforcer *m.Enforcer
 }

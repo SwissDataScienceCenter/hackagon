@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package health;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+message HealthCheckRequest {
+}

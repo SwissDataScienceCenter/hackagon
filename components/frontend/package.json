@@ -15,7 +15,7 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "lint": "eslint . && tsc --noEmit",
-    "proto:generate": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/lib/server/grpc/generated --ts_proto_opt=outputServices=nice-grpc,outputServices=generic-definitions,esModuleInterop=true,env=node,useExactTypes=false --proto_path=../../api/proto health.proto user.proto"
+    "proto:generate": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/lib/server/grpc/generated --ts_proto_opt=outputServices=nice-grpc,outputServices=generic-definitions,esModuleInterop=true,env=node,useExactTypes=false --proto_path=../../api/proto health_service.proto user_service.proto hackathon_service.proto"
   },
   "devDependencies": {
     "@bufbuild/protobuf": "^2.11.0",

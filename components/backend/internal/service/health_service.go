@@ -8,7 +8,7 @@ import (
 )
 
 type HealthService struct {
-	proto.UnimplementedHealthServer
+	proto.UnimplementedHealthSvcServer
 	startTime time.Time
 }
 

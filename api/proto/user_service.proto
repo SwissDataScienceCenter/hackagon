@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package user;
+
+import "user_list_request.proto";
+import "user_list_response.proto";
+import "who_am_i_request.proto";
+import "who_am_i_response.proto";
+import "register_request.proto";
+import "register_response.proto";
+import "add_role_request.proto";
+import "add_role_response.proto";
+import "remove_role_request.proto";
+import "remove_role_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+service UserSvc {
+  rpc List(UserListRequest) returns (UserListResponse);
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc AddRole(AddRoleRequest) returns (AddRoleResponse);
+  rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
+}

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package user;
+
+import "google/protobuf/timestamp.proto";
+
+import "global_role.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+message UserEntry {
+    string id = 1;
+    string name = 2;
+    string keycloak_id = 3;
+    google.protobuf.Timestamp created_at = 4;
+    string display_name = 5;
+    string email = 6;
+    repeated GlobalRole roles = 7;
+}

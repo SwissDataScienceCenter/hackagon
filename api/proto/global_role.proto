@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+enum GlobalRole {
+    GLOBAL_ROLE_ADMIN = 0;
+    GLOBAL_ROLE_HACKATHON_ORGANIZER = 1;
+}

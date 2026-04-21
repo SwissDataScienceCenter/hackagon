@@ -98,8 +98,8 @@ func main() {
 	)
 
 	// Register health service
-	proto.RegisterHealthServer(server, healthService)
-	proto.RegisterUserServer(server, userService)
+	proto.RegisterHealthSvcServer(server, healthService)
+	proto.RegisterUserSvcServer(server, userService)
 
 	reflection.Register(server)
 

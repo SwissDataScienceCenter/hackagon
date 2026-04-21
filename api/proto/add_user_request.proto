@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package hackathon;
+
+import "hackathon_role.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+
+message AddUserRequest {
+    string hackathon_id = 1;
+    string user_id = 2;
+    HackathonRole role = 3;
+}
