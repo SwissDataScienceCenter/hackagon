@@ -132,6 +132,7 @@ generate-proto *args:
     PROTO_DIR="api/proto"
     GO_OUT="components/backend/internal/proto"
 
+    rm "$GO_OUT/*"||true
     mkdir -p "$GO_OUT"
 
     protoc \

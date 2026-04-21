@@ -4,16 +4,16 @@ package hackathon;
 
 import "google/protobuf/empty.proto";
 
-import "create_hackathon_request.proto";
-import "create_hackathon_response.proto";
-import "add_user_request.proto";
-import "add_user_response.proto";
-import "remove_user_request.proto";
-import "add_page_request.proto";
-import "add_page_response.proto";
-import "delete_page_request.proto";
+import "hackathon/messages/create_hackathon_request.proto";
+import "hackathon/messages/create_hackathon_response.proto";
+import "hackathon/messages/add_user_request.proto";
+import "hackathon/messages/add_user_response.proto";
+import "hackathon/messages/remove_user_request.proto";
+import "hackathon/messages/add_page_request.proto";
+import "hackathon/messages/add_page_response.proto";
+import "hackathon/messages/delete_page_request.proto";
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
 
 service HackathonSvc {
   rpc Create(CreateHackathonRequest) returns (CreateHackathonResponse);

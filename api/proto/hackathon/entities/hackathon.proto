@@ -3,10 +3,10 @@ syntax = "proto3";
 package hackathon;
 
 import "google/protobuf/timestamp.proto";
-import "visibility.proto";
-import "hackathon_member.proto";
+import "hackathon/entities/visibility.proto";
+import "hackathon/entities/hackathon_member.proto";
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/proto";
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
 
 message Hackathon {
     string id = 1;
