@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package hackathon;
+
+import "hackathon/messages/create_team_request.proto";
+import "hackathon/messages/create_team_response.proto";
+import "hackathon/messages/assign_user_request.proto";
+import "hackathon/messages/assign_user_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
+
+service TeamService{
+    rpc Create(hackathon.messages.CreateTeamRequest) returns (hackathon.messages.CreateTeamResponse);
+    rpc AssignUser(hackathon.messages.AssignUserRequest) returns (hackathon.messages.AssignUserResponse);
+ }

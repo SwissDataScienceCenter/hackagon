@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package hackathon;
+
+import "hackathon/messages/propose_project_request.proto";
+import "hackathon/messages/propose_project_response.proto";
+import "hackathon/messages/approve_project_request.proto";
+import "hackathon/messages/approve_project_response.proto";
+import "hackathon/messages/edit_project_request.proto";
+import "hackathon/messages/edit_project_response.proto";
+import "hackathon/messages/delete_project_request.proto";
+import "hackathon/messages/delete_project_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
+
+service ProjectService{
+  rpc Propose(hackathon.messages.ProposeProjectRequest) returns (hackathon.messages.ProposeProjectResponse);
+  rpc Approve(hackathon.messages.ApproveProjectRequest) returns (hackathon.messages.ApproveProjectResponse);
+  rpc Edit(hackathon.messages.EditProjectRequest) returns (hackathon.messages.EditProjectResponse);
+  rpc Delete(hackathon.messages.DeleteProjectRequest) returns (hackathon.messages.DeleteProjectResponse);
+    
+}

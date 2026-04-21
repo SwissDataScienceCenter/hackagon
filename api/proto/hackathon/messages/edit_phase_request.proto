@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package hackathon.messages;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
+
+message EditPhaseRequest {
+    string phase_id = 1;
+    string name = 2;
+    string description = 3;
+    optional google.protobuf.Timestamp start_date = 4;
+    optional google.protobuf.Timestamp end_date = 5;
+}
