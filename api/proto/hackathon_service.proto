@@ -4,11 +4,16 @@ package hackathon;
 
 import "google/protobuf/empty.proto";
 
+import "hackathon/messages/get_hackathon_request.proto";
+import "hackathon/messages/get_hackathon_response.proto";
+import "hackathon/messages/list_hackathon_request.proto";
+import "hackathon/messages/list_hackathon_response.proto";
 import "hackathon/messages/create_hackathon_request.proto";
 import "hackathon/messages/create_hackathon_response.proto";
-import "hackathon/messages/add_user_request.proto";
-import "hackathon/messages/add_user_response.proto";
-import "hackathon/messages/remove_user_request.proto";
+import "hackathon/messages/join_request.proto";
+import "hackathon/messages/add_owner_request.proto";
+import "hackathon/messages/remove_owner_request.proto";
+import "hackathon/messages/remove_participant_request.proto";
 import "hackathon/messages/add_page_request.proto";
 import "hackathon/messages/add_page_response.proto";
 import "hackathon/messages/delete_page_request.proto";
@@ -16,9 +21,13 @@ import "hackathon/messages/delete_page_request.proto";
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
 
 service HackathonSvc {
+  rpc List(ListHackathonRequest) returns (ListHackathonResponse);
+  rpc Get(GetHackathonRequest) returns (GetHackathonResponse);
   rpc Create(CreateHackathonRequest) returns (CreateHackathonResponse);
-  rpc AddUser(AddUserRequest) returns (AddUserResponse);
-  rpc RemoveUser(RemoveUserRequest) returns (google.protobuf.Empty);
+  rpc Join(JoinRequest) returns (google.protobuf.Empty);
+  rpc RemoveParticipant(RemoveParticipantRequest) returns (google.protobuf.Empty);
+  rpc AddOwner(AddOwnerRequest) returns (google.protobuf.Empty);
+  rpc RemoveOwner(RemoveOwnerRequest) returns (google.protobuf.Empty);
   rpc AddPage(AddPageRequest) returns (AddPageResponse);
   rpc DeletePage(DeletePageRequest) returns (google.protobuf.Empty);
 }

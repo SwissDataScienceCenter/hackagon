@@ -4,6 +4,8 @@ package user;
 
 import "user/messages/user_list_request.proto";
 import "user/messages/user_list_response.proto";
+import "user/messages/user_get_request.proto";
+import "user/messages/user_get_response.proto";
 import "user/messages/who_am_i_request.proto";
 import "user/messages/who_am_i_response.proto";
 import "user/messages/register_request.proto";
@@ -17,6 +19,7 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 service UserSvc {
   rpc List(UserListRequest) returns (UserListResponse);
+  rpc Get(UserGetRequest) returns (UserGetResponse);
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc AddRole(AddRoleRequest) returns (AddRoleResponse);
