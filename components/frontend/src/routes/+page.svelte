@@ -14,6 +14,10 @@
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
+    import DashboardView from '$lib/components/dashboard/DashboardView.svelte';
+
+    const { data } = $props();
+    const isLoggedIn = Boolean(data.session?.user?.id);
 
     let carouselIndex = $state(0);
     const carouselSlides = [
@@ -30,6 +34,10 @@
         carouselIndex = (carouselIndex - 1 + carouselSlides.length) % carouselSlides.length;
     }
 </script>
+
+{#if isLoggedIn}
+    <DashboardView session={data.session} />
+{:else}
 
 <!-- Hero -->
 <section class="relative flex min-h-[480px] flex-col items-center justify-center gap-6 px-20 pb-16 pt-10 text-center overflow-hidden">
@@ -239,3 +247,5 @@
     buttonLabel="Contact Us"
     buttonHref={resolve('/')}
 />
+
+{/if}
