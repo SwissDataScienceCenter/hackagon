@@ -4,14 +4,14 @@ package user;
 
 import "user/messages/add_role_request.proto";
 import "user/messages/add_role_response.proto";
-import "user/messages/register_request.proto";
-import "user/messages/register_response.proto";
-import "user/messages/remove_role_request.proto";
-import "user/messages/remove_role_response.proto";
 import "user/messages/get_request.proto";
 import "user/messages/get_response.proto";
 import "user/messages/list_request.proto";
 import "user/messages/list_response.proto";
+import "user/messages/register_request.proto";
+import "user/messages/register_response.proto";
+import "user/messages/remove_role_request.proto";
+import "user/messages/remove_role_response.proto";
 import "user/messages/who_am_i_request.proto";
 import "user/messages/who_am_i_response.proto";
 

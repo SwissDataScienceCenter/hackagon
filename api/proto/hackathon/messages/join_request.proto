@@ -6,5 +6,4 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message JoinRequest {
   string hackathon_id = 1;
-  string user_id = 2;
 }

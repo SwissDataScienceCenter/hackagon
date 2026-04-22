@@ -45,7 +45,7 @@ func (s *UserService) List(
 ) (*msgs.ListResponse, error) {
 	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
 	if err != nil {
-		log.Printf("enforce error: %w", err)
+		log.Printf("enforce error: %v", err)
 		return nil, status.Error(codes.Internal, "authorization error")
 	}
 	if !ok {
@@ -53,7 +53,7 @@ func (s *UserService) List(
 	}
 	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
-		log.Printf("query user: %w", err)
+		log.Printf("query user: %v", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 	entries := make([]*ents.User, 0, len(users))
