@@ -8,18 +8,18 @@ import "user/messages/register_request.proto";
 import "user/messages/register_response.proto";
 import "user/messages/remove_role_request.proto";
 import "user/messages/remove_role_response.proto";
-import "user/messages/user_get_request.proto";
-import "user/messages/user_get_response.proto";
-import "user/messages/user_list_request.proto";
-import "user/messages/user_list_response.proto";
+import "user/messages/get_request.proto";
+import "user/messages/get_response.proto";
+import "user/messages/list_request.proto";
+import "user/messages/list_response.proto";
 import "user/messages/who_am_i_request.proto";
 import "user/messages/who_am_i_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user";
 
-service UserSvc {
-  rpc List(user.messages.UserListRequest) returns (user.messages.UserListResponse);
-  rpc Get(user.messages.UserGetRequest) returns (user.messages.UserGetResponse);
+service UserService {
+  rpc List(user.messages.ListRequest) returns (user.messages.ListResponse);
+  rpc Get(user.messages.GetRequest) returns (user.messages.GetResponse);
   rpc WhoAmI(user.messages.WhoAmIRequest) returns (user.messages.WhoAmIResponse);
   rpc Register(user.messages.RegisterRequest) returns (user.messages.RegisterResponse);
   rpc AddRole(user.messages.AddRoleRequest) returns (user.messages.AddRoleResponse);

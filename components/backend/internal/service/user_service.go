@@ -7,7 +7,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages"
 	"google.golang.org/grpc/codes"
@@ -16,7 +16,7 @@ import (
 )
 
 type UserService struct {
-	proto.UnimplementedUserSvcServer
+	user.UnimplementedUserServiceServer
 	dbClient *ent.Client
 	enforcer *m.Enforcer
 }
@@ -28,8 +28,8 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 	}
 }
 
-func userEntryFromEnt(u *ent.User) *ents.UserEntry {
-	return &ents.UserEntry{
+func userEntryFromEnt(u *ent.User) *ents.User {
+	return &ents.User{
 		Id:          u.ID.String(),
 		Name:        u.Username,
 		KeycloakId:  u.KeycloakID,
@@ -41,8 +41,8 @@ func userEntryFromEnt(u *ent.User) *ents.UserEntry {
 
 func (s *UserService) List(
 	ctx context.Context,
-	req *msgs.UserListRequest,
-) (*msgs.UserListResponse, error) {
+	req *msgs.ListRequest,
+) (*msgs.ListResponse, error) {
 	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
 	if err != nil {
 		log.Printf("enforce error: %w", err)
@@ -56,11 +56,11 @@ func (s *UserService) List(
 		log.Printf("query user: %w", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	entries := make([]*ents.UserEntry, 0, len(users))
+	entries := make([]*ents.User, 0, len(users))
 	for _, u := range users {
 		entries = append(entries, userEntryFromEnt(u))
 	}
-	return &msgs.UserListResponse{Users: entries}, nil
+	return &msgs.ListResponse{Users: entries}, nil
 }
 
 func (s *UserService) WhoAmI(

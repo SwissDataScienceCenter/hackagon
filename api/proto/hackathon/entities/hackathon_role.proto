@@ -5,6 +5,7 @@ package hackathon.entities;
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
 
 enum HackathonRole {
-  HACKATHON_ROLE_OWNER = 0;
-  HACKATHON_ROLE_MEMBER = 1;
+  HACKATHON_ROLE_UNSPECIFIED = 0;
+  HACKATHON_ROLE_OWNER = 1;
+  HACKATHON_ROLE_MEMBER = 2;
 }

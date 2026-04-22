@@ -2,10 +2,6 @@ syntax = "proto3";
 
 package user.messages;
 
-import "user/entities/user.proto";
-
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages";
 
-message UserListResponse {
-  repeated user.entities.UserEntry users = 1;
-}
+message ListRequest {}

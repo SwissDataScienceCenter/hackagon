@@ -6,6 +6,8 @@ lint:
     - .devenv
   use:
     - STANDARD
+  except:
+    - PACKAGE_VERSION_SUFFIX
 breaking:
   ignore:
     - .devenv

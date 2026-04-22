@@ -7,7 +7,7 @@ import "user/entities/global_role.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities";
 
-message UserEntry {
+message User {
   string id = 1;
   string name = 2;
   string keycloak_id = 3;

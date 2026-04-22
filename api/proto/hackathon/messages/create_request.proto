@@ -7,7 +7,7 @@ import "hackathon/entities/visibility.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
 
-message CreateHackathonRequest {
+message CreateRequest {
   string name = 1;
   optional google.protobuf.Timestamp start_date = 2;
   optional google.protobuf.Timestamp end_date = 3;

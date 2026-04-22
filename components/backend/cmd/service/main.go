@@ -14,7 +14,8 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
+	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -98,8 +99,8 @@ func main() {
 	)
 
 	// Register health service
-	proto.RegisterHealthSvcServer(server, healthService)
-	proto.RegisterUserSvcServer(server, userService)
+	health.RegisterHealthServiceServer(server, healthService)
+	userSvc.RegisterUserServiceServer(server, userService)
 
 	reflection.Register(server)
 
