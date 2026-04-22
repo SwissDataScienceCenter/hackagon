@@ -49,10 +49,12 @@
 <aside class="flex w-72 shrink-0 flex-col gap-4">
     <div class="card preset-outlined-surface-200-800 overflow-hidden">
         <div class="flex flex-col gap-2 p-4">
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
             <a href={primaryActionHref} class="btn btn-sm preset-filled-primary-500 w-full no-underline">
                 <ListOrdered class="h-3.5 w-3.5" />
                 {primaryAction}
             </a>
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
             <a href={secondaryActionHref} class="btn btn-sm preset-outlined-surface-200-800 w-full no-underline">
                 <FilePlus class="h-3.5 w-3.5" />
                 {secondaryAction}
@@ -64,7 +66,7 @@
             <span class="text-xs font-bold tracking-widest text-surface-500">YOUR TEAM</span>
             <p class="mt-1.5 text-sm font-semibold">{teamName}</p>
             <div class="mt-2 flex -space-x-1.5">
-                {#each Array(teamMemberCount) as _, i (i)}
+                {#each Array.from({ length: teamMemberCount }, (_, i) => i) as i (i)}
                     <div class="h-6 w-6 rounded-full bg-surface-200 ring-2 ring-surface-50 dark:bg-surface-700 dark:ring-surface-900"></div>
                 {/each}
             </div>

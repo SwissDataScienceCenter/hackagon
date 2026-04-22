@@ -31,6 +31,7 @@
                     <span class="text-xs text-surface-700 dark:text-surface-100">{event.speaker}</span>
                     <span class="text-xs text-surface-700 dark:text-surface-100">{event.date}</span>
                     {#if event.linkUrl}
+                        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
                         <a href={event.linkUrl} class="flex items-center gap-1 text-xs text-primary-700 dark:text-primary-500 no-underline hover:underline">
                             More info
                             <ExternalLink class="h-3 w-3" />

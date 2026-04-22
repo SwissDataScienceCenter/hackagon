@@ -35,7 +35,7 @@
             <span class="text-xs font-bold tracking-widest text-surface-500">TEAM</span>
             <span class="text-sm font-semibold">{teamName}</span>
             <div class="flex -space-x-1.5">
-                {#each Array(teamMemberCount) as _, i (i)}
+                {#each Array.from({ length: teamMemberCount }, (_, i) => i) as i (i)}
                     <div class="h-6 w-6 rounded-full bg-surface-200 ring-2 ring-surface-50 dark:bg-surface-700 dark:ring-surface-900"></div>
                 {/each}
             </div>
@@ -51,6 +51,7 @@
 
         <div class="flex flex-col items-end gap-2">
             <span class="text-xs font-bold tracking-widest text-surface-500">NEXT STEP</span>
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
             <a href={nextActionHref} class="btn btn-sm preset-filled-primary-500 no-underline">
                 <ArrowRight class="h-3.5 w-3.5" />
                 {nextAction}

@@ -153,31 +153,12 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// If a logged-in user visits the login page, send them to welcome page.
-const redirectHandle: Handle = async ({ event, resolve }) => {
-  const isRootPath = event.url.pathname === "/"
-  const hasReturnTo = event.url.searchParams.has("returnTo")
-
-  if (isRootPath && !hasReturnTo) {
-    if (event.locals.session?.user?.id) {
-      event.locals.logger.debug(
-        { userId: event.locals.session.user.id },
-        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
-      )
-      throw redirect(303, "/dashboard")
-    }
-  }
-
-  return resolve(event)
-}
-
 // sequence() executes these in order.
 export const handle = sequence(
   setupHandle, // Setup Config and logger
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
   sessionSetupHandle, // Sanitize session + guard protected routes + setup gRPC clients
-  redirectHandle, // Redirect logged-in users to dashboard
 )
 
 // ----------------------------------------------------------

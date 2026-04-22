@@ -4,6 +4,7 @@
 
 <section class="px-20 py-12">
     <div class="markdown-content max-w-[860px]">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {@html content}
     </div>
 </section>

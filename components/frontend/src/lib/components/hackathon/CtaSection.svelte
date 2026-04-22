@@ -19,6 +19,7 @@
 <section class="flex flex-col items-center gap-4 px-20 py-14">
     <h2 class="text-2xl font-bold">{heading}</h2>
     <p class="text-sm text-surface-700 dark:text-surface-100">{subtitle}</p>
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
     <a href={buttonHref} class="btn preset-filled-primary-500 no-underline">
         <UserPlus class="h-4 w-4" />
         {buttonLabel}

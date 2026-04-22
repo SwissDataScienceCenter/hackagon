@@ -12,10 +12,12 @@
         { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
         { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
     ];
+
+    const hackathonTitle = "Open Research Data\nHackathon 2026";
 </script>
 
 <HeroSection
-    title={"Open Research Data\nHackathon 2026"}
+    title={hackathonTitle}
     dates="24 – 25 October 2026"
     venue="ETH Zurich, Zurich"
     imageUrl="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
