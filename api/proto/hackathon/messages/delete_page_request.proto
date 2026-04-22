@@ -5,5 +5,5 @@ package hackathon;
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
 
 message DeletePageRequest {
-    string page_id = 1;
+  string page_id = 1;
 }

@@ -15,6 +15,9 @@ _: {
   programs.goimports.enable = true;
   programs.golines.enable = true;
 
+  # protobuf
+  programs.buf.enable = true;
+
   # Markdown, JSON, YAML, etc.
   programs.prettier.enable = true;
   settings.formatter.prettier.excludes = [

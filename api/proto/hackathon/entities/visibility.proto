@@ -5,6 +5,6 @@ package hackathon;
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
 
 enum Visibility {
-    VISIBILITY_PUBLIC = 0;
-    VISIBILITY_PRIVATE = 1;
+  VISIBILITY_PUBLIC = 0;
+  VISIBILITY_PRIVATE = 1;
 }

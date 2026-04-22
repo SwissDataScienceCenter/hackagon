@@ -7,8 +7,7 @@ import "hackathon/entities/hackathon_status.proto";
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
 
 message ListHackathonRequest {
-    repeated HackathonStatus status_filter = 1;
-    optional string owner_id = 2;
-    optional string participant_id = 3;
+  repeated HackathonStatus status_filter = 1;
+  optional string owner_id = 2;
+  optional string participant_id = 3;
 }
-

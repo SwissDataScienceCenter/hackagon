@@ -7,5 +7,5 @@ import "user/entities/user.proto";
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages";
 
 message UserListResponse {
-    repeated UserEntry users = 1;
+  repeated UserEntry users = 1;
 }

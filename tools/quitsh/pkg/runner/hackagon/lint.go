@@ -43,7 +43,10 @@ func (r *GeneralLintRunner) Run(ctx runner.IContext) error {
 
 	log.Info("Run profobuf lint & breaking.")
 
-	err := bufCtx.Chain().Check("lint").Check("breaking", "--against", "https://github.com/swissdatasciencecenter/hackagon.git#branch=main").Error()
+	err := bufCtx.Chain().
+		Check("lint").
+		Check("breaking", "--against", ".git#branch=main").
+		Error()
 	if err != nil {
 		log.ErrorE(err, "Protobuf lint&breaking failed.")
 
