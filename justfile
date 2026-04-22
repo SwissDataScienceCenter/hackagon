@@ -129,31 +129,8 @@ clean-all *args:
 generate-proto *args:
     #!/usr/bin/env bash
     set -eu
-    PROTO_DIR="api/proto"
-    GO_OUT="components/backend/internal/proto"
 
-    mkdir -p "$GO_OUT"
-
-    for proto in "$PROTO_DIR"/*.proto; do
-        proto_file="$(basename "$proto")"
-        echo "Processing $proto_file..."
-
-        cp "$proto" "$GO_OUT/$proto_file"
-        echo "  - Copied to $GO_OUT/$proto_file"
-
-        protoc \
-            --go_out="$GO_OUT" \
-            --go_opt=paths=source_relative \
-            --go-grpc_out="$GO_OUT" \
-            --go-grpc_opt=paths=source_relative \
-            --proto_path="components/backend/internal/proto" \
-            "$(basename "$proto")"
-        echo "  - Generated Go code"
-    done
-
-    mkdir -p "components/frontend/src/lib/server/grpc/generated"
-    (cd components/frontend && pnpm install --frozen-lockfile && pnpm proto:generate)
-    echo "  - Generated TypeScript code"
+    buf generate
 
     echo "All protos processed."
 

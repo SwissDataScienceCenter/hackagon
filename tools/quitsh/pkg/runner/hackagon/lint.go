@@ -5,6 +5,7 @@ import (
 
 	"github.com/sdsc-ordes/quitsh/pkg/common"
 	"github.com/sdsc-ordes/quitsh/pkg/debug"
+	"github.com/sdsc-ordes/quitsh/pkg/exec"
 	"github.com/sdsc-ordes/quitsh/pkg/runner"
 )
 
@@ -31,5 +32,26 @@ func (r *GeneralLintRunner) ID() runner.RegisterID {
 }
 
 func (r *GeneralLintRunner) Run(ctx runner.IContext) error {
+
+	log := ctx.Log()
+	comp := ctx.Component()
+
+	log.Info("Starting lint for component.", "component", comp.Name())
+
+	builder := exec.NewCmdCtxBuilder().BaseCmd("buf").Cwd(comp.Root())
+	bufCtx := builder.Build()
+
+	log.Info("Run profobuf lint & breaking.")
+
+	err := bufCtx.Chain().
+		Check("lint").
+		Check("breaking", "--against", ".git#branch=main").
+		Error()
+	if err != nil {
+		log.ErrorE(err, "Protobuf lint&breaking failed.")
+
+		return err
+	}
+
 	return nil
 }

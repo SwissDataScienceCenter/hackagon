@@ -1,0 +1,26 @@
+version: v2
+plugins:
+  - local: protoc-gen-doc
+    strategy: all
+    out: api/proto
+    opt:
+      - markdown,API.md
+  - local: protoc-gen-go
+    out: components/backend/internal/proto
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: components/backend/internal/proto
+    opt:
+      - paths=source_relative
+  - local: ./components/frontend/node_modules/.bin/protoc-gen-ts_proto
+    strategy: all
+    out: components/frontend/src/lib/server/grpc/generated
+    opt:
+      - outputServices=nice-grpc
+      - outputServices=generic-definitions
+      - esModuleInterop=true
+      - env=node
+      - useExactTypes=false
+inputs:
+  - directory: api/proto

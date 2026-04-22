@@ -1,0 +1,15 @@
+version: v2
+modules:
+  - path: api/proto
+lint:
+  ignore:
+    - .devenv
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_VERSION_SUFFIX
+breaking:
+  ignore:
+    - .devenv
+  use:
+    - FILE

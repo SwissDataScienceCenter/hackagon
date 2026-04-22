@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package hackathon;
+
+import "hackathon/messages/add_owner_request.proto";
+import "hackathon/messages/add_owner_response.proto";
+import "hackathon/messages/add_page_request.proto";
+import "hackathon/messages/add_page_response.proto";
+import "hackathon/messages/create_request.proto";
+import "hackathon/messages/create_response.proto";
+import "hackathon/messages/delete_page_request.proto";
+import "hackathon/messages/delete_page_response.proto";
+import "hackathon/messages/get_request.proto";
+import "hackathon/messages/get_response.proto";
+import "hackathon/messages/join_request.proto";
+import "hackathon/messages/join_response.proto";
+import "hackathon/messages/list_request.proto";
+import "hackathon/messages/list_response.proto";
+import "hackathon/messages/remove_owner_request.proto";
+import "hackathon/messages/remove_owner_response.proto";
+import "hackathon/messages/remove_participant_request.proto";
+import "hackathon/messages/remove_participant_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
+
+service HackathonService {
+  rpc List(hackathon.messages.ListRequest) returns (hackathon.messages.ListResponse);
+  rpc Get(hackathon.messages.GetRequest) returns (hackathon.messages.GetResponse);
+  rpc Create(hackathon.messages.CreateRequest) returns (hackathon.messages.CreateResponse);
+  rpc Join(hackathon.messages.JoinRequest) returns (hackathon.messages.JoinResponse);
+  rpc RemoveParticipant(hackathon.messages.RemoveParticipantRequest) returns (hackathon.messages.RemoveParticipantResponse);
+  rpc AddOwner(hackathon.messages.AddOwnerRequest) returns (hackathon.messages.AddOwnerResponse);
+  rpc RemoveOwner(hackathon.messages.RemoveOwnerRequest) returns (hackathon.messages.RemoveOwnerResponse);
+  rpc AddPage(hackathon.messages.AddPageRequest) returns (hackathon.messages.AddPageResponse);
+  rpc DeletePage(hackathon.messages.DeletePageRequest) returns (hackathon.messages.DeletePageResponse);
+}
