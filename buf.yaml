@@ -1,0 +1,13 @@
+version: v2
+modules:
+  - path: api/proto
+lint:
+  ignore:
+    - .devenv
+  use:
+    - STANDARD
+breaking:
+  ignore:
+    - .devenv
+  use:
+    - FILE
