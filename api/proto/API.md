@@ -271,8 +271,8 @@
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
-| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | visibility | [Visibility](#hackathon-entities-Visibility) |  |  |
@@ -368,6 +368,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
 | title | [string](#string) |  |  |
 | content | [string](#string) |  |  |
 | visible | [bool](#bool) |  |  |
@@ -434,8 +435,8 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | name | [string](#string) |  |  |
-| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | visibility | [hackathon.entities.Visibility](#hackathon-entities-Visibility) |  |  |
 | description | [string](#string) | optional |  |
 | logo | [string](#string) | optional |  |
@@ -469,7 +470,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) | repeated |  |
+| hackathon_id | [string](#string) |  |  |
 
 
 
@@ -620,7 +621,6 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
-| user_id | [string](#string) |  |  |
 
 
 

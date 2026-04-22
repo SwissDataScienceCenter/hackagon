@@ -27,10 +27,10 @@ func (Hackathon) Fields() []ent.Field {
 		field.String("name").
 			NotEmpty().Unique().
 			Comment("Display name of the hackathon, must be unique."),
-		field.Time("start_date").Optional().Nillable().
-			Comment("Scheduled start date; nil if not yet scheduled."),
-		field.Time("end_date").Optional().Nillable().
-			Comment("Scheduled end date; nil if not yet scheduled."),
+		field.Time("starts_at").Optional().Nillable().
+			Comment("Scheduled start time; nil if not yet scheduled."),
+		field.Time("ends_at").Optional().Nillable().
+			Comment("Scheduled end time; nil if not yet scheduled."),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).
@@ -75,8 +75,8 @@ func (Hackathon) Edges() []ent.Edge {
 func (Hackathon) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("name"),
-		index.Fields("start_date"),
-		index.Fields("end_date"),
+		index.Fields("starts_at"),
+		index.Fields("ends_at"),
 		index.Fields("visibility"),
 	}
 }
