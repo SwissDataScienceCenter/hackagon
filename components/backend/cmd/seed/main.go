@@ -131,8 +131,8 @@ func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		SetName(sentinelHackathon).
 		SetVisibility(hackathon.VisibilityPublic).
 		SetDescription("A 3-day hackathon focused on building AI-powered applications. Open to all skill levels.").
-		SetStartDate(now.AddDate(0, 0, 19)).
-		SetEndDate(now.AddDate(0, 0, 21)).
+		SetStartsAt(now.AddDate(0, 0, 19)).
+		SetEndsAt(now.AddDate(0, 0, 21)).
 		SetCreator(alice).
 		SetModifier(alice).
 		Save(ctx)
@@ -151,8 +151,8 @@ func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		if _, err := db.Phase.Create().
 			SetName(ph.name).
 			SetDescription(ph.desc).
-			SetStartDate(ph.start).
-			SetEndDate(ph.end).
+			SetStartsAt(ph.start).
+			SetEndsAt(ph.end).
 			SetHackathon(h).
 			SetCreator(alice).
 			SetModifier(alice).
@@ -360,8 +360,8 @@ func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		SetName("Climate Tech Hackathon 2026").
 		SetVisibility(hackathon.VisibilityPublic).
 		SetDescription("Build solutions to address climate change through technology. Focus on energy, agriculture, and sustainability.").
-		SetStartDate(now.AddDate(0, 0, -2)).
-		SetEndDate(now.AddDate(0, 0, 2)).
+		SetStartsAt(now.AddDate(0, 0, -2)).
+		SetEndsAt(now.AddDate(0, 0, 2)).
 		SetCreator(admin).
 		SetModifier(admin).
 		Save(ctx)
@@ -380,8 +380,8 @@ func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		if _, err := db.Phase.Create().
 			SetName(ph.name).
 			SetDescription(ph.desc).
-			SetStartDate(ph.start).
-			SetEndDate(ph.end).
+			SetStartsAt(ph.start).
+			SetEndsAt(ph.end).
 			SetHackathon(h).
 			SetCreator(admin).
 			SetModifier(admin).
@@ -524,8 +524,8 @@ func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *en
 		SetName("Internal Product Sprint").
 		SetVisibility(hackathon.VisibilityPrivate).
 		SetDescription("An internal sprint to improve developer tooling and data infrastructure.").
-		SetStartDate(now.AddDate(0, -1, -20)).
-		SetEndDate(now.AddDate(0, -1, -18)).
+		SetStartsAt(now.AddDate(0, -1, -20)).
+		SetEndsAt(now.AddDate(0, -1, -18)).
 		SetCreator(admin).
 		SetModifier(admin).
 		Save(ctx)
@@ -544,8 +544,8 @@ func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *en
 		if _, err := db.Phase.Create().
 			SetName(ph.name).
 			SetDescription(ph.desc).
-			SetStartDate(ph.start).
-			SetEndDate(ph.end).
+			SetStartsAt(ph.start).
+			SetEndsAt(ph.end).
 			SetHackathon(h).
 			SetCreator(admin).
 			SetModifier(admin).
