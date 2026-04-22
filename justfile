@@ -129,32 +129,8 @@ clean-all *args:
 generate-proto *args:
     #!/usr/bin/env bash
     set -eu
-    shopt -s globstar
-    PROTO_DIR="api/proto"
-    GO_OUT="components/backend/internal/proto"
 
-    rm -rf "$GO_OUT/*" 2>/dev/null||true
-    mkdir -p "$GO_OUT"
-
-    protoc \
-        --doc_out=api/proto/ \
-        --doc_opt=markdown,API.md \
-        -I="api/proto" \
-        api/proto/**/*.proto
-    echo "  - Generated api docs"
-    
-    protoc \
-        --go_out="$GO_OUT" \
-        --go_opt=paths=source_relative \
-        --go-grpc_out="$GO_OUT" \
-        --go-grpc_opt=paths=source_relative \
-        --proto_path="api/proto" \
-        api/proto/**/*.proto
-    echo "  - Generated Go code"
-
-    mkdir -p "components/frontend/src/lib/server/grpc/generated"
-    (cd components/frontend && pnpm install --frozen-lockfile && pnpm proto:generate)
-    echo "  - Generated TypeScript code"
+    buf generate
 
     echo "All protos processed."
 

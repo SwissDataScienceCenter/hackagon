@@ -56,3 +56,9 @@ run-service service:
     "{{service}}" \
         --config-dir ./data/test/config/
 
+# Clean the build.
+[group('general')]
+clean *args:
+    shopt -s extglob
+    rm -rf internal/proto/*
+    find ent -mindepth 1 -maxdepth 1 ! -name "schema" -exec rm -rf {} +

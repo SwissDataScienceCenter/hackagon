@@ -3,14 +3,11 @@
 
 ## Table of Contents
 
-- [hackathon/entities/hackathon_member.proto](#hackathon_entities_hackathon_member-proto)
-    - [HackathonMember](#hackathon-entities-HackathonMember)
-  
-- [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
-    - [Hackathon](#hackathon-entities-Hackathon)
-  
 - [hackathon/entities/hackathon_role.proto](#hackathon_entities_hackathon_role-proto)
     - [HackathonRole](#hackathon-entities-HackathonRole)
+  
+- [hackathon/entities/hackathon_member.proto](#hackathon_entities_hackathon_member-proto)
+    - [HackathonMember](#hackathon-entities-HackathonMember)
   
 - [hackathon/entities/hackathon_status.proto](#hackathon_entities_hackathon_status-proto)
     - [HackathonStatus](#hackathon-entities-HackathonStatus)
@@ -18,8 +15,8 @@
 - [hackathon/entities/visibility.proto](#hackathon_entities_visibility-proto)
     - [Visibility](#hackathon-entities-Visibility)
   
-- [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
-    - [HackathonService](#hackathon-HackathonService)
+- [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
+    - [Hackathon](#hackathon-entities-Hackathon)
   
 - [hackathon/messages/add_owner_request.proto](#hackathon_messages_add_owner_request-proto)
     - [AddOwnerRequest](#hackathon-messages-AddOwnerRequest)
@@ -75,14 +72,17 @@
 - [hackathon/messages/remove_participant_response.proto](#hackathon_messages_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-RemoveParticipantResponse)
   
-- [health/health_service.proto](#health_health_service-proto)
-    - [HealthService](#health-HealthService)
+- [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
+    - [HackathonService](#hackathon-HackathonService)
   
 - [health/messages/check_request.proto](#health_messages_check_request-proto)
     - [CheckRequest](#health-messages-CheckRequest)
   
 - [health/messages/check_response.proto](#health_messages_check_response-proto)
     - [CheckResponse](#health-messages-CheckResponse)
+  
+- [health/health_service.proto](#health_health_service-proto)
+    - [HealthService](#health-HealthService)
   
 - [user/entities/global_role.proto](#user_entities_global_role-proto)
     - [GlobalRole](#user-entities-GlobalRole)
@@ -133,6 +133,35 @@
 
 
 
+<a name="hackathon_entities_hackathon_role-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_role.proto
+
+
+ 
+
+
+<a name="hackathon-entities-HackathonRole"></a>
+
+### HackathonRole
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| HACKATHON_ROLE_UNSPECIFIED | 0 |  |
+| HACKATHON_ROLE_OWNER | 1 |  |
+| HACKATHON_ROLE_MEMBER | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_hackathon_member-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -157,76 +186,6 @@
 
 
  
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_entities_hackathon-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/entities/hackathon.proto
-
-
-
-<a name="hackathon-entities-Hackathon"></a>
-
-### Hackathon
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| name | [string](#string) |  |  |
-| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
-| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
-| visibility | [Visibility](#hackathon-entities-Visibility) |  |  |
-| status | [HackathonStatus](#hackathon-entities-HackathonStatus) |  |  |
-| description | [string](#string) | optional |  |
-| logo | [string](#string) | optional |  |
-| members | [HackathonMember](#hackathon-entities-HackathonMember) | repeated |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_entities_hackathon_role-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/entities/hackathon_role.proto
-
-
- 
-
-
-<a name="hackathon-entities-HackathonRole"></a>
-
-### HackathonRole
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| HACKATHON_ROLE_UNSPECIFIED | 0 |  |
-| HACKATHON_ROLE_OWNER | 1 |  |
-| HACKATHON_ROLE_MEMBER | 2 |  |
-
 
  
 
@@ -295,10 +254,35 @@
 
 
 
-<a name="hackathon_hackathon_service-proto"></a>
+<a name="hackathon_entities_hackathon-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/hackathon_service.proto
+## hackathon/entities/hackathon.proto
+
+
+
+<a name="hackathon-entities-Hackathon"></a>
+
+### Hackathon
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| visibility | [Visibility](#hackathon-entities-Visibility) |  |  |
+| status | [HackathonStatus](#hackathon-entities-HackathonStatus) |  |  |
+| description | [string](#string) | optional |  |
+| logo | [string](#string) | optional |  |
+| members | [HackathonMember](#hackathon-entities-HackathonMember) | repeated |  |
+
+
+
 
 
  
@@ -306,24 +290,6 @@
  
 
  
-
-
-<a name="hackathon-HackathonService"></a>
-
-### HackathonService
-
-
-| Method Name | Request Type | Response Type | Description |
-| ----------- | ------------ | ------------- | ------------|
-| List | [messages.ListRequest](#hackathon-messages-ListRequest) | [messages.ListResponse](#hackathon-messages-ListResponse) |  |
-| Get | [messages.GetRequest](#hackathon-messages-GetRequest) | [messages.GetResponse](#hackathon-messages-GetResponse) |  |
-| Create | [messages.CreateRequest](#hackathon-messages-CreateRequest) | [messages.CreateResponse](#hackathon-messages-CreateResponse) |  |
-| Join | [messages.JoinRequest](#hackathon-messages-JoinRequest) | [messages.JoinResponse](#hackathon-messages-JoinResponse) |  |
-| RemoveParticipant | [messages.RemoveParticipantRequest](#hackathon-messages-RemoveParticipantRequest) | [messages.RemoveParticipantResponse](#hackathon-messages-RemoveParticipantResponse) |  |
-| AddOwner | [messages.AddOwnerRequest](#hackathon-messages-AddOwnerRequest) | [messages.AddOwnerResponse](#hackathon-messages-AddOwnerResponse) |  |
-| RemoveOwner | [messages.RemoveOwnerRequest](#hackathon-messages-RemoveOwnerRequest) | [messages.RemoveOwnerResponse](#hackathon-messages-RemoveOwnerResponse) |  |
-| AddPage | [messages.AddPageRequest](#hackathon-messages-AddPageRequest) | [messages.AddPageResponse](#hackathon-messages-AddPageResponse) |  |
-| DeletePage | [messages.DeletePageRequest](#hackathon-messages-DeletePageRequest) | [messages.DeletePageResponse](#hackathon-messages-DeletePageResponse) |  |
 
  
 
@@ -876,10 +842,10 @@
 
 
 
-<a name="health_health_service-proto"></a>
+<a name="hackathon_hackathon_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## health/health_service.proto
+## hackathon/hackathon_service.proto
 
 
  
@@ -889,14 +855,22 @@
  
 
 
-<a name="health-HealthService"></a>
+<a name="hackathon-HackathonService"></a>
 
-### HealthService
+### HackathonService
 
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| Check | [messages.CheckRequest](#health-messages-CheckRequest) | [messages.CheckResponse](#health-messages-CheckResponse) |  |
+| List | [messages.ListRequest](#hackathon-messages-ListRequest) | [messages.ListResponse](#hackathon-messages-ListResponse) |  |
+| Get | [messages.GetRequest](#hackathon-messages-GetRequest) | [messages.GetResponse](#hackathon-messages-GetResponse) |  |
+| Create | [messages.CreateRequest](#hackathon-messages-CreateRequest) | [messages.CreateResponse](#hackathon-messages-CreateResponse) |  |
+| Join | [messages.JoinRequest](#hackathon-messages-JoinRequest) | [messages.JoinResponse](#hackathon-messages-JoinResponse) |  |
+| RemoveParticipant | [messages.RemoveParticipantRequest](#hackathon-messages-RemoveParticipantRequest) | [messages.RemoveParticipantResponse](#hackathon-messages-RemoveParticipantResponse) |  |
+| AddOwner | [messages.AddOwnerRequest](#hackathon-messages-AddOwnerRequest) | [messages.AddOwnerResponse](#hackathon-messages-AddOwnerResponse) |  |
+| RemoveOwner | [messages.RemoveOwnerRequest](#hackathon-messages-RemoveOwnerRequest) | [messages.RemoveOwnerResponse](#hackathon-messages-RemoveOwnerResponse) |  |
+| AddPage | [messages.AddPageRequest](#hackathon-messages-AddPageRequest) | [messages.AddPageResponse](#hackathon-messages-AddPageResponse) |  |
+| DeletePage | [messages.DeletePageRequest](#hackathon-messages-DeletePageRequest) | [messages.DeletePageResponse](#hackathon-messages-DeletePageResponse) |  |
 
  
 
@@ -954,6 +928,32 @@
  
 
  
+
+ 
+
+
+
+<a name="health_health_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## health/health_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="health-HealthService"></a>
+
+### HealthService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| Check | [messages.CheckRequest](#health-messages-CheckRequest) | [messages.CheckResponse](#health-messages-CheckResponse) |  |
 
  
 

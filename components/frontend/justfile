@@ -69,6 +69,8 @@ run-service *cmd:
 clean *args:
     rm -rf node_modules
     rm -rf .output
+    rm -rf components/backend/internal/proto/*
+    rm -rf components/frontend/src/lib/server/grpc/generated/*
 
 [private]
 init:
