@@ -1792,7 +1792,7 @@
             {
               "id": "hli-phase-bar",
               "name": "Phase Timeline",
-              "context": "FUNCTIONALITY: Show temporal progression. Phases from data model: each hackathon has multiple Phase records (id, hackathon_id, start_date, end_date, name). Current phase highlighted. Completed phases dimmed. Future phases muted.",
+              "context": "FUNCTIONALITY: Show temporal progression. Phases from data model: each hackathon has multiple Phase records (id, hackathon_id, starts_at, ends_at, name). Current phase highlighted. Completed phases dimmed. Future phases muted.",
               "type": "frame",
               "width": "fill_container", "height": 36,
               "fill": "$color.surface",

@@ -9,8 +9,8 @@ A hackathon event containing tracks, projects, phases, and participants.
 | Column        | Type                  | Required | Unique | Immutable | Default | Description                                                    |
 | ------------- | --------------------- | -------- | ------ | --------- | ------- | -------------------------------------------------------------- |
 | `name`        | string                | yes      | yes    | no        | no      | Display name of the hackathon, must be unique.                 |
-| `start_date`  | time.Time             | no       | no     | no        | no      | Scheduled start date; nil if not yet scheduled.                |
-| `end_date`    | time.Time             | no       | no     | no        | no      | Scheduled end date; nil if not yet scheduled.                  |
+| `starts_at`   | time.Time             | no       | no     | no        | no      | Scheduled start time; nil if not yet scheduled.                |
+| `ends_at`     | time.Time             | no       | no     | no        | no      | Scheduled end time; nil if not yet scheduled.                  |
 | `created_at`  | time.Time             | yes      | no     | yes       | yes     | Timestamp when the hackathon was created.                      |
 | `modified_at` | time.Time             | yes      | no     | no        | yes     | Timestamp of the last modification.                            |
 | `visibility`  | enum(public, private) | yes      | no     | no        | no      | Controls whether non-participants can discover this hackathon. |
@@ -33,8 +33,8 @@ A hackathon event containing tracks, projects, phases, and participants.
 ### Indexes
 
 - `name`
-- `start_date`
-- `end_date`
+- `starts_at`
+- `ends_at`
 - `visibility`
 
 ## Page
@@ -95,8 +95,8 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 
 | Column        | Type      | Required | Unique | Immutable | Default | Description                                       |
 | ------------- | --------- | -------- | ------ | --------- | ------- | ------------------------------------------------- |
-| `start_date`  | time.Time | no       | no     | no        | no      | When this phase begins; nil if not yet scheduled. |
-| `end_date`    | time.Time | no       | no     | no        | no      | When this phase ends; nil if not yet scheduled.   |
+| `starts_at`   | time.Time | no       | no     | no        | no      | When this phase begins; nil if not yet scheduled. |
+| `ends_at`     | time.Time | no       | no     | no        | no      | When this phase ends; nil if not yet scheduled.   |
 | `name`        | string    | yes      | no     | no        | no      | Display name of the phase.                        |
 | `description` | string    | no       | no     | no        | no      | Description of the phase and its objectives.      |
 | `created_at`  | time.Time | yes      | no     | yes       | yes     | Timestamp when the phase was created.             |
@@ -113,8 +113,8 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 
 ### Indexes
 
-- `start_date`
-- `end_date`
+- `starts_at`
+- `ends_at`
 - `name`
 
 ## Project

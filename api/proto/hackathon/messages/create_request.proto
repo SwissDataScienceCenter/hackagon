@@ -9,8 +9,8 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message CreateRequest {
   string name = 1;
-  optional google.protobuf.Timestamp start_date = 2;
-  optional google.protobuf.Timestamp end_date = 3;
+  optional google.protobuf.Timestamp starts_at = 2;
+  optional google.protobuf.Timestamp ends_at = 3;
   hackathon.entities.Visibility visibility = 4;
   optional string description = 5;
   optional string logo = 6;

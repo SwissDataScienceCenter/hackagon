@@ -24,9 +24,9 @@ func (Phase) Annotations() []schema.Annotation {
 // Fields of the Phase.
 func (Phase) Fields() []ent.Field {
 	return []ent.Field{
-		field.Time("start_date").Optional().Nillable().
+		field.Time("starts_at").Optional().Nillable().
 			Comment("When this phase begins; nil if not yet scheduled."),
-		field.Time("end_date").Optional().Nillable().
+		field.Time("ends_at").Optional().Nillable().
 			Comment("When this phase ends; nil if not yet scheduled."),
 		field.String("name").
 			NotEmpty().
@@ -64,8 +64,8 @@ func (Phase) Edges() []ent.Edge {
 // Indexes of the Phase.
 func (Phase) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("start_date"),
-		index.Fields("end_date"),
+		index.Fields("starts_at"),
+		index.Fields("ends_at"),
 		index.Fields("name"),
 	}
 }
