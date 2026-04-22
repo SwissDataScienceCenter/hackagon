@@ -144,9 +144,9 @@ func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		name, desc string
 		start, end time.Time
 	}{
-		{"Ideation", "Define your project idea and form your team.", now.AddDate(0, 0, 19), now.AddDate(0, 0, 19)},
-		{"Hacking", "Build your project. Mentors available throughout the day.", now.AddDate(0, 0, 20), now.AddDate(0, 0, 20)},
-		{"Judging", "Present your project to the judges. Top 3 teams win prizes.", now.AddDate(0, 0, 21), now.AddDate(0, 0, 21)},
+		{"Ideation", "Define your project idea and form your team.", now.AddDate(0, 0, 19).Add(9 * time.Hour), now.AddDate(0, 0, 19).Add(18 * time.Hour)},
+		{"Hacking", "Build your project. Mentors available throughout the day.", now.AddDate(0, 0, 20).Add(9 * time.Hour), now.AddDate(0, 0, 20).Add(21 * time.Hour)},
+		{"Judging", "Present your project to the judges. Top 3 teams win prizes.", now.AddDate(0, 0, 21).Add(10 * time.Hour), now.AddDate(0, 0, 21).Add(16 * time.Hour)},
 	} {
 		if _, err := db.Phase.Create().
 			SetName(ph.name).
@@ -375,7 +375,7 @@ func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 	}{
 		{"Ideation", "Research the problem space and define your approach.", now.AddDate(0, 0, -2), now.AddDate(0, 0, -1)},
 		{"Hacking", "Build your climate tech solution with support from domain experts.", now.AddDate(0, 0, 0), now.AddDate(0, 0, 1)},
-		{"Judging", "Demo day: present your solution to a panel of sustainability experts.", now.AddDate(0, 0, 2), now.AddDate(0, 0, 2)},
+		{"Judging", "Demo day: present your solution to a panel of sustainability experts.", now.AddDate(0, 0, 2).Add(9 * time.Hour), now.AddDate(0, 0, 2).Add(17 * time.Hour)},
 	} {
 		if _, err := db.Phase.Create().
 			SetName(ph.name).
@@ -537,9 +537,9 @@ func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *en
 		name, desc string
 		start, end time.Time
 	}{
-		{"Ideation", "Identify pain points in the current developer workflow and scope your proposal.", now.AddDate(0, -1, -20), now.AddDate(0, -1, -20)},
-		{"Building", "Implement your improvement prototype.", now.AddDate(0, -1, -19), now.AddDate(0, -1, -19)},
-		{"Demo", "Present your prototype and gather feedback from the team.", now.AddDate(0, -1, -18), now.AddDate(0, -1, -18)},
+		{"Ideation", "Identify pain points in the current developer workflow and scope your proposal.", now.AddDate(0, -1, -20).Add(9 * time.Hour), now.AddDate(0, -1, -20).Add(18 * time.Hour)},
+		{"Building", "Implement your improvement prototype.", now.AddDate(0, -1, -19).Add(9 * time.Hour), now.AddDate(0, -1, -19).Add(21 * time.Hour)},
+		{"Demo", "Present your prototype and gather feedback from the team.", now.AddDate(0, -1, -18).Add(10 * time.Hour), now.AddDate(0, -1, -18).Add(16 * time.Hour)},
 	} {
 		if _, err := db.Phase.Create().
 			SetName(ph.name).
