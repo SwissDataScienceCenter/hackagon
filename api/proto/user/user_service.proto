@@ -15,13 +15,13 @@ import "user/messages/user_list_response.proto";
 import "user/messages/who_am_i_request.proto";
 import "user/messages/who_am_i_response.proto";
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto";
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user";
 
 service UserSvc {
-  rpc List(UserListRequest) returns (UserListResponse);
-  rpc Get(UserGetRequest) returns (UserGetResponse);
-  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
-  rpc Register(RegisterRequest) returns (RegisterResponse);
-  rpc AddRole(AddRoleRequest) returns (AddRoleResponse);
-  rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
+  rpc List(user.messages.UserListRequest) returns (user.messages.UserListResponse);
+  rpc Get(user.messages.UserGetRequest) returns (user.messages.UserGetResponse);
+  rpc WhoAmI(user.messages.WhoAmIRequest) returns (user.messages.WhoAmIResponse);
+  rpc Register(user.messages.RegisterRequest) returns (user.messages.RegisterResponse);
+  rpc AddRole(user.messages.AddRoleRequest) returns (user.messages.AddRoleResponse);
+  rpc RemoveRole(user.messages.RemoveRoleRequest) returns (user.messages.RemoveRoleResponse);
 }

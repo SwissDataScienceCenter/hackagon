@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package hackathon;
+package hackathon.entities;
 
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/hackathon_member.proto";

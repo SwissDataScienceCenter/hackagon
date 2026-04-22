@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package hackathon;
+package hackathon.messages;
 
 import "hackathon/entities/hackathon.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
 
 message CreateHackathonResponse {
-  repeated Hackathon hackathon = 1;
+  repeated hackathon.entities.Hackathon hackathon = 1;
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package health;
+package health.messages;
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health/messages";
 

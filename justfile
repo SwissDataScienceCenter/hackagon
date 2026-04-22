@@ -140,7 +140,6 @@ generate-proto *args:
         --doc_out=api/proto/ \
         --doc_opt=markdown,API.md \
         -I="api/proto" \
-        api/proto/*.proto \
         api/proto/**/*.proto
     echo "  - Generated api docs"
     

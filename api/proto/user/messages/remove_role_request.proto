@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package user;
+package user.messages;
 
 import "user/entities/global_role.proto";
 
@@ -8,5 +8,5 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message RemoveRoleRequest {
   string user_id = 1;
-  GlobalRole role = 2;
+  user.entities.GlobalRole role = 2;
 }

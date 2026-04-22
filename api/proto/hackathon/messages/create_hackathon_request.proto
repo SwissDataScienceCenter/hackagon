@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package hackathon;
+package hackathon.messages;
 
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/visibility.proto";
@@ -11,7 +11,7 @@ message CreateHackathonRequest {
   string name = 1;
   optional google.protobuf.Timestamp start_date = 2;
   optional google.protobuf.Timestamp end_date = 3;
-  Visibility visibility = 4;
+  hackathon.entities.Visibility visibility = 4;
   optional string description = 5;
   optional string logo = 6;
 }
