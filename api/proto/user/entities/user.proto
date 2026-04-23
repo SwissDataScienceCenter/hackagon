@@ -9,10 +9,12 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message User {
   string id = 1;
-  string name = 2;
+  string username = 2;
   string keycloak_id = 3;
   google.protobuf.Timestamp created_at = 4;
   string display_name = 5;
   string email = 6;
+  // Populated from casbin on fetch; not persisted in ent DB.
   repeated GlobalRole roles = 7;
+  google.protobuf.Timestamp modified_at = 8;
 }
