@@ -5,7 +5,8 @@ package hackathon.messages.project_svc;
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/project_svc";
 
 message ProposeRequest {
-  string title = 1;
-  string description = 2;
-  optional string image = 3;
+  string hackathon_id = 1;
+  string title = 2;
+  string description = 3;
+  optional string image = 4;
 }
