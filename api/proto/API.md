@@ -99,12 +99,6 @@
 - [hackathon/messages/phase_svc/edit_response.proto](#hackathon_messages_phase_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-phase_svc-EditResponse)
   
-- [hackathon/messages/project_svc/add_request.proto](#hackathon_messages_project_svc_add_request-proto)
-    - [AddRequest](#hackathon-messages-project_svc-AddRequest)
-  
-- [hackathon/messages/project_svc/add_response.proto](#hackathon_messages_project_svc_add_response-proto)
-    - [AddResponse](#hackathon-messages-project_svc-AddResponse)
-  
 - [hackathon/messages/project_svc/approve_request.proto](#hackathon_messages_project_svc_approve_request-proto)
     - [ApproveRequest](#hackathon-messages-project_svc-ApproveRequest)
   
@@ -1202,72 +1196,6 @@
 
 
 
-<a name="hackathon_messages_project_svc_add_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/project_svc/add_request.proto
-
-
-
-<a name="hackathon-messages-project_svc-AddRequest"></a>
-
-### AddRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| title | [string](#string) |  |  |
-| description | [string](#string) |  |  |
-| status | [string](#string) |  |  |
-| image | [string](#string) | optional |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_project_svc_add_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/project_svc/add_response.proto
-
-
-
-<a name="hackathon-messages-project_svc-AddResponse"></a>
-
-### AddResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| project_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
 <a name="hackathon_messages_project_svc_approve_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1458,6 +1386,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
 | title | [string](#string) |  |  |
 | description | [string](#string) |  |  |
 | image | [string](#string) | optional |  |
@@ -1935,6 +1864,11 @@
 
 
 
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [user.entities.User](#user-entities-User) |  |  |
+
+
 
 
 
@@ -2167,6 +2101,11 @@
 
 ### RemoveRoleResponse
 
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [user.entities.User](#user-entities-User) |  |  |
 
 
 
