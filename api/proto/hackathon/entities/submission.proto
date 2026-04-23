@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+import "hackathon/entities/submission_status.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+message Submission {
+  string id = 1;
+  optional string result = 2;
+  SubmissionStatus status = 3;
+  int32 version = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp modified_at = 6;
+  string team_id = 7;
+  string project_id = 8;
+  string creator_id = 9;
+  optional string modifier_id = 10;
+}
