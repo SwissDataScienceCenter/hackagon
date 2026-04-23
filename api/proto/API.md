@@ -18,68 +18,140 @@
 - [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
     - [Hackathon](#hackathon-entities-Hackathon)
   
-- [hackathon/messages/add_owner_request.proto](#hackathon_messages_add_owner_request-proto)
-    - [AddOwnerRequest](#hackathon-messages-AddOwnerRequest)
+- [hackathon/messages/hackathon_svc/add_owner_request.proto](#hackathon_messages_hackathon_svc_add_owner_request-proto)
+    - [AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest)
   
-- [hackathon/messages/add_owner_response.proto](#hackathon_messages_add_owner_response-proto)
-    - [AddOwnerResponse](#hackathon-messages-AddOwnerResponse)
+- [hackathon/messages/hackathon_svc/add_owner_response.proto](#hackathon_messages_hackathon_svc_add_owner_response-proto)
+    - [AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse)
   
-- [hackathon/messages/add_page_request.proto](#hackathon_messages_add_page_request-proto)
-    - [AddPageRequest](#hackathon-messages-AddPageRequest)
+- [hackathon/messages/hackathon_svc/create_request.proto](#hackathon_messages_hackathon_svc_create_request-proto)
+    - [CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest)
   
-- [hackathon/messages/add_page_response.proto](#hackathon_messages_add_page_response-proto)
-    - [AddPageResponse](#hackathon-messages-AddPageResponse)
+- [hackathon/messages/hackathon_svc/create_response.proto](#hackathon_messages_hackathon_svc_create_response-proto)
+    - [CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse)
   
-- [hackathon/messages/create_request.proto](#hackathon_messages_create_request-proto)
-    - [CreateRequest](#hackathon-messages-CreateRequest)
+- [hackathon/messages/hackathon_svc/get_request.proto](#hackathon_messages_hackathon_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-hackathon_svc-GetRequest)
   
-- [hackathon/messages/create_response.proto](#hackathon_messages_create_response-proto)
-    - [CreateResponse](#hackathon-messages-CreateResponse)
+- [hackathon/messages/hackathon_svc/get_response.proto](#hackathon_messages_hackathon_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-hackathon_svc-GetResponse)
   
-- [hackathon/messages/delete_page_request.proto](#hackathon_messages_delete_page_request-proto)
-    - [DeletePageRequest](#hackathon-messages-DeletePageRequest)
+- [hackathon/messages/hackathon_svc/join_request.proto](#hackathon_messages_hackathon_svc_join_request-proto)
+    - [JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest)
   
-- [hackathon/messages/delete_page_response.proto](#hackathon_messages_delete_page_response-proto)
-    - [DeletePageResponse](#hackathon-messages-DeletePageResponse)
+- [hackathon/messages/hackathon_svc/join_response.proto](#hackathon_messages_hackathon_svc_join_response-proto)
+    - [JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse)
   
-- [hackathon/messages/get_request.proto](#hackathon_messages_get_request-proto)
-    - [GetRequest](#hackathon-messages-GetRequest)
+- [hackathon/messages/hackathon_svc/list_request.proto](#hackathon_messages_hackathon_svc_list_request-proto)
+    - [ListRequest](#hackathon-messages-hackathon_svc-ListRequest)
   
-- [hackathon/messages/get_response.proto](#hackathon_messages_get_response-proto)
-    - [GetResponse](#hackathon-messages-GetResponse)
+- [hackathon/messages/hackathon_svc/list_response.proto](#hackathon_messages_hackathon_svc_list_response-proto)
+    - [ListResponse](#hackathon-messages-hackathon_svc-ListResponse)
   
-- [hackathon/messages/join_request.proto](#hackathon_messages_join_request-proto)
-    - [JoinRequest](#hackathon-messages-JoinRequest)
+- [hackathon/messages/hackathon_svc/remove_owner_request.proto](#hackathon_messages_hackathon_svc_remove_owner_request-proto)
+    - [RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest)
   
-- [hackathon/messages/join_response.proto](#hackathon_messages_join_response-proto)
-    - [JoinResponse](#hackathon-messages-JoinResponse)
+- [hackathon/messages/hackathon_svc/remove_owner_response.proto](#hackathon_messages_hackathon_svc_remove_owner_response-proto)
+    - [RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse)
   
-- [hackathon/messages/list_request.proto](#hackathon_messages_list_request-proto)
-    - [ListRequest](#hackathon-messages-ListRequest)
+- [hackathon/messages/hackathon_svc/remove_participant_request.proto](#hackathon_messages_hackathon_svc_remove_participant_request-proto)
+    - [RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest)
   
-- [hackathon/messages/list_response.proto](#hackathon_messages_list_response-proto)
-    - [ListResponse](#hackathon-messages-ListResponse)
-  
-- [hackathon/messages/remove_owner_request.proto](#hackathon_messages_remove_owner_request-proto)
-    - [RemoveOwnerRequest](#hackathon-messages-RemoveOwnerRequest)
-  
-- [hackathon/messages/remove_owner_response.proto](#hackathon_messages_remove_owner_response-proto)
-    - [RemoveOwnerResponse](#hackathon-messages-RemoveOwnerResponse)
-  
-- [hackathon/messages/remove_participant_request.proto](#hackathon_messages_remove_participant_request-proto)
-    - [RemoveParticipantRequest](#hackathon-messages-RemoveParticipantRequest)
-  
-- [hackathon/messages/remove_participant_response.proto](#hackathon_messages_remove_participant_response-proto)
-    - [RemoveParticipantResponse](#hackathon-messages-RemoveParticipantResponse)
+- [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
+    - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
   
 - [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
     - [HackathonService](#hackathon-HackathonService)
   
-- [health/messages/check_request.proto](#health_messages_check_request-proto)
-    - [CheckRequest](#health-messages-CheckRequest)
+- [hackathon/messages/page_svc/create_request.proto](#hackathon_messages_page_svc_create_request-proto)
+    - [CreateRequest](#hackathon-messages-page_svc-CreateRequest)
   
-- [health/messages/check_response.proto](#health_messages_check_response-proto)
-    - [CheckResponse](#health-messages-CheckResponse)
+- [hackathon/messages/page_svc/create_response.proto](#hackathon_messages_page_svc_create_response-proto)
+    - [CreateResponse](#hackathon-messages-page_svc-CreateResponse)
+  
+- [hackathon/messages/page_svc/delete_request.proto](#hackathon_messages_page_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-page_svc-DeleteRequest)
+  
+- [hackathon/messages/page_svc/delete_response.proto](#hackathon_messages_page_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-page_svc-DeleteResponse)
+  
+- [hackathon/messages/page_svc/edit_request.proto](#hackathon_messages_page_svc_edit_request-proto)
+    - [EditRequest](#hackathon-messages-page_svc-EditRequest)
+  
+- [hackathon/messages/page_svc/edit_response.proto](#hackathon_messages_page_svc_edit_response-proto)
+    - [EditResponse](#hackathon-messages-page_svc-EditResponse)
+  
+- [hackathon/messages/phase_svc/create_request.proto](#hackathon_messages_phase_svc_create_request-proto)
+    - [CreateRequest](#hackathon-messages-phase_svc-CreateRequest)
+  
+- [hackathon/messages/phase_svc/create_response.proto](#hackathon_messages_phase_svc_create_response-proto)
+    - [CreateResponse](#hackathon-messages-phase_svc-CreateResponse)
+  
+- [hackathon/messages/phase_svc/delete_request.proto](#hackathon_messages_phase_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-phase_svc-DeleteRequest)
+  
+- [hackathon/messages/phase_svc/delete_response.proto](#hackathon_messages_phase_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-phase_svc-DeleteResponse)
+  
+- [hackathon/messages/phase_svc/edit_request.proto](#hackathon_messages_phase_svc_edit_request-proto)
+    - [EditRequest](#hackathon-messages-phase_svc-EditRequest)
+  
+- [hackathon/messages/phase_svc/edit_response.proto](#hackathon_messages_phase_svc_edit_response-proto)
+    - [EditResponse](#hackathon-messages-phase_svc-EditResponse)
+  
+- [hackathon/messages/project_svc/approve_request.proto](#hackathon_messages_project_svc_approve_request-proto)
+    - [ApproveRequest](#hackathon-messages-project_svc-ApproveRequest)
+  
+- [hackathon/messages/project_svc/approve_response.proto](#hackathon_messages_project_svc_approve_response-proto)
+    - [ApproveResponse](#hackathon-messages-project_svc-ApproveResponse)
+  
+- [hackathon/messages/project_svc/delete_request.proto](#hackathon_messages_project_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-project_svc-DeleteRequest)
+  
+- [hackathon/messages/project_svc/delete_response.proto](#hackathon_messages_project_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-project_svc-DeleteResponse)
+  
+- [hackathon/messages/project_svc/edit_request.proto](#hackathon_messages_project_svc_edit_request-proto)
+    - [EditRequest](#hackathon-messages-project_svc-EditRequest)
+  
+- [hackathon/messages/project_svc/edit_response.proto](#hackathon_messages_project_svc_edit_response-proto)
+    - [EditResponse](#hackathon-messages-project_svc-EditResponse)
+  
+- [hackathon/messages/project_svc/propose_request.proto](#hackathon_messages_project_svc_propose_request-proto)
+    - [ProposeRequest](#hackathon-messages-project_svc-ProposeRequest)
+  
+- [hackathon/messages/project_svc/propose_response.proto](#hackathon_messages_project_svc_propose_response-proto)
+    - [ProposeResponse](#hackathon-messages-project_svc-ProposeResponse)
+  
+- [hackathon/messages/team_svc/assign_user_request.proto](#hackathon_messages_team_svc_assign_user_request-proto)
+    - [AssignUserRequest](#hackathon-messages-team_svc-AssignUserRequest)
+  
+- [hackathon/messages/team_svc/assign_user_response.proto](#hackathon_messages_team_svc_assign_user_response-proto)
+    - [AssignUserResponse](#hackathon-messages-team_svc-AssignUserResponse)
+  
+- [hackathon/messages/team_svc/create_request.proto](#hackathon_messages_team_svc_create_request-proto)
+    - [CreateRequest](#hackathon-messages-team_svc-CreateRequest)
+  
+- [hackathon/messages/team_svc/create_response.proto](#hackathon_messages_team_svc_create_response-proto)
+    - [CreateResponse](#hackathon-messages-team_svc-CreateResponse)
+  
+- [hackathon/page_service.proto](#hackathon_page_service-proto)
+    - [PageService](#hackathon-PageService)
+  
+- [hackathon/phase_service.proto](#hackathon_phase_service-proto)
+    - [PhaseService](#hackathon-PhaseService)
+  
+- [hackathon/project_service.proto](#hackathon_project_service-proto)
+    - [ProjectService](#hackathon-ProjectService)
+  
+- [hackathon/team_service.proto](#hackathon_team_service-proto)
+    - [TeamService](#hackathon-TeamService)
+  
+- [health/messages/health_svc/check_request.proto](#health_messages_health_svc_check_request-proto)
+    - [CheckRequest](#health-messages-health_svc-CheckRequest)
+  
+- [health/messages/health_svc/check_response.proto](#health_messages_health_svc_check_response-proto)
+    - [CheckResponse](#health-messages-health_svc-CheckResponse)
   
 - [health/health_service.proto](#health_health_service-proto)
     - [HealthService](#health-HealthService)
@@ -90,41 +162,41 @@
 - [user/entities/user.proto](#user_entities_user-proto)
     - [User](#user-entities-User)
   
-- [user/messages/add_role_request.proto](#user_messages_add_role_request-proto)
-    - [AddRoleRequest](#user-messages-AddRoleRequest)
+- [user/messages/user_svc/add_role_request.proto](#user_messages_user_svc_add_role_request-proto)
+    - [AddRoleRequest](#user-messages-user_svc-AddRoleRequest)
   
-- [user/messages/add_role_response.proto](#user_messages_add_role_response-proto)
-    - [AddRoleResponse](#user-messages-AddRoleResponse)
+- [user/messages/user_svc/add_role_response.proto](#user_messages_user_svc_add_role_response-proto)
+    - [AddRoleResponse](#user-messages-user_svc-AddRoleResponse)
   
-- [user/messages/get_request.proto](#user_messages_get_request-proto)
-    - [GetRequest](#user-messages-GetRequest)
+- [user/messages/user_svc/get_request.proto](#user_messages_user_svc_get_request-proto)
+    - [GetRequest](#user-messages-user_svc-GetRequest)
   
-- [user/messages/get_response.proto](#user_messages_get_response-proto)
-    - [GetResponse](#user-messages-GetResponse)
+- [user/messages/user_svc/get_response.proto](#user_messages_user_svc_get_response-proto)
+    - [GetResponse](#user-messages-user_svc-GetResponse)
   
-- [user/messages/list_request.proto](#user_messages_list_request-proto)
-    - [ListRequest](#user-messages-ListRequest)
+- [user/messages/user_svc/list_request.proto](#user_messages_user_svc_list_request-proto)
+    - [ListRequest](#user-messages-user_svc-ListRequest)
   
-- [user/messages/list_response.proto](#user_messages_list_response-proto)
-    - [ListResponse](#user-messages-ListResponse)
+- [user/messages/user_svc/list_response.proto](#user_messages_user_svc_list_response-proto)
+    - [ListResponse](#user-messages-user_svc-ListResponse)
   
-- [user/messages/register_request.proto](#user_messages_register_request-proto)
-    - [RegisterRequest](#user-messages-RegisterRequest)
+- [user/messages/user_svc/register_request.proto](#user_messages_user_svc_register_request-proto)
+    - [RegisterRequest](#user-messages-user_svc-RegisterRequest)
   
-- [user/messages/register_response.proto](#user_messages_register_response-proto)
-    - [RegisterResponse](#user-messages-RegisterResponse)
+- [user/messages/user_svc/register_response.proto](#user_messages_user_svc_register_response-proto)
+    - [RegisterResponse](#user-messages-user_svc-RegisterResponse)
   
-- [user/messages/remove_role_request.proto](#user_messages_remove_role_request-proto)
-    - [RemoveRoleRequest](#user-messages-RemoveRoleRequest)
+- [user/messages/user_svc/remove_role_request.proto](#user_messages_user_svc_remove_role_request-proto)
+    - [RemoveRoleRequest](#user-messages-user_svc-RemoveRoleRequest)
   
-- [user/messages/remove_role_response.proto](#user_messages_remove_role_response-proto)
-    - [RemoveRoleResponse](#user-messages-RemoveRoleResponse)
+- [user/messages/user_svc/remove_role_response.proto](#user_messages_user_svc_remove_role_response-proto)
+    - [RemoveRoleResponse](#user-messages-user_svc-RemoveRoleResponse)
   
-- [user/messages/who_am_i_request.proto](#user_messages_who_am_i_request-proto)
-    - [WhoAmIRequest](#user-messages-WhoAmIRequest)
+- [user/messages/user_svc/who_am_i_request.proto](#user_messages_user_svc_who_am_i_request-proto)
+    - [WhoAmIRequest](#user-messages-user_svc-WhoAmIRequest)
   
-- [user/messages/who_am_i_response.proto](#user_messages_who_am_i_response-proto)
-    - [WhoAmIResponse](#user-messages-WhoAmIResponse)
+- [user/messages/user_svc/who_am_i_response.proto](#user_messages_user_svc_who_am_i_response-proto)
+    - [WhoAmIResponse](#user-messages-user_svc-WhoAmIResponse)
   
 - [user/user_service.proto](#user_user_service-proto)
     - [UserService](#user-UserService)
@@ -295,14 +367,14 @@
 
 
 
-<a name="hackathon_messages_add_owner_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_add_owner_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/add_owner_request.proto
+## hackathon/messages/hackathon_svc/add_owner_request.proto
 
 
 
-<a name="hackathon-messages-AddOwnerRequest"></a>
+<a name="hackathon-messages-hackathon_svc-AddOwnerRequest"></a>
 
 ### AddOwnerRequest
 
@@ -327,14 +399,14 @@
 
 
 
-<a name="hackathon_messages_add_owner_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_add_owner_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/add_owner_response.proto
+## hackathon/messages/hackathon_svc/add_owner_response.proto
 
 
 
-<a name="hackathon-messages-AddOwnerResponse"></a>
+<a name="hackathon-messages-hackathon_svc-AddOwnerResponse"></a>
 
 ### AddOwnerResponse
 
@@ -353,80 +425,14 @@
 
 
 
-<a name="hackathon_messages_add_page_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/add_page_request.proto
+## hackathon/messages/hackathon_svc/create_request.proto
 
 
 
-<a name="hackathon-messages-AddPageRequest"></a>
-
-### AddPageRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| title | [string](#string) |  |  |
-| content | [string](#string) |  |  |
-| visible | [bool](#bool) |  |  |
-| order | [int32](#int32) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_add_page_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/add_page_response.proto
-
-
-
-<a name="hackathon-messages-AddPageResponse"></a>
-
-### AddPageResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| page_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_create_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/create_request.proto
-
-
-
-<a name="hackathon-messages-CreateRequest"></a>
+<a name="hackathon-messages-hackathon_svc-CreateRequest"></a>
 
 ### CreateRequest
 
@@ -455,14 +461,14 @@
 
 
 
-<a name="hackathon_messages_create_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_create_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/create_response.proto
+## hackathon/messages/hackathon_svc/create_response.proto
 
 
 
-<a name="hackathon-messages-CreateResponse"></a>
+<a name="hackathon-messages-hackathon_svc-CreateResponse"></a>
 
 ### CreateResponse
 
@@ -486,71 +492,14 @@
 
 
 
-<a name="hackathon_messages_delete_page_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/delete_page_request.proto
+## hackathon/messages/hackathon_svc/get_request.proto
 
 
 
-<a name="hackathon-messages-DeletePageRequest"></a>
-
-### DeletePageRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| page_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_delete_page_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/delete_page_response.proto
-
-
-
-<a name="hackathon-messages-DeletePageResponse"></a>
-
-### DeletePageResponse
-
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_get_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/get_request.proto
-
-
-
-<a name="hackathon-messages-GetRequest"></a>
+<a name="hackathon-messages-hackathon_svc-GetRequest"></a>
 
 ### GetRequest
 
@@ -574,14 +523,14 @@
 
 
 
-<a name="hackathon_messages_get_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_get_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/get_response.proto
+## hackathon/messages/hackathon_svc/get_response.proto
 
 
 
-<a name="hackathon-messages-GetResponse"></a>
+<a name="hackathon-messages-hackathon_svc-GetResponse"></a>
 
 ### GetResponse
 
@@ -605,14 +554,14 @@
 
 
 
-<a name="hackathon_messages_join_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_join_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/join_request.proto
+## hackathon/messages/hackathon_svc/join_request.proto
 
 
 
-<a name="hackathon-messages-JoinRequest"></a>
+<a name="hackathon-messages-hackathon_svc-JoinRequest"></a>
 
 ### JoinRequest
 
@@ -636,19 +585,24 @@
 
 
 
-<a name="hackathon_messages_join_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_join_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/join_response.proto
+## hackathon/messages/hackathon_svc/join_response.proto
 
 
 
-<a name="hackathon-messages-JoinResponse"></a>
+<a name="hackathon-messages-hackathon_svc-JoinResponse"></a>
 
 ### JoinResponse
 
 
 
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
 
 
 
@@ -662,14 +616,14 @@
 
 
 
-<a name="hackathon_messages_list_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_list_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/list_request.proto
+## hackathon/messages/hackathon_svc/list_request.proto
 
 
 
-<a name="hackathon-messages-ListRequest"></a>
+<a name="hackathon-messages-hackathon_svc-ListRequest"></a>
 
 ### ListRequest
 
@@ -695,14 +649,14 @@
 
 
 
-<a name="hackathon_messages_list_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_list_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/list_response.proto
+## hackathon/messages/hackathon_svc/list_response.proto
 
 
 
-<a name="hackathon-messages-ListResponse"></a>
+<a name="hackathon-messages-hackathon_svc-ListResponse"></a>
 
 ### ListResponse
 
@@ -726,14 +680,14 @@
 
 
 
-<a name="hackathon_messages_remove_owner_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_remove_owner_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/remove_owner_request.proto
+## hackathon/messages/hackathon_svc/remove_owner_request.proto
 
 
 
-<a name="hackathon-messages-RemoveOwnerRequest"></a>
+<a name="hackathon-messages-hackathon_svc-RemoveOwnerRequest"></a>
 
 ### RemoveOwnerRequest
 
@@ -758,14 +712,14 @@
 
 
 
-<a name="hackathon_messages_remove_owner_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_remove_owner_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/remove_owner_response.proto
+## hackathon/messages/hackathon_svc/remove_owner_response.proto
 
 
 
-<a name="hackathon-messages-RemoveOwnerResponse"></a>
+<a name="hackathon-messages-hackathon_svc-RemoveOwnerResponse"></a>
 
 ### RemoveOwnerResponse
 
@@ -784,14 +738,14 @@
 
 
 
-<a name="hackathon_messages_remove_participant_request-proto"></a>
+<a name="hackathon_messages_hackathon_svc_remove_participant_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/remove_participant_request.proto
+## hackathon/messages/hackathon_svc/remove_participant_request.proto
 
 
 
-<a name="hackathon-messages-RemoveParticipantRequest"></a>
+<a name="hackathon-messages-hackathon_svc-RemoveParticipantRequest"></a>
 
 ### RemoveParticipantRequest
 
@@ -816,14 +770,14 @@
 
 
 
-<a name="hackathon_messages_remove_participant_response-proto"></a>
+<a name="hackathon_messages_hackathon_svc_remove_participant_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/remove_participant_response.proto
+## hackathon/messages/hackathon_svc/remove_participant_response.proto
 
 
 
-<a name="hackathon-messages-RemoveParticipantResponse"></a>
+<a name="hackathon-messages-hackathon_svc-RemoveParticipantResponse"></a>
 
 ### RemoveParticipantResponse
 
@@ -862,28 +816,868 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| List | [messages.ListRequest](#hackathon-messages-ListRequest) | [messages.ListResponse](#hackathon-messages-ListResponse) |  |
-| Get | [messages.GetRequest](#hackathon-messages-GetRequest) | [messages.GetResponse](#hackathon-messages-GetResponse) |  |
-| Create | [messages.CreateRequest](#hackathon-messages-CreateRequest) | [messages.CreateResponse](#hackathon-messages-CreateResponse) |  |
-| Join | [messages.JoinRequest](#hackathon-messages-JoinRequest) | [messages.JoinResponse](#hackathon-messages-JoinResponse) |  |
-| RemoveParticipant | [messages.RemoveParticipantRequest](#hackathon-messages-RemoveParticipantRequest) | [messages.RemoveParticipantResponse](#hackathon-messages-RemoveParticipantResponse) |  |
-| AddOwner | [messages.AddOwnerRequest](#hackathon-messages-AddOwnerRequest) | [messages.AddOwnerResponse](#hackathon-messages-AddOwnerResponse) |  |
-| RemoveOwner | [messages.RemoveOwnerRequest](#hackathon-messages-RemoveOwnerRequest) | [messages.RemoveOwnerResponse](#hackathon-messages-RemoveOwnerResponse) |  |
-| AddPage | [messages.AddPageRequest](#hackathon-messages-AddPageRequest) | [messages.AddPageResponse](#hackathon-messages-AddPageResponse) |  |
-| DeletePage | [messages.DeletePageRequest](#hackathon-messages-DeletePageRequest) | [messages.DeletePageResponse](#hackathon-messages-DeletePageResponse) |  |
+| List | [messages.hackathon_svc.ListRequest](#hackathon-messages-hackathon_svc-ListRequest) | [messages.hackathon_svc.ListResponse](#hackathon-messages-hackathon_svc-ListResponse) |  |
+| Get | [messages.hackathon_svc.GetRequest](#hackathon-messages-hackathon_svc-GetRequest) | [messages.hackathon_svc.GetResponse](#hackathon-messages-hackathon_svc-GetResponse) |  |
+| Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
+| Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
+| RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
+| AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
+| RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
 
  
 
 
 
-<a name="health_messages_check_request-proto"></a>
+<a name="hackathon_messages_page_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## health/messages/check_request.proto
+## hackathon/messages/page_svc/create_request.proto
 
 
 
-<a name="health-messages-CheckRequest"></a>
+<a name="hackathon-messages-page_svc-CreateRequest"></a>
+
+### CreateRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| content | [string](#string) |  |  |
+| visible | [bool](#bool) |  |  |
+| order | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_create_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/create_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-CreateResponse"></a>
+
+### CreateResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/edit_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| content | [string](#string) |  |  |
+| visible | [bool](#bool) |  |  |
+| order | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/edit_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_create_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/create_request.proto
+
+
+
+<a name="hackathon-messages-phase_svc-CreateRequest"></a>
+
+### CreateRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_create_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/create_response.proto
+
+
+
+<a name="hackathon-messages-phase_svc-CreateResponse"></a>
+
+### CreateResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-phase_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-phase_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/edit_request.proto
+
+
+
+<a name="hackathon-messages-phase_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase_id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/edit_response.proto
+
+
+
+<a name="hackathon-messages-phase_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_approve_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/approve_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-ApproveRequest"></a>
+
+### ApproveRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_approve_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/approve_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-ApproveResponse"></a>
+
+### ApproveResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/edit_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| status | [string](#string) |  |  |
+| image | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/edit_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_propose_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/propose_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-ProposeRequest"></a>
+
+### ProposeRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| image | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_propose_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/propose_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-ProposeResponse"></a>
+
+### ProposeResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_assign_user_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/assign_user_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-AssignUserRequest"></a>
+
+### AssignUserRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team_id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_assign_user_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/assign_user_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-AssignUserResponse"></a>
+
+### AssignUserResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_create_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/create_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-CreateRequest"></a>
+
+### CreateRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_create_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/create_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-CreateResponse"></a>
+
+### CreateResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_page_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/page_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-PageService"></a>
+
+### PageService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| Create | [messages.page_svc.CreateRequest](#hackathon-messages-page_svc-CreateRequest) | [messages.page_svc.CreateResponse](#hackathon-messages-page_svc-CreateResponse) |  |
+| Edit | [messages.page_svc.EditRequest](#hackathon-messages-page_svc-EditRequest) | [messages.page_svc.EditResponse](#hackathon-messages-page_svc-EditResponse) |  |
+| Delete | [messages.page_svc.DeleteRequest](#hackathon-messages-page_svc-DeleteRequest) | [messages.page_svc.DeleteResponse](#hackathon-messages-page_svc-DeleteResponse) |  |
+
+ 
+
+
+
+<a name="hackathon_phase_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/phase_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-PhaseService"></a>
+
+### PhaseService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| Create | [messages.phase_svc.CreateRequest](#hackathon-messages-phase_svc-CreateRequest) | [messages.phase_svc.CreateResponse](#hackathon-messages-phase_svc-CreateResponse) |  |
+| Edit | [messages.phase_svc.EditRequest](#hackathon-messages-phase_svc-EditRequest) | [messages.phase_svc.EditResponse](#hackathon-messages-phase_svc-EditResponse) |  |
+| Delete | [messages.phase_svc.DeleteRequest](#hackathon-messages-phase_svc-DeleteRequest) | [messages.phase_svc.DeleteResponse](#hackathon-messages-phase_svc-DeleteResponse) |  |
+
+ 
+
+
+
+<a name="hackathon_project_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/project_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-ProjectService"></a>
+
+### ProjectService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| Propose | [messages.project_svc.ProposeRequest](#hackathon-messages-project_svc-ProposeRequest) | [messages.project_svc.ProposeResponse](#hackathon-messages-project_svc-ProposeResponse) |  |
+| Approve | [messages.project_svc.ApproveRequest](#hackathon-messages-project_svc-ApproveRequest) | [messages.project_svc.ApproveResponse](#hackathon-messages-project_svc-ApproveResponse) |  |
+| Edit | [messages.project_svc.EditRequest](#hackathon-messages-project_svc-EditRequest) | [messages.project_svc.EditResponse](#hackathon-messages-project_svc-EditResponse) |  |
+| Delete | [messages.project_svc.DeleteRequest](#hackathon-messages-project_svc-DeleteRequest) | [messages.project_svc.DeleteResponse](#hackathon-messages-project_svc-DeleteResponse) |  |
+
+ 
+
+
+
+<a name="hackathon_team_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/team_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-TeamService"></a>
+
+### TeamService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| Create | [messages.team_svc.CreateRequest](#hackathon-messages-team_svc-CreateRequest) | [messages.team_svc.CreateResponse](#hackathon-messages-team_svc-CreateResponse) |  |
+| AssignUser | [messages.team_svc.AssignUserRequest](#hackathon-messages-team_svc-AssignUserRequest) | [messages.team_svc.AssignUserResponse](#hackathon-messages-team_svc-AssignUserResponse) |  |
+
+ 
+
+
+
+<a name="health_messages_health_svc_check_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## health/messages/health_svc/check_request.proto
+
+
+
+<a name="health-messages-health_svc-CheckRequest"></a>
 
 ### CheckRequest
 
@@ -902,14 +1696,14 @@
 
 
 
-<a name="health_messages_check_response-proto"></a>
+<a name="health_messages_health_svc_check_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## health/messages/check_response.proto
+## health/messages/health_svc/check_response.proto
 
 
 
-<a name="health-messages-CheckResponse"></a>
+<a name="health-messages-health_svc-CheckResponse"></a>
 
 ### CheckResponse
 
@@ -953,7 +1747,7 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| Check | [messages.CheckRequest](#health-messages-CheckRequest) | [messages.CheckResponse](#health-messages-CheckResponse) |  |
+| Check | [messages.health_svc.CheckRequest](#health-messages-health_svc-CheckRequest) | [messages.health_svc.CheckResponse](#health-messages-health_svc-CheckResponse) |  |
 
  
 
@@ -1025,14 +1819,14 @@
 
 
 
-<a name="user_messages_add_role_request-proto"></a>
+<a name="user_messages_user_svc_add_role_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/add_role_request.proto
+## user/messages/user_svc/add_role_request.proto
 
 
 
-<a name="user-messages-AddRoleRequest"></a>
+<a name="user-messages-user_svc-AddRoleRequest"></a>
 
 ### AddRoleRequest
 
@@ -1057,14 +1851,14 @@
 
 
 
-<a name="user_messages_add_role_response-proto"></a>
+<a name="user_messages_user_svc_add_role_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/add_role_response.proto
+## user/messages/user_svc/add_role_response.proto
 
 
 
-<a name="user-messages-AddRoleResponse"></a>
+<a name="user-messages-user_svc-AddRoleResponse"></a>
 
 ### AddRoleResponse
 
@@ -1088,14 +1882,14 @@
 
 
 
-<a name="user_messages_get_request-proto"></a>
+<a name="user_messages_user_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/get_request.proto
+## user/messages/user_svc/get_request.proto
 
 
 
-<a name="user-messages-GetRequest"></a>
+<a name="user-messages-user_svc-GetRequest"></a>
 
 ### GetRequest
 
@@ -1119,14 +1913,14 @@
 
 
 
-<a name="user_messages_get_response-proto"></a>
+<a name="user_messages_user_svc_get_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/get_response.proto
+## user/messages/user_svc/get_response.proto
 
 
 
-<a name="user-messages-GetResponse"></a>
+<a name="user-messages-user_svc-GetResponse"></a>
 
 ### GetResponse
 
@@ -1150,14 +1944,14 @@
 
 
 
-<a name="user_messages_list_request-proto"></a>
+<a name="user_messages_user_svc_list_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/list_request.proto
+## user/messages/user_svc/list_request.proto
 
 
 
-<a name="user-messages-ListRequest"></a>
+<a name="user-messages-user_svc-ListRequest"></a>
 
 ### ListRequest
 
@@ -1176,14 +1970,14 @@
 
 
 
-<a name="user_messages_list_response-proto"></a>
+<a name="user_messages_user_svc_list_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/list_response.proto
+## user/messages/user_svc/list_response.proto
 
 
 
-<a name="user-messages-ListResponse"></a>
+<a name="user-messages-user_svc-ListResponse"></a>
 
 ### ListResponse
 
@@ -1207,14 +2001,14 @@
 
 
 
-<a name="user_messages_register_request-proto"></a>
+<a name="user_messages_user_svc_register_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/register_request.proto
+## user/messages/user_svc/register_request.proto
 
 
 
-<a name="user-messages-RegisterRequest"></a>
+<a name="user-messages-user_svc-RegisterRequest"></a>
 
 ### RegisterRequest
 
@@ -1233,14 +2027,14 @@
 
 
 
-<a name="user_messages_register_response-proto"></a>
+<a name="user_messages_user_svc_register_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/register_response.proto
+## user/messages/user_svc/register_response.proto
 
 
 
-<a name="user-messages-RegisterResponse"></a>
+<a name="user-messages-user_svc-RegisterResponse"></a>
 
 ### RegisterResponse
 
@@ -1264,14 +2058,14 @@
 
 
 
-<a name="user_messages_remove_role_request-proto"></a>
+<a name="user_messages_user_svc_remove_role_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/remove_role_request.proto
+## user/messages/user_svc/remove_role_request.proto
 
 
 
-<a name="user-messages-RemoveRoleRequest"></a>
+<a name="user-messages-user_svc-RemoveRoleRequest"></a>
 
 ### RemoveRoleRequest
 
@@ -1296,14 +2090,14 @@
 
 
 
-<a name="user_messages_remove_role_response-proto"></a>
+<a name="user_messages_user_svc_remove_role_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/remove_role_response.proto
+## user/messages/user_svc/remove_role_response.proto
 
 
 
-<a name="user-messages-RemoveRoleResponse"></a>
+<a name="user-messages-user_svc-RemoveRoleResponse"></a>
 
 ### RemoveRoleResponse
 
@@ -1327,14 +2121,14 @@
 
 
 
-<a name="user_messages_who_am_i_request-proto"></a>
+<a name="user_messages_user_svc_who_am_i_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/who_am_i_request.proto
+## user/messages/user_svc/who_am_i_request.proto
 
 
 
-<a name="user-messages-WhoAmIRequest"></a>
+<a name="user-messages-user_svc-WhoAmIRequest"></a>
 
 ### WhoAmIRequest
 
@@ -1353,14 +2147,14 @@
 
 
 
-<a name="user_messages_who_am_i_response-proto"></a>
+<a name="user_messages_user_svc_who_am_i_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## user/messages/who_am_i_response.proto
+## user/messages/user_svc/who_am_i_response.proto
 
 
 
-<a name="user-messages-WhoAmIResponse"></a>
+<a name="user-messages-user_svc-WhoAmIResponse"></a>
 
 ### WhoAmIResponse
 
@@ -1404,12 +2198,12 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| List | [messages.ListRequest](#user-messages-ListRequest) | [messages.ListResponse](#user-messages-ListResponse) |  |
-| Get | [messages.GetRequest](#user-messages-GetRequest) | [messages.GetResponse](#user-messages-GetResponse) |  |
-| WhoAmI | [messages.WhoAmIRequest](#user-messages-WhoAmIRequest) | [messages.WhoAmIResponse](#user-messages-WhoAmIResponse) |  |
-| Register | [messages.RegisterRequest](#user-messages-RegisterRequest) | [messages.RegisterResponse](#user-messages-RegisterResponse) |  |
-| AddRole | [messages.AddRoleRequest](#user-messages-AddRoleRequest) | [messages.AddRoleResponse](#user-messages-AddRoleResponse) |  |
-| RemoveRole | [messages.RemoveRoleRequest](#user-messages-RemoveRoleRequest) | [messages.RemoveRoleResponse](#user-messages-RemoveRoleResponse) |  |
+| List | [messages.user_svc.ListRequest](#user-messages-user_svc-ListRequest) | [messages.user_svc.ListResponse](#user-messages-user_svc-ListResponse) |  |
+| Get | [messages.user_svc.GetRequest](#user-messages-user_svc-GetRequest) | [messages.user_svc.GetResponse](#user-messages-user_svc-GetResponse) |  |
+| WhoAmI | [messages.user_svc.WhoAmIRequest](#user-messages-user_svc-WhoAmIRequest) | [messages.user_svc.WhoAmIResponse](#user-messages-user_svc-WhoAmIResponse) |  |
+| Register | [messages.user_svc.RegisterRequest](#user-messages-user_svc-RegisterRequest) | [messages.user_svc.RegisterResponse](#user-messages-user_svc-RegisterResponse) |  |
+| AddRole | [messages.user_svc.AddRoleRequest](#user-messages-user_svc-AddRoleRequest) | [messages.user_svc.AddRoleResponse](#user-messages-user_svc-AddRoleResponse) |  |
+| RemoveRole | [messages.user_svc.RemoveRoleRequest](#user-messages-user_svc-RemoveRoleRequest) | [messages.user_svc.RemoveRoleResponse](#user-messages-user_svc-RemoveRoleResponse) |  |
 
  
 

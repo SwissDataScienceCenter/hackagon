@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package hackathon.messages;
-
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages";
-
-message AddPageResponse {
-  string page_id = 1;
-}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package hackathon;
+
+import "hackathon/messages/page_svc/create_request.proto";
+import "hackathon/messages/page_svc/create_response.proto";
+import "hackathon/messages/page_svc/delete_request.proto";
+import "hackathon/messages/page_svc/delete_response.proto";
+import "hackathon/messages/page_svc/edit_request.proto";
+import "hackathon/messages/page_svc/edit_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
+
+service PageService {
+  rpc Create(hackathon.messages.page_svc.CreateRequest) returns (hackathon.messages.page_svc.CreateResponse);
+  rpc Edit(hackathon.messages.page_svc.EditRequest) returns (hackathon.messages.page_svc.EditResponse);
+  rpc Delete(hackathon.messages.page_svc.DeleteRequest) returns (hackathon.messages.page_svc.DeleteResponse);
+}

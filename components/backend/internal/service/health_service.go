@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
-	messages "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health/messages"
+	messages "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health/messages/health_svc"
 )
 
 type HealthService struct {
