@@ -2,14 +2,14 @@ syntax = "proto3";
 
 package hackathon;
 
-import "hackathon/messages/create_team_request.proto";
-import "hackathon/messages/create_team_response.proto";
-import "hackathon/messages/assign_user_request.proto";
-import "hackathon/messages/assign_user_response.proto";
+import "hackathon/messages/team_svc/assign_user_request.proto";
+import "hackathon/messages/team_svc/assign_user_response.proto";
+import "hackathon/messages/team_svc/create_request.proto";
+import "hackathon/messages/team_svc/create_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 
-service TeamService{
-    rpc Create(hackathon.messages.CreateTeamRequest) returns (hackathon.messages.CreateTeamResponse);
-    rpc AssignUser(hackathon.messages.AssignUserRequest) returns (hackathon.messages.AssignUserResponse);
- }
+service TeamService {
+  rpc Create(hackathon.messages.team_svc.CreateRequest) returns (hackathon.messages.team_svc.CreateResponse);
+  rpc AssignUser(hackathon.messages.team_svc.AssignUserRequest) returns (hackathon.messages.team_svc.AssignUserResponse);
+}

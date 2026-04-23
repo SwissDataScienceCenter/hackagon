@@ -2,30 +2,29 @@ syntax = "proto3";
 
 package hackathon;
 
-import "hackathon/messages/add_owner_request.proto";
-import "hackathon/messages/add_owner_response.proto";
-import "hackathon/messages/create_request.proto";
-import "hackathon/messages/create_response.proto";
-import "hackathon/messages/get_request.proto";
-import "hackathon/messages/get_response.proto";
-import "hackathon/messages/join_request.proto";
-import "hackathon/messages/join_response.proto";
-import "hackathon/messages/list_request.proto";
-import "hackathon/messages/list_response.proto";
-import "hackathon/messages/remove_owner_request.proto";
-import "hackathon/messages/remove_owner_response.proto";
-import "hackathon/messages/remove_participant_request.proto";
-import "hackathon/messages/remove_participant_response.proto";
+import "hackathon/messages/hackathon_svc/add_owner_request.proto";
+import "hackathon/messages/hackathon_svc/add_owner_response.proto";
+import "hackathon/messages/hackathon_svc/create_request.proto";
+import "hackathon/messages/hackathon_svc/create_response.proto";
+import "hackathon/messages/hackathon_svc/get_request.proto";
+import "hackathon/messages/hackathon_svc/get_response.proto";
+import "hackathon/messages/hackathon_svc/join_request.proto";
+import "hackathon/messages/hackathon_svc/join_response.proto";
+import "hackathon/messages/hackathon_svc/list_request.proto";
+import "hackathon/messages/hackathon_svc/list_response.proto";
+import "hackathon/messages/hackathon_svc/remove_owner_request.proto";
+import "hackathon/messages/hackathon_svc/remove_owner_response.proto";
+import "hackathon/messages/hackathon_svc/remove_participant_request.proto";
+import "hackathon/messages/hackathon_svc/remove_participant_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 
 service HackathonService {
-  rpc List(hackathon.messages.ListRequest) returns (hackathon.messages.ListResponse);
-  rpc Get(hackathon.messages.GetRequest) returns (hackathon.messages.GetResponse);
-  rpc Create(hackathon.messages.CreateRequest) returns (hackathon.messages.CreateResponse);
-  rpc Join(hackathon.messages.JoinRequest) returns (hackathon.messages.JoinResponse);
-  rpc RemoveParticipant(hackathon.messages.RemoveParticipantRequest) returns (hackathon.messages.RemoveParticipantResponse);
-  rpc AddOwner(hackathon.messages.AddOwnerRequest) returns (hackathon.messages.AddOwnerResponse);
-  rpc RemoveOwner(hackathon.messages.RemoveOwnerRequest) returns (hackathon.messages.RemoveOwnerResponse);
+  rpc List(hackathon.messages.hackathon_svc.ListRequest) returns (hackathon.messages.hackathon_svc.ListResponse);
+  rpc Get(hackathon.messages.hackathon_svc.GetRequest) returns (hackathon.messages.hackathon_svc.GetResponse);
+  rpc Create(hackathon.messages.hackathon_svc.CreateRequest) returns (hackathon.messages.hackathon_svc.CreateResponse);
+  rpc Join(hackathon.messages.hackathon_svc.JoinRequest) returns (hackathon.messages.hackathon_svc.JoinResponse);
+  rpc RemoveParticipant(hackathon.messages.hackathon_svc.RemoveParticipantRequest) returns (hackathon.messages.hackathon_svc.RemoveParticipantResponse);
+  rpc AddOwner(hackathon.messages.hackathon_svc.AddOwnerRequest) returns (hackathon.messages.hackathon_svc.AddOwnerResponse);
+  rpc RemoveOwner(hackathon.messages.hackathon_svc.RemoveOwnerRequest) returns (hackathon.messages.hackathon_svc.RemoveOwnerResponse);
 }
-

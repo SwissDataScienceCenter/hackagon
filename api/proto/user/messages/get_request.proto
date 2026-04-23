@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package user.messages;
-
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages";
-
-message GetRequest {
-  string user_id = 1;
-}
