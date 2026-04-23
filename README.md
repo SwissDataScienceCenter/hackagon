@@ -30,6 +30,12 @@ just down
 
 # Attach to process-compose TUI
 just attach
+
+# Seed the database with sample data (after services are up)
+just seed
+
+# Show a summary of current DB state
+just db-summary
 ```
 
 ## Component READMEs

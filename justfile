@@ -63,6 +63,11 @@ refresh:
 
     echo "✓ Refresh complete. Run 'just up' to start fresh services."
 
+# Seed the test database with sample hackathons, tracks, projects, teams, and users.
+[group('general')]
+seed:
+    cd components/backend && go run ./cmd/seed/ --config-dir ./data/test/config/
+
 # Send a command to the running process-compose instance.
 [group('general')]
 proc-comp *args:
@@ -72,6 +77,11 @@ proc-comp *args:
 [group('general')]
 db *args:
     psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon "$@"
+
+# Show a formatted summary of what is currently in the database.
+[group('general')]
+db-summary:
+    psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon -f tools/sql/db-summary.sql
 
 # ─── Development ─────────────────────────────────────────────────────
 
