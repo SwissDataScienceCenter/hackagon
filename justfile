@@ -83,13 +83,6 @@ db *args:
 db-summary:
     psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon -f tools/sql/db-summary.sql
 
-# Call a gRPC method as alice (dev password aliceandbob).
-# Usage: just rpc user.UserService/WhoAmI
-#        just rpc user.UserService/Get '{"user_id":"..."}'
-[group('general')]
-rpc method data="{}":
-    just rpc-as alice aliceandbob "{{method}}" "{{data}}"
-
 # Call a gRPC method authed as a specific user.
 # Usage: just rpc-as bob aliceandbob user.UserService/WhoAmI
 [group('general')]
