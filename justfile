@@ -52,11 +52,11 @@ refresh:
     echo "==> Regenerating proto stubs (Go + TypeScript)..."
     just generate-proto
 
-    echo "==> Tidying Go modules..."
-    (cd components/backend && GOWORK=off go mod tidy)
-
     echo "==> Syncing frontend dependencies..."
     (cd components/frontend && pnpm install --frozen-lockfile)
+    
+    echo "==> Tidying Go modules..."
+    (cd components/backend && GOWORK=off go mod tidy)
 
     echo "==> Ensuring go.work is up to date..."
     just _setup
