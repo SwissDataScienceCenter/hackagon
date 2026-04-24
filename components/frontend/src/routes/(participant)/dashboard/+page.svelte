@@ -5,5 +5,5 @@
 </script>
 
 <div class="mx-auto w-full max-w-7xl">
-    <DashboardView session={data.session} />
+    <DashboardView session={data.session} hackathons={data.hackathons} myHackathons={data.myHackathons} />
 </div>

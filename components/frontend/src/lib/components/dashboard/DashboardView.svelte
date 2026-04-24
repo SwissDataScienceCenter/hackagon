@@ -4,16 +4,46 @@
         UserPlus,
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import { statusLabel, statusBadgePreset } from '$lib/utils/hackathonStatus';
+
+    interface HackathonEntry {
+        id: string;
+        name: string;
+        startsAt?: Date;
+        endsAt?: Date;
+        status: number;
+    }
+
     interface SessionProp {
         user?: { name?: string | null; id?: string } | null;
     }
 
     interface Props {
         session: SessionProp | null | undefined;
+        hackathons: HackathonEntry[];
+        myHackathons: HackathonEntry[];
     }
 
-    const { session }: Props = $props();
+    const { session, hackathons, myHackathons }: Props = $props();
     const userName = session?.user?.name ?? 'there';
+
+    const GRADIENTS = [
+        { from: 'var(--color-primary-700)', to: 'var(--color-primary-950)' },
+        { from: 'var(--color-secondary-500)', to: 'var(--color-secondary-950)' },
+        { from: 'var(--color-tertiary-500)', to: 'var(--color-tertiary-950)' },
+    ];
+
+    function gradient(i: number) {
+        return GRADIENTS[i % GRADIENTS.length];
+    }
+
+    function formatMeta(h: HackathonEntry): string {
+        const fmt = (d: Date) =>
+            d.toLocaleDateString('en-CH', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (h.startsAt && h.endsAt) return `${fmt(h.startsAt)} – ${fmt(h.endsAt)}`;
+        if (h.startsAt) return `Starts ${fmt(h.startsAt)}`;
+        return '';
+    }
 </script>
 
 <!-- Welcome Banner -->
@@ -21,7 +51,7 @@
     <div class="flex flex-col gap-1">
         <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
         <p class="text-sm text-surface-500">
-            You are registered in 1 active hackathon  ·  2 notifications
+            You are participating in {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
         </p>
     </div>
 </div>
@@ -32,42 +62,50 @@
     <!-- Main column -->
     <div class="flex flex-1 flex-col gap-6">
 
-        <!-- Active hackathons -->
+        <!-- All hackathons -->
         <section class="flex flex-col gap-4">
-            <h2 class="text-base font-bold">Your active hackathons</h2>
+            <h2 class="text-base font-bold">All hackathons</h2>
 
-            <div class="card preset-outlined-surface-200-800 overflow-hidden">
-                <HackathonRow
-                    href="/hackathon/ord-2026"
-                    name="ORD Hackathon 2026"
-                    meta="24 – 25 Oct 2026  ·  ETH Zurich  ·  Team: DataFlow (4 members)"
-                    badge="Project Proposals"
-                    badgePreset="preset-tonal-primary"
-                    gradFrom="var(--color-primary-700)"
-                    gradTo="var(--color-primary-950)"
-                />
-            </div>
+            {#if hackathons.length === 0}
+                <p class="text-sm text-surface-500">No hackathons yet.</p>
+            {:else}
+                <div class="card preset-outlined-surface-200-800 overflow-hidden">
+                    {#each hackathons as h, i (h.id)}
+                        <HackathonRow
+                            href="/hackathon/{h.id}"
+                            name={h.name}
+                            meta={formatMeta(h)}
+                            badge={statusLabel(h.status)}
+                            badgePreset={statusBadgePreset(h.status)}
+                            gradFrom={gradient(i).from}
+                            gradTo={gradient(i).to}
+                        />
+                    {/each}
+                </div>
+            {/if}
         </section>
 
-        <!-- Past participation -->
+        <!-- Your hackathons -->
         <section class="flex flex-col gap-4">
-            <h2 class="text-base font-bold">Past participation</h2>
+            <h2 class="text-base font-bold">Your hackathons</h2>
 
-            {#each [
-                { name: 'GenAI Hackathon 2025', meta: 'Nov 2025  ·  Team BioViz  ·  2nd place', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)', slug: 'genai-2025' },
-                { name: 'ORD Hackathon 2025', meta: 'Oct 2025  ·  Team DataFlow  ·  1st place', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2025' },
-            ] as row, i (i)}
+            {#if myHackathons.length === 0}
+                <p class="text-sm text-surface-500">You are not participating in any hackathons yet.</p>
+            {:else}
                 <div class="card preset-outlined-surface-200-800 overflow-hidden">
-                    <HackathonRow
-                        href="/hackathon/{row.slug}"
-                        name={row.name}
-                        meta={row.meta}
-                        gradFrom={row.gradFrom}
-                        gradTo={row.gradTo}
-                        size="compact"
-                    />
+                    {#each myHackathons as h, i (h.id)}
+                        <HackathonRow
+                            href="/hackathon/{h.id}"
+                            name={h.name}
+                            meta={formatMeta(h)}
+                            badge={statusLabel(h.status)}
+                            badgePreset={statusBadgePreset(h.status)}
+                            gradFrom={gradient(i).from}
+                            gradTo={gradient(i).to}
+                        />
+                    {/each}
                 </div>
-            {/each}
+            {/if}
         </section>
     </div>
 
