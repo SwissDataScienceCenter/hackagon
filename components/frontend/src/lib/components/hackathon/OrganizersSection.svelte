@@ -8,10 +8,10 @@
     } = $props();
 </script>
 
-<section class="flex flex-col gap-6 bg-surface-100 px-20 py-10 dark:bg-surface-900">
+<section class="flex flex-col gap-6 bg-surface-100-900 px-4 py-12 sm:px-10 md:px-20">
     <div class="flex flex-col gap-3">
-        <span class="text-xs font-bold tracking-widest text-surface-800 dark:text-surface-100">ORGANIZED BY</span>
-        <p class="max-w-[720px] text-sm leading-relaxed text-surface-700 dark:text-surface-100">{description}</p>
+        <span class="text-xs font-bold tracking-widest text-surface-800-200">ORGANIZED BY</span>
+        <p class="max-w-3xl text-sm leading-relaxed text-surface-700-300">{description}</p>
     </div>
     <div class="flex items-center gap-8">
         {#each organizers as org, i (i)}

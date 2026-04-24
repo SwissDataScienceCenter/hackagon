@@ -10,13 +10,13 @@
     } = $props();
 </script>
 
-<section class="px-20 py-12">
+<section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="mb-6 flex items-center gap-2">
-        <Target class="h-5 w-5 text-primary-700 dark:text-primary-500" />
+        <Target class="h-5 w-5 text-primary-700-300" />
         <h2 class="text-xl font-bold">{title}</h2>
     </div>
 
-    <div class="grid grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {#each highlights as item, i (i)}
             <div class="card preset-outlined-surface-200-800 overflow-hidden">
                 {#if item.imageUrl}
@@ -28,7 +28,7 @@
                     ></div>
                 {/if}
                 <div class="p-5">
-                    <p class="text-sm leading-relaxed text-surface-700 dark:text-surface-100">{item.message}</p>
+                    <p class="text-sm leading-relaxed text-surface-700-300">{item.message}</p>
                 </div>
             </div>
         {/each}

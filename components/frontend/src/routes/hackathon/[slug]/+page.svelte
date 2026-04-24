@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import { page } from '$app/state';
     import HeroSection from '$lib/components/hackathon/HeroSection.svelte';
     import OrganizersSection from '$lib/components/hackathon/OrganizersSection.svelte';
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
@@ -7,10 +8,17 @@
     import HighlightsSection from '$lib/components/hackathon/HighlightsSection.svelte';
     import VideoSection from '$lib/components/hackathon/VideoSection.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
+
+    const organizers = [
+        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
+        { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
+    ];
+
+    const hackathonTitle = "Open Research Data\nHackathon 2026";
 </script>
 
 <HeroSection
-    title={"Open Research Data\nHackathon 2026"}
+    title={hackathonTitle}
     dates="24 – 25 October 2026"
     venue="ETH Zurich, Zurich"
     imageUrl="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
@@ -23,12 +31,10 @@
     ]}
 />
 
+<div class="mx-auto w-full max-w-7xl">
 <OrganizersSection
     description="Co-organized by the Swiss Data Science Center (SDSC) and ETH Zurich Library, this hackathon brings together researchers, developers, and data stewards to build tools that make research data more accessible and reusable."
-    organizers={[
-        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
-        { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
-    ]}
+    {organizers}
 />
 
 <MarkdownSection content={`
@@ -96,6 +102,7 @@
     heading="Ready to participate?"
     subtitle="42 of 100 spots taken. Free participation, registration mandatory."
     buttonLabel="Register Now"
-    buttonHref={resolve('/dashboard')}
+    buttonHref={resolve(`/hackathon/${page.params.slug}/overview`)}
     note="Registration closes 17 Oct 2026"
 />
+</div>

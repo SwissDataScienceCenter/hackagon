@@ -9,23 +9,39 @@
 </script>
 
 <header
-    class="sticky top-0 z-50 flex items-center justify-between h-14 px-20
-           border-b border-surface-200 dark:border-surface-800
-           bg-surface-50 dark:bg-surface-950"
+    class="sticky top-0 z-50 flex h-14 items-center justify-between border-b
+           border-surface-200-800 bg-surface-50-950 px-4 sm:px-10 md:px-20"
 >
-    <a href={resolve('/')} class="flex items-center gap-3 no-underline">
-        <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
-        <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-        <span class="text-base font-bold">Hackathons</span>
-    </a>
+    {#if session?.user}
+        <a href={resolve('/(participant)/dashboard')} class="flex items-center gap-3 no-underline">
+            <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
+            <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
+            <span class="text-base font-bold">Hackathons</span>
+        </a>
+    {:else}
+        <a href={resolve('/')} class="flex items-center gap-3 no-underline">
+            <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
+            <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
+            <span class="text-base font-bold">Hackathons</span>
+        </a>
+    {/if}
 
     <nav class="hidden items-center gap-6 md:flex">
-        <a
-            href={resolve('/')}
-            class="text-sm font-medium no-underline hover:text-primary-500"
-        >
-            Hackathons
-        </a>
+        {#if session?.user}
+            <a
+                href={resolve('/(participant)/dashboard')}
+                class="text-sm font-medium no-underline hover:text-primary-500"
+            >
+                Hackathons
+            </a>
+        {:else}
+            <a
+                href={resolve('/')}
+                class="text-sm font-medium no-underline hover:text-primary-500"
+            >
+                Hackathons
+            </a>
+        {/if}
         <a
             href={resolve('/')}
             class="text-sm text-surface-400 no-underline hover:text-primary-500"

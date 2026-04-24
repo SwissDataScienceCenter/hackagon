@@ -3,14 +3,23 @@
 
     let checked = $state(false);
 
+    function applyMode(mode: 'light' | 'dark') {
+        if (typeof document === 'undefined') return;
+        const el = document.documentElement;
+        el.setAttribute('data-mode', mode);
+        el.style.colorScheme = mode === 'dark' ? 'dark' : 'light';
+    }
+
     $effect(() => {
-        const stored = localStorage.getItem('mode') || 'dark';
+        if (typeof localStorage === 'undefined') return;
+        const stored = (localStorage.getItem('mode') || 'dark') as 'light' | 'dark';
         checked = stored === 'dark';
+        applyMode(stored);
     });
 
     function toggle() {
         const mode = checked ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-mode', mode);
+        applyMode(mode);
         localStorage.setItem('mode', mode);
         checked = !checked;
     }
@@ -18,7 +27,12 @@
 
 <svelte:head>
     <script>
-        document.documentElement.setAttribute('data-mode', localStorage.getItem('mode') || 'dark');
+        (function () {
+            const m = (localStorage.getItem('mode') || 'dark');
+            const el = document.documentElement;
+            el.setAttribute('data-mode', m);
+            el.style.colorScheme = m === 'dark' ? 'dark' : 'light';
+        })();
     </script>
 </svelte:head>
 

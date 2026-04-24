@@ -1,3 +1,4 @@
+import { resolve as resolvePath } from "$app/paths"
 import { sequence } from "@sveltejs/kit/hooks"
 import {
   error,
@@ -20,9 +21,12 @@ let configLoader: ConfigLoader
 
 // Routes are protected by default. Only routes matching PUBLIC_ROUTE_PATTERNS
 // are accessible without authentication.
+// Public hackathon marketing page only: /hackathon/<slug> — not /hackathon/<slug>/overview, etc.
+// (Participant routes under (participant)/hackathon/[slug]/... require login.)
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
+  /^\/hackathon\/[^/]+\/?$/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
@@ -175,7 +179,7 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// If a logged-in user visits the login page, send them to welcome page.
+// If a logged-in user visits the root page (without returnTo), send them to the dashboard.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
   const hasReturnTo = event.url.searchParams.has("returnTo")
@@ -186,7 +190,7 @@ const redirectHandle: Handle = async ({ event, resolve }) => {
         { userId: event.locals.session.user.id },
         "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
       )
-      throw redirect(303, "/dashboard")
+      throw redirect(303, resolvePath("/(participant)/dashboard"))
     }
   }
 
@@ -199,7 +203,7 @@ export const handle = sequence(
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
   sessionSetupHandle, // Sanitize session + guard protected routes + setup gRPC clients
-  redirectHandle, // Redirect logged-in users to dashboard
+  redirectHandle, // Logged-in users on / -> /dashboard (unless returnTo is present)
 )
 
 // ----------------------------------------------------------
