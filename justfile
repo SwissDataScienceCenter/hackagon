@@ -83,6 +83,25 @@ db *args:
 db-summary:
     psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon -f tools/sql/db-summary.sql
 
+# Call a gRPC method authed as a specific user.
+# Usage: just rpc-as bob aliceandbob user.UserService/WhoAmI
+[group('general')]
+rpc-as user password method data="{}":
+    #!/usr/bin/env bash
+    set -eu
+    token=$(cd tools/deploy/process-compose && just get-access-token "{{user}}" "{{password}}")
+    if [ -z "$token" ] || [ "$token" = "null" ]; then
+        echo "failed to get access token for {{user}} (check user/password in Keycloak)" >&2
+        exit 1
+    fi
+    grpcurl -plaintext -H "authorization: Bearer $token" -d '{{data}}' localhost:3000 '{{method}}'
+
+# Call a gRPC method without auth (e.g. health probes).
+# Usage: just rpc-unauth health.HealthService/Check
+[group('general')]
+rpc-unauth method data="{}":
+    grpcurl -plaintext -d '{{data}}' localhost:3000 '{{method}}'
+
 # ─── Development ─────────────────────────────────────────────────────
 
 # Enter a Nix development shell.

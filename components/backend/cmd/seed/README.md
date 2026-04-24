@@ -27,8 +27,8 @@ comes from config; the other three are hardcoded constants in
 | #  | Name                         | Visibility | Timing   | Span (days from seed) | Creator | Teams | Submissions          |
 | -- | ---------------------------- | ---------- | -------- | --------------------- | ------- | ----- | -------------------- |
 | H1 | AI Innovation Challenge 2026 | public     | upcoming | `+19` to `+21`        | alice   | 2     | Alpha: draft, final  |
-| H2 | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`          | admin   | 1     | Gamma: final         |
-| H3 | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | admin  | 1     | Delta: draft, final  |
+| H2 | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`          | hackagon-admin | 1     | Gamma: final         |
+| H3 | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | hackagon-admin | 1     | Delta: draft, final  |
 
 ## Timeline
 
@@ -57,7 +57,7 @@ Phase-level timing is listed in each hackathon's section below.
 
 | User    | H1 AI Innovation                             | H2 Climate Tech                   | H3 Internal Sprint                 |
 | ------- | -------------------------------------------- | --------------------------------- | ---------------------------------- |
-| admin   | member of Team Alpha                         | **creator**; member of Team Gamma | **creator**; member of Team Delta  |
+| hackagon-admin | member of Team Alpha                         | **creator**; member of Team Gamma | **creator**; member of Team Delta  |
 | alice   | **creator**; member of Team Alpha, Team Beta | participant                       | member of Team Delta               |
 | bob     | participant                                  | member of Team Gamma              | —                                  |
 | charles | *waitlisted*                                 | —                                 | —                                  |
@@ -77,11 +77,11 @@ Tracks: **Machine Learning**, **Natural Language Processing**, **Computer Vision
 | ML    | Federated Learning Framework | proposed | bob                    |
 | NLP   | Multilingual Chatbot         | approved | alice                  |
 | NLP   | Document Summarizer          | proposed | bob                    |
-| CV    | Real-time Object Detection   | approved | bob (modified by admin) |
+| CV    | Real-time Object Detection   | approved | bob (modified by hackagon-admin) |
 
 | Team       | Project                 | Members      | Submissions                                                              |
 | ---------- | ----------------------- | ------------ | ------------------------------------------------------------------------ |
-| Team Alpha | AutoML Pipeline Builder | alice, admin | v1 draft; v2 final → `github.com/team-alpha/automl-pipeline`             |
+| Team Alpha | AutoML Pipeline Builder | alice, hackagon-admin | v1 draft; v2 final → `github.com/team-alpha/automl-pipeline`             |
 | Team Beta  | Multilingual Chatbot    | alice        | —                                                                        |
 
 Pages: `Welcome`, `Schedule` (visible); `Rules & Guidelines` (hidden).
@@ -103,7 +103,7 @@ Tracks: **Energy**, **Agriculture & Food**
 
 | Team       | Project               | Members    | Submissions                                                |
 | ---------- | --------------------- | ---------- | ---------------------------------------------------------- |
-| Team Gamma | Solar Panel Optimizer | bob, admin | v1 final → `github.com/team-gamma/solar-optimizer`         |
+| Team Gamma | Solar Panel Optimizer | bob, hackagon-admin | v1 final → `github.com/team-gamma/solar-optimizer`         |
 
 Pages: `About`, `Judging Criteria`, `Resources` (all visible).
 
@@ -124,6 +124,6 @@ Tracks: **Developer Tools**, **Data Platform**
 
 | Team       | Project            | Members      | Submissions                                          |
 | ---------- | ------------------ | ------------ | ---------------------------------------------------- |
-| Team Delta | CLI Code Generator | admin, alice | v1 draft; v2 final → `github.com/internal/cli-code-gen` |
+| Team Delta | CLI Code Generator | hackagon-admin, alice | v1 draft; v2 final → `github.com/internal/cli-code-gen` |
 
 Pages: `Overview`, `Technical Specs`, `Timeline` (all visible).
