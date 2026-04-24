@@ -1,21 +1,21 @@
 import { createChannel, createClientFactory, Metadata } from "nice-grpc"
-import { HealthDefinition } from "./generated/health"
-import { UserDefinition } from "./generated/user"
-import type { HealthClient } from "./generated/health"
-import type { UserClient } from "./generated/user"
+import { HealthServiceDefinition } from "./generated/health/health_service"
+import { UserServiceDefinition } from "./generated/user/user_service"
+import type { HealthServiceClient } from "./generated/health/health_service"
+import type { UserServiceClient } from "./generated/user/user_service"
 
 const channel = createChannel("localhost:3000")
 
 // Unauthenticated health client for the startup check in hooks.server.ts
 export const healthClient = createClientFactory().create(
-  HealthDefinition,
+  HealthServiceDefinition,
   channel,
 )
 
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
-  user: UserClient
-  health: HealthClient
+  user: UserServiceClient
+  health: HealthServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -30,8 +30,8 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
   )
 
   return {
-    user: factory.create(UserDefinition, channel),
-    health: factory.create(HealthDefinition, channel),
+    user: factory.create(UserServiceDefinition, channel),
+    health: factory.create(HealthServiceDefinition, channel),
   }
 }
 
