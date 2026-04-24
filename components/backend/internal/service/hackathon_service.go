@@ -100,7 +100,7 @@ func (s *HackathonService) List(
 		}
 		q = q.Where(enthackathon.VisibilityEQ(entV))
 	}
-	hs, err := q.All(ctx)
+	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
@@ -108,8 +108,8 @@ func (s *HackathonService) List(
 
 	now := time.Now()
 	wanted := make(map[ents.HackathonStatus]struct{}, len(req.GetStatusFilter()))
-	for _, s := range req.GetStatusFilter() {
-		wanted[s] = struct{}{}
+	for _, sf := range req.GetStatusFilter() {
+		wanted[sf] = struct{}{}
 	}
 
 	entries := make([]*ents.Hackathon, 0, len(hs))
