@@ -144,7 +144,7 @@ let
                     };
                     readiness_probe = {
                       exec = {
-                        command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 health.Health/Check";
+                        command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 health.HealthService/Check";
                       };
                       initial_delay_seconds = 10;
                       timeout_seconds = 5;
