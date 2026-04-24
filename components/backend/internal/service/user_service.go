@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
@@ -46,7 +46,7 @@ func (s *UserService) List(
 ) (*msgs.ListResponse, error) {
 	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
 	if err != nil {
-		log.Printf("enforce error: %v", err)
+		slog.Error("enforce", "err", err)
 		return nil, status.Error(codes.Internal, "authorization error")
 	}
 	if !ok {
@@ -54,7 +54,7 @@ func (s *UserService) List(
 	}
 	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
-		log.Printf("query user: %v", err)
+		slog.Error("query user", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 	entries := make([]*ents.User, 0, len(users))

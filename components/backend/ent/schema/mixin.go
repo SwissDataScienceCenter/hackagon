@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"log"
+	"log/slog"
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
@@ -19,7 +19,8 @@ func (UUIDMixin) Fields() []ent.Field {
 			Default(func() uuid.UUID {
 				id, err := uuid.NewV7()
 				if err != nil {
-					log.Fatalf("couldn't create UUID: %v", err)
+					slog.Error("couldn't create UUID", "err", err)
+					panic(err)
 				}
 
 				return id

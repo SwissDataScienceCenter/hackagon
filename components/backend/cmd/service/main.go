@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 
@@ -13,6 +13,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
@@ -40,13 +41,12 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 	if err != nil {
 		return fmt.Errorf("create admin user: %w", err)
 	}
-	log.Printf("Seeded admin user (keycloak_id=%s)", cfg.Server.AdminKeycloakID)
+	slog.Info("seeded admin user", "keycloak_id", cfg.Server.AdminKeycloakID)
 	return nil
 }
 
 func skipAuth(ctx context.Context, method string) bool {
 	// Methods to skip auth for.
-	fmt.Printf("%s", method)
 	if method == "/health.Health/Check" {
 		return true
 	}
@@ -55,33 +55,37 @@ func skipAuth(ctx context.Context, method string) bool {
 }
 
 func main() {
-	// Load configuration
-	fmt.Println("starting backend service")
+	logx.Setup("")
+
 	configDirPtr := flag.String("config-dir", "./data/test/config/", "path to config")
 	flag.Parse()
 	cfg, err := config.Load(*configDirPtr)
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		logx.Fatal("load config", "err", err)
 	}
+	logx.Setup(cfg.Logging.Level)
+
+	slog.Info("starting backend service")
 	// migrate database
 	dbClient, err := ent.Open(
 		"postgres",
 		cfg.ConnectionStr(),
+		ent.Log(func(a ...any) { slog.Debug("ent", "msg", fmt.Sprint(a...)) }),
 	)
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		logx.Fatal("open database", "err", err)
 	}
 
 	defer dbClient.Close()
 	if err := dbClient.Schema.Create(context.Background()); err != nil {
-		log.Fatalf("failed creating schema resources: %v", err)
+		logx.Fatal("create schema", "err", err)
 	}
 	if err := seedAdminUser(context.Background(), dbClient, cfg); err != nil {
-		log.Fatalf("failed to seed admin user: %v", err)
+		logx.Fatal("seed admin user", "err", err)
 	}
 	enf, err := mw.NewRBACEnforcer(cfg)
 	if err != nil {
-		log.Fatalf("failed to create RBAC enforcer: %v", err)
+		logx.Fatal("create RBAC enforcer", "err", err)
 	}
 
 	// Create services
@@ -91,7 +95,7 @@ func main() {
 	// Create gRPC server
 	a, err := mw.NewJWTValidator(cfg, skipAuth)
 	if err != nil {
-		log.Fatalf("failed to create JWT validator")
+		logx.Fatal("create JWT validator", "err", err)
 	}
 	auth_middleware := mw.AuthUnaryServerInterceptor(a)
 	server := grpc.NewServer(
@@ -107,22 +111,21 @@ func main() {
 	// Listen
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		logx.Fatal("listen", "err", err)
 	}
 
-	fmt.Printf("Starting gRPC server on port %s...\n", cfg.Server.Port)
-	fmt.Printf("Endpoint: grpc://localhost:%s\n", cfg.Server.Port)
+	slog.Info("grpc server listening", "port", cfg.Server.Port)
 
 	// Serve
 	if err := server.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		logx.Fatal("serve", "err", err)
 	}
 
 	// Graceful shutdown
 	shutdown := make(chan os.Signal, 1)
 	<-shutdown
 
-	fmt.Println("\nShutting down server...")
+	slog.Info("shutting down server")
 	server.GracefulStop()
-	log.Println("Server stopped")
+	slog.Info("server stopped")
 }

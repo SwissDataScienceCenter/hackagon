@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"path"
 	"strings"
 
@@ -17,6 +17,12 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	Oidc     OidcConfig     `yaml:"oidc"`
+	Logging  LoggingConfig  `yaml:"logging"`
+}
+
+type LoggingConfig struct {
+	// Level is one of: debug, info, warn, error. Defaults to info.
+	Level string `yaml:"level"`
 }
 
 type ServerConfig struct {
@@ -78,6 +84,9 @@ func Load(configDir string) (*Config, error) {
 			"issuerurl": "http://localhost:8180/realms/hackagon",
 			"algorithm": "RS256",
 		},
+		"logging": map[string]interface{}{
+			"level": "info",
+		},
 	}
 	if err := k.Load(confmap.Provider(defaults, ""), nil); err != nil {
 		return nil, err
@@ -89,7 +98,7 @@ func Load(configDir string) (*Config, error) {
 		if !strings.Contains(err.Error(), "no such file") {
 			return nil, err
 		}
-		log.Printf("Warn: Couldn't load config file: %v", err)
+		slog.Warn("couldn't load config file", "err", err)
 	}
 
 	// Override with environment variables
