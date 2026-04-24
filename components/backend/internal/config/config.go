@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"path"
 	"strings"
 
@@ -89,7 +89,7 @@ func Load(configDir string) (*Config, error) {
 		if !strings.Contains(err.Error(), "no such file") {
 			return nil, err
 		}
-		log.Printf("Warn: Couldn't load config file: %v", err)
+		slog.Warn("couldn't load config file", "err", err)
 	}
 
 	// Override with environment variables

@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -14,6 +14,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
 )
 
 const (
@@ -26,39 +27,41 @@ const (
 const sentinelHackathon = "AI Innovation Challenge 2026"
 
 func main() {
+	logx.Setup()
+
 	configDirPtr := flag.String("config-dir", "./data/test/config/", "path to config directory")
 	flag.Parse()
 
 	cfg, err := config.Load(*configDirPtr)
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		logx.Fatal("load config", "err", err)
 	}
 
 	db, err := ent.Open("postgres", cfg.ConnectionStr())
 	if err != nil {
-		log.Fatalf("open db: %v", err)
+		logx.Fatal("open db", "err", err)
 	}
 	defer db.Close()
 
 	ctx := context.Background()
 
 	if err := db.Schema.Create(ctx); err != nil {
-		log.Fatalf("migrate schema: %v", err)
+		logx.Fatal("migrate schema", "err", err)
 	}
 
 	exists, err := db.Hackathon.Query().Where(hackathon.NameEQ(sentinelHackathon)).Exist(ctx)
 	if err != nil {
-		log.Fatalf("check sentinel: %v", err)
+		logx.Fatal("check sentinel", "err", err)
 	}
 	if exists {
-		log.Println("seed data already present, skipping")
+		slog.Info("seed data already present, skipping")
 		return
 	}
 
 	if err := seed(ctx, db, cfg); err != nil {
-		log.Fatalf("seed: %v", err)
+		logx.Fatal("seed", "err", err)
 	}
-	log.Println("seed complete")
+	slog.Info("seed complete")
 }
 
 func seed(ctx context.Context, db *ent.Client, cfg *config.Config) error {
