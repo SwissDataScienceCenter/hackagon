@@ -40,6 +40,17 @@ func visibilityFromEnt(v enthackathon.Visibility) ents.Visibility {
 	}
 }
 
+func visibilityToEnt(v ents.Visibility) (enthackathon.Visibility, bool) {
+	switch v {
+	case ents.Visibility_VISIBILITY_PUBLIC:
+		return enthackathon.VisibilityPublic, true
+	case ents.Visibility_VISIBILITY_PRIVATE:
+		return enthackathon.VisibilityPrivate, true
+	default:
+		return "", false
+	}
+}
+
 func computeHackathonStatus(startsAt, endsAt *time.Time, now time.Time) ents.HackathonStatus {
 	if startsAt == nil || now.Before(*startsAt) {
 		return ents.HackathonStatus_HACKATHON_STATUS_PENDING
@@ -81,7 +92,15 @@ func (s *HackathonService) List(
 	req *msgs.ListRequest,
 ) (*msgs.ListResponse, error) {
 	// TODO: casbin check once role-granting RPCs exist
-	hs, err := s.dbClient.Hackathon.Query().All(ctx)
+	q := s.dbClient.Hackathon.Query()
+	if vf := req.GetVisibilityFilter(); vf != ents.Visibility_VISIBILITY_UNSPECIFIED {
+		entV, ok := visibilityToEnt(vf)
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown visibility: %v", vf)
+		}
+		q = q.Where(enthackathon.VisibilityEQ(entV))
+	}
+	hs, err := q.All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
