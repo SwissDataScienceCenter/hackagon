@@ -8,11 +8,12 @@ import (
 	"strings"
 )
 
-// Setup installs a JSON slog handler on the default logger. The log level
-// is read from the LOG_LEVEL env var (debug|info|warn|error) and defaults
-// to info.
-func Setup() {
-	opts := &slog.HandlerOptions{Level: parseLevel(os.Getenv("LOG_LEVEL"))}
+// Setup installs a JSON slog handler on the default logger at the given
+// level (debug|info|warn|error). An empty or unrecognized value defaults
+// to info. Safe to call more than once; a second call replaces the
+// default logger with one at the new level.
+func Setup(level string) {
+	opts := &slog.HandlerOptions{Level: parseLevel(level)}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, opts)))
 }
 

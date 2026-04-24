@@ -55,15 +55,17 @@ func skipAuth(ctx context.Context, method string) bool {
 }
 
 func main() {
-	logx.Setup()
+	logx.Setup("")
 
-	slog.Info("starting backend service")
 	configDirPtr := flag.String("config-dir", "./data/test/config/", "path to config")
 	flag.Parse()
 	cfg, err := config.Load(*configDirPtr)
 	if err != nil {
 		logx.Fatal("load config", "err", err)
 	}
+	logx.Setup(cfg.Logging.Level)
+
+	slog.Info("starting backend service")
 	// migrate database
 	dbClient, err := ent.Open(
 		"postgres",

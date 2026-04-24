@@ -13,3 +13,5 @@ oidc:
   jwksurl: "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs"
   issuerurl: "http://localhost:8180/realms/hackagon"
   algorithm: "RS256"
+logging:
+  level: info

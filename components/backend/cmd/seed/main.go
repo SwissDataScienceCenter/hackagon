@@ -27,7 +27,7 @@ const (
 const sentinelHackathon = "AI Innovation Challenge 2026"
 
 func main() {
-	logx.Setup()
+	logx.Setup("")
 
 	configDirPtr := flag.String("config-dir", "./data/test/config/", "path to config directory")
 	flag.Parse()
@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		logx.Fatal("load config", "err", err)
 	}
+	logx.Setup(cfg.Logging.Level)
 
 	db, err := ent.Open("postgres", cfg.ConnectionStr())
 	if err != nil {

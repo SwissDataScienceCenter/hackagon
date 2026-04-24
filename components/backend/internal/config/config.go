@@ -17,6 +17,12 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	Oidc     OidcConfig     `yaml:"oidc"`
+	Logging  LoggingConfig  `yaml:"logging"`
+}
+
+type LoggingConfig struct {
+	// Level is one of: debug, info, warn, error. Defaults to info.
+	Level string `yaml:"level"`
 }
 
 type ServerConfig struct {
@@ -77,6 +83,9 @@ func Load(configDir string) (*Config, error) {
 			"jwksurl":   "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs",
 			"issuerurl": "http://localhost:8180/realms/hackagon",
 			"algorithm": "RS256",
+		},
+		"logging": map[string]interface{}{
+			"level": "info",
 		},
 	}
 	if err := k.Load(confmap.Provider(defaults, ""), nil); err != nil {
