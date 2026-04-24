@@ -20,14 +20,14 @@ SELECT
   h.name,
   h.visibility,
   CASE
-    WHEN h.start_date IS NULL     THEN 'unscheduled'
-    WHEN h.start_date > NOW()     THEN 'upcoming'
-    WHEN h.end_date IS NULL
-      OR h.end_date >= NOW()      THEN 'ongoing'
+    WHEN h.starts_at IS NULL      THEN 'unscheduled'
+    WHEN h.starts_at > NOW()      THEN 'upcoming'
+    WHEN h.ends_at IS NULL
+      OR h.ends_at >= NOW()       THEN 'ongoing'
     ELSE                               'past'
   END                               AS status,
-  h.start_date::date                AS start,
-  h.end_date::date                  AS "end",
+  h.starts_at::date                 AS start,
+  h.ends_at::date                   AS "end",
   COUNT(DISTINCT t.id)              AS tracks,
   COUNT(DISTINCT p.id)              AS projects,
   COUNT(DISTINCT pa.user_id)        AS participants
@@ -36,7 +36,7 @@ LEFT JOIN tracks t        ON t.hackathon_tracks   = h.id
 LEFT JOIN projects p      ON p.hackathon_projects = h.id
 LEFT JOIN participants pa ON pa.hackathon_id      = h.id
 GROUP BY h.id
-ORDER BY h.start_date NULLS LAST;
+ORDER BY h.starts_at NULLS LAST;
 
 \echo '── Users ──────────────────────────────────────────────────────'
 SELECT

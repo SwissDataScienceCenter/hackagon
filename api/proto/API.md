@@ -1096,6 +1096,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | status_filter | [hackathon.entities.HackathonStatus](#hackathon-entities-HackathonStatus) | repeated |  |
 | owner_id | [string](#string) | optional |  |
 | participant_id | [string](#string) | optional |  |
+| visibility_filter | [hackathon.entities.Visibility](#hackathon-entities-Visibility) | optional |  |
 
 
 
