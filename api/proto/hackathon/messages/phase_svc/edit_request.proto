@@ -10,6 +10,6 @@ message EditRequest {
   string phase_id = 1;
   string name = 2;
   string description = 3;
-  optional google.protobuf.Timestamp start_date = 4;
-  optional google.protobuf.Timestamp end_date = 5;
+  optional google.protobuf.Timestamp starts_at = 4;
+  optional google.protobuf.Timestamp ends_at = 5;
 }
