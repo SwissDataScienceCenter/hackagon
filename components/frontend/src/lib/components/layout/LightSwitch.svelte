@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Sun, Moon } from 'lucide-svelte';
+    import Sun from 'lucide-svelte/icons/sun';
+    import Moon from 'lucide-svelte/icons/moon';
 
     let checked = $state(false);
 
