@@ -1616,8 +1616,8 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | hackathon_id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
 | description | [string](#string) |  |  |
-| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 
 
 
@@ -1739,8 +1739,8 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | phase_id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
 | description | [string](#string) |  |  |
-| start_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| end_date | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 
 
 
