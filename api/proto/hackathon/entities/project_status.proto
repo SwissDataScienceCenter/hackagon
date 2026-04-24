@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+enum ProjectStatus {
+  PROJECT_STATUS_UNSPECIFIED = 0;
+  PROJECT_STATUS_PROPOSED = 1;
+  PROJECT_STATUS_APPROVED = 2;
+}

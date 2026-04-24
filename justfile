@@ -140,6 +140,13 @@ generate-proto *args:
     #!/usr/bin/env bash
     set -eu
 
+    # Wipe codegen output dirs first — buf generate does not prune stale files,
+    # which silently shadows new output (e.g. Node resolving a stale user.ts
+    # over the new user/ directory). API.md is rewritten in place by
+    # protoc-gen-doc, so api/proto is not wiped.
+    rm -rf components/backend/internal/proto
+    rm -rf components/frontend/src/lib/server/grpc/generated
+
     buf generate
 
     echo "All protos processed."

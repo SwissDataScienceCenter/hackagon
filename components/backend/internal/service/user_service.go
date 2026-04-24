@@ -31,11 +31,12 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 func userEntryFromEnt(u *ent.User) *ents.User {
 	return &ents.User{
 		Id:          u.ID.String(),
-		Name:        u.Username,
+		Username:    u.Username,
 		KeycloakId:  u.KeycloakID,
 		DisplayName: u.DisplayName,
 		Email:       u.Email,
 		CreatedAt:   timestamppb.New(u.CreatedAt),
+		ModifiedAt:  timestamppb.New(u.ModifiedAt),
 	}
 }
 

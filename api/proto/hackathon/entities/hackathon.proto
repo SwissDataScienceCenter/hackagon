@@ -5,7 +5,12 @@ package hackathon.entities;
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/hackathon_member.proto";
 import "hackathon/entities/hackathon_status.proto";
+import "hackathon/entities/page.proto";
+import "hackathon/entities/phase.proto";
+import "hackathon/entities/project.proto";
+import "hackathon/entities/track.proto";
 import "hackathon/entities/visibility.proto";
+import "user/entities/user.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
 
@@ -17,8 +22,16 @@ message Hackathon {
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp modified_at = 6;
   Visibility visibility = 7;
+  // Computed server-side from starts_at/ends_at; not persisted in DB.
   HackathonStatus status = 8;
   optional string description = 9;
   optional string logo = 10;
   repeated HackathonMember members = 11;
+  user.entities.User creator = 12;
+  optional user.entities.User modifier = 13;
+  // The following collections are populated only on Get responses.
+  repeated Track tracks = 14;
+  repeated Project projects = 15;
+  repeated Page pages = 16;
+  repeated Phase phases = 17;
 }

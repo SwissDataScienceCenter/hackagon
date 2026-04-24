@@ -2,12 +2,18 @@ syntax = "proto3";
 
 package hackathon.entities;
 
+import "google/protobuf/timestamp.proto";
 import "hackathon/entities/hackathon_role.proto";
+import "user/entities/user.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
 
+// A user's relationship to a hackathon: DB participation state (is_waiting, joined_at)
+// combined with casbin role. `role` is HACKATHON_ROLE_UNSPECIFIED for users with no
+// casbin role for this hackathon; `is_waiting` is false once approved.
 message HackathonMember {
-  string id = 1;
-  string name = 2;
-  HackathonRole role = 3;
+  user.entities.User user = 1;
+  HackathonRole role = 2;
+  bool is_waiting = 3;
+  google.protobuf.Timestamp joined_at = 4;
 }

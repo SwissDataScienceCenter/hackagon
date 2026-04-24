@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+message Page {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  bool visible = 4;
+  int32 order = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp modified_at = 7;
+  string hackathon_id = 8;
+  optional string phase_id = 9;
+  string creator_id = 10;
+  optional string modifier_id = 11;
+}

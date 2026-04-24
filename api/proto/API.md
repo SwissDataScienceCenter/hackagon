@@ -6,17 +6,47 @@
 - [hackathon/entities/hackathon_role.proto](#hackathon_entities_hackathon_role-proto)
     - [HackathonRole](#hackathon-entities-HackathonRole)
   
+- [user/entities/global_role.proto](#user_entities_global_role-proto)
+    - [GlobalRole](#user-entities-GlobalRole)
+  
+- [user/entities/user.proto](#user_entities_user-proto)
+    - [User](#user-entities-User)
+  
 - [hackathon/entities/hackathon_member.proto](#hackathon_entities_hackathon_member-proto)
     - [HackathonMember](#hackathon-entities-HackathonMember)
   
 - [hackathon/entities/hackathon_status.proto](#hackathon_entities_hackathon_status-proto)
     - [HackathonStatus](#hackathon-entities-HackathonStatus)
   
+- [hackathon/entities/page.proto](#hackathon_entities_page-proto)
+    - [Page](#hackathon-entities-Page)
+  
+- [hackathon/entities/phase.proto](#hackathon_entities_phase-proto)
+    - [Phase](#hackathon-entities-Phase)
+  
+- [hackathon/entities/project_status.proto](#hackathon_entities_project_status-proto)
+    - [ProjectStatus](#hackathon-entities-ProjectStatus)
+  
+- [hackathon/entities/project.proto](#hackathon_entities_project-proto)
+    - [Project](#hackathon-entities-Project)
+  
+- [hackathon/entities/track.proto](#hackathon_entities_track-proto)
+    - [Track](#hackathon-entities-Track)
+  
 - [hackathon/entities/visibility.proto](#hackathon_entities_visibility-proto)
     - [Visibility](#hackathon-entities-Visibility)
   
 - [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
     - [Hackathon](#hackathon-entities-Hackathon)
+  
+- [hackathon/entities/submission_status.proto](#hackathon_entities_submission_status-proto)
+    - [SubmissionStatus](#hackathon-entities-SubmissionStatus)
+  
+- [hackathon/entities/submission.proto](#hackathon_entities_submission-proto)
+    - [Submission](#hackathon-entities-Submission)
+  
+- [hackathon/entities/team.proto](#hackathon_entities_team-proto)
+    - [Team](#hackathon-entities-Team)
   
 - [hackathon/messages/hackathon_svc/add_owner_request.proto](#hackathon_messages_hackathon_svc_add_owner_request-proto)
     - [AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest)
@@ -81,6 +111,18 @@
 - [hackathon/messages/page_svc/edit_response.proto](#hackathon_messages_page_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-page_svc-EditResponse)
   
+- [hackathon/messages/page_svc/get_request.proto](#hackathon_messages_page_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-page_svc-GetRequest)
+  
+- [hackathon/messages/page_svc/get_response.proto](#hackathon_messages_page_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-page_svc-GetResponse)
+  
+- [hackathon/messages/page_svc/list_request.proto](#hackathon_messages_page_svc_list_request-proto)
+    - [ListRequest](#hackathon-messages-page_svc-ListRequest)
+  
+- [hackathon/messages/page_svc/list_response.proto](#hackathon_messages_page_svc_list_response-proto)
+    - [ListResponse](#hackathon-messages-page_svc-ListResponse)
+  
 - [hackathon/messages/phase_svc/create_request.proto](#hackathon_messages_phase_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-phase_svc-CreateRequest)
   
@@ -98,6 +140,18 @@
   
 - [hackathon/messages/phase_svc/edit_response.proto](#hackathon_messages_phase_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-phase_svc-EditResponse)
+  
+- [hackathon/messages/phase_svc/get_request.proto](#hackathon_messages_phase_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-phase_svc-GetRequest)
+  
+- [hackathon/messages/phase_svc/get_response.proto](#hackathon_messages_phase_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-phase_svc-GetResponse)
+  
+- [hackathon/messages/phase_svc/list_request.proto](#hackathon_messages_phase_svc_list_request-proto)
+    - [ListRequest](#hackathon-messages-phase_svc-ListRequest)
+  
+- [hackathon/messages/phase_svc/list_response.proto](#hackathon_messages_phase_svc_list_response-proto)
+    - [ListResponse](#hackathon-messages-phase_svc-ListResponse)
   
 - [hackathon/messages/project_svc/approve_request.proto](#hackathon_messages_project_svc_approve_request-proto)
     - [ApproveRequest](#hackathon-messages-project_svc-ApproveRequest)
@@ -117,6 +171,18 @@
 - [hackathon/messages/project_svc/edit_response.proto](#hackathon_messages_project_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-project_svc-EditResponse)
   
+- [hackathon/messages/project_svc/get_request.proto](#hackathon_messages_project_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-project_svc-GetRequest)
+  
+- [hackathon/messages/project_svc/get_response.proto](#hackathon_messages_project_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-project_svc-GetResponse)
+  
+- [hackathon/messages/project_svc/list_request.proto](#hackathon_messages_project_svc_list_request-proto)
+    - [ListRequest](#hackathon-messages-project_svc-ListRequest)
+  
+- [hackathon/messages/project_svc/list_response.proto](#hackathon_messages_project_svc_list_response-proto)
+    - [ListResponse](#hackathon-messages-project_svc-ListResponse)
+  
 - [hackathon/messages/project_svc/propose_request.proto](#hackathon_messages_project_svc_propose_request-proto)
     - [ProposeRequest](#hackathon-messages-project_svc-ProposeRequest)
   
@@ -135,6 +201,30 @@
 - [hackathon/messages/team_svc/create_response.proto](#hackathon_messages_team_svc_create_response-proto)
     - [CreateResponse](#hackathon-messages-team_svc-CreateResponse)
   
+- [hackathon/messages/team_svc/get_request.proto](#hackathon_messages_team_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-team_svc-GetRequest)
+  
+- [hackathon/messages/team_svc/get_response.proto](#hackathon_messages_team_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-team_svc-GetResponse)
+  
+- [hackathon/messages/team_svc/list_request.proto](#hackathon_messages_team_svc_list_request-proto)
+    - [ListRequest](#hackathon-messages-team_svc-ListRequest)
+  
+- [hackathon/messages/team_svc/list_response.proto](#hackathon_messages_team_svc_list_response-proto)
+    - [ListResponse](#hackathon-messages-team_svc-ListResponse)
+  
+- [hackathon/messages/track_svc/get_request.proto](#hackathon_messages_track_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-track_svc-GetRequest)
+  
+- [hackathon/messages/track_svc/get_response.proto](#hackathon_messages_track_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-track_svc-GetResponse)
+  
+- [hackathon/messages/track_svc/list_request.proto](#hackathon_messages_track_svc_list_request-proto)
+    - [ListRequest](#hackathon-messages-track_svc-ListRequest)
+  
+- [hackathon/messages/track_svc/list_response.proto](#hackathon_messages_track_svc_list_response-proto)
+    - [ListResponse](#hackathon-messages-track_svc-ListResponse)
+  
 - [hackathon/page_service.proto](#hackathon_page_service-proto)
     - [PageService](#hackathon-PageService)
   
@@ -147,6 +237,9 @@
 - [hackathon/team_service.proto](#hackathon_team_service-proto)
     - [TeamService](#hackathon-TeamService)
   
+- [hackathon/track_service.proto](#hackathon_track_service-proto)
+    - [TrackService](#hackathon-TrackService)
+  
 - [health/messages/health_svc/check_request.proto](#health_messages_health_svc_check_request-proto)
     - [CheckRequest](#health-messages-health_svc-CheckRequest)
   
@@ -155,12 +248,6 @@
   
 - [health/health_service.proto](#health_health_service-proto)
     - [HealthService](#health-HealthService)
-  
-- [user/entities/global_role.proto](#user_entities_global_role-proto)
-    - [GlobalRole](#user-entities-GlobalRole)
-  
-- [user/entities/user.proto](#user_entities_user-proto)
-    - [User](#user-entities-User)
   
 - [user/messages/user_svc/add_role_request.proto](#user_messages_user_svc_add_role_request-proto)
     - [AddRoleRequest](#user-messages-user_svc-AddRoleRequest)
@@ -217,7 +304,8 @@
 <a name="hackathon-entities-HackathonRole"></a>
 
 ### HackathonRole
-
+Per-hackathon role sourced from casbin (not persisted in ent DB).
+See components/backend/internal/middleware/rbac.go.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
@@ -225,6 +313,74 @@
 | HACKATHON_ROLE_OWNER | 1 |  |
 | HACKATHON_ROLE_MEMBER | 2 |  |
 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="user_entities_global_role-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/entities/global_role.proto
+
+
+ 
+
+
+<a name="user-entities-GlobalRole"></a>
+
+### GlobalRole
+Global role sourced from casbin (not persisted in ent DB).
+See components/backend/internal/middleware/rbac.go.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| GLOBAL_ROLE_UNSPECIFIED | 0 |  |
+| GLOBAL_ROLE_ADMIN | 1 |  |
+| GLOBAL_ROLE_HACKATHON_ORGANIZER | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="user_entities_user-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/entities/user.proto
+
+
+
+<a name="user-entities-User"></a>
+
+### User
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| username | [string](#string) |  |  |
+| keycloak_id | [string](#string) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| display_name | [string](#string) |  |  |
+| email | [string](#string) |  |  |
+| roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
 
  
 
@@ -244,14 +400,17 @@
 <a name="hackathon-entities-HackathonMember"></a>
 
 ### HackathonMember
-
+A user&#39;s relationship to a hackathon: DB participation state (is_waiting, joined_at)
+combined with casbin role. `role` is HACKATHON_ROLE_UNSPECIFIED for users with no
+casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| name | [string](#string) |  |  |
+| user | [user.entities.User](#user-entities-User) |  |  |
 | role | [HackathonRole](#hackathon-entities-HackathonRole) |  |  |
+| is_waiting | [bool](#bool) |  |  |
+| joined_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 
 
 
@@ -288,6 +447,194 @@
 | HACKATHON_STATUS_ACTIVE | 2 |  |
 | HACKATHON_STATUS_FINISHED | 3 |  |
 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_page-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/page.proto
+
+
+
+<a name="hackathon-entities-Page"></a>
+
+### Page
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| content | [string](#string) |  |  |
+| visible | [bool](#bool) |  |  |
+| order | [int32](#int32) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| hackathon_id | [string](#string) |  |  |
+| phase_id | [string](#string) | optional |  |
+| creator_id | [string](#string) |  |  |
+| modifier_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_phase-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/phase.proto
+
+
+
+<a name="hackathon-entities-Phase"></a>
+
+### Phase
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| hackathon_id | [string](#string) |  |  |
+| page_id | [string](#string) | optional |  |
+| creator_id | [string](#string) |  |  |
+| modifier_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_project_status-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/project_status.proto
+
+
+ 
+
+
+<a name="hackathon-entities-ProjectStatus"></a>
+
+### ProjectStatus
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| PROJECT_STATUS_UNSPECIFIED | 0 |  |
+| PROJECT_STATUS_PROPOSED | 1 |  |
+| PROJECT_STATUS_APPROVED | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_project-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/project.proto
+
+
+
+<a name="hackathon-entities-Project"></a>
+
+### Project
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| status | [ProjectStatus](#hackathon-entities-ProjectStatus) |  |  |
+| image | [string](#string) | optional |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| track_id | [string](#string) |  |  |
+| hackathon_id | [string](#string) |  |  |
+| creator_id | [string](#string) |  |  |
+| modifier_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_track-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/track.proto
+
+
+
+<a name="hackathon-entities-Track"></a>
+
+### Track
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
 
  
 
@@ -348,10 +695,125 @@
 | created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | visibility | [Visibility](#hackathon-entities-Visibility) |  |  |
-| status | [HackathonStatus](#hackathon-entities-HackathonStatus) |  |  |
+| status | [HackathonStatus](#hackathon-entities-HackathonStatus) |  | Computed server-side from starts_at/ends_at; not persisted in DB. |
 | description | [string](#string) | optional |  |
 | logo | [string](#string) | optional |  |
 | members | [HackathonMember](#hackathon-entities-HackathonMember) | repeated |  |
+| creator | [user.entities.User](#user-entities-User) |  |  |
+| modifier | [user.entities.User](#user-entities-User) | optional |  |
+| tracks | [Track](#hackathon-entities-Track) | repeated | The following collections are populated only on Get responses. |
+| projects | [Project](#hackathon-entities-Project) | repeated |  |
+| pages | [Page](#hackathon-entities-Page) | repeated |  |
+| phases | [Phase](#hackathon-entities-Phase) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_submission_status-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/submission_status.proto
+
+
+ 
+
+
+<a name="hackathon-entities-SubmissionStatus"></a>
+
+### SubmissionStatus
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| SUBMISSION_STATUS_UNSPECIFIED | 0 |  |
+| SUBMISSION_STATUS_DRAFT | 1 |  |
+| SUBMISSION_STATUS_FINAL | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_submission-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/submission.proto
+
+
+
+<a name="hackathon-entities-Submission"></a>
+
+### Submission
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| result | [string](#string) | optional |  |
+| status | [SubmissionStatus](#hackathon-entities-SubmissionStatus) |  |  |
+| version | [int32](#int32) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| team_id | [string](#string) |  |  |
+| project_id | [string](#string) |  |  |
+| creator_id | [string](#string) |  |  |
+| modifier_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_team-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/team.proto
+
+
+
+<a name="hackathon-entities-Team"></a>
+
+### Team
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) | optional |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| project_id | [string](#string) |  |  |
+| creator_id | [string](#string) |  |  |
+| modifier_id | [string](#string) | optional |  |
+| members | [user.entities.User](#user-entities-User) | repeated |  |
+| submissions | [Submission](#hackathon-entities-Submission) | repeated |  |
 
 
 
@@ -1012,6 +1474,130 @@
 
 
 
+<a name="hackathon_messages_page_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page | [hackathon.entities.Page](#hackathon-entities-Page) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/list_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/list_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| pages | [hackathon.entities.Page](#hackathon-entities-Page) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_phase_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1196,6 +1782,130 @@
 
 
 
+<a name="hackathon_messages_phase_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-phase_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-phase_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase | [hackathon.entities.Phase](#hackathon-entities-Phase) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/list_request.proto
+
+
+
+<a name="hackathon-messages-phase_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_phase_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/phase_svc/list_response.proto
+
+
+
+<a name="hackathon-messages-phase_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phases | [hackathon.entities.Phase](#hackathon-entities-Phase) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_project_svc_approve_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1356,6 +2066,130 @@
 
 ### EditResponse
 
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project | [hackathon.entities.Project](#hackathon-entities-Project) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/list_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/list_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| projects | [hackathon.entities.Project](#hackathon-entities-Project) | repeated |  |
 
 
 
@@ -1558,6 +2392,255 @@
 
 
 
+<a name="hackathon_messages_team_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team | [hackathon.entities.Team](#hackathon-entities-Team) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/list_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) | optional |  |
+| project_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/list_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| teams | [hackathon.entities.Team](#hackathon-entities-Team) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-track_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| track_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-track_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| track | [hackathon.entities.Track](#hackathon-entities-Track) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/list_request.proto
+
+
+
+<a name="hackathon-messages-track_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/list_response.proto
+
+
+
+<a name="hackathon-messages-track_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| tracks | [hackathon.entities.Track](#hackathon-entities-Track) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_page_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1578,6 +2661,8 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| List | [messages.page_svc.ListRequest](#hackathon-messages-page_svc-ListRequest) | [messages.page_svc.ListResponse](#hackathon-messages-page_svc-ListResponse) |  |
+| Get | [messages.page_svc.GetRequest](#hackathon-messages-page_svc-GetRequest) | [messages.page_svc.GetResponse](#hackathon-messages-page_svc-GetResponse) |  |
 | Create | [messages.page_svc.CreateRequest](#hackathon-messages-page_svc-CreateRequest) | [messages.page_svc.CreateResponse](#hackathon-messages-page_svc-CreateResponse) |  |
 | Edit | [messages.page_svc.EditRequest](#hackathon-messages-page_svc-EditRequest) | [messages.page_svc.EditResponse](#hackathon-messages-page_svc-EditResponse) |  |
 | Delete | [messages.page_svc.DeleteRequest](#hackathon-messages-page_svc-DeleteRequest) | [messages.page_svc.DeleteResponse](#hackathon-messages-page_svc-DeleteResponse) |  |
@@ -1606,6 +2691,8 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| List | [messages.phase_svc.ListRequest](#hackathon-messages-phase_svc-ListRequest) | [messages.phase_svc.ListResponse](#hackathon-messages-phase_svc-ListResponse) |  |
+| Get | [messages.phase_svc.GetRequest](#hackathon-messages-phase_svc-GetRequest) | [messages.phase_svc.GetResponse](#hackathon-messages-phase_svc-GetResponse) |  |
 | Create | [messages.phase_svc.CreateRequest](#hackathon-messages-phase_svc-CreateRequest) | [messages.phase_svc.CreateResponse](#hackathon-messages-phase_svc-CreateResponse) |  |
 | Edit | [messages.phase_svc.EditRequest](#hackathon-messages-phase_svc-EditRequest) | [messages.phase_svc.EditResponse](#hackathon-messages-phase_svc-EditResponse) |  |
 | Delete | [messages.phase_svc.DeleteRequest](#hackathon-messages-phase_svc-DeleteRequest) | [messages.phase_svc.DeleteResponse](#hackathon-messages-phase_svc-DeleteResponse) |  |
@@ -1634,6 +2721,8 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| List | [messages.project_svc.ListRequest](#hackathon-messages-project_svc-ListRequest) | [messages.project_svc.ListResponse](#hackathon-messages-project_svc-ListResponse) |  |
+| Get | [messages.project_svc.GetRequest](#hackathon-messages-project_svc-GetRequest) | [messages.project_svc.GetResponse](#hackathon-messages-project_svc-GetResponse) |  |
 | Propose | [messages.project_svc.ProposeRequest](#hackathon-messages-project_svc-ProposeRequest) | [messages.project_svc.ProposeResponse](#hackathon-messages-project_svc-ProposeResponse) |  |
 | Approve | [messages.project_svc.ApproveRequest](#hackathon-messages-project_svc-ApproveRequest) | [messages.project_svc.ApproveResponse](#hackathon-messages-project_svc-ApproveResponse) |  |
 | Edit | [messages.project_svc.EditRequest](#hackathon-messages-project_svc-EditRequest) | [messages.project_svc.EditResponse](#hackathon-messages-project_svc-EditResponse) |  |
@@ -1663,8 +2752,37 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| List | [messages.team_svc.ListRequest](#hackathon-messages-team_svc-ListRequest) | [messages.team_svc.ListResponse](#hackathon-messages-team_svc-ListResponse) |  |
+| Get | [messages.team_svc.GetRequest](#hackathon-messages-team_svc-GetRequest) | [messages.team_svc.GetResponse](#hackathon-messages-team_svc-GetResponse) |  |
 | Create | [messages.team_svc.CreateRequest](#hackathon-messages-team_svc-CreateRequest) | [messages.team_svc.CreateResponse](#hackathon-messages-team_svc-CreateResponse) |  |
 | AssignUser | [messages.team_svc.AssignUserRequest](#hackathon-messages-team_svc-AssignUserRequest) | [messages.team_svc.AssignUserResponse](#hackathon-messages-team_svc-AssignUserResponse) |  |
+
+ 
+
+
+
+<a name="hackathon_track_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/track_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-TrackService"></a>
+
+### TrackService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| List | [messages.track_svc.ListRequest](#hackathon-messages-track_svc-ListRequest) | [messages.track_svc.ListResponse](#hackathon-messages-track_svc-ListResponse) |  |
+| Get | [messages.track_svc.GetRequest](#hackathon-messages-track_svc-GetRequest) | [messages.track_svc.GetResponse](#hackathon-messages-track_svc-GetResponse) |  |
 
  
 
@@ -1748,72 +2866,6 @@
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | Check | [messages.health_svc.CheckRequest](#health-messages-health_svc-CheckRequest) | [messages.health_svc.CheckResponse](#health-messages-health_svc-CheckResponse) |  |
-
- 
-
-
-
-<a name="user_entities_global_role-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## user/entities/global_role.proto
-
-
- 
-
-
-<a name="user-entities-GlobalRole"></a>
-
-### GlobalRole
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| GLOBAL_ROLE_UNSPECIFIED | 0 |  |
-| GLOBAL_ROLE_ADMIN | 1 |  |
-| GLOBAL_ROLE_HACKATHON_ORGANIZER | 2 |  |
-
-
- 
-
- 
-
- 
-
-
-
-<a name="user_entities_user-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## user/entities/user.proto
-
-
-
-<a name="user-entities-User"></a>
-
-### User
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| name | [string](#string) |  |  |
-| keycloak_id | [string](#string) |  |  |
-| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
-| display_name | [string](#string) |  |  |
-| email | [string](#string) |  |  |
-| roles | [GlobalRole](#user-entities-GlobalRole) | repeated |  |
-
-
-
-
-
- 
-
- 
-
- 
 
  
 
