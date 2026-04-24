@@ -77,6 +77,7 @@ Ent-to-proto mappers:
 - `HackathonStatus` is computed server-side from `starts_at`/`ends_at` (not in DB).
 - `HackathonMember` unifies DB participation (`is_waiting`, `joined_at`) + casbin role in one row.
 - Roles (`GlobalRole`, `HackathonRole`) are sourced from casbin, not the DB.
+- Filter application: column-backed filters push down to SQL via `.Where()` (e.g. `visibility_filter`); computed filters (e.g. `status_filter` on `HackathonStatus`) stay post-query. For optional enum filters, `UNSPECIFIED` means "no filter". See `hackathon_service.go:List` for the pattern.
 
 **Write path** — decide once when first write handler lands, then match across services:
 - `Edit*Request`: every field `optional` (no FieldMask).
@@ -101,7 +102,7 @@ For read endpoints during bootstrap, it's fine to skip casbin entirely and rely 
 Read path (Get/List) for every listed service, then mutations, then voting:
 
 1. `UserService` — already implemented (`List`, `WhoAmI`, `Register`). Needs `Get`.
-2. `HackathonService` — needs a handler file from scratch. Start with `List` + `Get`. Then `Create`, `Join`, `ApproveParticipant`.
+2. `HackathonService` — `List` implemented. Next: `Get`. Then `Create`, `Join`, `ApproveParticipant`.
 3. `PageService` — full CRUD.
 4. `PhaseService` — full CRUD.
 5. `TrackService` — Get/List proto exists; Create/Edit/Delete protos don't yet.
@@ -109,12 +110,9 @@ Read path (Get/List) for every listed service, then mutations, then voting:
 7. `TeamService` — Create/AssignUser exist; add Edit, Delete, RemoveUser, CreateSubmission, FinalizeSubmission.
 8. `VoteService` — only if DB has `Vote`/`VoteCategory` tables (currently doesn't). Defer until coworker returns.
 
-## Current state (2026-04-24)
+## Runtime status
 
-- On branch `feat-hackathon-read-path` (no commits yet on this branch).
-- Goal of the branch: implement `HackathonService.List` + `Get` handlers + register in main.go.
-- Read-path proto alignment landed in an earlier PR. Logging migration to slog landed. Health-check path bug fixed (`health.Health/Check` → `health.HealthService/Check` in both `skipAuth` and the process-compose readiness probe).
-- Only `HealthService` and `UserService` are registered in `main.go`. All `hackathon.*` services are UNIMPLEMENTED at runtime, even though their proto contracts exist.
+- `main.go` registers `HealthService`, `UserService`, `HackathonService`. Other `hackathon.*` services (Page/Phase/Project/Team/Track) have proto contracts but are UNIMPLEMENTED at runtime.
 
 ## Don't
 
