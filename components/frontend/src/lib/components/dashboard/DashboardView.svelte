@@ -4,6 +4,7 @@
         UserPlus,
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import { statusLabel, statusBadgePreset } from '$lib/utils/hackathonStatus';
 
     interface HackathonEntry {
         id: string;
@@ -25,14 +26,6 @@
 
     const { session, hackathons, myHackathons }: Props = $props();
     const userName = session?.user?.name ?? 'there';
-
-    // HackathonStatus numeric values: PENDING=1, ACTIVE=2, FINISHED=3
-    const STATUS_LABEL: Record<number, string> = { 1: 'Upcoming', 2: 'Active', 3: 'Finished' };
-    const STATUS_BADGE: Record<number, string> = {
-        1: 'preset-tonal-warning',
-        2: 'preset-tonal-primary',
-        3: 'preset-outlined-surface-200-800',
-    };
 
     const GRADIENTS = [
         { from: 'var(--color-primary-700)', to: 'var(--color-primary-950)' },
@@ -82,8 +75,8 @@
                             href="/hackathon/{h.id}"
                             name={h.name}
                             meta={formatMeta(h)}
-                            badge={STATUS_LABEL[h.status]}
-                            badgePreset={STATUS_BADGE[h.status]}
+                            badge={statusLabel(h.status)}
+                            badgePreset={statusBadgePreset(h.status)}
                             gradFrom={gradient(i).from}
                             gradTo={gradient(i).to}
                         />
@@ -105,8 +98,8 @@
                             href="/hackathon/{h.id}"
                             name={h.name}
                             meta={formatMeta(h)}
-                            badge={STATUS_LABEL[h.status]}
-                            badgePreset={STATUS_BADGE[h.status]}
+                            badge={statusLabel(h.status)}
+                            badgePreset={statusBadgePreset(h.status)}
                             gradFrom={gradient(i).from}
                             gradTo={gradient(i).to}
                         />
