@@ -15,6 +15,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
+	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
@@ -91,6 +92,7 @@ func main() {
 	// Create services
 	healthService := service.NewHealthService()
 	userService := service.NewUserService(dbClient, enf)
+	hackathonService := service.NewHackathonService(dbClient, enf)
 
 	// Create gRPC server
 	a, err := mw.NewJWTValidator(cfg, skipAuth)
@@ -105,6 +107,7 @@ func main() {
 	// Register health service
 	health.RegisterHealthServiceServer(server, healthService)
 	userSvc.RegisterUserServiceServer(server, userService)
+	hackathonSvc.RegisterHackathonServiceServer(server, hackathonService)
 
 	reflection.Register(server)
 
