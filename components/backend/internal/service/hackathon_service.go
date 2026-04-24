@@ -100,6 +100,24 @@ func (s *HackathonService) List(
 		}
 		q = q.Where(enthackathon.VisibilityEQ(entV))
 	}
+	if creatorID := req.GetCreatorId(); creatorID != "" {
+		uid, err := uuid.Parse(creatorID)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid creator_id: %v", creatorID)
+		}
+		q = q.Where(enthackathon.HasCreatorWith(entuser.IDEQ(uid)))
+	}
+
+	if participantID := req.GetParticipantId(); participantID != "" {
+		uid, err := uuid.Parse(participantID)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid participant_id: %v", participantID)
+		}
+		q = q.Where(enthackathon.HasParticipantsWith(
+			entparticipant.UserIDEQ(uid),
+			entparticipant.IsWaitingEQ(false),
+		))
+	}
 	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
