@@ -47,7 +47,7 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 
 func skipAuth(ctx context.Context, method string) bool {
 	// Methods to skip auth for.
-	if method == "/health.Health/Check" {
+	if method == "/health.HealthService/Check" {
 		return true
 	}
 
