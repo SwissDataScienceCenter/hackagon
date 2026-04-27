@@ -682,6 +682,68 @@
   "clientScopes": [
     {
       "attributes": {
+        "consent.screen.text": "${organizationScopeConsentText}",
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true"
+      },
+      "description": "Additional claims about the organization a subject belongs to",
+      "id": "8975bb15-36df-4218-bb50-d3273e951dcf",
+      "name": "organization",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "config": {
+            "access.token.claim": "true",
+            "addOrganizationAttributes": "true",
+            "addOrganizationId": "true",
+            "claim.name": "organization",
+            "id.token.claim": "true",
+            "introspection.token.claim": "true",
+            "jsonType.label": "String",
+            "lightweight.claim": "true",
+            "multivalued": "true",
+            "userinfo.token.claim": "true"
+          },
+          "consentRequired": false,
+          "id": "d85abb17-6b84-4466-bf52-3e75e8cdc2df",
+          "name": "organization",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-organization-membership-mapper"
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "consent.screen.text": "",
+        "display.on.consent.screen": "false",
+        "gui.order": "",
+        "include.in.openid.provider.metadata": "true",
+        "include.in.token.scope": "true"
+      },
+      "description": "Map `hackagon-backend` to `aud` claim.",
+      "id": "3d1e95c6-5c46-4519-9473-74f8210f2363",
+      "name": "map-audience",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "included.client.audience": "hackagon-backend",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false",
+            "userinfo.token.claim": "true"
+          },
+          "consentRequired": false,
+          "id": "8317a7f0-4171-4f2e-82f8-519d3d35bd23",
+          "name": "audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper"
+        }
+      ]
+    },
+    {
+      "attributes": {
         "consent.screen.text": "",
         "display.on.consent.screen": "false",
         "gui.order": "",
@@ -712,63 +774,45 @@
     },
     {
       "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "false"
       },
-      "description": "Dataset read scope",
-      "id": "52888324-d0cd-4923-8b15-4730c07679fd",
-      "name": "dataset:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "",
-      "id": "ad19479a-a906-4711-affc-0b0761c0fece",
-      "name": "custodian:dataset:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Data request write scope.",
-      "id": "05a805cb-2685-4238-a201-b0c2180d7203",
-      "name": "datarequest:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Submission write scope.",
-      "id": "2c13c744-cc34-4730-9a8e-83195c83b046",
-      "name": "submission:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "",
-      "id": "260bc7e7-00ed-47ef-9a4d-19995e5ee739",
-      "name": "custodian:policy:read",
-      "protocol": "openid-connect"
+      "description": "OpenID Connect scope for add all basic claims to the token",
+      "id": "108fc337-541e-4869-a8c4-5b933b3d6391",
+      "name": "basic",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "true"
+          },
+          "consentRequired": false,
+          "id": "52750f30-a81b-46c8-9a4f-e5e8100202d5",
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper"
+        },
+        {
+          "config": {
+            "access.token.claim": "true",
+            "access.tokenResponse.claim": "false",
+            "claim.name": "auth_time",
+            "id.token.claim": "true",
+            "introspection.token.claim": "true",
+            "jsonType.label": "long",
+            "lightweight.claim": "false",
+            "user.session.note": "AUTH_TIME",
+            "userinfo.token.claim": "true"
+          },
+          "consentRequired": false,
+          "id": "1064fefa-e452-4a6b-ba35-74fba130bdfe",
+          "name": "auth_time",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usersessionmodel-note-mapper"
+        }
+      ]
     },
     {
       "attributes": {
@@ -782,39 +826,57 @@
     },
     {
       "attributes": {
-        "consent.screen.text": "",
+        "consent.screen.text": "${rolesScopeConsentText}",
         "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
+        "include.in.token.scope": "false"
       },
-      "description": "Attachment read scope.",
-      "id": "ec9b9938-c13e-4bab-a350-94fad87975ca",
-      "name": "attachment:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Write policy scope.",
-      "id": "fda886e0-62de-46a4-a909-b958436f2594",
-      "name": "policy:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Membership read scope.",
-      "id": "28b43dd3-0295-43b7-8697-57ccb777908c",
-      "name": "membership:read",
-      "protocol": "openid-connect"
+      "description": "OpenID Connect scope for add user roles to the access token",
+      "id": "148427ab-35e8-410c-8d68-5f8dd0b79794",
+      "name": "roles",
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "introspection.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "user.attribute": "foo"
+          },
+          "consentRequired": false,
+          "id": "ada897b1-77a0-472e-8508-033cde38250c",
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper"
+        },
+        {
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "resource_access.${client_id}.roles",
+            "introspection.token.claim": "true",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "user.attribute": "foo"
+          },
+          "consentRequired": false,
+          "id": "4d7472e4-b7e0-4bea-8f24-20d5a84c0de1",
+          "name": "client roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper"
+        },
+        {
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          },
+          "consentRequired": false,
+          "id": "318fc674-0de2-4452-a2ba-af85c4e06b31",
+          "name": "audience resolve",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-resolve-mapper"
+        }
+      ]
     },
     {
       "attributes": {
@@ -1069,98 +1131,6 @@
     },
     {
       "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Data request read scope.",
-      "id": "5ae174db-c2c7-4838-8386-2d266e46ae74",
-      "name": "datarequest:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "${organizationScopeConsentText}",
-        "display.on.consent.screen": "true",
-        "include.in.token.scope": "true"
-      },
-      "description": "Additional claims about the organization a subject belongs to",
-      "id": "8975bb15-36df-4218-bb50-d3273e951dcf",
-      "name": "organization",
-      "protocol": "openid-connect",
-      "protocolMappers": [
-        {
-          "config": {
-            "access.token.claim": "true",
-            "addOrganizationAttributes": "true",
-            "addOrganizationId": "true",
-            "claim.name": "organization",
-            "id.token.claim": "true",
-            "introspection.token.claim": "true",
-            "jsonType.label": "String",
-            "lightweight.claim": "true",
-            "multivalued": "true",
-            "userinfo.token.claim": "true"
-          },
-          "consentRequired": false,
-          "id": "d85abb17-6b84-4466-bf52-3e75e8cdc2df",
-          "name": "organization",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-organization-membership-mapper"
-        }
-      ]
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "DAC read scope.",
-      "id": "c544c440-0e6b-49e1-a09d-6812f686cf84",
-      "name": "dac:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Submission read scope.",
-      "id": "1edaae58-7bb5-4eb3-94fb-00a6e0dfedae",
-      "name": "submission:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "",
-      "id": "1b5729ee-8d43-47ca-ba8d-369fc4173eee",
-      "name": "custodian:organization:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Consent read scope for contract-manager.",
-      "id": "c6bf5935-c141-4a14-b1f0-22048baa86f1",
-      "name": "consent:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
         "consent.screen.text": "${emailScopeConsentText}",
         "display.on.consent.screen": "true",
         "include.in.token.scope": "true"
@@ -1203,215 +1173,6 @@
           "protocolMapper": "oidc-usermodel-attribute-mapper"
         }
       ]
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "false",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Map `dac-backend` to `aud` claim.",
-      "id": "3d1e95c6-5c46-4519-9473-74f8210f2363",
-      "name": "map-audience",
-      "protocol": "openid-connect",
-      "protocolMappers": [
-        {
-          "config": {
-            "access.token.claim": "true",
-            "id.token.claim": "false",
-            "included.client.audience": "dac-backend",
-            "introspection.token.claim": "true",
-            "lightweight.claim": "false",
-            "userinfo.token.claim": "true"
-          },
-          "consentRequired": false,
-          "id": "8317a7f0-4171-4f2e-82f8-519d3d35bd23",
-          "name": "audience-mapper",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper"
-        }
-      ]
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "DAC write scope.",
-      "id": "58184916-4084-4d3c-af9b-ea089eaa2939",
-      "name": "dac:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Consent write scope for contract-manager.",
-      "id": "d07f45d8-0caa-437b-8217-095daa95f91f",
-      "name": "consent:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Membership write scope.",
-      "id": "6437b3b7-590a-42b9-a8a0-289eb5137fa7",
-      "name": "membership:write",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "display.on.consent.screen": "false",
-        "include.in.token.scope": "false"
-      },
-      "description": "OpenID Connect scope for add all basic claims to the token",
-      "id": "108fc337-541e-4869-a8c4-5b933b3d6391",
-      "name": "basic",
-      "protocol": "openid-connect",
-      "protocolMappers": [
-        {
-          "config": {
-            "access.token.claim": "true",
-            "introspection.token.claim": "true",
-            "lightweight.claim": "true"
-          },
-          "consentRequired": false,
-          "id": "52750f30-a81b-46c8-9a4f-e5e8100202d5",
-          "name": "sub",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-sub-mapper"
-        },
-        {
-          "config": {
-            "access.token.claim": "true",
-            "access.tokenResponse.claim": "false",
-            "claim.name": "auth_time",
-            "id.token.claim": "true",
-            "introspection.token.claim": "true",
-            "jsonType.label": "long",
-            "lightweight.claim": "false",
-            "user.session.note": "AUTH_TIME",
-            "userinfo.token.claim": "true"
-          },
-          "consentRequired": false,
-          "id": "1064fefa-e452-4a6b-ba35-74fba130bdfe",
-          "name": "auth_time",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usersessionmodel-note-mapper"
-        }
-      ]
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Read policy scope.",
-      "id": "4d1d8ee2-85cd-4797-b679-59aade9f3ced",
-      "name": "policy:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Attachment read scope.",
-      "id": "4cfe5006-3dc5-4f32-8a24-a28a5098164d",
-      "name": "attachment:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "${rolesScopeConsentText}",
-        "display.on.consent.screen": "true",
-        "include.in.token.scope": "false"
-      },
-      "description": "OpenID Connect scope for add user roles to the access token",
-      "id": "148427ab-35e8-410c-8d68-5f8dd0b79794",
-      "name": "roles",
-      "protocol": "openid-connect",
-      "protocolMappers": [
-        {
-          "config": {
-            "access.token.claim": "true",
-            "claim.name": "realm_access.roles",
-            "introspection.token.claim": "true",
-            "jsonType.label": "String",
-            "multivalued": "true",
-            "user.attribute": "foo"
-          },
-          "consentRequired": false,
-          "id": "ada897b1-77a0-472e-8508-033cde38250c",
-          "name": "realm roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper"
-        },
-        {
-          "config": {
-            "access.token.claim": "true",
-            "claim.name": "resource_access.${client_id}.roles",
-            "introspection.token.claim": "true",
-            "jsonType.label": "String",
-            "multivalued": "true",
-            "user.attribute": "foo"
-          },
-          "consentRequired": false,
-          "id": "4d7472e4-b7e0-4bea-8f24-20d5a84c0de1",
-          "name": "client roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-client-role-mapper"
-        },
-        {
-          "config": {
-            "access.token.claim": "true",
-            "introspection.token.claim": "true"
-          },
-          "consentRequired": false,
-          "id": "318fc674-0de2-4452-a2ba-af85c4e06b31",
-          "name": "audience resolve",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-resolve-mapper"
-        }
-      ]
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Read contracts scope for contract-manger.",
-      "id": "8aa3573a-cda1-4206-9fb3-22ef88d97300",
-      "name": "contract:read",
-      "protocol": "openid-connect"
-    },
-    {
-      "attributes": {
-        "consent.screen.text": "",
-        "display.on.consent.screen": "true",
-        "gui.order": "",
-        "include.in.token.scope": "true"
-      },
-      "description": "Write contracts scope for contract-manger.",
-      "id": "bb09fef5-8f9e-42ea-bbee-9ce6eb7233a9",
-      "name": "contract:write",
-      "protocol": "openid-connect"
     }
   ],
   "clientSessionIdleTimeout": 0,
@@ -1909,14 +1670,14 @@
       {
         "config": {
           "allowed-protocol-mapper-types": [
+            "oidc-usermodel-attribute-mapper",
             "oidc-usermodel-property-mapper",
             "oidc-sha256-pairwise-sub-mapper",
-            "oidc-full-name-mapper",
-            "saml-user-property-mapper",
             "oidc-address-mapper",
-            "oidc-usermodel-attribute-mapper",
             "saml-user-attribute-mapper",
-            "saml-role-list-mapper"
+            "saml-role-list-mapper",
+            "saml-user-property-mapper",
+            "oidc-full-name-mapper"
           ]
         },
         "id": "90229a65-f4f7-4a12-9eca-006fc017a9df",
@@ -1963,14 +1724,14 @@
       {
         "config": {
           "allowed-protocol-mapper-types": [
-            "oidc-sha256-pairwise-sub-mapper",
-            "saml-role-list-mapper",
-            "oidc-usermodel-attribute-mapper",
-            "saml-user-attribute-mapper",
-            "oidc-full-name-mapper",
+            "oidc-usermodel-property-mapper",
             "saml-user-property-mapper",
+            "saml-role-list-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-full-name-mapper",
             "oidc-address-mapper",
-            "oidc-usermodel-property-mapper"
+            "saml-user-attribute-mapper",
+            "oidc-usermodel-attribute-mapper"
           ]
         },
         "id": "de46d6ee-74d4-4976-9e7b-bd0ef5cb7f4d",
