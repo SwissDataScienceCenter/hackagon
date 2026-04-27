@@ -7,179 +7,148 @@ flake_dir := "./tools/nix"
 
 mod nix "./tools/just/nix.just"
 mod ci "./tools/just/ci.just"
+mod rpc "./tools/just/rpc.just"
+mod db "./tools/just/db.just"
+mod check "./tools/just/check.just"
+mod deploy "./tools/just/deploy.just"
+mod codegen "./tools/just/codegen.just"
+mod clean "./tools/just/clean.just"
 
 [private]
 default:
-    just --list --unsorted --list-submodules
+    just --list --unsorted
 
-# ─── Services & State ────────────────────────────────────────────────
-
-# Start Keycloak, Postgres, and the backend (via process-compose).
-[group('general')]
-up *args:
-    cd ./tools/deploy/process-compose && just up "$@"
+# ─── General ─────────────────────────────────────────────────────────
 
 # Stop all running services.
 [group('general')]
-down *args:
-    cd ./tools/deploy/process-compose && just down "$@"
+down:
+    just deploy::down
 
-# Attach to the process-compose TUI for log inspection.
+# Detect changes vs last commit, run generators if needed, then start services and attach.
+# Usage: just start
 [group('general')]
-attach:
-    cd ./tools/deploy/process-compose && just attach
-
-# Wipe DB + Keycloak data. Run 'just refresh' next, or 'just up' if code is current.
-[group('general')]
-reset:
+start *args:
     #!/usr/bin/env bash
     set -eu
-    just down 2>/dev/null || true
-    just _wipe-state
-    echo "✓ Reset complete. Run 'just refresh' to regenerate code, or 'just up' if code is current."
+    base="${ORIG_HEAD:-HEAD~1}"
+    changed=$(git diff --name-only "$base" HEAD 2>/dev/null || true)
 
-# Reset data + regenerate all code + sync deps. Run 'just up' to start services.
-[group('general')]
-refresh:
-    #!/usr/bin/env bash
-    set -eu
-    just down 2>/dev/null || true
-    just _wipe-state
+    need_proto=false
+    need_deps=false
 
-    echo "==> Regenerating database schema (Ent)..."
-    just generate-db-schema
+    if echo "$changed" | grep -qE '\.proto$'; then
+        need_proto=true
+    fi
+    if echo "$changed" | grep -qE '(go\.mod|go\.sum|pnpm-lock\.yaml)'; then
+        need_deps=true
+    fi
 
-    echo "==> Regenerating proto stubs (Go + TypeScript)..."
-    just generate-proto
-
-    echo "==> Syncing frontend dependencies..."
-    (cd components/frontend && pnpm install --frozen-lockfile)
-    
-    echo "==> Tidying Go modules..."
-    (cd components/backend && GOWORK=off go mod tidy)
-
-    echo "==> Ensuring go.work is up to date..."
-    just _setup
-
-    echo "✓ Refresh complete. Run 'just up' to start fresh services."
-
-# Seed the test database with sample hackathons, tracks, projects, teams, and users.
-[group('general')]
-seed:
-    cd components/backend && go run ./cmd/seed/ --config-dir ./data/test/config/
-
-# Send a command to the running process-compose instance.
-[group('general')]
-proc-comp *args:
-    cd ./tools/deploy/process-compose && just proc-comp "$@"
-
-# Open a psql shell to the local Hackagon database.
-[group('general')]
-db *args:
-    psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon "$@"
-
-# Show a formatted summary of what is currently in the database.
-[group('general')]
-db-summary:
-    psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon -f tools/sql/db-summary.sql
-
-# Call a gRPC method authed as a specific user.
-# Usage: just rpc-as bob aliceandbob user.UserService/WhoAmI
-[group('general')]
-rpc-as user password method data="{}":
-    #!/usr/bin/env bash
-    set -eu
-    token=$(cd tools/deploy/process-compose && just get-access-token "{{user}}" "{{password}}")
-    if [ -z "$token" ] || [ "$token" = "null" ]; then
-        echo "failed to get access token for {{user}} (check user/password in Keycloak)" >&2
+    # ── Bail early on DB schema changes, before touching anything ────
+    if echo "$changed" | grep -qE 'ent/schema/'; then
+        echo ""
+        echo "  ⚠️  DB schema changes detected (ent/schema/*.go)."
+        echo "      Run 'just schema-change' to handle automatically."
+        echo "      Note: if seed fails, update components/backend/cmd/seed/main.go first."
+        echo ""
         exit 1
     fi
-    grpcurl -plaintext -H "authorization: Bearer $token" -d '{{data}}' localhost:3000 '{{method}}'
 
-# Call a gRPC method without auth (e.g. health probes).
-# Usage: just rpc-unauth health.HealthService/Check
+    # ── Report what we detected ──────────────────────────────────────
+    echo ""
+    echo "  Branch: $(git rev-parse --abbrev-ref HEAD)"
+    echo "  Base:   $base ($(git log --oneline -1 $base 2>/dev/null | head -c 72 || echo 'unknown'))"
+    echo ""
+
+    if $need_proto || $need_deps; then
+        echo "  Changes detected — running generators before starting:"
+        $need_proto && echo "    • codegen::proto  (*.proto files changed)"  || true
+        $need_deps  && echo "    • dep sync  (go.mod / pnpm-lock.yaml changed)" || true
+        echo ""
+    else
+        echo "  No proto/dep changes detected — starting services directly."
+        echo ""
+    fi
+
+    just deploy::down 2>/dev/null || true
+
+    if $need_proto; then
+        echo "==> Regenerating proto stubs..."
+        just codegen::proto
+    fi
+
+    if $need_deps; then
+        echo "==> Syncing Go modules..."
+        (cd components/backend && GOWORK=off go mod tidy)
+        echo "==> Syncing frontend deps..."
+        (cd components/frontend && pnpm install --frozen-lockfile)
+        echo "==> Ensuring go.work is up to date..."
+        just _setup
+    fi
+
+    just deploy::up "$@"
+    just deploy::attach
+
+# Switch to a branch, checking for DB schema changes first, then start.
+# Usage: just switch <branch>
+#        just switch main
+#        just switch feature/my-branch
 [group('general')]
-rpc-unauth method data="{}":
-    grpcurl -plaintext -d '{{data}}' localhost:3000 '{{method}}'
+switch target:
+    #!/usr/bin/env bash
+    set -eu
+    changed=$(git diff --name-only HEAD "{{target}}" 2>/dev/null || true)
+    if echo "$changed" | grep -qE 'ent/schema/'; then
+        echo ""
+        echo "  ⚠️  DB schema changes detected (ent/schema/*.go)."
+        echo "      Run 'just schema-change' to handle automatically."
+        echo "      Note: if seed fails, update components/backend/cmd/seed/main.go first."
+        echo ""
+        exit 1
+    fi
+    git switch "{{target}}"
+    just start
+
+# Handle a DB schema change: regenerate, wipe state, restart and reseed.
+# Run after changing ent/schema/*.go.
+[group('general')]
+schema-change:
+    #!/usr/bin/env bash
+    set -eu
+    echo ""
+    echo "  Running DB schema change flow..."
+    echo ""
+
+    echo "==> Regenerating Ent ORM code..."
+    just codegen::db-schema
+
+    echo "==> Wiping Postgres + Keycloak state..."
+    just clean::state
+
+    echo "==> Starting services..."
+    just deploy::up
+
+    echo "==> Waiting for Postgres to be ready..."
+    until pg_isready -h 127.0.0.1 -p 5432 -U postgres 2>/dev/null; do
+        echo "    Postgres not ready yet, waiting..."
+        sleep 2
+    done
+    echo "    Postgres ready."
+
+    echo "==> Seeding database..."
+    just db::seed
+
+    echo "==> Done! Attaching to TUI..."
+    just deploy::attach
 
 # ─── Development ─────────────────────────────────────────────────────
 
 # Enter a Nix development shell.
 alias dev := develop
 [no-cd]
-[group('general')]
+[group('aux')]
 develop *args:
     just nix::develop default "$@"
-
-# Build components (accepts a component pattern).
-[group('general')]
-build *args:
-    just quitsh build "$@"
-
-# List all known components.
-[group('general')]
-list *args:
-    just quitsh list "$@"
-
-# ─── Code Quality ───────────────────────────────────────────────────
-
-# Format all code in the repository.
-[group('checks')]
-format *args:
-    just quitsh format "$@"
-
-# Lint components (accepts a component pattern).
-[group('checks')]
-lint *args:
-    just quitsh lint "$@" && \
-    just quitsh nix fix-hash
-
-# Run tests for components (accepts a component pattern).
-[group('checks')]
-test *args:
-    just quitsh test "$@"
-
-# ─── Code Generation & Cleanup ──────────────────────────────────────
-
-# DANGER: destroy ALL gitignored files (.devenv, node_modules, etc.).
-[group('aux')]
-[confirm("This will delete everything gitignored including .devenv and node_modules. Continue?")]
-clean-all *args:
-    #!/usr/bin/env bash
-    set -eu
-    just down 2>/dev/null || true
-    if [ -d ".devenv/state/go" ]; then
-        chmod -R +w .devenv/state/go
-    fi
-    git clean -dfX
-
-# Regenerate Go + TypeScript gRPC stubs from api/proto/*.proto.
-[group('aux')]
-generate-proto *args:
-    #!/usr/bin/env bash
-    set -eu
-
-    # Wipe codegen output dirs first — buf generate does not prune stale files,
-    # which silently shadows new output (e.g. Node resolving a stale user.ts
-    # over the new user/ directory). API.md is rewritten in place by
-    # protoc-gen-doc, so api/proto is not wiped.
-    rm -rf components/backend/internal/proto
-    rm -rf components/frontend/src/lib/server/grpc/generated
-
-    buf generate
-
-    echo "All protos processed."
-
-# Regenerate Ent ORM code + Schema.md from ent/schema/*.go.
-[group('aux')]
-generate-db-schema *args:
-    just quitsh generate-schema
-    just format components/backend/Schema.md
-
-# Remove component build artifacts (.build, .output).
-[group('aux')]
-clean *args:
-    just quitsh clean "$@"
 
 # Update quitsh and all Go/Nix dependencies.
 [group('aux')]
@@ -201,32 +170,25 @@ update-deps *args:
 
     quitsh nix fix-hash
 
-# ─── Quitsh ─────────────────────────────────────────────────────────
-
-# Run a quitsh command from the repo root.
-alias q := quitsh
-[group('aux')]
-quitsh *args:
-    quitsh-direct "$@"
-
-# Run a quitsh command from the current directory.
-[no-cd]
-[group('aux')]
-quitsh-nocd *args:
-    quitsh-direct "$@"
-
 # ─── Private helpers ─────────────────────────────────────────────────
 
 [private]
-_wipe-state:
-    #!/usr/bin/env bash
-    set -eu
-    echo "==> Wiping Postgres and Keycloak state..."
-    if [ -d ".devenv/state/postgres" ]; then
-        chmod -R +w .devenv/state/postgres 2>/dev/null || true
-        rm -rf .devenv/state/postgres
-    fi
-    rm -rf .devenv/state/keycloak
+build *args:
+    just quitsh build "$@"
+
+[private]
+list *args:
+    just quitsh list "$@"
+
+[private]
+alias q := quitsh
+quitsh *args:
+    quitsh-direct "$@"
+
+[private]
+[no-cd]
+quitsh-nocd *args:
+    quitsh-direct "$@"
 
 [private]
 _setup *args:

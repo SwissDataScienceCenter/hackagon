@@ -60,10 +60,6 @@ proc-comp *args:
 get-access-token user password:
     just get-all-tokens "{{user}}" "{{password}}" | jq -r ".access_token"
 
-# Retrieve an ID token for testing purposes.
-get-id-token user password:
-    just get-all-tokens "{{user}}" "{{password}}" | jq -r ".id_token"
-
 # Get all tokens for a user (for testing).
 get-all-tokens user password:
     #!/usr/bin/env bash
