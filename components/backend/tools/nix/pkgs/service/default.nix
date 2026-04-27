@@ -9,7 +9,7 @@ let
 
   cnFilesets = cnLib.fileset;
   cnComponents = cnLib.component;
-  compName = "contract-manager";
+  compName = "backend";
 in
 cnLib.build.buildGoModule {
   inherit compName buildType environmentType;

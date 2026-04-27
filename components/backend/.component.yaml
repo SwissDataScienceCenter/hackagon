@@ -11,6 +11,13 @@ targets:
       #     paths:
       #       - pkg
 
+  test-unittest:
+    steps:
+      - runner: go
+        config:
+          buildTags: ["test", "unittest"]
+    inputs: ["self"]
+
   lint:
     steps:
       - runner: go
