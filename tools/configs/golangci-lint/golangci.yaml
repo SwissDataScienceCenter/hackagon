@@ -103,60 +103,25 @@ linters:
             - pkg: "github.com/huandu/go-assert"
               desc: no wrong assert library
 
-        lib-common:
-          list-mode: lax
-          files:
-            - "**/lib-common/**/*"
-          deny:
-            - &no-quitsh
-              pkg: "github.com/swissdatasciencecenter/hackagon/tools/quitsh"
-              desc: should not include quitsh - if the dependency is needed, add a rule to the 'gitlabci-lint' configuration
-
-            - &no-quitsh-core
-              pkg: "github.com/sdsc-ordes/quitsh"
-              desc: should not include quitsh core
-
-            - &no-other-component
-              pkg: "github.com/swissdatasciencecenter/hackagon/components"
-              desc: should not include any other component - if the dependency is needed, add a rule to the 'gitlabci-lint' configuration
-          allow:
-            - "github.com/swissdatasciencecenter/hackagon/components/lib-common"
-
-        # Acts as a safeguard for newly added components in the repository.
-        # By default, all dependencies are denied unless explicitly allowed.
-        # This enforces stricter dependency control and prevents unintended coupling.
-        # Any new component must be explicitly excluded from this rule via the `components` deny list.
         components:
           list-mode: lax
           files:
             - "**/components/*/**/*"
             - "!**/components/*/test/**/*"
-            - "!**/components/contract-manager/**/*"
-            - "!**/components/lib-common/**/*"
           deny:
-            - *no-quitsh
-            - *no-quitsh-core
-            - *no-other-component
-
-        contract-manager:
-          list-mode: lax
-          files:
-            - "**/components/contract-manager/**/*"
-            - "!**/components/contract-manager/test/**/*"
-          deny:
-            - *no-quitsh
-            - *no-quitsh-core
-            - *no-other-component
+            - pkg: "github.com/swissdatasciencecenter/hackagon/tools/quitsh"
+              desc: should not include quitsh
+            - pkg: "github.com/sdsc-ordes/quitsh"
+              desc: should not include quitsh core
+            - pkg: "github.com/swissdatasciencecenter/hackagon/components"
+              desc: should not include any other component
           allow:
-            - "github.com/swissdatasciencecenter/hackagon/components/lib-common"
-            - "github.com/swissdatasciencecenter/hackagon/components/contract-manager"
+            - "github.com/swissdatasciencecenter/hackagon/components/backend"
 
         quitsh:
           list-mode: lax
           files:
             - "**/tools/quitsh/**/*"
-          allow:
-            - "github.com/swissdatasciencecenter/hackagon/components/contract-manager/pkg/ontology"
           deny:
             - pkg: "github.com/swissdatasciencecenter/hackagon/components"
               desc: should not include any other component
