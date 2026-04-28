@@ -151,6 +151,7 @@ func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (ents.HackathonRole, error) {
 	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonID)
 	if err != nil {
+		slog.Error("get roles for user", "keycloak_id", keycloakID, "hackathon_id", hackathonID, "err", err)
 		return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
 	}
 	for _, r := range roles {
