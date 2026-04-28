@@ -88,12 +88,27 @@ Ent-to-proto mappers:
 
 ## RBAC (casbin)
 
-See `components/backend/internal/middleware/rbac.go` and `casbin_model.conf`. Subject is the JWT `sub` claim (Keycloak ID, not DB UUID).
+See `components/backend/internal/middleware/rbac.go` and `casbin_model.conf`. Subject is the JWT `sub` claim (Keycloak ID, not DB UUID). Keycloak ID is used because it is present directly in the JWT — using the DB UUID would require a DB lookup on every request before casbin could check anything.
 
-- Per-hackathon roles (`g`): `Owner`, `Member`, scoped to a hackathon ID.
-- Global roles (`g2` or `g` with `hackathon_id = "*"`): `Admin`, `HackathonOrganizer`.
+The casbin policy table has three row types (stored in generic `v0`–`v5` columns; `v4`/`v5` are always null — the adapter schema is fixed regardless of how many fields the model uses):
+- `ptype=p` — permission rules: v0=role, v1=hackathon domain, v2=object type, v3=action
+- `ptype=g` — per-hackathon role assignments: v0=Keycloak user ID, v1=role, v2=hackathon UUID
+- `ptype=g2` — global role assignments: v0=Keycloak user ID, v1=global role
+
+Role hierarchy:
+- Per-hackathon roles (`g`): `Owner`, `Member`, scoped to a hackathon UUID.
+- Global roles (`g2`): `Admin`, `HackathonOrganizer`.
 - Admin always passes via the `g2(r.sub, "admin")` escape hatch in the matcher.
 - Role-granting code doesn't exist yet — `enforcer.AddRole` is wired up but no handler calls it. Until write-path handlers land, only the `hackagon-admin` user has non-zero roles.
+
+**Auth middleware modes** (configured in `cmd/service/main.go`, implemented in `middleware/auth.go`):
+- `skipAuth` — no JWT required or validated (health check only).
+- `optionalAuth` — JWT validated if present, proceeds as anonymous if absent or invalid. Used for `HackathonService.List` so both public visitors and logged-in users can call it. Anonymous callers get casbin `false` for private resources; authenticated callers get full casbin resolution.
+- required auth (default) — JWT must be present and valid; request rejected with `Unauthenticated` otherwise.
+
+**Access rules — backend is authoritative, frontend only translates errors:**
+- `HackathonService.Get`: caller must appear in `h.Edges.Participants` with `!p.IsWaiting`, or have the `Admin` global role. Waitlisted users get `PermissionDenied`.
+- `HackathonService.List`: public hackathons always visible; private hackathons filtered by casbin `Enforce` check (anonymous callers always fail, so they only see public ones).
 
 For read endpoints during bootstrap, it's fine to skip casbin entirely and rely on JWT alone — add a `// TODO: casbin check once role-granting RPCs exist` comment.
 
@@ -102,7 +117,7 @@ For read endpoints during bootstrap, it's fine to skip casbin entirely and rely 
 Read path (Get/List) for every listed service, then mutations, then voting:
 
 1. `UserService` — already implemented (`List`, `WhoAmI`, `Register`). Needs `Get`.
-2. `HackathonService` — `List` implemented. Next: `Get`. Then `Create`, `Join`, `ApproveParticipant`.
+2. `HackathonService` — `List` and `Get` implemented. Next: `Create`, `Join`, `ApproveParticipant`.
 3. `PageService` — full CRUD.
 4. `PhaseService` — full CRUD.
 5. `TrackService` — Get/List proto exists; Create/Edit/Delete protos don't yet.
@@ -112,7 +127,53 @@ Read path (Get/List) for every listed service, then mutations, then voting:
 
 ## Runtime status
 
-- `main.go` registers `HealthService`, `UserService`, `HackathonService`. Other `hackathon.*` services (Page/Phase/Project/Team/Track) have proto contracts but are UNIMPLEMENTED at runtime.
+- `main.go` registers `HealthService`, `UserService`, `HackathonService` (`List` + `Get` implemented). Other `hackathon.*` services (Page/Phase/Project/Team/Track) have proto contracts but are UNIMPLEMENTED at runtime.
+
+## Frontend route → backend pattern
+
+**The backend is authoritative for all access decisions.** The frontend never duplicates permission logic — it only translates gRPC errors into HTTP responses.
+
+To wire a new frontend route to a backend gRPC service:
+
+**1. Register the client** in `components/frontend/src/lib/server/grpc/client.ts`:
+- Import the service definition and client type from `generated/<domain>/<name>_service`
+- Add the client to the `AuthorizedGrpc` interface
+- Create it inside `createAuthorizedGrpc` with `factory.create(XServiceDefinition, channel)`
+- For endpoints that serve anonymous callers (e.g. public listing), create a separate unauthenticated client outside `createAuthorizedGrpc` (see `publicHackathonClient` as the pattern).
+
+**2. Load data server-side** in `+page.server.ts`:
+```ts
+import { requireGrpc } from '$lib/server/grpc/client'
+
+export const load: PageServerLoad = async (event) => {
+  const { myService } = requireGrpc(event.locals.grpc)
+  const result = await myService.list({})
+  return { items: result.items }
+}
+```
+- `event.locals.grpc` is populated by `hooks.server.ts` for protected routes
+- `event.locals.platformUser` holds the logged-in user (DB UUID in `.id`)
+- Use `Promise.all([...])` for parallel requests
+
+**3. Translate gRPC errors** in layout/page server files — catch `ClientError` from `nice-grpc-common` and map to SvelteKit HTTP errors:
+```ts
+import { ClientError, Status } from 'nice-grpc-common'
+import { error } from '@sveltejs/kit'
+
+try {
+  result = await myService.get({ id })
+} catch (e) {
+  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) error(403, 'Access denied')
+  if (e instanceof ClientError && e.code === Status.NOT_FOUND) error(404, 'Not found')
+  throw e  // let unexpected errors surface
+}
+```
+
+**4. Pass data to the component** via `+page.svelte` props; the load return is typed automatically by SvelteKit.
+
+**5. Status/enum display helpers** — don't inline lookup tables in components. Put them in `src/lib/utils/<domain>.ts` so any component can import them. Use `Partial<Record<number, string>>` (not `Record<number, string>`) so TypeScript correctly types the lookup as `string | undefined` for unrecognized enum values. **Do not import generated types from `$lib/server/grpc/generated/` inside Svelte components** — `$lib/server/` is server-only; use raw numbers with `Partial<Record<...>>` instead.
+
+**6. Prototype** — `src/lib/components/hackathon/HackathonRow.svelte` is the reference for a list-row component. Keep `badge`/`badgePreset` as generic string props so the row works for any badge text, not just status labels.
 
 ## Don't
 
