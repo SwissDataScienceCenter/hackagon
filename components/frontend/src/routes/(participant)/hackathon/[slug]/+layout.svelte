@@ -5,7 +5,10 @@
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
 
     import type { Snippet } from 'svelte';
-    let { children }: { children: Snippet } = $props();
+    import type { LayoutData } from './$types';
+    import { statusLabel, statusBadgePreset, visibilityLabel, visibilityBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+
+    let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
     const slug = $derived($page.params.slug);
 
@@ -20,19 +23,49 @@
         { id: 'photos', label: 'Photos' },
     ];
 
-    const phases = [
-        { name: 'Registration', status: 'completed' as const },
-        { name: 'Proposals', status: 'active' as const },
-        { name: 'Teams', status: 'upcoming' as const },
-        { name: 'Hackathon', status: 'upcoming' as const },
-        { name: 'Voting', status: 'upcoming' as const },
-        { name: 'Results', status: 'upcoming' as const },
-    ];
+    function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
+        if (!startsAt) return '';
+        const fmt = (d: Date) =>
+            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (!endsAt) return fmt(startsAt);
+        if (
+            startsAt.getFullYear() === endsAt.getFullYear() &&
+            startsAt.getMonth() === endsAt.getMonth()
+        ) {
+            const month = startsAt.toLocaleDateString('en-US', { month: 'short' });
+            return `${month} ${startsAt.getDate()} – ${endsAt.getDate()}, ${startsAt.getFullYear()}`;
+        }
+        return `${fmt(startsAt)} – ${fmt(endsAt)}`;
+    }
 
-    const organizers = [
-        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
-        { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
-    ];
+    function phaseStatus(
+        startsAt: Date | undefined,
+        endsAt: Date | undefined,
+    ): 'completed' | 'active' | 'upcoming' {
+        const now = new Date();
+        if (endsAt && endsAt < now) return 'completed';
+        if (startsAt && startsAt <= now) return 'active';
+        return 'upcoming';
+    }
+
+    const hackathon = $derived(data.hackathon);
+    const title = $derived(hackathon.name);
+    const dates = $derived(formatDates(hackathon.startsAt, hackathon.endsAt));
+    const participantCount = $derived(hackathon.members.length);
+    const phases = $derived(
+        hackathon.phases.map((p) => ({ name: p.name, status: phaseStatus(p.startsAt, p.endsAt) })),
+    );
+
+    const heroBadges = $derived((() => {
+        const chips: { label: string; preset: string }[] = [];
+        const sl = statusLabel(hackathon.status);
+        if (sl) chips.push({ label: sl, preset: statusBadgePreset(hackathon.status) ?? 'preset-tonal-surface' });
+        const vl = visibilityLabel(hackathon.visibility);
+        if (vl) chips.push({ label: vl, preset: visibilityBadgePreset(hackathon.visibility) ?? 'preset-tonal-surface' });
+        const mem = data.myMembership;
+        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), preset: membershipBadgePreset(mem.isWaiting) });
+        return chips;
+    })());
 
     /** List pages: only sub-nav + content (no compact hero or phase bar). */
     const listPageSegments = new Set([
@@ -55,16 +88,19 @@
 
 {#if !hideHeroAndTimeline}
     <HeroCompact
-        title="ORD for the Sciences"
-        dates="Oct 24 – 25, 2026"
-        venue="BC Building, EPFL, Lausanne"
-        imageUrl="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
-        participantCount={100}
-        participantCapacity={120}
-        {organizers}
+        {title}
+        {dates}
+        venue=""
+        imageUrl={hackathon.logo}
+        {participantCount}
+        participantCapacity={participantCount}
+        organizers={[]}
+        badges={heroBadges}
     />
 
-    <PhaseTimeline {phases} />
+    {#if phases.length > 0}
+        <PhaseTimeline {phases} />
+    {/if}
 {/if}
 
 <div class="mx-auto w-full max-w-7xl">
