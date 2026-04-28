@@ -26,14 +26,15 @@ type AuthFunc func(ctx context.Context) (context.Context, error)
 type claimsKey struct{}
 
 type JWTValidator struct {
-	JwksUrl   string
-	Algorithm jwt.SigningMethod
-	Issuer    string
-	Skip      SkipFn
-	Keyfunc   jwt.Keyfunc
+	JwksUrl      string
+	Algorithm    jwt.SigningMethod
+	Issuer       string
+	Skip         SkipFn
+	OptionalAuth SkipFn
+	Keyfunc      jwt.Keyfunc
 }
 
-func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
+func NewJWTValidator(cfg *config.Config, skip SkipFn, optionalAuth SkipFn) (*JWTValidator, error) {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 
 	jwks, err := keyfunc.NewDefault([]string{cfg.Oidc.JwksUrl})
@@ -41,11 +42,12 @@ func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
 		return nil, fmt.Errorf("failed to create keyfunc: %w: %w", err, ErrJwksLoadError)
 	}
 	return &JWTValidator{
-		JwksUrl:   cfg.Oidc.JwksUrl,
-		Algorithm: alg,
-		Issuer:    cfg.Oidc.IssuerUrl,
-		Skip:      skip,
-		Keyfunc:   jwks.Keyfunc,
+		JwksUrl:      cfg.Oidc.JwksUrl,
+		Algorithm:    alg,
+		Issuer:       cfg.Oidc.IssuerUrl,
+		Skip:         skip,
+		OptionalAuth: optionalAuth,
+		Keyfunc:      jwks.Keyfunc,
 	}, nil
 }
 
@@ -86,28 +88,41 @@ func (svc *JWTValidator) parseToken(token string) (*jwt.Token, error) {
 }
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
-	// Get raw token from grpc metadata
 	method_name, ok := ctx.Value(methodNameKey{}).(string)
 	if ok && svc.Skip != nil && svc.Skip(ctx, method_name) {
 		return ctx, nil
 	}
+
 	tokenString, err := extractToken(ctx)
+
+	// Optional-auth: if the token is absent or invalid, proceed as anonymous.
+	if ok && svc.OptionalAuth != nil && svc.OptionalAuth(ctx, method_name) {
+		if err != nil {
+			return ctx, nil
+		}
+		token, err := svc.parseToken(tokenString)
+		if err != nil {
+			return ctx, nil
+		}
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			ctx = context.WithValue(ctx, claimsKey{}, claims)
+		}
+		return ctx, nil
+	}
+
+	// Required auth.
 	if err != nil {
 		return nil, handleJwtError(err)
 	}
-	// Parse token
 	token, err := svc.parseToken(tokenString)
 	if err != nil {
 		return nil, handleJwtError(err)
 	}
-	// Verify standard claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return ctx, nil
 	}
-	// Set claims in context
 	ctx = context.WithValue(ctx, claimsKey{}, claims)
-
 	return ctx, nil
 }
 

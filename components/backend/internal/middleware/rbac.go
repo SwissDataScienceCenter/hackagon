@@ -4,12 +4,16 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"log/slog"
 
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/model"
 	entadapter "github.com/casbin/ent-adapter"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 //go:embed casbin_model.conf
@@ -137,16 +141,67 @@ func (e *Enforcer) AddRole(user, role, hackathonId string) (bool, error) {
 	return e.enforcer.AddGroupingPolicy(user, role, hackathonId)
 }
 
+func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
+	return e.enforcer.AddNamedGroupingPolicy("g2", user, role)
+}
+
+// GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
+// Subject must be the Keycloak ID (not the DB UUID). Returns UNSPECIFIED if no role is found.
+// Global admin/organizer roles (g2) are not surfaced here — the enum only has OWNER and MEMBER.
+func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (ents.HackathonRole, error) {
+	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonID)
+	if err != nil {
+		return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
+	}
+	for _, r := range roles {
+		switch r {
+		case Owner.String():
+			return ents.HackathonRole_HACKATHON_ROLE_OWNER, nil
+		case Member.String():
+			return ents.HackathonRole_HACKATHON_ROLE_MEMBER, nil
+		}
+	}
+	return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, nil
+}
+
 func (e *Enforcer) Enforce(
 	ctx context.Context,
 	hackathonId string,
 	object ObjectType,
 	permission Permission,
 ) (bool, error) {
-	sub, err := GetSubject(ctx)
-	if err != nil {
-		return false, err
-	}
-
+	// Missing claims means unauthenticated caller (skipAuth path); use empty subject so
+	// casbin returns false for private resources rather than propagating an error.
+	sub, _ := GetSubject(ctx)
 	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
+}
+
+// GetGlobalRoles returns the g2 (global) casbin roles for the given Keycloak ID.
+// Subject must be the Keycloak ID. Returns raw role strings (e.g. "admin", "hackathon_organizer").
+func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]string, error) {
+	policies, err := e.enforcer.GetFilteredNamedGroupingPolicy("g2", 0, keycloakID)
+	if err != nil {
+		return nil, err
+	}
+	roles := make([]string, 0, len(policies))
+	for _, p := range policies {
+		if len(p) >= 2 {
+			roles = append(roles, p[1])
+		}
+	}
+	return roles, nil
+}
+
+// RequirePermission enforces a permission check and returns a gRPC-ready error if denied.
+// Use this in handlers instead of calling Enforce directly.
+func (e *Enforcer) RequirePermission(ctx context.Context, hackathonId string, object ObjectType, permission Permission) error {
+	ok, err := e.Enforce(ctx, hackathonId, object, permission)
+	if err != nil {
+		slog.Error("enforce permission", "err", err)
+		return status.Error(codes.Internal, "authorization error")
+	}
+	if !ok {
+		return status.Error(codes.PermissionDenied, "permission denied")
+	}
+	return nil
 }

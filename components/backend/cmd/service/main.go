@@ -47,12 +47,13 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 }
 
 func skipAuth(ctx context.Context, method string) bool {
-	// Methods to skip auth for.
-	if method == "/health.HealthService/Check" {
-		return true
-	}
+	return method == "/health.HealthService/Check"
+}
 
-	return false
+// optionalAuth validates the JWT if present and proceeds as anonymous if absent or invalid.
+// Used for endpoints that serve both public and authenticated callers.
+func optionalAuth(ctx context.Context, method string) bool {
+	return method == "/hackathon.HackathonService/List"
 }
 
 func main() {
@@ -95,7 +96,7 @@ func main() {
 	hackathonService := service.NewHackathonService(dbClient, enf)
 
 	// Create gRPC server
-	a, err := mw.NewJWTValidator(cfg, skipAuth)
+	a, err := mw.NewJWTValidator(cfg, skipAuth, optionalAuth)
 	if err != nil {
 		logx.Fatal("create JWT validator", "err", err)
 	}
