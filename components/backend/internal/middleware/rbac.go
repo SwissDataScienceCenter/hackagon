@@ -11,7 +11,8 @@ import (
 	entadapter "github.com/casbin/ent-adapter"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
-	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
+	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
+	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -148,11 +149,11 @@ func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 // GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
 // Owner takes precedence over Member regardless of slice order — casbin does not sort roles.
 // Global admin/organizer roles (g2) are not surfaced here — the enum only has OWNER and MEMBER.
-func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (ents.HackathonRole, error) {
+func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (hackEnts.HackathonRole, error) {
 	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonID)
 	if err != nil {
 		slog.Error("get roles for user", "keycloak_id", keycloakID, "hackathon_id", hackathonID, "err", err)
-		return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
+		return hackEnts.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
 	}
 
 	roleSet := make(map[string]bool, len(roles))
@@ -162,11 +163,11 @@ func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (ents.Hackat
 
 	switch {
 	case roleSet[Owner.String()]:
-		return ents.HackathonRole_HACKATHON_ROLE_OWNER, nil
+		return hackEnts.HackathonRole_HACKATHON_ROLE_OWNER, nil
 	case roleSet[Member.String()]:
-		return ents.HackathonRole_HACKATHON_ROLE_MEMBER, nil
+		return hackEnts.HackathonRole_HACKATHON_ROLE_MEMBER, nil
 	default:
-		return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, nil
+		return hackEnts.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, nil
 	}
 }
 
@@ -182,17 +183,23 @@ func (e *Enforcer) Enforce(
 	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
 }
 
-// GetGlobalRoles returns the g2 (global) casbin roles for the given Keycloak ID.
-// Subject must be the Keycloak ID. Returns raw role strings (e.g. "admin", "hackathon_organizer").
-func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]string, error) {
+// GetGlobalRoles returns the g2 (global) casbin roles for the given Keycloak ID as typed enums.
+// Subject must be the Keycloak ID. Unrecognized role strings are silently skipped.
+func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, error) {
 	policies, err := e.enforcer.GetFilteredNamedGroupingPolicy("g2", 0, keycloakID)
 	if err != nil {
 		return nil, err
 	}
-	roles := make([]string, 0, len(policies))
+	roles := make([]userEnts.GlobalRole, 0, len(policies))
 	for _, p := range policies {
-		if len(p) >= 2 {
-			roles = append(roles, p[1])
+		if len(p) < 2 {
+			continue
+		}
+		switch p[1] {
+		case Admin.String():
+			roles = append(roles, userEnts.GlobalRole_GLOBAL_ROLE_ADMIN)
+		case HackathonOrganizer.String():
+			roles = append(roles, userEnts.GlobalRole_GLOBAL_ROLE_HACKATHON_ORGANIZER)
 		}
 	}
 	return roles, nil

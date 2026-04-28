@@ -197,6 +197,10 @@ func (s *HackathonService) Get(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Read); err != nil {
+		return nil, err
+	}
+
 	h, err := s.dbClient.Hackathon.Query().
 		Where(enthackathon.IDEQ(id)).
 		WithCreator().
@@ -213,35 +217,6 @@ func (s *HackathonService) Get(
 		}
 		slog.Error("query hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
-	}
-
-	sub, _, err := m.RequireSubject(ctx)
-	if err != nil {
-		return nil, err
-	}
-	globalRoles, err := s.enforcer.GetGlobalRoles(sub)
-	if err != nil {
-		slog.Error("get global roles", "err", err)
-		return nil, status.Error(codes.Internal, "authorization error")
-	}
-	isAdmin := false
-	for _, r := range globalRoles {
-		if r == m.Admin.String() {
-			isAdmin = true
-			break
-		}
-	}
-	if !isAdmin {
-		confirmedMember := false
-		for _, p := range h.Edges.Participants {
-			if p.Edges.User.KeycloakID == sub && !p.IsWaiting {
-				confirmedMember = true
-				break
-			}
-		}
-		if !confirmedMember {
-			return nil, status.Error(codes.PermissionDenied, "not a confirmed member of this hackathon")
-		}
 	}
 
 	entry := hackathonEntryFromEnt(h, time.Now())

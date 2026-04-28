@@ -79,20 +79,13 @@ func (s *UserService) Get(
 		slog.Error("query user", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	rawRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
 	if err != nil {
 		slog.Error("get global roles", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
 	}
 	entry := userEntryFromEnt(u)
-	for _, r := range rawRoles {
-		switch r {
-		case m.Admin.String():
-			entry.Roles = append(entry.Roles, ents.GlobalRole_GLOBAL_ROLE_ADMIN)
-		case m.HackathonOrganizer.String():
-			entry.Roles = append(entry.Roles, ents.GlobalRole_GLOBAL_ROLE_HACKATHON_ORGANIZER)
-		}
-	}
+	entry.Roles = append(entry.Roles, globalRoles...)
 	return &msgs.GetResponse{User: entry}, nil
 }
 
