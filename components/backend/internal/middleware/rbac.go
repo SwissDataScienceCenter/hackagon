@@ -146,7 +146,7 @@ func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 }
 
 // GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
-// Subject must be the Keycloak ID (not the DB UUID). Returns UNSPECIFIED if no role is found.
+// Owner takes precedence over Member regardless of slice order — casbin does not sort roles.
 // Global admin/organizer roles (g2) are not surfaced here — the enum only has OWNER and MEMBER.
 func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (ents.HackathonRole, error) {
 	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonID)
@@ -154,15 +154,20 @@ func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (ents.Hackat
 		slog.Error("get roles for user", "keycloak_id", keycloakID, "hackathon_id", hackathonID, "err", err)
 		return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
 	}
+
+	roleSet := make(map[string]bool, len(roles))
 	for _, r := range roles {
-		switch r {
-		case Owner.String():
-			return ents.HackathonRole_HACKATHON_ROLE_OWNER, nil
-		case Member.String():
-			return ents.HackathonRole_HACKATHON_ROLE_MEMBER, nil
-		}
+		roleSet[r] = true
 	}
-	return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, nil
+
+	switch {
+	case roleSet[Owner.String()]:
+		return ents.HackathonRole_HACKATHON_ROLE_OWNER, nil
+	case roleSet[Member.String()]:
+		return ents.HackathonRole_HACKATHON_ROLE_MEMBER, nil
+	default:
+		return ents.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, nil
+	}
 }
 
 func (e *Enforcer) Enforce(
