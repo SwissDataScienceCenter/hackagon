@@ -25,89 +25,59 @@ default:
 down:
     just deploy::down
 
-# Detect changes vs last commit, run generators if needed, then start services and attach.
+# Sync deps and start all services. Use after a code-only change.
+# For proto changes use 'just api-change'. For DB schema changes use 'just schema-change'.
 # Usage: just start
 [group('general')]
 start *args:
     #!/usr/bin/env bash
     set -eu
-    base="${ORIG_HEAD:-HEAD~1}"
-    changed=$(git diff --name-only "$base" HEAD 2>/dev/null || true)
-
-    need_proto=false
-    need_deps=false
-
-    if echo "$changed" | grep -qE '\.proto$'; then
-        need_proto=true
-    fi
-    if echo "$changed" | grep -qE '(go\.mod|go\.sum|pnpm-lock\.yaml)'; then
-        need_deps=true
-    fi
-
-    # ── Bail early on DB schema changes, before touching anything ────
-    if echo "$changed" | grep -qE 'ent/schema/'; then
-        echo ""
-        echo "  ⚠️  DB schema changes detected (ent/schema/*.go)."
-        echo "      Run 'just schema-change' to handle automatically."
-        echo "      Note: if seed fails, update components/backend/cmd/seed/main.go first."
-        echo ""
-        exit 1
-    fi
-
-    # ── Report what we detected ──────────────────────────────────────
-    echo ""
-    echo "  Branch: $(git rev-parse --abbrev-ref HEAD)"
-    echo "  Base:   $base ($(git log --oneline -1 $base 2>/dev/null | head -c 72 || echo 'unknown'))"
-    echo ""
-
-    if $need_proto || $need_deps; then
-        echo "  Changes detected — running generators before starting:"
-        $need_proto && echo "    • codegen::proto  (*.proto files changed)"  || true
-        $need_deps  && echo "    • dep sync  (go.mod / pnpm-lock.yaml changed)" || true
-        echo ""
-    else
-        echo "  No proto/dep changes detected — starting services directly."
-        echo ""
-    fi
-
     just deploy::down 2>/dev/null || true
-
-    if $need_proto; then
-        echo "==> Regenerating proto stubs..."
-        just codegen::proto
-    fi
-
-    if $need_deps; then
-        echo "==> Syncing Go modules..."
-        (cd components/backend && GOWORK=off go mod tidy)
-        echo "==> Syncing frontend deps..."
-        (cd components/frontend && pnpm install --frozen-lockfile)
-        echo "==> Ensuring go.work is up to date..."
-        just _setup
-    fi
-
+    echo "==> Syncing Go modules..."
+    (cd components/backend && GOWORK=off go mod tidy)
+    echo "==> Syncing frontend deps..."
+    (cd components/frontend && pnpm install --frozen-lockfile)
+    echo "==> Ensuring go.work is up to date..."
+    just _setup
     just deploy::up "$@"
     just deploy::attach
 
-# Switch to a branch, checking for DB schema changes first, then start.
-# Usage: just switch <branch>
-#        just switch main
-#        just switch feature/my-branch
+# Regenerate proto stubs then start. Use after changing *.proto files.
 [group('general')]
-switch target:
+api-change *args:
     #!/usr/bin/env bash
     set -eu
-    changed=$(git diff --name-only HEAD "{{target}}" 2>/dev/null || true)
-    if echo "$changed" | grep -qE 'ent/schema/'; then
-        echo ""
-        echo "  ⚠️  DB schema changes detected (ent/schema/*.go)."
-        echo "      Run 'just schema-change' to handle automatically."
-        echo "      Note: if seed fails, update components/backend/cmd/seed/main.go first."
-        echo ""
-        exit 1
+    echo "==> Regenerating proto stubs..."
+    just codegen::proto
+    just start "$@"
+
+# Classify changes between <ref> and HEAD and suggest which 'just' command to run.
+# Usage: just changes          (defaults to HEAD~1)
+#        just changes main
+#        just changes abc1234
+[group('general')]
+changes ref="HEAD~1":
+    #!/usr/bin/env bash
+    set -eu
+    changed=$(git diff --name-only "{{ref}}" HEAD 2>/dev/null || true)
+    if [ -z "$changed" ]; then
+        echo "No changes detected vs {{ref}}."
+        exit 0
     fi
-    git switch "{{target}}"
-    just start
+    echo "Changes vs {{ref}}:"
+    echo "$changed" | sed 's/^/  /'
+    echo ""
+    if echo "$changed" | grep -qE 'ent/schema/'; then
+        echo "  DB schema change detected  →  just schema-change"
+    elif echo "$changed" | grep -qE '\.proto$'; then
+        echo "  Proto change detected       →  just api-change"
+    else
+        echo "  Code/dep change only        →  just start"
+    fi
+    if echo "$changed" | grep -qE 'cmd/seed/'; then
+        echo ""
+        echo "  Seed script changed — if dev data needs refreshing: just schema-change"
+    fi
 
 # Handle a DB schema change: regenerate, wipe state, restart and reseed.
 # Run after changing ent/schema/*.go.
