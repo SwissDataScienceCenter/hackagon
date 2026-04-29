@@ -8,21 +8,12 @@ import (
 	"net"
 	"os"
 
-	"buf.build/go/protovalidate"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
-	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
-	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
-	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config) error {
@@ -77,41 +68,13 @@ func main() {
 	if err := seedAdminUser(context.Background(), dbClient, cfg); err != nil {
 		logx.Fatal("seed admin user", "err", err)
 	}
-	enf, err := mw.NewRBACEnforcer(cfg)
+
+	// Create server with all middleware and services
+	server, cleanup, err := service.NewServer(dbClient, cfg, nil)
 	if err != nil {
-		logx.Fatal("create RBAC enforcer", "err", err)
+		logx.Fatal("create server", "err", err)
 	}
-
-	// Create services
-	healthService := service.NewHealthService()
-	userService := service.NewUserService(dbClient, enf)
-	hackathonService := service.NewHackathonService(dbClient, enf)
-
-	// Create gRPC server
-	a, err := mw.NewJWTValidator(cfg)
-	if err != nil {
-		logx.Fatal("create JWT validator", "err", err)
-	}
-	auth_middleware := mw.AuthUnaryServerInterceptor(a)
-
-	validator, err := protovalidate.New()
-	if err != nil {
-		logx.Fatal("create GRPC validator", "err", err)
-	}
-	validation_interceptor := protovalidate_middleware.UnaryServerInterceptor(validator)
-
-	server := grpc.NewServer(
-		grpc.UnaryInterceptor(
-			grpc_middleware.ChainUnaryServer(auth_middleware, validation_interceptor),
-		),
-	)
-
-	// Register health service
-	health.RegisterHealthServiceServer(server, healthService)
-	userSvc.RegisterUserServiceServer(server, userService)
-	hackathonSvc.RegisterHackathonServiceServer(server, hackathonService)
-
-	reflection.Register(server)
+	defer cleanup()
 
 	// Listen
 	lc := net.ListenConfig{} //nolint:exhaustruct // all fields optional

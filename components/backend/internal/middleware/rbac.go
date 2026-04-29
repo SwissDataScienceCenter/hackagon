@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	_ "embed"
 	"fmt"
 	"log/slog"
@@ -158,6 +159,17 @@ func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 	return e.enforcer.AddNamedGroupingPolicy("g2", user, role)
 }
 
+// CheckPermission checks if the given subject has permission for the given hackathon, object, and action.
+// This is a low-level method that doesn't require a JWT token in the context.
+func (e *Enforcer) CheckPermission(subject, hackathonId string, object ObjectType, permission Permission) (bool, error) {
+	return e.enforcer.Enforce(subject, hackathonId, object.String(), permission.String())
+}
+
+// ListG2Policies returns all g2 policies in the enforcer for debugging.
+func (e *Enforcer) ListG2Policies() ([][]string, error) {
+	return e.enforcer.GetFilteredNamedGroupingPolicy("g2", 0)
+}
+
 // GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
 // Owner takes precedence over Member regardless of slice order — casbin does not sort roles.
 // Global admin/organizer roles (g2) are not surfaced here — the enum only has OWNER and MEMBER.
@@ -199,7 +211,11 @@ func (e *Enforcer) Enforce(
 	object ObjectType,
 	permission Permission,
 ) (bool, error) {
-	sub, err := GetSubject(ctx)
+	claims, ok := GetClaims(ctx)
+	if !ok {
+		return false, errors.New("no claims in context")
+	}
+	sub, err := claims.GetSubject()
 	if err != nil {
 		return false, err
 	}

@@ -48,6 +48,18 @@ func NewJWTValidator(cfg *config.Config) (*JWTValidator, error) {
 	}, nil
 }
 
+// NewTestJWTValidator creates a JWT validator for testing that uses the provided keyfunc.
+// This bypasses the remote JWKS loading which is not available in test environments.
+func NewTestJWTValidator(cfg *config.Config, keyfunc jwt.Keyfunc) *JWTValidator {
+	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
+	return &JWTValidator{
+		JwksUrl:   cfg.Oidc.JwksUrl,
+		Algorithm: alg,
+		Issuer:    cfg.Oidc.IssuerUrl,
+		Keyfunc:   keyfunc,
+	}
+}
+
 func (svc *JWTValidator) AuthFunc() AuthFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		ctx, err := svc.validate(ctx)
