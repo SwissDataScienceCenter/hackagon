@@ -13,7 +13,6 @@ import (
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserService struct {
@@ -29,17 +28,6 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 	}
 }
 
-func userEntryFromEnt(u *ent.User) *ents.User {
-	return &ents.User{
-		Id:          u.ID.String(),
-		Username:    u.Username,
-		KeycloakId:  u.KeycloakID,
-		DisplayName: u.DisplayName,
-		Email:       u.Email,
-		CreatedAt:   timestamppb.New(u.CreatedAt),
-		ModifiedAt:  timestamppb.New(u.ModifiedAt),
-	}
-}
 
 func (s *UserService) List(
 	ctx context.Context,
