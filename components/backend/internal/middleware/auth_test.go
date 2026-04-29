@@ -63,13 +63,7 @@ func createContextWithoutAuth() context.Context {
 	return context.Background()
 }
 
-// Helper function to create context with method name
-func createContextWithMethod(method string) context.Context {
-	ctx := createContextWithoutAuth()
-	return context.WithValue(ctx, methodNameKey{}, method)
-}
-
-// TestAuthMiddleware_ValidToken tests that valid tokens are processed correctly
+//TestAuthMiddleware_ValidToken tests that valid tokens are processed correctly
 func TestAuthMiddleware_ValidToken(t *testing.T) {
 	t.Run("ValidToken", func(t *testing.T) {
 		tokenString := createTestToken(t, "test-user-123", 24*time.Hour)
@@ -77,11 +71,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 		ctx := createContextWithAuth(tokenString)
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
 		assert.NoError(t, err, "Valid token should not produce error")
 
@@ -99,11 +89,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 		ctx := createContextWithAuth(tokenString)
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
 		assert.NoError(t, err, "Valid token should not produce error")
 
@@ -120,11 +106,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 			"authorization", "Bearer not-a-valid-token",
 		))
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		_, err := validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Malformed token should produce error")
 		assert.ErrorContains(t, err, "token is malformed", "Error should contain malformed message")
@@ -135,11 +117,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 		ctx := createContextWithAuth(tokenString)
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		_, err := validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Expired token should produce error")
 		assert.ErrorContains(t, err, "token is expired", "Error should contain expired message")
@@ -159,11 +137,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 		ctx := createContextWithAuth(tokenString)
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		_, err = validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Future nbf token should produce error")
 		assert.ErrorContains(
@@ -180,11 +154,7 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 	t.Run("MissingAuthorizationHeader", func(t *testing.T) {
 		ctx := createContextWithoutAuth()
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
 		assert.NoError(t, err, "Missing token should not produce error")
 		claims, ok := GetClaims(newCtx)
@@ -197,11 +167,7 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 			"authorization", "",
 		))
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
 		assert.NoError(t, err, "Empty auth header should not produce error")
 		claims, ok := GetClaims(newCtx)
@@ -215,50 +181,10 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 			"authorization", "not-a-valid-token-at-all",
 		))
 
-		skipFn := func(ctx context.Context, method string) bool {
-			return false
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
+		validator := newMockJWTValidator(t)
 		_, err := validator.AuthFunc()(ctx)
 		assert.Error(t, err, "Invalid token without Bearer prefix should produce error")
 		assert.ErrorContains(t, err, "token is malformed", "Error should contain malformed message")
-	})
-}
-
-// TestAuthMiddleware_SkipFunction tests that skip function works correctly
-func TestAuthMiddleware_SkipFunction(t *testing.T) {
-	t.Run("HealthCheckSkipped", func(t *testing.T) {
-		skipFn := func(ctx context.Context, method string) bool {
-			return method == "/health.Health/Check"
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
-
-		// Create context with health check method and no auth
-		ctx := createContextWithMethod("/health.Health/Check")
-
-		// Should not produce error even without valid token
-		_, err := validator.AuthFunc()(ctx)
-		assert.NoError(t, err, "Health check should be skipped")
-	})
-
-	t.Run("OtherMethodGetsAnonymousClaims", func(t *testing.T) {
-		skipFn := func(ctx context.Context, method string) bool {
-			return method == "/health.Health/Check"
-		}
-
-		validator := newMockJWTValidator(t, skipFn)
-
-		// Create context with non-health method and no auth
-		ctx := createContextWithMethod("/user.User/List")
-
-		// No token → anonymous claims, not an error
-		newCtx, err := validator.AuthFunc()(ctx)
-		assert.NoError(t, err, "Non-health method with no token should get anonymous claims")
-		claims, ok := GetClaims(newCtx)
-		assert.True(t, ok, "Anonymous claims should be set")
-		assert.Equal(t, AnonSubject, claims["sub"], "Subject should be anonymous")
 	})
 }
 
@@ -330,10 +256,8 @@ func TestGetSubject(t *testing.T) {
 }
 
 // Helper function to create a mock JWTValidator for testing
-func newMockJWTValidator(t *testing.T, skip SkipFn) *JWTValidator {
-	// Create a keyfunc that uses our test key to verify tokens
+func newMockJWTValidator(t *testing.T) *JWTValidator {
 	mockKeyfunc := func(token *jwt.Token) (interface{}, error) {
-		// Verify the signing method is what we expect
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -344,7 +268,6 @@ func newMockJWTValidator(t *testing.T, skip SkipFn) *JWTValidator {
 		JwksUrl:   "http://mock-keycloak/realms/test/protocol/openid-connect/certs",
 		Algorithm: jwt.SigningMethodRS256,
 		Issuer:    "http://test-issuer",
-		Skip:      skip,
 		Keyfunc:   mockKeyfunc,
 	}
 }

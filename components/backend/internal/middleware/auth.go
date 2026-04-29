@@ -17,10 +17,6 @@ import (
 
 const authHeader = "authorization"
 
-type methodNameKey struct{}
-
-type SkipFn func(ctx context.Context, method string) bool
-
 type AuthFunc func(ctx context.Context) (context.Context, error)
 
 type claimsKey struct{}
@@ -34,11 +30,10 @@ type JWTValidator struct {
 	JwksUrl   string
 	Algorithm jwt.SigningMethod
 	Issuer    string
-	Skip      SkipFn
 	Keyfunc   jwt.Keyfunc
 }
 
-func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
+func NewJWTValidator(cfg *config.Config) (*JWTValidator, error) {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 
 	jwks, err := keyfunc.NewDefault([]string{cfg.Oidc.JwksUrl})
@@ -49,7 +44,6 @@ func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
 		Issuer:    cfg.Oidc.IssuerUrl,
-		Skip:      skip,
 		Keyfunc:   jwks.Keyfunc,
 	}, nil
 }
@@ -91,11 +85,6 @@ func (svc *JWTValidator) parseToken(token string) (*jwt.Token, error) {
 }
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
-	method_name, ok := ctx.Value(methodNameKey{}).(string)
-	if ok && svc.Skip != nil && svc.Skip(ctx, method_name) {
-		return ctx, nil
-	}
-
 	tokenString, err := extractToken(ctx)
 	if errors.Is(err, ErrMissingKey) {
 		// No token — inject anonymous subject so casbin can evaluate access normally.
@@ -174,7 +163,6 @@ func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterce
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
-		ctx = context.WithValue(ctx, methodNameKey{}, info.FullMethod)
 		ctx, err := validator.AuthFunc()(ctx)
 		if err != nil {
 			return nil, err

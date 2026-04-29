@@ -46,10 +46,6 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 	return nil
 }
 
-func skipAuth(ctx context.Context, method string) bool {
-	return method == "/health.HealthService/Check"
-}
-
 func main() {
 	logx.Setup("")
 
@@ -90,7 +86,7 @@ func main() {
 	hackathonService := service.NewHackathonService(dbClient, enf)
 
 	// Create gRPC server
-	a, err := mw.NewJWTValidator(cfg, skipAuth)
+	a, err := mw.NewJWTValidator(cfg)
 	if err != nil {
 		logx.Fatal("create JWT validator", "err", err)
 	}
