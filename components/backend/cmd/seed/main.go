@@ -15,6 +15,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
+	middleware "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 )
 
 const (
@@ -59,15 +60,25 @@ func main() {
 		return
 	}
 
-	if err := seed(ctx, db, cfg); err != nil {
+	enf, err := middleware.NewRBACEnforcer(cfg)
+	if err != nil {
+		logx.Fatal("create enforcer", "err", err)
+	}
+
+	// alice is a hackathon organizer globally (can create new hackathons).
+	if _, err := enf.AddGlobalRole(aliceKeycloakID, middleware.HackathonOrganizer.String()); err != nil {
+		logx.Fatal("assign organizer role to alice", "err", err)
+	}
+
+	if err := seed(ctx, db, cfg, enf); err != nil {
 		logx.Fatal("seed", "err", err)
 	}
 	slog.Info("seed complete")
 }
 
-func seed(ctx context.Context, db *ent.Client, cfg *config.Config) error {
+func seed(ctx context.Context, db *ent.Client, cfg *config.Config, enf *middleware.Enforcer) error {
 	return withTx(ctx, db, func(tx *ent.Tx) error {
-		return seedInTx(ctx, tx.Client(), cfg)
+		return seedInTx(ctx, tx.Client(), cfg, enf)
 	})
 }
 
@@ -93,7 +104,7 @@ func withTx(ctx context.Context, c *ent.Client, fn func(tx *ent.Tx) error) error
 	return tx.Commit()
 }
 
-func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config) error {
+func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config, enf *middleware.Enforcer) error {
 	// Users
 	admin, err := getOrCreateUser(ctx, db, cfg.Server.AdminKeycloakID, "hackagon-admin", "Hackagon Admin", cfg.Server.AdminEmail)
 	if err != nil {
@@ -115,14 +126,14 @@ func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config) error {
 	now := time.Now()
 
 	// alice is the organizer of H1; she creates it and manages its content
-	if err := seedH1(ctx, db, now, admin, alice, bob, charles); err != nil {
+	if err := seedH1(ctx, db, now, admin, alice, bob, charles, enf); err != nil {
 		return fmt.Errorf("h1: %w", err)
 	}
 	// admin runs H2 and H3; charles does not participate in these
-	if err := seedH2(ctx, db, now, admin, alice, bob); err != nil {
+	if err := seedH2(ctx, db, now, admin, alice, bob, enf); err != nil {
 		return fmt.Errorf("h2: %w", err)
 	}
-	if err := seedH3(ctx, db, now, admin, alice); err != nil {
+	if err := seedH3(ctx, db, now, admin, alice, enf); err != nil {
 		return fmt.Errorf("h3: %w", err)
 	}
 	return nil
@@ -130,7 +141,7 @@ func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config) error {
 
 // seedH1 seeds the upcoming public AI Innovation Challenge hackathon.
 // alice acts as organizer (creator); charles is waitlisted.
-func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bob, charles *ent.User) error {
+func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bob, charles *ent.User, enf *middleware.Enforcer) error {
 	h, err := db.Hackathon.Create().
 		SetName(sentinelHackathon).
 		SetVisibility(hackathon.VisibilityPublic).
@@ -355,11 +366,21 @@ func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		return fmt.Errorf("submission Alpha v2: %w", err)
 	}
 
+	for _, ra := range []struct{ id, role string }{
+		{alice.KeycloakID, middleware.Owner.String()},
+		{admin.KeycloakID, middleware.Member.String()},
+		{bob.KeycloakID, middleware.Member.String()},
+	} {
+		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
+			return fmt.Errorf("assign role %s to %s in h1: %w", ra.role, ra.id, err)
+		}
+	}
+
 	return nil
 }
 
 // seedH2 seeds the ongoing public Climate Tech hackathon.
-func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bob *ent.User) error {
+func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bob *ent.User, enf *middleware.Enforcer) error {
 	h, err := db.Hackathon.Create().
 		SetName("Climate Tech Hackathon 2026").
 		SetVisibility(hackathon.VisibilityPublic).
@@ -519,11 +540,21 @@ func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 		return fmt.Errorf("submission Gamma v1: %w", err)
 	}
 
+	for _, ra := range []struct{ id, role string }{
+		{admin.KeycloakID, middleware.Owner.String()},
+		{alice.KeycloakID, middleware.Member.String()},
+		{bob.KeycloakID, middleware.Member.String()},
+	} {
+		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
+			return fmt.Errorf("assign role %s to %s in h2: %w", ra.role, ra.id, err)
+		}
+	}
+
 	return nil
 }
 
 // seedH3 seeds the past private Internal Product Sprint hackathon.
-func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *ent.User) error {
+func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *ent.User, enf *middleware.Enforcer) error {
 	h, err := db.Hackathon.Create().
 		SetName("Internal Product Sprint").
 		SetVisibility(hackathon.VisibilityPrivate).
@@ -691,6 +722,15 @@ func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *en
 		SetModifier(admin).
 		Save(ctx); err != nil {
 		return fmt.Errorf("submission Delta v2: %w", err)
+	}
+
+	for _, ra := range []struct{ id, role string }{
+		{admin.KeycloakID, middleware.Owner.String()},
+		{alice.KeycloakID, middleware.Member.String()},
+	} {
+		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
+			return fmt.Errorf("assign role %s to %s in h3: %w", ra.role, ra.id, err)
+		}
 	}
 
 	return nil

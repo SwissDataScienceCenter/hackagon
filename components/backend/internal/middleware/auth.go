@@ -17,23 +17,23 @@ import (
 
 const authHeader = "authorization"
 
-type methodNameKey struct{}
-
-type SkipFn func(ctx context.Context, method string) bool
-
 type AuthFunc func(ctx context.Context) (context.Context, error)
 
 type claimsKey struct{}
+
+// AnonSubject is the JWT subject injected when no bearer token is present.
+// Casbin treats it as an ordinary (unprivileged) subject, so it passes only
+// wildcard rules — confirmed members always have a real Keycloak ID.
+const AnonSubject = "anonymous"
 
 type JWTValidator struct {
 	JwksUrl   string
 	Algorithm jwt.SigningMethod
 	Issuer    string
-	Skip      SkipFn
 	Keyfunc   jwt.Keyfunc
 }
 
-func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
+func NewJWTValidator(cfg *config.Config) (*JWTValidator, error) {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 
 	jwks, err := keyfunc.NewDefault([]string{cfg.Oidc.JwksUrl})
@@ -44,7 +44,6 @@ func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
 		Issuer:    cfg.Oidc.IssuerUrl,
-		Skip:      skip,
 		Keyfunc:   jwks.Keyfunc,
 	}, nil
 }
@@ -86,28 +85,22 @@ func (svc *JWTValidator) parseToken(token string) (*jwt.Token, error) {
 }
 
 func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) {
-	// Get raw token from grpc metadata
-	method_name, ok := ctx.Value(methodNameKey{}).(string)
-	if ok && svc.Skip != nil && svc.Skip(ctx, method_name) {
+	tokenString, err := extractToken(ctx)
+	if errors.Is(err, ErrMissingKey) {
+		// No token — inject anonymous subject so casbin can evaluate access normally.
+		ctx = context.WithValue(ctx, claimsKey{}, jwt.MapClaims{"sub": AnonSubject})
 		return ctx, nil
 	}
-	tokenString, err := extractToken(ctx)
-	if err != nil {
-		return nil, handleJwtError(err)
-	}
-	// Parse token
+
 	token, err := svc.parseToken(tokenString)
 	if err != nil {
 		return nil, handleJwtError(err)
 	}
-	// Verify standard claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return ctx, nil
 	}
-	// Set claims in context
 	ctx = context.WithValue(ctx, claimsKey{}, claims)
-
 	return ctx, nil
 }
 
@@ -170,7 +163,6 @@ func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterce
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
-		ctx = context.WithValue(ctx, methodNameKey{}, info.FullMethod)
 		ctx, err := validator.AuthFunc()(ctx)
 		if err != nil {
 			return nil, err

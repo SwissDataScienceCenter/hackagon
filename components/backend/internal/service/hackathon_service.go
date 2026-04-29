@@ -32,69 +32,85 @@ func NewHackathonService(dbClient *ent.Client, enf *m.Enforcer) *HackathonServic
 	}
 }
 
-func visibilityFromEnt(v enthackathon.Visibility) ents.Visibility {
-	switch v {
-	case enthackathon.VisibilityPublic:
-		return ents.Visibility_VISIBILITY_PUBLIC
-	case enthackathon.VisibilityPrivate:
-		return ents.Visibility_VISIBILITY_PRIVATE
-	default:
-		return ents.Visibility_VISIBILITY_UNSPECIFIED
-	}
-}
 
-func visibilityToEnt(v ents.Visibility) (enthackathon.Visibility, bool) {
-	switch v {
-	case ents.Visibility_VISIBILITY_PUBLIC:
-		return enthackathon.VisibilityPublic, true
-	case ents.Visibility_VISIBILITY_PRIVATE:
-		return enthackathon.VisibilityPrivate, true
-	default:
-		return "", false
+func (s *HackathonService) Get(
+	ctx context.Context,
+	req *msgs.GetRequest,
+) (*msgs.GetResponse, error) {
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-}
 
-func computeHackathonStatus(startsAt, endsAt *time.Time, now time.Time) ents.HackathonStatus {
-	if startsAt == nil || now.Before(*startsAt) {
-		return ents.HackathonStatus_HACKATHON_STATUS_PENDING
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Read); err != nil {
+		return nil, err
 	}
-	if endsAt != nil && !now.Before(*endsAt) {
-		return ents.HackathonStatus_HACKATHON_STATUS_FINISHED
-	}
-	return ents.HackathonStatus_HACKATHON_STATUS_ACTIVE
-}
 
-func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *ents.Hackathon {
-	e := &ents.Hackathon{
-		Id:         h.ID.String(),
-		Name:       h.Name,
-		CreatedAt:  timestamppb.New(h.CreatedAt),
-		ModifiedAt: timestamppb.New(h.ModifiedAt),
-		Visibility: visibilityFromEnt(h.Visibility),
-		Status:     computeHackathonStatus(h.StartsAt, h.EndsAt, now),
+	h, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.IDEQ(id)).
+		WithCreator().
+		WithModifier().
+		WithTracks().
+		WithProjects(func(q *ent.ProjectQuery) { q.WithCreator().WithModifier().WithTrack() }).
+		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
+		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
+		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", req.GetHackathonId())
+		}
+		slog.Error("query hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
-	if h.StartsAt != nil {
-		e.StartsAt = timestamppb.New(*h.StartsAt)
+
+	entry := hackathonEntryFromEnt(h, time.Now())
+
+	entry.Creator = userEntryFromEnt(h.Edges.Creator)
+	entry.Modifier = userEntryFromEnt(h.Edges.Modifier)
+
+	entry.Tracks = make([]*ents.Track, 0, len(h.Edges.Tracks))
+	for _, t := range h.Edges.Tracks {
+		entry.Tracks = append(entry.Tracks, trackEntryFromEnt(t, id))
 	}
-	if h.EndsAt != nil {
-		e.EndsAt = timestamppb.New(*h.EndsAt)
+
+	entry.Projects = make([]*ents.Project, 0, len(h.Edges.Projects))
+	for _, p := range h.Edges.Projects {
+		entry.Projects = append(entry.Projects, projectEntryFromEnt(p, id))
 	}
-	if h.Description != "" {
-		d := h.Description
-		e.Description = &d
+
+	entry.Pages = make([]*ents.Page, 0, len(h.Edges.Pages))
+	for _, p := range h.Edges.Pages {
+		entry.Pages = append(entry.Pages, pageEntryFromEnt(p, id))
 	}
-	if h.Logo != "" {
-		l := h.Logo
-		e.Logo = &l
+
+	entry.Phases = make([]*ents.Phase, 0, len(h.Edges.Phases))
+	for _, p := range h.Edges.Phases {
+		entry.Phases = append(entry.Phases, phaseEntryFromEnt(p, id))
 	}
-	return e
+
+	entry.Members = make([]*ents.HackathonMember, 0, len(h.Edges.Participants))
+	for _, p := range h.Edges.Participants {
+		role, err := s.enforcer.GetHackathonRole(p.Edges.User.KeycloakID, id.String())
+		if err != nil {
+			slog.Error("get hackathon role", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't resolve member roles")
+		}
+		entry.Members = append(entry.Members, &ents.HackathonMember{
+			User:      userEntryFromEnt(p.Edges.User),
+			Role:      role,
+			IsWaiting: p.IsWaiting,
+			JoinedAt:  timestamppb.New(p.CreatedAt),
+		})
+	}
+
+	return &msgs.GetResponse{Hackathon: entry}, nil
 }
 
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
 ) (*msgs.ListResponse, error) {
-	// TODO: casbin check once role-granting RPCs exist
 	q := s.dbClient.Hackathon.Query()
 	if vf := req.GetVisibilityFilter(); vf != ents.Visibility_VISIBILITY_UNSPECIFIED {
 		entV, ok := visibilityToEnt(vf)
@@ -111,15 +127,17 @@ func (s *HackathonService) List(
 		q = q.Where(enthackathon.HasCreatorWith(entuser.IDEQ(uid)))
 	}
 
+	var participantUID *uuid.UUID
 	if participantID := req.GetParticipantId(); participantID != "" {
 		uid, err := uuid.Parse(participantID)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid participant_id: %v", participantID)
 		}
-		q = q.Where(enthackathon.HasParticipantsWith(
-			entparticipant.UserIDEQ(uid),
-			entparticipant.IsWaitingEQ(false),
-		))
+		participantUID = &uid
+		q = q.Where(enthackathon.HasParticipantsWith(entparticipant.UserIDEQ(uid))).
+			WithParticipants(func(pq *ent.ParticipantQuery) {
+				pq.Where(entparticipant.UserIDEQ(uid)).WithUser()
+			})
 	}
 	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
@@ -135,10 +153,34 @@ func (s *HackathonService) List(
 
 	entries := make([]*ents.Hackathon, 0, len(hs))
 	for _, h := range hs {
+		if h.Visibility == enthackathon.VisibilityPrivate {
+			ok, err := s.enforcer.Enforce(ctx, h.ID.String(), m.Hackathon, m.Read)
+			if err != nil {
+				slog.Error("enforce list hackathon", "err", err)
+				return nil, status.Error(codes.Internal, "authorization error")
+			}
+			if !ok {
+				continue
+			}
+		}
 		e := hackathonEntryFromEnt(h, now)
 		if len(wanted) > 0 {
 			if _, ok := wanted[e.Status]; !ok {
 				continue
+			}
+		}
+		if participantUID != nil && len(h.Edges.Participants) > 0 {
+			p := h.Edges.Participants[0]
+			role, err := s.enforcer.GetHackathonRole(p.Edges.User.KeycloakID, h.ID.String())
+			if err != nil {
+				slog.Error("get hackathon role for viewer_membership", "err", err)
+				return nil, status.Error(codes.Internal, "couldn't resolve member role")
+			}
+			e.ViewerMembership = &ents.HackathonMember{
+				User:      userEntryFromEnt(p.Edges.User),
+				Role:      role,
+				IsWaiting: p.IsWaiting,
+				JoinedAt:  timestamppb.New(p.CreatedAt),
 			}
 		}
 		entries = append(entries, e)

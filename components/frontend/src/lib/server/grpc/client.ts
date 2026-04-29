@@ -14,6 +14,12 @@ export const healthClient = createClientFactory().create(
   channel,
 )
 
+// Unauthenticated hackathon client for public pages (List endpoint is skipAuth)
+export const publicHackathonClient = createClientFactory().create(
+  HackathonServiceDefinition,
+  channel,
+)
+
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
   user: UserServiceClient

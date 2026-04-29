@@ -7,6 +7,7 @@
         participantCount,
         participantCapacity,
         organizers,
+        badges = [],
     }: {
         title: string;
         dates: string;
@@ -15,6 +16,7 @@
         participantCount: number;
         participantCapacity: number;
         organizers: { name: string; logoUrl: string; logoDarkUrl?: string }[];
+        badges?: { label: string; preset: string }[];
     } = $props();
 </script>
 
@@ -34,6 +36,13 @@
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <span class="text-xs font-semibold text-primary-700-300">{dates}</span>
         <h1 class="text-lg font-bold sm:text-xl">{title}</h1>
+        {#if badges.length > 0}
+            <div class="flex flex-wrap gap-1.5">
+                {#each badges as b (b.label)}
+                    <span class="badge {b.preset} text-xs">{b.label}</span>
+                {/each}
+            </div>
+        {/if}
         <span class="text-xs text-primary-700-300">{venue}</span>
         <div class="mt-1 flex flex-wrap items-center gap-3 sm:gap-4">
             {#each organizers as org (org.name)}

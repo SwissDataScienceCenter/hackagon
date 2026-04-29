@@ -1,6 +1,9 @@
 <script lang="ts">
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import HackathonSidebar from '$lib/components/hackathon/HackathonSidebar.svelte';
+    import type { PageData } from './$types';
+
+    let { data }: { data: PageData } = $props();
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20 lg:flex-row lg:items-start">
@@ -19,11 +22,11 @@
 
         <div class="card preset-outlined-surface-200-800 p-5">
             <h2 class="mb-3 text-base font-bold">About</h2>
-            <p class="text-sm leading-relaxed text-surface-700-300">
-                Explore the potential and impact of Open Research Data on the sciences!
-                Co-organized by the Swiss Data Science Center and EPFL Open Science,
-                this event brings together professionals from academia, industry, and the public sector.
-            </p>
+            {#if data.hackathon.description}
+                <p class="text-sm leading-relaxed text-surface-700-300">{data.hackathon.description}</p>
+            {:else}
+                <p class="text-sm text-surface-500">No description provided.</p>
+            {/if}
         </div>
 
         <div class="card preset-outlined-surface-200-800 p-5">

@@ -40,9 +40,9 @@
         { icon: Mail, label: 'Contact us' },
     ];
 
-    const adminLinks: { icon: Component; label: string }[] = [
-        { icon: PlusCircle, label: 'Create Hackathon' },
-        { icon: BarChart3, label: 'Admin Dashboard' },
+    const adminLinks: { icon: Component; label: string; href: string }[] = [
+        { icon: PlusCircle, label: 'Create Hackathon', href: '/hackathon/create' },
+        { icon: BarChart3, label: 'Admin Dashboard', href: '/admin' },
     ];
 </script>
 
@@ -93,7 +93,7 @@
                 <div class="mt-1 flex flex-col gap-0.5">
                     {#each adminLinks as link (link.label)}
                         {@const Icon = link.icon}
-                        <a href="#" class="flex h-7 items-center gap-2 text-xs text-surface-500 no-underline transition-colors hover:text-primary-500">
+                        <a href={link.href} class="flex h-7 items-center gap-2 text-xs text-surface-500 no-underline transition-colors hover:text-primary-500">
                             <Icon class="h-3.5 w-3.5" />
                             {link.label}
                         </a>

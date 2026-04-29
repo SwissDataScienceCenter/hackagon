@@ -28,10 +28,13 @@ message Hackathon {
   optional string logo = 10;
   repeated HackathonMember members = 11;
   user.entities.User creator = 12;
-  optional user.entities.User modifier = 13;
+  user.entities.User modifier = 13;
   // The following collections are populated only on Get responses.
   repeated Track tracks = 14;
   repeated Project projects = 15;
   repeated Page pages = 16;
   repeated Phase phases = 17;
+  // Populated in List responses only when participant_id filter is set.
+  // Contains the requesting user's membership in this hackathon (role + is_waiting).
+  optional HackathonMember viewer_membership = 18;
 }

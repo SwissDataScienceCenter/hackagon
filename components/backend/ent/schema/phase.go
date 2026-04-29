@@ -56,7 +56,7 @@ func (Phase) Edges() []ent.Edge {
 			Ref("created_phases").Unique().Required().Immutable().
 			Comment("The user who created this phase."),
 		edge.From("modifier", User.Type).
-			Ref("modified_phases").Unique().
+			Ref("modified_phases").Unique().Required().
 			Comment("The user who last modified this phase."),
 	}
 }

@@ -79,8 +79,8 @@ changes ref="HEAD~1":
         echo "  Seed script changed — if dev data needs refreshing: just schema-change"
     fi
 
-# Handle a DB schema change: regenerate, wipe state, restart and reseed.
-# Run after changing ent/schema/*.go.
+# Handle a DB schema change: regenerate proto + ent, wipe state, restart and reseed.
+# Run after changing ent/schema/*.go (also safe to run after *.proto changes).
 [group('general')]
 schema-change:
     #!/usr/bin/env bash
@@ -88,6 +88,9 @@ schema-change:
     echo ""
     echo "  Running DB schema change flow..."
     echo ""
+
+    echo "==> Regenerating proto stubs..."
+    just codegen::proto
 
     echo "==> Regenerating Ent ORM code..."
     just codegen::db-schema

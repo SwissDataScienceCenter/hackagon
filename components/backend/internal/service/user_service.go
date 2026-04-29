@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -12,7 +13,6 @@ import (
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserService struct {
@@ -28,29 +28,13 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 	}
 }
 
-func userEntryFromEnt(u *ent.User) *ents.User {
-	return &ents.User{
-		Id:          u.ID.String(),
-		Username:    u.Username,
-		KeycloakId:  u.KeycloakID,
-		DisplayName: u.DisplayName,
-		Email:       u.Email,
-		CreatedAt:   timestamppb.New(u.CreatedAt),
-		ModifiedAt:  timestamppb.New(u.ModifiedAt),
-	}
-}
 
 func (s *UserService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
 ) (*msgs.ListResponse, error) {
-	ok, err := s.enforcer.Enforce(ctx, "", m.User, m.Read)
-	if err != nil {
-		slog.Error("enforce", "err", err)
-		return nil, status.Error(codes.Internal, "authorization error")
-	}
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "permission denied")
+	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Read); err != nil {
+		return nil, err
 	}
 	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
@@ -62,6 +46,35 @@ func (s *UserService) List(
 		entries = append(entries, userEntryFromEnt(u))
 	}
 	return &msgs.ListResponse{Users: entries}, nil
+}
+
+func (s *UserService) Get(
+	ctx context.Context,
+	req *msgs.GetRequest,
+) (*msgs.GetResponse, error) {
+	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Read); err != nil {
+		return nil, err
+	}
+	id, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+	u, err := s.dbClient.User.Query().Where(entuser.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+	return &msgs.GetResponse{User: entry}, nil
 }
 
 func (s *UserService) WhoAmI(

@@ -14,6 +14,28 @@
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
+    import { statusLabel, statusBadgePreset } from '$lib/utils/hackathonStatus';
+    import type { PageData } from './$types';
+
+    let { data }: { data: PageData } = $props();
+
+    const GRADIENTS = [
+        { from: 'var(--color-primary-700)', to: 'var(--color-primary-950)' },
+        { from: 'var(--color-secondary-500)', to: 'var(--color-secondary-950)' },
+        { from: 'var(--color-tertiary-500)', to: 'var(--color-tertiary-950)' },
+    ];
+
+    function formatMeta(h: { startsAt?: Date; endsAt?: Date }): string {
+        const fmt = (d: Date) =>
+            d.toLocaleDateString('en-CH', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (h.startsAt && h.endsAt) return `${fmt(h.startsAt)} – ${fmt(h.endsAt)}`;
+        if (h.startsAt) return `Starts ${fmt(h.startsAt)}`;
+        return '';
+    }
+
+    function gradient(i: number) {
+        return GRADIENTS[i % GRADIENTS.length]!;
+    }
 
     let carouselIndex = $state(0);
     const carouselSlides = [
@@ -97,25 +119,21 @@
     </div>
 
     <div class="mt-0 divide-y divide-surface-200-800">
-        {#each [
-            { name: 'ORD Hackathon 2026', org: 'SDSC', meta: '24 – 25 Oct 2026  ·  ETH Zurich  ·  42 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '42', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2026' },
-            { name: 'Generative AI for Science', org: 'SDSC', meta: '14 – 15 Nov 2026  ·  EPFL, Lausanne', badge: 'Upcoming', badgePreset: 'preset-tonal-secondary', count: '—', gradFrom: 'var(--color-secondary-500)', gradTo: 'var(--color-secondary-950)', slug: 'genai-2026' },
-            { name: 'Global Wheat Challenge 2026', org: 'SDSC', meta: '1 Sep – 30 Nov 2026  ·  Online  ·  87 registered', badge: 'Registration Open', badgePreset: 'preset-tonal-primary', count: '87', gradFrom: 'var(--color-warning-600)', gradTo: 'var(--color-warning-950)', slug: 'wheat-2026' },
-            { name: 'Climate Data Challenge 2025', org: 'SDSC', meta: '5 – 6 Jun 2025  ·  Univ. of Bern  ·  64 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '64', gradFrom: 'var(--color-tertiary-500)', gradTo: 'var(--color-tertiary-950)', slug: 'climate-2025' },
-            { name: 'ORD Hackathon 2025', org: 'SDSC', meta: '18 – 19 Oct 2025  ·  ETH Zurich  ·  78 participants', badge: 'Completed', badgePreset: 'preset-tonal-surface', count: '78', gradFrom: 'var(--color-primary-700)', gradTo: 'var(--color-primary-950)', slug: 'ord-2025' },
-        ] as row, i (i)}
-            <HackathonRow
-                href="/hackathon/{row.slug}"
-                name={row.name}
-                org={row.org}
-                meta={row.meta}
-                badge={row.badge}
-                badgePreset={row.badgePreset}
-                count={row.count}
-                gradFrom={row.gradFrom}
-                gradTo={row.gradTo}
-            />
-        {/each}
+        {#if data.hackathons.length === 0}
+            <p class="py-6 text-sm text-surface-500">No hackathons available yet.</p>
+        {:else}
+            {#each data.hackathons as h, i (h.id)}
+                <HackathonRow
+                    href="/hackathon/{h.id}"
+                    name={h.name}
+                    meta={formatMeta(h)}
+                    badge={statusLabel(h.status)}
+                    badgePreset={statusBadgePreset(h.status)}
+                    gradFrom={gradient(i).from}
+                    gradTo={gradient(i).to}
+                />
+            {/each}
+        {/if}
     </div>
 </section>
 

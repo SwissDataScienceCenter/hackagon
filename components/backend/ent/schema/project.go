@@ -58,7 +58,7 @@ func (Project) Edges() []ent.Edge {
 			Ref("created_projects").Unique().Immutable().Required().
 			Comment("The user who proposed this project."),
 		edge.From("modifier", User.Type).
-			Ref("modified_projects").Unique().
+			Ref("modified_projects").Unique().Required().
 			Comment("The user who last modified this project."),
 		edge.To("teams", Team.Type).
 			Comment("Teams working on this project."),

@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // toInterfaceSlice converts a []string to []interface{}
@@ -325,6 +327,69 @@ func TestRBAC_AdminAccess(t *testing.T) {
 				tc.objectType,
 				tc.name,
 			)
+		})
+	}
+}
+
+func TestRequirePermission(t *testing.T) {
+	const adminID = "admin-uuid"
+	enf := newTestEnforcer(t, adminID)
+
+	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
+	require.NoError(t, err)
+	defer enf.enforcer.RemoveGroupingPolicy("uuid-alice", "owner", "h1")
+
+	testCases := []struct {
+		name      string
+		ctx       context.Context
+		hackathon string
+		object    ObjectType
+		perm      Permission
+		wantCode  codes.Code // codes.OK means no error expected
+	}{
+		{
+			name:      "allowed: owner reads their hackathon",
+			ctx:       ctxWithClaims("uuid-alice"),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			wantCode:  codes.OK,
+		},
+		{
+			name:      "denied: user has no role in hackathon",
+			ctx:       ctxWithClaims("uuid-nobody"),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			wantCode:  codes.PermissionDenied,
+		},
+		{
+			name:      "allowed: admin bypasses all checks",
+			ctx:       ctxWithClaims(adminID),
+			hackathon: "any",
+			object:    Hackathon,
+			perm:      Read,
+			wantCode:  codes.OK,
+		},
+		{
+			name:      "internal error: no JWT claims in context",
+			ctx:       context.Background(),
+			hackathon: "h1",
+			object:    Hackathon,
+			perm:      Read,
+			wantCode:  codes.Internal,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := enf.RequirePermission(tc.ctx, tc.hackathon, tc.object, tc.perm)
+			if tc.wantCode == codes.OK {
+				assert.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				assert.Equal(t, tc.wantCode, status.Code(err))
+			}
 		})
 	}
 }
