@@ -63,7 +63,7 @@ Read path contracts and entities already exist (`Get`, `List` protos are shaped 
 3. `just up` → `just rpc-as alice aliceandbob x.XService/List` to verify end-to-end.
 
 Ent-to-proto mappers:
-- `userEntryFromEnt` already lives in `user_service.go` — reuse it (same Go package).
+- Shared mappers (including `userEntryFromEnt`) live in `internal/service/mappers.go` — reuse them (same Go package).
 - DB `Optional().Nillable()` → proto `optional` (pointer on the Go side).
 - Timestamps → `timestamppb.New(t)` always; if nillable, `timestamppb.New(*t)` after nil-check.
 - DB enums → write a short `enumFromEnt()` helper per enum.
@@ -101,10 +101,12 @@ Role hierarchy:
 - Admin always passes via the `g2(r.sub, "admin")` escape hatch in the matcher.
 - Role-granting code doesn't exist yet — `enforcer.AddRole` is wired up but no handler calls it. Until write-path handlers land, only the `hackagon-admin` user has non-zero roles.
 
-**Auth middleware modes** (configured in `cmd/service/main.go`, implemented in `middleware/auth.go`):
-- `skipAuth` — no JWT required or validated (health check only).
-- `optionalAuth` — JWT validated if present, proceeds as anonymous if absent or invalid. Used for `HackathonService.List` so both public visitors and logged-in users can call it. Anonymous callers get casbin `false` for private resources; authenticated callers get full casbin resolution.
-- required auth (default) — JWT must be present and valid; request rejected with `Unauthenticated` otherwise.
+**Auth middleware** (implemented in `middleware/auth.go`): a single interceptor runs for all endpoints.
+- No bearer token → anonymous claims `{sub: "anonymous"}` injected; request proceeds.
+- Invalid/expired token → `Unauthenticated` error returned.
+- Valid token → real Keycloak claims stored in context.
+
+There are no per-endpoint skip or optional modes. Endpoints that serve anonymous callers (e.g. `HackathonService.List`) work because casbin evaluates `"anonymous"` as an unprivileged subject — it passes only wildcard rules. The health endpoint works because it never reads claims at all.
 
 **Access rules — backend is authoritative, frontend only translates errors:**
 - `HackathonService.Get`: caller must appear in `h.Edges.Participants` with `!p.IsWaiting`, or have the `Admin` global role. Waitlisted users get `PermissionDenied`.
