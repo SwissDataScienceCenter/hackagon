@@ -175,7 +175,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	})
 }
 
-// TestAuthMiddleware_MissingAuth tests that missing auth header is rejected
+// TestAuthMiddleware_MissingAuth tests that missing auth injects anonymous claims
 func TestAuthMiddleware_MissingAuth(t *testing.T) {
 	t.Run("MissingAuthorizationHeader", func(t *testing.T) {
 		ctx := createContextWithoutAuth()
@@ -185,14 +185,11 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 		}
 
 		validator := newMockJWTValidator(t, skipFn)
-		_, err := validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Missing authorization header should produce error")
-		assert.ErrorContains(
-			t,
-			err,
-			"authorization header missing",
-			"Error should be ErrMissingKey",
-		)
+		newCtx, err := validator.AuthFunc()(ctx)
+		assert.NoError(t, err, "Missing token should not produce error")
+		claims, ok := GetClaims(newCtx)
+		assert.True(t, ok, "Anonymous claims should be set")
+		assert.Equal(t, AnonSubject, claims["sub"], "Subject should be anonymous")
 	})
 
 	t.Run("EmptyAuthorizationHeader", func(t *testing.T) {
@@ -205,14 +202,11 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 		}
 
 		validator := newMockJWTValidator(t, skipFn)
-		_, err := validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Empty authorization header should produce error")
-		assert.ErrorContains(
-			t,
-			err,
-			"authorization header missing",
-			"Error should be ErrMissingKey",
-		)
+		newCtx, err := validator.AuthFunc()(ctx)
+		assert.NoError(t, err, "Empty auth header should not produce error")
+		claims, ok := GetClaims(newCtx)
+		assert.True(t, ok, "Anonymous claims should be set")
+		assert.Equal(t, AnonSubject, claims["sub"], "Subject should be anonymous")
 	})
 
 	t.Run("MissingBearerPrefix", func(t *testing.T) {
@@ -249,7 +243,7 @@ func TestAuthMiddleware_SkipFunction(t *testing.T) {
 		assert.NoError(t, err, "Health check should be skipped")
 	})
 
-	t.Run("OtherMethodRequiresAuth", func(t *testing.T) {
+	t.Run("OtherMethodGetsAnonymousClaims", func(t *testing.T) {
 		skipFn := func(ctx context.Context, method string) bool {
 			return method == "/health.Health/Check"
 		}
@@ -259,15 +253,12 @@ func TestAuthMiddleware_SkipFunction(t *testing.T) {
 		// Create context with non-health method and no auth
 		ctx := createContextWithMethod("/user.User/List")
 
-		// Should produce error due to missing auth
-		_, err := validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Non-health method should require auth")
-		assert.ErrorContains(
-			t,
-			err,
-			"authorization header missing",
-			"Error should be ErrMissingKey",
-		)
+		// No token → anonymous claims, not an error
+		newCtx, err := validator.AuthFunc()(ctx)
+		assert.NoError(t, err, "Non-health method with no token should get anonymous claims")
+		claims, ok := GetClaims(newCtx)
+		assert.True(t, ok, "Anonymous claims should be set")
+		assert.Equal(t, AnonSubject, claims["sub"], "Subject should be anonymous")
 	})
 }
 

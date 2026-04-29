@@ -50,12 +50,6 @@ func skipAuth(ctx context.Context, method string) bool {
 	return method == "/health.HealthService/Check"
 }
 
-// optionalAuth validates the JWT if present and proceeds as anonymous if absent or invalid.
-// Used for endpoints that serve both public and authenticated callers.
-func optionalAuth(ctx context.Context, method string) bool {
-	return method == "/hackathon.HackathonService/List"
-}
-
 func main() {
 	logx.Setup("")
 
@@ -96,7 +90,7 @@ func main() {
 	hackathonService := service.NewHackathonService(dbClient, enf)
 
 	// Create gRPC server
-	a, err := mw.NewJWTValidator(cfg, skipAuth, optionalAuth)
+	a, err := mw.NewJWTValidator(cfg, skipAuth)
 	if err != nil {
 		logx.Fatal("create JWT validator", "err", err)
 	}

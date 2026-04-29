@@ -25,16 +25,20 @@ type AuthFunc func(ctx context.Context) (context.Context, error)
 
 type claimsKey struct{}
 
+// AnonSubject is the JWT subject injected when no bearer token is present.
+// Casbin treats it as an ordinary (unprivileged) subject, so it passes only
+// wildcard rules — confirmed members always have a real Keycloak ID.
+const AnonSubject = "anonymous"
+
 type JWTValidator struct {
-	JwksUrl      string
-	Algorithm    jwt.SigningMethod
-	Issuer       string
-	Skip         SkipFn
-	OptionalAuth SkipFn
-	Keyfunc      jwt.Keyfunc
+	JwksUrl   string
+	Algorithm jwt.SigningMethod
+	Issuer    string
+	Skip      SkipFn
+	Keyfunc   jwt.Keyfunc
 }
 
-func NewJWTValidator(cfg *config.Config, skip SkipFn, optionalAuth SkipFn) (*JWTValidator, error) {
+func NewJWTValidator(cfg *config.Config, skip SkipFn) (*JWTValidator, error) {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
 
 	jwks, err := keyfunc.NewDefault([]string{cfg.Oidc.JwksUrl})
@@ -42,12 +46,11 @@ func NewJWTValidator(cfg *config.Config, skip SkipFn, optionalAuth SkipFn) (*JWT
 		return nil, fmt.Errorf("failed to create keyfunc: %w: %w", err, ErrJwksLoadError)
 	}
 	return &JWTValidator{
-		JwksUrl:      cfg.Oidc.JwksUrl,
-		Algorithm:    alg,
-		Issuer:       cfg.Oidc.IssuerUrl,
-		Skip:         skip,
-		OptionalAuth: optionalAuth,
-		Keyfunc:      jwks.Keyfunc,
+		JwksUrl:   cfg.Oidc.JwksUrl,
+		Algorithm: alg,
+		Issuer:    cfg.Oidc.IssuerUrl,
+		Skip:      skip,
+		Keyfunc:   jwks.Keyfunc,
 	}, nil
 }
 
@@ -94,26 +97,12 @@ func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) 
 	}
 
 	tokenString, err := extractToken(ctx)
-
-	// Optional-auth: if the token is absent or invalid, proceed as anonymous.
-	if ok && svc.OptionalAuth != nil && svc.OptionalAuth(ctx, method_name) {
-		if err != nil {
-			return ctx, nil
-		}
-		token, err := svc.parseToken(tokenString)
-		if err != nil {
-			return ctx, nil
-		}
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			ctx = context.WithValue(ctx, claimsKey{}, claims)
-		}
+	if errors.Is(err, ErrMissingKey) {
+		// No token — inject anonymous subject so casbin can evaluate access normally.
+		ctx = context.WithValue(ctx, claimsKey{}, jwt.MapClaims{"sub": AnonSubject})
 		return ctx, nil
 	}
 
-	// Required auth.
-	if err != nil {
-		return nil, handleJwtError(err)
-	}
 	token, err := svc.parseToken(tokenString)
 	if err != nil {
 		return nil, handleJwtError(err)

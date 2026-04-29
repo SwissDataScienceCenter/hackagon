@@ -177,9 +177,10 @@ func (e *Enforcer) Enforce(
 	object ObjectType,
 	permission Permission,
 ) (bool, error) {
-	// Missing claims means unauthenticated caller (skipAuth path); use empty subject so
-	// casbin returns false for private resources rather than propagating an error.
-	sub, _ := GetSubject(ctx)
+	sub, err := GetSubject(ctx)
+	if err != nil {
+		return false, err
+	}
 	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
 }
 
