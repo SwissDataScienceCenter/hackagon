@@ -481,7 +481,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | hackathon_id | [string](#string) |  |  |
 | phase_id | [string](#string) | optional |  |
 | creator_id | [string](#string) |  |  |
-| modifier_id | [string](#string) | optional |  |
+| modifier_id | [string](#string) |  |  |
 
 
 
@@ -522,7 +522,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | hackathon_id | [string](#string) |  |  |
 | page_id | [string](#string) | optional |  |
 | creator_id | [string](#string) |  |  |
-| modifier_id | [string](#string) | optional |  |
+| modifier_id | [string](#string) |  |  |
 
 
 
@@ -592,7 +592,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | track_id | [string](#string) |  |  |
 | hackathon_id | [string](#string) |  |  |
 | creator_id | [string](#string) |  |  |
-| modifier_id | [string](#string) | optional |  |
+| modifier_id | [string](#string) |  |  |
 
 
 
@@ -700,7 +700,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | logo | [string](#string) | optional |  |
 | members | [HackathonMember](#hackathon-entities-HackathonMember) | repeated |  |
 | creator | [user.entities.User](#user-entities-User) |  |  |
-| modifier | [user.entities.User](#user-entities-User) | optional |  |
+| modifier | [user.entities.User](#user-entities-User) |  |  |
 | tracks | [Track](#hackathon-entities-Track) | repeated | The following collections are populated only on Get responses. |
 | projects | [Project](#hackathon-entities-Project) | repeated |  |
 | pages | [Page](#hackathon-entities-Page) | repeated |  |

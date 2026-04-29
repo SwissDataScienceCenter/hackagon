@@ -27,7 +27,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
-| `modifier` | User | M2O | yes | no | The user who last modified this hackathon. |
+| `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
 
 ### Indexes
@@ -59,7 +59,7 @@ A content page associated with a hackathon, used for information display.
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this page belongs to. |
 | `phase` | Phase | O2O | yes | no | The phase this page is linked to, if any. |
 | `creator` | User | M2O | yes | yes | The user who created this page. |
-| `modifier` | User | M2O | yes | no | The user who last modified this page. |
+| `modifier` | User | M2O | yes | yes | The user who last modified this page. |
 
 ### Indexes
 
@@ -108,7 +108,7 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this phase belongs to. |
 | `page` | Page | O2O | no | no | Content page linked to this phase. |
 | `creator` | User | M2O | yes | yes | The user who created this phase. |
-| `modifier` | User | M2O | yes | no | The user who last modified this phase. |
+| `modifier` | User | M2O | yes | yes | The user who last modified this phase. |
 
 ### Indexes
 
@@ -138,7 +138,7 @@ A project proposal within a hackathon track.
 | `track` | Track | M2O | yes | yes | The track this project belongs to. |
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this project belongs to. |
 | `creator` | User | M2O | yes | yes | The user who proposed this project. |
-| `modifier` | User | M2O | yes | no | The user who last modified this project. |
+| `modifier` | User | M2O | yes | yes | The user who last modified this project. |
 | `teams` | Team | O2M | no | no | Teams working on this project. |
 | `submissions` | Submission | O2M | no | no | Submissions made for this project. |
 | `preferred_by_users` | User | M2M | yes | no | Users who marked this project as preferred. |
