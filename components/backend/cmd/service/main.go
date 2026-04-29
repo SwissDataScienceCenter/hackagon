@@ -8,7 +8,9 @@ import (
 	"net"
 	"os"
 
+	"buf.build/go/protovalidate"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
@@ -91,8 +93,16 @@ func main() {
 		logx.Fatal("create JWT validator", "err", err)
 	}
 	auth_middleware := mw.AuthUnaryServerInterceptor(a)
+
+	validator, err := protovalidate.New()
+	if err != nil {
+		logx.Fatal("create GRPC validator", "err", err)
+
+	}
+	validation_interceptor := protovalidate_middleware.UnaryServerInterceptor(validator)
+
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware, validation_interceptor)),
 	)
 
 	// Register health service

@@ -4,14 +4,15 @@ package hackathon.messages.hackathon_svc;
 
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/visibility.proto";
+import "buf/validate/validate.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
 
 message CreateRequest {
-  string name = 1;
+  string name = 1 [(buf.validate.field).string.min_len = 3, (buf.validate.field).string.max_len = 255];
   optional google.protobuf.Timestamp starts_at = 2;
   optional google.protobuf.Timestamp ends_at = 3;
   hackathon.entities.Visibility visibility = 4;
-  optional string description = 5;
+  optional string description = 5 [(buf.validate.field).string.max_len = 2048];
   optional string logo = 6;
 }
