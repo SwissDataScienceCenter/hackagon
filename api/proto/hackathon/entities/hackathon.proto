@@ -28,7 +28,7 @@ message Hackathon {
   optional string logo = 10;
   repeated HackathonMember members = 11;
   user.entities.User creator = 12;
-  optional user.entities.User modifier = 13;
+  user.entities.User modifier = 13;
   // The following collections are populated only on Get responses.
   repeated Track tracks = 14;
   repeated Project projects = 15;

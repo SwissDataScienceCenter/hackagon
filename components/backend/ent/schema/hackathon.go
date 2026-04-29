@@ -66,7 +66,7 @@ func (Hackathon) Edges() []ent.Edge {
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),
 		edge.From("modifier", User.Type).
-			Ref("modified_hackathons").Unique().
+			Ref("modified_hackathons").Unique().Required().
 			Comment("The user who last modified this hackathon."),
 	}
 }

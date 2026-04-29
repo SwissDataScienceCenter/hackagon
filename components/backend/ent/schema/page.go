@@ -56,7 +56,7 @@ func (Page) Edges() []ent.Edge {
 			Ref("created_pages").Unique().Required().Immutable().
 			Comment("The user who created this page."),
 		edge.From("modifier", User.Type).
-			Ref("modified_pages").Unique().
+			Ref("modified_pages").Unique().Required().
 			Comment("The user who last modified this page."),
 	}
 }

@@ -18,5 +18,5 @@ message Project {
   string track_id = 8;
   string hackathon_id = 9;
   string creator_id = 10;
-  optional string modifier_id = 11;
+  string modifier_id = 11;
 }

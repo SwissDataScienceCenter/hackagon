@@ -67,9 +67,7 @@ func (s *HackathonService) Get(
 	entry := hackathonEntryFromEnt(h, time.Now())
 
 	entry.Creator = userEntryFromEnt(h.Edges.Creator)
-	if h.Edges.Modifier != nil {
-		entry.Modifier = userEntryFromEnt(h.Edges.Modifier)
-	}
+	entry.Modifier = userEntryFromEnt(h.Edges.Modifier)
 
 	entry.Tracks = make([]*ents.Track, 0, len(h.Edges.Tracks))
 	for _, t := range h.Edges.Tracks {
