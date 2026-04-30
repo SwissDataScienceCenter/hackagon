@@ -9,7 +9,6 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
@@ -45,29 +44,30 @@ func (s *HackathonService) Create(
 		return nil, err
 	}
 
-	creator, err := s.dbClient.User.Query().Where(user.KeycloakIDEQ(uid)).Only(ctx)
+	creator, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "user does not exist: %s", uid)
+		return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
 	}
 
-	visibility, ok := visibilityToEnt(req.Visibility)
+	visibility, ok := visibilityToEnt(req.GetVisibility())
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown visibility: %s", req.Visibility.String())
 	}
 
 	q := s.dbClient.Hackathon.Create().
-		SetName(req.Name).
+		SetName(req.GetName()).
 		SetVisibility(visibility).
 		SetCreator(creator).
 		SetModifier(creator)
-	if req.Description != nil {
-		q = q.SetDescription(*req.Description)
+	q = q.SetNillableDescription(req.Description)
+	if req.GetStartsAt() != nil {
+		q = q.SetStartsAt(req.GetStartsAt().AsTime())
 	}
-	if req.StartsAt != nil {
-		q = q.SetStartsAt(req.StartsAt.AsTime())
+	if req.GetEndsAt() != nil {
+		q = q.SetEndsAt(req.GetEndsAt().AsTime())
 	}
-	if req.EndsAt != nil {
-		q = q.SetEndsAt(req.EndsAt.AsTime())
+	if req.GetLogo() != "" {
+		q = q.SetLogo(req.GetLogo())
 	}
 	h, err := q.Save(ctx)
 	if err != nil {
