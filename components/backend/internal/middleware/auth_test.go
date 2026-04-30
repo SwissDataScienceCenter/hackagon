@@ -30,6 +30,7 @@ var _ = Describe("Auth Middleware", func() {
 			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
+
 			return testutils.GetTestRSAPublicKey(), nil
 		}
 	})

@@ -1,14 +1,12 @@
 package testutils
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 )
@@ -61,14 +59,8 @@ func GenerateTestToken(subject string, expiration time.Duration, customIssuer ..
 	if err != nil {
 		panic(fmt.Sprintf("failed to sign test token: %v", err))
 	}
-	return tokenString
-}
 
-// CreateContextWithAuth creates a context with the authorization header set.
-func CreateContextWithAuth(token string) context.Context {
-	return metadata.NewIncomingContext(context.Background(), metadata.Pairs(
-		"authorization", "Bearer "+token,
-	))
+	return tokenString
 }
 
 // NewTestConfig creates a test configuration with SQLite.
@@ -86,4 +78,10 @@ func NewTestConfig(adminKeycloakID string) *config.Config {
 			Algorithm: jwt.SigningMethodRS256.Name,
 		},
 	}
+}
+
+// CreateTestJWTToken creates a JWT token for testing with the given subject.
+// The token is valid for 24 hours from now.
+func CreateTestJWTToken(subject string) string {
+	return GenerateTestToken(subject, 24*time.Hour)
 }

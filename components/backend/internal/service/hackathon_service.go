@@ -79,6 +79,7 @@ func (s *HackathonService) Create(
 	h, err := q.Save(ctx)
 	if err != nil {
 		slog.Error("create hackathon", "err", err)
+
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
@@ -88,6 +89,7 @@ func (s *HackathonService) Create(
 		if err != nil {
 			slog.Error("cleanup hackathon creation error", "err", err)
 		}
+
 		return nil, status.Errorf(codes.Internal, "couldn't set hackathon owner")
 	}
 
@@ -126,6 +128,7 @@ func (s *HackathonService) Get(
 			)
 		}
 		slog.Error("query hackathon", "err", err)
+
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
@@ -159,6 +162,7 @@ func (s *HackathonService) Get(
 		role, err := s.enforcer.GetHackathonRole(p.Edges.User.KeycloakID, id.String())
 		if err != nil {
 			slog.Error("get hackathon role", "err", err)
+
 			return nil, status.Error(codes.Internal, "couldn't resolve member roles")
 		}
 		entry.Members = append(entry.Members, &ents.HackathonMember{
@@ -211,6 +215,7 @@ func (s *HackathonService) List(
 	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
+
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
@@ -226,6 +231,7 @@ func (s *HackathonService) List(
 			ok, err := s.enforcer.Enforce(ctx, h.ID.String(), m.Hackathon, m.Read)
 			if err != nil {
 				slog.Error("enforce list hackathon", "err", err)
+
 				return nil, status.Error(codes.Internal, "authorization error")
 			}
 			if !ok {
@@ -243,6 +249,7 @@ func (s *HackathonService) List(
 			role, err := s.enforcer.GetHackathonRole(p.Edges.User.KeycloakID, h.ID.String())
 			if err != nil {
 				slog.Error("get hackathon role for viewer_membership", "err", err)
+
 				return nil, status.Error(codes.Internal, "couldn't resolve member role")
 			}
 			e.ViewerMembership = &ents.HackathonMember{
@@ -254,5 +261,6 @@ func (s *HackathonService) List(
 		}
 		entries = append(entries, e)
 	}
+
 	return &msgs.ListResponse{Hackathons: entries}, nil
 }

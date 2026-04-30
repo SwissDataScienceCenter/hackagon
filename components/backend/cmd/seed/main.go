@@ -43,7 +43,7 @@ func main() {
 	if err != nil {
 		logx.Fatal("open db", "err", err)
 	}
-	defer db.Close()
+	defer db.Close() //nolint:errcheck
 
 	ctx := context.Background()
 
@@ -57,6 +57,7 @@ func main() {
 	}
 	if exists {
 		slog.Info("seed data already present, skipping")
+
 		return
 	}
 
@@ -99,8 +100,10 @@ func withTx(ctx context.Context, c *ent.Client, fn func(tx *ent.Tx) error) error
 		if rerr := tx.Rollback(); rerr != nil {
 			return fmt.Errorf("%w (rollback: %w)", err, rerr)
 		}
+
 		return err
 	}
+
 	return tx.Commit()
 }
 
@@ -162,6 +165,7 @@ func seedInTx(
 	if err := seedH3(ctx, db, now, admin, alice, enf); err != nil {
 		return fmt.Errorf("h3: %w", err)
 	}
+
 	return nil
 }
 
@@ -792,6 +796,7 @@ func getOrCreateUser(
 	if !ent.IsNotFound(err) {
 		return nil, err
 	}
+
 	return db.User.Create().
 		SetKeycloakID(keycloakID).
 		SetUsername(username).

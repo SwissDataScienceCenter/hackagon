@@ -36,6 +36,7 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 		return fmt.Errorf("create admin user: %w", err)
 	}
 	slog.Info("seeded admin user", "keycloak_id", cfg.Server.AdminKeycloakID)
+
 	return nil
 }
 
@@ -61,7 +62,7 @@ func main() {
 		logx.Fatal("open database", "err", err)
 	}
 
-	defer dbClient.Close()
+	defer dbClient.Close() //nolint:errcheck
 	if err := dbClient.Schema.Create(context.Background()); err != nil {
 		logx.Fatal("create schema", "err", err)
 	}

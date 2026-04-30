@@ -199,6 +199,7 @@ func (e *Enforcer) GetHackathonRole(
 			"err",
 			err,
 		)
+
 		return hackEnts.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
 	}
 
@@ -231,6 +232,7 @@ func (e *Enforcer) Enforce(
 	if err != nil {
 		return false, err
 	}
+
 	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
 }
 
@@ -255,6 +257,7 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 			roles = append(roles, userEnts.GlobalRole_GLOBAL_ROLE_HACKATHON_ORGANIZER)
 		}
 	}
+
 	return roles, nil
 }
 
@@ -269,10 +272,12 @@ func (e *Enforcer) RequirePermission(
 	ok, err := e.Enforce(ctx, hackathonId, object, permission)
 	if err != nil {
 		slog.Error("enforce permission", "err", err)
+
 		return status.Error(codes.Internal, "authorization error")
 	}
 	if !ok {
 		return status.Error(codes.PermissionDenied, "permission denied")
 	}
+
 	return nil
 }

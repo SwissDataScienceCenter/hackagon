@@ -40,6 +40,7 @@ func NewJWTValidator(cfg *config.Config) (*JWTValidator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create keyfunc: %w: %w", err, ErrJwksLoadError)
 	}
+
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
@@ -52,6 +53,7 @@ func NewJWTValidator(cfg *config.Config) (*JWTValidator, error) {
 // This bypasses the remote JWKS loading which is not available in test environments.
 func NewTestJWTValidator(cfg *config.Config, keyfunc jwt.Keyfunc) *JWTValidator {
 	alg := jwt.GetSigningMethod(cfg.Oidc.Algorithm)
+
 	return &JWTValidator{
 		JwksUrl:   cfg.Oidc.JwksUrl,
 		Algorithm: alg,
@@ -101,6 +103,7 @@ func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) 
 	if errors.Is(err, ErrMissingKey) {
 		// No token — inject anonymous subject so casbin can evaluate access normally.
 		ctx = context.WithValue(ctx, claimsKey{}, jwt.MapClaims{"sub": AnonSubject})
+
 		return ctx, nil
 	}
 
@@ -113,6 +116,7 @@ func (svc *JWTValidator) validate(ctx context.Context) (context.Context, error) 
 		return ctx, nil
 	}
 	ctx = context.WithValue(ctx, claimsKey{}, claims)
+
 	return ctx, nil
 }
 
@@ -144,6 +148,7 @@ func RequireSubject(ctx context.Context) (string, jwt.MapClaims, error) {
 	if err != nil || sub == "" {
 		return "", nil, status.Error(codes.Unauthenticated, "missing subject claim")
 	}
+
 	return sub, claims, nil
 }
 
@@ -151,6 +156,7 @@ func UsernameFromClaims(claims map[string]interface{}, fallback string) string {
 	if v, ok := claims["preferred_username"].(string); ok && v != "" {
 		return v
 	}
+
 	return fallback
 }
 
@@ -158,6 +164,7 @@ func DisplayNameFromClaims(claims map[string]interface{}) string {
 	if v, ok := claims["name"].(string); ok {
 		return v
 	}
+
 	return ""
 }
 
@@ -165,6 +172,7 @@ func EmailFromClaims(claims map[string]interface{}) string {
 	if v, ok := claims["email"].(string); ok {
 		return v
 	}
+
 	return ""
 }
 
@@ -187,5 +195,6 @@ func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterce
 // ctxWithClaims builds a context carrying JWT claims with the given sub.
 func CtxWithClaims(sub string) context.Context {
 	claims := jwt.MapClaims{"sub": sub}
+
 	return context.WithValue(context.Background(), claimsKey{}, claims)
 }

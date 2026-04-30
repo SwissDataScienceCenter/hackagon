@@ -54,6 +54,7 @@ func computeHackathonStatus(startsAt, endsAt *time.Time, now time.Time) hackEnts
 	if endsAt != nil && !now.Before(*endsAt) {
 		return hackEnts.HackathonStatus_HACKATHON_STATUS_FINISHED
 	}
+
 	return hackEnts.HackathonStatus_HACKATHON_STATUS_ACTIVE
 }
 
@@ -80,6 +81,7 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		l := h.Logo
 		e.Logo = &l
 	}
+
 	return e
 }
 
@@ -122,6 +124,7 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 		e.Image = &img
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
 	return e
 }
 
@@ -144,6 +147,7 @@ func pageEntryFromEnt(p *ent.Page, hackathonID uuid.UUID) *hackEnts.Page {
 		e.PhaseId = &pid
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
 	return e
 }
 
@@ -171,5 +175,6 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 		e.PageId = &pid
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
 	return e
 }

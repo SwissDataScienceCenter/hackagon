@@ -39,12 +39,14 @@ func (s *UserService) List(
 	users, err := s.dbClient.User.Query().All(ctx)
 	if err != nil {
 		slog.Error("query user", "err", err)
+
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 	entries := make([]*ents.User, 0, len(users))
 	for _, u := range users {
 		entries = append(entries, userEntryFromEnt(u))
 	}
+
 	return &msgs.ListResponse{Users: entries}, nil
 }
 
@@ -65,15 +67,18 @@ func (s *UserService) Get(
 			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 		}
 		slog.Error("query user", "err", err)
+
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
 	if err != nil {
 		slog.Error("get global roles", "err", err)
+
 		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
 	}
 	entry := userEntryFromEnt(u)
 	entry.Roles = append(entry.Roles, globalRoles...)
+
 	return &msgs.GetResponse{User: entry}, nil
 }
 
@@ -93,6 +98,7 @@ func (s *UserService) WhoAmI(
 		if ent.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, "user not registered on platform")
 		}
+
 		return nil, status.Errorf(codes.Internal, "query user: %v", err)
 	}
 
@@ -144,6 +150,7 @@ func (s *UserService) Register(
 				return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
 			}
 		}
+
 		return &msgs.RegisterResponse{User: userEntryFromEnt(existing)}, nil
 	}
 	if !ent.IsNotFound(err) {

@@ -55,11 +55,11 @@ var _ = Describe("HackathonService", func() {
 
 			resp, err := client.Create(ctx, req)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.HackathonId).NotTo(BeEmpty())
+			Expect(resp.GetHackathonId()).NotTo(BeEmpty())
 
 			// Verify in database
 			h, err := dbClient.Hackathon.Query().
-				Where(enthackathon.IDEQ(uuid.MustParse(resp.HackathonId))).
+				Where(enthackathon.IDEQ(uuid.MustParse(resp.GetHackathonId()))).
 				WithCreator().
 				Only(context.Background())
 			Expect(err).NotTo(HaveOccurred())
@@ -115,14 +115,15 @@ var _ = Describe("HackathonService", func() {
 
 			listResp, err := client.List(ctx, &msgs.ListRequest{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(listResp.Hackathons).To(HaveLen(len(hackathons)))
+			Expect(listResp.GetHackathons()).To(HaveLen(len(hackathons)))
 
 			// Verify each hackathon exists in list
 			for _, expected := range hackathons {
 				found := false
-				for _, actual := range listResp.Hackathons {
-					if actual.Name == expected.name && actual.Visibility == expected.visibility {
+				for _, actual := range listResp.GetHackathons() {
+					if actual.GetName() == expected.name && actual.GetVisibility() == expected.visibility {
 						found = true
+
 						break
 					}
 				}
@@ -136,13 +137,13 @@ var _ = Describe("HackathonService", func() {
 
 			listResp, err := client.List(ctx, &msgs.ListRequest{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(listResp.Hackathons)).To(BeNumerically(">", 0))
+			Expect(len(listResp.GetHackathons())).To(BeNumerically(">", 0))
 
 			// Check first hackathon has required fields
-			h := listResp.Hackathons[0]
-			Expect(h.Id).NotTo(BeEmpty())
-			Expect(h.Name).NotTo(BeEmpty())
-			Expect(h.Visibility).NotTo(Equal(entities.Visibility_VISIBILITY_UNSPECIFIED))
+			h := listResp.GetHackathons()[0]
+			Expect(h.GetId()).NotTo(BeEmpty())
+			Expect(h.GetName()).NotTo(BeEmpty())
+			Expect(h.GetVisibility()).NotTo(Equal(entities.Visibility_VISIBILITY_UNSPECIFIED))
 		})
 	})
 
@@ -164,8 +165,8 @@ var _ = Describe("HackathonService", func() {
 
 			createResp, err := client.Create(ctx, createReq)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(createResp.HackathonId).NotTo(BeEmpty())
-			createdID = createResp.HackathonId
+			Expect(createResp.GetHackathonId()).NotTo(BeEmpty())
+			createdID = createResp.GetHackathonId()
 		})
 
 		It("retrieves hackathon with full details", func() {
@@ -176,15 +177,15 @@ var _ = Describe("HackathonService", func() {
 			getResp, err := client.Get(ctx, getReq)
 			Expect(err).NotTo(HaveOccurred())
 
-			h := getResp.Hackathon
-			Expect(h.Id).To(Equal(createdID))
-			Expect(h.Name).To(Equal("Get Test Hackathon"))
-			Expect(h.Visibility).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
+			h := getResp.GetHackathon()
+			Expect(h.GetId()).To(Equal(createdID))
+			Expect(h.GetName()).To(Equal("Get Test Hackathon"))
+			Expect(h.GetVisibility()).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
 
 			// Check creator is populated
-			Expect(h.Creator).NotTo(BeNil())
-			Expect(h.Creator.KeycloakId).To(Equal(testAdmin))
-			Expect(h.Creator.Username).To(Equal("hackagon-admin"))
+			Expect(h.GetCreator()).NotTo(BeNil())
+			Expect(h.GetCreator().GetKeycloakId()).To(Equal(testAdmin))
+			Expect(h.GetCreator().GetUsername()).To(Equal("hackagon-admin"))
 		})
 
 		It("returns correct status", func() {
@@ -195,9 +196,9 @@ var _ = Describe("HackathonService", func() {
 			getResp, err := client.Get(ctx, getReq)
 			Expect(err).NotTo(HaveOccurred())
 
-			h := getResp.Hackathon
+			h := getResp.GetHackathon()
 			// Status should be computed based on dates
-			Expect(h.Status).NotTo(Equal(entities.HackathonStatus_HACKATHON_STATUS_UNSPECIFIED))
+			Expect(h.GetStatus()).NotTo(Equal(entities.HackathonStatus_HACKATHON_STATUS_UNSPECIFIED))
 		})
 
 		It("returns NOT_FOUND for invalid hackathon ID", func() {
@@ -226,7 +227,7 @@ var _ = Describe("HackathonService", func() {
 
 				resp, err := client.Create(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.HackathonId).NotTo(BeEmpty())
+				Expect(resp.GetHackathonId()).NotTo(BeEmpty())
 			})
 
 			It("denies non-admin users without roles from creating", func() {
@@ -273,7 +274,7 @@ var _ = Describe("HackathonService", func() {
 				resp, err := client.List(ctx, &msgs.ListRequest{})
 				Expect(err).NotTo(HaveOccurred())
 				// Should return empty list (not error) when no hackathons exist
-				Expect(resp.Hackathons).To(BeEmpty())
+				Expect(resp.GetHackathons()).To(BeEmpty())
 			})
 
 			It("allows anonymous users to list public hackathons but not private ones", func() {
@@ -301,10 +302,10 @@ var _ = Describe("HackathonService", func() {
 				// Now list as anonymous - should only see public hackathons
 				resp, err := client.List(ctx, &msgs.ListRequest{})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.Hackathons).NotTo(BeNil())
-				Expect(resp.Hackathons).To(HaveLen(1), "should only list public hackathons")
-				Expect(resp.Hackathons[0].Name).To(Equal("Public Hackathon"))
-				Expect(resp.Hackathons[0].Visibility).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
+				Expect(resp.GetHackathons()).NotTo(BeNil())
+				Expect(resp.GetHackathons()).To(HaveLen(1), "should only list public hackathons")
+				Expect(resp.GetHackathons()[0].Name).To(Equal("Public Hackathon"))
+				Expect(resp.GetHackathons()[0].Visibility).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
 			})
 		})
 	})

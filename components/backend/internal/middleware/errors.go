@@ -31,6 +31,7 @@ func handleError(err error, setErrorCodes bool) error {
 	if setErrorCodes {
 		return setGrpcErrorCodes(err)
 	}
+
 	return err
 }
 
@@ -50,9 +51,11 @@ func handleJwtError(errIn error) error {
 			if strings.Contains(err.Error(), "signing method") {
 				return ErrBadAlgorithm
 			}
+
 			return ErrSignatureInvalid
 		}
 	}
+
 	return errIn
 }
 

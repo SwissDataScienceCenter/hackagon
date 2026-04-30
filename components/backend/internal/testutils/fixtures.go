@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,7 +14,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
-	entHackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -69,6 +65,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
+
 		return testRSAKeyPairPublic, nil
 	}
 
@@ -103,7 +100,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 	lis := bufconn.Listen(TestBufBufferSize)
 	go func() {
 		if err := server.Serve(lis); err != nil {
-			fmt.Fprintf(GinkgoWriter, "server error: %v\n", err)
+			_, _ = fmt.Fprintf(GinkgoWriter, "server error: %v\n", err)
 		}
 	}()
 
@@ -118,54 +115,6 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 	DeferCleanup(func() { _ = conn.Close() })
 
 	return dbClient, conn
-}
-
-// NewTestHackathon creates a test hackathon with minimal required fields.
-// Returns the hackathon entity and ID.
-func NewTestHackathon(db *ent.Client) (*ent.Hackathon, string) {
-	GinkgoHelper()
-
-	h, err := CreateTestHackathon(db, "Test Hackathon", entHackathon.VisibilityPublic)
-	Expect(err).NotTo(HaveOccurred())
-
-	return h, h.ID.String()
-}
-
-// NewTestUser creates a test user with minimal required fields.
-// Returns the user entity.
-func NewTestUser(db *ent.Client, keycloakID, username string) (*ent.User, error) {
-	return db.User.Create().
-		SetKeycloakID(keycloakID).
-		SetUsername(username).
-		SetDisplayName(username).
-		SetEmail(username + "@test.local").
-		Save(context.Background())
-}
-
-// RequirePermissionCheck verifies that a permission check works as expected.
-// This is a helper for testing the RequirePermission middleware.
-func RequirePermissionCheck(enf *middleware.Enforcer, ctx context.Context, hackathonID string, object middleware.ObjectType, perm middleware.Permission) {
-	GinkgoHelper()
-
-	err := enf.RequirePermission(ctx, hackathonID, object, perm)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-// GetStatusError extracts the gRPC status code from an error.
-func GetStatusError(err error) codes.Code {
-	if err == nil {
-		return codes.OK
-	}
-	s, ok := status.FromError(err)
-	if !ok {
-		return codes.Unknown
-	}
-	return s.Code()
-}
-
-// CreateTestJWTToken creates a JWT token for testing with the given subject.
-func CreateTestJWTToken(subject string) string {
-	return GenerateTestToken(subject, 24*time.Hour)
 }
 
 // NewMockEnforcer creates a mock RBAC enforcer for testing with admin role pre-seeded.

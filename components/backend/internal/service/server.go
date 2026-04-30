@@ -13,7 +13,6 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
@@ -37,9 +36,9 @@ func NewServer(
 	// Create JWT validator
 	var validator *mw.JWTValidator
 	if keyfunc != nil {
-		validator = middleware.NewTestJWTValidator(cfg, *keyfunc)
+		validator = mw.NewTestJWTValidator(cfg, *keyfunc)
 	} else {
-		validator, err = middleware.NewJWTValidator(cfg)
+		validator, err = mw.NewJWTValidator(cfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("create jwt validator: %w", err)
 		}
@@ -53,7 +52,7 @@ func NewServer(
 	validationInterceptor := protovalidate_middleware.UnaryServerInterceptor(protoValidator)
 
 	// Create auth interceptor
-	authInterceptor := middleware.AuthUnaryServerInterceptor(validator)
+	authInterceptor := mw.AuthUnaryServerInterceptor(validator)
 
 	// Create gRPC server with middleware chain (matching main.go exactly)
 	server := grpc.NewServer(
