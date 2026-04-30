@@ -16,9 +16,21 @@ import (
 var (
 	// testRSAKeyPair is shared across all tests for JWT signing.
 	// Generated once at package init for deterministic test behavior.
-	testRSAKeyPair *rsa.PrivateKey
+	testRSAKeyPair       *rsa.PrivateKey
 	testRSAKeyPairPublic *rsa.PublicKey
 )
+
+// GetTestRSAPrivateKey returns the test RSA private key for custom JWT signing.
+// Used when tests need to create tokens with specific claims.
+func GetTestRSAPrivateKey() *rsa.PrivateKey {
+	return testRSAKeyPair
+}
+
+// GetTestRSAPublicKey returns the test RSA public key for JWT verification.
+// Used when tests need to create custom JWT validators.
+func GetTestRSAPublicKey() *rsa.PublicKey {
+	return testRSAKeyPairPublic
+}
 
 func init() {
 	var err error
