@@ -14,23 +14,22 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entHackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
-	"testing"
 )
 
 const (
-	// testBufBufferSize is 1 MB buffer for bufconn.
-	testBufBufferSize = 1024 * 1024
+	// TestBufBufferSize is 1 MB buffer for bufconn.
+	TestBufBufferSize = 1024 * 1024
 
-	// testAdminKeycloakID is the Keycloak ID for the admin user used in tests.
-	testAdminKeycloakID = "1183370a-46a2-4dad-b8fd-dd927d083e14"
+	// TestAdminKeycloakID is the Keycloak ID for the admin user used in tests.
+	TestAdminKeycloakID = "1183370a-46a2-4dad-b8fd-dd927d083e14"
 )
 
 // SetupFreshTestDB creates a fresh in-memory SQLite database for each test.
@@ -51,36 +50,21 @@ func SetupFreshTestDB() *ent.Client {
 	return dbClient
 }
 
-// setupTestServerWithCustomDialer creates a bufconn listener, mock keyfunc,
-// and returns the gRPC server, cleanup function, and client connection.
-func setupTestServerWithCustomDialer(
-	t *testing.T,
-	cfg *config.Config,
-	dbClient *ent.Client,
-) (*grpc.Server, func(), *grpc.ClientConn) {
-	t.Helper()
+// CreateTestServer creates a complete test environment with fresh DB and server.
+// Returns the DB client and gRPC client connection.
+// Automatically sets up DeferCleanup for database, server, and connection.
+// Suitable for Ginkgo tests: db, conn := CreateTestServer(); client = NewClient(conn)
+// Ensures admin user is seeded and admin global role is added.
+func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
+	GinkgoHelper()
 
-	// Seed admin user (required for admin-level RBAC access)
-	ctx := context.Background()
-	exists, err := dbClient.User.Query().
-		Where(entuser.KeycloakIDEQ(testAdminKeycloakID)).
-		Exist(ctx)
-	if err != nil {
-		t.Fatalf("failed to check admin user existence: %v", err)
-	}
-	if !exists {
-		_, err := dbClient.User.Create().
-			SetKeycloakID(testAdminKeycloakID).
-			SetUsername("hackagon-admin").
-			SetDisplayName("Hackagon Admin").
-			SetEmail("admin@hackagon.dev").
-			Save(ctx)
-		if err != nil {
-			t.Fatalf("failed to seed admin user: %v", err)
-		}
-	}
+	// Create fresh database
+	dbClient := SetupFreshTestDB()
+	DeferCleanup(func() { _ = dbClient.Close() })
 
-	// Create mock keyfunc for testing
+	cfg := NewTestConfig(TestAdminKeycloakID)
+
+	// Create mock keyfunc
 	mockKeyfunc := func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -89,74 +73,60 @@ func setupTestServerWithCustomDialer(
 	}
 
 	keyfunc := jwt.Keyfunc(mockKeyfunc)
-	server, cleanup, err := service.NewServer(dbClient, cfg, &keyfunc)
-	if err != nil {
-		t.Fatalf("couldn't create gRPC server: %v", err)
+	server, cleanupServer, err := service.NewServer(dbClient, cfg, &keyfunc)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	DeferCleanup(cleanupServer)
+
+	// Seed admin user (required for admin-level RBAC access)
+	ctx := context.Background()
+	exists, err := dbClient.User.Query().
+		Where(entuser.KeycloakIDEQ(TestAdminKeycloakID)).
+		Exist(ctx)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	if !exists {
+		_, err := dbClient.User.Create().
+			SetKeycloakID(TestAdminKeycloakID).
+			SetUsername("hackagon-admin").
+			SetDisplayName("Hackagon Admin").
+			SetEmail("admin@hackagon.dev").
+			Save(ctx)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 
-	lis := bufconn.Listen(testBufBufferSize)
+	// Ensure admin policy is present
+	enf, err := middleware.NewRBACEnforcer(cfg)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	_, err = enf.AddGlobalRole(TestAdminKeycloakID, "admin")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+	// Create client connection with bufconn
+	lis := bufconn.Listen(TestBufBufferSize)
 	go func() {
 		if err := server.Serve(lis); err != nil {
-			t.Logf("server error: %v", err)
+			fmt.Fprintf(GinkgoWriter, "server error: %v\n", err)
 		}
 	}()
 
 	conn, err := grpc.NewClient(
 		"passthrough:///bufconn",
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-			return lis.DialContext(ctx) // Returns client end of in-memory pipe
+			return lis.DialContext(ctx)
 		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
-	if err != nil {
-		t.Fatalf("failed to connect to bufconn: %v", err)
-	}
-
-	// Cleanup: close connection when test ends
-	t.Cleanup(func() { _ = conn.Close() })
-
-	return server, cleanup, conn
-}
-
-// CreateTestServerForTest creates a complete test environment with fresh DB and server.
-// Returns the DB client and gRPC client connection.
-// Pattern: Tests call this once at the start, then use the returned components.
-func CreateTestServerForTest(t *testing.T) (*ent.Client, *grpc.ClientConn) {
-	t.Helper()
-
-	// Create fresh database
-	dbClient := SetupFreshTestDB()
-	t.Cleanup(func() { _ = dbClient.Close() })
-
-	cfg := NewTestConfig(testAdminKeycloakID)
-
-	enf, err := middleware.NewRBACEnforcer(cfg)
-	if err != nil {
-		t.Fatalf("failed to create enforcer: %v", err)
-	}
-
-	// Ensure admin policy is present (sometimes SQLite in-memory doesn't persist)
-	_, err = enf.AddGlobalRole(testAdminKeycloakID, "admin")
-	if err != nil {
-		t.Fatalf("failed to add admin global role: %v", err)
-	}
-
-	// Create client connection with bufconn
-	_, _, conn := setupTestServerWithCustomDialer(t, cfg, dbClient)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	DeferCleanup(func() { _ = conn.Close() })
 
 	return dbClient, conn
 }
 
 // NewTestHackathon creates a test hackathon with minimal required fields.
 // Returns the hackathon entity and ID.
-func NewTestHackathon(t *testing.T, db *ent.Client) (*ent.Hackathon, string) {
-	t.Helper()
+func NewTestHackathon(db *ent.Client) (*ent.Hackathon, string) {
+	GinkgoHelper()
 
 	h, err := CreateTestHackathon(db, "Test Hackathon", entHackathon.VisibilityPublic)
-	if err != nil {
-		t.Fatalf("failed to create test hackathon: %v", err)
-	}
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	return h, h.ID.String()
 }
@@ -174,13 +144,11 @@ func NewTestUser(db *ent.Client, keycloakID, username string) (*ent.User, error)
 
 // RequirePermissionCheck verifies that a permission check works as expected.
 // This is a helper for testing the RequirePermission middleware.
-func RequirePermissionCheck(t *testing.T, enf *middleware.Enforcer, ctx context.Context, hackathonID string, object middleware.ObjectType, perm middleware.Permission) {
-	t.Helper()
+func RequirePermissionCheck(enf *middleware.Enforcer, ctx context.Context, hackathonID string, object middleware.ObjectType, perm middleware.Permission) {
+	GinkgoHelper()
 
 	err := enf.RequirePermission(ctx, hackathonID, object, perm)
-	if err != nil {
-		t.Logf("permission check failed: %v", err)
-	}
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 // GetStatusError extracts the gRPC status code from an error.
@@ -202,7 +170,7 @@ func CreateTestJWTToken(subject string) string {
 
 // NewMockEnforcer creates a mock RBAC enforcer for testing with admin role pre-seeded.
 func NewMockEnforcer(adminKeycloakID string) *middleware.Enforcer {
-	ginkgo.GinkgoHelper()
+	GinkgoHelper()
 	cfg := NewTestConfig(adminKeycloakID)
 	enf, err := middleware.NewRBACEnforcer(cfg)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
