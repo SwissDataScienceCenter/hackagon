@@ -13,3 +13,5 @@ breaking:
     - .devenv
   use:
     - FILE
+deps:
+  - buf.build/bufbuild/protovalidate

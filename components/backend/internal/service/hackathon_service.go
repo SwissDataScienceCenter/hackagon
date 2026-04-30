@@ -32,6 +32,61 @@ func NewHackathonService(dbClient *ent.Client, enf *m.Enforcer) *HackathonServic
 	}
 }
 
+func (s *HackathonService) Create(
+	ctx context.Context,
+	req *msgs.CreateRequest,
+) (*msgs.CreateResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.enforcer.RequirePermission(ctx, "*", m.Hackathon, m.Create); err != nil {
+		return nil, err
+	}
+
+	creator, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+	}
+
+	visibility, ok := visibilityToEnt(req.GetVisibility())
+	if !ok {
+		return nil, status.Errorf(codes.InvalidArgument, "unknown visibility: %s", req.Visibility.String())
+	}
+
+	q := s.dbClient.Hackathon.Create().
+		SetName(req.GetName()).
+		SetVisibility(visibility).
+		SetCreator(creator).
+		SetModifier(creator)
+	q = q.SetNillableDescription(req.Description)
+	if req.GetStartsAt() != nil {
+		q = q.SetStartsAt(req.GetStartsAt().AsTime())
+	}
+	if req.GetEndsAt() != nil {
+		q = q.SetEndsAt(req.GetEndsAt().AsTime())
+	}
+	if req.GetLogo() != "" {
+		q = q.SetLogo(req.GetLogo())
+	}
+	h, err := q.Save(ctx)
+	if err != nil {
+		slog.Error("create hackathon", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
+	}
+
+	if _, err := s.enforcer.AddRole(uid, m.Owner.String(), h.ID.String()); err != nil {
+		slog.Error("add hackathon owner", "err", err)
+		err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
+		if err != nil {
+			slog.Error("cleanup hackathon creation error", "err", err)
+		}
+		return nil, status.Errorf(codes.Internal, "couldn't set hackathon owner")
+	}
+
+	return &msgs.CreateResponse{HackathonId: h.ID.String()}, nil
+
+}
 
 func (s *HackathonService) Get(
 	ctx context.Context,
