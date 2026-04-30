@@ -1,447 +1,215 @@
 //go:build test && unittest
 
-package middleware
+package middleware_test
 
 import (
 	"context"
-	"testing"
 
-	"github.com/golang-jwt/jwt/v5"
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
+	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	. "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/testutils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// newTestConfig creates a config with SQLite for testing.
-func newTestConfig() *config.Config {
-	return &config.Config{
-		Server: config.ServerConfig{
-			AdminKeycloakID: "admin-uuid",
-		},
-		Database: config.DatabaseConfig{
-			Driver: "sqlite3",
-		},
-	}
-}
+var _ = Describe("RBAC Enforcer", func() {
 
-// newTestEnforcer creates a new RBAC Enforcer with SQLite for testing.
-func newTestEnforcer(t *testing.T) *Enforcer {
-	t.Helper()
+	Describe("NewRBACEnforcer", func() {
+		It("creates enforcer with admin policy", func() {
+			adminID := "admin-uuid"
+			enf := testutils.NewMockEnforcer(adminID)
 
-	cfg := newTestConfig()
-	enf, err := NewRBACEnforcer(cfg)
-	require.NoError(t, err)
-	require.NotNil(t, enf)
-
-	// Save policy to ensure default policies are persisted
-	err = enf.enforcer.SavePolicy()
-	require.NoError(t, err)
-
-	return enf
-}
-
-// TestNewRBACEnforcer tests the enforcer creation with SQLite
-func TestNewRBACEnforcer(t *testing.T) {
-	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t)
-
-	adminCanReadUsers, err := enf.enforcer.Enforce(adminID, "any", "user", "read")
-	require.NoError(t, err)
-	assert.True(t, adminCanReadUsers, "Admin should be able to read users by default")
-}
-
-func TestEnforce(t *testing.T) {
-	enf := newTestEnforcer(t)
-
-	_, err := enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("alice", "owner", "h1")
-
-	_, err = enf.enforcer.AddGroupingPolicy("bob", "member", "h1")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("bob", "member", "h1")
-
-	_, err = enf.enforcer.AddGroupingPolicy("eve", "owner", "h2")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("eve", "owner", "h2")
-
-	testCases := []struct {
-		name       string
-		user       string
-		hackathon  string
-		objectType string
-		permission string
-		expected   bool
-	}{
-		{
-			name:       "Alice as owner can read h1",
-			user:       "alice",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Alice as owner can write h1",
-			user:       "alice",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   true,
-		},
-		{
-			name:       "Alice cannot read h2",
-			user:       "alice",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   false,
-		},
-		{
-			name:       "Bob as member can read h1",
-			user:       "bob",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Bob as member cannot write h1",
-			user:       "bob",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   false,
-		},
-		{
-			name:       "Bob cannot read h2",
-			user:       "bob",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   false,
-		},
-		{
-			name:       "Eve as owner can read h2",
-			user:       "eve",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Eve as owner can write h2",
-			user:       "eve",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   true,
-		},
-		{
-			name:       "Eve cannot read h1",
-			user:       "eve",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(
-				tc.user,
-				tc.hackathon,
-				tc.objectType,
-				tc.permission,
-			)
-			require.NoError(t, err)
-			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
+			ctx := CtxWithClaims(adminID)
+			adminCanReadUsers, err := enf.Enforce(ctx, "any", User, Read)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(adminCanReadUsers).To(gomega.BeTrue())
 		})
-	}
-}
+	})
 
-func TestEnforcePublicHackathon(t *testing.T) {
-	enf := newTestEnforcer(t)
+	Describe("Role-based Access", func() {
+		var enf *Enforcer
 
-	_, err := enf.enforcer.AddPolicy("*", "h2", "hackathon", "read")
-	require.NoError(t, err)
-	defer enf.enforcer.RemovePolicy("*", "h2", "hackathon", "read")
+		BeforeEach(func() {
+			enf = testutils.NewMockEnforcer("admin-uuid")
 
-	_, err = enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("alice", "owner", "h1")
+			_, err := enf.AddRole("alice", "owner", "h1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("alice", "owner", "h1")
+			})
 
-	_, err = enf.enforcer.AddGroupingPolicy("bob", "member", "h1")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("bob", "member", "h1")
+			_, err = enf.AddRole("bob", "member", "h1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("bob", "member", "h1")
+			})
 
-	_, err = enf.enforcer.AddGroupingPolicy("eve", "owner", "h2")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("eve", "owner", "h2")
-
-	testCases := []struct {
-		name       string
-		user       string
-		hackathon  string
-		objectType string
-		permission string
-		expected   bool
-	}{
-		{
-			name:       "Alice can read public h2",
-			user:       "alice",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Alice can't write public h2",
-			user:       "alice",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   true,
-		},
-		{
-			name:       "Bob can read public h2",
-			user:       "bob",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Bob can't write public h2",
-			user:       "bob",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   false,
-		},
-		{
-			name:       "Eve as owner can read h2",
-			user:       "eve",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Eve as owner can write h2",
-			user:       "eve",
-			hackathon:  "h2",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   true,
-		},
-		{
-			name:       "Eve cannot read h1",
-			user:       "eve",
-			hackathon:  "h1",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(
-				tc.user,
-				tc.hackathon,
-				tc.objectType,
-				tc.permission,
-			)
-			require.NoError(t, err)
-			assert.Equal(t, tc.expected, allowed, "Expected %v for %s", tc.expected, tc.name)
+			_, err = enf.AddRole("eve", "owner", "h2")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("eve", "owner", "h2")
+			})
 		})
-	}
-}
 
-// TestRBAC_AdminAccess tests admin-level access control
-func TestRBAC_AdminAccess(t *testing.T) {
-	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t)
+		DescribeTable("enforce permissions",
+			func(user, hackathon string, objectType ObjectType, permission Permission, expected bool) {
+				ctx := CtxWithClaims(user)
+				allowed, err := enf.Enforce(ctx, hackathon, objectType, permission)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(allowed).To(gomega.BeEquivalentTo(expected))
+			},
+			Entry("alice owner reads h1", "alice", "h1", Hackathon, Read, true),
+			Entry("alice owner writes h1", "alice", "h1", Hackathon, Write, true),
+			Entry("alice cannot read h2", "alice", "h2", Hackathon, Read, false),
+			Entry("bob member reads h1", "bob", "h1", Hackathon, Read, true),
+			Entry("bob member cannot write h1", "bob", "h1", Hackathon, Write, false),
+			Entry("bob cannot read h2", "bob", "h2", Hackathon, Read, false),
+			Entry("eve owner reads h2", "eve", "h2", Hackathon, Read, true),
+			Entry("eve owner writes h2", "eve", "h2", Hackathon, Write, true),
+			Entry("eve cannot read h1", "eve", "h1", Hackathon, Read, false),
+		)
+	})
 
-	testCases := []struct {
-		name       string
-		user       string
-		hackathon  string
-		objectType string
-		permission string
-		expected   bool
-	}{
-		{
-			name:       "Admin reads any user",
-			user:       adminID,
-			hackathon:  "any",
-			objectType: "user",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Admin reads any hackathon",
-			user:       adminID,
-			hackathon:  "any",
-			objectType: "hackathon",
-			permission: "read",
-			expected:   true,
-		},
-		{
-			name:       "Admin writes any hackathon",
-			user:       adminID,
-			hackathon:  "any",
-			objectType: "hackathon",
-			permission: "write",
-			expected:   true,
-		},
-	}
+	Describe("Public Hackathon Access", func() {
+		var enf *Enforcer
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.enforcer.Enforce(
-				tc.user,
-				tc.hackathon,
-				tc.objectType,
-				tc.permission,
-			)
-			require.NoError(t, err)
-			assert.Equal(
-				t,
-				tc.expected,
-				allowed,
-				"Admin should have %v access to %s %s",
-				tc.expected,
-				tc.objectType,
-				tc.name,
-			)
+		BeforeEach(func() {
+			enf = testutils.NewMockEnforcer("admin-uuid")
+
+			_, err := enf.AllowPublicHackathonAccess("h2")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemovePublicHackathonAccess("h2")
+			})
+
+			_, err = enf.AddRole("alice", "owner", "h1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("alice", "owner", "h1")
+			})
+
+			_, err = enf.AddRole("bob", "member", "h1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("bob", "member", "h1")
+			})
+
+			_, err = enf.AddRole("eve", "owner", "h2")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("eve", "owner", "h2")
+			})
 		})
-	}
-}
 
-func TestRequirePermission(t *testing.T) {
-	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t)
+		DescribeTable("enforce permissions with public hackathon",
+			func(user, hackathon string, objectType ObjectType, permission Permission, expected bool) {
+				ctx := CtxWithClaims(user)
+				allowed, err := enf.Enforce(ctx, hackathon, objectType, permission)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(allowed).To(gomega.BeEquivalentTo(expected))
+			},
+			Entry("alice can read public h2", "alice", "h2", Hackathon, Read, true),
+			Entry("alice can't write public h1", "alice", "h1", Hackathon, Write, true),
+			Entry("bob can read public h2", "bob", "h1", Hackathon, Read, true),
+			Entry("bob can't write public h1", "bob", "h1", Hackathon, Write, false),
+			Entry("eve owner reads h2", "eve", "h2", Hackathon, Read, true),
+			Entry("eve owner writes h2", "eve", "h2", Hackathon, Write, true),
+			Entry("eve cannot read h1", "eve", "h1", Hackathon, Read, false),
+		)
+	})
 
-	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("uuid-alice", "owner", "h1")
+	Describe("Admin Access", func() {
+		adminID := "admin-uuid"
 
-	testCases := []struct {
-		name      string
-		ctx       context.Context
-		hackathon string
-		object    ObjectType
-		perm      Permission
-		wantCode  codes.Code // codes.OK means no error expected
-	}{
-		{
-			name:      "allowed: owner reads their hackathon",
-			ctx:       ctxWithClaims("uuid-alice"),
-			hackathon: "h1",
-			object:    Hackathon,
-			perm:      Read,
-			wantCode:  codes.OK,
-		},
-		{
-			name:      "denied: user has no role in hackathon",
-			ctx:       ctxWithClaims("uuid-nobody"),
-			hackathon: "h1",
-			object:    Hackathon,
-			perm:      Read,
-			wantCode:  codes.PermissionDenied,
-		},
-		{
-			name:      "allowed: admin bypasses all checks",
-			ctx:       ctxWithClaims(adminID),
-			hackathon: "any",
-			object:    Hackathon,
-			perm:      Read,
-			wantCode:  codes.OK,
-		},
-		{
-			name:      "internal error: no JWT claims in context",
-			ctx:       context.Background(),
-			hackathon: "h1",
-			object:    Hackathon,
-			perm:      Read,
-			wantCode:  codes.Internal,
-		},
-	}
+		DescribeTable("admin bypasses checks",
+			func(objectType ObjectType, permission Permission, expected bool) {
+				enf := testutils.NewMockEnforcer(adminID)
+				ctx := CtxWithClaims(adminID)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := enf.RequirePermission(tc.ctx, tc.hackathon, tc.object, tc.perm)
-			if tc.wantCode == codes.OK {
-				assert.NoError(t, err)
-			} else {
-				require.Error(t, err)
-				assert.Equal(t, tc.wantCode, status.Code(err))
-			}
+				allowed, err := enf.Enforce(ctx, "any", objectType, permission)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(allowed).To(gomega.BeEquivalentTo(expected))
+			},
+			Entry("reads users", User, Read, true),
+			Entry("reads hackathons", Hackathon, Read, true),
+			Entry("writes hackathons", Hackathon, Write, true),
+		)
+	})
+
+	Describe("RequirePermission", func() {
+		var enf *Enforcer
+		adminID := "admin-uuid"
+		BeforeEach(func() {
+			enf = testutils.NewMockEnforcer(adminID)
+
+			_, err := enf.AddRole("uuid-alice", "owner", "h1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("uuid-alice", "owner", "h1")
+			})
+
 		})
-	}
-}
 
-// ctxWithClaims builds a context carrying JWT claims with the given sub.
-func ctxWithClaims(sub string) context.Context {
-	claims := jwt.MapClaims{"sub": sub}
-	return context.WithValue(context.Background(), claimsKey{}, claims)
-}
-
-// TestEnforce_AdminByKeycloakID verifies that the Enforce method resolves
-// admin access by matching the JWT subject (Keycloak ID) against g2 policies.
-func TestEnforce_AdminByKeycloakID(t *testing.T) {
-	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t)
-
-	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
-	require.NoError(t, err)
-	defer enf.enforcer.RemoveGroupingPolicy("uuid-alice", "owner", "h1")
-
-	testCases := []struct {
-		name      string
-		ctx       context.Context
-		hackathon string
-		object    ObjectType
-		perm      Permission
-		expected  bool
-	}{
-		{
-			name:      "Admin Keycloak ID matches g2 policy",
-			ctx:       ctxWithClaims(adminID),
-			hackathon: "any",
-			object:    User,
-			perm:      Read,
-			expected:  true,
-		},
-		{
-			name:      "Owner matched by sub UUID directly",
-			ctx:       ctxWithClaims("uuid-alice"),
-			hackathon: "h1",
-			object:    Hackathon,
-			perm:      Read,
-			expected:  true,
-		},
-		{
-			name:      "Unknown UUID is denied",
-			ctx:       ctxWithClaims("uuid-nobody"),
-			hackathon: "h1",
-			object:    Hackathon,
-			perm:      Read,
-			expected:  false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			allowed, err := enf.Enforce(tc.ctx, tc.hackathon, tc.object, tc.perm)
-			require.NoError(t, err)
-			assert.Equal(t, tc.expected, allowed)
+		It("allows owner to read their hackathon", func() {
+			ctx := CtxWithClaims("uuid-alice")
+			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
-	}
-}
+
+		It("denies unauthorized access", func() {
+			ctx := CtxWithClaims("uuid-nobody")
+			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
+			gomega.Expect(err).To(gomega.HaveOccurred())
+			gomega.Expect(status.Code(err)).To(gomega.Equal(codes.PermissionDenied))
+		})
+
+		It("allows admin to bypass", func() {
+			ctx := CtxWithClaims(adminID)
+			err := enf.RequirePermission(ctx, "any", Hackathon, Read)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		})
+
+		It("returns internal error when no JWT claims", func() {
+			ctx := context.Background()
+			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
+			gomega.Expect(err).To(gomega.HaveOccurred())
+			gomega.Expect(status.Code(err)).To(gomega.Equal(codes.Internal))
+		})
+	})
+
+	Describe("Admin Keycloak ID Resolution", func() {
+		var enf *Enforcer
+		adminID := "admin-uuid"
+		BeforeEach(func() {
+			enf = testutils.NewMockEnforcer(adminID)
+
+			_, err := enf.AddRole("uuid-alice", "owner", "h1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			DeferCleanup(func() {
+				_, _ = enf.RemoveRole("uuid-alice", "owner", "h1")
+			})
+		})
+		It("Admin Keycloak ID matches g2 policy", func() {
+			ctx := CtxWithClaims(adminID)
+			allowed, err := enf.Enforce(ctx, "any", User, Read)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(allowed).To(gomega.BeTrue())
+		})
+
+		It("Owner matched by sub UUID directly", func() {
+			ctx := CtxWithClaims("uuid-alice")
+			allowed, err := enf.Enforce(ctx, "h1", Hackathon, Read)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(allowed).To(gomega.BeTrue())
+		})
+
+		It("Unknown UUID is denied", func() {
+			ctx := CtxWithClaims("uuid-nobody")
+			allowed, err := enf.Enforce(ctx, "h1", Hackathon, Read)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(allowed).To(gomega.BeFalse())
+		})
+	})
+
+})

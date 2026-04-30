@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"context"
-	"errors"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -155,8 +155,20 @@ func (e *Enforcer) AddRole(user, role, hackathonId string) (bool, error) {
 	return e.enforcer.AddGroupingPolicy(user, role, hackathonId)
 }
 
+func (e *Enforcer) RemoveRole(user, role, hackathonId string) (bool, error) {
+	return e.enforcer.RemoveGroupingPolicy(user, role, hackathonId)
+}
+
 func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 	return e.enforcer.AddNamedGroupingPolicy("g2", user, role)
+}
+
+func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
+	return e.enforcer.AddPolicy("*", hackathonId, Hackathon.String(), Read.String())
+}
+
+func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error) {
+	return e.enforcer.RemovePolicy("*", hackathonId, Hackathon.String(), Read.String())
 }
 
 // CheckPermission checks if the given subject has permission for the given hackathon, object, and action.

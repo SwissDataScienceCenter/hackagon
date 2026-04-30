@@ -183,3 +183,9 @@ func AuthUnaryServerInterceptor(validator *JWTValidator) grpc.UnaryServerInterce
 		return handler(ctx, req)
 	}
 }
+
+// ctxWithClaims builds a context carrying JWT claims with the given sub.
+func CtxWithClaims(sub string) context.Context {
+	claims := jwt.MapClaims{"sub": sub}
+	return context.WithValue(context.Background(), claimsKey{}, claims)
+}

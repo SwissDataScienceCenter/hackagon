@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"testing"
 	"time"
 
 	"google.golang.org/grpc"
@@ -14,13 +13,16 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/golang-jwt/jwt/v5"
-
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entHackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
+	"testing"
 )
 
 const (
@@ -196,4 +198,18 @@ func GetStatusError(err error) codes.Code {
 // CreateTestJWTToken creates a JWT token for testing with the given subject.
 func CreateTestJWTToken(subject string) string {
 	return GenerateTestToken(subject, 24*time.Hour)
+}
+
+// NewMockEnforcer creates a mock RBAC enforcer for testing with admin role pre-seeded.
+func NewMockEnforcer(adminKeycloakID string) *middleware.Enforcer {
+	ginkgo.GinkgoHelper()
+	cfg := NewTestConfig(adminKeycloakID)
+	enf, err := middleware.NewRBACEnforcer(cfg)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(enf).NotTo(gomega.BeNil())
+
+	_, err = enf.AddGlobalRole(adminKeycloakID, "admin")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	return enf
 }
