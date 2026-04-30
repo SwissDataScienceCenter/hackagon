@@ -81,6 +81,7 @@ let
       dev-go = [
         {
           packages = [
+            pkgs.ginkgo
             pkgs.golangci-lint
             pkgs.golangci-lint-langserver
             pkgs.typos-lsp
@@ -422,6 +423,9 @@ let
                 pkgs.protoc-gen-go-grpc
                 pkgs.protoc-gen-doc
                 pkgs.buf
+
+                # Go testing
+                pkgs.ginkgo
               ];
             }
           )

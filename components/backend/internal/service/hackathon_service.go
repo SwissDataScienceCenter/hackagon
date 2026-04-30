@@ -50,7 +50,7 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
 	}
 
-	visibility, ok := visibilityToEnt(req.GetVisibility())
+	visibility, ok := VisibilityToEnt(req.GetVisibility())
 	if !ok {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -178,7 +178,7 @@ func (s *HackathonService) List(
 ) (*msgs.ListResponse, error) {
 	q := s.dbClient.Hackathon.Query()
 	if vf := req.GetVisibilityFilter(); vf != ents.Visibility_VISIBILITY_UNSPECIFIED {
-		entV, ok := visibilityToEnt(vf)
+		entV, ok := VisibilityToEnt(vf)
 		if !ok {
 			return nil, status.Errorf(codes.InvalidArgument, "unknown visibility: %v", vf)
 		}

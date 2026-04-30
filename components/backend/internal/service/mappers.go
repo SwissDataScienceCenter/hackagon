@@ -23,7 +23,7 @@ func userEntryFromEnt(u *ent.User) *userEnts.User {
 	}
 }
 
-func visibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
+func VisibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
 	switch v {
 	case enthackathon.VisibilityPublic:
 		return hackEnts.Visibility_VISIBILITY_PUBLIC
@@ -34,7 +34,7 @@ func visibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
 	}
 }
 
-func visibilityToEnt(v hackEnts.Visibility) (enthackathon.Visibility, bool) {
+func VisibilityToEnt(v hackEnts.Visibility) (enthackathon.Visibility, bool) {
 	switch v {
 	case hackEnts.Visibility_VISIBILITY_PUBLIC:
 		return enthackathon.VisibilityPublic, true
@@ -63,7 +63,7 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		Name:       h.Name,
 		CreatedAt:  timestamppb.New(h.CreatedAt),
 		ModifiedAt: timestamppb.New(h.ModifiedAt),
-		Visibility: visibilityFromEnt(h.Visibility),
+		Visibility: VisibilityFromEnt(h.Visibility),
 		Status:     computeHackathonStatus(h.StartsAt, h.EndsAt, now),
 	}
 	if h.StartsAt != nil {
