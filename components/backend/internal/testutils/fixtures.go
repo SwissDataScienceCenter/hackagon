@@ -15,7 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/mattn/go-sqlite3"
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entHackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
@@ -74,7 +74,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 
 	keyfunc := jwt.Keyfunc(mockKeyfunc)
 	server, cleanupServer, err := service.NewServer(dbClient, cfg, &keyfunc)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	DeferCleanup(cleanupServer)
 
 	// Seed admin user (required for admin-level RBAC access)
@@ -82,7 +82,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 	exists, err := dbClient.User.Query().
 		Where(entuser.KeycloakIDEQ(TestAdminKeycloakID)).
 		Exist(ctx)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	if !exists {
 		_, err := dbClient.User.Create().
 			SetKeycloakID(TestAdminKeycloakID).
@@ -90,14 +90,14 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 			SetDisplayName("Hackagon Admin").
 			SetEmail("admin@hackagon.dev").
 			Save(ctx)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	}
 
 	// Ensure admin policy is present
 	enf, err := middleware.NewRBACEnforcer(cfg)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	_, err = enf.AddGlobalRole(TestAdminKeycloakID, "admin")
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	// Create client connection with bufconn
 	lis := bufconn.Listen(TestBufBufferSize)
@@ -114,7 +114,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 		}),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 	DeferCleanup(func() { _ = conn.Close() })
 
 	return dbClient, conn
@@ -126,7 +126,7 @@ func NewTestHackathon(db *ent.Client) (*ent.Hackathon, string) {
 	GinkgoHelper()
 
 	h, err := CreateTestHackathon(db, "Test Hackathon", entHackathon.VisibilityPublic)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	return h, h.ID.String()
 }
@@ -148,7 +148,7 @@ func RequirePermissionCheck(enf *middleware.Enforcer, ctx context.Context, hacka
 	GinkgoHelper()
 
 	err := enf.RequirePermission(ctx, hackathonID, object, perm)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 }
 
 // GetStatusError extracts the gRPC status code from an error.
@@ -173,11 +173,11 @@ func NewMockEnforcer(adminKeycloakID string) *middleware.Enforcer {
 	GinkgoHelper()
 	cfg := NewTestConfig(adminKeycloakID)
 	enf, err := middleware.NewRBACEnforcer(cfg)
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(enf).NotTo(gomega.BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(enf).NotTo(BeNil())
 
 	_, err = enf.AddGlobalRole(adminKeycloakID, "admin")
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	return enf
 }

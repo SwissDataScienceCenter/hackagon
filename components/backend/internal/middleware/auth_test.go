@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
@@ -37,7 +37,7 @@ var _ = Describe("Auth Middleware", func() {
 	Describe("Valid Token Processing", func() {
 		It("processes valid token and injects claims", func() {
 			tokenString := testutils.GenerateTestToken("test-user-123", 24*time.Hour)
-			gomega.Expect(tokenString).NotTo(gomega.BeEmpty())
+			Expect(tokenString).NotTo(BeEmpty())
 
 			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 				"authorization", "Bearer "+tokenString,
@@ -45,19 +45,19 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			newCtx, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			claims, ok := middleware.GetClaims(newCtx)
-			gomega.Expect(ok).To(gomega.BeTrue())
-			gomega.Expect(claims["sub"]).To(gomega.Equal("test-user-123"))
-			gomega.Expect(claims["exp"]).NotTo(gomega.BeNil())
-			gomega.Expect(claims["iat"]).NotTo(gomega.BeNil())
+			Expect(ok).To(BeTrue())
+			Expect(claims["sub"]).To(Equal("test-user-123"))
+			Expect(claims["exp"]).NotTo(BeNil())
+			Expect(claims["iat"]).NotTo(BeNil())
 		})
 
 		It("handles different user subjects correctly", func() {
 			tokenString := testutils.GenerateTestToken("different-user-456", 24*time.Hour)
-			gomega.Expect(tokenString).NotTo(gomega.BeEmpty())
-			gomega.Expect(tokenString).To(gomega.ContainSubstring("."))
+			Expect(tokenString).NotTo(BeEmpty())
+			Expect(tokenString).To(ContainSubstring("."))
 
 			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 				"authorization", "Bearer "+tokenString,
@@ -65,11 +65,11 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			newCtx, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			claims, ok := middleware.GetClaims(newCtx)
-			gomega.Expect(ok).To(gomega.BeTrue())
-			gomega.Expect(claims["sub"]).To(gomega.Equal("different-user-456"))
+			Expect(ok).To(BeTrue())
+			Expect(claims["sub"]).To(Equal("different-user-456"))
 		})
 	})
 
@@ -81,8 +81,8 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			_, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Error()).To(gomega.ContainSubstring("token is malformed"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("token is malformed"))
 		})
 
 		It("rejects expired tokens", func() {
@@ -93,8 +93,8 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			_, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Error()).To(gomega.ContainSubstring("token is expired"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("token is expired"))
 		})
 
 		It("rejects tokens with future not-before", func() {
@@ -108,7 +108,7 @@ var _ = Describe("Auth Middleware", func() {
 			}
 			token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 			tokenString, err := token.SignedString(testutils.GetTestRSAPrivateKey())
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 				"authorization", "Bearer "+tokenString,
@@ -116,8 +116,8 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			_, err = validator.AuthFunc()(ctx)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Error()).To(gomega.ContainSubstring("token is not valid yet"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("token is not valid yet"))
 		})
 	})
 
@@ -127,11 +127,11 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			newCtx, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			claims, ok := middleware.GetClaims(newCtx)
-			gomega.Expect(ok).To(gomega.BeTrue())
-			gomega.Expect(claims["sub"]).To(gomega.Equal(middleware.AnonSubject))
+			Expect(ok).To(BeTrue())
+			Expect(claims["sub"]).To(Equal(middleware.AnonSubject))
 		})
 
 		It("injects anonymous claims when Authorization header is empty", func() {
@@ -141,11 +141,11 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			newCtx, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			claims, ok := middleware.GetClaims(newCtx)
-			gomega.Expect(ok).To(gomega.BeTrue())
-			gomega.Expect(claims["sub"]).To(gomega.Equal(middleware.AnonSubject))
+			Expect(ok).To(BeTrue())
+			Expect(claims["sub"]).To(Equal(middleware.AnonSubject))
 		})
 
 		It("rejects invalid tokens without Bearer prefix", func() {
@@ -155,8 +155,8 @@ var _ = Describe("Auth Middleware", func() {
 
 			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
 			_, err := validator.AuthFunc()(ctx)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Error()).To(gomega.ContainSubstring("token is malformed"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("token is malformed"))
 		})
 	})
 
@@ -165,17 +165,17 @@ var _ = Describe("Auth Middleware", func() {
 			ctx := middleware.CtxWithClaims("test-user")
 
 			retrievedClaims, ok := middleware.GetClaims(ctx)
-			gomega.Expect(ok).To(gomega.BeTrue())
-			gomega.Expect(retrievedClaims["sub"]).To(gomega.Equal("test-user"))
-			gomega.Expect(retrievedClaims).NotTo(gomega.BeNil())
+			Expect(ok).To(BeTrue())
+			Expect(retrievedClaims["sub"]).To(Equal("test-user"))
+			Expect(retrievedClaims).NotTo(BeNil())
 		})
 
 		It("returns false and nil when no claims available", func() {
 			ctx := context.Background()
 
 			retrievedClaims, ok := middleware.GetClaims(ctx)
-			gomega.Expect(ok).To(gomega.BeFalse())
-			gomega.Expect(retrievedClaims).To(gomega.BeNil())
+			Expect(ok).To(BeFalse())
+			Expect(retrievedClaims).To(BeNil())
 		})
 	})
 
@@ -184,17 +184,17 @@ var _ = Describe("Auth Middleware", func() {
 			ctx := middleware.CtxWithClaims("test-user-subject")
 
 			subject, err := middleware.GetSubject(ctx)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(subject).To(gomega.Equal("test-user-subject"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(subject).To(Equal("test-user-subject"))
 		})
 
 		It("returns error when no claims available", func() {
 			ctx := context.Background()
 
 			subject, err := middleware.GetSubject(ctx)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Error()).To(gomega.ContainSubstring("couldn't get claims from jwt"))
-			gomega.Expect(subject).To(gomega.BeEmpty())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("couldn't get claims from jwt"))
+			Expect(subject).To(BeEmpty())
 		})
 	})
 

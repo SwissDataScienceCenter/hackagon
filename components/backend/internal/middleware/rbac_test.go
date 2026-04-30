@@ -6,7 +6,7 @@ import (
 	"context"
 
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	. "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/testutils"
 	"google.golang.org/grpc/codes"
@@ -22,8 +22,8 @@ var _ = Describe("RBAC Enforcer", func() {
 
 			ctx := CtxWithClaims(adminID)
 			adminCanReadUsers, err := enf.Enforce(ctx, "any", User, Read)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(adminCanReadUsers).To(gomega.BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(adminCanReadUsers).To(BeTrue())
 		})
 	})
 
@@ -34,19 +34,19 @@ var _ = Describe("RBAC Enforcer", func() {
 			enf = testutils.NewMockEnforcer("admin-uuid")
 
 			_, err := enf.AddRole("alice", "owner", "h1")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("alice", "owner", "h1")
 			})
 
 			_, err = enf.AddRole("bob", "member", "h1")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("bob", "member", "h1")
 			})
 
 			_, err = enf.AddRole("eve", "owner", "h2")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("eve", "owner", "h2")
 			})
@@ -56,8 +56,8 @@ var _ = Describe("RBAC Enforcer", func() {
 			func(user, hackathon string, objectType ObjectType, permission Permission, expected bool) {
 				ctx := CtxWithClaims(user)
 				allowed, err := enf.Enforce(ctx, hackathon, objectType, permission)
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(allowed).To(gomega.BeEquivalentTo(expected))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allowed).To(BeEquivalentTo(expected))
 			},
 			Entry("alice owner reads h1", "alice", "h1", Hackathon, Read, true),
 			Entry("alice owner writes h1", "alice", "h1", Hackathon, Write, true),
@@ -78,25 +78,25 @@ var _ = Describe("RBAC Enforcer", func() {
 			enf = testutils.NewMockEnforcer("admin-uuid")
 
 			_, err := enf.AllowPublicHackathonAccess("h2")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemovePublicHackathonAccess("h2")
 			})
 
 			_, err = enf.AddRole("alice", "owner", "h1")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("alice", "owner", "h1")
 			})
 
 			_, err = enf.AddRole("bob", "member", "h1")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("bob", "member", "h1")
 			})
 
 			_, err = enf.AddRole("eve", "owner", "h2")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("eve", "owner", "h2")
 			})
@@ -106,8 +106,8 @@ var _ = Describe("RBAC Enforcer", func() {
 			func(user, hackathon string, objectType ObjectType, permission Permission, expected bool) {
 				ctx := CtxWithClaims(user)
 				allowed, err := enf.Enforce(ctx, hackathon, objectType, permission)
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(allowed).To(gomega.BeEquivalentTo(expected))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allowed).To(BeEquivalentTo(expected))
 			},
 			Entry("alice can read public h2", "alice", "h2", Hackathon, Read, true),
 			Entry("alice can't write public h1", "alice", "h1", Hackathon, Write, true),
@@ -128,8 +128,8 @@ var _ = Describe("RBAC Enforcer", func() {
 				ctx := CtxWithClaims(adminID)
 
 				allowed, err := enf.Enforce(ctx, "any", objectType, permission)
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(allowed).To(gomega.BeEquivalentTo(expected))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allowed).To(BeEquivalentTo(expected))
 			},
 			Entry("reads users", User, Read, true),
 			Entry("reads hackathons", Hackathon, Read, true),
@@ -144,7 +144,7 @@ var _ = Describe("RBAC Enforcer", func() {
 			enf = testutils.NewMockEnforcer(adminID)
 
 			_, err := enf.AddRole("uuid-alice", "owner", "h1")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("uuid-alice", "owner", "h1")
 			})
@@ -154,27 +154,27 @@ var _ = Describe("RBAC Enforcer", func() {
 		It("allows owner to read their hackathon", func() {
 			ctx := CtxWithClaims("uuid-alice")
 			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("denies unauthorized access", func() {
 			ctx := CtxWithClaims("uuid-nobody")
 			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(status.Code(err)).To(gomega.Equal(codes.PermissionDenied))
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 
 		It("allows admin to bypass", func() {
 			ctx := CtxWithClaims(adminID)
 			err := enf.RequirePermission(ctx, "any", Hackathon, Read)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns internal error when no JWT claims", func() {
 			ctx := context.Background()
 			err := enf.RequirePermission(ctx, "h1", Hackathon, Read)
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(status.Code(err)).To(gomega.Equal(codes.Internal))
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.Internal))
 		})
 	})
 
@@ -185,7 +185,7 @@ var _ = Describe("RBAC Enforcer", func() {
 			enf = testutils.NewMockEnforcer(adminID)
 
 			_, err := enf.AddRole("uuid-alice", "owner", "h1")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
 				_, _ = enf.RemoveRole("uuid-alice", "owner", "h1")
 			})
@@ -193,22 +193,22 @@ var _ = Describe("RBAC Enforcer", func() {
 		It("Admin Keycloak ID matches g2 policy", func() {
 			ctx := CtxWithClaims(adminID)
 			allowed, err := enf.Enforce(ctx, "any", User, Read)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(allowed).To(gomega.BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(allowed).To(BeTrue())
 		})
 
 		It("Owner matched by sub UUID directly", func() {
 			ctx := CtxWithClaims("uuid-alice")
 			allowed, err := enf.Enforce(ctx, "h1", Hackathon, Read)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(allowed).To(gomega.BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(allowed).To(BeTrue())
 		})
 
 		It("Unknown UUID is denied", func() {
 			ctx := CtxWithClaims("uuid-nobody")
 			allowed, err := enf.Enforce(ctx, "h1", Hackathon, Read)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(allowed).To(gomega.BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(allowed).To(BeFalse())
 		})
 	})
 

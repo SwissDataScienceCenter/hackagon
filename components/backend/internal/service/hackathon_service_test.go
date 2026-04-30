@@ -5,7 +5,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -54,19 +54,19 @@ var _ = Describe("HackathonService", func() {
 			}
 
 			resp, err := client.Create(ctx, req)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(resp.HackathonId).NotTo(gomega.BeEmpty())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.HackathonId).NotTo(BeEmpty())
 
 			// Verify in database
 			h, err := dbClient.Hackathon.Query().
 				Where(enthackathon.IDEQ(uuid.MustParse(resp.HackathonId))).
 				WithCreator().
 				Only(context.Background())
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(h.Name).To(gomega.Equal("Test Hackathon"))
-			gomega.Expect(h.Visibility).To(gomega.Equal(enthackathon.VisibilityPublic))
-			gomega.Expect(h.Edges.Creator).NotTo(gomega.BeNil())
-			gomega.Expect(h.Edges.Creator.KeycloakID).To(gomega.Equal(testAdmin))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Name).To(Equal("Test Hackathon"))
+			Expect(h.Visibility).To(Equal(enthackathon.VisibilityPublic))
+			Expect(h.Edges.Creator).NotTo(BeNil())
+			Expect(h.Edges.Creator.KeycloakID).To(Equal(testAdmin))
 		})
 	})
 
@@ -105,7 +105,7 @@ var _ = Describe("HackathonService", func() {
 					Visibility: h.visibility,
 				}
 				_, err := client.Create(ctx, req)
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			}
 		})
 
@@ -114,8 +114,8 @@ var _ = Describe("HackathonService", func() {
 			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
 
 			listResp, err := client.List(ctx, &msgs.ListRequest{})
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(listResp.Hackathons).To(gomega.HaveLen(len(hackathons)))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(listResp.Hackathons).To(HaveLen(len(hackathons)))
 
 			// Verify each hackathon exists in list
 			for _, expected := range hackathons {
@@ -126,7 +126,7 @@ var _ = Describe("HackathonService", func() {
 						break
 					}
 				}
-				gomega.Expect(found).To(gomega.BeTrue(), "should find %s in list", expected.name)
+				Expect(found).To(BeTrue(), "should find %s in list", expected.name)
 			}
 		})
 
@@ -135,14 +135,14 @@ var _ = Describe("HackathonService", func() {
 			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
 
 			listResp, err := client.List(ctx, &msgs.ListRequest{})
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(len(listResp.Hackathons)).To(gomega.BeNumerically(">", 0))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(listResp.Hackathons)).To(BeNumerically(">", 0))
 
 			// Check first hackathon has required fields
 			h := listResp.Hackathons[0]
-			gomega.Expect(h.Id).NotTo(gomega.BeEmpty())
-			gomega.Expect(h.Name).NotTo(gomega.BeEmpty())
-			gomega.Expect(h.Visibility).NotTo(gomega.Equal(entities.Visibility_VISIBILITY_UNSPECIFIED))
+			Expect(h.Id).NotTo(BeEmpty())
+			Expect(h.Name).NotTo(BeEmpty())
+			Expect(h.Visibility).NotTo(Equal(entities.Visibility_VISIBILITY_UNSPECIFIED))
 		})
 	})
 
@@ -163,8 +163,8 @@ var _ = Describe("HackathonService", func() {
 			}
 
 			createResp, err := client.Create(ctx, createReq)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(createResp.HackathonId).NotTo(gomega.BeEmpty())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(createResp.HackathonId).NotTo(BeEmpty())
 			createdID = createResp.HackathonId
 		})
 
@@ -174,17 +174,17 @@ var _ = Describe("HackathonService", func() {
 
 			getReq := &msgs.GetRequest{HackathonId: createdID}
 			getResp, err := client.Get(ctx, getReq)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			h := getResp.Hackathon
-			gomega.Expect(h.Id).To(gomega.Equal(createdID))
-			gomega.Expect(h.Name).To(gomega.Equal("Get Test Hackathon"))
-			gomega.Expect(h.Visibility).To(gomega.Equal(entities.Visibility_VISIBILITY_PUBLIC))
+			Expect(h.Id).To(Equal(createdID))
+			Expect(h.Name).To(Equal("Get Test Hackathon"))
+			Expect(h.Visibility).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
 
 			// Check creator is populated
-			gomega.Expect(h.Creator).NotTo(gomega.BeNil())
-			gomega.Expect(h.Creator.KeycloakId).To(gomega.Equal(testAdmin))
-			gomega.Expect(h.Creator.Username).To(gomega.Equal("hackagon-admin"))
+			Expect(h.Creator).NotTo(BeNil())
+			Expect(h.Creator.KeycloakId).To(Equal(testAdmin))
+			Expect(h.Creator.Username).To(Equal("hackagon-admin"))
 		})
 
 		It("returns correct status", func() {
@@ -193,11 +193,11 @@ var _ = Describe("HackathonService", func() {
 
 			getReq := &msgs.GetRequest{HackathonId: createdID}
 			getResp, err := client.Get(ctx, getReq)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
 			h := getResp.Hackathon
 			// Status should be computed based on dates
-			gomega.Expect(h.Status).NotTo(gomega.Equal(entities.HackathonStatus_HACKATHON_STATUS_UNSPECIFIED))
+			Expect(h.Status).NotTo(Equal(entities.HackathonStatus_HACKATHON_STATUS_UNSPECIFIED))
 		})
 
 		It("returns NOT_FOUND for invalid hackathon ID", func() {
@@ -206,10 +206,10 @@ var _ = Describe("HackathonService", func() {
 
 			getReq := &msgs.GetRequest{HackathonId: uuid.NewString()}
 			_, err := client.Get(ctx, getReq)
-			gomega.Expect(err).To(gomega.HaveOccurred())
+			Expect(err).To(HaveOccurred())
 
 			st := status.Convert(err)
-			gomega.Expect(st.Code()).To(gomega.Equal(codes.NotFound))
+			Expect(st.Code()).To(Equal(codes.NotFound))
 		})
 	})
 
@@ -225,8 +225,8 @@ var _ = Describe("HackathonService", func() {
 				}
 
 				resp, err := client.Create(ctx, req)
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(resp.HackathonId).NotTo(gomega.BeEmpty())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.HackathonId).NotTo(BeEmpty())
 			})
 
 			It("denies non-admin users without roles from creating", func() {
@@ -239,11 +239,11 @@ var _ = Describe("HackathonService", func() {
 				}
 
 				resp, err := client.Create(ctx, req)
-				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(resp).To(gomega.BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(resp).To(BeNil())
 
 				st := status.Convert(err)
-				gomega.Expect(st.Code()).To(gomega.Equal(codes.PermissionDenied))
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
 			})
 
 			It("denies anonymous requests from creating", func() {
@@ -256,11 +256,11 @@ var _ = Describe("HackathonService", func() {
 				}
 
 				resp, err := client.Create(ctx, req)
-				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(resp).To(gomega.BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(resp).To(BeNil())
 
 				st := status.Convert(err)
-				gomega.Expect(st.Code()).To(gomega.Equal(codes.PermissionDenied))
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
 			})
 		})
 
@@ -271,9 +271,9 @@ var _ = Describe("HackathonService", func() {
 				ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
 
 				resp, err := client.List(ctx, &msgs.ListRequest{})
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 				// Should return empty list (not error) when no hackathons exist
-				gomega.Expect(resp.Hackathons).To(gomega.BeEmpty())
+				Expect(resp.Hackathons).To(BeEmpty())
 			})
 
 			It("allows anonymous users to list public hackathons but not private ones", func() {
@@ -289,22 +289,22 @@ var _ = Describe("HackathonService", func() {
 					Name:       "Public Hackathon",
 					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
 				})
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
 				// Create private hackathon
 				_, err = client.Create(adminCtx, &msgs.CreateRequest{
 					Name:       "Private Hackathon",
 					Visibility: entities.Visibility_VISIBILITY_PRIVATE,
 				})
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
 				// Now list as anonymous - should only see public hackathons
 				resp, err := client.List(ctx, &msgs.ListRequest{})
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(resp.Hackathons).NotTo(gomega.BeNil())
-				gomega.Expect(resp.Hackathons).To(gomega.HaveLen(1), "should only list public hackathons")
-				gomega.Expect(resp.Hackathons[0].Name).To(gomega.Equal("Public Hackathon"))
-				gomega.Expect(resp.Hackathons[0].Visibility).To(gomega.Equal(entities.Visibility_VISIBILITY_PUBLIC))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.Hackathons).NotTo(BeNil())
+				Expect(resp.Hackathons).To(HaveLen(1), "should only list public hackathons")
+				Expect(resp.Hackathons[0].Name).To(Equal("Public Hackathon"))
+				Expect(resp.Hackathons[0].Visibility).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
 			})
 		})
 	})
