@@ -251,6 +251,145 @@ func (s *HackathonService) Join(
 	return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
 }
 
+func (s *HackathonService) ApproveParticipant(
+	ctx context.Context,
+	req *msgs.ApproveParticipantRequest,
+) (*msgs.ApproveParticipantResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reject anonymous users
+	if uid == m.AnonSubject {
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"anonymous users cannot remove participants",
+		)
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Write permission on hackathon
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Find the user to approve by keycloak ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(req.GetUserId())).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user to approve", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Update participant record to set is_waiting=false (approved)
+	_, err = s.dbClient.Participant.Update().
+		Where(
+			entparticipant.HackathonIDEQ(id),
+			entparticipant.UserID(user.ID),
+		).
+		SetIsWaiting(false).
+		Save(ctx)
+	if err != nil {
+		slog.Error("update participant", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't approve participant")
+	}
+
+	return &msgs.ApproveParticipantResponse{}, nil
+}
+
+func (s *HackathonService) RemoveParticipant(
+	ctx context.Context,
+	req *msgs.RemoveParticipantRequest,
+) (*msgs.RemoveParticipantResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reject anonymous users
+	if uid == m.AnonSubject {
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"anonymous users cannot remove participants",
+		)
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Write permission on hackathon (owners/organizers only)
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Find the user to remove by keycloak ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(req.GetUserId())).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user to remove", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Delete the participant record
+	_, err = s.dbClient.Participant.Delete().
+		Where(
+			entparticipant.HackathonIDEQ(id),
+			entparticipant.UserID(user.ID),
+		).
+		Exec(ctx)
+	if err != nil {
+		slog.Error("delete participant", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove participant")
+	}
+
+	return &msgs.RemoveParticipantResponse{}, nil
+}
+
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
