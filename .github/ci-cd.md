@@ -1,9 +1,5 @@
 # CI/CD concept
 
-**Status:** MVP implemented (stages 1–6 in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Stages 7–8 not yet
-implemented.
-
 ## Goal
 
 Give Hackagon a CI/CD pipeline where every check that runs in CI can be
@@ -84,17 +80,41 @@ Three viable shapes, in order of complexity:
 Add path filtering once CI time on docs-only PRs becomes noticeable; split into
 a matrix only if overall CI time becomes a bottleneck.
 
-## Local verification
+## Usage
 
-The `ci::all` recipe in [tools/just/ci.just](../tools/just/ci.just) runs stages
-2–6 in sequence (generate check → format → lint → build → test). Call it from a
-bare shell, not from within `nix develop`:
+Run the full CI pipeline locally from the repo root:
 
 ```sh
 just ci::all
 ```
 
-Individual stages can also be run in isolation:
+This mirrors stages 2–6 exactly as they run on GitHub Actions (generate check →
+format → lint → build → test). Works from a bare shell or from a direnv-managed
+shell — `ci::all` handles the Nix shell itself, so do **not** call it from
+inside `nix develop`.
+
+Before pushing: `just ci::all` → if it passes locally, CI passes.
+
+### Component-level commands
+
+The same checks can be run one at a time directly inside a component directory.
+These commands are wired to the same underlying tooling, so results are
+identical to the corresponding stage in `just ci::all`:
+
+```sh
+# From components/backend/ or components/frontend/
+just format
+just lint
+just test
+just build
+```
+
+Useful during active development when you want fast feedback on a single check
+without running the full pipeline.
+
+### Debugging CI failures
+
+Individual stages can also be isolated from the repo root:
 
 ```sh
 just ci::codegen-check                   # stage 2 — uses default shell
@@ -104,9 +124,8 @@ just ci::run just build -c backend       # stage 5 (one component)
 just ci::run just check::test -c backend # stage 6 (one component)
 ```
 
-- Before pushing: `just ci::all` → if it passes locally, CI passes.
-- On CI failure: copy the failing command from the workflow YAML, run it
-  locally, reproduce.
+On CI failure: copy the failing command from the workflow YAML, run it locally,
+reproduce.
 
 ## Caching strategy
 
@@ -145,29 +164,3 @@ git ls-remote https://github.com/<owner>/<action> refs/tags/<version>
 Then update both the SHA and the comment in `ci.yml`. Consider using
 [`pinact`](https://github.com/suzuki-shunsuke/pinact) or
 [Renovate](https://docs.renovatebot.com/) to automate this.
-
-## Rollout
-
-Incremental, one PR per step, each independently useful:
-
-1. ~~**MVP workflow** — stages 1–6 in a single job, Cachix, on PR + push to
-   main.~~ ✓ Done
-2. ~~**`just ci::all` recipe** — developer-side reproduction.~~ ✓ Done
-3. ~~**Concurrency group** — cancel in-progress runs on the same branch/PR.~~ ✓
-   Done
-4. ~~**Action SHA pinning** — pin all third-party actions to commit SHAs.~~ ✓
-   Done
-5. **Coverage upload** — wire Codecov; config already exists at
-   [codecov.yaml](../tools/configs/codecov/codecov.yaml).
-6. **Path filtering** — condition build/test on changed paths; lint always runs.
-7. **Container builds** on `main` (stage 7).
-8. **Release pipeline** (stage 8) once a tagged-release process is defined,
-   including attaching image references to GitHub releases.
-
-## Remaining preconditions
-
-- **buf.lock** — not present at time of writing. For stage 2's drift check to be
-  deterministic, `buf dep update` should have produced a lockfile and committed
-  it to the repository.
-- **Branch protection** — once the MVP workflow is green on `main`, mark stages
-  2–6 as required checks in GitHub branch protection.
