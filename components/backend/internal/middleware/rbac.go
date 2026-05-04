@@ -62,6 +62,8 @@ func (ot ObjectType) String() string {
 	switch ot {
 	case Hackathon:
 		return "hackathon"
+	case Page:
+		return "page"
 	case Team:
 		return "team"
 	case User:

@@ -4,6 +4,8 @@ package hackathon;
 
 import "hackathon/messages/hackathon_svc/add_owner_request.proto";
 import "hackathon/messages/hackathon_svc/add_owner_response.proto";
+import "hackathon/messages/hackathon_svc/approve_participant_request.proto";
+import "hackathon/messages/hackathon_svc/approve_participant_response.proto";
 import "hackathon/messages/hackathon_svc/create_request.proto";
 import "hackathon/messages/hackathon_svc/create_response.proto";
 import "hackathon/messages/hackathon_svc/get_request.proto";

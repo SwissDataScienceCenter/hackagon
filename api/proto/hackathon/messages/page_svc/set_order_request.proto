@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package hackathon.messages.page_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/page_svc";
+
+message SetOrderRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  repeated string page_ids = 2 [
+    (buf.validate.field).repeated.items.string.uuid = true,
+    (buf.validate.field).repeated.unique = true
+  ];
+  // List of page IDs in the desired order
+}

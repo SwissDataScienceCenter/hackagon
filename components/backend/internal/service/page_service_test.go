@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package service_test
 
 import (
@@ -49,7 +51,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Test Page",
 				Content:     "Test content",
 				Visible:     true,
-				Order:       1,
 			}
 
 			_, err := client.Create(ctx, createReq)
@@ -80,7 +81,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Test Page",
 				Content:     "Test content",
 				Visible:     true,
-				Order:       1,
 			}
 
 			resp, err := client.Create(ctx, createReq)
@@ -96,7 +96,7 @@ var _ = Describe("PageService", func() {
 			Expect(page.Title).To(Equal("Test Page"))
 			Expect(page.Content).To(Equal("Test content"))
 			Expect(page.Visible).To(BeTrue())
-			Expect(page.Order).To(Equal(1))
+			Expect(page.Order).To(Equal(0))
 		})
 
 		It("requires authentication to create", func() {
@@ -108,7 +108,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Unauthorized Page",
 				Content:     "Unauthorized",
 				Visible:     true,
-				Order:       1,
 			}
 
 			_, err := client.Create(ctx, createReq)
@@ -131,7 +130,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Unauthorized Page",
 				Content:     "Unauthorized",
 				Visible:     true,
-				Order:       1,
 			}
 
 			_, err := client.Create(ctx, createReq)
@@ -167,7 +165,7 @@ var _ = Describe("PageService", func() {
 					Title:       "Page " + string(rune('A'+i)),
 					Content:     "Content for page " + string(rune('A'+i)),
 					Visible:     true,
-					Order:       int32(i + 1),
+					// order auto-assigned by backend
 				})
 				Expect(err).NotTo(HaveOccurred())
 			}
@@ -184,12 +182,15 @@ var _ = Describe("PageService", func() {
 				HackathonId: createdHackathonID,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(listResp.GetPages())).To(Equal(3))
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(3))
 
-			// Verify pages are ordered
-			Expect(listResp.GetPages()[0].GetOrder()).To(Equal(int32(1)))
-			Expect(listResp.GetPages()[1].GetOrder()).To(Equal(int32(2)))
-			Expect(listResp.GetPages()[2].GetOrder()).To(Equal(int32(3)))
+			// Verify pages are ordered sequentially
+			for i, p := range pages {
+				Expect(
+					p.GetOrder(),
+				).To(Equal(int32(i)), "Page at index %d should have order %d", i, i)
+			}
 		})
 
 		It("returns pages with correct fields", func() {
@@ -280,7 +281,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Get Test Page",
 				Content:     "Get test content",
 				Visible:     true,
-				Order:       1,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			createdPageID = createResp.GetPageId()
@@ -303,7 +303,7 @@ var _ = Describe("PageService", func() {
 			Expect(page.GetTitle()).To(Equal("Get Test Page"))
 			Expect(page.GetContent()).To(Equal("Get test content"))
 			Expect(page.GetVisible()).To(BeTrue())
-			Expect(page.GetOrder()).To(Equal(int32(1)))
+			Expect(page.GetOrder()).To(Equal(int32(0)))
 		})
 
 		It("returns NOT_FOUND for invalid page ID", func() {
@@ -336,7 +336,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Fake Page",
 				Content:     "Fake",
 				Visible:     true,
-				Order:       1,
 			})
 			Expect(err).To(HaveOccurred())
 
@@ -393,7 +392,6 @@ var _ = Describe("PageService", func() {
 				Title:       "Original Title",
 				Content:     "Original content",
 				Visible:     true,
-				Order:       1,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			createdPageID = createResp.GetPageId()
@@ -407,11 +405,10 @@ var _ = Describe("PageService", func() {
 			)
 
 			_, err := client.Edit(ctx, &pageMsgs.EditRequest{
-				PageId:   createdPageID,
-				Title:    stringPtr("Updated Title"),
-				Content:  stringPtr("Updated content"),
-				Visible:  boolPtr(false),
-				Order:    int32Ptr(99),
+				PageId:  createdPageID,
+				Title:   stringPtr("Updated Title"),
+				Content: stringPtr("Updated content"),
+				Visible: boolPtr(false),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -423,7 +420,6 @@ var _ = Describe("PageService", func() {
 			Expect(page.Title).To(Equal("Updated Title"))
 			Expect(page.Content).To(Equal("Updated content"))
 			Expect(page.Visible).To(BeFalse())
-			Expect(page.Order).To(Equal(99))
 		})
 
 		It("updates page with partial fields (optional fields)", func() {
@@ -514,30 +510,54 @@ var _ = Describe("PageService", func() {
 				Title:       "Delete Test Page",
 				Content:     "Content to delete",
 				Visible:     true,
-				Order:       1,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			createdPageID = createResp.GetPageId()
 		})
 
-		It("deletes page successfully", func() {
+		It("deletes page successfully and renumbers order", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
 
+			// Use the page from BeforeEach plus create additional pages
+			pages := []string{createdPageID}
+			for i := 0; i < 3; i++ {
+				createResp, err := client.Create(ctx, &pageMsgs.CreateRequest{
+					HackathonId: createdHackathonID,
+					Title:       "Additional Page " + string(rune('A'+i)),
+					Content:     "Content", Visible: true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				pages = append(pages, createResp.GetPageId())
+			}
+
+			// Delete middle page (index 1) to test order renumbering
 			_, err := client.Delete(ctx, &pageMsgs.DeleteRequest{
-				PageId: createdPageID,
+				PageId: pages[1],
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Verify page was deleted
+			// Verify the deleted page is gone
 			_, err = dbClient.Page.Query().
-				Where(enpage.IDEQ(uuid.MustParse(createdPageID))).
+				Where(enpage.IDEQ(uuid.MustParse(pages[1]))).
 				Only(context.Background())
 			Expect(err).To(HaveOccurred())
 			Expect(ent.IsNotFound(err)).To(BeTrue())
+
+			// Verify remaining pages have sequential order (0, 1, 2)
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(listResp.GetPages()).To(HaveLen(3))
+			for i, p := range listResp.GetPages() {
+				Expect(
+					p.GetOrder(),
+				).To(Equal(int32(i)), "Remaining page should have sequential order %d", i)
+			}
 		})
 
 		It("returns NOT_FOUND for invalid page ID", func() {
