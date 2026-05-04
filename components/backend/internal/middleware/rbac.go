@@ -29,6 +29,8 @@ const (
 	Member
 )
 
+const minPolicyFields = 2
+
 func (r Role) String() string {
 	switch r {
 	case Admin:
@@ -54,32 +56,30 @@ const (
 	User
 )
 
-var objectName = map[ObjectType]string{
-	Hackathon: "hackathon",
-	Team:      "team",
-	User:      "user",
-}
-
 func (ot ObjectType) String() string {
-	return objectName[ot]
-}
-
-type Permission int
-
-const (
-	Read Permission = iota
-	Write
-	Create
-)
-
-var permissionName = map[Permission]string{
-	Create: "create",
-	Read:   "read",
-	Write:  "write",
+	switch ot {
+	case Hackathon:
+		return "hackathon"
+	case Team:
+		return "team"
+	case User:
+		return "user"
+	default:
+		return ""
+	}
 }
 
 func (p Permission) String() string {
-	return permissionName[p]
+	switch p {
+	case Read:
+		return "read"
+	case Write:
+		return "write"
+	case Create:
+		return "create"
+	default:
+		return ""
+	}
 }
 
 type Enforcer struct {
@@ -209,7 +209,7 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 	for _, p := range policies {
 		if len(
 			p,
-		) < 2 { //nolint:mnd // casbin policy tuples have at least 2 fields: subject and role
+		) < minPolicyFields {
 			continue
 		}
 		switch p[1] {
