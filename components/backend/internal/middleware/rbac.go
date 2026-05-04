@@ -20,6 +20,8 @@ import (
 //go:embed casbin_model.conf
 var modelFile string
 
+const minPolicyFields = 2 // casbin policy tuples have at least 2 fields: subject and role
+
 type Role int
 
 const (
@@ -28,8 +30,6 @@ const (
 	Owner
 	Member
 )
-
-const minPolicyFields = 2
 
 func (r Role) String() string {
 	switch r {
@@ -68,6 +68,14 @@ func (ot ObjectType) String() string {
 		return ""
 	}
 }
+
+type Permission int
+
+const (
+	Read Permission = iota
+	Write
+	Create
+)
 
 func (p Permission) String() string {
 	switch p {
