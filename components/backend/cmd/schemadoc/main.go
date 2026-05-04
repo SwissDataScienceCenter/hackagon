@@ -45,6 +45,7 @@ func schemaComment(t *gen.Type) string {
 	if err := json.Unmarshal(b, ant); err != nil {
 		return ""
 	}
+
 	return ant.Text
 }
 
@@ -93,6 +94,7 @@ func formatFieldType(f *gen.Field) string {
 		}
 		typeName = fmt.Sprintf("enum(%s)", strings.Join(vals, ", "))
 	}
+
 	return typeName
 }
 
@@ -142,11 +144,13 @@ func boolYesNo(v bool) string {
 	if v {
 		return "yes"
 	}
+
 	return "no"
 }
 
 func escapeMarkdown(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")
 	s = strings.ReplaceAll(s, "\n", " ")
+
 	return s
 }

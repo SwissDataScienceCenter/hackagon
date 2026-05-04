@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -154,8 +155,33 @@ func (e *Enforcer) AddRole(user, role, hackathonId string) (bool, error) {
 	return e.enforcer.AddGroupingPolicy(user, role, hackathonId)
 }
 
+func (e *Enforcer) RemoveRole(user, role, hackathonId string) (bool, error) {
+	return e.enforcer.RemoveGroupingPolicy(user, role, hackathonId)
+}
+
 func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 	return e.enforcer.AddNamedGroupingPolicy("g2", user, role)
+}
+
+func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
+	return e.enforcer.AddPolicy("*", hackathonId, Hackathon.String(), Read.String())
+}
+
+func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error) {
+	return e.enforcer.RemovePolicy("*", hackathonId, Hackathon.String(), Read.String())
+}
+
+// CheckPermission checks if the given subject has permission for the given hackathon, object, and action.
+// This is a low-level method that doesn't require a JWT token in the context.
+func (e *Enforcer) CheckPermission(
+	subject, hackathonId string, object ObjectType, permission Permission,
+) (bool, error) {
+	return e.enforcer.Enforce(subject, hackathonId, object.String(), permission.String())
+}
+
+// ListG2Policies returns all g2 policies in the enforcer for debugging.
+func (e *Enforcer) ListG2Policies() ([][]string, error) {
+	return e.enforcer.GetFilteredNamedGroupingPolicy("g2", 0)
 }
 
 // GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
@@ -175,6 +201,7 @@ func (e *Enforcer) GetHackathonRole(
 			"err",
 			err,
 		)
+
 		return hackEnts.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
 	}
 
@@ -199,10 +226,15 @@ func (e *Enforcer) Enforce(
 	object ObjectType,
 	permission Permission,
 ) (bool, error) {
-	sub, err := GetSubject(ctx)
+	claims, ok := GetClaims(ctx)
+	if !ok {
+		return false, errors.New("no claims in context")
+	}
+	sub, err := claims.GetSubject()
 	if err != nil {
 		return false, err
 	}
+
 	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
 }
 
@@ -227,6 +259,7 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 			roles = append(roles, userEnts.GlobalRole_GLOBAL_ROLE_HACKATHON_ORGANIZER)
 		}
 	}
+
 	return roles, nil
 }
 
@@ -241,10 +274,12 @@ func (e *Enforcer) RequirePermission(
 	ok, err := e.Enforce(ctx, hackathonId, object, permission)
 	if err != nil {
 		slog.Error("enforce permission", "err", err)
+
 		return status.Error(codes.Internal, "authorization error")
 	}
 	if !ok {
 		return status.Error(codes.PermissionDenied, "permission denied")
 	}
+
 	return nil
 }

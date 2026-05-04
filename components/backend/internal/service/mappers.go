@@ -23,7 +23,7 @@ func userEntryFromEnt(u *ent.User) *userEnts.User {
 	}
 }
 
-func visibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
+func VisibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
 	switch v {
 	case enthackathon.VisibilityPublic:
 		return hackEnts.Visibility_VISIBILITY_PUBLIC
@@ -34,7 +34,7 @@ func visibilityFromEnt(v enthackathon.Visibility) hackEnts.Visibility {
 	}
 }
 
-func visibilityToEnt(v hackEnts.Visibility) (enthackathon.Visibility, bool) {
+func VisibilityToEnt(v hackEnts.Visibility) (enthackathon.Visibility, bool) {
 	switch v {
 	case hackEnts.Visibility_VISIBILITY_PUBLIC:
 		return enthackathon.VisibilityPublic, true
@@ -54,6 +54,7 @@ func computeHackathonStatus(startsAt, endsAt *time.Time, now time.Time) hackEnts
 	if endsAt != nil && !now.Before(*endsAt) {
 		return hackEnts.HackathonStatus_HACKATHON_STATUS_FINISHED
 	}
+
 	return hackEnts.HackathonStatus_HACKATHON_STATUS_ACTIVE
 }
 
@@ -63,7 +64,7 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		Name:       h.Name,
 		CreatedAt:  timestamppb.New(h.CreatedAt),
 		ModifiedAt: timestamppb.New(h.ModifiedAt),
-		Visibility: visibilityFromEnt(h.Visibility),
+		Visibility: VisibilityFromEnt(h.Visibility),
 		Status:     computeHackathonStatus(h.StartsAt, h.EndsAt, now),
 	}
 	if h.StartsAt != nil {
@@ -80,6 +81,7 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		l := h.Logo
 		e.Logo = &l
 	}
+
 	return e
 }
 
@@ -122,6 +124,7 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 		e.Image = &img
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
 	return e
 }
 
@@ -144,6 +147,7 @@ func pageEntryFromEnt(p *ent.Page, hackathonID uuid.UUID) *hackEnts.Page {
 		e.PhaseId = &pid
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
 	return e
 }
 
@@ -171,5 +175,6 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 		e.PageId = &pid
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
 	return e
 }
