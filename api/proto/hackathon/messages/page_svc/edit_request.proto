@@ -6,8 +6,8 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message EditRequest {
   string page_id = 1;
-  string title = 2;
-  string content = 3;
-  bool visible = 4;
-  int32 order = 5;
+  optional string title = 2;
+  optional string content = 3;
+  optional bool visible = 4;
+  optional int32 order = 5;
 }

@@ -1432,10 +1432,10 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | page_id | [string](#string) |  |  |
-| title | [string](#string) |  |  |
-| content | [string](#string) |  |  |
-| visible | [bool](#bool) |  |  |
-| order | [int32](#int32) |  |  |
+| title | [string](#string) | optional |  |
+| content | [string](#string) | optional |  |
+| visible | [bool](#bool) | optional |  |
+| order | [int32](#int32) | optional |  |
 
 
 
