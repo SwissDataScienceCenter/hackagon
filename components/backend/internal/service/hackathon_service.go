@@ -176,6 +176,81 @@ func (s *HackathonService) Get(
 	return &msgs.GetResponse{Hackathon: entry}, nil
 }
 
+func (s *HackathonService) Join(
+	ctx context.Context,
+	req *msgs.JoinRequest,
+) (*msgs.JoinResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reject anonymous users - write operations require real authentication
+	if uid == m.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "anonymous users cannot join hackathons")
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check if hackathon exists and get it
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// First ensure user exists and get their entity ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Check if user already exists in hackathon (approved or waitlisted)
+	_, err = s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(id),
+		entparticipant.UserID(user.ID),
+	).Only(ctx)
+	if err == nil {
+		// Already a participant - return success with existing hackathon ID
+		return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
+	}
+	if !ent.IsNotFound(err) {
+		slog.Error("check existing participant", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't check participant status")
+	}
+
+	// User doesn't have a participant record - create new participant with is_waiting=true (pending approval)
+	_, err = s.dbClient.Participant.Create().
+		SetHackathonID(id).
+		SetUserID(user.ID).
+		SetIsWaiting(true).
+		Save(ctx)
+	if err != nil {
+		slog.Error("create participant", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't join hackathon")
+	}
+
+	return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
+}
+
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
