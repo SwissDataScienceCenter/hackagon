@@ -61,12 +61,6 @@
       url = "github:vic/import-tree";
     };
 
-    systems = {
-      # Using `nix-systems` flake specification.
-      url = "path:./flake/systems.nix";
-      flake = false;
-    };
-
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
     };

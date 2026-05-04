@@ -446,7 +446,8 @@ let
             pkgs.openssh # SSH agent
           ];
         }
-      ];
+      ]
+      ++ quitsh-direct;
 
     in
     {
