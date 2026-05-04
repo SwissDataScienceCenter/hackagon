@@ -28,8 +28,6 @@ targets:
               - includePatterns:
                   ["**/internal/**/*_test.go", "**/pkg/**/*_test.go"]
                 constraints: ["test && unittest"]
-              - includePatterns: ["**/test/**/*_test.go"]
-                constraints: ["test && integration"]
 
   image:
     steps:
