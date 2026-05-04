@@ -35,19 +35,19 @@ format *args: init
     pnpm run format
 
 # Serve the page.
-[group('general')]
+[private]
 serve *args: init
     pnpm run dev -- --config-dir "{{config_dir}}" --data-dir "{{data_dir}}" "$@"
 
 # Run the build from the build folder.
-[group('general')]
+[private]
 run *args: init build
     #!/usr/bin/env bash
     build_dir=$(quitsh list --component-dir "." --format "{{{{ (index . 0).OutBuildDir }}")
     just run-service node "$build_dir/share/service"
 
 # Run the Nix build.
-[group('general')]
+[private]
 run-nix *args:
     # Stage everything to be current.
     git -C "{{root_dir}}" add .
@@ -55,7 +55,7 @@ run-nix *args:
     just run-service "{{root_dir}}/.output/package/frontend-service-dev/bin/frontend"
 
 # Run the service executable `cmd`.
-[group('ci')]
+[private]
 run-service *cmd:
     #!/usr/bin/env bash
     # FIXME:
@@ -65,7 +65,7 @@ run-service *cmd:
     "$@" --config-dir "{{config_dir}}" --data-dir "{{data_dir}}"
 
 # Clean the build.
-[group('general')]
+[private]
 clean *args:
     rm -rf node_modules
     rm -rf .output
