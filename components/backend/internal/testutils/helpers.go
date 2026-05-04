@@ -4,9 +4,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 )
@@ -65,12 +67,16 @@ func GenerateTestToken(subject string, expiration time.Duration, customIssuer ..
 
 // NewTestConfig creates a test configuration with SQLite.
 func NewTestConfig(adminKeycloakID string) *config.Config {
+	spec := ginkgo.CurrentSpecReport()
+	dbName := fmt.Sprintf("test_db_%s", spec.FullText())
+	dbName = strings.ReplaceAll(strings.ToLower(dbName), " ", "_")
 	return &config.Config{
 		Server: config.ServerConfig{
 			AdminKeycloakID: adminKeycloakID,
 		},
 		Database: config.DatabaseConfig{
 			Driver: "sqlite3",
+			DbName: dbName,
 		},
 		Oidc: config.OidcConfig{
 			JwksUrl:   "http://test-keycloak/realms/test/protocol/openid-connect/certs",

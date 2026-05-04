@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	config "github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
@@ -30,9 +31,9 @@ const (
 
 // SetupFreshTestDB creates a fresh in-memory SQLite database for each test.
 // The database is created with auto-migrate schema enabled.
-func SetupFreshTestDB() *ent.Client {
+func SetupFreshTestDB(cfg *config.Config) *ent.Client {
 	// Open SQLite in-memory database (non-shared for test isolation)
-	dbClient, err := ent.Open("sqlite3", "file::memory:?cache=private&_fk=true")
+	dbClient, err := ent.Open("sqlite3", cfg.ConnectionStr())
 	if err != nil {
 		panic(fmt.Sprintf("failed to open in-memory SQLite: %v", err))
 	}
@@ -54,11 +55,11 @@ func SetupFreshTestDB() *ent.Client {
 func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 	GinkgoHelper()
 
-	// Create fresh database
-	dbClient := SetupFreshTestDB()
-	DeferCleanup(func() { _ = dbClient.Close() })
-
 	cfg := NewTestConfig(TestAdminKeycloakID)
+
+	// Create fresh database
+	dbClient := SetupFreshTestDB(cfg)
+	DeferCleanup(func() { _ = dbClient.Close() })
 
 	// Create mock keyfunc
 	mockKeyfunc := func(token *jwt.Token) (any, error) {
@@ -89,12 +90,6 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 			Save(ctx)
 		Expect(err).NotTo(HaveOccurred())
 	}
-
-	// Ensure admin policy is present
-	enf, err := middleware.NewRBACEnforcer(cfg)
-	Expect(err).NotTo(HaveOccurred())
-	_, err = enf.AddGlobalRole(TestAdminKeycloakID, "admin")
-	Expect(err).NotTo(HaveOccurred())
 
 	// Create client connection with bufconn
 	lis := bufconn.Listen(TestBufBufferSize)

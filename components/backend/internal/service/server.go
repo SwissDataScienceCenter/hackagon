@@ -12,7 +12,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
@@ -30,7 +29,7 @@ func NewServer(
 	// Create Casbin enforcer
 	enf, err := mw.NewRBACEnforcer(cfg)
 	if err != nil {
-		logx.Fatal("create RBAC enforcer", "err", err)
+		return nil, nil, fmt.Errorf("create RBAC enforcer: %w", err)
 	}
 
 	// Create JWT validator

@@ -51,7 +51,13 @@ func (c *Config) ConnectionStr() string {
 	case "sqlite3":
 		// For SQLite, use in-memory database
 		// This can be overridden for testing
-		return "file::memory:?cache=shared&_fk=true"
+		dbName := c.Database.DbName
+		if dbName == "" {
+			dbName = "default-db"
+		}
+		dbName = strings.ReplaceAll(strings.ToLower(dbName), " ", "_")
+
+		return fmt.Sprintf("file:%s?mode=memory&cache=shared&_fk=1", dbName)
 	default:
 		// Default to postgres connection string
 		return fmt.Sprintf(
