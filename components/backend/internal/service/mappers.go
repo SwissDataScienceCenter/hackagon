@@ -40,6 +40,8 @@ func visibilityToEnt(v hackEnts.Visibility) (enthackathon.Visibility, bool) {
 		return enthackathon.VisibilityPublic, true
 	case hackEnts.Visibility_VISIBILITY_PRIVATE:
 		return enthackathon.VisibilityPrivate, true
+	case hackEnts.Visibility_VISIBILITY_UNSPECIFIED:
+		return "", false
 	default:
 		return "", false
 	}
@@ -119,17 +121,20 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 		img := p.Image
 		e.Image = &img
 	}
-	e.ModifierId = p.Edges.Modifier.ID.String()
+	modID := p.Edges.Modifier.ID.String()
+	e.ModifierId = modID
 	return e
 }
 
 func pageEntryFromEnt(p *ent.Page, hackathonID uuid.UUID) *hackEnts.Page {
 	e := &hackEnts.Page{
-		Id:          p.ID.String(),
-		Title:       p.Title,
-		Content:     p.Content,
-		Visible:     p.Visible,
-		Order:       int32(p.Order),
+		Id:      p.ID.String(),
+		Title:   p.Title,
+		Content: p.Content,
+		Visible: p.Visible,
+		Order: int32(
+			p.Order, //nolint:gosec // G115: Order is a bounded position index, overflow not possible
+		),
 		CreatedAt:   timestamppb.New(p.CreatedAt),
 		ModifiedAt:  timestamppb.New(p.ModifiedAt),
 		HackathonId: hackathonID.String(),
@@ -139,7 +144,8 @@ func pageEntryFromEnt(p *ent.Page, hackathonID uuid.UUID) *hackEnts.Page {
 		pid := p.Edges.Phase.ID.String()
 		e.PhaseId = &pid
 	}
-	e.ModifierId = p.Edges.Modifier.ID.String()
+	modID := p.Edges.Modifier.ID.String()
+	e.ModifierId = modID
 	return e
 }
 
@@ -166,6 +172,7 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 		pid := p.Edges.Page.ID.String()
 		e.PageId = &pid
 	}
-	e.ModifierId = p.Edges.Modifier.ID.String()
+	modID := p.Edges.Modifier.ID.String()
+	e.ModifierId = modID
 	return e
 }

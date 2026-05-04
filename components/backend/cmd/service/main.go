@@ -97,12 +97,13 @@ func main() {
 	validator, err := protovalidate.New()
 	if err != nil {
 		logx.Fatal("create GRPC validator", "err", err)
-
 	}
 	validation_interceptor := protovalidate_middleware.UnaryServerInterceptor(validator)
 
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(auth_middleware, validation_interceptor)),
+		grpc.UnaryInterceptor(
+			grpc_middleware.ChainUnaryServer(auth_middleware, validation_interceptor),
+		),
 	)
 
 	// Register health service
@@ -113,7 +114,8 @@ func main() {
 	reflection.Register(server)
 
 	// Listen
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.Port))
+	lc := net.ListenConfig{} //nolint:exhaustruct // all fields optional
+	lis, err := lc.Listen(context.Background(), "tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
 		logx.Fatal("listen", "err", err)
 	}

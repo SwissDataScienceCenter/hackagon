@@ -97,20 +97,39 @@ func withTx(ctx context.Context, c *ent.Client, fn func(tx *ent.Tx) error) error
 	}()
 	if err := fn(tx); err != nil {
 		if rerr := tx.Rollback(); rerr != nil {
-			return fmt.Errorf("%w (rollback: %v)", err, rerr)
+			return fmt.Errorf("%w (rollback: %w)", err, rerr)
 		}
 		return err
 	}
 	return tx.Commit()
 }
 
-func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config, enf *middleware.Enforcer) error {
+func seedInTx(
+	ctx context.Context,
+	db *ent.Client,
+	cfg *config.Config,
+	enf *middleware.Enforcer,
+) error {
 	// Users
-	admin, err := getOrCreateUser(ctx, db, cfg.Server.AdminKeycloakID, "hackagon-admin", "Hackagon Admin", cfg.Server.AdminEmail)
+	admin, err := getOrCreateUser(
+		ctx,
+		db,
+		cfg.Server.AdminKeycloakID,
+		"hackagon-admin",
+		"Hackagon Admin",
+		cfg.Server.AdminEmail,
+	)
 	if err != nil {
 		return fmt.Errorf("admin: %w", err)
 	}
-	alice, err := getOrCreateUser(ctx, db, aliceKeycloakID, "alice", "Alice Wonderland", "alice@mail.com")
+	alice, err := getOrCreateUser(
+		ctx,
+		db,
+		aliceKeycloakID,
+		"alice",
+		"Alice Wonderland",
+		"alice@mail.com",
+	)
 	if err != nil {
 		return fmt.Errorf("alice: %w", err)
 	}
@@ -118,7 +137,14 @@ func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config, enf *midd
 	if err != nil {
 		return fmt.Errorf("bob: %w", err)
 	}
-	charles, err := getOrCreateUser(ctx, db, charlesKeycloakID, "charles", "Charles Whitfield", "charles@mail.net")
+	charles, err := getOrCreateUser(
+		ctx,
+		db,
+		charlesKeycloakID,
+		"charles",
+		"Charles Whitfield",
+		"charles@mail.net",
+	)
 	if err != nil {
 		return fmt.Errorf("charles: %w", err)
 	}
@@ -141,7 +167,13 @@ func seedInTx(ctx context.Context, db *ent.Client, cfg *config.Config, enf *midd
 
 // seedH1 seeds the upcoming public AI Innovation Challenge hackathon.
 // alice acts as organizer (creator); charles is waitlisted.
-func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bob, charles *ent.User, enf *middleware.Enforcer) error {
+func seedH1(
+	ctx context.Context,
+	db *ent.Client,
+	now time.Time,
+	admin, alice, bob, charles *ent.User,
+	enf *middleware.Enforcer,
+) error {
 	h, err := db.Hackathon.Create().
 		SetName(sentinelHackathon).
 		SetVisibility(hackathon.VisibilityPublic).
@@ -380,7 +412,13 @@ func seedH1(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 }
 
 // seedH2 seeds the ongoing public Climate Tech hackathon.
-func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bob *ent.User, enf *middleware.Enforcer) error {
+func seedH2(
+	ctx context.Context,
+	db *ent.Client,
+	now time.Time,
+	admin, alice, bob *ent.User,
+	enf *middleware.Enforcer,
+) error {
 	h, err := db.Hackathon.Create().
 		SetName("Climate Tech Hackathon 2026").
 		SetVisibility(hackathon.VisibilityPublic).
@@ -554,7 +592,13 @@ func seedH2(ctx context.Context, db *ent.Client, now time.Time, admin, alice, bo
 }
 
 // seedH3 seeds the past private Internal Product Sprint hackathon.
-func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *ent.User, enf *middleware.Enforcer) error {
+func seedH3(
+	ctx context.Context,
+	db *ent.Client,
+	now time.Time,
+	admin, alice *ent.User,
+	enf *middleware.Enforcer,
+) error {
 	h, err := db.Hackathon.Create().
 		SetName("Internal Product Sprint").
 		SetVisibility(hackathon.VisibilityPrivate).
@@ -736,7 +780,11 @@ func seedH3(ctx context.Context, db *ent.Client, now time.Time, admin, alice *en
 	return nil
 }
 
-func getOrCreateUser(ctx context.Context, db *ent.Client, keycloakID, username, displayName, email string) (*ent.User, error) {
+func getOrCreateUser(
+	ctx context.Context,
+	db *ent.Client,
+	keycloakID, username, displayName, email string,
+) (*ent.User, error) {
 	u, err := db.User.Query().Where(user.KeycloakIDEQ(keycloakID)).Only(ctx)
 	if err == nil {
 		return u, nil

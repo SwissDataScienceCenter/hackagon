@@ -34,7 +34,7 @@ func main() {
 }
 
 func schemaComment(t *gen.Type) string {
-	ant := &entschema.CommentAnnotation{}
+	ant := &entschema.CommentAnnotation{Text: ""}
 	if t.Annotations == nil || t.Annotations[ant.Name()] == nil {
 		return ""
 	}

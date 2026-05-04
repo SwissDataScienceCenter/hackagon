@@ -23,15 +23,15 @@ type UserService struct {
 
 func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 	return &UserService{
-		dbClient: dbClient,
-		enforcer: enf,
+		UnimplementedUserServiceServer: user.UnimplementedUserServiceServer{},
+		dbClient:                       dbClient,
+		enforcer:                       enf,
 	}
 }
 
-
 func (s *UserService) List(
 	ctx context.Context,
-	req *msgs.ListRequest,
+	_ *msgs.ListRequest,
 ) (*msgs.ListResponse, error) {
 	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Read); err != nil {
 		return nil, err
@@ -133,7 +133,8 @@ func (s *UserService) Register(
 		Where(entuser.KeycloakIDEQ(sub)).
 		Only(ctx)
 	if err == nil {
-		if existing.Username != username || existing.DisplayName != displayName || existing.Email != email {
+		if existing.Username != username || existing.DisplayName != displayName ||
+			existing.Email != email {
 			existing, err = existing.Update().
 				SetUsername(username).
 				SetDisplayName(displayName).

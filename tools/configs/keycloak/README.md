@@ -34,9 +34,9 @@ curl http://localhost:8180/realms/hackagon/.well-known/openid-configuration
 
 ## Test Users
 
-All passwords are `aliceandbob`. Run `just seed` from the repo root to
-populate the matching DB rows (hackathons, teams, submissions) for these
-users — without seeding, they can log in but have no associated data.
+All passwords are `aliceandbob`. Run `just seed` from the repo root to populate
+the matching DB rows (hackathons, teams, submissions) for these users — without
+seeding, they can log in but have no associated data.
 
 | Username       | Role                              |
 | -------------- | --------------------------------- |

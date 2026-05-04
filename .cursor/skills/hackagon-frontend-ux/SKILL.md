@@ -62,37 +62,75 @@ calls.
 
 ## Backend integration (seamless and safe)
 
-- The backend exposes **gRPC** (see `components/backend/cmd/service/main.go`). Services and messages are the source of truth in **`api/proto/**/*.proto`**.
-- **Call the backend from SvelteKit server code** (load functions, actions, server-only modules under `$lib/server`). Forward user identity via the same mechanisms the backend expects (e.g. JWT validation middleware on the Go side). Do not expose service credentials or internal host details to the browser.
-- When new RPCs are added, **update protos in `api/proto`**, regenerate Go code as per the backend workflow, and add typed client usage in the frontend only where a Node-compatible gRPC client exists in the project; if a gateway or REST layer is introduced later, **still** derive types and validation from the same contract.
-- Align naming and field semantics with proto messages (camelCase in TS typically maps from proto JSON/gRPC field conventions; keep transforms explicit in one place).
+- The backend exposes **gRPC** (see `components/backend/cmd/service/main.go`).
+  Services and messages are the source of truth in
+  **`api/proto/**/\*.proto`\*\*.
+- **Call the backend from SvelteKit server code** (load functions, actions,
+  server-only modules under `$lib/server`). Forward user identity via the same
+  mechanisms the backend expects (e.g. JWT validation middleware on the Go
+  side). Do not expose service credentials or internal host details to the
+  browser.
+- When new RPCs are added, **update protos in `api/proto`**, regenerate Go code
+  as per the backend workflow, and add typed client usage in the frontend only
+  where a Node-compatible gRPC client exists in the project; if a gateway or
+  REST layer is introduced later, **still** derive types and validation from the
+  same contract.
+- Align naming and field semantics with proto messages (camelCase in TS
+  typically maps from proto JSON/gRPC field conventions; keep transforms
+  explicit in one place).
 
 ## Spacing & typography scale
 
-- **Page gutter** — `px-4 sm:px-10 md:px-20` for nav, footer, marketing sections, dashboard, and hackathon content; list routes use `py-8` on the main shell.
-- **Section vertical** — `py-12` for most content bands; hero blocks use `pt-8 pb-12` (and `min-h-96` / `min-h-[30rem]` where a min height is required).
-- **Dense list cards** (proposals, teams, participants) — `py-4 px-5`, `gap-4` between media and text; title `text-sm font-semibold` (or `font-bold` for team names), body `text-xs`, `leading-snug` / `leading-normal`; card CTAs `h-9` with `w-24` / `min-w-40` as needed. Avoid one-off `text-[Npx]` / `p-[16px_20px]`; use the Tailwind scale and `max-w-*` for measure.
-- **Prose** — Prefer `text-base` / `text-sm` with `leading-relaxed` for paragraphs; headings `text-xl`–`text-2xl` for section titles on marketing pages.
+- **Page gutter** — `px-4 sm:px-10 md:px-20` for nav, footer, marketing
+  sections, dashboard, and hackathon content; list routes use `py-8` on the main
+  shell.
+- **Section vertical** — `py-12` for most content bands; hero blocks use
+  `pt-8 pb-12` (and `min-h-96` / `min-h-[30rem]` where a min height is
+  required).
+- **Dense list cards** (proposals, teams, participants) — `py-4 px-5`, `gap-4`
+  between media and text; title `text-sm font-semibold` (or `font-bold` for team
+  names), body `text-xs`, `leading-snug` / `leading-normal`; card CTAs `h-9`
+  with `w-24` / `min-w-40` as needed. Avoid one-off `text-[Npx]` /
+  `p-[16px_20px]`; use the Tailwind scale and `max-w-*` for measure.
+- **Prose** — Prefer `text-base` / `text-sm` with `leading-relaxed` for
+  paragraphs; headings `text-xl`–`text-2xl` for section titles on marketing
+  pages.
 
 ## Clean design checklist
 
-- **No section-divider borders** — Do not use `border-t` / `border-b` between page sections. Rely on alternating background colors (`bg-surface-100-900` vs default) and spacing to separate sections visually. Borders inside cards/components (e.g. card headers, list dividers) are fine.
-- **Cohesion under density** — Prefer predictable grids, repeated spacing steps, and the same few heading/body styles so busy layouts stay scannable; when space is tight, clarity beats decoration.
-- **Skeleton theme tokens** — Use CSS variables and Skeleton component tokens for color, radius, and shadow before hard-coding hex values.
-- **Tailwind discipline** — Prefer composable utilities and `class` patterns consistent with existing files; use the Prettier Tailwind plugin ordering already configured in the frontend.
-- **Dark mode** — Respect `data-mode` and `color-scheme` sync in `app.html` / `LightSwitch.svelte`. Prefer Skeleton **paired** color utilities (e.g. `text-surface-600-400`, `text-surface-700-300`, `border-surface-200-800`) over separate `light`/`dark:` classes where a pairing exists.
-- **Accessibility** — Semantic labels, focus order, keyboard support, and sufficient contrast for both themes. Skeleton components help; do not remove implicit a11y for styling shortcuts.
-- **States** — Every async view: loading, success, empty, and error. Avoid layout shift; use Skeleton placeholders or subtle skeletons where appropriate.
-- **Copy** — Short, human, action-oriented strings; avoid internal jargon in user-visible text.
+- **No section-divider borders** — Do not use `border-t` / `border-b` between
+  page sections. Rely on alternating background colors (`bg-surface-100-900` vs
+  default) and spacing to separate sections visually. Borders inside
+  cards/components (e.g. card headers, list dividers) are fine.
+- **Cohesion under density** — Prefer predictable grids, repeated spacing steps,
+  and the same few heading/body styles so busy layouts stay scannable; when
+  space is tight, clarity beats decoration.
+- **Skeleton theme tokens** — Use CSS variables and Skeleton component tokens
+  for color, radius, and shadow before hard-coding hex values.
+- **Tailwind discipline** — Prefer composable utilities and `class` patterns
+  consistent with existing files; use the Prettier Tailwind plugin ordering
+  already configured in the frontend.
+- **Dark mode** — Respect `data-mode` and `color-scheme` sync in `app.html` /
+  `LightSwitch.svelte`. Prefer Skeleton **paired** color utilities (e.g.
+  `text-surface-600-400`, `text-surface-700-300`, `border-surface-200-800`) over
+  separate `light`/`dark:` classes where a pairing exists.
+- **Accessibility** — Semantic labels, focus order, keyboard support, and
+  sufficient contrast for both themes. Skeleton components help; do not remove
+  implicit a11y for styling shortcuts.
+- **States** — Every async view: loading, success, empty, and error. Avoid
+  layout shift; use Skeleton placeholders or subtle skeletons where appropriate.
+- **Copy** — Short, human, action-oriented strings; avoid internal jargon in
+  user-visible text.
 
 ## Code quality (frontend)
 
 - **TypeScript strictness** — Run `pnpm check` and `pnpm lint` in
   `components/frontend` after substantive changes.
 - **Svelte 5 idioms** — Prefer runes and `$props()` over legacy patterns; keep
-  components small and composable. **Do not use `<svelte:component>`** (deprecated
-  in runes mode); pick the component in script or with `{@const Icon = ...}` and
-  render **`<Icon />`** (see `EventsSection.svelte` / `HackathonSidebar.svelte`).
+  components small and composable. **Do not use `<svelte:component>`**
+  (deprecated in runes mode); pick the component in script or with
+  `{@const Icon = ...}` and render **`<Icon />`** (see `EventsSection.svelte` /
+  `HackathonSidebar.svelte`).
 - **Colocation** — Route-specific components under `src/lib/components/` with
   clear names; reuse layout pieces from `src/lib/components/layout/`.
 - **Tests** — Add or update Vitest tests for non-trivial logic (e.g. auth

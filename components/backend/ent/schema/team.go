@@ -53,7 +53,9 @@ func (Team) Edges() []ent.Edge {
 			Comment("The user who last modified this team."),
 		edge.To("submissions", Submission.Type).
 			Comment("Submissions made by this team."),
-		edge.From("members", User.Type).Ref("participates_in_teams").Through("team_participants", TeamParticipant.Type).
+		edge.From("members", User.Type).
+			Ref("participates_in_teams").
+			Through("team_participants", TeamParticipant.Type).
 			Comment("Users who are members of this team."),
 	}
 }

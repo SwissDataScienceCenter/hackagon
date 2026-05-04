@@ -15,13 +15,14 @@ type HealthService struct {
 
 func NewHealthService() *HealthService {
 	return &HealthService{
-		startTime: time.Now(),
+		UnimplementedHealthServiceServer: health.UnimplementedHealthServiceServer{},
+		startTime:                        time.Now(),
 	}
 }
 
 func (s *HealthService) Check(
-	ctx context.Context,
-	req *messages.CheckRequest,
+	_ context.Context,
+	_ *messages.CheckRequest,
 ) (*messages.CheckResponse, error) {
 	message := "Service is healthy"
 

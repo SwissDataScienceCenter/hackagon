@@ -56,7 +56,9 @@ func (Hackathon) Edges() []ent.Edge {
 			Comment("Thematic tracks within this hackathon."),
 		edge.To("projects", Project.Type).
 			Comment("Projects submitted to this hackathon."),
-		edge.From("participating_users", User.Type).Ref("participates_in_hackathons").Through("participants", Participant.Type).
+		edge.From("participating_users", User.Type).
+			Ref("participates_in_hackathons").
+			Through("participants", Participant.Type).
 			Comment("Users who are participating or waitlisted."),
 		edge.To("pages", Page.Type).
 			Comment("Content pages associated with this hackathon."),
