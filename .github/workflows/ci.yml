@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel in-progress runs on the same branch/PR to avoid wasted minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Cache name is not sensitive — only the auth token is.
+      # On fork PRs the token is empty and cachix falls back to read-only mode.
+      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
+        with:
+          name: hackagon
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Install bootstrap tools
+        run: nix profile install --accept-flake-config ./tools/nix#bootstrap
+
+      - name: Cache Go modules
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+
+      - name: Cache pnpm store
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      # Uses the `default` shell (not `ci`) because buf and protoc-gen-ts_proto
+      # live there. Wrapped in a just recipe so `just ci::all` can call the same
+      # command locally — see tools/just/ci.just.
+      - name: Verify generated code is in sync
+        run: just ci::codegen-check
+
+      - name: Format check
+        run: just ci::run just check::format
+
+      - name: Lint
+        run: |
+          just ci::run just check::lint -c backend
+          just ci::run just check::lint -c frontend
+
+      - name: Build
+        run: |
+          just ci::run just check::build -c backend
+          just ci::run just check::build -c frontend
+
+      - name: Test
+        run: |
+          just ci::run just check::test -c backend
+          just ci::run just check::test -c frontend

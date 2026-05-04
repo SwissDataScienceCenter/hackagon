@@ -93,6 +93,7 @@
                 <div class="mt-1 flex flex-col gap-0.5">
                     {#each adminLinks as link (link.label)}
                         {@const Icon = link.icon}
+                        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
                         <a href={link.href} class="flex h-7 items-center gap-2 text-xs text-surface-500 no-underline transition-colors hover:text-primary-500">
                             <Icon class="h-3.5 w-3.5" />
                             {link.label}

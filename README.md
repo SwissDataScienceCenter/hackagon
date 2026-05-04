@@ -43,3 +43,8 @@ just db-summary
 - [Frontend](components/frontend/README.md)
 - [Backend](components/backend/README.md)
 - [Keycloak](tools/configs/keycloak/README.md)
+
+## CI/CD
+
+See [.github/ci-cd.md](.github/ci-cd.md) for the pipeline design and how to
+reproduce CI checks locally.

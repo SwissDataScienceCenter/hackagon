@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"path"
@@ -75,7 +76,7 @@ func Load(configDir string) (*Config, error) {
 		"database": map[string]interface{}{
 			"driver": "postgres",
 			"host":   "localhost",
-			"port":   5432,
+			"port":   5432, //nolint:mnd // 5432 is the well-known default Postgres port
 			"dbname": "hackagon",
 			"user":   "postgres",
 		},
@@ -103,7 +104,8 @@ func Load(configDir string) (*Config, error) {
 
 	// Override with environment variables
 	if err := k.Load(env.Provider(".", env.Opt{
-		Prefix: "HACKAGON_",
+		Prefix:      "HACKAGON_",
+		EnvironFunc: nil, // Use default os.Environ
 		TransformFunc: func(k, v string) (string, any) {
 			// Transform the key.
 			k = strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(k, "HACKAGON_")), "_", ".")
@@ -127,7 +129,7 @@ func Load(configDir string) (*Config, error) {
 	}
 
 	if cfg.Server.AdminKeycloakID == "" {
-		return nil, fmt.Errorf("server.adminkeycloakid is required")
+		return nil, errors.New("server.adminkeycloakid is required")
 	}
 
 	return &cfg, nil

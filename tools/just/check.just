@@ -29,6 +29,11 @@ root_dir := `git rev-parse --show-toplevel`
 default:
     just --list --unsorted -f "{{source_file()}}"
 
+# Build a component. Usage: just check::build -c backend
+[group('checks')]
+build *args:
+    cd "{{root_dir}}" && just quitsh build "$@"
+
 # Run tests for a component. Usage: just check::test -c frontend
 [group('checks')]
 test *args:

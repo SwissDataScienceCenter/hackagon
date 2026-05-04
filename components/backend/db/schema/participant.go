@@ -18,7 +18,9 @@ type Participant struct {
 func (Participant) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		field.ID("user_id", "hackathon_id"),
-		schema.Comment("Join table for the M2M relationship between users and hackathons, with participation metadata."),
+		schema.Comment(
+			"Join table for the M2M relationship between users and hackathons, with participation metadata.",
+		),
 	}
 }
 

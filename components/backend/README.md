@@ -36,15 +36,15 @@ generate the db schema files. An overview of the DB schema can be found in
 
 ## Test Data
 
-`just seed` populates the database with 3 hackathons (upcoming/ongoing/past),
-a mix of tracks, projects, teams, and submissions, and 4 users (admin, alice,
-bob, charles). Seeding runs in a single transaction and is idempotent —
-re-running is a no-op if the seed hackathon already exists. See
-[cmd/seed/README.md](cmd/seed/README.md) for a full breakdown with timeline
-and user-involvement diagrams.
+`just seed` populates the database with 3 hackathons (upcoming/ongoing/past), a
+mix of tracks, projects, teams, and submissions, and 4 users (admin, alice, bob,
+charles). Seeding runs in a single transaction and is idempotent — re-running is
+a no-op if the seed hackathon already exists. See
+[cmd/seed/README.md](cmd/seed/README.md) for a full breakdown with timeline and
+user-involvement diagrams.
 
-`just db-summary` prints entity counts and per-hackathon/per-user detail. Use
-it to sanity-check the DB after seeding or migrations.
+`just db-summary` prints entity counts and per-hackathon/per-user detail. Use it
+to sanity-check the DB after seeding or migrations.
 
 `just reset` wipes all state; re-seed with `just seed` afterwards.
 

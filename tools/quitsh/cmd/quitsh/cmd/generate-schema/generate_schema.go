@@ -44,7 +44,30 @@ func run(rootDir string) error {
 		Build()
 
 	log.Info("Generating Ent schema code.")
-	err := goCtx.Check("run", "-mod=mod", "entgo.io/ent/cmd/ent", "generate", "./ent/schema/")
+
+	// ent generate --target requires the target to be a loadable Go package.
+	// On a fresh checkout the directory is empty, so we seed it with a minimal
+	// doc.go that satisfies the package loader before codegen runs.
+	entDir := filepath.Join(backendDir, "ent")
+	if err := os.MkdirAll(entDir, 0o755); err != nil {
+		return err
+	}
+	docGo := filepath.Join(entDir, "doc.go")
+	if _, err := os.Stat(docGo); os.IsNotExist(err) {
+		if err := os.WriteFile(docGo, []byte("package ent\n"), 0o644); err != nil {
+			return err
+		}
+	}
+
+	err := goCtx.Check(
+		"run",
+		"-mod=mod",
+		"entgo.io/ent/cmd/ent",
+		"generate",
+		"--target",
+		"./ent",
+		"./db/schema/",
+	)
 	if err != nil {
 		return err
 	}

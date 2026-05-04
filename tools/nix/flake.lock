@@ -605,7 +605,6 @@
         "nixpkgs-codecov": "nixpkgs-codecov",
         "nixpkgs-devenv": "nixpkgs-devenv",
         "quitsh": "quitsh",
-        "systems": "systems_2",
         "treefmt-nix": "treefmt-nix_2"
       }
     },
@@ -646,18 +645,6 @@
         "repo": "default",
         "type": "github"
       }
-    },
-    "systems_2": {
-      "flake": false,
-      "locked": {
-        "path": "./flake/systems.nix",
-        "type": "path"
-      },
-      "original": {
-        "path": "./flake/systems.nix",
-        "type": "path"
-      },
-      "parent": []
     },
     "treefmt-nix": {
       "inputs": {

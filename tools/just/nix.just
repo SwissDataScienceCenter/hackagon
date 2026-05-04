@@ -30,7 +30,7 @@ develop *args:
         root_file=$(set_devenv_root "$root_dir")
 
     nix develop \
-        "${nix_args[@]}" \
+        ${nix_args[@]+"${nix_args[@]}"} \
         --accept-flake-config \
         --override-input devenv-root "path:$root_file" \
         "$flake_dir#$shell" \
@@ -52,7 +52,7 @@ repl:
     flake_dir="$root_dir/tools/nix"
 
     nix repl \
-        "${nix_args[@]}" \
+        ${nix_args[@]+"${nix_args[@]}"} \
         --accept-flake-config \
         --override-input devenv-root "path:$root_dir/.devenv/state/pwd" \
         "$flake_dir"
@@ -80,7 +80,7 @@ package attrname *args:
         --accept-flake-config \
         --override-input devenv-root "path:$root_file" \
         -L "$flake_dir#$attrname" \
-        "${nix_args[@]}" \
+        ${nix_args[@]+"${nix_args[@]}"} \
         --out-link "$outlink" --json
 
 # Show all packages.

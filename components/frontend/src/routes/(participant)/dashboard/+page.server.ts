@@ -11,11 +11,11 @@ export const load: PageServerLoad = async (event) => {
     hackathon.list({ participantId }),
   ])
 
-  const myIds = new Set(myResult.hackathons.map(h => h.id))
+  const myIds = new Set(myResult.hackathons.map((h) => h.id))
 
   return {
     session: event.locals.session,
     myHackathons: myResult.hackathons,
-    otherHackathons: allResult.hackathons.filter(h => !myIds.has(h.id)),
+    otherHackathons: allResult.hackathons.filter((h) => !myIds.has(h.id)),
   }
 }

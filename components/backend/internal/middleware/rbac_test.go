@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package middleware
 
 import (
@@ -13,20 +15,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// toInterfaceSlice converts a []string to []interface{}
-func toInterfaceSlice(strs []string) []interface{} {
-	result := make([]interface{}, len(strs))
-	for i, s := range strs {
-		result[i] = s
-	}
-	return result
-}
-
-// newTestConfig creates a config with SQLite for testing
-func newTestConfig(adminKeycloakID string) *config.Config {
+// newTestConfig creates a config with SQLite for testing.
+func newTestConfig() *config.Config {
 	return &config.Config{
 		Server: config.ServerConfig{
-			AdminKeycloakID: adminKeycloakID,
+			AdminKeycloakID: "admin-uuid",
 		},
 		Database: config.DatabaseConfig{
 			Driver: "sqlite3",
@@ -34,11 +27,11 @@ func newTestConfig(adminKeycloakID string) *config.Config {
 	}
 }
 
-// newTestEnforcer creates a new RBAC Enforcer with SQLite for testing
-func newTestEnforcer(t *testing.T, adminKeycloakID string) *Enforcer {
+// newTestEnforcer creates a new RBAC Enforcer with SQLite for testing.
+func newTestEnforcer(t *testing.T) *Enforcer {
 	t.Helper()
 
-	cfg := newTestConfig(adminKeycloakID)
+	cfg := newTestConfig()
 	enf, err := NewRBACEnforcer(cfg)
 	require.NoError(t, err)
 	require.NotNil(t, enf)
@@ -53,7 +46,7 @@ func newTestEnforcer(t *testing.T, adminKeycloakID string) *Enforcer {
 // TestNewRBACEnforcer tests the enforcer creation with SQLite
 func TestNewRBACEnforcer(t *testing.T) {
 	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t, adminID)
+	enf := newTestEnforcer(t)
 
 	adminCanReadUsers, err := enf.enforcer.Enforce(adminID, "any", "user", "read")
 	require.NoError(t, err)
@@ -61,7 +54,7 @@ func TestNewRBACEnforcer(t *testing.T) {
 }
 
 func TestEnforce(t *testing.T) {
-	enf := newTestEnforcer(t, "admin-uuid")
+	enf := newTestEnforcer(t)
 
 	_, err := enf.enforcer.AddGroupingPolicy("alice", "owner", "h1")
 	require.NoError(t, err)
@@ -172,7 +165,7 @@ func TestEnforce(t *testing.T) {
 }
 
 func TestEnforcePublicHackathon(t *testing.T) {
-	enf := newTestEnforcer(t, "admin-uuid")
+	enf := newTestEnforcer(t)
 
 	_, err := enf.enforcer.AddPolicy("*", "h2", "hackathon", "read")
 	require.NoError(t, err)
@@ -273,7 +266,7 @@ func TestEnforcePublicHackathon(t *testing.T) {
 // TestRBAC_AdminAccess tests admin-level access control
 func TestRBAC_AdminAccess(t *testing.T) {
 	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t, adminID)
+	enf := newTestEnforcer(t)
 
 	testCases := []struct {
 		name       string
@@ -333,7 +326,7 @@ func TestRBAC_AdminAccess(t *testing.T) {
 
 func TestRequirePermission(t *testing.T) {
 	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t, adminID)
+	enf := newTestEnforcer(t)
 
 	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
 	require.NoError(t, err)
@@ -404,7 +397,7 @@ func ctxWithClaims(sub string) context.Context {
 // admin access by matching the JWT subject (Keycloak ID) against g2 policies.
 func TestEnforce_AdminByKeycloakID(t *testing.T) {
 	const adminID = "admin-uuid"
-	enf := newTestEnforcer(t, adminID)
+	enf := newTestEnforcer(t)
 
 	_, err := enf.enforcer.AddGroupingPolicy("uuid-alice", "owner", "h1")
 	require.NoError(t, err)

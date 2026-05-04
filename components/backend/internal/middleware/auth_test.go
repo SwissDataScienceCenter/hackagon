@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package middleware
 
 import (
@@ -63,7 +65,7 @@ func createContextWithoutAuth() context.Context {
 	return context.Background()
 }
 
-//TestAuthMiddleware_ValidToken tests that valid tokens are processed correctly
+// TestAuthMiddleware_ValidToken tests that valid tokens are processed correctly
 func TestAuthMiddleware_ValidToken(t *testing.T) {
 	t.Run("ValidToken", func(t *testing.T) {
 		tokenString := createTestToken(t, "test-user-123", 24*time.Hour)
@@ -73,7 +75,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
-		assert.NoError(t, err, "Valid token should not produce error")
+		require.NoError(t, err, "Valid token should not produce error")
 
 		claims, ok := GetClaims(newCtx)
 		assert.True(t, ok, "Claims should be available after valid token")
@@ -91,7 +93,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
-		assert.NoError(t, err, "Valid token should not produce error")
+		require.NoError(t, err, "Valid token should not produce error")
 
 		claims, ok := GetClaims(newCtx)
 		assert.True(t, ok, "Claims should be available after valid token")
@@ -108,7 +110,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		_, err := validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Malformed token should produce error")
+		require.Error(t, err, "Malformed token should produce error")
 		assert.ErrorContains(t, err, "token is malformed", "Error should contain malformed message")
 	})
 
@@ -119,7 +121,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		_, err := validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Expired token should produce error")
+		require.Error(t, err, "Expired token should produce error")
 		assert.ErrorContains(t, err, "token is expired", "Error should contain expired message")
 	})
 
@@ -139,7 +141,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		_, err = validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Future nbf token should produce error")
+		require.Error(t, err, "Future nbf token should produce error")
 		assert.ErrorContains(
 			t,
 			err,
@@ -156,7 +158,7 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
-		assert.NoError(t, err, "Missing token should not produce error")
+		require.NoError(t, err, "Missing token should not produce error")
 		claims, ok := GetClaims(newCtx)
 		assert.True(t, ok, "Anonymous claims should be set")
 		assert.Equal(t, AnonSubject, claims["sub"], "Subject should be anonymous")
@@ -169,7 +171,7 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		newCtx, err := validator.AuthFunc()(ctx)
-		assert.NoError(t, err, "Empty auth header should not produce error")
+		require.NoError(t, err, "Empty auth header should not produce error")
 		claims, ok := GetClaims(newCtx)
 		assert.True(t, ok, "Anonymous claims should be set")
 		assert.Equal(t, AnonSubject, claims["sub"], "Subject should be anonymous")
@@ -183,7 +185,7 @@ func TestAuthMiddleware_MissingAuth(t *testing.T) {
 
 		validator := newMockJWTValidator(t)
 		_, err := validator.AuthFunc()(ctx)
-		assert.Error(t, err, "Invalid token without Bearer prefix should produce error")
+		require.Error(t, err, "Invalid token without Bearer prefix should produce error")
 		assert.ErrorContains(t, err, "token is malformed", "Error should contain malformed message")
 	})
 }
@@ -223,7 +225,7 @@ func TestGetSubject(t *testing.T) {
 		ctx := context.WithValue(context.Background(), claimsKey{}, claims)
 
 		subject, err := GetSubject(ctx)
-		assert.NoError(t, err, "Should not produce error")
+		require.NoError(t, err, "Should not produce error")
 		assert.Equal(t, "test-user-subject", subject, "Subject should match")
 	})
 
@@ -231,7 +233,7 @@ func TestGetSubject(t *testing.T) {
 		ctx := context.Background()
 
 		subject, err := GetSubject(ctx)
-		assert.Error(t, err, "Should produce error when no claims")
+		require.Error(t, err, "Should produce error when no claims")
 		assert.Contains(
 			t,
 			err.Error(),
@@ -250,13 +252,13 @@ func TestGetSubject(t *testing.T) {
 
 		subject, err := GetSubject(ctx)
 		// GetSubject returns empty string when sub is missing, no error
-		assert.NoError(t, err, "Should not error when subject missing")
+		require.NoError(t, err, "Should not error when subject missing")
 		assert.Empty(t, subject, "Subject should be empty when sub claim is missing")
 	})
 }
 
 // Helper function to create a mock JWTValidator for testing
-func newMockJWTValidator(t *testing.T) *JWTValidator {
+func newMockJWTValidator(_ *testing.T) *JWTValidator {
 	mockKeyfunc := func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

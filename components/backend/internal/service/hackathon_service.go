@@ -27,8 +27,9 @@ type HackathonService struct {
 
 func NewHackathonService(dbClient *ent.Client, enf *m.Enforcer) *HackathonService {
 	return &HackathonService{
-		dbClient: dbClient,
-		enforcer: enf,
+		UnimplementedHackathonServiceServer: hackathon.UnimplementedHackathonServiceServer{},
+		dbClient:                            dbClient,
+		enforcer:                            enf,
 	}
 }
 
@@ -51,7 +52,11 @@ func (s *HackathonService) Create(
 
 	visibility, ok := visibilityToEnt(req.GetVisibility())
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "unknown visibility: %s", req.Visibility.String())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown visibility: %s",
+			req.GetVisibility().String(),
+		)
 	}
 
 	q := s.dbClient.Hackathon.Create().
@@ -59,7 +64,9 @@ func (s *HackathonService) Create(
 		SetVisibility(visibility).
 		SetCreator(creator).
 		SetModifier(creator)
-	q = q.SetNillableDescription(req.Description)
+	if desc := req.GetDescription(); desc != "" {
+		q = q.SetNillableDescription(&desc)
+	}
 	if req.GetStartsAt() != nil {
 		q = q.SetStartsAt(req.GetStartsAt().AsTime())
 	}
@@ -85,7 +92,6 @@ func (s *HackathonService) Create(
 	}
 
 	return &msgs.CreateResponse{HackathonId: h.ID.String()}, nil
-
 }
 
 func (s *HackathonService) Get(
@@ -113,7 +119,11 @@ func (s *HackathonService) Get(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", req.GetHackathonId())
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
 		}
 		slog.Error("query hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
@@ -186,7 +196,11 @@ func (s *HackathonService) List(
 	if participantID := req.GetParticipantId(); participantID != "" {
 		uid, err := uuid.Parse(participantID)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid participant_id: %v", participantID)
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"invalid participant_id: %v",
+				participantID,
+			)
 		}
 		participantUID = &uid
 		q = q.Where(enthackathon.HasParticipantsWith(entparticipant.UserIDEQ(uid))).
@@ -220,7 +234,7 @@ func (s *HackathonService) List(
 		}
 		e := hackathonEntryFromEnt(h, now)
 		if len(wanted) > 0 {
-			if _, ok := wanted[e.Status]; !ok {
+			if _, ok := wanted[e.GetStatus()]; !ok {
 				continue
 			}
 		}

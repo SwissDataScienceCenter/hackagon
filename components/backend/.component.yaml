@@ -16,6 +16,8 @@ targets:
       - runner: go
         config:
           buildTags: ["test", "unittest"]
+          args:
+            - "-coverpkg=github.com/swissdatasciencecenter/hackagon/components/backend/cmd/...,github.com/swissdatasciencecenter/hackagon/components/backend/internal/..."
     inputs: ["self"]
 
   lint:
@@ -28,8 +30,6 @@ targets:
               - includePatterns:
                   ["**/internal/**/*_test.go", "**/pkg/**/*_test.go"]
                 constraints: ["test && unittest"]
-              - includePatterns: ["**/test/**/*_test.go"]
-                constraints: ["test && integration"]
 
   image:
     steps:

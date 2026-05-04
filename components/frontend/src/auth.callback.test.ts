@@ -24,6 +24,21 @@ const mockLogger = {
 // Mock the fetch
 const mockFetch = vi.fn()
 
+vi.mock("$lib/server/settings", () => {
+  const mockConfig = {
+    oidc: {
+      clientSecret: "pb2nRrkLw4P1Czslopa5LbMc3A69Zx14ue8iOfX0hkA=",
+      authSecret: "pb2nRrkLw4P1Czslopa5LbMc3A69Zx14ue8iOfX0hkA=",
+    },
+  }
+  return {
+    ConfigLoader: vi.fn().mockImplementation(() => ({
+      load: vi.fn(), // no-op, never touches the filesystem
+      get: vi.fn().mockReturnValue(mockConfig),
+    })),
+  }
+})
+
 describe("Auth.js jwt Callback", () => {
   let jwtCallback: JwtCallback
 

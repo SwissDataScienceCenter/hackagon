@@ -67,7 +67,7 @@ changes ref="HEAD~1":
     echo "Changes vs {{ref}}:"
     echo "$changed" | sed 's/^/  /'
     echo ""
-    if echo "$changed" | grep -qE 'ent/schema/'; then
+    if echo "$changed" | grep -qE 'db/schema/'; then
         echo "  DB schema change detected  →  just schema-change"
     elif echo "$changed" | grep -qE '\.proto$'; then
         echo "  Proto change detected       →  just api-change"
@@ -80,7 +80,7 @@ changes ref="HEAD~1":
     fi
 
 # Handle a DB schema change: regenerate proto + ent, wipe state, restart and reseed.
-# Run after changing ent/schema/*.go (also safe to run after *.proto changes).
+# Run after changing db/schema/*.go (also safe to run after *.proto changes).
 [group('general')]
 schema-change:
     #!/usr/bin/env bash

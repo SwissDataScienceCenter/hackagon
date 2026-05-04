@@ -7,6 +7,12 @@ _: {
     excludes = [
       "external/**/*"
       "**/vendor/**/*"
+      # Generated files — managed by codegen, not formatted by hand
+      "components/backend/Schema.md"
+      "api/proto/API.md"
+      "components/backend/internal/proto/**"
+      "components/backend/ent/**"
+      "components/frontend/src/lib/server/grpc/generated/**"
     ];
   };
 

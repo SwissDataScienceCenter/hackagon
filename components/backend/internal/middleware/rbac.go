@@ -20,6 +20,8 @@ import (
 //go:embed casbin_model.conf
 var modelFile string
 
+const minPolicyFields = 2 // casbin policy tuples have at least 2 fields: subject and role
+
 type Role int
 
 const (
@@ -29,15 +31,19 @@ const (
 	Member
 )
 
-var roleName = map[Role]string{
-	Admin:              "admin",
-	HackathonOrganizer: "hackathon_organizer",
-	Owner:              "owner",
-	Member:             "member",
-}
-
 func (r Role) String() string {
-	return roleName[r]
+	switch r {
+	case Admin:
+		return "admin"
+	case HackathonOrganizer:
+		return "hackathon_organizer"
+	case Owner:
+		return "owner"
+	case Member:
+		return "member"
+	default:
+		return ""
+	}
 }
 
 type ObjectType int
@@ -50,14 +56,17 @@ const (
 	User
 )
 
-var objectName = map[ObjectType]string{
-	Hackathon: "hackathon",
-	Team:      "team",
-	User:      "user",
-}
-
 func (ot ObjectType) String() string {
-	return objectName[ot]
+	switch ot {
+	case Hackathon:
+		return "hackathon"
+	case Team:
+		return "team"
+	case User:
+		return "user"
+	default:
+		return ""
+	}
 }
 
 type Permission int
@@ -68,14 +77,17 @@ const (
 	Create
 )
 
-var permissionName = map[Permission]string{
-	Create: "create",
-	Read:   "read",
-	Write:  "write",
-}
-
 func (p Permission) String() string {
-	return permissionName[p]
+	switch p {
+	case Read:
+		return "read"
+	case Write:
+		return "write"
+	case Create:
+		return "create"
+	default:
+		return ""
+	}
 }
 
 type Enforcer struct {
@@ -149,10 +161,20 @@ func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
 // GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
 // Owner takes precedence over Member regardless of slice order — casbin does not sort roles.
 // Global admin/organizer roles (g2) are not surfaced here — the enum only has OWNER and MEMBER.
-func (e *Enforcer) GetHackathonRole(keycloakID, hackathonID string) (hackEnts.HackathonRole, error) {
+func (e *Enforcer) GetHackathonRole(
+	keycloakID, hackathonID string,
+) (hackEnts.HackathonRole, error) {
 	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonID)
 	if err != nil {
-		slog.Error("get roles for user", "keycloak_id", keycloakID, "hackathon_id", hackathonID, "err", err)
+		slog.Error(
+			"get roles for user",
+			"keycloak_id",
+			keycloakID,
+			"hackathon_id",
+			hackathonID,
+			"err",
+			err,
+		)
 		return hackEnts.HackathonRole_HACKATHON_ROLE_UNSPECIFIED, err
 	}
 
@@ -193,7 +215,9 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 	}
 	roles := make([]userEnts.GlobalRole, 0, len(policies))
 	for _, p := range policies {
-		if len(p) < 2 {
+		if len(
+			p,
+		) < minPolicyFields {
 			continue
 		}
 		switch p[1] {
@@ -208,7 +232,12 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 
 // RequirePermission enforces a permission check and returns a gRPC-ready error if denied.
 // Use this in handlers instead of calling Enforce directly.
-func (e *Enforcer) RequirePermission(ctx context.Context, hackathonId string, object ObjectType, permission Permission) error {
+func (e *Enforcer) RequirePermission(
+	ctx context.Context,
+	hackathonId string,
+	object ObjectType,
+	permission Permission,
+) error {
 	ok, err := e.Enforce(ctx, hackathonId, object, permission)
 	if err != nil {
 		slog.Error("enforce permission", "err", err)

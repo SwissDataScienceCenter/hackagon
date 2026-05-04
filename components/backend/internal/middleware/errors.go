@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -58,30 +57,28 @@ func handleJwtError(errIn error) error {
 }
 
 func setGrpcErrorCodes(err error) error {
-	switch err {
-	case nil:
+	if err == nil {
 		return nil
-	case ErrTokenExpired:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrTokenMalformed:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrTokenNotValidYet:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrTokenUsedBeforeIssued:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrKIDNotFound:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrBadAlgorithm:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrSignatureInvalid:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrTokenInvalidIssuer:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrBadAuthScheme:
-		return status.Error(codes.Unauthenticated, err.Error())
-	case ErrMissingKey:
-		return status.Error(codes.Unauthenticated, err.Error())
-	default:
-		return status.Error(codes.Internal, fmt.Errorf("%v - %w", ErrInternal, err).Error())
 	}
+
+	unauthenticatedErrors := []error{
+		ErrTokenExpired,
+		ErrTokenMalformed,
+		ErrTokenNotValidYet,
+		ErrTokenUsedBeforeIssued,
+		ErrKIDNotFound,
+		ErrBadAlgorithm,
+		ErrSignatureInvalid,
+		ErrTokenInvalidIssuer,
+		ErrBadAuthScheme,
+		ErrMissingKey,
+	}
+
+	for _, target := range unauthenticatedErrors {
+		if errors.Is(err, target) {
+			return status.Error(codes.Unauthenticated, err.Error())
+		}
+	}
+
+	return status.Error(codes.Internal, ErrInternal.Error()+" - "+err.Error())
 }
