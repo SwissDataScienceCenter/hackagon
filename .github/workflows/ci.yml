@@ -58,11 +58,15 @@ jobs:
 
       - name: Lint
         run: |
-          just ci::run just check::lint -c backend 
+          just ci::run just check::lint -c backend
           just ci::run just check::lint -c frontend
 
       - name: Build
-        run: just ci::run bash -c "just build -c backend && just build -c frontend"
+        run: |
+          just ci::run just check::build -c backend
+          just ci::run just check::build -c frontend
 
       - name: Test
-        run: just ci::run bash -c "just check::test -c backend && just check::test -c frontend"
+        run: |
+          just ci::run just check::test -c backend
+          just ci::run just check::test -c frontend
