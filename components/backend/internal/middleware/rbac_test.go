@@ -52,7 +52,8 @@ var _ = Describe("RBAC Enforcer", func() {
 			})
 		})
 
-		DescribeTable("enforce permissions",
+		DescribeTable(
+			"enforce permissions",
 			func(user, hackathon string, objectType ObjectType, permission Permission, expected bool) {
 				ctx := CtxWithClaims(user)
 				allowed, err := enf.Enforce(ctx, hackathon, objectType, permission)
@@ -102,7 +103,8 @@ var _ = Describe("RBAC Enforcer", func() {
 			})
 		})
 
-		DescribeTable("enforce permissions with public hackathon",
+		DescribeTable(
+			"enforce permissions with public hackathon",
 			func(user, hackathon string, objectType ObjectType, permission Permission, expected bool) {
 				ctx := CtxWithClaims(user)
 				allowed, err := enf.Enforce(ctx, hackathon, objectType, permission)

@@ -43,7 +43,7 @@ func main() {
 	if err != nil {
 		logx.Fatal("open db", "err", err)
 	}
-	defer db.Close() //nolint:errcheck
+	defer db.Close()
 
 	ctx := context.Background()
 

@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package testutils
 
 import (
@@ -11,8 +13,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/mattn/go-sqlite3"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck // dot import in test file is fine
+	. "github.com/onsi/gomega"    //nolint:staticcheck // dot import in test file is fine
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	config "github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"

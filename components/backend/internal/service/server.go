@@ -55,7 +55,9 @@ func NewServer(
 
 	// Create gRPC server with middleware chain (matching main.go exactly)
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(authInterceptor, validationInterceptor)),
+		grpc.UnaryInterceptor(
+			grpc_middleware.ChainUnaryServer(authInterceptor, validationInterceptor),
+		),
 	)
 
 	// Create services

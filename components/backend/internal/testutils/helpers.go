@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package testutils
 
 import (
@@ -89,5 +91,5 @@ func NewTestConfig(adminKeycloakID string) *config.Config {
 // CreateTestJWTToken creates a JWT token for testing with the given subject.
 // The token is valid for 24 hours from now.
 func CreateTestJWTToken(subject string) string {
-	return GenerateTestToken(subject, 24*time.Hour)
+	return GenerateTestToken(subject, 24*time.Hour) //nolint:mnd // 24 hours in test file is fine
 }

@@ -173,7 +173,9 @@ func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error)
 
 // CheckPermission checks if the given subject has permission for the given hackathon, object, and action.
 // This is a low-level method that doesn't require a JWT token in the context.
-func (e *Enforcer) CheckPermission(subject, hackathonId string, object ObjectType, permission Permission) (bool, error) {
+func (e *Enforcer) CheckPermission(
+	subject, hackathonId string, object ObjectType, permission Permission,
+) (bool, error) {
 	return e.enforcer.Enforce(subject, hackathonId, object.String(), permission.String())
 }
 

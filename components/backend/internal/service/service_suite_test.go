@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package service_test
 
 import (

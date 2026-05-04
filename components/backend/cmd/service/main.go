@@ -62,7 +62,7 @@ func main() {
 		logx.Fatal("open database", "err", err)
 	}
 
-	defer dbClient.Close() //nolint:errcheck
+	defer dbClient.Close()
 	if err := dbClient.Schema.Create(context.Background()); err != nil {
 		logx.Fatal("create schema", "err", err)
 	}

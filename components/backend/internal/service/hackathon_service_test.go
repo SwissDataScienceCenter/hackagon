@@ -1,3 +1,5 @@
+//go:build test && unittest
+
 package service_test
 
 import (
@@ -41,7 +43,10 @@ var _ = Describe("HackathonService", func() {
 	Describe("Create", func() {
 		It("creates hackathon successfully with admin token", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			now := time.Now()
 			desc := "A test hackathon description"
@@ -97,7 +102,10 @@ var _ = Describe("HackathonService", func() {
 
 			// Create hackathons using admin
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			for _, h := range hackathons {
 				req := &msgs.CreateRequest{
@@ -111,7 +119,10 @@ var _ = Describe("HackathonService", func() {
 
 		It("lists all hackathons for authorized user", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			listResp, err := client.List(ctx, &msgs.ListRequest{})
 			Expect(err).NotTo(HaveOccurred())
@@ -121,7 +132,8 @@ var _ = Describe("HackathonService", func() {
 			for _, expected := range hackathons {
 				found := false
 				for _, actual := range listResp.GetHackathons() {
-					if actual.GetName() == expected.name && actual.GetVisibility() == expected.visibility {
+					if actual.GetName() == expected.name &&
+						actual.GetVisibility() == expected.visibility {
 						found = true
 
 						break
@@ -133,7 +145,10 @@ var _ = Describe("HackathonService", func() {
 
 		It("returns correct fields for each hackathon", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			listResp, err := client.List(ctx, &msgs.ListRequest{})
 			Expect(err).NotTo(HaveOccurred())
@@ -153,7 +168,10 @@ var _ = Describe("HackathonService", func() {
 		BeforeEach(func() {
 			// Create hackathon using admin
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			now := time.Now()
 			createReq := &msgs.CreateRequest{
@@ -171,7 +189,10 @@ var _ = Describe("HackathonService", func() {
 
 		It("retrieves hackathon with full details", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			getReq := &msgs.GetRequest{HackathonId: createdID}
 			getResp, err := client.Get(ctx, getReq)
@@ -190,7 +211,10 @@ var _ = Describe("HackathonService", func() {
 
 		It("returns correct status", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			getReq := &msgs.GetRequest{HackathonId: createdID}
 			getResp, err := client.Get(ctx, getReq)
@@ -198,12 +222,17 @@ var _ = Describe("HackathonService", func() {
 
 			h := getResp.GetHackathon()
 			// Status should be computed based on dates
-			Expect(h.GetStatus()).NotTo(Equal(entities.HackathonStatus_HACKATHON_STATUS_UNSPECIFIED))
+			Expect(
+				h.GetStatus(),
+			).NotTo(Equal(entities.HackathonStatus_HACKATHON_STATUS_UNSPECIFIED))
 		})
 
 		It("returns NOT_FOUND for invalid hackathon ID", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
 
 			getReq := &msgs.GetRequest{HackathonId: uuid.NewString()}
 			_, err := client.Get(ctx, getReq)
@@ -218,7 +247,10 @@ var _ = Describe("HackathonService", func() {
 		Describe("Create permissions", func() {
 			It("allows admin to create hackathons", func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
-				ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
 
 				req := &msgs.CreateRequest{
 					Name:       "Auth Test Hackathon",
@@ -232,7 +264,10 @@ var _ = Describe("HackathonService", func() {
 
 			It("denies non-admin users without roles from creating", func() {
 				token := testutils.CreateTestJWTToken("non-admin-user")
-				ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
 
 				req := &msgs.CreateRequest{
 					Name:       "Unauthorized Create",
@@ -269,7 +304,10 @@ var _ = Describe("HackathonService", func() {
 			It("allows authorized users to list public hackathons", func() {
 				// List with authorized user - may be empty list if no hackathons exist
 				token := testutils.CreateTestJWTToken(testAdmin)
-				ctx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
 
 				resp, err := client.List(ctx, &msgs.ListRequest{})
 				Expect(err).NotTo(HaveOccurred())
@@ -283,7 +321,10 @@ var _ = Describe("HackathonService", func() {
 
 				// Create both public and private hackathons as admin
 				adminToken := testutils.CreateTestJWTToken(testAdmin)
-				adminCtx := metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+adminToken))
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+adminToken),
+				)
 
 				// Create public hackathon
 				_, err := client.Create(adminCtx, &msgs.CreateRequest{
@@ -304,8 +345,10 @@ var _ = Describe("HackathonService", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.GetHackathons()).NotTo(BeNil())
 				Expect(resp.GetHackathons()).To(HaveLen(1), "should only list public hackathons")
-				Expect(resp.GetHackathons()[0].Name).To(Equal("Public Hackathon"))
-				Expect(resp.GetHackathons()[0].Visibility).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
+				Expect(resp.GetHackathons()[0].GetName()).To(Equal("Public Hackathon"))
+				Expect(
+					resp.GetHackathons()[0].GetVisibility(),
+				).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
 			})
 		})
 	})
