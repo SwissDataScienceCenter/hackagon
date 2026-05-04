@@ -121,8 +121,7 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 		img := p.Image
 		e.Image = &img
 	}
-	modID := p.Edges.Modifier.ID.String()
-	e.ModifierId = modID
+	e.ModifierId = p.Edges.Modifier.ID.String()
 	return e
 }
 
@@ -144,8 +143,7 @@ func pageEntryFromEnt(p *ent.Page, hackathonID uuid.UUID) *hackEnts.Page {
 		pid := p.Edges.Phase.ID.String()
 		e.PhaseId = &pid
 	}
-	modID := p.Edges.Modifier.ID.String()
-	e.ModifierId = modID
+	e.ModifierId = p.Edges.Modifier.ID.String()
 	return e
 }
 
@@ -172,7 +170,6 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 		pid := p.Edges.Page.ID.String()
 		e.PageId = &pid
 	}
-	modID := p.Edges.Modifier.ID.String()
-	e.ModifierId = modID
+	e.ModifierId = p.Edges.Modifier.ID.String()
 	return e
 }
