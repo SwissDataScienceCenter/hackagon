@@ -26,7 +26,8 @@ api/proto/
 components/backend/
 ├── cmd/service/main.go           # starts the gRPC server, registers services
 ├── cmd/seed/main.go              # populates DB with dev data (README inside)
-├── ent/schema/*.go               # DB schema (source of truth)
+├── db/schema/*.go                # DB schema (source of truth — hand-written)
+├── ent/**                        # generated ORM code (do not edit)
 ├── internal/service/*.go         # gRPC handlers (one file per service)
 ├── internal/middleware/rbac.go   # casbin enforcer
 ├── internal/logx/logx.go         # slog setup + Fatal helper
@@ -262,7 +263,7 @@ props so the row works for any badge text, not just status labels.
 ## Don't
 
 - Don't edit generated code: `components/backend/internal/proto/**`,
-  `components/backend/ent/*.go` (except under `ent/schema/`),
+  `components/backend/ent/**`,
   `components/frontend/src/lib/server/grpc/generated/**`, `api/proto/API.md`.
   Regenerate via `just generate-proto` or `just generate-db-schema`.
 - Don't run `just generate-proto` outside the Nix shell — `buf` isn't in PATH.

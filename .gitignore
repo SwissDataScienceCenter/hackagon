@@ -35,6 +35,5 @@ result
 # Generated files
 components/backend/internal/proto
 components/backend/ent/*
-!components/backend/ent/schema
 components/frontend/src/lib/server/grpc/*.proto
 components/frontend/src/lib/server/grpc/generated

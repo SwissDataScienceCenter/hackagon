@@ -24,7 +24,7 @@ proto *args:
 
     echo "All protos processed."
 
-# Regenerate Ent ORM code + Schema.md from ent/schema/*.go.
+# Regenerate Ent ORM code + Schema.md from db/schema/*.go.
 [group('codegen')]
 db-schema *args:
     cd "{{root_dir}}" && just quitsh generate-schema "$@"
@@ -40,11 +40,11 @@ help:
 
     echo ""
     echo -e "  ${bold}Codegen Commands${reset}"
-    echo -e "  ${dim}Run after changing .proto files or ent/schema/*.go${reset}"
+    echo -e "  ${dim}Run after changing .proto files or db/schema/*.go${reset}"
     echo ""
     echo -e "  ${cyan}just codegen::proto${reset}"
     echo -e "  ${dim}Regenerate Go + TypeScript gRPC stubs from api/proto/*.proto${reset}"
     echo ""
     echo -e "  ${cyan}just codegen::db-schema${reset}"
-    echo -e "  ${dim}Regenerate Ent ORM code + Schema.md from ent/schema/*.go${reset}"
+    echo -e "  ${dim}Regenerate Ent ORM code + Schema.md from db/schema/*.go${reset}"
     echo ""

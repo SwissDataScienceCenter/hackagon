@@ -237,7 +237,7 @@ linters:
       - linters: [exhaustruct]
         path: components/backend/cmd/schemadoc/
       - linters: [exhaustruct]
-        path: components/backend/ent/schema/
+        path: components/backend/db/schema/
       - linters: [exhaustruct]
         path: components/backend/internal/logx/
       - linters: [exhaustruct]

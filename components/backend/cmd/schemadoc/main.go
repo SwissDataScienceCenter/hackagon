@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	graph, err := entc.LoadGraph("./ent/schema", &gen.Config{})
+	graph, err := entc.LoadGraph("./db/schema", &gen.Config{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load ent schema: %v\n", err)
 		os.Exit(1)

@@ -11,6 +11,7 @@ _: {
       "components/backend/Schema.md"
       "api/proto/API.md"
       "components/backend/internal/proto/**"
+      "components/backend/ent/**"
       "components/frontend/src/lib/server/grpc/generated/**"
     ];
   };
