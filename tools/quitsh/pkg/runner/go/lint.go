@@ -155,6 +155,7 @@ func runTestBuildConstraintsRule(
 			err = errors.Combine(err, e2,
 				errors.New("Go test file '%s' does not contain a necessary"+
 					"build constraint starting with '%s' on first line", file, buildTags))
+			continue
 		}
 
 		for i := range rule.Constraints {
