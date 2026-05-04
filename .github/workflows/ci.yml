@@ -57,7 +57,9 @@ jobs:
         run: just ci::run just check::format
 
       - name: Lint
-        run: just ci::run bash -c "just check::lint -c backend && just check::lint -c frontend"
+        run: |
+          just ci::run just check::lint -c backend 
+          just ci::run just check::lint -c frontend
 
       - name: Build
         run: just ci::run bash -c "just build -c backend && just build -c frontend"
