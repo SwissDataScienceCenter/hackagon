@@ -322,7 +322,9 @@ func (s *PageService) Delete(
 
 	// Delete the page
 	if err := txn.Page.DeleteOne(page).Exec(ctx); err != nil {
-		_ = txn.Rollback()
+		if rbErr := txn.Rollback(); rbErr != nil {
+			slog.Error("rollback transaction after delete failure", "err", err, "rollback", rbErr)
+		}
 		slog.Error("delete page", "err", err)
 		return nil, status.Errorf(codes.Internal, "couldn't delete page from database")
 	}
@@ -333,7 +335,9 @@ func (s *PageService) Delete(
 		Order(entpage.ByOrder()).
 		All(ctx)
 	if err != nil {
-		_ = txn.Rollback()
+		if rbErr := txn.Rollback(); rbErr != nil {
+			slog.Error("rollback transaction after query failure", "err", err, "rollback", rbErr)
+		}
 		slog.Error("query remaining pages", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query remaining pages")
 	}
@@ -345,7 +349,15 @@ func (s *PageService) Delete(
 			SetOrder(i).
 			Save(ctx)
 		if err != nil {
-			_ = txn.Rollback()
+			if rbErr := txn.Rollback(); rbErr != nil {
+				slog.Error(
+					"rollback transaction after update failure",
+					"err",
+					err,
+					"rollback",
+					rbErr,
+				)
+			}
 			slog.Error("update page order", "err", err)
 			return nil, status.Error(codes.Internal, "couldn't renumber pages")
 		}
@@ -500,7 +512,15 @@ func (s *PageService) movePages(
 			SetOrder(newOrder).
 			Save(ctx)
 		if err != nil {
-			_ = txn.Rollback()
+			if rbErr := txn.Rollback(); rbErr != nil {
+				slog.Error(
+					"rollback transaction after update failure",
+					"err",
+					err,
+					"rollback",
+					rbErr,
+				)
+			}
 			slog.Error("update page order", "err", err)
 			return 0, status.Error(codes.Internal, "couldn't update page order")
 		}
@@ -599,7 +619,15 @@ func (s *PageService) SetOrder(
 	for i, pageIDStr := range pageIDs {
 		pageID, err := uuid.Parse(pageIDStr)
 		if err != nil {
-			_ = txn.Rollback()
+			if rbErr := txn.Rollback(); rbErr != nil {
+				slog.Error(
+					"rollback transaction after parse failure",
+					"err",
+					err,
+					"rollback",
+					rbErr,
+				)
+			}
 			return nil, status.Errorf(
 				codes.InvalidArgument,
 				"invalid page_id %s: %v",
@@ -610,7 +638,15 @@ func (s *PageService) SetOrder(
 
 		_, ok := pageMap[pageID]
 		if !ok {
-			_ = txn.Rollback()
+			if rbErr := txn.Rollback(); rbErr != nil {
+				slog.Error(
+					"rollback transaction after validation failure",
+					"err",
+					err,
+					"rollback",
+					rbErr,
+				)
+			}
 			return nil, status.Errorf(codes.NotFound, "page %s not found in hackathon", pageIDStr)
 		}
 
@@ -619,8 +655,16 @@ func (s *PageService) SetOrder(
 			SetOrder(i).
 			Save(ctx)
 		if err != nil {
-			_ = txn.Rollback()
-			slog.Error("update page order", "page_id", pageIDStr, "err", err)
+			if rbErr := txn.Rollback(); rbErr != nil {
+				slog.Error(
+					"rollback transaction after update failure",
+					"err",
+					err,
+					"rollback",
+					rbErr,
+				)
+			}
+			slog.Error("update page order", "err", err)
 			return nil, status.Error(codes.Internal, "couldn't update page order")
 		}
 	}

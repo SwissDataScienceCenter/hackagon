@@ -93,3 +93,16 @@ func NewTestConfig(adminKeycloakID string) *config.Config {
 func CreateTestJWTToken(subject string) string {
 	return GenerateTestToken(subject, 24*time.Hour) //nolint:mnd // 24 hours in test file is fine
 }
+
+// Helper functions for optional fields in tests
+func StringPtr(s string) *string {
+	return &s
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
+func Int32Ptr(i int32) *int32 {
+	return &i
+}

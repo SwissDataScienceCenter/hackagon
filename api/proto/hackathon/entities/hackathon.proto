@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package hackathon.entities;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/hackathon_member.proto";
 import "hackathon/entities/hackathon_status.proto";
@@ -19,6 +20,13 @@ message Hackathon {
   string name = 2;
   optional google.protobuf.Timestamp starts_at = 3;
   optional google.protobuf.Timestamp ends_at = 4;
+
+  option (buf.validate.message).cel = {
+    id: "starts_at_requires_ends_at"
+    message: "ends_at must be present if starts_at is present and must be after starts_at"
+    expression: "(!has(this.starts_at) && !has(this.ends_at)) || (has(this.starts_at) && has(this.ends_at) && this.ends_at >= this.starts_at)"
+  };
+
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp modified_at = 6;
   Visibility visibility = 7;
