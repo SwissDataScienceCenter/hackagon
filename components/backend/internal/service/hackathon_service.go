@@ -417,6 +417,112 @@ func (s *HackathonService) RemoveParticipant(
 	return &msgs.RemoveParticipantResponse{}, nil
 }
 
+func (s *HackathonService) Edit(
+	ctx context.Context,
+	req *msgs.EditRequest,
+) (*msgs.EditResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Get the hackathon to verify it exists and find its ID for permission checks
+	h, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.IDEQ(id)).
+		WithCreator().
+		WithModifier().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Check Write permission on hackathon
+	if err := s.enforcer.RequirePermission(ctx, h.ID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Ensure user exists and get their entity ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Build the update query with only provided fields
+	update := s.dbClient.Hackathon.Update().
+		Where(enthackathon.IDEQ(id)).
+		SetModifier(user)
+
+	if req.Name != nil {
+		update = update.SetName(req.GetName())
+	}
+	if req.Description != nil {
+		update = update.SetDescription(req.GetDescription())
+	}
+	if req.Visibility != nil && req.GetVisibility() != ents.Visibility_VISIBILITY_UNSPECIFIED {
+		entVis, ok := VisibilityToEnt(req.GetVisibility())
+		if !ok {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"unknown visibility: %s",
+				req.GetVisibility().String(),
+			)
+		}
+		update = update.SetVisibility(entVis)
+	}
+	if req.GetStartsAt() != nil {
+		update = update.SetStartsAt(req.GetStartsAt().AsTime())
+	}
+	if req.GetEndsAt() != nil {
+		update = update.SetEndsAt(req.GetEndsAt().AsTime())
+	}
+	if req.Logo != nil {
+		update = update.SetLogo(req.GetLogo())
+	}
+
+	_, err = update.Save(ctx)
+	if err != nil {
+		slog.Error("update hackathon", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't update hackathon in database")
+	}
+
+	// Fetch the updated hackathon with creator and modifier
+	updated, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.IDEQ(id)).
+		WithCreator().
+		WithModifier().
+		Only(ctx)
+	if err != nil {
+		slog.Error("query updated hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query updated hackathon")
+	}
+
+	entry := hackathonEntryFromEnt(updated, time.Now())
+	entry.Creator = userEntryFromEnt(updated.Edges.Creator)
+	entry.Modifier = userEntryFromEnt(updated.Edges.Modifier)
+
+	return &msgs.EditResponse{Hackathon: entry}, nil
+}
+
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
