@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package hackathon.messages.track_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/track_svc";
+
+message EditRequest {
+  string track_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [
+    (buf.validate.field).string.min_len = 3,
+    (buf.validate.field).string.max_len = 255
+  ];
+  optional string description = 3 [(buf.validate.field).string.max_len = 10000];
+}

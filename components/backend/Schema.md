@@ -237,6 +237,8 @@ A thematic track within a hackathon that groups related projects.
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | M2O | yes | no | The hackathon this track belongs to. |
 | `projects` | Project | O2M | no | no | Projects within this track. |
+| `creator` | User | M2O | yes | yes | The user who created this track. |
+| `modifier` | User | M2O | yes | yes | The user who last modified this track. |
 
 ### Indexes
 
@@ -275,6 +277,8 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_phases` | Phase | O2M | no | no | Phases this user last modified. |
 | `created_submissions` | Submission | O2M | no | no | Submissions this user created. |
 | `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
+| `created_tracks` | Track | O2M | no | no | Tracks this user created. |
+| `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `participations` | Participant | O2M | yes | no |  |
 | `team_participations` | TeamParticipant | O2M | yes | no |  |

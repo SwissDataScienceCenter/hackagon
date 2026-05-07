@@ -2,6 +2,12 @@ syntax = "proto3";
 
 package hackathon;
 
+import "hackathon/messages/track_svc/create_request.proto";
+import "hackathon/messages/track_svc/create_response.proto";
+import "hackathon/messages/track_svc/delete_request.proto";
+import "hackathon/messages/track_svc/delete_response.proto";
+import "hackathon/messages/track_svc/edit_request.proto";
+import "hackathon/messages/track_svc/edit_response.proto";
 import "hackathon/messages/track_svc/get_request.proto";
 import "hackathon/messages/track_svc/get_response.proto";
 import "hackathon/messages/track_svc/list_request.proto";
@@ -12,4 +18,7 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 service TrackService {
   rpc List(hackathon.messages.track_svc.ListRequest) returns (hackathon.messages.track_svc.ListResponse);
   rpc Get(hackathon.messages.track_svc.GetRequest) returns (hackathon.messages.track_svc.GetResponse);
+  rpc Create(hackathon.messages.track_svc.CreateRequest) returns (hackathon.messages.track_svc.CreateResponse);
+  rpc Edit(hackathon.messages.track_svc.EditRequest) returns (hackathon.messages.track_svc.EditResponse);
+  rpc Delete(hackathon.messages.track_svc.DeleteRequest) returns (hackathon.messages.track_svc.DeleteResponse);
 }

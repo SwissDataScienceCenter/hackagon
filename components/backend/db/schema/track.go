@@ -47,6 +47,17 @@ func (Track) Edges() []ent.Edge {
 			Comment("The hackathon this track belongs to."),
 		edge.To("projects", Project.Type).
 			Comment("Projects within this track."),
+		edge.From("creator", User.Type).
+			Ref("created_tracks").
+			Unique().
+			Required().
+			Immutable().
+			Comment("The user who created this track."),
+		edge.From("modifier", User.Type).
+			Ref("modified_tracks").
+			Unique().
+			Required().
+			Comment("The user who last modified this track."),
 	}
 }
 
