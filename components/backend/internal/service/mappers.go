@@ -108,6 +108,10 @@ func projectStatusFromEnt(s string) hackEnts.ProjectStatus {
 }
 
 func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Project {
+	trackID := ""
+	if p.Edges.Track != nil {
+		trackID = p.Edges.Track.ID.String()
+	}
 	e := &hackEnts.Project{
 		Id:          p.ID.String(),
 		Title:       p.Title,
@@ -116,7 +120,7 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 		CreatedAt:   timestamppb.New(p.CreatedAt),
 		ModifiedAt:  timestamppb.New(p.ModifiedAt),
 		HackathonId: hackathonID.String(),
-		TrackId:     p.Edges.Track.ID.String(),
+		TrackId:     trackID,
 		CreatorId:   p.Edges.Creator.ID.String(),
 	}
 	if p.Image != "" {
@@ -124,6 +128,36 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 		e.Image = &img
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+
+	return e
+}
+
+func projectWithPreferencesEntryFromEnt(
+	p *ent.Project,
+	hackathonID uuid.UUID,
+) *hackEnts.ProjectWithPreferences {
+	e := &hackEnts.ProjectWithPreferences{
+		Id:          p.ID.String(),
+		Title:       p.Title,
+		Description: p.Description,
+		Status:      projectStatusFromEnt(string(p.Status)),
+		CreatedAt:   timestamppb.New(p.CreatedAt),
+		ModifiedAt:  timestamppb.New(p.ModifiedAt),
+		HackathonId: hackathonID.String(),
+	}
+	if p.Edges.Track != nil {
+		trackID := p.Edges.Track.ID.String()
+		e.TrackId = trackID
+	}
+	if p.Image != "" {
+		e.Image = &p.Image
+	}
+	if len(p.Edges.PreferredByUsers) > 0 {
+		e.Preferences = make([]*userEnts.User, 0, len(p.Edges.PreferredByUsers))
+		for _, u := range p.Edges.PreferredByUsers {
+			e.Preferences = append(e.Preferences, userEntryFromEnt(u))
+		}
+	}
 
 	return e
 }

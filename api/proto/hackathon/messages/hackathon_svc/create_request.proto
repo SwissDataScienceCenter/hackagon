@@ -23,6 +23,6 @@ message CreateRequest {
   };
 
   hackathon.entities.Visibility visibility = 4 [(buf.validate.field).enum.defined_only = true];
-  optional string description = 5 [(buf.validate.field).string.max_len = 2048];
+  optional string description = 5 [(buf.validate.field).string.max_len = 10000];
   optional string logo = 6 [(buf.validate.field).string.uri = true];
 }

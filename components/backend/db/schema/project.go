@@ -49,8 +49,8 @@ func (Project) Fields() []ent.Field {
 func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("track", Track.Type).
-			Ref("projects").Unique().Required().
-			Comment("The track this project belongs to."),
+			Ref("projects").Unique().
+			Comment("The track this project belongs to (optional)."),
 		edge.From("hackathon", Hackathon.Type).
 			Ref("projects").Unique().Required().
 			Comment("The hackathon this project belongs to."),

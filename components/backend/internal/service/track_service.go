@@ -254,6 +254,7 @@ func (s *TrackService) Edit(
 	return &msgs.EditResponse{Track: entry}, nil
 }
 
+//nolint:dupl // delete for entities is very similar by its nature, but not consolidating them keeps the code simple
 func (s *TrackService) Delete(
 	ctx context.Context,
 	req *msgs.DeleteRequest,

@@ -2,12 +2,20 @@ syntax = "proto3";
 
 package hackathon.messages.project_svc;
 
+import "buf/validate/validate.proto";
+
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/project_svc";
 
 message EditRequest {
-  string project_id = 1;
-  string title = 2;
-  string description = 3;
-  string status = 4;
-  optional string image = 5;
+  string project_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string title = 2 [
+    (buf.validate.field).string.min_len = 3,
+    (buf.validate.field).string.max_len = 255
+  ];
+  optional string description = 3 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 10000
+  ];
+  optional string track_id = 4 [(buf.validate.field).string.uuid = true];
+  optional string image = 5 [(buf.validate.field).string.max_len = 5000];
 }
