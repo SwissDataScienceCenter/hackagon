@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package hackathon.messages.team_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svc";
+
+message EditRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+}

@@ -185,6 +185,72 @@ func pageEntryFromEnt(p *ent.Page, hackathonID uuid.UUID) *hackEnts.Page {
 	return e
 }
 
+func submissionStatusFromEnt(s string) hackEnts.SubmissionStatus {
+	switch s {
+	case "draft":
+		return hackEnts.SubmissionStatus_SUBMISSION_STATUS_DRAFT
+	case "final":
+		return hackEnts.SubmissionStatus_SUBMISSION_STATUS_FINAL
+	default:
+		return hackEnts.SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
+	}
+}
+
+func submissionEntryFromEnt(s *ent.Submission) *hackEnts.Submission {
+	e := &hackEnts.Submission{
+		Id:         s.ID.String(),
+		Status:     submissionStatusFromEnt(s.Status.String()),
+		Version:    int32(s.Version),
+		CreatedAt:  timestamppb.New(s.CreatedAt),
+		ModifiedAt: timestamppb.New(s.ModifiedAt),
+		TeamId:     s.Edges.Team.ID.String(),
+		ProjectId:  s.Edges.Project.ID.String(),
+		CreatorId:  s.Edges.Creator.ID.String(),
+	}
+	if s.Result != "" {
+		res := s.Result
+		e.Result = &res
+	}
+	if s.Edges.Modifier != nil {
+		modID := s.Edges.Modifier.ID.String()
+		e.ModifierId = &modID
+	}
+	return e
+}
+
+func teamEntryFromEnt(t *ent.Team) *hackEnts.Team {
+	e := &hackEnts.Team{
+		Id:         t.ID.String(),
+		Name:       t.Name,
+		CreatedAt:  timestamppb.New(t.CreatedAt),
+		ModifiedAt: timestamppb.New(t.ModifiedAt),
+		ProjectId:  t.Edges.Project.ID.String(),
+		CreatorId:  t.Edges.Creator.ID.String(),
+	}
+	if t.Description != "" {
+		d := t.Description
+		e.Description = &d
+	}
+	if t.Edges.Modifier != nil {
+		modID := t.Edges.Modifier.ID.String()
+		e.ModifierId = &modID
+	}
+	if len(t.Edges.Members) > 0 {
+		e.Members = make([]*userEnts.User, 0, len(t.Edges.Members))
+		for _, u := range t.Edges.Members {
+			e.Members = append(e.Members, userEntryFromEnt(u))
+		}
+	}
+	if len(t.Edges.Submissions) > 0 {
+		e.Submissions = make([]*hackEnts.Submission, 0, len(t.Edges.Submissions))
+		for _, s := range t.Edges.Submissions {
+			e.Submissions = append(e.Submissions, submissionEntryFromEnt(s))
+		}
+	}
+
+	return e
+}
+
 func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 	e := &hackEnts.Phase{
 		Id:          p.ID.String(),

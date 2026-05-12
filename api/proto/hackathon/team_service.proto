@@ -6,10 +6,20 @@ import "hackathon/messages/team_svc/assign_user_request.proto";
 import "hackathon/messages/team_svc/assign_user_response.proto";
 import "hackathon/messages/team_svc/create_request.proto";
 import "hackathon/messages/team_svc/create_response.proto";
+import "hackathon/messages/team_svc/create_submission_request.proto";
+import "hackathon/messages/team_svc/create_submission_response.proto";
+import "hackathon/messages/team_svc/delete_request.proto";
+import "hackathon/messages/team_svc/delete_response.proto";
+import "hackathon/messages/team_svc/edit_request.proto";
+import "hackathon/messages/team_svc/edit_response.proto";
+import "hackathon/messages/team_svc/finalize_submission_request.proto";
+import "hackathon/messages/team_svc/finalize_submission_response.proto";
 import "hackathon/messages/team_svc/get_request.proto";
 import "hackathon/messages/team_svc/get_response.proto";
 import "hackathon/messages/team_svc/list_request.proto";
 import "hackathon/messages/team_svc/list_response.proto";
+import "hackathon/messages/team_svc/remove_user_request.proto";
+import "hackathon/messages/team_svc/remove_user_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 
@@ -17,5 +27,10 @@ service TeamService {
   rpc List(hackathon.messages.team_svc.ListRequest) returns (hackathon.messages.team_svc.ListResponse);
   rpc Get(hackathon.messages.team_svc.GetRequest) returns (hackathon.messages.team_svc.GetResponse);
   rpc Create(hackathon.messages.team_svc.CreateRequest) returns (hackathon.messages.team_svc.CreateResponse);
+  rpc Edit(hackathon.messages.team_svc.EditRequest) returns (hackathon.messages.team_svc.EditResponse);
+  rpc Delete(hackathon.messages.team_svc.DeleteRequest) returns (hackathon.messages.team_svc.DeleteResponse);
   rpc AssignUser(hackathon.messages.team_svc.AssignUserRequest) returns (hackathon.messages.team_svc.AssignUserResponse);
+  rpc RemoveUser(hackathon.messages.team_svc.RemoveUserRequest) returns (hackathon.messages.team_svc.RemoveUserResponse);
+  rpc CreateSubmission(hackathon.messages.team_svc.CreateSubmissionRequest) returns (hackathon.messages.team_svc.CreateSubmissionResponse);
+  rpc FinalizeSubmission(hackathon.messages.team_svc.FinalizeSubmissionRequest) returns (hackathon.messages.team_svc.FinalizeSubmissionResponse);
 }
