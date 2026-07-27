@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/casbin/casbin/v3"
+	"github.com/casbin/casbin/v3/log"
 	"github.com/casbin/casbin/v3/model"
 	entadapter "github.com/casbin/ent-adapter"
 	_ "github.com/lib/pq"
@@ -125,6 +127,11 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create enforcer: %w", err)
 	}
+	if cfg.Logging.Level == "debug" {
+		l := log.NewDefaultLogger()
+		l.SetOutput(os.Stderr)
+		e.SetLogger(l)
+	}
 
 	// Load the policy from DB.
 	err = e.LoadPolicy()
@@ -147,41 +154,41 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons
-		{HackathonOrganizer.String(), "*", Hackathon.String(), Create.String()},
+		{HackathonOrganizer.String(), "/hackathon/*", Hackathon.String(), Create.String()},
 		// Owner can read owned hackathon
-		{Owner.String(), "*", Hackathon.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", Hackathon.String(), Read.String()},
 		// Owner can write owned hackathon
-		{Owner.String(), "*", Hackathon.String(), Write.String()},
+		{Owner.String(), "/hackathon/*", Hackathon.String(), Write.String()},
 		// Owner can write owned hackathon pages
-		{Owner.String(), "*", Page.String(), Write.String()},
+		{Owner.String(), "/hackathon/*", Page.String(), Write.String()},
 		// Owner can write owned hackathon pages
-		{Owner.String(), "*", Page.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", Page.String(), Read.String()},
 		// Owner can write owned hackathon phases
-		{Owner.String(), "*", Phase.String(), Write.String()},
+		{Owner.String(), "/hackathon/*", Phase.String(), Write.String()},
 		// Owner can write owned hackathon phases
-		{Owner.String(), "*", Phase.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", Phase.String(), Read.String()},
 		// Owner can write owned hackathon tracks
-		{Owner.String(), "*", Track.String(), Write.String()},
+		{Owner.String(), "/hackathon/*", Track.String(), Write.String()},
 		// Owner can read owned hackathon tracks
-		{Owner.String(), "*", Track.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", Track.String(), Read.String()},
 		// Owner can write owned hackathon projects
-		{Owner.String(), "*", Project.String(), Write.String()},
+		{Owner.String(), "/hackathon/*", Project.String(), Write.String()},
 		// Owner can read owned hackathon projects
-		{Owner.String(), "*", Project.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", Project.String(), Read.String()},
 		// Owner can propose new projects
-		{Owner.String(), "*", Project.String(), Propose.String()},
+		{Owner.String(), "/hackathon/*", Project.String(), Propose.String()},
 		// Member can propose new projects
-		{Member.String(), "*", Project.String(), Propose.String()},
+		{Member.String(), "/hackathon/*", Project.String(), Propose.String()},
 		// Member can read joined hackathon
-		{Member.String(), "*", Hackathon.String(), Read.String()},
+		{Member.String(), "/hackathon/*", Hackathon.String(), Read.String()},
 		// Member can read hackathon pages
-		{Member.String(), "*", Page.String(), Read.String()},
+		{Member.String(), "/hackathon/*", Page.String(), Read.String()},
 		// Member can read hackathon phases
-		{Member.String(), "*", Phase.String(), Read.String()},
+		{Member.String(), "/hackathon/*", Phase.String(), Read.String()},
 		// Member can read hackathon tracks
-		{Member.String(), "*", Track.String(), Read.String()},
+		{Member.String(), "/hackathon/*", Track.String(), Read.String()},
 		// Member can read hackathon projects
-		{Member.String(), "*", Project.String(), Read.String()},
+		{Member.String(), "/hackathon/*", Project.String(), Read.String()},
 	}
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
@@ -194,24 +201,38 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	return nil
 }
 
-func (e *Enforcer) AddRole(user, role, hackathonId string) (bool, error) {
-	return e.enforcer.AddGroupingPolicy(user, role, hackathonId)
+func hackathonIdToPath(hackathonId string) string {
+	return fmt.Sprintf("/hackathon/%s", hackathonId)
 }
 
-func (e *Enforcer) RemoveRole(user, role, hackathonId string) (bool, error) {
-	return e.enforcer.RemoveGroupingPolicy(user, role, hackathonId)
+func (e *Enforcer) AddRole(user string, role Role, hackathonId string) (bool, error) {
+	return e.enforcer.AddGroupingPolicy(user, role.String(), hackathonIdToPath(hackathonId))
 }
 
-func (e *Enforcer) AddGlobalRole(user, role string) (bool, error) {
-	return e.enforcer.AddNamedGroupingPolicy("g2", user, role)
+func (e *Enforcer) RemoveRole(user string, role Role, hackathonId string) (bool, error) {
+	return e.enforcer.RemoveGroupingPolicy(user, role.String(), hackathonIdToPath(hackathonId))
+}
+
+func (e *Enforcer) AddGlobalRole(user string, role Role) (bool, error) {
+	return e.enforcer.AddNamedGroupingPolicy("g2", user, role.String())
 }
 
 func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
-	return e.enforcer.AddPolicy("*", hackathonId, Hackathon.String(), Read.String())
+	return e.enforcer.AddPolicy(
+		"*",
+		hackathonIdToPath(hackathonId),
+		Hackathon.String(),
+		Read.String(),
+	)
 }
 
 func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error) {
-	return e.enforcer.RemovePolicy("*", hackathonId, Hackathon.String(), Read.String())
+	return e.enforcer.RemovePolicy(
+		"*",
+		hackathonIdToPath(hackathonId),
+		Hackathon.String(),
+		Read.String(),
+	)
 }
 
 // CheckPermission checks if the given subject has permission for the given hackathon, object, and action.
@@ -219,7 +240,12 @@ func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error)
 func (e *Enforcer) CheckPermission(
 	subject, hackathonId string, object ObjectType, permission Permission,
 ) (bool, error) {
-	return e.enforcer.Enforce(subject, hackathonId, object.String(), permission.String())
+	return e.enforcer.Enforce(
+		subject,
+		hackathonIdToPath(hackathonId),
+		object.String(),
+		permission.String(),
+	)
 }
 
 // ListG2Policies returns all g2 policies in the enforcer for debugging.
@@ -233,7 +259,7 @@ func (e *Enforcer) ListG2Policies() ([][]string, error) {
 func (e *Enforcer) GetHackathonRole(
 	keycloakID, hackathonID string,
 ) (hackEnts.HackathonRole, error) {
-	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonID)
+	roles, err := e.enforcer.GetRolesForUser(keycloakID, hackathonIdToPath(hackathonID))
 	if err != nil {
 		slog.Error(
 			"get roles for user",
@@ -278,7 +304,12 @@ func (e *Enforcer) Enforce(
 		return false, err
 	}
 
-	return e.enforcer.Enforce(sub, hackathonId, object.String(), permission.String())
+	return e.enforcer.Enforce(
+		sub,
+		hackathonIdToPath(hackathonId),
+		object.String(),
+		permission.String(),
+	)
 }
 
 // GetGlobalRoles returns the g2 (global) casbin roles for the given Keycloak ID as typed enums.

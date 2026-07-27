@@ -122,7 +122,7 @@ func NewMockEnforcer(adminKeycloakID string) *middleware.Enforcer {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(enf).NotTo(BeNil())
 
-	_, err = enf.AddGlobalRole(adminKeycloakID, "admin")
+	_, err = enf.AddGlobalRole(adminKeycloakID, middleware.Admin)
 	Expect(err).NotTo(HaveOccurred())
 
 	return enf

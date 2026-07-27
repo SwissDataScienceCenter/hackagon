@@ -67,7 +67,7 @@ func main() {
 	}
 
 	// alice is a hackathon organizer globally (can create new hackathons).
-	if _, err := enf.AddGlobalRole(aliceKeycloakID, middleware.HackathonOrganizer.String()); err != nil {
+	if _, err := enf.AddGlobalRole(aliceKeycloakID, middleware.HackathonOrganizer); err != nil {
 		logx.Fatal("assign organizer role to alice", "err", err)
 	}
 
@@ -408,10 +408,13 @@ func seedH1(
 		return fmt.Errorf("submission Alpha v2: %w", err)
 	}
 
-	for _, ra := range []struct{ id, role string }{
-		{alice.KeycloakID, middleware.Owner.String()},
-		{admin.KeycloakID, middleware.Member.String()},
-		{bob.KeycloakID, middleware.Member.String()},
+	for _, ra := range []struct {
+		id   string
+		role middleware.Role
+	}{
+		{alice.KeycloakID, middleware.Owner},
+		{admin.KeycloakID, middleware.Member},
+		{bob.KeycloakID, middleware.Member},
 	} {
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h1: %w", ra.role, ra.id, err)
@@ -592,10 +595,13 @@ func seedH2(
 		return fmt.Errorf("submission Gamma v1: %w", err)
 	}
 
-	for _, ra := range []struct{ id, role string }{
-		{admin.KeycloakID, middleware.Owner.String()},
-		{alice.KeycloakID, middleware.Member.String()},
-		{bob.KeycloakID, middleware.Member.String()},
+	for _, ra := range []struct {
+		id   string
+		role middleware.Role
+	}{
+		{admin.KeycloakID, middleware.Owner},
+		{alice.KeycloakID, middleware.Member},
+		{bob.KeycloakID, middleware.Member},
 	} {
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h2: %w", ra.role, ra.id, err)
@@ -786,9 +792,12 @@ func seedH3(
 		return fmt.Errorf("submission Delta v2: %w", err)
 	}
 
-	for _, ra := range []struct{ id, role string }{
-		{admin.KeycloakID, middleware.Owner.String()},
-		{alice.KeycloakID, middleware.Member.String()},
+	for _, ra := range []struct {
+		id   string
+		role middleware.Role
+	}{
+		{admin.KeycloakID, middleware.Owner},
+		{alice.KeycloakID, middleware.Member},
 	} {
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h3: %w", ra.role, ra.id, err)

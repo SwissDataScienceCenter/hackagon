@@ -33,22 +33,22 @@ var _ = Describe("RBAC Enforcer", func() {
 		BeforeEach(func() {
 			enf = testutils.NewMockEnforcer("admin-uuid")
 
-			_, err := enf.AddRole("alice", "owner", "h1")
+			_, err := enf.AddRole("alice", Owner, "h1")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("alice", "owner", "h1")
+				_, _ = enf.RemoveRole("alice", Owner, "h1")
 			})
 
-			_, err = enf.AddRole("bob", "member", "h1")
+			_, err = enf.AddRole("bob", Member, "h1")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("bob", "member", "h1")
+				_, _ = enf.RemoveRole("bob", Member, "h1")
 			})
 
-			_, err = enf.AddRole("eve", "owner", "h2")
+			_, err = enf.AddRole("eve", Owner, "h2")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("eve", "owner", "h2")
+				_, _ = enf.RemoveRole("eve", Owner, "h2")
 			})
 		})
 
@@ -84,22 +84,22 @@ var _ = Describe("RBAC Enforcer", func() {
 				_, _ = enf.RemovePublicHackathonAccess("h2")
 			})
 
-			_, err = enf.AddRole("alice", "owner", "h1")
+			_, err = enf.AddRole("alice", Owner, "h1")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("alice", "owner", "h1")
+				_, _ = enf.RemoveRole("alice", Owner, "h1")
 			})
 
-			_, err = enf.AddRole("bob", "member", "h1")
+			_, err = enf.AddRole("bob", Member, "h1")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("bob", "member", "h1")
+				_, _ = enf.RemoveRole("bob", Member, "h1")
 			})
 
-			_, err = enf.AddRole("eve", "owner", "h2")
+			_, err = enf.AddRole("eve", Owner, "h2")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("eve", "owner", "h2")
+				_, _ = enf.RemoveRole("eve", Owner, "h2")
 			})
 		})
 
@@ -145,10 +145,10 @@ var _ = Describe("RBAC Enforcer", func() {
 		BeforeEach(func() {
 			enf = testutils.NewMockEnforcer(adminID)
 
-			_, err := enf.AddRole("uuid-alice", "owner", "h1")
+			_, err := enf.AddRole("uuid-alice", Owner, "h1")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("uuid-alice", "owner", "h1")
+				_, _ = enf.RemoveRole("uuid-alice", Owner, "h1")
 			})
 
 		})
@@ -186,10 +186,10 @@ var _ = Describe("RBAC Enforcer", func() {
 		BeforeEach(func() {
 			enf = testutils.NewMockEnforcer(adminID)
 
-			_, err := enf.AddRole("uuid-alice", "owner", "h1")
+			_, err := enf.AddRole("uuid-alice", Owner, "h1")
 			Expect(err).NotTo(HaveOccurred())
 			DeferCleanup(func() {
-				_, _ = enf.RemoveRole("uuid-alice", "owner", "h1")
+				_, _ = enf.RemoveRole("uuid-alice", Owner, "h1")
 			})
 		})
 		It("Admin Keycloak ID matches g2 policy", func() {
