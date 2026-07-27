@@ -36,7 +36,7 @@ var _ = Describe("TrackService", func() {
 	)
 
 	BeforeEach(func() {
-		dbClient, conn = testutils.CreateTestServer()
+		dbClient, conn, _ = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		trackClient = hackathonSvc.NewTrackServiceClient(conn)

@@ -71,7 +71,7 @@ func main() {
 	}
 
 	// Create server with all middleware and services
-	server, cleanup, err := service.NewServer(dbClient, cfg, nil)
+	server, cleanup, _, err := service.NewServer(dbClient, cfg, nil)
 	if err != nil {
 		logx.Fatal("create server", "err", err)
 	}

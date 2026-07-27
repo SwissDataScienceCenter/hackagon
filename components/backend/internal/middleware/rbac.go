@@ -58,6 +58,7 @@ const (
 	Track
 	Project
 	Team
+	Submission
 	// Note: this is a dummy entry, there are no rules for users, since we only use admin checks with users.
 	// This is just here so we have something we can query on when checking admin permissions for the user table.
 	User
@@ -77,6 +78,8 @@ func (ot ObjectType) String() string {
 		return "project"
 	case Team:
 		return "team"
+	case Submission:
+		return "submission"
 	case User:
 		return "user"
 	default:
@@ -154,7 +157,7 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons
-		{HackathonOrganizer.String(), "/hackathon/*", Hackathon.String(), Create.String()},
+		{HackathonOrganizer.String(), "*", Hackathon.String(), Create.String()},
 		// Owner can read owned hackathon
 		{Owner.String(), "/hackathon/*", Hackathon.String(), Read.String()},
 		// Owner can write owned hackathon
@@ -189,6 +192,16 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Member.String(), "/hackathon/*", Track.String(), Read.String()},
 		// Member can read hackathon projects
 		{Member.String(), "/hackathon/*", Project.String(), Read.String()},
+		// Owner can create teams
+		{Owner.String(), "/hackathon/*", Team.String(), Create.String()},
+		// Owner can edit teams
+		{Owner.String(), "/hackathon/*", Team.String(), Write.String()},
+		// Team member can edit team
+		{Member.String(), "/hackathon/*/team/*", Team.String(), Write.String()},
+		// Team member can create a submission
+		{Member.String(), "/hackathon/*/team/*", Submission.String(), Create.String()},
+		// Team member can edit a submission
+		{Member.String(), "/hackathon/*/team/*", Submission.String(), Write.String()},
 	}
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
@@ -205,12 +218,50 @@ func hackathonIdToPath(hackathonId string) string {
 	return fmt.Sprintf("/hackathon/%s", hackathonId)
 }
 
-func (e *Enforcer) AddRole(user string, role Role, hackathonId string) (bool, error) {
-	return e.enforcer.AddGroupingPolicy(user, role.String(), hackathonIdToPath(hackathonId))
+// teamDomainPath returns the full domain path for a team resource,
+// e.g. /hackathon/<id>/team/<id>.
+func teamDomainPath(hackathonId, teamId string) string {
+	return fmt.Sprintf("/hackathon/%s/team/%s", hackathonId, teamId)
 }
 
-func (e *Enforcer) RemoveRole(user string, role Role, hackathonId string) (bool, error) {
-	return e.enforcer.RemoveGroupingPolicy(user, role.String(), hackathonIdToPath(hackathonId))
+func (e *Enforcer) AddRole(
+	user string,
+	role Role,
+	hackathonId string,
+	opts ...EnforceOption,
+) (bool, error) {
+	//exhaustruct:ignore
+	options := &enforceOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	domain := hackathonIdToPath(hackathonId)
+	if options.teamID != "" {
+		domain = teamDomainPath(hackathonId, options.teamID)
+	}
+
+	return e.enforcer.AddGroupingPolicy(user, role.String(), domain)
+}
+
+func (e *Enforcer) RemoveRole(
+	user string,
+	role Role,
+	hackathonId string,
+	opts ...EnforceOption,
+) (bool, error) {
+	//exhaustruct:ignore
+	options := &enforceOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	domain := hackathonIdToPath(hackathonId)
+	if options.teamID != "" {
+		domain = teamDomainPath(hackathonId, options.teamID)
+	}
+
+	return e.enforcer.RemoveGroupingPolicy(user, role.String(), domain)
 }
 
 func (e *Enforcer) AddGlobalRole(user string, role Role) (bool, error) {
@@ -289,12 +340,40 @@ func (e *Enforcer) GetHackathonRole(
 	}
 }
 
+//exhaustruct:optional
+type enforceOptions struct {
+	teamID string
+}
+
+type EnforceOption func(*enforceOptions)
+
+// WithTeam overrides the default /hackathon/<id> domain path to
+// /hackathon/<id>/team/<teamId>. Use this for team-level operations
+// so that both hackathon-owner and team-member policies can match.
+func WithTeam(teamID string) EnforceOption {
+	return func(o *enforceOptions) {
+		o.teamID = teamID
+	}
+}
+
 func (e *Enforcer) Enforce(
 	ctx context.Context,
 	hackathonId string,
 	object ObjectType,
 	permission Permission,
+	opts ...EnforceOption,
 ) (bool, error) {
+	//exhaustruct:ignore
+	options := &enforceOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	domain := hackathonIdToPath(hackathonId)
+	if options.teamID != "" {
+		domain = teamDomainPath(hackathonId, options.teamID)
+	}
+
 	claims, ok := GetClaims(ctx)
 	if !ok {
 		return false, errors.New("no claims in context")
@@ -304,12 +383,7 @@ func (e *Enforcer) Enforce(
 		return false, err
 	}
 
-	return e.enforcer.Enforce(
-		sub,
-		hackathonIdToPath(hackathonId),
-		object.String(),
-		permission.String(),
-	)
+	return e.enforcer.Enforce(sub, domain, object.String(), permission.String())
 }
 
 // GetGlobalRoles returns the g2 (global) casbin roles for the given Keycloak ID as typed enums.
@@ -339,13 +413,15 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 
 // RequirePermission enforces a permission check and returns a gRPC-ready error if denied.
 // Use this in handlers instead of calling Enforce directly.
+// Accepts optional EnforceOption values (e.g. WithDomain) to override the default domain.
 func (e *Enforcer) RequirePermission(
 	ctx context.Context,
 	hackathonId string,
 	object ObjectType,
 	permission Permission,
+	opts ...EnforceOption,
 ) error {
-	ok, err := e.Enforce(ctx, hackathonId, object, permission)
+	ok, err := e.Enforce(ctx, hackathonId, object, permission, opts...)
 	if err != nil {
 		slog.Error("enforce permission", "err", err)
 

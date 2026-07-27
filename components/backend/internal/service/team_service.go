@@ -37,10 +37,27 @@ func (s *TeamService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
 ) (*msgs.ListResponse, error) {
-	// TODO: casbin check once role-granting RPCs exist
 	hackathonID, err := uuid.Parse(req.GetHackathonId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	if err = s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
+		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
 	}
 
 	teams, err := s.dbClient.Team.Query().
@@ -65,7 +82,6 @@ func (s *TeamService) Get(
 	ctx context.Context,
 	req *msgs.GetRequest,
 ) (*msgs.GetResponse, error) {
-	// TODO: casbin check once role-granting RPCs exist
 	teamID, err := uuid.Parse(req.GetTeamId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
@@ -92,6 +108,9 @@ func (s *TeamService) Get(
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
 		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
+	if err = s.enforcer.RequirePermission(ctx, t.Edges.Project.Edges.Hackathon.ID.String(), m.Hackathon, m.Read); err != nil {
+		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
+	}
 
 	return &msgs.GetResponse{Team: teamEntryFromEnt(t)}, nil
 }
@@ -116,6 +135,15 @@ func (s *TeamService) Create(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
 	}
+	hackathon, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.HasProjectsWith(entproject.IDEQ(projectID))).
+		Only(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "could not find hackathon: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathon.ID.String(), m.Team, m.Create); err != nil {
+		return nil, err
+	}
 
 	t, err := s.dbClient.Team.Create().
 		SetName(req.GetName()).
@@ -126,14 +154,6 @@ func (s *TeamService) Create(
 	if err != nil {
 		slog.Error("create team", "err", err)
 		return nil, status.Errorf(codes.Internal, "couldn't create team: %v", err)
-	}
-
-	_, err = s.dbClient.Team.UpdateOne(t).
-		AddMembers(u).
-		Save(ctx)
-	if err != nil {
-		slog.Error("add creator to team", "err", err)
-		return nil, status.Errorf(codes.Internal, "couldn't add creator to team: %v", err)
 	}
 
 	return &msgs.CreateResponse{TeamId: t.ID.String()}, nil
@@ -153,15 +173,12 @@ func (s *TeamService) Edit(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
 
+	// Query team with project to get hackathon ID for RBAC.
 	t, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
 		WithProject(func(pq *ent.ProjectQuery) {
 			pq.WithHackathon()
 		}).
-		WithCreator().
-		WithModifier().
-		WithMembers().
-		WithSubmissions().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -170,15 +187,21 @@ func (s *TeamService) Edit(
 		return nil, status.Errorf(codes.Internal, "query team: %v", err)
 	}
 
-	isMember := false
-	for _, m := range t.Edges.Members {
-		if m.KeycloakID == sub {
-			isMember = true
-			break
-		}
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
-	if !isMember {
-		return nil, status.Error(codes.PermissionDenied, "only team members can edit the team")
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Team, m.Write,
+		m.WithTeam(t.ID.String()),
+	); err != nil {
+		if err := s.enforcer.RequirePermission(
+			ctx, hackathonID, m.Team, m.Write,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	u, err := s.dbClient.User.Query().
@@ -204,8 +227,18 @@ func (s *TeamService) Edit(
 		return nil, status.Errorf(codes.Internal, "couldn't edit team: %v", err)
 	}
 
-	if updatedT.Edges.Project == nil || updatedT.Edges.Project.Edges.Hackathon == nil {
-		return nil, status.Error(codes.Internal, "team project or hackathon not found")
+	// Re-query with edges — Save() doesn't return edges.
+	updatedT, err = s.dbClient.Team.Query().
+		Where(entteam.IDEQ(updatedT.ID)).
+		WithProject().
+		WithCreator().
+		WithModifier().
+		WithMembers().
+		WithSubmissions().
+		Only(ctx)
+	if err != nil {
+		slog.Error("re-query team", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't re-query team: %v", err)
 	}
 
 	return &msgs.EditResponse{Team: teamEntryFromEnt(updatedT)}, nil
@@ -215,8 +248,7 @@ func (s *TeamService) Delete(
 	ctx context.Context,
 	req *msgs.DeleteRequest,
 ) (*msgs.DeleteResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
-	if err != nil {
+	if _, _, err := m.RequireSubject(ctx); err != nil {
 		return nil, err
 	}
 
@@ -225,9 +257,12 @@ func (s *TeamService) Delete(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
 
+	// Query team with project to get hackathon ID for RBAC.
 	t, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
-		WithMembers().
+		WithProject(func(pq *ent.ProjectQuery) {
+			pq.WithHackathon()
+		}).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -236,15 +271,24 @@ func (s *TeamService) Delete(
 		return nil, status.Errorf(codes.Internal, "query team: %v", err)
 	}
 
-	isMember := false
-	for _, m := range t.Edges.Members {
-		if m.KeycloakID == sub {
-			isMember = true
-			break
-		}
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
-	if !isMember {
-		return nil, status.Error(codes.PermissionDenied, "only team members can delete the team")
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Team, m.Write,
+	); err != nil {
+		return nil, err
+	}
+
+	// Remove members first to avoid FK constraint violation.
+	if len(t.Edges.Members) > 0 {
+		if err := s.dbClient.Team.UpdateOne(t).RemoveMembers(t.Edges.Members...).Exec(ctx); err != nil {
+			slog.Error("remove team members", "err", err)
+			return nil, status.Errorf(codes.Internal, "couldn't remove team members: %v", err)
+		}
 	}
 
 	err = s.dbClient.Team.DeleteOne(t).Exec(ctx)
@@ -260,8 +304,7 @@ func (s *TeamService) AssignUser(
 	ctx context.Context,
 	req *msgs.AssignUserRequest,
 ) (*msgs.AssignUserResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
-	if err != nil {
+	if _, _, err := m.RequireSubject(ctx); err != nil {
 		return nil, err
 	}
 
@@ -274,12 +317,12 @@ func (s *TeamService) AssignUser(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 	}
 
+	// Query team with project to get hackathon ID for RBAC.
 	t, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
 		WithProject(func(pq *ent.ProjectQuery) {
 			pq.WithHackathon()
 		}).
-		WithMembers().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -288,15 +331,15 @@ func (s *TeamService) AssignUser(
 		return nil, status.Errorf(codes.Internal, "query team: %v", err)
 	}
 
-	isMember := false
-	for _, m := range t.Edges.Members {
-		if m.KeycloakID == sub {
-			isMember = true
-			break
-		}
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
-	if !isMember {
-		return nil, status.Error(codes.PermissionDenied, "only team members can assign users")
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Team, m.Write,
+	); err != nil {
+		return nil, err
 	}
 
 	u, err := s.dbClient.User.Get(ctx, userID)
@@ -304,12 +347,19 @@ func (s *TeamService) AssignUser(
 		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 	}
 
+	// Add to DB members.
 	_, err = s.dbClient.Team.UpdateOne(t).
 		AddMembers(u).
 		Save(ctx)
 	if err != nil {
 		slog.Error("assign user to team", "err", err)
 		return nil, status.Errorf(codes.Internal, "couldn't assign user to team: %v", err)
+	}
+
+	// Add to casbin team role.
+	_, err = s.enforcer.AddRole(u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()))
+	if err != nil {
+		slog.Error("add team role for user", "err", err)
 	}
 
 	return &msgs.AssignUserResponse{}, nil
@@ -319,8 +369,7 @@ func (s *TeamService) RemoveUser(
 	ctx context.Context,
 	req *msgs.RemoveUserRequest,
 ) (*msgs.RemoveUserResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
-	if err != nil {
+	if _, _, err := m.RequireSubject(ctx); err != nil {
 		return nil, err
 	}
 
@@ -333,9 +382,12 @@ func (s *TeamService) RemoveUser(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 	}
 
+	// Query team with project to get hackathon ID for RBAC.
 	t, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
-		WithMembers().
+		WithProject(func(pq *ent.ProjectQuery) {
+			pq.WithHackathon()
+		}).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -344,15 +396,15 @@ func (s *TeamService) RemoveUser(
 		return nil, status.Errorf(codes.Internal, "query team: %v", err)
 	}
 
-	isMember := false
-	for _, m := range t.Edges.Members {
-		if m.KeycloakID == sub {
-			isMember = true
-			break
-		}
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
-	if !isMember {
-		return nil, status.Error(codes.PermissionDenied, "only team members can remove users")
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Team, m.Write,
+	); err != nil {
+		return nil, err
 	}
 
 	u, err := s.dbClient.User.Get(ctx, userID)
@@ -360,6 +412,7 @@ func (s *TeamService) RemoveUser(
 		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 	}
 
+	// Remove from DB members.
 	_, err = s.dbClient.Team.UpdateOne(t).
 		RemoveMembers(u).
 		Save(ctx)
@@ -368,11 +421,16 @@ func (s *TeamService) RemoveUser(
 		return nil, status.Errorf(codes.Internal, "couldn't remove user from team: %v", err)
 	}
 
+	// Remove from casbin team role.
+	_, err = s.enforcer.RemoveRole(u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()))
+	if err != nil {
+		slog.Error("remove team role for user", "err", err)
+	}
+
+	// Re-query with edges — Save() doesn't return edges.
 	updatedT, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
+		WithProject().
 		WithCreator().
 		WithModifier().
 		WithMembers().
@@ -380,10 +438,6 @@ func (s *TeamService) RemoveUser(
 		Only(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "query updated team: %v", err)
-	}
-
-	if updatedT.Edges.Project == nil || updatedT.Edges.Project.Edges.Hackathon == nil {
-		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
 
 	return &msgs.RemoveUserResponse{Team: teamEntryFromEnt(updatedT)}, nil
@@ -407,9 +461,12 @@ func (s *TeamService) CreateSubmission(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
 	}
 
+	// Query team with project to get hackathon ID for RBAC.
 	t, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
-		WithMembers().
+		WithProject(func(pq *ent.ProjectQuery) {
+			pq.WithHackathon()
+		}).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -418,15 +475,16 @@ func (s *TeamService) CreateSubmission(
 		return nil, status.Errorf(codes.Internal, "query team: %v", err)
 	}
 
-	isMember := false
-	for _, m := range t.Edges.Members {
-		if m.KeycloakID == sub {
-			isMember = true
-			break
-		}
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
-	if !isMember {
-		return nil, status.Error(codes.PermissionDenied, "only team members can create submissions")
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Team, m.Write,
+		m.WithTeam(t.ID.String()),
+	); err != nil {
+		return nil, err
 	}
 
 	u, err := s.dbClient.User.Query().
@@ -476,8 +534,11 @@ func (s *TeamService) FinalizeSubmission(
 
 	subm, err := s.dbClient.Submission.Query().
 		Where(entsubmission.IDEQ(submID)).
-		WithTeam().
-		WithProject().
+		WithTeam(func(tq *ent.TeamQuery) {
+			tq.WithProject(func(pq *ent.ProjectQuery) {
+				pq.WithHackathon()
+			})
+		}).
 		WithCreator().
 		WithModifier().
 		Only(ctx)
@@ -492,19 +553,20 @@ func (s *TeamService) FinalizeSubmission(
 		return nil, status.Errorf(codes.Internal, "query submission: %v", err)
 	}
 
-	// Check if user is a member of the team that owns this submission.
-	isMember := false
-	for _, m := range subm.Edges.Team.Edges.Members {
-		if m.KeycloakID == sub {
-			isMember = true
-			break
-		}
+	// Use RBAC for authorization via the submission's team domain.
+	if subm.Edges.Team == nil {
+		return nil, status.Error(codes.Internal, "submission team")
 	}
-	if !isMember {
-		return nil, status.Error(
-			codes.PermissionDenied,
-			"only team members can finalize the submission",
-		)
+
+	hackathonID := subm.Edges.Team.Edges.Project.Edges.Hackathon.ID.String()
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID,
+		m.Submission,
+		m.Write,
+		m.WithTeam(subm.Edges.Team.ID.String()),
+	); err != nil {
+		return nil, err
 	}
 
 	u, err := s.dbClient.User.Query().
@@ -521,6 +583,19 @@ func (s *TeamService) FinalizeSubmission(
 	if err != nil {
 		slog.Error("finalize submission", "err", err)
 		return nil, status.Errorf(codes.Internal, "couldn't finalize submission: %v", err)
+	}
+
+	// Re-query with edges — Save() doesn't return edges.
+	updatedSubm, err = s.dbClient.Submission.Query().
+		Where(entsubmission.IDEQ(updatedSubm.ID)).
+		WithTeam().
+		WithProject().
+		WithCreator().
+		WithModifier().
+		Only(ctx)
+	if err != nil {
+		slog.Error("re-query submission", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't re-query submission: %v", err)
 	}
 
 	return &msgs.FinalizeSubmissionResponse{Submission: submissionEntryFromEnt(updatedSubm)}, nil

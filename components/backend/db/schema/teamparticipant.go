@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
@@ -42,10 +43,12 @@ func (TeamParticipant) Edges() []ent.Edge {
 		edge.To("team", Team.Type).
 			Unique().Required().
 			Field("team_id").
+			Annotations(entsql.OnDelete(entsql.Cascade)).
 			Comment("The team."),
 		edge.To("user", User.Type).
 			Unique().Required().
 			Field("user_id").
+			Annotations(entsql.OnDelete(entsql.Cascade)).
 			Comment("The team member."),
 	}
 }

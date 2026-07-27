@@ -37,7 +37,7 @@ var _ = Describe("ProjectService", func() {
 	)
 
 	BeforeEach(func() {
-		dbClient, conn = testutils.CreateTestServer()
+		dbClient, conn, _ = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		projectClient = hackathonSvc.NewProjectServiceClient(conn)
