@@ -1,6 +1,7 @@
 # Frontend wiring status — real backend data vs. fake data
 
-Branch: `feat/frontend` · Last checked: 2026-07-28
+Branch: `feat/frontend` · Last checked: 2026-07-28 (updated same day: dashboard
+role-based entry + hackathon-admin shell)
 
 Route-by-route: does this page's `load` function call a real gRPC method and
 render what comes back, or is the content hardcoded in the `.svelte` file?
@@ -10,6 +11,28 @@ server-side, no viewer-role distinctions in participant-facing pages).
 
 ## Recent changes (newest first)
 
+- New route tree `(admin)/admin/hackathon/[slug]` created — a per-hackathon
+  admin shell, distinct from the site-wide `(admin)/users`. `+layout.server.ts`
+  calls `hackathon.get({ hackathonId: slug })` and gates entry to the caller's
+  own `HackathonRole.HACKATHON_ROLE_OWNER` membership or global
+  `GlobalRole.GLOBAL_ROLE_ADMIN` (403 otherwise) — this is a **UI-only gate**,
+  same caveat as below: real enforcement is casbin's per-mutation Write
+  permission (Owner-only), not this check. `+page.svelte` is a read-only
+  overview (approved/pending participant counts, page/phase/track/project
+  counts) — all real data from the same `Get` call, but **no admin actions
+  wired yet**, just a "coming soon" placeholder where they'll go.
+- Dashboard "Your hackathons" rows now branch on the real
+  `viewerMembership.role`/`isWaiting` (already loaded, previously only shown
+  as a badge): Owner rows get "Enter as Participant" (outlined) + "Enter as
+  Admin" (filled, → the new admin route above); Member rows get a single
+  filled "Enter"; waitlisted rows get no entry action. A "Site Admin" button
+  (visible only when `platformUser.roles` from `WhoAmI` includes
+  `GlobalRole.GLOBAL_ROLE_ADMIN`) was added next to the welcome banner, linking
+  to the existing `/(admin)/users`. The role badge itself was restyled from
+  green (`preset-tonal-success`) to neutral (`preset-tonal-surface`) so it
+  stops competing visually with the action buttons — this also changed the
+  membership badge on the participant hackathon layout's hero, since both
+  share `membershipBadgePreset()`.
 - Admin section given a first-draft UI: `AdminSubNav` component (Home /
   Administrate Projects / Administrate Users / Administrate Teams / General
   Settings — only the first two are real links, the rest are disabled
@@ -65,13 +88,24 @@ server-side, no viewer-role distinctions in participant-facing pages).
 
 ## Recommended next quick win
 
-**Wire the Dashboard "Join" button.** `HackathonService.Join({hackathonId})`
-is live, takes only `hackathonId` (caller resolved from the JWT), and today
-it's just `alert('Join: not yet implemented')` in
-`DashboardView.svelte:54-56,129-134`. This is the one remaining case where a
-real, fully-live *mutation* is sitting behind a fake stub — needs a SvelteKit
-form action in `routes/(participant)/dashboard/+page.server.ts` (matching the
-`signin`/`signout` action pattern) rather than a plain `load` change.
+**Wire participant approval into the new admin shell.**
+`HackathonService.ApproveParticipant({hackathonId, userId})` and
+`RemoveParticipant` are both live, and `(admin)/admin/hackathon/[slug]`'s
+layout already fetches the full `hackathon.members` list (with `isWaiting`)
+via `hackathon.get()` — the pending-count stat on the placeholder page is
+computed from exactly the data this needs. This is the natural next step
+because it's the first real mutation surface for the admin shell just built,
+needs zero backend work, and has an obvious home (list waitlisted members on
+`(admin)/admin/hackathon/[slug]`, each with Approve/Remove buttons calling
+these two RPCs as SvelteKit form actions — matching the `signin`/`signout`
+action pattern, same shape the Join button below will need).
+
+**Second option: wire the Dashboard "Join" button.**
+`HackathonService.Join({hackathonId})` is live, takes only `hackathonId`
+(caller resolved from the JWT), and today it's just
+`alert('Join: not yet implemented')` in `DashboardView.svelte:52-54,127-132`.
+Same shape as above — a SvelteKit form action — just a different, unrelated
+surface (public "Other hackathons" list, not the admin shell).
 
 ## ✅ Fully wired — real gRPC call, renders the response
 
@@ -83,6 +117,7 @@ form action in `routes/(participant)/dashboard/+page.server.ts` (matching the
 | `.../participants` | `participants/+page.server.ts` + `+page.svelte` | reuses layout's `hackathon.get()` via `event.parent()`, maps `hackathon.members` server-side — no duplicate call |
 | `.../proposals` | `proposals/+page.server.ts` + `+page.svelte` | reuses layout's `hackathon.get()` via `event.parent()`, maps `hackathon.projects` server-side — no duplicate call |
 | `/(admin)/users` | `routes/(admin)/users/+page.server.ts` | `user.list({})` |
+| `/(admin)/admin/hackathon/[slug]` | `.../admin/hackathon/[slug]/+layout.server.ts` + `+page.svelte` | `hackathon.get({ hackathonId: slug })`; read-only stats only, no mutations yet; layout gate is Owner/global-Admin only (403 otherwise) |
 
 ## 🟡 Partially wired — real data mixed with hardcoded content
 
@@ -97,7 +132,7 @@ form action in `routes/(participant)/dashboard/+page.server.ts` (matching the
 | Dashboard "Join" button | `HackathonService.Join({hackathonId})` — live | See "Recommended next quick win" above. |
 | `.../timeline` | `hackathon.phases` (embedded in `Get`) — `id, name, description, startsAt, endsAt`; or `PhaseService.List`/`Get` directly | The layout already derives a trimmed `{name, status}` for the phase bar; the dedicated tab could show the fuller info that's currently discarded. |
 | A real "Pages"/CMS feature | `PageService` full CRUD — live; `hackathon.pages` (`title`, `content`, `visible`, `order`) also embedded in `Get` | `page` client now added to `AuthorizedGrpc`. Text/content model, not photos — see below. |
-| Admin: approve/remove waitlisted participants | `HackathonService.ApproveParticipant({hackathonId, userId})` / `RemoveParticipant` — live | No frontend surface at all yet. Per the participants guideline above, this belongs under `/(admin)/*`, not the hackathon-scoped participants page. |
+| Admin: approve/remove waitlisted participants | `HackathonService.ApproveParticipant({hackathonId, userId})` / `RemoveParticipant` — live | See "Recommended next quick win" above — `/(admin)/admin/hackathon/[slug]` now exists as the surface for this; it just doesn't call these RPCs yet. |
 
 ## ❌ Not wired, and genuinely blocked on backend work
 
