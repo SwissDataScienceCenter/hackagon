@@ -1,8 +1,4 @@
 <script lang="ts">
-    import {
-        Bell,
-        UserPlus,
-    } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
 
@@ -66,10 +62,9 @@
     </div>
 </div>
 
-<!-- Body: main + sidebar -->
+<!-- Body -->
 <div class="flex gap-6 px-4 py-8 sm:px-10 md:px-20">
 
-    <!-- Main column -->
     <div class="flex flex-1 flex-col gap-6">
 
         <!-- Your hackathons -->
@@ -137,39 +132,5 @@
                 </div>
             {/if}
         </section>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="flex w-80 shrink-0 flex-col gap-6">
-
-        <!-- Notifications -->
-        <div class="card preset-outlined-surface-200-800 overflow-hidden">
-            <div
-                class="flex h-10 items-center justify-between border-b border-surface-200-800 px-4"
-            >
-                <span class="text-sm font-semibold">Notifications</span>
-                <span class="badge-icon preset-filled-primary-500 text-xs">
-                    2
-                </span>
-            </div>
-            <div class="flex items-start gap-3 border-b border-surface-200-800 p-4">
-                <Bell class="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-500" />
-                <div class="flex flex-col gap-1">
-                    <p class="text-xs leading-snug">
-                        Project proposals are due in 5 days for ORD Hackathon 2026.
-                    </p>
-                    <span class="text-xs text-surface-500">2 hours ago</span>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-4">
-                <UserPlus class="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary-500" />
-                <div class="flex flex-col gap-1">
-                    <p class="text-xs leading-snug">
-                        You were added to Team DataFlow by Carlos.
-                    </p>
-                    <span class="text-xs text-surface-500">1 day ago</span>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
