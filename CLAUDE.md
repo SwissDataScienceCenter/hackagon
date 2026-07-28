@@ -186,9 +186,13 @@ Read path (Get/List) for every listed service, then mutations, then voting:
 
 ## Runtime status
 
-- `main.go` registers `HealthService`, `UserService`, `HackathonService`
-  (`List` + `Get` implemented). Other `hackathon.*` services
-  (Page/Phase/Project/Team/Track) have proto contracts but are UNIMPLEMENTED at
+- Services are registered in `internal/service/server.go` (not `main.go`).
+  Registered and implemented: `HealthService`, `UserService` (`List`,
+  `WhoAmI`, `Register`), `HackathonService` (`List`, `Get`), `PageService`
+  (full CRUD + `MoveUp`/`MoveDown`/`SetOrder`), `PhaseService` (full CRUD),
+  `TrackService` (`List`/`Get` only — no Create/Edit/Delete protos yet).
+- `ProjectService` and `TeamService` are NOT registered in `server.go` yet,
+  even though some of their handlers/protos exist — still UNIMPLEMENTED at
   runtime.
 
 ## Frontend route → backend pattern
