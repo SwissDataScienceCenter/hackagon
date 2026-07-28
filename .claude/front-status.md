@@ -1,21 +1,26 @@
 # Frontend wiring status — real backend data vs. fake data
 
-Branch: `feat/frontend-add-admin-section` · Date: 2026-07-28
+Branch: `feat/frontend` · Last checked: 2026-07-28 (after rebase on `main`)
 
 Route-by-route: does this page's `load` function call a real gRPC method and
 render what comes back, or is the content hardcoded in the `.svelte` file
 regardless of what's in the database?
 
-**Correction (2026-07-28, after digging into the Go handler):** `HackathonService.Get`
-(`components/backend/internal/service/hackathon_service.go:112-121`) already
-eager-loads `Tracks`, `Projects`, `Pages`, and `Phases` on top of `Members` —
-all fully populated at runtime today, not just proto contracts. That means
-`proposals`, the overview proposal preview, the timeline tab, and the fake
-track-category chips are wireable **right now** with zero backend work — see
-"Genuinely wireable today" below. Only `teams` and `submissions` are actually
-blocked on backend work; see [[frontend-data-wiring]] skill for the wiring
-pattern to use (own `+page.server.ts`, reuse via `event.parent()`, shape
-server-side).
+**Update after rebase:** `main` picked up two new PRs since this doc was last
+written — `feat/hackathon-join-pages-svc` and `feat/phase-svc`. Backend
+runtime now registers `PageService` and `PhaseService` in addition to
+`Health`/`User`/`Hackathon` (`components/backend/internal/service/server.go:64-75`),
+and `HackathonService` gained `Join`, `ApproveParticipant`, `RemoveParticipant`
+handlers (`hackathon_service.go`). `ProjectService`, `TeamService`, and
+`TrackService` are still **not** registered — no handler files exist for them
+under `internal/service/`. See [[frontend-data-wiring]] skill for the wiring
+pattern to use (own `+page.server.ts`, reuse parent data via `event.parent()`,
+shape server-side).
+
+**Frontend gap introduced by this:** `src/lib/server/grpc/client.ts`'s
+`AuthorizedGrpc` still only exposes `user`, `health`, `hackathon` — `page` and
+`phase` clients need to be added there before any route can call them,
+even though the backend is ready.
 
 ## ✅ Fully wired — real gRPC call, renders the response
 
@@ -33,20 +38,23 @@ server-side).
 |---|---|---|---|
 | `.../overview` | `overview/+page.svelte` | "About" section (`data.hackathon.description`, inherited from the layout — but this route still has **no `+page.server.ts` of its own**, unlike `participants` now) | `ParticipationCard` (team name "Bishorn", role, project name — all hardcoded props), the two listed proposals + "16 proposals" / "9" / "7" counts (real data — `hackathon.projects` — sits unused right next to it), `HackathonSidebar` `isAdmin={false}` (hardcoded, never reads the caller's real role) |
 
-## Genuinely wireable today — real data already returned by `Get`, currently unused
+## Genuinely wireable today — no backend work needed
 
-| Route | Real field (from `hackathon.get()`) | Notes |
+| Route/feature | Real data available | Notes |
 |---|---|---|
-| `.../proposals` + overview's proposal preview | `hackathon.projects` — `id, title, description, status (ProjectStatus enum), image, trackId` | `ProjectService`'s own CRUD RPCs (`Propose`/`Approve`/`Edit`/`Delete`) are still unregistered, but the *read* path doesn't need them — `Get` already returns the full list. |
-| `.../timeline` | `hackathon.phases` — `id, name, description, startsAt, endsAt` | The layout already derives a trimmed `{name, status}` for the phase bar from this same data; the dedicated tab could show the fuller phase info that's currently discarded. |
+| Dashboard "Join" button | `HackathonService.Join({hackathonId})` — **live now** | Currently `alert('Join: not yet implemented')` in `DashboardView.svelte`. Trivial wire — request only needs `hackathonId`, caller resolved from JWT server-side. |
+| `.../proposals` + overview's proposal preview | `hackathon.projects` (embedded in `Get`) — `id, title, description, status (ProjectStatus enum), image, trackId` | `ProjectService`'s own CRUD RPCs are still unregistered, but the *read* path doesn't need them — `Get` already returns the full list. |
+| `.../timeline` | `hackathon.phases` (embedded in `Get`) — `id, name, description, startsAt, endsAt`; alternatively the now-live `PhaseService.List`/`Get` directly | The layout already derives a trimmed `{name, status}` for the phase bar from the embedded data; the dedicated tab could show the fuller phase info that's currently discarded. `PhaseService` being registered also means phase CRUD (not just read) is now possible if an editing UI is wanted. |
 | overview's fake track chips ("DATA SCIENCE", "RESEARCH DATA INFRA") | `hackathon.tracks` | Currently hardcoded strings; real track names are sitting unused in the same response. |
+| A real "Pages"/CMS-style feature (could replace `photos` conceptually, or back the public marketing page's content) | `PageService` full CRUD — **live now** (`List`/`Get`/`Create`/`Edit`/`Delete`/`MoveUp`/`MoveDown`/`SetOrder`); `hackathon.pages` (`title`, `content`, `visible`, `order`) also already embedded in `Get` | Needs the `page` client added to `AuthorizedGrpc` first. Note: this is a text/content model, not photos — see below. |
+| Admin: approve/remove waitlisted participants | `HackathonService.ApproveParticipant({hackathonId, userId})` / `RemoveParticipant` — **live now** | No frontend surface exists for this at all yet (not even mocked) — this is a net-new capability the backend just gained, worth a decision on whether/where to expose it (e.g. an admin tab on the hackathon layout, or the `/(admin)` section). |
 
 ## ❌ Not wired, and genuinely blocked on backend work
 
 | Route | File | Notes |
 |---|---|---|
-| `.../teams` | `teams/+page.svelte` | `Hackathon` entity has **no `teams` field at all** (not eager-loaded in `Get`), and `TeamService` isn't registered in `main.go`. 9-team hardcoded array today. Needs real backend work (handler + embedding teams in `Get`, or a separate `team.list({hackathonId})` call once registered). |
+| `.../teams` | `teams/+page.svelte` | `Hackathon` entity has **no `teams` field at all** (not eager-loaded in `Get`), and `TeamService` isn't registered in `main.go` — confirmed still true after rebase. 9-team hardcoded array today. |
 | `.../submissions` | `submissions/+page.svelte` | Same: no `submissions` field on `Hackathon`, and no `SubmissionService` proto exists yet (only the DB table + entity). 5-line stub. |
 | `.../webinars` | `webinars/+page.svelte` | No backend concept anywhere. 5-line stub. |
-| `.../photos` | `photos/+page.svelte` | No "photo" concept anywhere. `hackathon.pages` (`title`, `content`, `visible`, `order` — a real lightweight CMS) exists and is unused, but that's text content, not a photo/gallery model — a conceptual mismatch, not a ready-to-wire fit. 5-line stub. |
+| `.../photos` | `photos/+page.svelte` | No "photo"/image-gallery concept anywhere. `PageService`/`hackathon.pages` is real and now fully live, but it's a title+text-content model, not images — a conceptual mismatch, not a ready-to-wire fit as-is. 5-line stub. |
 | `/hackathon/[slug]` (public marketing page) | `routes/hackathon/[slug]/+page.server.ts` + `+page.svelte` | Makes **no gRPC call at all** — only checks session and redirects logged-in users to `/overview`. Could get real `name`/`dates`/`description`/`logo`/`status` via `publicHackathonClient.list({visibilityFilter: PUBLIC})` (find-by-id client-side — `ListRequest` has no id/slug filter). The richer sections (organizers, tracks, full page content) need `Get`, which per CLAUDE.md requires being a confirmed participant or admin — anonymous visitors can never get that data regardless of frontend wiring. |
