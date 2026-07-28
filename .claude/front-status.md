@@ -23,6 +23,12 @@ server-side).
 `phase` clients need to be added there before any route can call them, even
 though the backend is ready.
 
+**Update:** `page` and `phase` clients both added to `AuthorizedGrpc` in
+`client.ts` — any route can now call `page.list`/`.get`/`.create`/`.edit`/`.delete`/`.moveUp`/`.moveDown`/`.setOrder`
+and `phase.list`/`.get`/`.create`/`.edit`/`.delete` via
+`requireGrpc(event.locals.grpc).page`/`.phase`. No route calls either yet —
+this was infrastructure only, no visible feature change.
+
 ## ✅ Fully wired — real gRPC call, renders the response
 
 | Route                                                              | File                                              | Backend call                                                                                                     |
