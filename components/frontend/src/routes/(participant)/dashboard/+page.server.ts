@@ -1,6 +1,7 @@
 import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
@@ -17,5 +18,8 @@ export const load: PageServerLoad = async (event) => {
     session: event.locals.session,
     myHackathons: myResult.hackathons,
     otherHackathons: allResult.hackathons.filter((h) => !myIds.has(h.id)),
+    isGlobalAdmin:
+      event.locals.platformUser?.roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN) ??
+      false,
   }
 }
