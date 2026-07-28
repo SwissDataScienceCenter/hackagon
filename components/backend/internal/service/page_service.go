@@ -275,7 +275,21 @@ func (s *PageService) Edit(
 		return nil, status.Errorf(codes.Internal, "couldn't update page in database")
 	}
 
-	return &msgs.EditResponse{}, nil
+	// Fetch the updated page with creator and modifier
+	updated, err := s.dbClient.Page.Query().
+		Where(entpage.IDEQ(pageID)).
+		WithCreator().
+		WithModifier().
+		Only(ctx)
+	if err != nil {
+		slog.Error("query updated page", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query updated page")
+	}
+
+	entry := pageEntryFromEnt(updated, hackathonID)
+
+	return &msgs.EditResponse{Page: entry}, nil
 }
 
 func (s *PageService) Delete(

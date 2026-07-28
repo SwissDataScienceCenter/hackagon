@@ -239,7 +239,19 @@ func (s *TrackService) Edit(
 		return nil, status.Errorf(codes.Internal, "couldn't update track in database")
 	}
 
-	return &msgs.EditResponse{TrackId: trackID.String()}, nil
+	// Fetch the updated track with hackathon
+	updated, err := s.dbClient.Track.Query().
+		Where(enttrack.IDEQ(trackID)).
+		Only(ctx)
+	if err != nil {
+		slog.Error("query updated track", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query updated track")
+	}
+
+	entry := trackEntryFromEnt(updated, hackathonID)
+
+	return &msgs.EditResponse{Track: entry}, nil
 }
 
 func (s *TrackService) Delete(

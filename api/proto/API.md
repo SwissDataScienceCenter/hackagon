@@ -1637,6 +1637,11 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page | [hackathon.entities.Page](#hackathon-entities-Page) |  |  |
+
+
 
 
 
@@ -2136,6 +2141,11 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 ### EditResponse
 
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase | [hackathon.entities.Phase](#hackathon-entities-Phase) |  |  |
 
 
 
@@ -3055,7 +3065,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| track_id | [string](#string) |  |  |
+| track | [hackathon.entities.Track](#hackathon-entities-Track) |  |  |
 
 
 

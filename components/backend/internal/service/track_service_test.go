@@ -385,7 +385,7 @@ var _ = Describe("TrackService", func() {
 
 			editResp, err := trackClient.Edit(ctx, editReq)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(editResp.GetTrackId()).To(Equal(createdTrackID))
+			Expect(editResp.Track.Id).To(Equal(createdTrackID))
 
 			// Verify in database
 			t, err := dbClient.Track.Query().

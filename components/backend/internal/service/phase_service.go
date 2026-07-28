@@ -320,7 +320,22 @@ func (s *PhaseService) Edit(
 		return nil, status.Error(codes.Internal, "couldn't commit transaction")
 	}
 
-	return &msgs.EditResponse{}, nil
+	// Fetch the updated phase with creator, modifier, and linked page
+	updated, err := s.dbClient.Phase.Query().
+		Where(entphase.IDEQ(phaseID)).
+		WithCreator().
+		WithModifier().
+		WithPage().
+		Only(ctx)
+	if err != nil {
+		slog.Error("query updated phase", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query updated phase")
+	}
+
+	entry := phaseEntryFromEnt(updated, hackathonID)
+
+	return &msgs.EditResponse{Phase: entry}, nil
 }
 
 func (s *PhaseService) Delete(
