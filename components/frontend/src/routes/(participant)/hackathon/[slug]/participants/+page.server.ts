@@ -9,7 +9,6 @@ export const load: PageServerLoad = async (event) => {
     .map((m) => ({
       id: m.user!.id,
       name: m.user!.displayName || m.user!.username,
-      email: m.user!.email,
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
     }))
 
