@@ -1,7 +1,7 @@
 # Frontend wiring status — real backend data vs. fake data
 
 Branch: `feat/frontend` · Last checked: 2026-07-28 (updated same day: dashboard
-role-based entry + hackathon-admin shell)
+role-based entry + hackathon-admin shell + Join action + participant approval)
 
 Route-by-route: does this page's `load` function call a real gRPC method and
 render what comes back, or is the content hardcoded in the `.svelte` file?
@@ -11,6 +11,23 @@ server-side, no viewer-role distinctions in participant-facing pages).
 
 ## Recent changes (newest first)
 
+- `(admin)/admin/hackathon/[slug]` gained its first real mutations: a "Pending
+  participants" list (waitlisted `hackathon.members`, avatar-initials + name +
+  email + joined date) with per-row **Approve**/**Remove** buttons, wired via
+  a new `+page.server.ts` (`approve`/`remove` form actions calling
+  `HackathonService.ApproveParticipant`/`RemoveParticipant`). Each button is a
+  `<form use:enhance>` that shows an inline error on `fail()` and otherwise
+  calls `update()` so the member list refreshes in place — same pattern as
+  the Join button below. The admin overview page's stats/placeholder text are
+  unchanged otherwise.
+- Dashboard "Other hackathons" **Join** button rewired from
+  `alert('Join: not yet implemented')` to a real `<form use:enhance>` posting
+  to a new `join` action in `routes/(participant)/dashboard/+page.server.ts`,
+  which calls `HackathonService.Join({hackathonId})`. On success `update()`
+  re-runs `load`, which naturally moves the hackathon into "Your hackathons"
+  as Waitlisted (`List` with `participantId` matches waitlisted rows too, so
+  no extra backend logic was needed). Errors (hackathon not found / already
+  finished) render inline next to the button instead of an alert.
 - New route tree `(admin)/admin/hackathon/[slug]` created — a per-hackathon
   admin shell, distinct from the site-wide `(admin)/users`. `+layout.server.ts`
   calls `hackathon.get({ hackathonId: slug })` and gates entry to the caller's
@@ -88,36 +105,34 @@ server-side, no viewer-role distinctions in participant-facing pages).
 
 ## Recommended next quick win
 
-**Wire participant approval into the new admin shell.**
-`HackathonService.ApproveParticipant({hackathonId, userId})` and
-`RemoveParticipant` are both live, and `(admin)/admin/hackathon/[slug]`'s
-layout already fetches the full `hackathon.members` list (with `isWaiting`)
-via `hackathon.get()` — the pending-count stat on the placeholder page is
-computed from exactly the data this needs. This is the natural next step
-because it's the first real mutation surface for the admin shell just built,
-needs zero backend work, and has an obvious home (list waitlisted members on
-`(admin)/admin/hackathon/[slug]`, each with Approve/Remove buttons calling
-these two RPCs as SvelteKit form actions — matching the `signin`/`signout`
-action pattern, same shape the Join button below will need).
+**Wire Pages management into the admin shell.** `PageService` is full CRUD
+and already live (see Runtime status in `CLAUDE.md`), the `page` gRPC client
+was added to `AuthorizedGrpc` a while back but nothing has ever called it, and
+`(admin)/admin/hackathon/[slug]/+page.svelte` already says "Managing pages,
+phases and tracks from here is coming soon" — literally the next promise on
+that page to make good on. `hackathon.pages` (`title`, `content`, `visible`,
+`order`) is already in the layout's `hackathon.get()` response, so a first
+pass (list existing pages, create/edit/delete via `PageService`) needs no new
+data fetch, following the same form-action pattern just used for participant
+approval.
 
-**Second option: wire the Dashboard "Join" button.**
-`HackathonService.Join({hackathonId})` is live, takes only `hackathonId`
-(caller resolved from the JWT), and today it's just
-`alert('Join: not yet implemented')` in `DashboardView.svelte:52-54,127-132`.
-Same shape as above — a SvelteKit form action — just a different, unrelated
-surface (public "Other hackathons" list, not the admin shell).
+**Second option: flesh out `.../timeline`.** `hackathon.phases` (embedded in
+`Get`) has `id, name, description, startsAt, endsAt`; the layout already
+derives a trimmed `{name, status}` for the phase bar and discards the rest.
+Unlike the option above this is participant-facing, not admin, and needs no
+new mutations — just rendering data that's already fetched.
 
 ## ✅ Fully wired — real gRPC call, renders the response
 
 | Route | File | Backend call |
 |---|---|---|
 | `/` (landing) | `routes/+page.server.ts` | `publicHackathonClient.list({ visibilityFilter: PUBLIC })` (unauthenticated) |
-| `/(participant)/dashboard` | `routes/(participant)/dashboard/+page.server.ts` | `hackathon.list({ visibilityFilter: PUBLIC })` + `hackathon.list({ participantId })`, deduped client-side |
+| `/(participant)/dashboard` | `routes/(participant)/dashboard/+page.server.ts` | `hackathon.list({ visibilityFilter: PUBLIC })` + `hackathon.list({ participantId })`, deduped client-side; `join` action calls `hackathon.join({ hackathonId })` |
 | `/(participant)/hackathon/[slug]` layout (hero, phase bar, badges) | `.../[slug]/+layout.server.ts` + `+layout.svelte` | `hackathon.get({ hackathonId: slug })`; handles 403 (not a confirmed member) / 404 |
 | `.../participants` | `participants/+page.server.ts` + `+page.svelte` | reuses layout's `hackathon.get()` via `event.parent()`, maps `hackathon.members` server-side — no duplicate call |
 | `.../proposals` | `proposals/+page.server.ts` + `+page.svelte` | reuses layout's `hackathon.get()` via `event.parent()`, maps `hackathon.projects` server-side — no duplicate call |
 | `/(admin)/users` | `routes/(admin)/users/+page.server.ts` | `user.list({})` |
-| `/(admin)/admin/hackathon/[slug]` | `.../admin/hackathon/[slug]/+layout.server.ts` + `+page.svelte` | `hackathon.get({ hackathonId: slug })`; read-only stats only, no mutations yet; layout gate is Owner/global-Admin only (403 otherwise) |
+| `/(admin)/admin/hackathon/[slug]` | `.../admin/hackathon/[slug]/+layout.server.ts` + `+page.server.ts` + `+page.svelte` | `hackathon.get({ hackathonId: slug })` for stats + pending-member list; `approve`/`remove` actions call `hackathon.approveParticipant`/`removeParticipant`; layout gate is Owner/global-Admin only (403 otherwise) |
 
 ## 🟡 Partially wired — real data mixed with hardcoded content
 
@@ -129,10 +144,8 @@ surface (public "Other hackathons" list, not the admin shell).
 
 | Route/feature | Real data available | Notes |
 |---|---|---|
-| Dashboard "Join" button | `HackathonService.Join({hackathonId})` — live | See "Recommended next quick win" above. |
-| `.../timeline` | `hackathon.phases` (embedded in `Get`) — `id, name, description, startsAt, endsAt`; or `PhaseService.List`/`Get` directly | The layout already derives a trimmed `{name, status}` for the phase bar; the dedicated tab could show the fuller info that's currently discarded. |
-| A real "Pages"/CMS feature | `PageService` full CRUD — live; `hackathon.pages` (`title`, `content`, `visible`, `order`) also embedded in `Get` | `page` client now added to `AuthorizedGrpc`. Text/content model, not photos — see below. |
-| Admin: approve/remove waitlisted participants | `HackathonService.ApproveParticipant({hackathonId, userId})` / `RemoveParticipant` — live | See "Recommended next quick win" above — `/(admin)/admin/hackathon/[slug]` now exists as the surface for this; it just doesn't call these RPCs yet. |
+| `.../timeline` | `hackathon.phases` (embedded in `Get`) — `id, name, description, startsAt, endsAt`; or `PhaseService.List`/`Get` directly | See "Recommended next quick win" above. The layout already derives a trimmed `{name, status}` for the phase bar; the dedicated tab could show the fuller info that's currently discarded. |
+| A real "Pages"/CMS feature | `PageService` full CRUD — live; `hackathon.pages` (`title`, `content`, `visible`, `order`) also embedded in `Get` | See "Recommended next quick win" above. `page` client now added to `AuthorizedGrpc`. Text/content model, not photos — see below. |
 
 ## ❌ Not wired, and genuinely blocked on backend work
 
