@@ -11,7 +11,7 @@
         profileDetailsHref = '#',
     }: {
         name: string;
-        affiliation: string;
+        affiliation?: string;
         avatarUrl?: string;
         /** Job title; if omitted, first skills are shown on the role line. */
         role?: string;
@@ -71,7 +71,9 @@
                     {#if roleLine}
                         <p class="m-0 text-xs leading-snug text-surface-600-400">{roleLine}</p>
                     {/if}
-                    <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {#if affiliation}
+                        <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {/if}
                     {#if linkedinUrl}
                         <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
                         <a

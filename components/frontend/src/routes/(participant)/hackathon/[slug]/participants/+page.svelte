@@ -1,40 +1,10 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
+    import type { PageData } from './$types';
 
-    interface DemoParticipant {
-        name: string;
-        affiliation: string;
-        skills: string[];
-        role?: string;
-        linkedinUrl?: string;
-    }
-
-    const participants: DemoParticipant[] = [
-        {
-            name: 'Carlos Vivar Rios',
-            role: 'Senior Data Scientist',
-            affiliation: 'SDSC',
-            skills: ['Go', 'Kubernetes', 'Data Eng'],
-            linkedinUrl: 'https://www.linkedin.com/',
-        },
-        { name: 'Anna Müller', role: 'PhD Researcher', affiliation: 'ETH Zurich', skills: ['Python', 'ML', 'NLP'] },
-        { name: 'Sophie Dupont', affiliation: 'EPFL', skills: ['R', 'Statistics'] },
-        { name: 'Luca Bernasconi', affiliation: 'Univ. of Bern', skills: ['Python', 'Computer Vision', 'PyTorch'] },
-        {
-            name: 'Elena Rossi',
-            affiliation: 'ETH Zurich',
-            skills: ['JavaScript', 'React', 'Data Viz'],
-            linkedinUrl: 'https://www.linkedin.com/',
-        },
-        { name: 'Marc Hofmann', affiliation: 'Univ. of Zurich', skills: ['Rust', 'Systems'] },
-        { name: 'Julia Fischer', affiliation: 'EPFL', skills: ['Bioinformatics', 'Python', 'R', 'Genomics'] },
-        { name: 'Thomas Weber', affiliation: 'SDSC', skills: ['Scala', 'Spark', 'Data Eng'] },
-        { name: 'Nadia Keller', affiliation: 'ETH Zurich', skills: ['ML', 'Transformers'] },
-        { name: 'David Schmid', affiliation: 'Univ. of Bern', skills: ['Python', 'Climate Data'] },
-        { name: 'Marie Favre', affiliation: 'EPFL', skills: ['Signal Processing', 'MATLAB'] },
-        { name: 'Patrick Meier', affiliation: 'Univ. of Zurich', skills: ['NLP', 'Python', 'LLMs'] },
-    ];
+    let { data }: { data: PageData } = $props();
+    const participants = $derived(data.participants);
 
     let search = $state('');
 
@@ -42,10 +12,7 @@
         participants.filter((p) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
-            const roleStr = p.role ?? p.skills.join(' ');
-            return `${p.name} ${p.affiliation} ${roleStr} ${p.skills.join(' ')}`
-                .toLowerCase()
-                .includes(q);
+            return `${p.name} ${p.email} ${p.roleLabel}`.toLowerCase().includes(q);
         })
     );
 
@@ -73,7 +40,7 @@
                 <input
                     type="search"
                     bind:value={search}
-                    placeholder="Search participants by name, affiliation…"
+                    placeholder="Search participants by name, email…"
                     class="h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950
                            pl-9 pr-3 text-xs text-surface-950-50 placeholder:text-surface-700-300
                            focus:border-primary-500 focus:outline-none"
@@ -88,14 +55,12 @@
                 No participants match your search.
             </p>
         {:else}
-            {#each filtered as participant (participant.name)}
+            {#each filtered as participant (participant.id)}
                 <ParticipantCard
                     name={participant.name}
-                    affiliation={participant.affiliation}
-                    role={participant.role}
-                    skills={participant.skills}
-                    linkedinUrl={participant.linkedinUrl}
-                    profileDetailsHref="#participant-{encodeURIComponent(participant.name)}"
+                    affiliation={participant.email}
+                    role={participant.roleLabel}
+                    profileDetailsHref="#participant-{participant.id}"
                 />
             {/each}
         {/if}
