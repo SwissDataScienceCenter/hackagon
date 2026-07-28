@@ -477,7 +477,7 @@ func (s *HackathonService) Edit(
 	if req.Description != nil {
 		update = update.SetDescription(req.GetDescription())
 	}
-	if req.Visibility != nil && req.GetVisibility() != ents.Visibility_VISIBILITY_UNSPECIFIED {
+	if req.Visibility != nil {
 		entVis, ok := VisibilityToEnt(req.GetVisibility())
 		if !ok {
 			return nil, status.Errorf(
