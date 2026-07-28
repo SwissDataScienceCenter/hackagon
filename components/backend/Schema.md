@@ -135,7 +135,7 @@ A project proposal within a hackathon track.
 
 | Edge | Target | Relation | Inverse | Required | Description |
 |------|--------|----------|---------|----------|-------------|
-| `track` | Track | M2O | yes | yes | The track this project belongs to. |
+| `track` | Track | M2O | yes | no | The track this project belongs to (optional). |
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this project belongs to. |
 | `creator` | User | M2O | yes | yes | The user who proposed this project. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this project. |

@@ -54,6 +54,7 @@ const (
 	Page
 	Phase
 	Track
+	Project
 	Team
 	// Note: this is a dummy entry, there are no rules for users, since we only use admin checks with users.
 	// This is just here so we have something we can query on when checking admin permissions for the user table.
@@ -70,6 +71,8 @@ func (ot ObjectType) String() string {
 		return "phase"
 	case Track:
 		return "track"
+	case Project:
+		return "project"
 	case Team:
 		return "team"
 	case User:
@@ -85,6 +88,7 @@ const (
 	Read Permission = iota
 	Write
 	Create
+	Propose
 )
 
 func (p Permission) String() string {
@@ -95,6 +99,8 @@ func (p Permission) String() string {
 		return "write"
 	case Create:
 		return "create"
+	case Propose:
+		return "propose"
 	default:
 		return ""
 	}
@@ -158,6 +164,14 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "*", Track.String(), Write.String()},
 		// Owner can read owned hackathon tracks
 		{Owner.String(), "*", Track.String(), Read.String()},
+		// Owner can write owned hackathon projects
+		{Owner.String(), "*", Project.String(), Write.String()},
+		// Owner can read owned hackathon projects
+		{Owner.String(), "*", Project.String(), Read.String()},
+		// Owner can propose new projects
+		{Owner.String(), "*", Project.String(), Propose.String()},
+		// Member can propose new projects
+		{Member.String(), "*", Project.String(), Propose.String()},
 		// Member can read joined hackathon
 		{Member.String(), "*", Hackathon.String(), Read.String()},
 		// Member can read hackathon pages
@@ -166,6 +180,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Member.String(), "*", Phase.String(), Read.String()},
 		// Member can read hackathon tracks
 		{Member.String(), "*", Track.String(), Read.String()},
+		// Member can read hackathon projects
+		{Member.String(), "*", Project.String(), Read.String()},
 	}
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
