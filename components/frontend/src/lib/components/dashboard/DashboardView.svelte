@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import { enhance } from '$app/forms';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset, isOwnerRole } from '$lib/utils/hackathonStatus';
 
@@ -49,9 +50,7 @@
         return '';
     }
 
-    function joinStub() {
-        alert('Join: not yet implemented');
-    }
+    let joinErrors: Record<string, string> = $state({});
 </script>
 
 <!-- Welcome Banner -->
@@ -157,12 +156,32 @@
                                     gradTo={gradient(i).to}
                                 />
                             </div>
-                            <button
-                                onclick={joinStub}
-                                class="mr-4 btn btn-sm preset-tonal-primary shrink-0"
-                            >
-                                Join
-                            </button>
+                            <div class="mr-4 flex shrink-0 items-center gap-2">
+                                {#if joinErrors[h.id]}
+                                    <span class="text-xs text-error-500">{joinErrors[h.id]}</span>
+                                {/if}
+                                <form
+                                    method="POST"
+                                    action="?/join"
+                                    use:enhance={() => {
+                                        return async ({ result, update }) => {
+                                            if (result.type === 'failure') {
+                                                joinErrors[h.id] =
+                                                    (result.data as { message?: string } | undefined)
+                                                        ?.message ?? 'Could not join.';
+                                            } else {
+                                                delete joinErrors[h.id];
+                                            }
+                                            await update();
+                                        };
+                                    }}
+                                >
+                                    <input type="hidden" name="hackathonId" value={h.id} />
+                                    <button type="submit" class="btn btn-sm preset-tonal-primary">
+                                        Join
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     {/each}
                 </div>
