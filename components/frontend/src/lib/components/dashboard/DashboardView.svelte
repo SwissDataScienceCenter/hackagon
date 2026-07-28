@@ -1,6 +1,7 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
-    import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset, isOwnerRole } from '$lib/utils/hackathonStatus';
 
     interface HackathonMember {
         role: number;
@@ -24,9 +25,10 @@
         session: SessionProp | null | undefined;
         myHackathons: HackathonEntry[];
         otherHackathons: HackathonEntry[];
+        isGlobalAdmin: boolean;
     }
 
-    const { session, myHackathons, otherHackathons }: Props = $props();
+    const { session, myHackathons, otherHackathons, isGlobalAdmin }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
     const GRADIENTS = [
@@ -54,11 +56,18 @@
 
 <!-- Welcome Banner -->
 <div class="px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-1">
-        <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
-        <p class="text-sm text-surface-500">
-            You are connected to {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
-        </p>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
+            <p class="text-sm text-surface-500">
+                You are connected to {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
+            </p>
+        </div>
+        {#if isGlobalAdmin}
+            <a href={resolve('/(admin)/users')} class="btn btn-sm preset-filled-primary-500 no-underline shrink-0">
+                Site Admin
+            </a>
+        {/if}
     </div>
 </div>
 
@@ -90,9 +99,36 @@
                                 />
                             </div>
                             {#if mem}
-                                <span class="mr-4 badge {membershipBadgePreset(mem.isWaiting)} shrink-0">
-                                    {membershipBadgeLabel(mem.isWaiting, mem.role)}
-                                </span>
+                                <div class="mr-4 flex shrink-0 items-center gap-3">
+                                    <span class="badge {membershipBadgePreset(mem.isWaiting)}">
+                                        {membershipBadgeLabel(mem.isWaiting, mem.role)}
+                                    </span>
+                                    {#if !mem.isWaiting}
+                                        <div class="flex items-center gap-2">
+                                            {#if isOwnerRole(mem.role)}
+                                                <a
+                                                    href={resolve(`/hackathon/${h.id}/overview`)}
+                                                    class="btn btn-sm preset-outlined-primary-500 no-underline"
+                                                >
+                                                    Enter as Participant
+                                                </a>
+                                                <a
+                                                    href={resolve(`/admin/hackathon/${h.id}`)}
+                                                    class="btn btn-sm preset-filled-primary-500 no-underline"
+                                                >
+                                                    Enter as Admin
+                                                </a>
+                                            {:else}
+                                                <a
+                                                    href={resolve(`/hackathon/${h.id}/overview`)}
+                                                    class="btn btn-sm preset-filled-primary-500 no-underline"
+                                                >
+                                                    Enter
+                                                </a>
+                                            {/if}
+                                        </div>
+                                    {/if}
+                                </div>
                             {/if}
                         </div>
                     {/each}
