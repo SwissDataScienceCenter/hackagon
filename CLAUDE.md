@@ -14,6 +14,13 @@ Before making changes:
 4. Make focused, single-purpose commits.
 5. Show the diff + commit message, wait for approval before committing.
 
+**Frontend exception:** for `components/frontend/` work, skip steps 3 and 5 —
+the user drives in small, single-focused steps (one change described at a
+time), implement just that change, then stop; don't batch multiple asks
+together or proactively continue to the next logical step. The user writes
+and makes commits themselves — don't draft or propose a commit message for
+frontend changes unless asked.
+
 ## Repo layout
 
 ```
