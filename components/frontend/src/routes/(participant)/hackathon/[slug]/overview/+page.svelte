@@ -4,6 +4,15 @@
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
+
+    const projects = $derived(data.hackathon.projects);
+    const previewProposals = $derived(projects.slice(0, 2));
+    const trackCounts = $derived(
+        data.hackathon.tracks.map((t) => ({
+            name: t.name,
+            count: projects.filter((p) => p.trackId === t.id).length,
+        }))
+    );
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20 lg:flex-row lg:items-start">
@@ -32,29 +41,30 @@
         <div class="card preset-outlined-surface-200-800 p-5">
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-base font-bold">Project Proposals</h2>
-                <span class="text-xs text-surface-500">16 proposals</span>
+                <span class="text-xs text-surface-500">{projects.length} proposals</span>
             </div>
 
-            <div class="mb-4 flex gap-3">
-                <div class="flex flex-1 flex-col gap-1 bg-primary-500/5 p-3 dark:bg-primary-950">
-                    <span class="text-xs font-bold text-primary-700-300">DATA SCIENCE</span>
-                    <span class="text-xs text-surface-500">9 proposals</span>
+            {#if trackCounts.length > 0}
+                <div class="mb-4 flex gap-3">
+                    {#each trackCounts as track (track.name)}
+                        <div class="flex flex-1 flex-col gap-1 bg-primary-500/5 p-3 dark:bg-primary-950">
+                            <span class="text-xs font-bold text-primary-700-300">{track.name.toUpperCase()}</span>
+                            <span class="text-xs text-surface-500">{track.count} proposals</span>
+                        </div>
+                    {/each}
                 </div>
-                <div class="flex flex-1 flex-col gap-1 bg-secondary-500/5 p-3 dark:bg-secondary-950">
-                    <span class="text-xs font-bold text-secondary-700-300">RESEARCH DATA INFRA</span>
-                    <span class="text-xs text-surface-500">7 proposals</span>
-                </div>
-            </div>
+            {/if}
 
-            {#each [
-                { num: 16, title: 'Embedding of Pharmacokinetic Equations', desc: 'In pharma and biotech, ODEs often follow repetitive patterns...' },
-                { num: 15, title: 'Automatic extraction of data from literature', desc: 'Have you ever been frustrated by having to copy data...' },
-            ] as proposal (proposal.num)}
+            {#each previewProposals as proposal, i (proposal.id)}
                 <div class="flex items-center gap-3 border-t border-surface-200-800 py-3">
-                    <div class="h-12 w-12 shrink-0 bg-surface-100-900"></div>
+                    {#if proposal.image}
+                        <img src={proposal.image} alt="" class="h-12 w-12 shrink-0 rounded object-cover" />
+                    {:else}
+                        <div class="h-12 w-12 shrink-0 bg-surface-100-900"></div>
+                    {/if}
                     <div class="flex flex-1 flex-col gap-0.5">
-                        <span class="text-xs font-semibold">{proposal.num}. {proposal.title}</span>
-                        <span class="text-xs text-surface-500">{proposal.desc}</span>
+                        <span class="text-xs font-semibold">{i + 1}. {proposal.title}</span>
+                        <span class="text-xs text-surface-500">{proposal.description}</span>
                     </div>
                     <a href="#" class="btn btn-sm preset-tonal-surface no-underline">More Info</a>
                 </div>
@@ -64,7 +74,7 @@
                 href="#proposals"
                 class="mt-2 block text-center text-xs font-semibold text-primary-700-300 no-underline hover:underline"
             >
-                View all 16 proposals →
+                View all {projects.length} proposals →
             </a>
         </div>
     </div>
