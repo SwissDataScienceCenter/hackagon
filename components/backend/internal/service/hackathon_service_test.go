@@ -646,6 +646,318 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
+	Describe("Edit", func() {
+		var createdHackathonID string
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createReq := &msgs.CreateRequest{
+				Name:        "Edit Test Hackathon",
+				Description: testutils.StringPtr("Original description"),
+				Visibility:  entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(createResp.GetHackathonId()).NotTo(BeEmpty())
+			createdHackathonID = createResp.GetHackathonId()
+		})
+
+		It("allows admin to edit hackathon fields", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			newName := "Updated Hackathon Name"
+			newDesc := testutils.StringPtr("Updated description")
+			newVis := entities.Visibility_VISIBILITY_PRIVATE
+
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Name:        testutils.StringPtr(newName),
+				Description: newDesc,
+				Visibility:  &newVis,
+			}
+
+			editResp, err := client.Edit(ctx, editReq)
+			Expect(err).NotTo(HaveOccurred())
+			h := editResp.GetHackathon()
+			Expect(h.GetId()).To(Equal(createdHackathonID))
+			Expect(h.GetName()).To(Equal(newName))
+			Expect(h.GetDescription()).To(Equal(*newDesc))
+			Expect(h.GetVisibility()).To(Equal(newVis))
+
+			// Verify in database
+			var h2 *ent.Hackathon
+			h2, err = dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h2.Name).To(Equal(newName))
+			Expect(h2.Visibility).To(Equal(enthackathon.VisibilityPrivate))
+		})
+
+		It("allows partial updates (only provided fields)", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Only update name, keep other fields as-is
+			newName := "Partially Updated"
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Name:        &newName,
+			}
+
+			editResp, err := client.Edit(ctx, editReq)
+			Expect(err).NotTo(HaveOccurred())
+			h := editResp.GetHackathon()
+			Expect(h.GetName()).To(Equal(newName))
+			// Original description should be preserved
+			Expect(h.GetDescription()).To(Equal("Original description"))
+			Expect(h.GetVisibility()).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			editReq := &msgs.EditRequest{
+				HackathonId: uuid.NewString(),
+				Name:        testutils.StringPtr("Should fail"),
+			}
+
+			_, err := client.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Write permission to edit", func() {
+			// Use a user who is not an owner/organizer
+			nonOwnerKeycloakID := "non-owner-edit"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-edit-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Name:        testutils.StringPtr("Unauthorized edit"),
+			}
+
+			_, err = client.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("validates starts_at/ends_at constraint", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			// ends_at before starts_at - should fail validation
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				StartsAt:    timestamppb.New(now.Add(48 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(24 * time.Hour)),
+			}
+
+			_, err := client.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			// Validation error should be returned
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("denies anonymous users from editing", func() {
+			// Anonymous user has read permission on public hackathons but not write
+			ctx := context.Background()
+
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Name:        testutils.StringPtr("Anonymous edit"),
+			}
+
+			_, err := client.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("allows editing timestamps", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			newStartsAt := now.Add(72 * time.Hour)
+			newEndsAt := now.Add(120 * time.Hour)
+
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				StartsAt:    timestamppb.New(newStartsAt),
+				EndsAt:      timestamppb.New(newEndsAt),
+			}
+
+			editResp, err := client.Edit(ctx, editReq)
+			Expect(err).NotTo(HaveOccurred())
+			h := editResp.GetHackathon()
+			// Compare timestamps (allowing for minor precision differences from DB)
+			Expect(h.GetStartsAt().AsTime()).To(BeTemporally("==", newStartsAt))
+			Expect(h.GetEndsAt().AsTime()).To(BeTemporally("==", newEndsAt))
+		})
+
+		It("allows editing the logo field", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			newLogo := "https://example.com/logo.png"
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Logo:        &newLogo,
+			}
+
+			editResp, err := client.Edit(ctx, editReq)
+			Expect(err).NotTo(HaveOccurred())
+			h := editResp.GetHackathon()
+			Expect(h.GetLogo()).To(Equal(newLogo))
+
+			// Verify in database
+			h2, err := dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h2.Logo).To(Equal(newLogo))
+		})
+
+		It("allows editing logo and visibility together", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			newLogo := "https://example.com/new-logo.png"
+			newVis := entities.Visibility_VISIBILITY_PRIVATE
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Logo:        &newLogo,
+				Visibility:  &newVis,
+			}
+
+			editResp, err := client.Edit(ctx, editReq)
+			Expect(err).NotTo(HaveOccurred())
+			h := editResp.GetHackathon()
+			Expect(h.GetLogo()).To(Equal(newLogo))
+			Expect(h.GetVisibility()).To(Equal(newVis))
+
+			// Verify in database
+			h2, err := dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h2.Logo).To(Equal(newLogo))
+			Expect(h2.Visibility).To(Equal(enthackathon.VisibilityPrivate))
+		})
+
+		It("allows setting logo to empty string (clearing)", func() {
+			// First set a logo
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			initialLogo := "https://example.com/initial-logo.png"
+			_, err := client.Edit(ctx, &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Logo:        &initialLogo,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Now clear the logo
+			emptyLogo := ""
+			editResp, err := client.Edit(ctx, &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Logo:        &emptyLogo,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(editResp.GetHackathon().GetLogo()).To(BeEmpty())
+		})
+
+		It("denies non-owner participant from editing", func() {
+			// Create a user who is a participant but not an owner
+			participantKeycloakID := "participant-editor"
+			participantUser, err := dbClient.User.Create().
+				SetKeycloakID(participantKeycloakID).
+				SetUsername("participant-editor-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(createdHackathonID)).
+				SetUserID(participantUser.ID).
+				SetIsWaiting(false).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(participantKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			newLogo := "https://example.com/hacked-logo.png"
+			editReq := &msgs.EditRequest{
+				HackathonId: createdHackathonID,
+				Logo:        &newLogo,
+			}
+
+			_, err = client.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
 	Describe("Authentication and RBAC", func() {
 		Describe("Create permissions", func() {
 			It("allows admin to create hackathons", func() {
