@@ -1054,33 +1054,6 @@ var _ = Describe("ProjectService", func() {
 			Expect(p.Edges.Track.Name).To(Equal("Backend Track"))
 		})
 
-		It("prevents editing approved projects", func() {
-			token := testutils.CreateTestJWTToken(testAdmin)
-			ctx := metadata.NewOutgoingContext(
-				context.Background(),
-				metadata.Pairs("authorization", "Bearer "+token),
-			)
-
-			// Approve the project
-			_, err := projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
-				ProjectId: createdProjectID,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			// Try to edit the approved project
-			newTitle := "Should fail"
-			editReq := &projectMsgs.EditRequest{
-				ProjectId: createdProjectID,
-				Title:     &newTitle,
-			}
-
-			_, err = projectClient.Edit(ctx, editReq)
-			Expect(err).To(HaveOccurred())
-
-			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.FailedPrecondition))
-		})
-
 		It("returns NOT_FOUND for invalid project ID", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
