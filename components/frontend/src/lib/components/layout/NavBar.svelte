@@ -46,12 +46,6 @@
             href={resolve('/')}
             class="text-sm text-surface-400 no-underline hover:text-primary-500"
         >
-            Challenges
-        </a>
-        <a
-            href={resolve('/')}
-            class="text-sm text-surface-400 no-underline hover:text-primary-500"
-        >
             About
         </a>
     </nav>
