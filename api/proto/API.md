@@ -1892,6 +1892,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | description | [string](#string) |  |  |
 | starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| page_id | [string](#string) | optional |  |
 
 
 
@@ -2011,10 +2012,11 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | phase_id | [string](#string) |  |  |
-| name | [string](#string) |  |  |
-| description | [string](#string) |  |  |
+| name | [string](#string) | optional |  |
+| description | [string](#string) | optional |  |
 | starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| page_id | [string](#string) | optional | Empty string = unlink (unset), non-empty string = link to this phase, not set = no change |
 
 
 

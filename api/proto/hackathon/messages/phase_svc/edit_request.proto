@@ -2,14 +2,31 @@ syntax = "proto3";
 
 package hackathon.messages.phase_svc;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/phase_svc";
 
 message EditRequest {
-  string phase_id = 1;
-  string name = 2;
-  string description = 3;
+  string phase_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [
+    (buf.validate.field).string.min_len = 3,
+    (buf.validate.field).string.max_len = 255
+  ];
+  optional string description = 3 [(buf.validate.field).string.min_len = 1];
   optional google.protobuf.Timestamp starts_at = 4;
   optional google.protobuf.Timestamp ends_at = 5;
+  // Empty string = unlink (unset), non-empty string = link to this phase, not set = no change
+  optional string page_id = 6;
+
+  option (buf.validate.message).cel = {
+    id: "starts_at_requires_ends_at"
+    message: "ends_at must be present if starts_at is present and must be after starts_at"
+    expression: "(!has(this.starts_at) && !has(this.ends_at)) || (has(this.starts_at) && has(this.ends_at) && this.ends_at >= this.starts_at)"
+  };
+  option (buf.validate.message).cel = {
+    id: "page_id_uuid"
+    message: "page_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.page_id) || this.page_id == '' || this.page_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
 }

@@ -406,9 +406,9 @@ var _ = Describe("PageService", func() {
 
 			_, err := client.Edit(ctx, &pageMsgs.EditRequest{
 				PageId:  createdPageID,
-				Title:   stringPtr("Updated Title"),
-				Content: stringPtr("Updated content"),
-				Visible: boolPtr(false),
+				Title:   testutils.StringPtr("Updated Title"),
+				Content: testutils.StringPtr("Updated content"),
+				Visible: testutils.BoolPtr(false),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -431,7 +431,7 @@ var _ = Describe("PageService", func() {
 
 			_, err := client.Edit(ctx, &pageMsgs.EditRequest{
 				PageId: createdPageID,
-				Title:  stringPtr("Partial Update"),
+				Title:  testutils.StringPtr("Partial Update"),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -453,7 +453,7 @@ var _ = Describe("PageService", func() {
 
 			_, err := client.Edit(ctx, &pageMsgs.EditRequest{
 				PageId: uuid.NewString(),
-				Title:  stringPtr("Updated"),
+				Title:  testutils.StringPtr("Updated"),
 			})
 			Expect(err).To(HaveOccurred())
 
@@ -477,7 +477,7 @@ var _ = Describe("PageService", func() {
 
 			_, err = client.Edit(ctx, &pageMsgs.EditRequest{
 				PageId: createdPageID,
-				Title:  stringPtr("Unauthorized Edit"),
+				Title:  testutils.StringPtr("Unauthorized Edit"),
 			})
 			Expect(err).To(HaveOccurred())
 
@@ -675,7 +675,7 @@ var _ = Describe("PageService", func() {
 			// Move page at index 3 ("Page D") up by 2 - should swap with index 1 ("Page B")
 			moveResp, err := client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
 				PageId:    pageIDs[3],
-				Increment: int32Ptr(2),
+				Increment: testutils.Int32Ptr(2),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(moveResp.GetPageId()).To(Equal(pageIDs[3]))
@@ -836,7 +836,7 @@ var _ = Describe("PageService", func() {
 			// Move page at index 0 ("Page A") down by 2 - should swap with index 2 ("Page C")
 			moveResp, err := client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
 				PageId:    pageIDs[0],
-				Increment: int32Ptr(2),
+				Increment: testutils.Int32Ptr(2),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(moveResp.GetPageId()).To(Equal(pageIDs[0]))
@@ -1125,16 +1125,3 @@ var _ = Describe("PageService", func() {
 	})
 
 })
-
-// Helper functions for optional fields
-func stringPtr(s string) *string {
-	return &s
-}
-
-func boolPtr(b bool) *bool {
-	return &b
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
-}
