@@ -249,6 +249,8 @@ func seedH1(
 		SetName("Machine Learning").
 		SetDescription("Projects leveraging ML models, training pipelines, and deployment infrastructure.").
 		SetHackathon(h).
+		SetCreator(alice).
+		SetModifier(alice).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track ML: %w", err)
@@ -257,6 +259,8 @@ func seedH1(
 		SetName("Natural Language Processing").
 		SetDescription("Chatbots, summarization, translation, and other language-powered applications.").
 		SetHackathon(h).
+		SetCreator(alice).
+		SetModifier(alice).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track NLP: %w", err)
@@ -265,6 +269,8 @@ func seedH1(
 		SetName("Computer Vision").
 		SetDescription("Image recognition, object detection, video analysis, and visual AI applications.").
 		SetHackathon(h).
+		SetCreator(alice).
+		SetModifier(alice).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track CV: %w", err)
@@ -494,6 +500,8 @@ func seedH2(
 		SetName("Energy").
 		SetDescription("Renewable energy generation, smart grids, energy efficiency, and storage solutions.").
 		SetHackathon(h).
+		SetCreator(admin).
+		SetModifier(admin).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track Energy: %w", err)
@@ -502,6 +510,8 @@ func seedH2(
 		SetName("Agriculture & Food").
 		SetDescription("Sustainable farming, food waste reduction, supply chain transparency, and soil health monitoring.").
 		SetHackathon(h).
+		SetCreator(admin).
+		SetModifier(admin).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track AgriFood: %w", err)
@@ -674,6 +684,8 @@ func seedH3(
 		SetName("Developer Tools").
 		SetDescription("CLI tools, IDE plugins, testing frameworks, and workflow automation.").
 		SetHackathon(h).
+		SetCreator(admin).
+		SetModifier(admin).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track DevTools: %w", err)
@@ -682,6 +694,8 @@ func seedH3(
 		SetName("Data Platform").
 		SetDescription("Data pipelines, observability, schema management, and analytics infrastructure.").
 		SetHackathon(h).
+		SetCreator(admin).
+		SetModifier(admin).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("track Data: %w", err)
