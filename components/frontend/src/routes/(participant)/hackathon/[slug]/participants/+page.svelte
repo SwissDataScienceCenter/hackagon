@@ -12,7 +12,7 @@
         participants.filter((p) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
-            return `${p.name} ${p.email} ${p.roleLabel}`.toLowerCase().includes(q);
+            return `${p.name} ${p.roleLabel}`.toLowerCase().includes(q);
         })
     );
 
@@ -57,7 +57,7 @@
                 <input
                     type="search"
                     bind:value={search}
-                    placeholder="Search participants by name, email…"
+                    placeholder="Search participants by name…"
                     class="h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950
                            pl-9 pr-3 text-xs text-surface-950-50 placeholder:text-surface-700-300
                            focus:border-primary-500 focus:outline-none"
@@ -75,9 +75,7 @@
             {#each pagedParticipants as participant (participant.id)}
                 <ParticipantCard
                     name={participant.name}
-                    affiliation={participant.email}
                     role={participant.roleLabel}
-                    profileDetailsHref="#participant-{participant.id}"
                 />
             {/each}
         {/if}
