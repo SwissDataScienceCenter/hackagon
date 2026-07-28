@@ -600,6 +600,530 @@ var _ = Describe("PageService", func() {
 		})
 	})
 
+	Describe("MoveUp", func() {
+		var createdHackathonID string
+		var pageIDs []string
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+			createHackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+				Name:       "Page MoveUp Test Hackathon",
+				Visibility: 2, // PUBLIC
+			})
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createHackResp.GetHackathonId()
+
+			// Create 4 pages
+			pageIDs = []string{}
+			for i := 0; i < 4; i++ {
+				createResp, err := client.Create(ctx, &pageMsgs.CreateRequest{
+					HackathonId: createdHackathonID,
+					Title:       "Page " + string(rune('A'+i)),
+					Content:     "Content for page " + string(rune('A'+i)),
+					Visible:     true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				pageIDs = append(pageIDs, createResp.GetPageId())
+			}
+		})
+
+		It("moves page up by one position", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Move page at index 2 ("Page C") up - should swap with index 1 ("Page B")
+			moveResp, err := client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
+				PageId: pageIDs[2],
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moveResp.GetPageId()).To(Equal(pageIDs[2]))
+			Expect(moveResp.GetOrder()).To(Equal(int32(1)))
+
+			// Verify order: A=0, C=1, B=2, D=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			Expect(pages[0].GetTitle()).To(Equal("Page A"))
+			Expect(pages[0].GetOrder()).To(Equal(int32(0)))
+			Expect(pages[1].GetTitle()).To(Equal("Page C"))
+			Expect(pages[1].GetOrder()).To(Equal(int32(1)))
+			Expect(pages[2].GetTitle()).To(Equal("Page B"))
+			Expect(pages[2].GetOrder()).To(Equal(int32(2)))
+			Expect(pages[3].GetTitle()).To(Equal("Page D"))
+			Expect(pages[3].GetOrder()).To(Equal(int32(3)))
+		})
+
+		It("moves page up by custom increment", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Move page at index 3 ("Page D") up by 2 - should swap with index 1 ("Page B")
+			moveResp, err := client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
+				PageId:    pageIDs[3],
+				Increment: int32Ptr(2),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moveResp.GetPageId()).To(Equal(pageIDs[3]))
+			Expect(moveResp.GetOrder()).To(Equal(int32(1)))
+
+			// Verify order: A=0, D=1, B=2, C=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			Expect(pages[0].GetTitle()).To(Equal("Page A"))
+			Expect(pages[1].GetTitle()).To(Equal("Page D"))
+			Expect(pages[2].GetTitle()).To(Equal("Page B"))
+			Expect(pages[3].GetTitle()).To(Equal("Page C"))
+		})
+
+		It("does nothing when page is already at top", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Move first page up - should return same order
+			moveResp, err := client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
+				PageId: pageIDs[0],
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moveResp.GetPageId()).To(Equal(pageIDs[0]))
+			Expect(moveResp.GetOrder()).To(Equal(int32(0)))
+
+			// Verify order unchanged: A=0, B=1, C=2, D=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			for i, p := range pages {
+				Expect(p.GetOrder()).To(Equal(int32(i)))
+			}
+		})
+
+		It("returns NOT_FOUND for invalid page ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
+				PageId: uuid.NewString(),
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Page.Write permission", func() {
+			nonOwnerKeycloakID := "non-owner-moveup"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-moveup-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
+				PageId: pageIDs[1],
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("MoveDown", func() {
+		var createdHackathonID string
+		var pageIDs []string
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+			createHackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+				Name:       "Page MoveDown Test Hackathon",
+				Visibility: 2, // PUBLIC
+			})
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createHackResp.GetHackathonId()
+
+			// Create 4 pages
+			pageIDs = []string{}
+			for i := 0; i < 4; i++ {
+				createResp, err := client.Create(ctx, &pageMsgs.CreateRequest{
+					HackathonId: createdHackathonID,
+					Title:       "Page " + string(rune('A'+i)),
+					Content:     "Content for page " + string(rune('A'+i)),
+					Visible:     true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				pageIDs = append(pageIDs, createResp.GetPageId())
+			}
+		})
+
+		It("moves page down by one position", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Move page at index 1 ("Page B") down - should swap with index 2 ("Page C")
+			moveResp, err := client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
+				PageId: pageIDs[1],
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moveResp.GetPageId()).To(Equal(pageIDs[1]))
+			Expect(moveResp.GetOrder()).To(Equal(int32(2)))
+
+			// Verify order: A=0, C=1, B=2, D=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			Expect(pages[0].GetTitle()).To(Equal("Page A"))
+			Expect(pages[0].GetOrder()).To(Equal(int32(0)))
+			Expect(pages[1].GetTitle()).To(Equal("Page C"))
+			Expect(pages[1].GetOrder()).To(Equal(int32(1)))
+			Expect(pages[2].GetTitle()).To(Equal("Page B"))
+			Expect(pages[2].GetOrder()).To(Equal(int32(2)))
+			Expect(pages[3].GetTitle()).To(Equal("Page D"))
+			Expect(pages[3].GetOrder()).To(Equal(int32(3)))
+		})
+
+		It("moves page down by custom increment", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Move page at index 0 ("Page A") down by 2 - should swap with index 2 ("Page C")
+			moveResp, err := client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
+				PageId:    pageIDs[0],
+				Increment: int32Ptr(2),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moveResp.GetPageId()).To(Equal(pageIDs[0]))
+			Expect(moveResp.GetOrder()).To(Equal(int32(2)))
+
+			// Verify order: B=0, C=1, A=2, D=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			Expect(pages[0].GetTitle()).To(Equal("Page B"))
+			Expect(pages[1].GetTitle()).To(Equal("Page C"))
+			Expect(pages[2].GetTitle()).To(Equal("Page A"))
+			Expect(pages[3].GetTitle()).To(Equal("Page D"))
+		})
+
+		It("does nothing when page is already at bottom", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Move last page down - should return same order
+			moveResp, err := client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
+				PageId: pageIDs[3],
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moveResp.GetPageId()).To(Equal(pageIDs[3]))
+			Expect(moveResp.GetOrder()).To(Equal(int32(3)))
+
+			// Verify order unchanged: A=0, B=1, C=2, D=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			for i, p := range pages {
+				Expect(p.GetOrder()).To(Equal(int32(i)))
+			}
+		})
+
+		It("returns NOT_FOUND for invalid page ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
+				PageId: uuid.NewString(),
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Page.Write permission", func() {
+			nonOwnerKeycloakID := "non-owner-movedown"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-movedown-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
+				PageId: pageIDs[1],
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("SetOrder", func() {
+		var createdHackathonID string
+		var pageIDs []string
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+			createHackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+				Name:       "Page SetOrder Test Hackathon",
+				Visibility: 2, // PUBLIC
+			})
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createHackResp.GetHackathonId()
+
+			// Create 4 pages
+			pageIDs = []string{}
+			for i := 0; i < 4; i++ {
+				createResp, err := client.Create(ctx, &pageMsgs.CreateRequest{
+					HackathonId: createdHackathonID,
+					Title:       "Page " + string(rune('A'+i)),
+					Content:     "Content for page " + string(rune('A'+i)),
+					Visible:     true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				pageIDs = append(pageIDs, createResp.GetPageId())
+			}
+		})
+
+		It("reorders pages to the specified order", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Reverse the order: D, C, B, A
+			reversedPageIDs := []string{pageIDs[3], pageIDs[2], pageIDs[1], pageIDs[0]}
+			_, err := client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     reversedPageIDs,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify new order
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			Expect(pages[0].GetTitle()).To(Equal("Page D"))
+			Expect(pages[0].GetOrder()).To(Equal(int32(0)))
+			Expect(pages[1].GetTitle()).To(Equal("Page C"))
+			Expect(pages[1].GetOrder()).To(Equal(int32(1)))
+			Expect(pages[2].GetTitle()).To(Equal("Page B"))
+			Expect(pages[2].GetOrder()).To(Equal(int32(2)))
+			Expect(pages[3].GetTitle()).To(Equal("Page A"))
+			Expect(pages[3].GetOrder()).To(Equal(int32(3)))
+		})
+
+		It("preserves order when passed in same sequence", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Pass pages in original order
+			_, err := client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     pageIDs,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify order unchanged: A=0, B=1, C=2, D=3
+			listResp, err := client.List(ctx, &pageMsgs.ListRequest{
+				HackathonId: createdHackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pages := listResp.GetPages()
+			Expect(pages).To(HaveLen(4))
+			for i, p := range pages {
+				Expect(p.GetOrder()).To(Equal(int32(i)))
+			}
+		})
+
+		It("returns INVALID_ARGUMENT for empty page_ids", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     []string{},
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns INVALID_ARGUMENT when not all pages are passed", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Pass only 2 of 4 pages
+			_, err := client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     pageIDs[:2],
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns INVALID_ARGUMENT for invalid page ID format", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     []string{"not-a-uuid", pageIDs[1], pageIDs[2], pageIDs[3]},
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns NOT_FOUND for page not in hackathon", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Create a page in a different hackathon
+			hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+			hack2Resp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+				Name:       "Other Hackathon",
+				Visibility: 2, // PUBLIC
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			page2Resp, err := client.Create(ctx, &pageMsgs.CreateRequest{
+				HackathonId: hack2Resp.GetHackathonId(),
+				Title:       "Other Page",
+				Content:     "Other content",
+				Visible:     true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to set order with a page from a different hackathon
+			_, err = client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     []string{page2Resp.GetPageId(), pageIDs[1], pageIDs[2], pageIDs[3]},
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("requires Page.Write permission", func() {
+			nonOwnerKeycloakID := "non-owner-setorder"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-setorder-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = client.SetOrder(ctx, &pageMsgs.SetOrderRequest{
+				HackathonId: createdHackathonID,
+				PageIds:     pageIDs,
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
 })
 
 // Helper functions for optional fields

@@ -210,6 +210,10 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
+	if h.EndsAt.Before(time.Now()) {
+		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
+	}
+
 	// First ensure user exists and get their entity ID
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {
@@ -279,7 +283,15 @@ func (s *HackathonService) ApproveParticipant(
 	}
 
 	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	userId, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).WithParticipants(
+		func(pq *ent.ParticipantQuery) {
+			pq.Where(entparticipant.UserIDEQ(userId)).WithUser()
+		},
+	).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
@@ -292,9 +304,12 @@ func (s *HackathonService) ApproveParticipant(
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
+	if len(h.Edges.Participants) == 0 {
+		return nil, status.Errorf(codes.NotFound, "Participant %s not found", userId)
+	}
 
-	// Find the user to approve by keycloak ID
-	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(req.GetUserId())).Only(ctx)
+	// Find the user to approve
+	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
@@ -349,7 +364,16 @@ func (s *HackathonService) RemoveParticipant(
 	}
 
 	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	userId, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).
+		WithParticipants(
+			func(pq *ent.ParticipantQuery) {
+				pq.Where(entparticipant.UserIDEQ(userId)).WithUser()
+			},
+		).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
@@ -362,9 +386,12 @@ func (s *HackathonService) RemoveParticipant(
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
+	if len(h.Edges.Participants) == 0 {
+		return nil, status.Errorf(codes.NotFound, "Participant %s not found", userId)
+	}
 
-	// Find the user to remove by keycloak ID
-	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(req.GetUserId())).Only(ctx)
+	// Find the user to remove
+	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())

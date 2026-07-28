@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"slices"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
@@ -41,7 +42,6 @@ func (s *PageService) List(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	// Check Page.Read permission
 	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
 		return nil, err
 	}
@@ -62,8 +62,13 @@ func (s *PageService) List(
 	}
 
 	// Query pages ordered by order field with creator and modifier
-	pages, err := s.dbClient.Page.Query().
-		Where(entpage.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+	pageQuery := s.dbClient.Page.Query().
+		Where(entpage.HasHackathonWith(enthackathon.IDEQ(hackathonID)))
+	if err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+		// user can't write pages, so we don't return hidden pages
+		pageQuery = pageQuery.Where(entpage.VisibleEQ(true))
+	}
+	pages, err := pageQuery.
 		WithCreator().
 		WithModifier().
 		Order(entpage.ByOrder()).
@@ -109,8 +114,12 @@ func (s *PageService) Get(
 
 	hackathonID := page.Edges.Hackathon.ID
 
-	// Check Page.Read permission
 	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
+		return nil, err
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil &&
+		!page.Visible {
+		// page is not visible and user does not have write permissions
 		return nil, err
 	}
 
@@ -471,12 +480,6 @@ func (s *PageService) movePages(
 		), nil
 	}
 
-	// Adjust newPos when moving down (newPos > currentPos)
-	// because we're removing from currentPos first, shifting all items between
-	if newPos > currentPos {
-		newPos--
-	}
-
 	// Remove page from current position
 	pages = append(pages[:currentPos], pages[currentPos+1:]...)
 
@@ -484,7 +487,6 @@ func (s *PageService) movePages(
 	pages = append(pages[:newPos], append([]*ent.Page{page}, pages[newPos:]...)...)
 
 	// Assign new sequential order values starting from 0 and update all pages
-	orderBase := 0
 	txn, err := s.dbClient.Tx(ctx)
 	if err != nil {
 		slog.Error("start transaction", "err", err)
@@ -492,7 +494,7 @@ func (s *PageService) movePages(
 	}
 
 	for i, p := range pages {
-		newOrder := orderBase + i
+		newOrder := i
 		_, err := txn.Page.Update().
 			Where(entpage.IDEQ(p.ID)).
 			SetOrder(newOrder).
@@ -511,7 +513,7 @@ func (s *PageService) movePages(
 
 	//nolint:gosec // there will never be enough pages for this to overflow
 	return int32(
-		orderBase + newPos,
+		newPos,
 	), nil
 }
 
@@ -560,6 +562,24 @@ func (s *PageService) SetOrder(
 	if err != nil {
 		slog.Error("query pages", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// check that all pages were specified
+	if len(pages) != len(pageIDs) {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"SetOrder requires all pages to be passed for reordering, got %d, expected %d",
+			len(pageIDs),
+			len(pages))
+	}
+
+	for _, page := range pages {
+		if !slices.Contains(pageIDs, page.ID.String()) {
+			return nil, status.Error(
+				codes.InvalidArgument,
+				"SetOrder requires all pages to be passed for reordering2",
+			)
+		}
 	}
 
 	// Build a map of page ID to page entity

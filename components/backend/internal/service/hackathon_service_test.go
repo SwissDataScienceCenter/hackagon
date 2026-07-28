@@ -435,7 +435,7 @@ var _ = Describe("HackathonService", func() {
 
 			approveReq := &msgs.ApproveParticipantRequest{
 				HackathonId: createdHackathonID,
-				UserId:      waitlistedUser.KeycloakID,
+				UserId:      waitlistedUser.ID.String(),
 			}
 
 			_, err := client.ApproveParticipant(ctx, approveReq)
@@ -459,7 +459,7 @@ var _ = Describe("HackathonService", func() {
 
 			approveReq := &msgs.ApproveParticipantRequest{
 				HackathonId: uuid.NewString(),
-				UserId:      waitlistedUser.KeycloakID,
+				UserId:      waitlistedUser.ID.String(),
 			}
 
 			_, err := client.ApproveParticipant(ctx, approveReq)
@@ -478,7 +478,7 @@ var _ = Describe("HackathonService", func() {
 
 			approveReq := &msgs.ApproveParticipantRequest{
 				HackathonId: createdHackathonID,
-				UserId:      "non-existent-user-keycloak-id",
+				UserId:      uuid.NewString(),
 			}
 
 			_, err := client.ApproveParticipant(ctx, approveReq)
@@ -565,7 +565,7 @@ var _ = Describe("HackathonService", func() {
 
 			removeReq := &msgs.RemoveParticipantRequest{
 				HackathonId: createdHackathonID,
-				UserId:      participantUser.KeycloakID,
+				UserId:      participantUser.ID.String(),
 			}
 
 			_, err := client.RemoveParticipant(ctx, removeReq)
@@ -589,7 +589,7 @@ var _ = Describe("HackathonService", func() {
 
 			removeReq := &msgs.RemoveParticipantRequest{
 				HackathonId: uuid.NewString(),
-				UserId:      participantUser.KeycloakID,
+				UserId:      participantUser.ID.String(),
 			}
 
 			_, err := client.RemoveParticipant(ctx, removeReq)
@@ -608,7 +608,7 @@ var _ = Describe("HackathonService", func() {
 
 			removeReq := &msgs.RemoveParticipantRequest{
 				HackathonId: createdHackathonID,
-				UserId:      "non-existent-user-keycloak-id",
+				UserId:      uuid.NewString(),
 			}
 
 			_, err := client.RemoveParticipant(ctx, removeReq)
