@@ -377,6 +377,134 @@ var _ = Describe("PhaseService", func() {
 			Expect(phase.Edges.Page).ToNot(BeNil())
 			Expect(phase.Edges.Page.ID).To(Equal(uuid.MustParse(page1ID)))
 		})
+
+		It("returns NOT_FOUND when linking to a non-existing page on create", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.Create(ctx, &phaseMsgs.CreateRequest{
+				HackathonId: createdHackathonID,
+				Name:        "Phase with Bad Page",
+				Description: "Should fail",
+				PageId:      testutils.StringPtr(uuid.NewString()),
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It(
+			"returns InvalidArgument when linking to a page in a different hackathon on create",
+			func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create a page in a different hackathon
+				hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+				otherHackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+					Name:       "Other Hackathon",
+					Visibility: 2, // PUBLIC
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				pageClient := hackathonSvc.NewPageServiceClient(conn)
+				otherPageResp, err := pageClient.Create(ctx, &pageMsgs.CreateRequest{
+					HackathonId: otherHackResp.GetHackathonId(),
+					Title:       "Other Page",
+					Visible:     true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.Create(ctx, &phaseMsgs.CreateRequest{
+					HackathonId: createdHackathonID,
+					Name:        "Phase with Cross-Hack Page",
+					Description: "Should fail",
+					PageId:      testutils.StringPtr(otherPageResp.GetPageId()),
+				})
+				Expect(err).To(HaveOccurred())
+
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.InvalidArgument))
+			},
+		)
+
+		It("returns NOT_FOUND when linking to a non-existing page on edit", func() {
+			// First create a phase
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createResp, err := client.Create(ctx, &phaseMsgs.CreateRequest{
+				HackathonId: createdHackathonID,
+				Name:        "Phase to Edit",
+				Description: "Phase to edit",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to link to non-existing page
+			_, err = client.Edit(ctx, &phaseMsgs.EditRequest{
+				PhaseId: createResp.GetPhaseId(),
+				PageId:  testutils.StringPtr(uuid.NewString()),
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It(
+			"returns InvalidArgument when linking to a page in a different hackathon on edit",
+			func() {
+				// First create a phase
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				createResp, err := client.Create(ctx, &phaseMsgs.CreateRequest{
+					HackathonId: createdHackathonID,
+					Name:        "Phase to Edit 2",
+					Description: "Phase to edit 2",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create a page in a different hackathon
+				hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+				otherHackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+					Name:       "Other Hackathon 2",
+					Visibility: 2, // PUBLIC
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				pageClient := hackathonSvc.NewPageServiceClient(conn)
+				otherPageResp, err := pageClient.Create(ctx, &pageMsgs.CreateRequest{
+					HackathonId: otherHackResp.GetHackathonId(),
+					Title:       "Other Page 2",
+					Visible:     true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Try to link to page from different hackathon
+				_, err = client.Edit(ctx, &phaseMsgs.EditRequest{
+					PhaseId: createResp.GetPhaseId(),
+					PageId:  testutils.StringPtr(otherPageResp.GetPageId()),
+				})
+				Expect(err).To(HaveOccurred())
+
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.InvalidArgument))
+			},
+		)
 	})
 
 	Describe("List", func() {
@@ -802,6 +930,61 @@ var _ = Describe("PhaseService", func() {
 
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("unlinks page when deleting a phase", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Create a page and link it to the phase
+			pageClient := hackathonSvc.NewPageServiceClient(conn)
+			pageResp, err := pageClient.Create(ctx, &pageMsgs.CreateRequest{
+				HackathonId: createdHackathonID,
+				Title:       "Page to Unlink",
+				Visible:     true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			pageID := pageResp.GetPageId()
+
+			// Link page to phase via Edit
+			_, err = client.Edit(ctx, &phaseMsgs.EditRequest{
+				PhaseId: createdPhaseID,
+				PageId:  testutils.StringPtr(pageID),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify page is linked to phase
+			page, err := dbClient.Page.Query().
+				Where(enpage.IDEQ(uuid.MustParse(pageID))).
+				WithPhase().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(page.Edges.Phase).ToNot(BeNil())
+			Expect(page.Edges.Phase.ID).To(Equal(uuid.MustParse(createdPhaseID)))
+
+			// Delete the phase
+			_, err = client.Delete(ctx, &phaseMsgs.DeleteRequest{
+				PhaseId: createdPhaseID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify phase was deleted
+			_, err = dbClient.Phase.Query().
+				Where(entphase.IDEQ(uuid.MustParse(createdPhaseID))).
+				Only(context.Background())
+			Expect(err).To(HaveOccurred())
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+
+			// Verify page is unlinked (phase_id cleared)
+			page, err = dbClient.Page.Query().
+				Where(enpage.IDEQ(uuid.MustParse(pageID))).
+				WithPhase().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(page.Edges.Phase).To(BeNil())
 		})
 	})
 

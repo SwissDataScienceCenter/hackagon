@@ -675,7 +675,7 @@ var _ = Describe("PageService", func() {
 			// Move page at index 3 ("Page D") up by 2 - should swap with index 1 ("Page B")
 			moveResp, err := client.MoveUp(ctx, &pageMsgs.MoveUpRequest{
 				PageId:    pageIDs[3],
-				Increment: int32Ptr(2),
+				Increment: testutils.Int32Ptr(2),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(moveResp.GetPageId()).To(Equal(pageIDs[3]))
@@ -836,7 +836,7 @@ var _ = Describe("PageService", func() {
 			// Move page at index 0 ("Page A") down by 2 - should swap with index 2 ("Page C")
 			moveResp, err := client.MoveDown(ctx, &pageMsgs.MoveDownRequest{
 				PageId:    pageIDs[0],
-				Increment: int32Ptr(2),
+				Increment: testutils.Int32Ptr(2),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(moveResp.GetPageId()).To(Equal(pageIDs[0]))
