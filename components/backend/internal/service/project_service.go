@@ -224,14 +224,37 @@ func (s *ProjectService) Approve(
 	ctx context.Context,
 	req *msgs.ApproveRequest,
 ) (*msgs.ApproveResponse, error) {
-	_, _, err := mw.RequireSubject(ctx)
+	err := s.setApproval(ctx, req.GetProjectId(), "approved")
 	if err != nil {
 		return nil, err
 	}
+	return &msgs.ApproveResponse{}, nil
+}
 
-	projectID, err := uuid.Parse(req.GetProjectId())
+func (s *ProjectService) Disapprove(
+	ctx context.Context,
+	req *msgs.DisapproveRequest,
+) (*msgs.DisapproveResponse, error) {
+	err := s.setApproval(ctx, req.GetProjectId(), "proposed")
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
+		return nil, err
+	}
+	return &msgs.DisapproveResponse{}, nil
+}
+
+func (s *ProjectService) setApproval(
+	ctx context.Context,
+	projectId string,
+	projectStatus entproject.Status,
+) error {
+	_, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return err
+	}
+
+	projectID, err := uuid.Parse(projectId)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
 	}
 
 	// Get the project to find its hackathon_id
@@ -241,32 +264,32 @@ func (s *ProjectService) Approve(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "project %s not found", req.GetProjectId())
+			return status.Errorf(codes.NotFound, "project %s not found", projectId)
 		}
 		slog.Error("query project", "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't query database")
+		return status.Error(codes.Internal, "couldn't query database")
 	}
 
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check Project.Write permission
 	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write); err != nil {
-		return nil, err
+		return err
 	}
 
-	// Update the project status to "approved"
+	// Update the project status to "proposed"
 	_, err = s.dbClient.Project.Update().
 		Where(entproject.IDEQ(projectID)).
-		SetStatus("approved").
+		SetStatus(projectStatus).
 		Save(ctx)
 	if err != nil {
 		slog.Error("update project status", "err", err)
 
-		return nil, status.Errorf(codes.Internal, "couldn't update project status")
+		return status.Errorf(codes.Internal, "couldn't update project status")
 	}
 
-	return &msgs.ApproveResponse{}, nil
+	return nil
 }
 
 func (s *ProjectService) SetPreference(
@@ -438,16 +461,10 @@ func (s *ProjectService) Edit(
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check if user is hackathon owner (has Write permission) OR project creator
-	canEdit := false
-
-	// Check if user is an owner of the hackathon
-	ownerOK, err := s.enforcer.CheckPermission(uid, hackathonID.String(), mw.Project, mw.Write)
+	canEdit, err := s.enforcer.CheckPermission(uid, hackathonID.String(), mw.Project, mw.Write)
 	if err != nil {
 		slog.Error("check owner permission", "err", err)
 		return nil, status.Error(codes.Internal, "authorization error")
-	}
-	if ownerOK {
-		canEdit = true
 	}
 
 	// If not an owner, check if user is the project creator
@@ -510,15 +527,29 @@ func (s *ProjectService) Edit(
 		return nil, status.Errorf(codes.Internal, "couldn't update project in database")
 	}
 
-	return &msgs.EditResponse{}, nil
+	// Fetch the updated project with creator, modifier, and track
+	updated, err := s.dbClient.Project.Query().
+		Where(entproject.IDEQ(projectID)).
+		WithCreator().
+		WithModifier().
+		WithTrack().
+		Only(ctx)
+	if err != nil {
+		slog.Error("query updated project", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query updated project")
+	}
+
+	entry := projectEntryFromEnt(updated, hackathonID)
+
+	return &msgs.EditResponse{Project: entry}, nil
 }
 
-//nolint:dupl // delete for entities is very similar by its nature, but not consolidating them keeps the code simple
 func (s *ProjectService) Delete(
 	ctx context.Context,
 	req *msgs.DeleteRequest,
 ) (*msgs.DeleteResponse, error) {
-	_, _, err := mw.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -532,6 +563,7 @@ func (s *ProjectService) Delete(
 	project, err := s.dbClient.Project.Query().
 		Where(entproject.IDEQ(projectID)).
 		WithHackathon().
+		WithCreator().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -544,9 +576,22 @@ func (s *ProjectService) Delete(
 
 	hackathonID := project.Edges.Hackathon.ID
 
-	// Check Project.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write); err != nil {
-		return nil, err
+	// Check if user is hackathon owner (has Write permission) OR project creator
+	canEdit, err := s.enforcer.CheckPermission(uid, hackathonID.String(), mw.Project, mw.Write)
+	if err != nil {
+		slog.Error("check owner permission", "err", err)
+		return nil, status.Error(codes.Internal, "authorization error")
+	}
+
+	// If not an owner, check if user is the project creator
+	if !canEdit {
+		if project.Edges.Creator.KeycloakID == uid {
+			canEdit = true
+		}
+	}
+
+	if !canEdit {
+		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 
 	// Delete the project

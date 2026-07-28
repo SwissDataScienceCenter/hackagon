@@ -6,6 +6,8 @@ import "hackathon/messages/project_svc/approve_request.proto";
 import "hackathon/messages/project_svc/approve_response.proto";
 import "hackathon/messages/project_svc/delete_request.proto";
 import "hackathon/messages/project_svc/delete_response.proto";
+import "hackathon/messages/project_svc/disapprove_request.proto";
+import "hackathon/messages/project_svc/disapprove_response.proto";
 import "hackathon/messages/project_svc/edit_request.proto";
 import "hackathon/messages/project_svc/edit_response.proto";
 import "hackathon/messages/project_svc/export_preferences_request.proto";
@@ -26,6 +28,7 @@ service ProjectService {
   rpc Get(hackathon.messages.project_svc.GetRequest) returns (hackathon.messages.project_svc.GetResponse);
   rpc Propose(hackathon.messages.project_svc.ProposeRequest) returns (hackathon.messages.project_svc.ProposeResponse);
   rpc Approve(hackathon.messages.project_svc.ApproveRequest) returns (hackathon.messages.project_svc.ApproveResponse);
+  rpc Disapprove(hackathon.messages.project_svc.DisapproveRequest) returns (hackathon.messages.project_svc.DisapproveResponse);
   rpc SetPreference(hackathon.messages.project_svc.SetPreferenceRequest) returns (hackathon.messages.project_svc.SetPreferenceResponse);
   rpc ExportPreferences(hackathon.messages.project_svc.ExportPreferencesRequest) returns (hackathon.messages.project_svc.ExportPreferencesResponse);
   rpc Edit(hackathon.messages.project_svc.EditRequest) returns (hackathon.messages.project_svc.EditResponse);

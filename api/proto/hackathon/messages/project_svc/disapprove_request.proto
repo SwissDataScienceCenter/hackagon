@@ -2,10 +2,8 @@ syntax = "proto3";
 
 package hackathon.messages.project_svc;
 
-import "hackathon/entities/project.proto";
-
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/project_svc";
 
-message EditResponse {
-  hackathon.entities.Project project = 1;
+message DisapproveRequest {
+  string project_id = 1;
 }

@@ -1054,6 +1054,33 @@ var _ = Describe("ProjectService", func() {
 			Expect(p.Edges.Track.Name).To(Equal("Backend Track"))
 		})
 
+		It("prevents editing approved projects", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Approve the project
+			_, err := projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: createdProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to edit the approved project
+			newTitle := "Should fail"
+			editReq := &projectMsgs.EditRequest{
+				ProjectId: createdProjectID,
+				Title:     &newTitle,
+			}
+
+			_, err = projectClient.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+		})
+
 		It("returns NOT_FOUND for invalid project ID", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
@@ -1094,6 +1121,106 @@ var _ = Describe("ProjectService", func() {
 			}
 
 			_, err = projectClient.Edit(ctx, editReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("Disapprove", func() {
+		var createdProjectID string
+		var hackathonID string
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:        "Disapprove Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+
+			// Create a project and approve it
+			projectResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       "Disapprove Test Project",
+				Description: "Project to be disapproved",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			createdProjectID = projectResp.GetProjectId()
+
+			// Approve the project
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: createdProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("allows owner to disapprove a project", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := projectClient.Disapprove(ctx, &projectMsgs.DisapproveRequest{
+				ProjectId: createdProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify status is back to proposed
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(createdProjectID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Status).To(Equal(entproject.StatusProposed))
+		})
+
+		It("returns NOT_FOUND for invalid project ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := projectClient.Disapprove(ctx, &projectMsgs.DisapproveRequest{
+				ProjectId: uuid.NewString(),
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Write permission to disapprove", func() {
+			// Use a user who is not an owner/organizer
+			nonAdminKeycloakID := "non-admin-disapprove"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonAdminKeycloakID).
+				SetUsername("non-admin-disapprove-user").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = projectClient.Disapprove(ctx, &projectMsgs.DisapproveRequest{
+				ProjectId: createdProjectID,
+			})
 			Expect(err).To(HaveOccurred())
 
 			st := status.Convert(err)
@@ -1151,6 +1278,52 @@ var _ = Describe("ProjectService", func() {
 			// Verify project was deleted
 			_, err = dbClient.Project.Query().
 				Where(entproject.IDEQ(uuid.MustParse(createdProjectID))).
+				Only(context.Background())
+			Expect(err).To(HaveOccurred())
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("allows creator to delete their project", func() {
+			// Create a user who will be the project creator
+			creatorID := "project-deleter-user"
+			creatorUser, err := dbClient.User.Create().
+				SetKeycloakID(creatorID).
+				SetUsername("deleter-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create project directly in DB with creator user
+			now := time.Now()
+			creatorProject, err := dbClient.Project.Create().
+				SetHackathonID(uuid.MustParse(hackathonID)).
+				SetTitle("Creator's Deletable Project").
+				SetDescription("Creator's description").
+				SetStatus("proposed").
+				SetCreator(creatorUser).
+				SetModifier(creatorUser).
+				SetCreatedAt(now).
+				SetModifiedAt(now).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			creatorProjectID := creatorProject.ID
+
+			// Creator deletes their own project
+			creatorToken := testutils.CreateTestJWTToken(creatorID)
+			creatorCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+creatorToken),
+			)
+
+			deleteReq := &projectMsgs.DeleteRequest{
+				ProjectId: creatorProjectID.String(),
+			}
+
+			_, err = projectClient.Delete(creatorCtx, deleteReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify project was deleted
+			_, err = dbClient.Project.Query().
+				Where(entproject.IDEQ(creatorProjectID)).
 				Only(context.Background())
 			Expect(err).To(HaveOccurred())
 			Expect(ent.IsNotFound(err)).To(BeTrue())
