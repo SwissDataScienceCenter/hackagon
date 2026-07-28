@@ -51,6 +51,7 @@ type ObjectType int
 
 const (
 	Hackathon ObjectType = iota
+	Page
 	Team
 	// Note: this is a dummy entry, there are no rules for users, since we only use admin checks with users.
 	// This is just here so we have something we can query on when checking admin permissions for the user table.
@@ -61,6 +62,8 @@ func (ot ObjectType) String() string {
 	switch ot {
 	case Hackathon:
 		return "hackathon"
+	case Page:
+		return "page"
 	case Team:
 		return "team"
 	case User:
@@ -137,8 +140,14 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "*", Hackathon.String(), Read.String()},
 		// Owner can write owned hackathon
 		{Owner.String(), "*", Hackathon.String(), Write.String()},
+		// Owner can write owned hackathon pages
+		{Owner.String(), "*", Page.String(), Write.String()},
+		// Owner can write owned hackathon pages
+		{Owner.String(), "*", Page.String(), Read.String()},
 		// Member can read joined hackathon
 		{Member.String(), "*", Hackathon.String(), Read.String()},
+		// Owner can write owned hackathon pages
+		{Member.String(), "*", Page.String(), Read.String()},
 	}
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)

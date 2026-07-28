@@ -54,6 +54,12 @@
 - [hackathon/messages/hackathon_svc/add_owner_response.proto](#hackathon_messages_hackathon_svc_add_owner_response-proto)
     - [AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse)
   
+- [hackathon/messages/hackathon_svc/approve_participant_request.proto](#hackathon_messages_hackathon_svc_approve_participant_request-proto)
+    - [ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest)
+  
+- [hackathon/messages/hackathon_svc/approve_participant_response.proto](#hackathon_messages_hackathon_svc_approve_participant_response-proto)
+    - [ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse)
+  
 - [hackathon/messages/hackathon_svc/create_request.proto](#hackathon_messages_hackathon_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest)
   
@@ -122,6 +128,24 @@
   
 - [hackathon/messages/page_svc/list_response.proto](#hackathon_messages_page_svc_list_response-proto)
     - [ListResponse](#hackathon-messages-page_svc-ListResponse)
+  
+- [hackathon/messages/page_svc/move_down_request.proto](#hackathon_messages_page_svc_move_down_request-proto)
+    - [MoveDownRequest](#hackathon-messages-page_svc-MoveDownRequest)
+  
+- [hackathon/messages/page_svc/move_down_response.proto](#hackathon_messages_page_svc_move_down_response-proto)
+    - [MoveDownResponse](#hackathon-messages-page_svc-MoveDownResponse)
+  
+- [hackathon/messages/page_svc/move_up_request.proto](#hackathon_messages_page_svc_move_up_request-proto)
+    - [MoveUpRequest](#hackathon-messages-page_svc-MoveUpRequest)
+  
+- [hackathon/messages/page_svc/move_up_response.proto](#hackathon_messages_page_svc_move_up_response-proto)
+    - [MoveUpResponse](#hackathon-messages-page_svc-MoveUpResponse)
+  
+- [hackathon/messages/page_svc/set_order_request.proto](#hackathon_messages_page_svc_set_order_request-proto)
+    - [SetOrderRequest](#hackathon-messages-page_svc-SetOrderRequest)
+  
+- [hackathon/messages/page_svc/set_order_response.proto](#hackathon_messages_page_svc_set_order_response-proto)
+    - [SetOrderResponse](#hackathon-messages-page_svc-SetOrderResponse)
   
 - [hackathon/messages/phase_svc/create_request.proto](#hackathon_messages_phase_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-phase_svc-CreateRequest)
@@ -888,6 +912,64 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_approve_participant_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/approve_participant_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ApproveParticipantRequest"></a>
+
+### ApproveParticipantRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_approve_participant_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/approve_participant_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ApproveParticipantResponse"></a>
+
+### ApproveParticipantResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1284,6 +1366,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Get | [messages.hackathon_svc.GetRequest](#hackathon-messages-hackathon_svc-GetRequest) | [messages.hackathon_svc.GetResponse](#hackathon-messages-hackathon_svc-GetResponse) |  |
 | Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
+| ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
 | AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
 | RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
@@ -1310,8 +1393,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | hackathon_id | [string](#string) |  |  |
 | title | [string](#string) |  |  |
 | content | [string](#string) |  |  |
-| visible | [bool](#bool) |  |  |
-| order | [int32](#int32) |  |  |
+| visible | [bool](#bool) |  | order is automatically assigned by backend (max(order) &#43; 1) |
 
 
 
@@ -1431,10 +1513,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | page_id | [string](#string) |  |  |
-| title | [string](#string) |  |  |
-| content | [string](#string) |  |  |
-| visible | [bool](#bool) |  |  |
-| order | [int32](#int32) |  |  |
+| title | [string](#string) | optional |  |
+| content | [string](#string) | optional |  |
+| visible | [bool](#bool) | optional | order should not be modified here - use MoveUp/MoveDown/SetOrder instead |
 
 
 
@@ -1585,6 +1666,197 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | pages | [hackathon.entities.Page](#hackathon-entities-Page) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_move_down_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/move_down_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-MoveDownRequest"></a>
+
+### MoveDownRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+| increment | [int32](#int32) | optional | Number of positions to move down (default: 1) Must be &gt;= 1 |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_move_down_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/move_down_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-MoveDownResponse"></a>
+
+### MoveDownResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+| order | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_move_up_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/move_up_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-MoveUpRequest"></a>
+
+### MoveUpRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+| increment | [int32](#int32) | optional | Number of positions to move up (default: 1) Must be &gt;= 1 |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_move_up_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/move_up_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-MoveUpResponse"></a>
+
+### MoveUpResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_id | [string](#string) |  |  |
+| order | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_set_order_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/set_order_request.proto
+
+
+
+<a name="hackathon-messages-page_svc-SetOrderRequest"></a>
+
+### SetOrderRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| page_ids | [string](#string) | repeated | List of page IDs in the desired order |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_page_svc_set_order_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/page_svc/set_order_response.proto
+
+
+
+<a name="hackathon-messages-page_svc-SetOrderResponse"></a>
+
+### SetOrderResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_ids | [string](#string) | repeated |  |
 
 
 
@@ -2668,6 +2940,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Create | [messages.page_svc.CreateRequest](#hackathon-messages-page_svc-CreateRequest) | [messages.page_svc.CreateResponse](#hackathon-messages-page_svc-CreateResponse) |  |
 | Edit | [messages.page_svc.EditRequest](#hackathon-messages-page_svc-EditRequest) | [messages.page_svc.EditResponse](#hackathon-messages-page_svc-EditResponse) |  |
 | Delete | [messages.page_svc.DeleteRequest](#hackathon-messages-page_svc-DeleteRequest) | [messages.page_svc.DeleteResponse](#hackathon-messages-page_svc-DeleteResponse) |  |
+| MoveUp | [messages.page_svc.MoveUpRequest](#hackathon-messages-page_svc-MoveUpRequest) | [messages.page_svc.MoveUpResponse](#hackathon-messages-page_svc-MoveUpResponse) | Reordering methods - backend manages order uniqueness |
+| MoveDown | [messages.page_svc.MoveDownRequest](#hackathon-messages-page_svc-MoveDownRequest) | [messages.page_svc.MoveDownResponse](#hackathon-messages-page_svc-MoveDownResponse) |  |
+| SetOrder | [messages.page_svc.SetOrderRequest](#hackathon-messages-page_svc-SetOrderRequest) | [messages.page_svc.SetOrderResponse](#hackathon-messages-page_svc-SetOrderResponse) |  |
 
  
 

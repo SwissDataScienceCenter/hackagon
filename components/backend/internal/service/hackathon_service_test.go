@@ -18,6 +18,7 @@ import (
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -240,6 +241,408 @@ var _ = Describe("HackathonService", func() {
 
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+	})
+
+	Describe("Join", func() {
+		var createdHackathonID string
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createReq := &msgs.CreateRequest{
+				Name:       "Join Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(createResp.GetHackathonId()).NotTo(BeEmpty())
+			createdHackathonID = createResp.GetHackathonId()
+		})
+
+		It("allows authorized user to join hackathon", func() {
+			// Create a non-admin test user
+			nonAdminKeycloakID := "non-admin"
+			token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// First ensure user exists in DB
+			user, err := dbClient.User.Create().
+				SetKeycloakID(nonAdminKeycloakID).
+				SetUsername("test-join-user").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Join the hackathon
+			joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+			joinResp, err := client.Join(ctx, joinReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(joinResp.GetHackathonId()).To(Equal(createdHackathonID))
+
+			// Verify participant was created with is_waiting=true
+			participant, err := dbClient.Participant.Query().Where(
+				entparticipant.HackathonIDEQ(uuid.MustParse(createdHackathonID)),
+				entparticipant.UserIDEQ(user.ID),
+			).Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(participant.IsWaiting).To(BeTrue(), "participant should be waitlisted")
+		})
+
+		It("returns success if user already joined (idempotent)", func() {
+			nonAdminKeycloakID := "non-admin"
+			token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Ensure user exists in DB
+			user, err := dbClient.User.Create().
+				SetKeycloakID(nonAdminKeycloakID).
+				SetUsername("test-join-user-2").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Join first time
+			joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+			_, err = client.Join(ctx, joinReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Join again - should succeed without error
+			joinResp, err := client.Join(ctx, joinReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(joinResp.GetHackathonId()).To(Equal(createdHackathonID))
+
+			// Verify participant exists
+			participant, err := dbClient.Participant.Query().Where(
+				entparticipant.HackathonIDEQ(uuid.MustParse(createdHackathonID)),
+				entparticipant.UserIDEQ(user.ID),
+			).Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(participant.IsWaiting).To(BeTrue())
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			joinReq := &msgs.JoinRequest{HackathonId: uuid.NewString()}
+			_, err := client.Join(ctx, joinReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for non-existent user", func() {
+			// Use a Keycloak ID that doesn't exist in DB
+			nonExistentKeycloakID := "non-existent"
+			token := testutils.CreateTestJWTToken(nonExistentKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+			_, err := client.Join(ctx, joinReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires authentication to join", func() {
+			// First create user as admin to simulate sync
+			anonKeycloakID := "anonymous"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(anonKeycloakID).
+				SetUsername("anonymous-joiner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Join without auth header - should fail due to missing auth
+			ctx := context.Background()
+			joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+			joinResp, err := client.Join(ctx, joinReq)
+			Expect(err).To(HaveOccurred())
+			Expect(joinResp).To(BeNil())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.Unauthenticated))
+		})
+	})
+
+	Describe("ApproveParticipant", func() {
+		var createdHackathonID string
+		var waitlistedUser *ent.User
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createReq := &msgs.CreateRequest{
+				Name:       "Approve Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+
+			// Create a waitlisted user and participant
+			waitlistedUser, err = dbClient.User.Create().
+				SetKeycloakID("approve-test-user").
+				SetUsername("approve-test-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(createdHackathonID)).
+				SetUserID(waitlistedUser.ID).
+				SetIsWaiting(true).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("allows owner to approve a pending participant", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			approveReq := &msgs.ApproveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      waitlistedUser.ID.String(),
+			}
+
+			_, err := client.ApproveParticipant(ctx, approveReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify participant was updated with is_waiting=false
+			participant, err := dbClient.Participant.Query().Where(
+				entparticipant.HackathonIDEQ(uuid.MustParse(createdHackathonID)),
+				entparticipant.UserID(waitlistedUser.ID),
+			).Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(participant.IsWaiting).To(BeFalse(), "participant should be approved")
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			approveReq := &msgs.ApproveParticipantRequest{
+				HackathonId: uuid.NewString(),
+				UserId:      waitlistedUser.ID.String(),
+			}
+
+			_, err := client.ApproveParticipant(ctx, approveReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for non-existent user to approve", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			approveReq := &msgs.ApproveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      uuid.NewString(),
+			}
+
+			_, err := client.ApproveParticipant(ctx, approveReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Write permission to approve", func() {
+			// Use a user who is not an owner/organizer
+			nonOwnerKeycloakID := "non-owner"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			approveReq := &msgs.ApproveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      waitlistedUser.KeycloakID,
+			}
+
+			_, err = client.ApproveParticipant(ctx, approveReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("RemoveParticipant", func() {
+		var createdHackathonID string
+		var participantUser *ent.User
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createReq := &msgs.CreateRequest{
+				Name:       "Remove Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+
+			// Create a participant user
+			participantUser, err = dbClient.User.Create().
+				SetKeycloakID("remove-test-user").
+				SetUsername("remove-test-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create the participant record
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(createdHackathonID)).
+				SetUserID(participantUser.ID).
+				SetIsWaiting(false).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("allows owner to remove a participant", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      participantUser.ID.String(),
+			}
+
+			_, err := client.RemoveParticipant(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify participant was deleted
+			_, err = dbClient.Participant.Query().Where(
+				entparticipant.HackathonIDEQ(uuid.MustParse(createdHackathonID)),
+				entparticipant.UserID(participantUser.ID),
+			).Only(context.Background())
+			Expect(err).To(HaveOccurred())
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveParticipantRequest{
+				HackathonId: uuid.NewString(),
+				UserId:      participantUser.ID.String(),
+			}
+
+			_, err := client.RemoveParticipant(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for non-existent user to remove", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      uuid.NewString(),
+			}
+
+			_, err := client.RemoveParticipant(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Write permission to remove", func() {
+			// Use a user who is not an owner/organizer
+			nonOwnerKeycloakID := "non-owner-remove"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-remove-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveParticipantRequest{
+				HackathonId: createdHackathonID,
+				UserId:      participantUser.KeycloakID,
+			}
+
+			_, err = client.RemoveParticipant(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
 	})
 

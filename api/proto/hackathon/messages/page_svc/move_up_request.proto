@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hackathon.messages.page_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/page_svc";
+
+message MoveUpRequest {
+  string page_id = 1 [(buf.validate.field).string.uuid = true];
+  // Number of positions to move up (default: 1)
+  // Must be >= 1
+  optional int32 increment = 2 [(buf.validate.field).int32.gte = 1];
+}
