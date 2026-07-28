@@ -19,6 +19,23 @@
     const countLabel = $derived(
         filtered.length === 1 ? '1 registered' : `${filtered.length} registered`
     );
+
+    const pageSize = 8;
+    let page = $state(1);
+
+    const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
+    const pagedParticipants = $derived(
+        filtered.slice((page - 1) * pageSize, page * pageSize)
+    );
+
+    $effect(() => {
+        void search;
+        page = 1;
+    });
+
+    $effect(() => {
+        if (page > pageCount) page = pageCount;
+    });
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -55,7 +72,7 @@
                 No participants match your search.
             </p>
         {:else}
-            {#each filtered as participant (participant.id)}
+            {#each pagedParticipants as participant (participant.id)}
                 <ParticipantCard
                     name={participant.name}
                     affiliation={participant.email}
@@ -65,4 +82,22 @@
             {/each}
         {/if}
     </div>
+
+    {#if pageCount > 1}
+        <nav class="flex w-full justify-center gap-1" aria-label="Pagination">
+            {#each Array.from({ length: pageCount }, (_, i) => i + 1) as p (p)}
+                <button
+                    type="button"
+                    onclick={() => (page = p)}
+                    class="btn btn-sm flex h-8 w-8 items-center justify-center rounded-none p-0
+                           text-xs font-semibold transition-colors
+                           {page === p ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+                    aria-label="Page {p}"
+                    aria-current={page === p ? 'page' : undefined}
+                >
+                    {p}
+                </button>
+            {/each}
+        </nav>
+    {/if}
 </div>
