@@ -35,9 +35,21 @@ export const load: PageServerLoad = async (event) => {
 ## Shape data server-side, not in the component
 
 Mapping raw entities into display-ready rows (e.g. `HackathonMember` →
-`{id, name, email, roleLabel}`) belongs in the `load` function, not in the
-`.svelte` file. The component should just render what `data` gives it (plus
-purely presentational client state like search-box filtering).
+`{id, name, roleLabel}`) belongs in the `load` function, not in the `.svelte`
+file. The component should just render what `data` gives it (plus purely
+presentational client state like search-box filtering).
+
+## Keep participant-facing pages free of viewer-role distinctions
+
+Pages under `hackathon/[slug]/*` that list hackathon data (e.g.
+`participants`) should render the same thing for every viewer — no
+admin-only fields, no admin-only actions, no `isAdmin`/role gating baked into
+them. This was tried once (an admin-only "View contact details" link +
+detail page under `participants/[userId]/`) and reverted — admin/user
+management belongs in the existing `/(admin)/users` section instead, not
+nested under a participant-facing hackathon route. If a page there is
+carrying a field or action that's only relevant to admins, move it out to
+`/(admin)/*` rather than gating it in place.
 
 ## Reference implementation
 

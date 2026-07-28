@@ -64,6 +64,15 @@ reduce payload size or query cost. A real fix (proto pagination fields + DB
 query limits) would be a larger, cross-cutting change if the data volume ever
 warrants it.
 
+**Guideline:** keep the per-hackathon `participants` list free of any
+viewer-role distinction (no admin-only actions, no admin-only fields) — it's
+plain, uniform data for every viewer. Admin-facing user management belongs in
+the existing `/(admin)/users` section instead, not in a page nested under
+`hackathon/[slug]/participants/`. (An admin-gated contact-details detail page
+was tried under `participants/[userId]/` and then removed per this
+guideline — `participants` shows only `name`/`roleLabel` now, no email, no
+"View" action.)
+
 **Recommended next quick win: wire the Dashboard "Join" button.**
 `HackathonService.Join({hackathonId})` is live, takes only `hackathonId` (caller
 resolved from the JWT), and today it's just `alert('Join: not yet implemented')`
