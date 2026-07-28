@@ -85,6 +85,12 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_submissions", Submission.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Submissions this user last modified."),
+		edge.To("created_tracks", Track.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Tracks this user created."),
+		edge.To("modified_tracks", Track.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Tracks this user last modified."),
 		edge.To("preferred_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Projects this user has marked as preferred."),

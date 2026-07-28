@@ -243,6 +243,24 @@
 - [hackathon/messages/team_svc/list_response.proto](#hackathon_messages_team_svc_list_response-proto)
     - [ListResponse](#hackathon-messages-team_svc-ListResponse)
   
+- [hackathon/messages/track_svc/create_request.proto](#hackathon_messages_track_svc_create_request-proto)
+    - [CreateRequest](#hackathon-messages-track_svc-CreateRequest)
+  
+- [hackathon/messages/track_svc/create_response.proto](#hackathon_messages_track_svc_create_response-proto)
+    - [CreateResponse](#hackathon-messages-track_svc-CreateResponse)
+  
+- [hackathon/messages/track_svc/delete_request.proto](#hackathon_messages_track_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-track_svc-DeleteRequest)
+  
+- [hackathon/messages/track_svc/delete_response.proto](#hackathon_messages_track_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-track_svc-DeleteResponse)
+  
+- [hackathon/messages/track_svc/edit_request.proto](#hackathon_messages_track_svc_edit_request-proto)
+    - [EditRequest](#hackathon-messages-track_svc-EditRequest)
+  
+- [hackathon/messages/track_svc/edit_response.proto](#hackathon_messages_track_svc_edit_response-proto)
+    - [EditResponse](#hackathon-messages-track_svc-EditResponse)
+  
 - [hackathon/messages/track_svc/get_request.proto](#hackathon_messages_track_svc_get_request-proto)
     - [GetRequest](#hackathon-messages-track_svc-GetRequest)
   
@@ -1619,6 +1637,11 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page | [hackathon.entities.Page](#hackathon-entities-Page) |  |  |
+
+
 
 
 
@@ -2118,6 +2141,11 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 ### EditResponse
 
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| phase | [hackathon.entities.Phase](#hackathon-entities-Phase) |  |  |
 
 
 
@@ -2868,6 +2896,191 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_track_svc_create_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/create_request.proto
+
+
+
+<a name="hackathon-messages-track_svc-CreateRequest"></a>
+
+### CreateRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_create_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/create_response.proto
+
+
+
+<a name="hackathon-messages-track_svc-CreateResponse"></a>
+
+### CreateResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| track_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-track_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| track_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-track_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/edit_request.proto
+
+
+
+<a name="hackathon-messages-track_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| track_id | [string](#string) |  |  |
+| name | [string](#string) | optional |  |
+| description | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_track_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/track_svc/edit_response.proto
+
+
+
+<a name="hackathon-messages-track_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| track | [hackathon.entities.Track](#hackathon-entities-Track) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_track_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3137,6 +3350,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | ----------- | ------------ | ------------- | ------------|
 | List | [messages.track_svc.ListRequest](#hackathon-messages-track_svc-ListRequest) | [messages.track_svc.ListResponse](#hackathon-messages-track_svc-ListResponse) |  |
 | Get | [messages.track_svc.GetRequest](#hackathon-messages-track_svc-GetRequest) | [messages.track_svc.GetResponse](#hackathon-messages-track_svc-GetResponse) |  |
+| Create | [messages.track_svc.CreateRequest](#hackathon-messages-track_svc-CreateRequest) | [messages.track_svc.CreateResponse](#hackathon-messages-track_svc-CreateResponse) |  |
+| Edit | [messages.track_svc.EditRequest](#hackathon-messages-track_svc-EditRequest) | [messages.track_svc.EditResponse](#hackathon-messages-track_svc-EditResponse) |  |
+| Delete | [messages.track_svc.DeleteRequest](#hackathon-messages-track_svc-DeleteRequest) | [messages.track_svc.DeleteResponse](#hackathon-messages-track_svc-DeleteResponse) |  |
 
  
 

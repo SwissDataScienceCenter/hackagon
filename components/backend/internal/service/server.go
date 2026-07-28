@@ -66,6 +66,7 @@ func NewServer(
 	hackathonService := NewHackathonService(dbClient, enf)
 	pageService := NewPageService(dbClient, enf)
 	phaseService := NewPhaseService(dbClient, enf)
+	trackService := NewTrackService(dbClient, enf)
 
 	// Register services
 	health.RegisterHealthServiceServer(server, healthService)
@@ -73,6 +74,7 @@ func NewServer(
 	hackathonSvc.RegisterHackathonServiceServer(server, hackathonService)
 	hackathonSvc.RegisterPageServiceServer(server, pageService)
 	hackathonSvc.RegisterPhaseServiceServer(server, phaseService)
+	hackathonSvc.RegisterTrackServiceServer(server, trackService)
 	reflection.Register(server)
 
 	// Cleanup: shutdown the gRPC server
