@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
-
     let {
         name,
         affiliation,
@@ -8,7 +6,6 @@
         role: roleProp,
         skills = [],
         linkedinUrl,
-        profileDetailsHref = '#',
     }: {
         name: string;
         affiliation?: string;
@@ -17,7 +14,6 @@
         role?: string;
         skills?: string[];
         linkedinUrl?: string;
-        profileDetailsHref?: string;
     } = $props();
 
     const roleLine = $derived(
@@ -90,8 +86,5 @@
                 </div>
             </div>
         </div>
-
-        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a class="btn btn-sm preset-tonal-surface" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
     </div>
 </div>

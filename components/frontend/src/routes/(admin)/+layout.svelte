@@ -1,11 +1,19 @@
 <script lang="ts">
-    import '../../app.css';
+    import AdminSubNav from '$lib/components/admin/AdminSubNav.svelte';
 
     const { children } = $props();
+
+    const tabs = [
+        { id: 'home', label: 'Home', href: '/(participant)/dashboard' },
+        { id: 'projects', label: 'Administrate Projects' },
+        { id: 'users', label: 'Administrate Users', href: '/(admin)/users' },
+        { id: 'teams', label: 'Administrate Teams' },
+        { id: 'settings', label: 'General Settings' },
+    ];
 </script>
 
-<div class="grid grid-cols-[240px_minmax(0,1fr)_280px]">
-    <main class="overflow-y-auto">
-        {@render children()}
-    </main>
-</div>
+<AdminSubNav {tabs} />
+
+<main class="mx-auto w-full max-w-7xl overflow-y-auto">
+    {@render children()}
+</main>
