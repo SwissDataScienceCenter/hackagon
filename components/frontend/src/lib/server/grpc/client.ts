@@ -3,10 +3,12 @@ import { HealthServiceDefinition } from "./generated/health/health_service"
 import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
 import { PageServiceDefinition } from "./generated/hackathon/page_service"
+import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { PageServiceClient } from "./generated/hackathon/page_service"
+import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -28,6 +30,7 @@ export interface AuthorizedGrpc {
   health: HealthServiceClient
   hackathon: HackathonServiceClient
   page: PageServiceClient
+  phase: PhaseServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -46,6 +49,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     health: factory.create(HealthServiceDefinition, channel),
     hackathon: factory.create(HackathonServiceDefinition, channel),
     page: factory.create(PageServiceDefinition, channel),
+    phase: factory.create(PhaseServiceDefinition, channel),
   }
 }
 
