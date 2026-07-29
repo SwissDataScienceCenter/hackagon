@@ -5,13 +5,43 @@
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
+    import HackathonSwitcher from './HackathonSwitcher.svelte';
+
+    interface HackathonMember {
+        role: number;
+        isWaiting: boolean;
+    }
+
+    interface HackathonEntry {
+        id: string;
+        name: string;
+        viewerMembership?: HackathonMember;
+    }
+
+    let { myHackathons }: { myHackathons: HackathonEntry[] } = $props();
 
     let collapsed = $state(false);
     let mobileOpen = $state(false);
+    let isDesktop = $state(true);
+
+    // `collapsed` is a desktop-only preference (persisted below); on a narrow
+    // viewport the drawer must always render fully expanded regardless of it.
+    const effectiveCollapsed = $derived(collapsed && isDesktop);
 
     $effect(() => {
         if (typeof localStorage === 'undefined') return;
         collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    });
+
+    $effect(() => {
+        if (typeof window === 'undefined') return;
+        const mq = window.matchMedia('(min-width: 768px)');
+        isDesktop = mq.matches;
+        const handler = (e: MediaQueryListEvent) => {
+            isDesktop = e.matches;
+        };
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
     });
 
     $effect(() => {
@@ -61,9 +91,9 @@
 >
     <div
         class="flex h-14 shrink-0 items-center gap-3 border-b border-surface-200-800 px-4
-               {collapsed ? 'md:justify-center md:px-0' : 'justify-between'}"
+               {effectiveCollapsed ? 'justify-center px-0' : 'justify-between'}"
     >
-        {#if !collapsed}
+        {#if !effectiveCollapsed}
             <a
                 href={resolve('/(app)/(participant)/dashboard')}
                 class="flex items-center gap-2 no-underline"
@@ -92,6 +122,8 @@
             <X class="h-4 w-4" />
         </button>
     </div>
+
+    <HackathonSwitcher hackathons={myHackathons} collapsed={effectiveCollapsed} />
 
     <nav class="flex-1 overflow-y-auto p-2"></nav>
 </aside>
