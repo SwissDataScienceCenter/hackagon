@@ -4,7 +4,6 @@
     import Menu from 'lucide-svelte/icons/menu';
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
-    import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import HackathonSwitcher from './HackathonSwitcher.svelte';
     import HackathonNav from './HackathonNav.svelte';
     import HackathonOwnerNav from './HackathonOwnerNav.svelte';
@@ -130,7 +129,29 @@
         class="flex h-14 shrink-0 items-center gap-3 border-b border-surface-200-800 px-4
                {effectiveCollapsed ? 'justify-center px-0' : 'justify-between'}"
     >
-        {#if !effectiveCollapsed}
+        {#if effectiveCollapsed}
+            <!-- The collapsed rail keeps the wordmark: hiding it outright made a
+                 collapsed sidebar indistinguishable from a broken one. There is
+                 no square SDSC mark, so the wordmark is scaled to the 4rem rail
+                 and doubles as the expand affordance. -->
+            <button
+                onclick={toggleCollapsed}
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+                class="flex h-full w-full items-center justify-center px-2"
+            >
+                <img
+                    src="/logos/sdsc_white.svg"
+                    alt=""
+                    class="hidden h-4 w-full object-contain dark:block"
+                />
+                <img
+                    src="/logos/sdsc.svg"
+                    alt=""
+                    class="block h-4 w-full object-contain dark:hidden"
+                />
+            </button>
+        {:else}
             <a
                 href={resolve('/(app)/(member)/dashboard')}
                 class="flex items-center gap-2 no-underline"
@@ -139,25 +160,21 @@
                 <img src="/logos/sdsc.svg" alt="SDSC" class="block h-6 dark:hidden" />
                 <span class="text-sm font-bold">Hackathons</span>
             </a>
-        {/if}
-        <button
-            onclick={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            class="btn-icon btn-sm hidden md:inline-flex"
-        >
-            {#if collapsed}
-                <PanelLeftOpen class="h-4 w-4" />
-            {:else}
+            <button
+                onclick={toggleCollapsed}
+                aria-label="Collapse sidebar"
+                class="btn-icon btn-sm hidden md:inline-flex"
+            >
                 <PanelLeftClose class="h-4 w-4" />
-            {/if}
-        </button>
-        <button
-            onclick={() => (mobileOpen = false)}
-            aria-label="Close navigation"
-            class="btn-icon btn-sm md:hidden"
-        >
-            <X class="h-4 w-4" />
-        </button>
+            </button>
+            <button
+                onclick={() => (mobileOpen = false)}
+                aria-label="Close navigation"
+                class="btn-icon btn-sm md:hidden"
+            >
+                <X class="h-4 w-4" />
+            </button>
+        {/if}
     </div>
 
     <HackathonSwitcher hackathons={myHackathons} collapsed={effectiveCollapsed} />

@@ -55,7 +55,11 @@
             {label}
         </span>
     {/if}
-    {#each items as item (item.label)}
+    <!-- Keyed on href, not label: page titles are user-supplied, so two pages
+         named the same (or one named like a built-in entry) would be a duplicate
+         key and take the entire sidebar down. Stub entries have no href, but
+         their labels are hardcoded and unique. -->
+    {#each items as item (item.href ?? item.label)}
         {@const Icon = item.icon}
         {@const isActive = item.href === activeHref}
         {#if item.href}

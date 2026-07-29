@@ -4,9 +4,21 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 
 export const load: LayoutServerLoad = async (event) => {
   const { hackathon, page } = requireGrpc(event.locals.grpc)
-  const participantId = event.locals.platformUser!.id
+  const participantId = event.locals.platformUser?.id
 
-  const { hackathons: myHackathons } = await hackathon.list({ participantId })
+  // The sidebar is app-shell chrome for every authenticated route, so a
+  // backend hiccup must degrade it to an empty switcher rather than fail this
+  // load and blank the whole shell (logo, nav and user footer along with it).
+  let myHackathons: Awaited<ReturnType<typeof hackathon.list>>["hackathons"] =
+    []
+  if (participantId) {
+    try {
+      const result = await hackathon.list({ participantId })
+      myHackathons = result.hackathons
+    } catch {
+      myHackathons = []
+    }
+  }
 
   // The sidebar nav needs the active hackathon's visible pages, but this
   // layout sits above hackathon/[slug]'s own load — fetch a shallow list
