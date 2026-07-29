@@ -5,10 +5,11 @@ export const load: PageServerLoad = async (event) => {
 
   const proposals = hackathon.projects.map((p, i) => ({
     num: i + 1,
+    id: p.id,
     title: p.title,
     description: p.description,
     imageUrl: p.image,
   }))
 
-  return { proposals }
+  return { proposals, slug: event.params.slug }
 }

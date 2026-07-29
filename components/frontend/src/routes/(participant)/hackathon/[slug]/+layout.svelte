@@ -67,7 +67,8 @@
         return chips;
     })());
 
-    /** List pages: only sub-nav + content (no compact hero or phase bar). */
+    /** List pages (and anything nested under them, e.g. a detail or create
+     *  sub-page): only sub-nav + content, no compact hero or phase bar. */
     const listPageSegments = new Set([
         'participants',
         'teams',
@@ -78,7 +79,10 @@
         'photos',
     ]);
     const hideHeroAndTimeline = $derived(
-        listPageSegments.has($page.url.pathname.split('/').filter(Boolean).pop() ?? '')
+        $page.url.pathname
+            .split('/')
+            .filter(Boolean)
+            .some((segment) => listPageSegments.has(segment))
     );
 </script>
 

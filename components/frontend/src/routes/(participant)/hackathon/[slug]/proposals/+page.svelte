@@ -1,17 +1,19 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import { Plus } from 'lucide-svelte';
     import ProposalCard from '$lib/components/hackathon/ProposalCard.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
     const proposals = $derived(data.proposals);
+    const slug = $derived(data.slug);
 
     const pageSize = 8;
-    let page = $state(1);
+    let pageNum = $state(1);
 
     const pageCount = $derived(Math.max(1, Math.ceil(proposals.length / pageSize)));
     const pagedProposals = $derived(
-        proposals.slice((page - 1) * pageSize, page * pageSize)
+        proposals.slice((pageNum - 1) * pageSize, pageNum * pageSize)
     );
 </script>
 
@@ -25,7 +27,7 @@
             <span class="text-xs text-surface-500">{proposals.length} proposals</span>
         </div>
         <a
-            href="#propose"
+            href={resolve(`/hackathon/${slug}/proposals/create`)}
             class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
                    rounded-none px-3 text-center text-xs font-semibold no-underline
                    sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
@@ -42,7 +44,7 @@
                 title={proposal.title}
                 description={proposal.description}
                 imageUrl={proposal.imageUrl}
-                moreInfoHref="#proposal-{proposal.num}"
+                moreInfoHref="/hackathon/{slug}/proposals/{proposal.id}"
             />
         {/each}
     </div>
@@ -55,12 +57,12 @@
             {#each Array.from({ length: pageCount }, (_, i) => i + 1) as p (p)}
                 <button
                     type="button"
-                    onclick={() => (page = p)}
+                    onclick={() => (pageNum = p)}
                     class="btn btn-sm flex h-8 w-8 items-center justify-center rounded-none p-0
                            text-xs font-semibold transition-colors
-                           {page === p ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+                           {pageNum === p ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
                     aria-label="Page {p}"
-                    aria-current={page === p ? 'page' : undefined}
+                    aria-current={pageNum === p ? 'page' : undefined}
                 >
                     {p}
                 </button>
