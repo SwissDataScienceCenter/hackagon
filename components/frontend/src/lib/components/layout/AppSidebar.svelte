@@ -55,18 +55,16 @@
     const effectiveCollapsed = $derived(collapsed && isDesktop);
     const activeSlug = $derived($page.params.slug);
     const activeHackathon = $derived(myHackathons.find((h) => h.id === activeSlug));
-    const canManageActiveHackathon = $derived(
-        Boolean(activeSlug) &&
-            (isGlobalAdmin || isOwnerRole(activeHackathon?.viewerMembership?.role ?? 0)),
-    );
-
     const mode = $derived(navModeFromRouteId($page.route.id ?? null));
 
-    // Already being on a manage route means the owner layout's gate let us
-    // through, so keep the switch even if myHackathons failed to load and
-    // canManageActiveHackathon came back false.
+    // Owners of this hackathon, plus global admins (who can manage any of them —
+    // and who need the isGlobalAdmin branch because a non-participant admin never
+    // appears in myHackathons, so there is no membership row to read a role from).
+    // `viewerMembership.role` is sourced from casbin and populated by
+    // HackathonService.List whenever participant_id is set — always, here.
     const showModeSwitch = $derived(
-        Boolean(activeSlug) && (canManageActiveHackathon || mode === 'manage'),
+        Boolean(activeSlug) &&
+            (isGlobalAdmin || isOwnerRole(activeHackathon?.viewerMembership?.role ?? 0)),
     );
 
     const hackathonItems = $derived(
