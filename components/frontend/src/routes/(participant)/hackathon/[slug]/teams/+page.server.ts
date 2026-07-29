@@ -15,6 +15,7 @@ export const load: PageServerLoad = async (event) => {
       id: t.id,
       title: t.name,
       projectDescription: t.description || `Project: ${projectTitle ?? "unknown"}`,
+      members: t.members.map((m) => ({ name: m.displayName || m.username })),
     }
   })
 

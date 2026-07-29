@@ -74,7 +74,7 @@
                     num={team.num}
                     title={team.title}
                     projectDescription={team.projectDescription}
-                    members={[]}
+                    members={team.members}
                     moreInfoHref="/hackathon/{data.slug}/teams/{team.id}"
                 />
             {/each}
