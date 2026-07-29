@@ -6,6 +6,7 @@
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import HackathonSwitcher from './HackathonSwitcher.svelte';
+    import HackathonNav from './HackathonNav.svelte';
 
     interface HackathonMember {
         role: number;
@@ -27,6 +28,7 @@
     // `collapsed` is a desktop-only preference (persisted below); on a narrow
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
+    const activeSlug = $derived($page.params.slug);
 
     $effect(() => {
         if (typeof localStorage === 'undefined') return;
@@ -125,5 +127,9 @@
 
     <HackathonSwitcher hackathons={myHackathons} collapsed={effectiveCollapsed} />
 
-    <nav class="flex-1 overflow-y-auto p-2"></nav>
+    <nav class="flex-1 overflow-y-auto">
+        {#if activeSlug}
+            <HackathonNav slug={activeSlug} collapsed={effectiveCollapsed} />
+        {/if}
+    </nav>
 </aside>

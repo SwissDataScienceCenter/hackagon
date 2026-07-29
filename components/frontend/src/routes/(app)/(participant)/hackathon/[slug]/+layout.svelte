@@ -1,6 +1,5 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import HackathonSubNav from '$lib/components/hackathon/HackathonSubNav.svelte';
     import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
 
@@ -10,19 +9,6 @@
     import { phaseStatus } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
-
-    const slug = $derived($page.params.slug);
-
-    const tabs = [
-        { id: 'overview', label: 'Overview' },
-        { id: 'participants', label: 'Participants' },
-        { id: 'proposals', label: 'Proposals' },
-        { id: 'teams', label: 'Teams' },
-        { id: 'submissions', label: 'Submissions' },
-        { id: 'timeline', label: 'Timeline' },
-        { id: 'webinars', label: 'Webinars' },
-        { id: 'photos', label: 'Photos' },
-    ];
 
     function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
         if (!startsAt) return '';
@@ -76,10 +62,6 @@
             .some((segment) => listPageSegments.has(segment))
     );
 </script>
-
-<div class="mx-auto w-full max-w-7xl">
-    <HackathonSubNav {tabs} slug={slug ?? ''} />
-</div>
 
 {#if !hideHeroAndTimeline}
     <HeroCompact
