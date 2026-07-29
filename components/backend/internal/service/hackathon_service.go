@@ -332,6 +332,11 @@ func (s *HackathonService) ApproveParticipant(
 
 		return nil, status.Errorf(codes.Internal, "couldn't approve participant")
 	}
+	if _, err := s.enforcer.AddRole(user.KeycloakID, m.Member, h.ID.String()); err != nil {
+		slog.Error("add hackathon member", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't set hackathon member permission")
+	}
 
 	return &msgs.ApproveParticipantResponse{}, nil
 }
@@ -412,6 +417,11 @@ func (s *HackathonService) RemoveParticipant(
 		slog.Error("delete participant", "err", err)
 
 		return nil, status.Errorf(codes.Internal, "couldn't remove participant")
+	}
+	if _, err := s.enforcer.RemoveRole(user.KeycloakID, m.Member, h.ID.String()); err != nil {
+		slog.Error("remove hackathon member", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove hackathon member permission")
 	}
 
 	return &msgs.RemoveParticipantResponse{}, nil
