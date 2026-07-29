@@ -4,9 +4,9 @@
     const { children } = $props();
 
     const tabs = [
-        { id: 'home', label: 'Home', href: '/(participant)/dashboard' },
+        { id: 'home', label: 'Home', href: '/(app)/(participant)/dashboard' },
         { id: 'projects', label: 'Administrate Projects' },
-        { id: 'users', label: 'Administrate Users', href: '/(admin)/users' },
+        { id: 'users', label: 'Administrate Users', href: '/(app)/(admin)/users' },
         { id: 'teams', label: 'Administrate Teams' },
         { id: 'settings', label: 'General Settings' },
     ];

@@ -63,7 +63,7 @@
             </p>
         </div>
         {#if isGlobalAdmin}
-            <a href={resolve('/(admin)/users')} class="btn btn-sm preset-filled-primary-500 no-underline shrink-0">
+            <a href={resolve('/(app)/(admin)/users')} class="btn btn-sm preset-filled-primary-500 no-underline shrink-0">
                 Site Admin
             </a>
         {/if}

@@ -5,7 +5,7 @@
     interface Tab {
         id: string;
         label: string;
-        /** Route id (as passed to resolve()), e.g. '/(admin)/users'. Omit if not built yet. */
+        /** Route id (as passed to resolve()), e.g. '/(app)/(admin)/users'. Omit if not built yet. */
         href?: string;
     }
 
