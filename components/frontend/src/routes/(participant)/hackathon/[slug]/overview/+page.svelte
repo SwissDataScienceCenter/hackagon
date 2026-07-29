@@ -43,15 +43,6 @@
     {/if}
 
     <div class="card preset-outlined-surface-200-800 p-5">
-        <h2 class="mb-3 text-base font-bold">About</h2>
-        {#if data.hackathon.description}
-            <p class="text-sm leading-relaxed text-surface-700-300">{data.hackathon.description}</p>
-        {:else}
-            <p class="text-sm text-surface-500">No description provided.</p>
-        {/if}
-    </div>
-
-    <div class="card preset-outlined-surface-200-800 p-5">
         <div class="mb-4 flex items-center justify-between">
             <h2 class="text-base font-bold">Project Proposals</h2>
             <span class="text-xs text-surface-500">{projects.length} proposals</span>
