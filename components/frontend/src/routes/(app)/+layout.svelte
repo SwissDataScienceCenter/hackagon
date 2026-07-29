@@ -5,7 +5,7 @@
     let { children }: { children: Snippet } = $props();
 </script>
 
-<div class="flex flex-1 flex-col md:flex-row">
+<div class="flex min-h-screen flex-col md:flex-row">
     <AppSidebar />
     <main class="flex-1 overflow-y-auto">
         {@render children()}
