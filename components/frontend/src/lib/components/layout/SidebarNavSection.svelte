@@ -32,6 +32,21 @@
         secondary: 'text-secondary-500',
         tertiary: 'text-tertiary-500',
     };
+
+    // When multiple item hrefs prefix-match the current path (e.g. both
+    // "/hackathons" and "/hackathons/new"), only the most specific one should
+    // be highlighted.
+    const activeHref = $derived.by(() => {
+        const path = $page.url.pathname;
+        let best: string | undefined;
+        for (const item of items) {
+            if (!item.href) continue;
+            if (path === item.href || path.startsWith(item.href + '/')) {
+                if (!best || item.href.length > best.length) best = item.href;
+            }
+        }
+        return best;
+    });
 </script>
 
 <div class="flex flex-col gap-0.5 border-t border-surface-200-800 p-2">
@@ -42,9 +57,7 @@
     {/if}
     {#each items as item (item.label)}
         {@const Icon = item.icon}
-        {@const isActive = item.href
-            ? $page.url.pathname === item.href || $page.url.pathname.startsWith(item.href + '/')
-            : false}
+        {@const isActive = item.href === activeHref}
         {#if item.href}
             <a
                 href={item.href}
