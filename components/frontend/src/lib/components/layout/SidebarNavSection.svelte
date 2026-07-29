@@ -1,23 +1,20 @@
 <script lang="ts">
-    import { page } from '$app/stores';
-    import type { ComponentType } from 'svelte';
-
-    interface Item {
-        label: string;
-        icon: ComponentType;
-        /** Omit for a "not available yet" stub entry. */
-        href?: string;
-    }
+    import type { NavItem } from '$lib/navigation';
 
     let {
         label,
         items,
         collapsed,
+        activeId,
         activeColor = 'primary',
     }: {
-        label: string;
-        items: Item[];
+        /** Omit where a heading would just repeat nearby context. */
+        label?: string;
+        items: NavItem[];
         collapsed: boolean;
+        /** Computed once across all sections by the caller, so two sections can
+         *  never both render as active. */
+        activeId?: string;
         activeColor?: 'primary' | 'secondary' | 'tertiary';
     } = $props();
 
@@ -32,39 +29,24 @@
         secondary: 'text-secondary-500',
         tertiary: 'text-tertiary-500',
     };
-
-    // When multiple item hrefs prefix-match the current path (e.g. both
-    // "/hackathons" and "/hackathons/new"), only the most specific one should
-    // be highlighted.
-    const activeHref = $derived.by(() => {
-        const path = $page.url.pathname;
-        let best: string | undefined;
-        for (const item of items) {
-            if (!item.href) continue;
-            if (path === item.href || path.startsWith(item.href + '/')) {
-                if (!best || item.href.length > best.length) best = item.href;
-            }
-        }
-        return best;
-    });
 </script>
 
 <div class="flex flex-col gap-0.5 border-t border-surface-200-800 p-2">
-    {#if !collapsed}
+    {#if label && !collapsed}
         <span class="px-2 pb-1 text-xs font-bold tracking-widest {LABEL_CLASS[activeColor]}">
             {label}
         </span>
     {/if}
-    <!-- Keyed on href, not label: page titles are user-supplied, so two pages
-         named the same (or one named like a built-in entry) would be a duplicate
-         key and take the entire sidebar down. Stub entries have no href, but
-         their labels are hardcoded and unique. -->
-    {#each items as item (item.href ?? item.label)}
+    {#each items as item (item.id)}
         {@const Icon = item.icon}
-        {@const isActive = item.href === activeHref}
+        {@const isActive = item.id === activeId}
         {#if item.href}
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- these hrefs are
+                 built with resolve() in $lib/navigation; the rule only recognizes a
+                 literal resolve() call in the attribute itself. -->
             <a
                 href={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 title={collapsed ? item.label : undefined}
                 class="flex h-10 items-center gap-2 rounded-lg px-2 text-sm no-underline
                        transition-colors
@@ -73,9 +55,10 @@
             >
                 <Icon class="h-4 w-4 shrink-0" />
                 {#if !collapsed}
-                    <span>{item.label}</span>
+                    <span class="truncate">{item.label}</span>
                 {/if}
             </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
         {:else}
             <span
                 title="Not available yet"
@@ -84,7 +67,7 @@
             >
                 <Icon class="h-4 w-4 shrink-0" />
                 {#if !collapsed}
-                    <span>{item.label}</span>
+                    <span class="truncate">{item.label}</span>
                 {/if}
             </span>
         {/if}

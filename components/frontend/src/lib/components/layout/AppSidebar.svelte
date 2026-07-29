@@ -5,11 +5,17 @@
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import HackathonSwitcher from './HackathonSwitcher.svelte';
-    import HackathonNav from './HackathonNav.svelte';
-    import HackathonOwnerNav from './HackathonOwnerNav.svelte';
-    import SiteAdminNav from './SiteAdminNav.svelte';
+    import SidebarNavSection from './SidebarNavSection.svelte';
+    import NavModeSwitch from './NavModeSwitch.svelte';
     import SidebarUserFooter from './SidebarUserFooter.svelte';
     import { isOwnerRole } from '$lib/utils/hackathonStatus';
+    import {
+        activeNavId,
+        manageNav,
+        memberNav,
+        navModeFromRouteId,
+        platformNav,
+    } from '$lib/navigation';
     import type { Session } from '@auth/sveltekit';
 
     interface HackathonMember {
@@ -52,6 +58,27 @@
     const canManageActiveHackathon = $derived(
         Boolean(activeSlug) &&
             (isGlobalAdmin || isOwnerRole(activeHackathon?.viewerMembership?.role ?? 0)),
+    );
+
+    const mode = $derived(navModeFromRouteId($page.route.id ?? null));
+
+    // Already being on a manage route means the owner layout's gate let us
+    // through, so keep the switch even if myHackathons failed to load and
+    // canManageActiveHackathon came back false.
+    const showModeSwitch = $derived(
+        Boolean(activeSlug) && (canManageActiveHackathon || mode === 'manage'),
+    );
+
+    const hackathonItems = $derived(
+        activeSlug
+            ? mode === 'manage'
+                ? manageNav(activeSlug)
+                : memberNav(activeSlug, hackathonPages)
+            : [],
+    );
+    const platformItems = $derived(isGlobalAdmin ? platformNav() : []);
+    const activeId = $derived(
+        activeNavId($page.url.pathname, [...hackathonItems, ...platformItems]),
     );
 
     $effect(() => {
@@ -179,17 +206,34 @@
 
     <HackathonSwitcher hackathons={myHackathons} collapsed={effectiveCollapsed} />
 
+    {#if showModeSwitch && activeSlug}
+        <NavModeSwitch slug={activeSlug} {mode} collapsed={effectiveCollapsed} />
+    {/if}
+
     <nav class="flex-1 overflow-y-auto">
         {#if activeSlug}
-            <HackathonNav slug={activeSlug} pages={hackathonPages} collapsed={effectiveCollapsed} />
-            {#if canManageActiveHackathon}
-                <HackathonOwnerNav slug={activeSlug} collapsed={effectiveCollapsed} />
-            {/if}
-        {/if}
-        {#if isGlobalAdmin}
-            <SiteAdminNav collapsed={effectiveCollapsed} />
+            <!-- No section heading: the switcher above names the hackathon and the
+                 mode switch names the mode, so a third label is just noise. -->
+            <SidebarNavSection
+                items={hackathonItems}
+                {activeId}
+                collapsed={effectiveCollapsed}
+                activeColor={mode === 'manage' ? 'secondary' : 'primary'}
+            />
         {/if}
     </nav>
+
+    <!-- Platform scope is not part of the current hackathon, so it sits pinned
+         outside the scrolling hackathon nav rather than trailing it. -->
+    {#if isGlobalAdmin}
+        <SidebarNavSection
+            label="Platform"
+            items={platformItems}
+            {activeId}
+            collapsed={effectiveCollapsed}
+            activeColor="tertiary"
+        />
+    {/if}
 
     <SidebarUserFooter {session} collapsed={effectiveCollapsed} />
 </aside>
