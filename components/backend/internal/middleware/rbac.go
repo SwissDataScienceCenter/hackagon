@@ -176,6 +176,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "/hackathon/*", Track.String(), Read.String()},
 		// Owner can write owned hackathon projects
 		{Owner.String(), "/hackathon/*", Project.String(), Write.String()},
+		// Project Owner can write owned  project
+		{Owner.String(), "/hackathon/*/project/*", Project.String(), Write.String()},
 		// Owner can read owned hackathon projects
 		{Owner.String(), "/hackathon/*", Project.String(), Read.String()},
 		// Owner can propose new projects
@@ -220,8 +222,31 @@ func hackathonIdToPath(hackathonId string) string {
 
 // teamDomainPath returns the full domain path for a team resource,
 // e.g. /hackathon/<id>/team/<id>.
-func teamDomainPath(hackathonId, teamId string) string {
-	return fmt.Sprintf("/hackathon/%s/team/%s", hackathonId, teamId)
+func teamDomainPath(domain, teamId string) string {
+	return fmt.Sprintf("%s/team/%s", domain, teamId)
+}
+
+// projectDomainPath returns the full domain path for a project resource,
+// e.g. /hackathon/<id>/project/<id>.
+func projectDomainPath(domain, projectId string) string {
+	return fmt.Sprintf("%s/project/%s", domain, projectId)
+}
+
+func enforceOptsToPath(hackathonId string, opts ...EnforceOption) string {
+	//exhaustruct:ignore
+	options := &enforceOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	domain := hackathonIdToPath(hackathonId)
+	if options.projectID != "" {
+		domain = projectDomainPath(domain, options.projectID)
+	}
+	if options.teamID != "" {
+		domain = teamDomainPath(domain, options.teamID)
+	}
+	return domain
 }
 
 func (e *Enforcer) AddRole(
@@ -230,16 +255,7 @@ func (e *Enforcer) AddRole(
 	hackathonId string,
 	opts ...EnforceOption,
 ) (bool, error) {
-	//exhaustruct:ignore
-	options := &enforceOptions{}
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	domain := hackathonIdToPath(hackathonId)
-	if options.teamID != "" {
-		domain = teamDomainPath(hackathonId, options.teamID)
-	}
+	domain := enforceOptsToPath(hackathonId, opts...)
 
 	return e.enforcer.AddGroupingPolicy(user, role.String(), domain)
 }
@@ -250,16 +266,7 @@ func (e *Enforcer) RemoveRole(
 	hackathonId string,
 	opts ...EnforceOption,
 ) (bool, error) {
-	//exhaustruct:ignore
-	options := &enforceOptions{}
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	domain := hackathonIdToPath(hackathonId)
-	if options.teamID != "" {
-		domain = teamDomainPath(hackathonId, options.teamID)
-	}
+	domain := enforceOptsToPath(hackathonId, opts...)
 
 	return e.enforcer.RemoveGroupingPolicy(user, role.String(), domain)
 }
@@ -342,7 +349,8 @@ func (e *Enforcer) GetHackathonRole(
 
 //exhaustruct:optional
 type enforceOptions struct {
-	teamID string
+	teamID    string
+	projectID string
 }
 
 type EnforceOption func(*enforceOptions)
@@ -356,6 +364,15 @@ func WithTeam(teamID string) EnforceOption {
 	}
 }
 
+// WithProject overrides the default /hackathon/<id> domain path to
+// /hackathon/<id>/project/<projectId>. Use this for project-level operations
+// so that both hackathon-owner and project-member policies can match.
+func WithProject(projectID string) EnforceOption {
+	return func(o *enforceOptions) {
+		o.projectID = projectID
+	}
+}
+
 func (e *Enforcer) Enforce(
 	ctx context.Context,
 	hackathonId string,
@@ -363,16 +380,7 @@ func (e *Enforcer) Enforce(
 	permission Permission,
 	opts ...EnforceOption,
 ) (bool, error) {
-	//exhaustruct:ignore
-	options := &enforceOptions{}
-	for _, opt := range opts {
-		opt(options)
-	}
-
-	domain := hackathonIdToPath(hackathonId)
-	if options.teamID != "" {
-		domain = teamDomainPath(hackathonId, options.teamID)
-	}
+	domain := enforceOptsToPath(hackathonId, opts...)
 
 	claims, ok := GetClaims(ctx)
 	if !ok {

@@ -1075,37 +1075,55 @@ var _ = Describe("ProjectService", func() {
 		It("allows creator to edit their own project", func() {
 			// Create a new user who will be the project creator
 			creatorID := "project-creator-user"
-			creatorUser, err := dbClient.User.Create().
+			_, err := dbClient.User.Create().
 				SetKeycloakID(creatorID).
 				SetUsername("creator-username").
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
-			// Create project directly in DB with creator user
-			now := time.Now()
-			creatorProject, err := dbClient.Project.Create().
-				SetHackathonID(uuid.MustParse(hackathonID)).
-				SetTitle("Creator's Project").
-				SetDescription("Creator's description").
-				SetStatus("proposed").
-				SetCreator(creatorUser).
-				SetModifier(creatorUser).
-				SetCreatedAt(now).
-				SetModifiedAt(now).
-				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-			creatorProjectID := creatorProject.ID
-
-			// Creator edits their own project
+			// Creator joins the hackathon (creates waitlisted participant)
 			creatorToken := testutils.CreateTestJWTToken(creatorID)
 			creatorCtx := metadata.NewOutgoingContext(
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+creatorToken),
 			)
+			_, err = hackathonClient.Join(creatorCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
 
+			// Approve the participant as admin
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			creatorUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(creatorID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.ApproveParticipant(adminCtx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      creatorUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Creator proposes the project via the gRPC endpoint
+			creatorProjectResp, err := projectClient.Propose(
+				creatorCtx,
+				&projectMsgs.ProposeRequest{
+					HackathonId: hackathonID,
+					Title:       "Creator's Project",
+					Description: "Creator's description",
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			creatorProjectID := creatorProjectResp.GetProjectId()
+
+			// Creator edits their own project
 			newTitle := "Updated by Creator"
 			editReq := &projectMsgs.EditRequest{
-				ProjectId: creatorProjectID.String(),
+				ProjectId: creatorProjectID,
 				Title:     &newTitle,
 			}
 
@@ -1114,7 +1132,7 @@ var _ = Describe("ProjectService", func() {
 
 			// Verify update
 			p, err := dbClient.Project.Query().
-				Where(entproject.IDEQ(creatorProjectID)).
+				Where(entproject.IDEQ(uuid.MustParse(creatorProjectID))).
 				Only(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Title).To(Equal(newTitle))
@@ -1386,36 +1404,54 @@ var _ = Describe("ProjectService", func() {
 		It("allows creator to delete their project", func() {
 			// Create a user who will be the project creator
 			creatorID := "project-deleter-user"
-			creatorUser, err := dbClient.User.Create().
+			_, err := dbClient.User.Create().
 				SetKeycloakID(creatorID).
 				SetUsername("deleter-username").
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
-			// Create project directly in DB with creator user
-			now := time.Now()
-			creatorProject, err := dbClient.Project.Create().
-				SetHackathonID(uuid.MustParse(hackathonID)).
-				SetTitle("Creator's Deletable Project").
-				SetDescription("Creator's description").
-				SetStatus("proposed").
-				SetCreator(creatorUser).
-				SetModifier(creatorUser).
-				SetCreatedAt(now).
-				SetModifiedAt(now).
-				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-			creatorProjectID := creatorProject.ID
-
-			// Creator deletes their own project
+			// Creator joins the hackathon (creates waitlisted participant)
 			creatorToken := testutils.CreateTestJWTToken(creatorID)
 			creatorCtx := metadata.NewOutgoingContext(
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+creatorToken),
 			)
+			_, err = hackathonClient.Join(creatorCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
 
+			// Approve the participant as admin
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			creatorUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(creatorID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.ApproveParticipant(adminCtx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      creatorUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Creator proposes the project via the gRPC endpoint
+			creatorProjectResp, err := projectClient.Propose(
+				creatorCtx,
+				&projectMsgs.ProposeRequest{
+					HackathonId: hackathonID,
+					Title:       "Creator's Deletable Project",
+					Description: "Creator's description",
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			creatorProjectID := creatorProjectResp.GetProjectId()
+
+			// Creator deletes their own project
 			deleteReq := &projectMsgs.DeleteRequest{
-				ProjectId: creatorProjectID.String(),
+				ProjectId: creatorProjectID,
 			}
 
 			_, err = projectClient.Delete(creatorCtx, deleteReq)
@@ -1423,7 +1459,7 @@ var _ = Describe("ProjectService", func() {
 
 			// Verify project was deleted
 			_, err = dbClient.Project.Query().
-				Where(entproject.IDEQ(creatorProjectID)).
+				Where(entproject.IDEQ(uuid.MustParse(creatorProjectID))).
 				Only(context.Background())
 			Expect(err).To(HaveOccurred())
 			Expect(ent.IsNotFound(err)).To(BeTrue())
