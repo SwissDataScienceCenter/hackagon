@@ -24,4 +24,4 @@
     ]);
 </script>
 
-<SidebarNavSection label="Hackathon" {items} {collapsed} activeColor="primary" />
+<SidebarNavSection label="Member" {items} {collapsed} activeColor="primary" />
