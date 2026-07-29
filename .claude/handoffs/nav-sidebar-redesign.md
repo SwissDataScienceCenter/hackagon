@@ -24,7 +24,7 @@
 - `.claude/skills/frontend-data-wiring/SKILL.md` — the established wiring
   pattern (own `+page.server.ts`, reuse parent data via `event.parent()`,
   shape server-side, keep participant pages free of viewer-role
-  distinctions — admin concerns live in `/(admin)/*`).
+  distinctions — admin concerns live in `/(app)/(admin)/*`).
 - **Standing caveat, proven true repeatedly this session:** `CLAUDE.md`'s
   "Runtime status" section and prior docs have understated what's actually
   registered/implemented more than once (`ProjectService`, `TeamService`,
@@ -44,14 +44,14 @@ backend bug along the way.
 
 1. **Dashboard entry + admin shell.** Dashboard rows now branch on the
    viewer's real per-hackathon role: Owner gets "Enter as Admin" (→ new
-   `(admin)/admin/hackathon/[slug]` route tree, gated to Owner/global-Admin)
+   `(app)/(owner)/owner/hackathon/[slug]` route tree, gated to Owner/global-Admin)
    + "Enter as Participant"; Member gets "Enter"; waitlisted gets neither. A
-   "Site Admin" button (global-Admin only) links to `/(admin)/users`.
-   `(admin)/admin/hackathon/[slug]` grew a real "Pending participants"
+   "Site Admin" button (global-Admin only) links to `/(app)/(admin)/users`.
+   `(app)/(owner)/owner/hackathon/[slug]` grew a real "Pending participants"
    list with Approve/Remove form actions.
 2. **Dashboard "Join" wired** — real form action calling
    `HackathonService.Join`, replacing an `alert()` stub.
-3. **`/(admin)/users` 403 crash fixed** — its `load` had no error handling
+3. **`/(app)/(admin)/users` 403 crash fixed** — its `load` had no error handling
    around a call that requires global-Admin casbin permission; any other
    logged-in user hit an unhandled crash instead of a clean 403.
 4. **Discovered `ProjectService` is fully registered and implemented**
@@ -149,7 +149,7 @@ systems (`NavBar`, `HackathonSubNav`'s horizontal tab strip, and eventually
 `AdminSubNav`) with one. Suggested framing to start from: split into two
 shells — a public/marketing shell (keep current header+footer) for `/`,
 the public `/hackathon/[slug]` page, and signin/signout; and a new
-authenticated app shell for everything under `(participant)`/`(admin)`.
+authenticated app shell for everything under `(member)`/`(admin)` (both nested under `(app)`).
 This is a structural change touching the root layout and every nested
 layout — treat it as its own design pass (alternatives, rough component
 boundaries, mobile behavior) before writing code, per the general working

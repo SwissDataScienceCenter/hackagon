@@ -11,7 +11,7 @@ server-side, no viewer-role distinctions in participant-facing pages).
 
 ## Recent changes (newest first)
 
-- `(admin)/admin/hackathon/[slug]` gained its first real mutations: a "Pending
+- `(app)/(owner)/owner/hackathon/[slug]` gained its first real mutations: a "Pending
   participants" list (waitlisted `hackathon.members`, avatar-initials + name +
   email + joined date) with per-row **Approve**/**Remove** buttons, wired via
   a new `+page.server.ts` (`approve`/`remove` form actions calling
@@ -22,14 +22,14 @@ server-side, no viewer-role distinctions in participant-facing pages).
   unchanged otherwise.
 - Dashboard "Other hackathons" **Join** button rewired from
   `alert('Join: not yet implemented')` to a real `<form use:enhance>` posting
-  to a new `join` action in `routes/(participant)/dashboard/+page.server.ts`,
+  to a new `join` action in `routes/(app)/(member)/dashboard/+page.server.ts`,
   which calls `HackathonService.Join({hackathonId})`. On success `update()`
   re-runs `load`, which naturally moves the hackathon into "Your hackathons"
   as Waitlisted (`List` with `participantId` matches waitlisted rows too, so
   no extra backend logic was needed). Errors (hackathon not found / already
   finished) render inline next to the button instead of an alert.
-- New route tree `(admin)/admin/hackathon/[slug]` created — a per-hackathon
-  admin shell, distinct from the site-wide `(admin)/users`. `+layout.server.ts`
+- New route tree `(app)/(owner)/owner/hackathon/[slug]` created — a per-hackathon
+  admin shell, distinct from the site-wide `(app)/(admin)/users`. `+layout.server.ts`
   calls `hackathon.get({ hackathonId: slug })` and gates entry to the caller's
   own `HackathonRole.HACKATHON_ROLE_OWNER` membership or global
   `GlobalRole.GLOBAL_ROLE_ADMIN` (403 otherwise) — this is a **UI-only gate**,
@@ -45,7 +45,7 @@ server-side, no viewer-role distinctions in participant-facing pages).
   filled "Enter"; waitlisted rows get no entry action. A "Site Admin" button
   (visible only when `platformUser.roles` from `WhoAmI` includes
   `GlobalRole.GLOBAL_ROLE_ADMIN`) was added next to the welcome banner, linking
-  to the existing `/(admin)/users`. The role badge itself was restyled from
+  to the existing `/(app)/(admin)/users`. The role badge itself was restyled from
   green (`preset-tonal-success`) to neutral (`preset-tonal-surface`) so it
   stops competing visually with the action buttons — this also changed the
   membership badge on the participant hackathon layout's hero, since both
@@ -53,8 +53,8 @@ server-side, no viewer-role distinctions in participant-facing pages).
 - Admin section given a first-draft UI: `AdminSubNav` component (Home /
   Administrate Projects / Administrate Users / Administrate Teams / General
   Settings — only the first two are real links, the rest are disabled
-  placeholders since no backend/route exists yet), `(admin)/+layout.svelte`
-  now renders it, `(admin)/users` redesigned with a working search box and a
+  placeholders since no backend/route exists yet), `(app)/(admin)/+layout.svelte`
+  now renders it, `(app)/(admin)/users` redesigned with a working search box and a
   table matching the team's reference mockup. Only `Photo` (initials
   fallback), `Display Name`, and `Email` are real — `SurName`, `Name`,
   `Status`, `Employer's Category`, `Employer` render `—`; the `User` backend
@@ -65,7 +65,7 @@ server-side, no viewer-role distinctions in participant-facing pages).
   it had no real destination.
 - Guideline adopted: per-hackathon `participants` list stays free of any
   viewer-role distinction (no admin-only fields/actions) — admin/user
-  management belongs in `/(admin)/*`, not nested under
+  management belongs in `/(app)/(admin)/*`, not nested under
   `hackathon/[slug]/participants/`. An admin-gated contact-details detail
   page was tried there and reverted for this reason.
 - `.../proposals` wired (own `+page.server.ts`, reuses the layout's
@@ -108,7 +108,7 @@ server-side, no viewer-role distinctions in participant-facing pages).
 **Wire Pages management into the admin shell.** `PageService` is full CRUD
 and already live (see Runtime status in `CLAUDE.md`), the `page` gRPC client
 was added to `AuthorizedGrpc` a while back but nothing has ever called it, and
-`(admin)/admin/hackathon/[slug]/+page.svelte` already says "Managing pages,
+`(app)/(owner)/owner/hackathon/[slug]/+page.svelte` already says "Managing pages,
 phases and tracks from here is coming soon" — literally the next promise on
 that page to make good on. `hackathon.pages` (`title`, `content`, `visible`,
 `order`) is already in the layout's `hackathon.get()` response, so a first
@@ -127,12 +127,12 @@ new mutations — just rendering data that's already fetched.
 | Route | File | Backend call |
 |---|---|---|
 | `/` (landing) | `routes/+page.server.ts` | `publicHackathonClient.list({ visibilityFilter: PUBLIC })` (unauthenticated) |
-| `/(participant)/dashboard` | `routes/(participant)/dashboard/+page.server.ts` | `hackathon.list({ visibilityFilter: PUBLIC })` + `hackathon.list({ participantId })`, deduped client-side; `join` action calls `hackathon.join({ hackathonId })` |
-| `/(participant)/hackathon/[slug]` layout (hero, phase bar, badges) | `.../[slug]/+layout.server.ts` + `+layout.svelte` | `hackathon.get({ hackathonId: slug })`; handles 403 (not a confirmed member) / 404 |
+| `/(app)/(member)/dashboard` | `routes/(app)/(member)/dashboard/+page.server.ts` | `hackathon.list({ visibilityFilter: PUBLIC })` + `hackathon.list({ participantId })`, deduped client-side; `join` action calls `hackathon.join({ hackathonId })` |
+| `/(app)/(member)/hackathon/[slug]` layout (hero, phase bar, badges) | `.../[slug]/+layout.server.ts` + `+layout.svelte` | `hackathon.get({ hackathonId: slug })`; handles 403 (not a confirmed member) / 404 |
 | `.../participants` | `participants/+page.server.ts` + `+page.svelte` | reuses layout's `hackathon.get()` via `event.parent()`, maps `hackathon.members` server-side — no duplicate call |
 | `.../proposals` | `proposals/+page.server.ts` + `+page.svelte` | reuses layout's `hackathon.get()` via `event.parent()`, maps `hackathon.projects` server-side — no duplicate call |
-| `/(admin)/users` | `routes/(admin)/users/+page.server.ts` | `user.list({})` |
-| `/(admin)/admin/hackathon/[slug]` | `.../admin/hackathon/[slug]/+layout.server.ts` + `+page.server.ts` + `+page.svelte` | `hackathon.get({ hackathonId: slug })` for stats + pending-member list; `approve`/`remove` actions call `hackathon.approveParticipant`/`removeParticipant`; layout gate is Owner/global-Admin only (403 otherwise) |
+| `/(app)/(admin)/users` | `routes/(app)/(admin)/users/+page.server.ts` | `user.list({})` |
+| `/(app)/(owner)/owner/hackathon/[slug]` | `.../owner/hackathon/[slug]/+layout.server.ts` + `+page.server.ts` + `+page.svelte` | `hackathon.get({ hackathonId: slug })` for stats + pending-member list; `approve`/`remove` actions call `hackathon.approveParticipant`/`removeParticipant`; layout gate is Owner/global-Admin only (403 otherwise) |
 
 ## 🟡 Partially wired — real data mixed with hardcoded content
 

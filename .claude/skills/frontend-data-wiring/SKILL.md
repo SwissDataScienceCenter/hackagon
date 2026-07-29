@@ -53,7 +53,7 @@ carrying a field or action that's only relevant to admins, move it out to
 
 ## Reference implementation
 
-`components/frontend/src/routes/(participant)/hackathon/[slug]/participants/+page.server.ts`
+`components/frontend/src/routes/(app)/(member)/hackathon/[slug]/participants/+page.server.ts`
 — reuses the hackathon layout's already-fetched member list via
 `event.parent()`, maps it to row data using `membershipBadgeLabel` from
 `$lib/utils/hackathonStatus`, and returns just `{ participants }`. The matching
