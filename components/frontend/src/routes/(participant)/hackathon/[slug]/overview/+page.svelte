@@ -4,6 +4,7 @@
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
+    const myTeam = $derived(data.myTeam);
 
     const projects = $derived(data.hackathon.projects);
     const trackCounts = $derived(
@@ -15,17 +16,31 @@
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <ParticipationCard
-        teamName="Bishorn"
-        teamRole="Member"
-        teamMemberCount={3}
-        projectName="SoDeDo: Replicated Dataset for ML"
-        projectTrack="Data Science"
-        projectStatus="Proposal submitted"
-        nextAction="Set Preferences"
-        nextActionHref="#preferences"
-        deadline="Closes in 12 days"
-    />
+    {#if myTeam}
+        <ParticipationCard
+            teamName={myTeam.name}
+            teamMemberCount={myTeam.memberCount}
+            projectName={myTeam.projectName}
+            projectTrack={myTeam.projectTrack}
+            projectStatus={myTeam.projectStatus}
+            nextAction="View Team"
+            nextActionHref="/hackathon/{data.hackathon.id}/teams/{myTeam.id}"
+        />
+    {:else}
+        <div class="card preset-outlined-surface-200-800 p-5">
+            <h2 class="mb-2 text-base font-bold">Your Participation</h2>
+            <p class="m-0 text-sm text-surface-500">
+                You haven't been assigned to a team yet. Check the
+                <a
+                    href={resolve(`/hackathon/${data.hackathon.id}/teams`)}
+                    class="text-primary-700-300 no-underline hover:underline"
+                >
+                    Teams
+                </a>
+                page once teams are formed.
+            </p>
+        </div>
+    {/if}
 
     <div class="card preset-outlined-surface-200-800 p-5">
         <h2 class="mb-3 text-base font-bold">About</h2>
