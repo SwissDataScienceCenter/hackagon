@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
+    import HeroSlim from '$lib/components/hackathon/HeroSlim.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
 
     import type { Snippet } from 'svelte';
@@ -45,7 +46,7 @@
     })());
 
     /** List pages (and anything nested under them, e.g. a detail or create
-     *  sub-page): only sub-nav + content, no compact hero or phase bar. */
+     *  sub-page): sub-nav + a slim header, no full hero or phase bar. */
     const listPageSegments = new Set([
         'participants',
         'teams',
@@ -54,7 +55,7 @@
         'timeline',
         'pages',
     ]);
-    const hideHeroAndTimeline = $derived(
+    const isSectionPage = $derived(
         $page.url.pathname
             .split('/')
             .filter(Boolean)
@@ -62,7 +63,9 @@
     );
 </script>
 
-{#if !hideHeroAndTimeline}
+{#if isSectionPage}
+    <HeroSlim {title} {dates} badges={heroBadges} />
+{:else}
     <HeroCompact
         {title}
         {dates}
