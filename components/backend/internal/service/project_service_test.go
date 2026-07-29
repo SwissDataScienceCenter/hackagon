@@ -18,6 +18,7 @@ import (
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -246,6 +247,132 @@ var _ = Describe("ProjectService", func() {
 
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("allows hackathon member to propose", func() {
+			// Create a test user
+			memberKeycloakID := "member-project-proposer"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(memberKeycloakID).
+				SetUsername("member-project-proposer").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create hackathon as admin
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			now := time.Now()
+			hackathonResp, err := hackathonClient.Create(adminCtx, &msgs.CreateRequest{
+				Name:        "Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID := hackathonResp.GetHackathonId()
+
+			// Join the hackathon as the member (creates waitlisted participant)
+			memberToken := testutils.CreateTestJWTToken(memberKeycloakID)
+			memberCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+memberToken),
+			)
+			_, err = hackathonClient.Join(memberCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Look up the user entity ID
+			memberUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(memberKeycloakID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Approve the participant as admin
+			_, err = hackathonClient.ApproveParticipant(adminCtx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      memberUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Propose as approved member
+			title := "Member Proposed Project"
+			req := &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       title,
+				Description: "Proposed by a member",
+			}
+
+			resp, err := projectClient.Propose(memberCtx, req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetProjectId()).NotTo(BeEmpty())
+
+			// Verify in database
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(resp.GetProjectId()))).
+				WithCreator().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Title).To(Equal(title))
+			Expect(p.Status).To(Equal(entproject.StatusProposed))
+			Expect(p.Edges.Creator.KeycloakID).To(Equal(memberKeycloakID))
+		})
+
+		It("denies waitlisted participant from proposing", func() {
+			// Create a test user
+			waitlistedKeycloakID := "waitlisted-project-proposer"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(waitlistedKeycloakID).
+				SetUsername("waitlisted-project-proposer").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create hackathon as admin
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			now := time.Now()
+			hackathonResp, err := hackathonClient.Create(adminCtx, &msgs.CreateRequest{
+				Name:        "Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID := hackathonResp.GetHackathonId()
+
+			// Join the hackathon as the waitlisted user (creates is_waiting=true participant)
+			waitlistedToken := testutils.CreateTestJWTToken(waitlistedKeycloakID)
+			waitlistedCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+waitlistedToken),
+			)
+			_, err = hackathonClient.Join(waitlistedCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to propose — should be denied (not yet approved)
+			req := &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       "Waitlisted Project",
+				Description: "Should not be allowed",
+			}
+
+			_, err = projectClient.Propose(waitlistedCtx, req)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
 
 		It("requires Propose permission to propose", func() {
