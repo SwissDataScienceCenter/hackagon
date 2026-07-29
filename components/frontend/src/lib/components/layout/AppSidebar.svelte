@@ -9,7 +9,9 @@
     import HackathonNav from './HackathonNav.svelte';
     import HackathonAdminNav from './HackathonAdminNav.svelte';
     import SiteAdminNav from './SiteAdminNav.svelte';
+    import SidebarUserFooter from './SidebarUserFooter.svelte';
     import { isOwnerRole } from '$lib/utils/hackathonStatus';
+    import type { Session } from '@auth/sveltekit';
 
     interface HackathonMember {
         role: number;
@@ -25,7 +27,12 @@
     let {
         myHackathons,
         isGlobalAdmin,
-    }: { myHackathons: HackathonEntry[]; isGlobalAdmin: boolean } = $props();
+        session,
+    }: {
+        myHackathons: HackathonEntry[];
+        isGlobalAdmin: boolean;
+        session: Omit<Session, 'accessToken'> | null;
+    } = $props();
 
     let collapsed = $state(false);
     let mobileOpen = $state(false);
@@ -159,4 +166,6 @@
             <SiteAdminNav collapsed={effectiveCollapsed} />
         {/if}
     </nav>
+
+    <SidebarUserFooter {session} collapsed={effectiveCollapsed} />
 </aside>

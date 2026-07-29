@@ -7,7 +7,11 @@
 </script>
 
 <div class="flex min-h-screen flex-col md:flex-row">
-    <AppSidebar myHackathons={data.myHackathons} isGlobalAdmin={data.isGlobalAdmin} />
+    <AppSidebar
+        myHackathons={data.myHackathons}
+        isGlobalAdmin={data.isGlobalAdmin}
+        session={data.session ?? null}
+    />
     <main class="flex-1 overflow-y-auto">
         {@render children()}
     </main>
