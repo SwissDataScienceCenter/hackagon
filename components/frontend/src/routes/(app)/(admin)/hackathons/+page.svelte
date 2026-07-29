@@ -24,7 +24,7 @@
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">All Hackathons</h1>
+        <h1 class="m-0 text-lg font-bold text-surface-950-50">Hackathons</h1>
         <div class="flex w-full flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
             <div class="relative w-full sm:w-72">
                 <Search
@@ -57,9 +57,9 @@
                         <th class="px-3 py-2 font-semibold">Name</th>
                         <th class="px-3 py-2 font-semibold">Status</th>
                         <th class="px-3 py-2 font-semibold">Visibility</th>
-                        <th class="px-3 py-2 font-semibold">Creator</th>
                         <th class="px-3 py-2 font-semibold">Starts</th>
                         <th class="px-3 py-2 font-semibold">Ends</th>
+                        <th class="px-3 py-2 font-semibold">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -67,7 +67,7 @@
                         <tr class="border-b border-surface-200-800 last:border-0">
                             <td class="px-3 py-2 font-semibold">
                                 <a
-                                    href={resolve(`/owner/hackathon/${h.id}`)}
+                                    href={resolve(`/hackathons/${h.id}`)}
                                     class="text-surface-950-50 no-underline hover:underline"
                                 >
                                     {h.name}
@@ -88,13 +88,34 @@
                                 {/if}
                             </td>
                             <td class="px-3 py-2 text-surface-500">
-                                {h.creator?.displayName || h.creator?.username || '—'}
-                            </td>
-                            <td class="px-3 py-2 text-surface-500">
                                 {h.startsAt ? new Date(h.startsAt).toLocaleDateString() : '—'}
                             </td>
                             <td class="px-3 py-2 text-surface-500">
                                 {h.endsAt ? new Date(h.endsAt).toLocaleDateString() : '—'}
+                            </td>
+                            <td class="px-3 py-2">
+                                <div class="flex gap-2">
+                                    <a
+                                        href={resolve(`/hackathons/${h.id}`)}
+                                        class="btn btn-sm preset-tonal-surface"
+                                    >
+                                        View
+                                    </a>
+                                    <a
+                                        href={resolve(`/hackathons/${h.id}/edit`)}
+                                        class="btn btn-sm preset-tonal-surface"
+                                    >
+                                        Edit
+                                    </a>
+                                    <button
+                                        type="button"
+                                        disabled
+                                        class="btn btn-sm preset-tonal-surface cursor-not-allowed opacity-50"
+                                        title="Not available yet"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     {/each}
