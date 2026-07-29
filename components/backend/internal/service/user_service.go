@@ -117,7 +117,16 @@ func (s *UserService) WhoAmI(
 		}
 	}
 
-	return &msgs.WhoAmIResponse{User: userEntryFromEnt(u)}, nil
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+
+	return &msgs.WhoAmIResponse{User: entry}, nil
 }
 
 func (s *UserService) Register(
