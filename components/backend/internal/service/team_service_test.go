@@ -128,8 +128,6 @@ var _ = Describe("TeamService", func() {
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(err).NotTo(HaveOccurred())
-
 			token := testutils.CreateTestJWTToken(ownerID)
 			ctx := metadata.NewOutgoingContext(
 				context.Background(),
@@ -304,6 +302,7 @@ var _ = Describe("TeamService", func() {
 
 	Describe("Edit", func() {
 		var teamID string
+		var hackathonID string
 		var ownerID string
 		var memberID string
 
@@ -313,8 +312,6 @@ var _ = Describe("TeamService", func() {
 				SetKeycloakID(ownerID).
 				SetUsername("team-edit-owner").
 				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -333,6 +330,7 @@ var _ = Describe("TeamService", func() {
 				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -406,10 +404,39 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
+
+		It("denies edit for hackathon member not in team", func() {
+			// Create a user who is a hackathon member (Member role) but not a team member.
+			hackathonMemberID := "hackathon-member-not-in-team"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Grant hackathon member role (not owner).
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			newName := "Unauthorized Name"
+			_, err = teamClient.Edit(ctx, &teamMsgs.EditRequest{
+				Id:   teamID,
+				Name: &newName,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
 	})
 
 	Describe("Delete", func() {
 		var teamID string
+		var hackathonID string
 		var ownerID string
 		var memberID string
 
@@ -419,8 +446,6 @@ var _ = Describe("TeamService", func() {
 				SetKeycloakID(ownerID).
 				SetUsername("team-delete-owner").
 				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -439,6 +464,7 @@ var _ = Describe("TeamService", func() {
 				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -506,10 +532,39 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
+
+		It("denies delete for hackathon member not in team", func() {
+			// Create a user who is a hackathon member (Member role) but not a team member.
+			hackathonMemberID := "hackathon-member-not-in-team-delete"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-delete").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Grant hackathon member role (not owner).
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.Delete(ctx, &teamMsgs.DeleteRequest{Id: teamID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+
+			// Verify team still exists.
+			_, err = dbClient.Team.Get(ctx, uuid.MustParse(teamID))
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Describe("AssignUser", func() {
 		var teamID string
+		var hackathonID string
 		var userID string
 		var ownerID string
 		var memberID string
@@ -520,8 +575,6 @@ var _ = Describe("TeamService", func() {
 				SetKeycloakID(ownerID).
 				SetUsername("team-assign-owner").
 				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -541,6 +594,7 @@ var _ = Describe("TeamService", func() {
 				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -626,10 +680,38 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
+
+		It("denies assignment for hackathon member not in team", func() {
+			// Create a user who is a hackathon member (Member role) but not a team member.
+			hackathonMemberID := "hackathon-member-not-in-team-assign"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-assign").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Grant hackathon member role (not owner).
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamID,
+				UserId: userID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
 	})
 
 	Describe("RemoveUser", func() {
 		var teamID string
+		var hackathonID string
 		var userID string
 		var ownerID string
 		var memberID string
@@ -640,8 +722,6 @@ var _ = Describe("TeamService", func() {
 				SetKeycloakID(ownerID).
 				SetUsername("team-remove-owner").
 				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -660,6 +740,7 @@ var _ = Describe("TeamService", func() {
 				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -745,6 +826,33 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
+
+		It("denies removal for hackathon member not in team", func() {
+			// Create a user who is a hackathon member (Member role) but not a team member.
+			hackathonMemberID := "hackathon-member-not-in-team-remove"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-remove").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Grant hackathon member role (not owner).
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.RemoveUser(ctx, &teamMsgs.RemoveUserRequest{
+				TeamId: teamID,
+				UserId: userID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
 	})
 
 	Describe("CreateSubmission", func() {
@@ -759,8 +867,6 @@ var _ = Describe("TeamService", func() {
 				SetKeycloakID(ownerID).
 				SetUsername("team-submission-owner").
 				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -899,8 +1005,6 @@ var _ = Describe("TeamService", func() {
 				SetKeycloakID(ownerID).
 				SetUsername("team-finalize-owner").
 				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)

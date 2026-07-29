@@ -157,7 +157,7 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons
-		{HackathonOrganizer.String(), "*", Hackathon.String(), Create.String()},
+		{HackathonOrganizer.String(), "/hackathon/*", Hackathon.String(), Create.String()},
 		// Owner can read owned hackathon
 		{Owner.String(), "/hackathon/*", Hackathon.String(), Read.String()},
 		// Owner can write owned hackathon

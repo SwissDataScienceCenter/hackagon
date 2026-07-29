@@ -42,7 +42,7 @@ func (s *TeamService) List(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
@@ -108,7 +108,12 @@ func (s *TeamService) Get(
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
 		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
-	if err = s.enforcer.RequirePermission(ctx, t.Edges.Project.Edges.Hackathon.ID.String(), m.Hackathon, m.Read); err != nil {
+	if err = s.enforcer.RequirePermission(
+		ctx,
+		t.Edges.Project.Edges.Hackathon.ID.String(),
+		m.Hackathon,
+		m.Read,
+	); err != nil {
 		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
 	}
 
@@ -481,7 +486,7 @@ func (s *TeamService) CreateSubmission(
 
 	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
 	if err := s.enforcer.RequirePermission(
-		ctx, hackathonID, m.Team, m.Write,
+		ctx, hackathonID, m.Submission, m.Create,
 		m.WithTeam(t.ID.String()),
 	); err != nil {
 		return nil, err
