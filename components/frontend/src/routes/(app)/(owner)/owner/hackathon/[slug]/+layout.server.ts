@@ -32,13 +32,13 @@ export const load: LayoutServerLoad = async (event) => {
   const isGlobalAdmin =
     platformUser?.roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN) ?? false
 
-  // UI-only gate for the admin shell. The real security boundary is casbin's
+  // UI-only gate for the owner shell. The real security boundary is casbin's
   // Write permission (Owner-only) enforced on each mutating RPC these pages call.
   if (
     myMembership?.role !== HackathonRole.HACKATHON_ROLE_OWNER &&
     !isGlobalAdmin
   ) {
-    error(403, "You must be an owner of this hackathon to access admin tools")
+    error(403, "You must be an owner of this hackathon to access owner tools")
   }
 
   return { hackathon: result.hackathon, myMembership }

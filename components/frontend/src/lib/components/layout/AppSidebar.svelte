@@ -7,7 +7,7 @@
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import HackathonSwitcher from './HackathonSwitcher.svelte';
     import HackathonNav from './HackathonNav.svelte';
-    import HackathonAdminNav from './HackathonAdminNav.svelte';
+    import HackathonOwnerNav from './HackathonOwnerNav.svelte';
     import SiteAdminNav from './SiteAdminNav.svelte';
     import SidebarUserFooter from './SidebarUserFooter.svelte';
     import { isOwnerRole } from '$lib/utils/hackathonStatus';
@@ -98,7 +98,7 @@
     >
         <Menu class="h-5 w-5" />
     </button>
-    <a href={resolve('/(app)/(participant)/dashboard')} class="flex items-center gap-2 no-underline">
+    <a href={resolve('/(app)/(member)/dashboard')} class="flex items-center gap-2 no-underline">
         <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-6 dark:block" />
         <img src="/logos/sdsc.svg" alt="SDSC" class="block h-6 dark:hidden" />
         <span class="text-sm font-bold">Hackathons</span>
@@ -125,7 +125,7 @@
     >
         {#if !effectiveCollapsed}
             <a
-                href={resolve('/(app)/(participant)/dashboard')}
+                href={resolve('/(app)/(member)/dashboard')}
                 class="flex items-center gap-2 no-underline"
             >
                 <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-6 dark:block" />
@@ -159,7 +159,7 @@
         {#if activeSlug}
             <HackathonNav slug={activeSlug} collapsed={effectiveCollapsed} />
             {#if canManageActiveHackathon}
-                <HackathonAdminNav slug={activeSlug} collapsed={effectiveCollapsed} />
+                <HackathonOwnerNav slug={activeSlug} collapsed={effectiveCollapsed} />
             {/if}
         {/if}
         {#if isGlobalAdmin}

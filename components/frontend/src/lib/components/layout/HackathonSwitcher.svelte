@@ -110,7 +110,7 @@
                 </a>
             {/each}
             <a
-                href={resolve('/(app)/(participant)/dashboard')}
+                href={resolve('/(app)/(member)/dashboard')}
                 class="flex items-center gap-2 border-t border-surface-200-800 px-3 py-2 text-sm
                        font-medium no-underline hover:bg-surface-100-900"
             >

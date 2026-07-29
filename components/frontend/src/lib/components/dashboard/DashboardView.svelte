@@ -112,10 +112,10 @@
                                                     Enter as Participant
                                                 </a>
                                                 <a
-                                                    href={resolve(`/admin/hackathon/${h.id}`)}
+                                                    href={resolve(`/owner/hackathon/${h.id}`)}
                                                     class="btn btn-sm preset-filled-primary-500 no-underline"
                                                 >
-                                                    Enter as Admin
+                                                    Enter as Owner
                                                 </a>
                                             {:else}
                                                 <a

@@ -6,8 +6,8 @@
     let { slug, collapsed }: { slug: string; collapsed: boolean } = $props();
 
     const items = $derived([
-        { label: 'Hackathon admin', icon: ShieldCheck, href: resolve(`/admin/hackathon/${slug}`) },
+        { label: 'Dashboard', icon: ShieldCheck, href: resolve(`/owner/hackathon/${slug}`) },
     ]);
 </script>
 
-<SidebarNavSection label="Manage this hackathon" {items} {collapsed} activeColor="secondary" />
+<SidebarNavSection label="Owner tools" {items} {collapsed} activeColor="secondary" />

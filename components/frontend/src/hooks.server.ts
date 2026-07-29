@@ -22,7 +22,7 @@ let configLoader: ConfigLoader
 // Routes are protected by default. Only routes matching PUBLIC_ROUTE_PATTERNS
 // are accessible without authentication.
 // Public hackathon marketing page only: /hackathon/<slug> — not /hackathon/<slug>/overview, etc.
-// (Participant routes under (app)/(participant)/hackathon/[slug]/... require login.)
+// (Participant routes under (app)/(member)/hackathon/[slug]/... require login.)
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
@@ -190,7 +190,7 @@ const redirectHandle: Handle = async ({ event, resolve }) => {
         { userId: event.locals.session.user.id },
         "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
       )
-      throw redirect(303, resolvePath("/(app)/(participant)/dashboard"))
+      throw redirect(303, resolvePath("/(app)/(member)/dashboard"))
     }
   }
 
