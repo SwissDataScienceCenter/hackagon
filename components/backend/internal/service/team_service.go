@@ -64,6 +64,7 @@ func (s *TeamService) List(
 		Where(entteam.HasProjectWith(entproject.HasHackathonWith(enthackathon.IDEQ(hackathonID)))).
 		WithProject().
 		WithCreator().
+		WithMembers().
 		All(ctx)
 	if err != nil {
 		slog.Error("query teams", "err", err)
