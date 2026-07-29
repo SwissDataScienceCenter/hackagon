@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
@@ -52,6 +53,7 @@ func (Team) Edges() []ent.Edge {
 			Ref("modified_teams").Unique().
 			Comment("The user who last modified this team."),
 		edge.To("submissions", Submission.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)).
 			Comment("Submissions made by this team."),
 		edge.From("members", User.Type).
 			Ref("participates_in_teams").

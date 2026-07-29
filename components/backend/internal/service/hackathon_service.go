@@ -83,7 +83,7 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
-	if _, err := s.enforcer.AddRole(uid, m.Owner.String(), h.ID.String()); err != nil {
+	if _, err := s.enforcer.AddRole(uid, m.Owner, h.ID.String()); err != nil {
 		slog.Error("add hackathon owner", "err", err)
 		err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
 		if err != nil {

@@ -252,6 +252,30 @@
 - [hackathon/messages/team_svc/create_response.proto](#hackathon_messages_team_svc_create_response-proto)
     - [CreateResponse](#hackathon-messages-team_svc-CreateResponse)
   
+- [hackathon/messages/team_svc/create_submission_request.proto](#hackathon_messages_team_svc_create_submission_request-proto)
+    - [CreateSubmissionRequest](#hackathon-messages-team_svc-CreateSubmissionRequest)
+  
+- [hackathon/messages/team_svc/create_submission_response.proto](#hackathon_messages_team_svc_create_submission_response-proto)
+    - [CreateSubmissionResponse](#hackathon-messages-team_svc-CreateSubmissionResponse)
+  
+- [hackathon/messages/team_svc/delete_request.proto](#hackathon_messages_team_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-team_svc-DeleteRequest)
+  
+- [hackathon/messages/team_svc/delete_response.proto](#hackathon_messages_team_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-team_svc-DeleteResponse)
+  
+- [hackathon/messages/team_svc/edit_request.proto](#hackathon_messages_team_svc_edit_request-proto)
+    - [EditRequest](#hackathon-messages-team_svc-EditRequest)
+  
+- [hackathon/messages/team_svc/edit_response.proto](#hackathon_messages_team_svc_edit_response-proto)
+    - [EditResponse](#hackathon-messages-team_svc-EditResponse)
+  
+- [hackathon/messages/team_svc/finalize_submission_request.proto](#hackathon_messages_team_svc_finalize_submission_request-proto)
+    - [FinalizeSubmissionRequest](#hackathon-messages-team_svc-FinalizeSubmissionRequest)
+  
+- [hackathon/messages/team_svc/finalize_submission_response.proto](#hackathon_messages_team_svc_finalize_submission_response-proto)
+    - [FinalizeSubmissionResponse](#hackathon-messages-team_svc-FinalizeSubmissionResponse)
+  
 - [hackathon/messages/team_svc/get_request.proto](#hackathon_messages_team_svc_get_request-proto)
     - [GetRequest](#hackathon-messages-team_svc-GetRequest)
   
@@ -263,6 +287,12 @@
   
 - [hackathon/messages/team_svc/list_response.proto](#hackathon_messages_team_svc_list_response-proto)
     - [ListResponse](#hackathon-messages-team_svc-ListResponse)
+  
+- [hackathon/messages/team_svc/remove_user_request.proto](#hackathon_messages_team_svc_remove_user_request-proto)
+    - [RemoveUserRequest](#hackathon-messages-team_svc-RemoveUserRequest)
+  
+- [hackathon/messages/team_svc/remove_user_response.proto](#hackathon_messages_team_svc_remove_user_response-proto)
+    - [RemoveUserResponse](#hackathon-messages-team_svc-RemoveUserResponse)
   
 - [hackathon/messages/track_svc/create_request.proto](#hackathon_messages_track_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-track_svc-CreateRequest)
@@ -3019,6 +3049,253 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_team_svc_create_submission_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/create_submission_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-CreateSubmissionRequest"></a>
+
+### CreateSubmissionRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team_id | [string](#string) |  |  |
+| project_id | [string](#string) |  |  |
+| result | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_create_submission_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/create_submission_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-CreateSubmissionResponse"></a>
+
+### CreateSubmissionResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/edit_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) | optional |  |
+| description | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/edit_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team | [hackathon.entities.Team](#hackathon-entities-Team) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_finalize_submission_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/finalize_submission_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-FinalizeSubmissionRequest"></a>
+
+### FinalizeSubmissionRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_finalize_submission_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/finalize_submission_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-FinalizeSubmissionResponse"></a>
+
+### FinalizeSubmissionResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission | [hackathon.entities.Submission](#hackathon-entities-Submission) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_team_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3129,6 +3406,69 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | teams | [hackathon.entities.Team](#hackathon-entities-Team) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_remove_user_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/remove_user_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-RemoveUserRequest"></a>
+
+### RemoveUserRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team_id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_remove_user_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/remove_user_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-RemoveUserResponse"></a>
+
+### RemoveUserResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| team | [hackathon.entities.Team](#hackathon-entities-Team) |  |  |
 
 
 
@@ -3573,7 +3913,12 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | List | [messages.team_svc.ListRequest](#hackathon-messages-team_svc-ListRequest) | [messages.team_svc.ListResponse](#hackathon-messages-team_svc-ListResponse) |  |
 | Get | [messages.team_svc.GetRequest](#hackathon-messages-team_svc-GetRequest) | [messages.team_svc.GetResponse](#hackathon-messages-team_svc-GetResponse) |  |
 | Create | [messages.team_svc.CreateRequest](#hackathon-messages-team_svc-CreateRequest) | [messages.team_svc.CreateResponse](#hackathon-messages-team_svc-CreateResponse) |  |
+| Edit | [messages.team_svc.EditRequest](#hackathon-messages-team_svc-EditRequest) | [messages.team_svc.EditResponse](#hackathon-messages-team_svc-EditResponse) |  |
+| Delete | [messages.team_svc.DeleteRequest](#hackathon-messages-team_svc-DeleteRequest) | [messages.team_svc.DeleteResponse](#hackathon-messages-team_svc-DeleteResponse) |  |
 | AssignUser | [messages.team_svc.AssignUserRequest](#hackathon-messages-team_svc-AssignUserRequest) | [messages.team_svc.AssignUserResponse](#hackathon-messages-team_svc-AssignUserResponse) |  |
+| RemoveUser | [messages.team_svc.RemoveUserRequest](#hackathon-messages-team_svc-RemoveUserRequest) | [messages.team_svc.RemoveUserResponse](#hackathon-messages-team_svc-RemoveUserResponse) |  |
+| CreateSubmission | [messages.team_svc.CreateSubmissionRequest](#hackathon-messages-team_svc-CreateSubmissionRequest) | [messages.team_svc.CreateSubmissionResponse](#hackathon-messages-team_svc-CreateSubmissionResponse) |  |
+| FinalizeSubmission | [messages.team_svc.FinalizeSubmissionRequest](#hackathon-messages-team_svc-FinalizeSubmissionRequest) | [messages.team_svc.FinalizeSubmissionResponse](#hackathon-messages-team_svc-FinalizeSubmissionResponse) |  |
 
  
 

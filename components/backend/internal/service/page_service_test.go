@@ -32,7 +32,7 @@ var _ = Describe("PageService", func() {
 	)
 
 	BeforeEach(func() {
-		dbClient, conn = testutils.CreateTestServer()
+		dbClient, conn, _ = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewPageServiceClient(conn)

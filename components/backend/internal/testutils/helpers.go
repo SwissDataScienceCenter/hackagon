@@ -85,6 +85,7 @@ func NewTestConfig(adminKeycloakID string) *config.Config {
 			IssuerUrl: "http://test-keycloak/realms/test",
 			Algorithm: jwt.SigningMethodRS256.Name,
 		},
+		Logging: config.LoggingConfig{Level: "debug"},
 	}
 }
 

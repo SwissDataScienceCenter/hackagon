@@ -50,11 +50,11 @@ func SetupFreshTestDB(cfg *config.Config) *ent.Client {
 }
 
 // CreateTestServer creates a complete test environment with fresh DB and server.
-// Returns the DB client and gRPC client connection.
+// Returns the DB client, gRPC client connection, and the enforcer.
 // Automatically sets up DeferCleanup for database, server, and connection.
-// Suitable for Ginkgo tests: db, conn := CreateTestServer(); client = NewClient(conn)
+// Suitable for Ginkgo tests: db, conn, enf := CreateTestServer(); client = NewClient(conn)
 // Ensures admin user is seeded and admin global role is added.
-func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
+func CreateTestServer() (*ent.Client, *grpc.ClientConn, *middleware.Enforcer) {
 	GinkgoHelper()
 
 	cfg := NewTestConfig(TestAdminKeycloakID)
@@ -73,7 +73,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 	}
 
 	keyfunc := jwt.Keyfunc(mockKeyfunc)
-	server, cleanupServer, err := service.NewServer(dbClient, cfg, &keyfunc)
+	server, cleanupServer, enf, err := service.NewServer(dbClient, cfg, &keyfunc)
 	Expect(err).NotTo(HaveOccurred())
 	DeferCleanup(cleanupServer)
 
@@ -111,7 +111,7 @@ func CreateTestServer() (*ent.Client, *grpc.ClientConn) {
 	Expect(err).NotTo(HaveOccurred())
 	DeferCleanup(func() { _ = conn.Close() })
 
-	return dbClient, conn
+	return dbClient, conn, enf
 }
 
 // NewMockEnforcer creates a mock RBAC enforcer for testing with admin role pre-seeded.
@@ -122,7 +122,7 @@ func NewMockEnforcer(adminKeycloakID string) *middleware.Enforcer {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(enf).NotTo(BeNil())
 
-	_, err = enf.AddGlobalRole(adminKeycloakID, "admin")
+	_, err = enf.AddGlobalRole(adminKeycloakID, middleware.Admin)
 	Expect(err).NotTo(HaveOccurred())
 
 	return enf

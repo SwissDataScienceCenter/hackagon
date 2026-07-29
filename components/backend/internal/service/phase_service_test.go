@@ -34,7 +34,7 @@ var _ = Describe("PhaseService", func() {
 	)
 
 	BeforeEach(func() {
-		dbClient, conn = testutils.CreateTestServer()
+		dbClient, conn, _ = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewPhaseServiceClient(conn)

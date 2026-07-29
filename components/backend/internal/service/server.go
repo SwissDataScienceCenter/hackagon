@@ -19,17 +19,17 @@ import (
 )
 
 // NewServer creates a gRPC server with all middleware, services, and registration.
-// Returns: server instance, cleanup function, error.
+// Returns: server instance, cleanup function, enforcer, error.
 // The cleanup function should be called to gracefully stop the server.
 func NewServer(
 	dbClient *ent.Client,
 	cfg *config.Config,
 	keyfunc *jwt.Keyfunc,
-) (*grpc.Server, func(), error) {
+) (*grpc.Server, func(), *mw.Enforcer, error) {
 	// Create Casbin enforcer
 	enf, err := mw.NewRBACEnforcer(cfg)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create RBAC enforcer: %w", err)
+		return nil, nil, nil, fmt.Errorf("create RBAC enforcer: %w", err)
 	}
 
 	// Create JWT validator
@@ -39,14 +39,14 @@ func NewServer(
 	} else {
 		validator, err = mw.NewJWTValidator(cfg)
 		if err != nil {
-			return nil, nil, fmt.Errorf("create jwt validator: %w", err)
+			return nil, nil, nil, fmt.Errorf("create jwt validator: %w", err)
 		}
 	}
 
 	// Create protovalidate
 	protoValidator, err := protovalidate.New()
 	if err != nil {
-		return nil, nil, fmt.Errorf("create protovalidate: %w", err)
+		return nil, nil, nil, fmt.Errorf("create protovalidate: %w", err)
 	}
 	validationInterceptor := protovalidate_middleware.UnaryServerInterceptor(protoValidator)
 
@@ -68,6 +68,7 @@ func NewServer(
 	phaseService := NewPhaseService(dbClient, enf)
 	trackService := NewTrackService(dbClient, enf)
 	projectService := NewProjectService(dbClient, enf)
+	teamService := NewTeamService(dbClient, enf)
 
 	// Register services
 	health.RegisterHealthServiceServer(server, healthService)
@@ -77,6 +78,7 @@ func NewServer(
 	hackathonSvc.RegisterPhaseServiceServer(server, phaseService)
 	hackathonSvc.RegisterTrackServiceServer(server, trackService)
 	hackathonSvc.RegisterProjectServiceServer(server, projectService)
+	hackathonSvc.RegisterTeamServiceServer(server, teamService)
 	reflection.Register(server)
 
 	// Cleanup: shutdown the gRPC server
@@ -84,5 +86,5 @@ func NewServer(
 		server.GracefulStop()
 	}
 
-	return server, cleanup, nil
+	return server, cleanup, enf, nil
 }
