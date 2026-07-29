@@ -95,7 +95,9 @@ func (s *TeamService) Get(
 		WithCreator().
 		WithModifier().
 		WithMembers().
-		WithSubmissions().
+		WithSubmissions(func(sq *ent.SubmissionQuery) {
+			sq.WithTeam().WithProject().WithCreator().WithModifier()
+		}).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
