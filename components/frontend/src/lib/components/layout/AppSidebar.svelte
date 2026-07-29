@@ -24,12 +24,19 @@
         viewerMembership?: HackathonMember;
     }
 
+    interface HackathonPage {
+        id: string;
+        title: string;
+    }
+
     let {
         myHackathons,
+        hackathonPages,
         isGlobalAdmin,
         session,
     }: {
         myHackathons: HackathonEntry[];
+        hackathonPages: HackathonPage[];
         isGlobalAdmin: boolean;
         session: Omit<Session, 'accessToken'> | null;
     } = $props();
@@ -157,7 +164,7 @@
 
     <nav class="flex-1 overflow-y-auto">
         {#if activeSlug}
-            <HackathonNav slug={activeSlug} collapsed={effectiveCollapsed} />
+            <HackathonNav slug={activeSlug} pages={hackathonPages} collapsed={effectiveCollapsed} />
             {#if canManageActiveHackathon}
                 <HackathonOwnerNav slug={activeSlug} collapsed={effectiveCollapsed} />
             {/if}

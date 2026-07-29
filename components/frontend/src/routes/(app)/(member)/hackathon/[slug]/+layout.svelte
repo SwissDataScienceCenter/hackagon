@@ -52,8 +52,7 @@
         'proposals',
         'submissions',
         'timeline',
-        'webinars',
-        'photos',
+        'pages',
     ]);
     const hideHeroAndTimeline = $derived(
         $page.url.pathname

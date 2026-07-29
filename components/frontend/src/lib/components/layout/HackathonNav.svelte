@@ -7,10 +7,18 @@
     import UsersRound from 'lucide-svelte/icons/users-round';
     import Send from 'lucide-svelte/icons/send';
     import CalendarClock from 'lucide-svelte/icons/calendar-clock';
-    import Video from 'lucide-svelte/icons/video';
-    import Image from 'lucide-svelte/icons/image';
+    import FileText from 'lucide-svelte/icons/file-text';
 
-    let { slug, collapsed }: { slug: string; collapsed: boolean } = $props();
+    interface HackathonPage {
+        id: string;
+        title: string;
+    }
+
+    let {
+        slug,
+        pages,
+        collapsed,
+    }: { slug: string; pages: HackathonPage[]; collapsed: boolean } = $props();
 
     const items = $derived([
         { label: 'Overview', icon: LayoutDashboard, href: resolve(`/hackathon/${slug}/overview`) },
@@ -19,8 +27,11 @@
         { label: 'Teams', icon: UsersRound, href: resolve(`/hackathon/${slug}/teams`) },
         { label: 'Submissions', icon: Send, href: resolve(`/hackathon/${slug}/submissions`) },
         { label: 'Timeline', icon: CalendarClock, href: resolve(`/hackathon/${slug}/timeline`) },
-        { label: 'Webinars', icon: Video, href: resolve(`/hackathon/${slug}/webinars`) },
-        { label: 'Photos', icon: Image, href: resolve(`/hackathon/${slug}/photos`) },
+        ...pages.map((p) => ({
+            label: p.title,
+            icon: FileText,
+            href: resolve(`/hackathon/${slug}/pages/${p.id}`),
+        })),
     ]);
 </script>
 
