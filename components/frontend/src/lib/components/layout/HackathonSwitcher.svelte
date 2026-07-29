@@ -38,7 +38,7 @@
     });
 </script>
 
-<div class="relative border-b border-surface-200-800 p-2">
+<div class="relative p-2">
     <button
         onclick={() => (open = !open)}
         aria-label="Switch hackathon"

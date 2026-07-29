@@ -1,0 +1,75 @@
+<script lang="ts">
+    import { page } from '$app/stores';
+    import type { ComponentType } from 'svelte';
+
+    interface Item {
+        label: string;
+        icon: ComponentType;
+        /** Omit for a "not available yet" stub entry. */
+        href?: string;
+    }
+
+    let {
+        label,
+        items,
+        collapsed,
+        activeColor = 'primary',
+    }: {
+        label: string;
+        items: Item[];
+        collapsed: boolean;
+        activeColor?: 'primary' | 'secondary' | 'tertiary';
+    } = $props();
+
+    const ACTIVE_CLASS = {
+        primary: 'bg-surface-100-900 font-medium text-primary-700-300',
+        secondary: 'bg-surface-100-900 font-medium text-secondary-700-300',
+        tertiary: 'bg-surface-100-900 font-medium text-tertiary-700-300',
+    };
+
+    const LABEL_CLASS = {
+        primary: 'text-surface-500',
+        secondary: 'text-secondary-500',
+        tertiary: 'text-tertiary-500',
+    };
+</script>
+
+<div class="flex flex-col gap-0.5 border-t border-surface-200-800 p-2">
+    {#if !collapsed}
+        <span class="px-2 pb-1 text-xs font-bold tracking-widest {LABEL_CLASS[activeColor]}">
+            {label}
+        </span>
+    {/if}
+    {#each items as item (item.label)}
+        {@const Icon = item.icon}
+        {@const isActive = item.href
+            ? $page.url.pathname === item.href || $page.url.pathname.startsWith(item.href + '/')
+            : false}
+        {#if item.href}
+            <a
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                class="flex h-10 items-center gap-2 rounded-lg px-2 text-sm no-underline
+                       transition-colors
+                       {isActive ? ACTIVE_CLASS[activeColor] : 'text-surface-500 hover:text-surface-700-300'}
+                       {collapsed ? 'justify-center' : ''}"
+            >
+                <Icon class="h-4 w-4 shrink-0" />
+                {#if !collapsed}
+                    <span>{item.label}</span>
+                {/if}
+            </a>
+        {:else}
+            <span
+                title="Not available yet"
+                class="flex h-10 cursor-not-allowed items-center gap-2 rounded-lg px-2 text-sm
+                       text-surface-500 opacity-50 {collapsed ? 'justify-center' : ''}"
+            >
+                <Icon class="h-4 w-4 shrink-0" />
+                {#if !collapsed}
+                    <span>{item.label}</span>
+                {/if}
+            </span>
+        {/if}
+    {/each}
+</div>

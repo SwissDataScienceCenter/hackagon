@@ -7,6 +7,9 @@
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import HackathonSwitcher from './HackathonSwitcher.svelte';
     import HackathonNav from './HackathonNav.svelte';
+    import HackathonAdminNav from './HackathonAdminNav.svelte';
+    import SiteAdminNav from './SiteAdminNav.svelte';
+    import { isOwnerRole } from '$lib/utils/hackathonStatus';
 
     interface HackathonMember {
         role: number;
@@ -19,7 +22,10 @@
         viewerMembership?: HackathonMember;
     }
 
-    let { myHackathons }: { myHackathons: HackathonEntry[] } = $props();
+    let {
+        myHackathons,
+        isGlobalAdmin,
+    }: { myHackathons: HackathonEntry[]; isGlobalAdmin: boolean } = $props();
 
     let collapsed = $state(false);
     let mobileOpen = $state(false);
@@ -29,6 +35,11 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
     const activeSlug = $derived($page.params.slug);
+    const activeHackathon = $derived(myHackathons.find((h) => h.id === activeSlug));
+    const canManageActiveHackathon = $derived(
+        Boolean(activeSlug) &&
+            (isGlobalAdmin || isOwnerRole(activeHackathon?.viewerMembership?.role ?? 0)),
+    );
 
     $effect(() => {
         if (typeof localStorage === 'undefined') return;
@@ -49,6 +60,16 @@
     $effect(() => {
         $page.url.pathname;
         mobileOpen = false;
+    });
+
+    // Lock background scroll while the mobile drawer is open — it's an
+    // overlay, not part of the page flow.
+    $effect(() => {
+        if (typeof document === 'undefined') return;
+        document.body.style.overflow = mobileOpen ? 'hidden' : '';
+        return () => {
+            document.body.style.overflow = '';
+        };
     });
 
     function toggleCollapsed() {
@@ -130,6 +151,12 @@
     <nav class="flex-1 overflow-y-auto">
         {#if activeSlug}
             <HackathonNav slug={activeSlug} collapsed={effectiveCollapsed} />
+            {#if canManageActiveHackathon}
+                <HackathonAdminNav slug={activeSlug} collapsed={effectiveCollapsed} />
+            {/if}
+        {/if}
+        {#if isGlobalAdmin}
+            <SiteAdminNav collapsed={effectiveCollapsed} />
         {/if}
     </nav>
 </aside>
