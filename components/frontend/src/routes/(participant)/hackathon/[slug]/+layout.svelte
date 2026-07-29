@@ -7,6 +7,7 @@
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
     import { statusLabel, statusBadgePreset, visibilityLabel, visibilityBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+    import { phaseStatus } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -36,16 +37,6 @@
             return `${month} ${startsAt.getDate()} – ${endsAt.getDate()}, ${startsAt.getFullYear()}`;
         }
         return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-    }
-
-    function phaseStatus(
-        startsAt: Date | undefined,
-        endsAt: Date | undefined,
-    ): 'completed' | 'active' | 'upcoming' {
-        const now = new Date();
-        if (endsAt && endsAt < now) return 'completed';
-        if (startsAt && startsAt <= now) return 'active';
-        return 'upcoming';
     }
 
     const hackathon = $derived(data.hackathon);
