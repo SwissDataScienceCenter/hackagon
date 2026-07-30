@@ -15,6 +15,9 @@
 - [hackathon/entities/hackathon_member.proto](#hackathon_entities_hackathon_member-proto)
     - [HackathonMember](#hackathon-entities-HackathonMember)
   
+- [hackathon/entities/hackathon_settings.proto](#hackathon_entities_hackathon_settings-proto)
+    - [HackathonSettings](#hackathon-entities-HackathonSettings)
+  
 - [hackathon/entities/hackathon_status.proto](#hackathon_entities_hackathon_status-proto)
     - [HackathonStatus](#hackathon-entities-HackathonStatus)
   
@@ -74,6 +77,12 @@
   
 - [hackathon/messages/hackathon_svc/edit_response.proto](#hackathon_messages_hackathon_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-hackathon_svc-EditResponse)
+  
+- [hackathon/messages/hackathon_svc/edit_settings_request.proto](#hackathon_messages_hackathon_svc_edit_settings_request-proto)
+    - [EditSettingsRequest](#hackathon-messages-hackathon_svc-EditSettingsRequest)
+  
+- [hackathon/messages/hackathon_svc/edit_settings_response.proto](#hackathon_messages_hackathon_svc_edit_settings_response-proto)
+    - [EditSettingsResponse](#hackathon-messages-hackathon_svc-EditSettingsResponse)
   
 - [hackathon/messages/hackathon_svc/get_request.proto](#hackathon_messages_hackathon_svc_get_request-proto)
     - [GetRequest](#hackathon-messages-hackathon_svc-GetRequest)
@@ -537,6 +546,40 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_entities_hackathon_settings-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_settings.proto
+
+
+
+<a name="hackathon-entities-HackathonSettings"></a>
+
+### HackathonSettings
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| registrations_enabled | [bool](#bool) |  |  |
+| voting_enabled | [bool](#bool) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_hackathon_status-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -817,6 +860,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | pages | [Page](#hackathon-entities-Page) | repeated |  |
 | phases | [Phase](#hackathon-entities-Phase) | repeated |  |
 | viewer_membership | [HackathonMember](#hackathon-entities-HackathonMember) | optional | Populated in List responses only when participant_id filter is set. Contains the requesting user&#39;s membership in this hackathon (role &#43; is_waiting). |
+| settings | [HackathonSettings](#hackathon-entities-HackathonSettings) |  | Populated in Get responses only. |
 
 
 
@@ -1232,6 +1276,70 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_edit_settings_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/edit_settings_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-EditSettingsRequest"></a>
+
+### EditSettingsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| registrations_enabled | [bool](#bool) | optional |  |
+| voting_enabled | [bool](#bool) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_edit_settings_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/edit_settings_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-EditSettingsResponse"></a>
+
+### EditSettingsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| settings | [hackathon.entities.HackathonSettings](#hackathon-entities-HackathonSettings) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1561,6 +1669,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Get | [messages.hackathon_svc.GetRequest](#hackathon-messages-hackathon_svc-GetRequest) | [messages.hackathon_svc.GetResponse](#hackathon-messages-hackathon_svc-GetResponse) |  |
 | Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
+| EditSettings | [messages.hackathon_svc.EditSettingsRequest](#hackathon-messages-hackathon_svc-EditSettingsRequest) | [messages.hackathon_svc.EditSettingsResponse](#hackathon-messages-hackathon_svc-EditSettingsResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |

@@ -52,10 +52,6 @@ func (Phase) Edges() []ent.Edge {
 			Comment("The hackathon this phase belongs to."),
 		edge.To("page", Page.Type).Unique().
 			Comment("Content page linked to this phase."),
-		edge.To("opens_capabilities", Capability.Type).
-			Comment("Capabilities expected to open when this phase starts."),
-		edge.To("closes_capabilities", Capability.Type).
-			Comment("Capabilities expected to close when this phase starts."),
 		edge.To("current_of", Hackathon.Type).
 			Comment(
 				"The hackathon currently sitting in this phase, if an organizer has " +

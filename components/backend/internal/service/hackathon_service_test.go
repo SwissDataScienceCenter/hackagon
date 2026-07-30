@@ -18,6 +18,7 @@ import (
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -1068,4 +1069,225 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
+
+	Describe("HackathonSettings", func() {
+		var createdHackathonID string
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createReq := &msgs.CreateRequest{
+				Name:       "Settings Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+		})
+
+		Describe("Create creates default settings", func() {
+			It("creates settings with both flags disabled by default", func() {
+				// Verify settings exist in database with defaults
+				settings, err := dbClient.HackathonSettings.Query().
+					Where(enthackathonsettings.HasHackathonWith(
+						enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+					)).Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(settings.RegistrationsEnabled).To(BeFalse())
+				Expect(settings.VotingEnabled).To(BeFalse())
+			})
+		})
+
+		Describe("Get returns settings", func() {
+			It("includes settings in Get response", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				getReq := &msgs.GetRequest{HackathonId: createdHackathonID}
+				getResp, err := client.Get(ctx, getReq)
+				Expect(err).NotTo(HaveOccurred())
+
+				h := getResp.GetHackathon()
+				Expect(h.GetSettings()).NotTo(BeNil())
+				settings := h.GetSettings()
+				Expect(settings.GetRegistrationsEnabled()).To(BeFalse())
+				Expect(settings.GetVotingEnabled()).To(BeFalse())
+				Expect(settings.GetId()).NotTo(BeEmpty())
+				Expect(settings.GetModifiedAt()).NotTo(BeNil())
+			})
+		})
+
+		Describe("EditSettings", func() {
+			It("enables registrations", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				enabled := true
+				req := &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: &enabled,
+				}
+
+				resp, err := client.EditSettings(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeTrue())
+				Expect(resp.GetSettings().GetVotingEnabled()).To(BeFalse())
+
+				// Verify in database
+				settings, err := dbClient.HackathonSettings.Query().
+					Where(enthackathonsettings.HasHackathonWith(
+						enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+					)).Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(settings.RegistrationsEnabled).To(BeTrue())
+				Expect(settings.VotingEnabled).To(BeFalse())
+			})
+
+			It("enables voting", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				enabled := true
+				req := &msgs.EditSettingsRequest{
+					HackathonId: createdHackathonID,
+					VotingEnabled: &enabled,
+				}
+
+				resp, err := client.EditSettings(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetSettings().GetVotingEnabled()).To(BeTrue())
+				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeFalse())
+			})
+
+			It("enables both flags together", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				enabled := true
+				req := &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: &enabled,
+					VotingEnabled:      &enabled,
+				}
+
+				resp, err := client.EditSettings(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeTrue())
+				Expect(resp.GetSettings().GetVotingEnabled()).To(BeTrue())
+			})
+
+			It("disables previously enabled flags", func() {
+				// First enable registrations
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+				enabled := true
+				_, err := client.EditSettings(ctx, &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: &enabled,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Now disable it
+				disabled := false
+				resp, err := client.EditSettings(ctx, &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: &disabled,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeFalse())
+			})
+
+			It("returns NOT_FOUND for invalid hackathon ID", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.EditSettingsRequest{
+					HackathonId: uuid.NewString(),
+				}
+
+				_, err := client.EditSettings(ctx, req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("requires Write permission", func() {
+				nonOwnerKeycloakID := "non-owner-settings"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("non-owner-settings-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				enabled := true
+				req := &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: &enabled,
+				}
+
+				_, err = client.EditSettings(ctx, req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+
+			It("denies anonymous users", func() {
+				req := &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: testutils.BoolPtr(true),
+				}
+
+				_, err := client.EditSettings(context.Background(), req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+
+			It("returns settings with modified_at timestamp", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.EditSettingsRequest{
+					HackathonId:        createdHackathonID,
+					RegistrationsEnabled: testutils.BoolPtr(true),
+				}
+
+				resp, err := client.EditSettings(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetSettings().GetModifiedAt()).NotTo(BeNil())
+			})
+		})
+	})
 })

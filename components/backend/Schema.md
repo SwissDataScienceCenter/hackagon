@@ -1,31 +1,5 @@
 # Database Schema
 
-## Capability
-
-Whether one member-facing action is currently open in a hackathon. One row per capability per hackathon, pre-created on hackathon creation.
-
-### Fields
-
-| Column | Type | Required | Unique | Immutable | Default | Description |
-|--------|------|----------|--------|-----------|---------|-------------|
-| `capability` | enum(register, propose_projects, set_team_preferences, create_project_submissions, vote, view_results) | yes | no | yes | no | Which action this row gates. Immutable: it identifies the row. |
-| `enabled` | bool | yes | no | no | yes | The authoritative gate. Phases may describe when this is expected to change, but never change it themselves — a wrong date can only produce a wrong countdown, never an unauthorized action. |
-| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the capability row was created. |
-| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
-
-### Relationships
-
-| Edge | Target | Relation | Inverse | Required | Description |
-|------|--------|----------|---------|----------|-------------|
-| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this capability belongs to. |
-| `modifier` | User | M2O | yes | no | Who last flipped the flag. Optional so seeded and backfilled rows need no attribution; set on every edit. |
-| `open_in_phase` | Phase | M2O | yes | no | Phase from whose start this is expected open; null = manually driven. |
-| `closed_in_phase` | Phase | M2O | yes | no | Phase at whose start this is expected to close; null = stays open. |
-
-### Indexes
-
-- `capability, hackathon_capabilities` *(unique)*
-
 ## Hackathon
 
 A hackathon event containing tracks, projects, phases, and participants.
@@ -42,7 +16,6 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `visibility` | enum(public, private) | yes | no | no | no | Controls whether non-participants can discover this hackathon. |
 | `description` | string | no | no | no | no | Detailed description of the hackathon, supports rich text. |
 | `logo` | string | no | no | no | no | URL or path to the hackathon logo image. |
-| `current_phase_id` | uuid.UUID | no | no | no | no | The phase an organizer has declared current. Nil means fall back to deriving it from phase dates, which is right before the event but wrong during one, where the schedule always slips. |
 
 ### Relationships
 
@@ -53,8 +26,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `participating_users` | User | M2M | yes | no | Users who are participating or waitlisted. |
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
-| `capabilities` | Capability | O2M | no | no | Which member-facing actions are available on this hackathon. |
-| `current_phase` | Phase | M2O | yes | no | Set by AdvancePhase; SET NULL so deleting a phase does not orphan it. |
+| `settings` | HackathonSettings | O2O | no | no | Configuration settings for this hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -65,6 +37,26 @@ A hackathon event containing tracks, projects, phases, and participants.
 - `starts_at`
 - `ends_at`
 - `visibility`
+
+## HackathonSettings
+
+Configuration settings for a hackathon.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `registrations_enabled` | bool | yes | no | no | yes | Whether new participants can register for this hackathon. |
+| `voting_enabled` | bool | yes | no | no | yes | Whether voting is enabled for this hackathon. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the settings were created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | O2O | yes | yes | The hackathon this settings entry belongs to. |
+| `modifier` | User | M2O | yes | yes | The user who last modified these settings. |
 
 ## Page
 
@@ -136,8 +128,6 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this phase belongs to. |
 | `page` | Page | O2O | no | no | Content page linked to this phase. |
-| `opens_capabilities` | Capability | O2M | no | no | Capabilities expected to open when this phase starts. |
-| `closes_capabilities` | Capability | O2M | no | no | Capabilities expected to close when this phase starts. |
 | `current_of` | Hackathon | O2M | no | no | The hackathon currently sitting in this phase, if an organizer has advanced to it. At most one in practice, since a phase belongs to exactly one hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this phase. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this phase. |
@@ -311,7 +301,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
 | `created_tracks` | Track | O2M | no | no | Tracks this user created. |
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
-| `modified_capabilities` | Capability | O2M | no | no | Hackathon capabilities this user last opened or closed. |
+| `modified_settings` | HackathonSettings | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `participations` | Participant | O2M | yes | no |  |
 | `team_participations` | TeamParticipant | O2M | yes | no |  |
