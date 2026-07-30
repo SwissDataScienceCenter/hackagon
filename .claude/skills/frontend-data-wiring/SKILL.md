@@ -51,6 +51,20 @@ nested under a participant-facing hackathon route. If a page there is
 carrying a field or action that's only relevant to admins, move it out to
 `/(admin)/*` rather than gating it in place.
 
+## If the route needs a sidebar entry, add it to `$lib/navigation.ts`
+
+Nav entries are not built in components. `src/lib/navigation.ts` is the single
+source of truth — add to `memberNav()`, `manageNav()` or `platformNav()` there.
+Give the entry a stable `id` (`manage:tracks`, `member:page:<pageId>`) and never
+key or active-match on the label: page titles are user-supplied, and two pages
+sharing a title crashes the sidebar. Full conventions are in the "Frontend shells
+and navigation" section of `CLAUDE.md`.
+
+Which function to add to follows the same guideline as the rest of this skill:
+participant-facing routes go in `memberNav()`, organizer tools in `manageNav()`
+(they live under `/owner/hackathon/[slug]/*`), platform-wide admin in
+`platformNav()`.
+
 ## Reference implementation
 
 `components/frontend/src/routes/(app)/(member)/hackathon/[slug]/participants/+page.server.ts`

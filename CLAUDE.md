@@ -50,24 +50,60 @@ name collisions (buf rejects `hackathon/messages/hackathon/`); `_svc` means
 
 ## Dev commands
 
+The justfile is split into modules (`just --list`, and `just <module> --list` for
+each). Pick the entry point by what you changed:
+
 ```bash
-just up                 # start keycloak + postgres + backend via process-compose
+just start              # sync deps + start keycloak, postgres, backend. The default.
+just api-change         # regen proto stubs, then start. Use after editing *.proto
+just schema-change      # use after editing db/schema/*.go
 just down               # stop everything
-just refresh            # wipe state + regen ent + regen proto + tidy + install deps
-just seed               # populate dev hackathons, users, projects (see cmd/seed/README.md)
-just generate-proto     # buf generate — wipes codegen dirs first (prevents stale shadowing)
-just generate-db-schema # ent codegen + Schema.md
-just rpc-as <user> <password> <method> [json]   # authed grpcurl
-just rpc-unauth <method> [json]                 # unauthed grpcurl (health)
+just changes [ref]      # classify changes vs <ref> and suggest which of the above to run
+just develop            # enter the Nix dev shell (alias: just dev)
 ```
 
+Module commands (note the `::`):
+
+```bash
+just codegen::proto            # regen Go + TypeScript gRPC stubs
+just codegen::db-schema        # regen Ent code + Schema.md
+just db::seed                  # sample hackathons/tracks/projects/teams/users
+just db::psql                  # psql shell
+just db::summary               # what's currently in the DB
+just rpc::as <user> <password> <method> [json]   # authed grpcurl
+just rpc::unauth <method> [json]                 # unauthed grpcurl (health)
+just check::lint -c backend    # also: test, format, build — all need -c <component>
+just deploy::attach            # process-compose TUI, for logs
+just clean::state              # wipe Postgres + Keycloak state, then just start
+```
+
+`just clean::all` destroys every gitignored file (`.devenv`, `node_modules`) —
+don't reach for it casually.
+
 Dev users (Keycloak password for all is `aliceandbob`): `hackagon-admin` (global
-admin), `alice` (organizer), `bob`, `charles`.
+admin), `alice` (organizer), `bob`, `charles`. Alice owns at least one seeded
+hackathon and is on two seeded teams — useful for owner-only flows without
+touching Keycloak.
+
+**Backend runs on `localhost:3000`** under process-compose. To rebuild and
+restart just the backend after a Go change, without disturbing the rest of the
+stack:
+
+```bash
+cd components/backend && GOWORK=off go build -o .output/build/bin/service ./cmd/service
+kill $(lsof -tiTCP:3000 -sTCP:LISTEN)   # process-compose restarts it within seconds
+```
+
+The live binary is `components/backend/.output/build/bin/service` — *not* the
+top-level `.output/backend/...`, which is an unrelated build path. Note that an
+unrecovered panic in any gRPC handler kills the whole backend process, not just
+that request; process-compose then restarts it, so repeated restarts in its log
+usually mean a panicking handler rather than a startup problem.
 
 ## Service implementation pattern
 
-Read path contracts and entities already exist (`Get`, `List` protos are shaped
-for every service). Handlers are what's missing. To add a service:
+Every service listed under Runtime status is already implemented — this is the
+pattern to follow when adding a *new* service, or a new RPC to an existing one:
 
 1. Create `components/backend/internal/service/<name>_service.go` following
    `user_service.go`:
@@ -77,9 +113,9 @@ for every service). Handlers are what's missing. To add a service:
    - ent query with `With*()` for eager-loading relations in `Get`
    - a private `entryFromEnt(*ent.X) *ents.X` mapper (shared across List/Get —
      server decides depth)
-2. Register in `cmd/service/main.go`:
+2. Register in `internal/service/server.go` (not `main.go`):
    `x.RegisterXServiceServer(server, xService)`.
-3. `just up` → `just rpc-as alice aliceandbob x.XService/List` to verify
+3. `just start` → `just rpc::as alice aliceandbob x.XService/List` to verify
    end-to-end.
 
 Ent-to-proto mappers:
@@ -91,7 +127,7 @@ Ent-to-proto mappers:
   after nil-check.
 - DB enums → write a short `enumFromEnt()` helper per enum.
 
-## Conventions (already applied to proto, apply to handlers)
+## Conventions (applied across proto and handlers — match them)
 
 **Read path** — already decided:
 
@@ -110,8 +146,7 @@ Ent-to-proto mappers:
   `HackathonStatus`) stay post-query. For optional enum filters, `UNSPECIFIED`
   means "no filter". See `hackathon_service.go:List` for the pattern.
 
-**Write path** — decide once when first write handler lands, then match across
-services:
+**Write path** — settled; these are now applied across every service, match them:
 
 - `Edit*Request`: every field `optional` (no FieldMask).
 - `Create`/`Add`/`Propose`: return `{id}` only.
@@ -142,9 +177,13 @@ Role hierarchy:
 - Per-hackathon roles (`g`): `Owner`, `Member`, scoped to a hackathon UUID.
 - Global roles (`g2`): `Admin`, `HackathonOrganizer`.
 - Admin always passes via the `g2(r.sub, "admin")` escape hatch in the matcher.
-- Role-granting code doesn't exist yet — `enforcer.AddRole` is wired up but no
-  handler calls it. Until write-path handlers land, only the `hackagon-admin`
-  user has non-zero roles.
+- Role granting is live — handlers call `enforcer.AddRole` at three points:
+  `HackathonService.Create` grants the creator `Owner`
+  (`hackathon_service.go:86`), `HackathonService.ApproveParticipant` grants
+  `Member` (`hackathon_service.go:335`), and `TeamService.AssignUser` grants a
+  team-scoped `Member` via `m.WithTeam(teamID)` (`team_service.go:368`) — that
+  option is what produces the `/hackathon/*/team/*` domain the `Submission` and
+  team-edit policies match on.
 
 **Auth middleware** (implemented in `middleware/auth.go`): a single interceptor
 runs for all endpoints.
@@ -168,38 +207,47 @@ health endpoint works because it never reads claims at all.
   filtered by casbin `Enforce` check (anonymous callers always fail, so they
   only see public ones).
 
-For read endpoints during bootstrap, it's fine to skip casbin entirely and rely
-on JWT alone — add a `// TODO: casbin check once role-granting RPCs exist`
-comment.
-
-## Priority order (from coworker)
-
-Read path (Get/List) for every listed service, then mutations, then voting:
-
-1. `UserService` — already implemented (`List`, `WhoAmI`, `Register`). Needs
-   `Get`.
-2. `HackathonService` — `List` and `Get` implemented. Next: `Create`, `Join`,
-   `ApproveParticipant`.
-3. `PageService` — full CRUD.
-4. `PhaseService` — full CRUD.
-5. `TrackService` — Get/List proto exists; Create/Edit/Delete protos don't yet.
-6. `ProjectService` — mutation protos exist (`Propose`, `Approve`, `Edit`,
-   `Delete`) but `status` is still a string — convert to `ProjectStatus` enum.
-   Also add `SetPreference`, `ExportPreferences`.
-7. `TeamService` — Create/AssignUser exist; add Edit, Delete, RemoveUser,
-   CreateSubmission, FinalizeSubmission.
-8. `VoteService` — only if DB has `Vote`/`VoteCategory` tables (currently
-   doesn't). Defer until coworker returns.
-
 ## Runtime status
 
-- Services are registered in `internal/service/server.go` (not `main.go`).
-  Registered and implemented: `HealthService`, `UserService` (`List`, `WhoAmI`,
-  `Register`), `HackathonService` (`List`, `Get`), `PageService` (full CRUD +
-  `MoveUp`/`MoveDown`/`SetOrder`), `PhaseService` (full CRUD), `TrackService`
-  (`List`/`Get` only — no Create/Edit/Delete protos yet).
-- `ProjectService` and `TeamService` are NOT registered in `server.go` yet, even
-  though some of their handlers/protos exist — still UNIMPLEMENTED at runtime.
+**Verify before trusting this section.** It has understated reality more than
+once — services were repeatedly found already registered and fully implemented
+while these notes still called them missing. Check
+`internal/service/server.go` and `grep -n "^func (s \*XService)"` on the handler
+file, or run `grpcurl -plaintext localhost:3000 list` (needs the Nix shell).
+
+Services are registered in `internal/service/server.go` (not `main.go`). As of
+the last audit, all eight are registered and their handlers implemented:
+
+| Service | Handlers |
+| --- | --- |
+| `HealthService` | health check (no claims read) |
+| `UserService` | `List`, `Get`, `WhoAmI`, `Register` |
+| `HackathonService` | `List`, `Get`, `Create`, `Edit`, `Join`, `ApproveParticipant`, `RemoveParticipant` |
+| `PageService` | `List`, `Get`, `Create`, `Edit`, `Delete`, `MoveUp`, `MoveDown`, `SetOrder` |
+| `PhaseService` | `List`, `Get`, `Create`, `Edit`, `Delete` |
+| `TrackService` | `List`, `Get`, `Create`, `Edit`, `Delete` |
+| `ProjectService` | `List`, `Get`, `Propose`, `Approve`, `Disapprove`, `Edit`, `Delete`, `SetPreference`, `ExportPreferences` |
+| `TeamService` | `List`, `Get`, `Create`, `Edit`, `Delete`, `AssignUser`, `RemoveUser`, `CreateSubmission`, `FinalizeSubmission` |
+
+Not implemented, and genuinely blocked:
+
+- `VoteService` — no `Vote`/`VoteCategory` DB tables exist. Still deferred.
+- No `SubmissionService`; submissions are reached through
+  `TeamService.CreateSubmission`/`FinalizeSubmission`.
+
+Data-model facts that are easy to get wrong:
+
+- A `Team` belongs to a `Project`, not to a `Hackathon` — `TeamService.Create`
+  takes `project_id` and there is no `hackathon_id` on it.
+- Only hackathon `Owner`s can create teams (`Team.Create` has exactly one casbin
+  grant). Members can only be assigned into existing teams.
+- `HackathonService.Get` eager-loads `Members`, `Tracks`, `Projects`, `Pages`
+  and `Phases`, all fully populated. Most per-hackathon pages need no second
+  call — reuse it via `event.parent()`.
+- There is **no pagination anywhere in the API** — no
+  `page_size`/`page_token`/`limit`/`offset` on any message, and no handler calls
+  `.Limit()`/`.Offset()`. Any pagination in the frontend slices an
+  already-fully-fetched list.
 
 ## Frontend route → backend pattern
 
@@ -270,13 +318,68 @@ components** — `$lib/server/` is server-only; use raw numbers with
 reference for a list-row component. Keep `badge`/`badgePreset` as generic string
 props so the row works for any badge text, not just status labels.
 
+## Frontend shells and navigation
+
+Two shells, split at the route-group level:
+
+- `(marketing)` — public. `NavBar` + `AppFooter` chrome. Landing page, the
+  public `/hackathon/[slug]` page, signin/signout.
+- `(app)` — authenticated. `AppSidebar` only, no header/footer. Contains three
+  scopes: `(member)` participant pages, `(owner)` organizer tools under
+  `/owner/hackathon/[slug]/*`, and `(admin)` platform pages.
+
+**All sidebar entries live in `src/lib/navigation.ts`.** Nothing else builds nav
+hrefs. It exports `memberNav(slug, pages)`, `manageNav(slug)`, `platformNav()`,
+plus `activeNavId()` and `navModeFromRouteId()`. Add a nav entry there, not in a
+component.
+
+Rules that exist because breaking them broke the sidebar before:
+
+- **`NavItem.id` is the key and the active-state handle — never the label.** Page
+  titles are user-supplied, so two identically-titled pages keyed by label are a
+  duplicate-key crash that takes down the whole `<aside>`.
+- **Compute active state once, across every section.** `activeNavId(pathname,
+  [...all items])` picks the longest match. Per-section computation let two
+  sections highlight at the same time, since each only saw its own hrefs.
+- **Derive view/manage mode from `$page.route.id`, not the pathname.** A slug or
+  page title containing "owner" must not flip modes; the `(owner)` route group is
+  the real boundary.
+- **The `(app)` shell load must never throw.** It is chrome for every
+  authenticated route, so a failed RPC has to degrade to an empty switcher —
+  wrap the calls and fall back to `[]`. A throw there blanks the entire shell,
+  logo and user footer included. Note the tradeoff: this means a dead backend
+  shows up as "no hackathons" rather than an error.
+
+The member/owner overlap is presented as one mode switch (`NavModeSwitch`, shown
+to hackathon owners and global admins), not two simultaneous menus — one
+hackathon section renders at a time. Platform nav is pinned outside the scrolling
+`<nav>` because it is not scoped to the current hackathon.
+
+Owner routes deliberately still live at `/owner/hackathon/[slug]/*` rather than
+nested under `/hackathon/[slug]/manage/*`. Re-parenting was considered and
+declined: nesting them under the member `[slug]` layout would inherit its hero
+chrome (that layout picks hero variants by matching path segments), and escaping
+that with a layout reset would give back the shared-`hackathon.get` saving that
+motivated the move.
+
 ## Don't
 
 - Don't edit generated code: `components/backend/internal/proto/**`,
   `components/backend/ent/**`,
   `components/frontend/src/lib/server/grpc/generated/**`, `api/proto/API.md`.
-  Regenerate via `just generate-proto` or `just generate-db-schema`.
-- Don't run `just generate-proto` outside the Nix shell — `buf` isn't in PATH.
-  Either run it yourself, or stage proto changes and ask the user to regen.
+  Regenerate via `just codegen::proto` or `just codegen::db-schema`.
+- Don't run `just codegen::proto` outside the Nix shell — `buf` isn't in PATH.
+  Enter it with `just develop`, or stage proto changes and ask the user to regen.
 - Don't skip the casbin `Enforce` check on mutation handlers — follow the
   user_service.go pattern.
+- Don't assume a backend service is missing because a doc says so — the status
+  notes here have been wrong in that direction repeatedly. Check `server.go` and
+  the handler file first.
+- Don't treat a frontend gate as a security boundary. Nothing filters
+  `members[].user.email` by caller role, so any confirmed participant already
+  receives every other member's email in the raw response. Hiding a field
+  client-side is UX, not enforcement.
+- Don't run `pnpm format` expecting it to touch `.svelte` files —
+  `.prettierrc.yaml` registers no `prettier-plugin-svelte`, so Prettier errors
+  with "No parser could be inferred" on every Svelte file. Svelte formatting is
+  hand-maintained (4-space indent) until that's fixed.
