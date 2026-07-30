@@ -5,14 +5,8 @@
 
     let { data }: { data: PageData } = $props();
     const myTeam = $derived(data.myTeam);
-
-    const projects = $derived(data.hackathon.projects);
-    const trackCounts = $derived(
-        data.hackathon.tracks.map((t) => ({
-            name: t.name,
-            count: projects.filter((p) => p.trackId === t.id).length,
-        }))
-    );
+    const approvedCount = $derived(data.approvedCount);
+    const trackCounts = $derived(data.trackCounts);
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -44,8 +38,8 @@
 
     <div class="card preset-outlined-surface-200-800 p-5">
         <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-base font-bold">Project Proposals</h2>
-            <span class="text-xs text-surface-500">{projects.length} proposals</span>
+            <h2 class="text-base font-bold">Projects</h2>
+            <span class="text-xs text-surface-500">{approvedCount} approved</span>
         </div>
 
         {#if trackCounts.length > 0}
@@ -53,7 +47,7 @@
                 {#each trackCounts as track (track.name)}
                     <div class="flex flex-1 flex-col gap-1 bg-primary-500/5 p-3 dark:bg-primary-950">
                         <span class="text-xs font-bold text-primary-700-300">{track.name.toUpperCase()}</span>
-                        <span class="text-xs text-surface-500">{track.count} proposals</span>
+                        <span class="text-xs text-surface-500">{track.count} projects</span>
                     </div>
                 {/each}
             </div>
@@ -63,7 +57,7 @@
             href={resolve(`/hackathon/${data.hackathon.id}/proposals`)}
             class="block text-center text-xs font-semibold text-primary-700-300 no-underline hover:underline"
         >
-            View all {projects.length} proposals →
+            View all {approvedCount} projects →
         </a>
     </div>
 </div>
