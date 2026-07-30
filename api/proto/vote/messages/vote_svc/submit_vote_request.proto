@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package vote.messages.vote_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
+
+message SubmitVoteRequest {
+  string category_id = 1 [(buf.validate.field).string.uuid = true];
+  oneof vote {
+    SingleChoiceVote single_choice = 2;
+    RankedVote ranked = 3;
+    PointsVote points = 4;
+  }
+}
+
+message SingleChoiceVote {
+  string submission_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message RankedVote {
+  repeated RankedSubmission submissions = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message RankedSubmission {
+  string submission_id = 1 [(buf.validate.field).string.uuid = true];
+  int32 rank = 2 [(buf.validate.field).int32.gt = 0];
+}
+
+message PointsVote {
+  repeated PointsSubmission submissions = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message PointsSubmission {
+  string submission_id = 1 [(buf.validate.field).string.uuid = true];
+  int32 points = 2 [(buf.validate.field).int32.gt = 0];
+}
