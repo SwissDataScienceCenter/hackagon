@@ -1,82 +1,171 @@
 ---
 name: frontend-data-wiring
 description:
-  Conventions for wiring a hackagon frontend route to real backend data (or
-  replacing hardcoded/mock content with it). Use whenever adding a
-  +page.server.ts, un-mocking a page, or deciding where data-shaping logic for a
-  route should live.
+  How hackagon's SvelteKit frontend talks to the Go gRPC backend — registering a
+  client, loading data in +page.server.ts, translating gRPC errors into HTTP
+  errors, where data-shaping belongs, registering a sidebar entry, and which
+  pages are still mocked. Use for any work under components/frontend/, especially
+  adding a route, un-mocking a page, or wiring one to real backend data.
 ---
 
-This repo's frontend (`components/frontend/`) already documents the overall
-route-to-backend pattern in the root `CLAUDE.md` ("Frontend route → backend
-pattern"). This skill adds the parts that pattern doesn't spell out.
+**The backend is authoritative for all access decisions.** The frontend never
+duplicates permission logic — it only translates gRPC errors into HTTP responses.
 
-## Always add a route's own `+page.server.ts`
+## 1. Register the gRPC client
 
-Even if the data a page needs is already available from an ancestor
-`+layout.server.ts` (SvelteKit merges parent load data into the child's `data`
-prop automatically), still give the route its own `+page.server.ts`. Don't have
-the `.svelte` component reach into inherited layout data directly — make the
-route's data dependency explicit and typed via its own load function.
+In `src/lib/server/grpc/client.ts`:
 
-## Don't refetch data the parent layout already loaded
+- Import the service definition and client type from
+  `generated/<domain>/<name>_service`.
+- Add the client to the `AuthorizedGrpc` interface.
+- Create it inside `createAuthorizedGrpc` with
+  `factory.create(XServiceDefinition, channel)`.
+- For endpoints serving anonymous callers, create a separate unauthenticated
+  client *outside* `createAuthorizedGrpc` — `publicHackathonClient` is the
+  pattern.
 
-If the data is already fetched one level up, call `await event.parent()` inside
-the route's `load` and reuse it — do not issue a second gRPC call for data you
-already have.
+## 2. Always give the route its own `+page.server.ts`
+
+Even when an ancestor `+layout.server.ts` already loaded the data (SvelteKit
+merges parent data into the child's `data` prop automatically). Don't let the
+`.svelte` file reach into inherited layout data — make the dependency explicit
+and typed via the route's own load function.
 
 ```ts
+import { requireGrpc } from "$lib/server/grpc/client"
+
 export const load: PageServerLoad = async (event) => {
-  const { hackathon } = await event.parent()
-  // shape hackathon into what this page needs
+  const { myService } = requireGrpc(event.locals.grpc)
+  const result = await myService.list({})
+  return { items: result.items }
 }
 ```
 
-## Shape data server-side, not in the component
+- `event.locals.grpc` is populated by `hooks.server.ts` for protected routes.
+- `event.locals.platformUser` holds the logged-in user (DB UUID in `.id`).
+- Use `Promise.all([...])` for independent parallel requests.
 
-Mapping raw entities into display-ready rows (e.g. `HackathonMember` →
-`{id, name, roleLabel}`) belongs in the `load` function, not in the `.svelte`
-file. The component should just render what `data` gives it (plus purely
-presentational client state like search-box filtering).
+## 3. Don't refetch what the parent already loaded
 
-## Keep participant-facing pages free of viewer-role distinctions
+```ts
+const { hackathon } = await event.parent()
+```
 
-Pages under `hackathon/[slug]/*` that list hackathon data (e.g.
-`participants`) should render the same thing for every viewer — no
-admin-only fields, no admin-only actions, no `isAdmin`/role gating baked into
-them. This was tried once (an admin-only "View contact details" link +
-detail page under `participants/[userId]/`) and reverted — admin/user
-management belongs in the existing `/(admin)/users` section instead, not
-nested under a participant-facing hackathon route. If a page there is
-carrying a field or action that's only relevant to admins, move it out to
-`/(admin)/*` rather than gating it in place.
+`HackathonService.Get` eager-loads `Members`, `Tracks`, `Projects`, `Pages` and
+`Phases`, all fully populated — so most per-hackathon pages need **no** second
+call. Reuse it.
 
-## If the route needs a sidebar entry, add it to `$lib/navigation.ts`
+## 4. Translate gRPC errors
 
-Nav entries are not built in components. `src/lib/navigation.ts` is the single
-source of truth — add to `memberNav()`, `manageNav()` or `platformNav()` there.
-Give the entry a stable `id` (`manage:tracks`, `member:page:<pageId>`) and never
-key or active-match on the label: page titles are user-supplied, and two pages
-sharing a title crashes the sidebar. Full conventions are in the "Frontend shells
-and navigation" section of `CLAUDE.md`.
+Catch `ClientError` from `nice-grpc-common` and map to SvelteKit errors:
 
-Which function to add to follows the same guideline as the rest of this skill:
-participant-facing routes go in `memberNav()`, organizer tools in `manageNav()`
-(they live under `/owner/hackathon/[slug]/*`), platform-wide admin in
-`platformNav()`.
+```ts
+import { ClientError, Status } from "nice-grpc-common"
+import { error } from "@sveltejs/kit"
 
-## Reference implementation
+try {
+  result = await myService.get({ id })
+} catch (e) {
+  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
+    error(403, "Access denied")
+  if (e instanceof ClientError && e.code === Status.NOT_FOUND)
+    error(404, "Not found")
+  throw e // let unexpected errors surface
+}
+```
 
-`components/frontend/src/routes/(app)/(member)/hackathon/[slug]/participants/+page.server.ts`
-— reuses the hackathon layout's already-fetched member list via
-`event.parent()`, maps it to row data using `membershipBadgeLabel` from
-`$lib/utils/hackathonStatus`, and returns just `{ participants }`. The matching
-`+page.svelte` only does `const participants = $derived(data.participants)` plus
-client-side search filtering.
+In form actions use `fail(status, { message })` instead, so the page can render
+the error inline.
 
-## Background
+## 5. Shape data server-side
 
-See `.claude/front-status.md` for the current inventory of which routes are
-wired to real backend calls vs. still hardcoded, and
-`.claude/frontend-feature-audit.md` for which stubbed features have no backend
-counterpart at all yet.
+Mapping raw entities into display-ready rows (`HackathonMember` →
+`{id, name, roleLabel}`) belongs in `load`, not in the `.svelte` file. The
+component renders what `data` gives it, plus purely presentational client state
+like search filtering.
+
+## 6. Enum and status display helpers
+
+Put them in `src/lib/utils/<domain>.ts`, never inline in a component. Use
+`Partial<Record<number, string>>` (not `Record<number, string>`) so unrecognized
+enum values type as `string | undefined`.
+
+**Never import from `$lib/server/grpc/generated/` inside a Svelte component** —
+`$lib/server/` is server-only. Pass raw numbers and look them up with
+`Partial<Record<...>>`.
+
+## 7. Keep participant pages free of viewer-role distinctions
+
+Pages under `hackathon/[slug]/*` render the same thing for every viewer — no
+admin-only fields or actions, no `isAdmin` gating. This was tried once (an
+admin-only contact-details page under `participants/[userId]/`) and reverted.
+Organizer concerns belong in the owner shell, platform concerns in `(admin)/*`.
+
+## 8. If the route needs a sidebar entry
+
+**All nav entries live in `src/lib/navigation.ts`** — nothing else builds nav
+hrefs. Add to `memberNav(slug, pages)` (participant pages), `manageNav(slug)`
+(organizer tools, under `/owner/hackathon/[slug]/*`), or `platformNav()`
+(platform admin).
+
+Rules, each of which exists because breaking it broke the sidebar:
+
+- **`NavItem.id` is the key and the active-state handle — never the label.** Page
+  titles are user-supplied; two pages sharing a title is a duplicate-key crash
+  that takes down the whole `<aside>`.
+- **Compute active state once across all sections** via `activeNavId(pathname,
+  [...allItems])`, longest match winning. Per-section computation let two
+  sections highlight at the same time.
+- **Derive view/manage mode from `$page.route.id`, not the pathname** — a slug or
+  page title containing "owner" must not flip modes.
+- **The `(app)` shell load must never throw.** It is chrome for every
+  authenticated route, so a failed RPC has to degrade to `[]`, not fail the load
+  — a throw there blanks the entire shell. Tradeoff: a dead backend then reads as
+  "no hackathons" rather than an error.
+
+## Shells
+
+- `(marketing)` — public. `NavBar` + `AppFooter`. Landing page, public
+  `/hackathon/[slug]`, signin/signout.
+- `(app)` — authenticated, `AppSidebar` only. Three scopes: `(member)`
+  participant pages, `(owner)` organizer tools at `/owner/hackathon/[slug]/*`,
+  `(admin)` platform pages. Member/owner overlap is one View/Manage mode switch
+  (`NavModeSwitch`), not two simultaneous menus. Navigation is settled — treat
+  this as a description of how it works, not an open design question.
+
+## Reference implementations
+
+- **List row from parent data:**
+  `routes/(app)/(member)/hackathon/[slug]/participants/+page.server.ts` — reuses
+  the layout's members via `event.parent()`, maps with `membershipBadgeLabel`,
+  returns just `{ participants }`.
+- **Full CRUD with form actions:**
+  `routes/(app)/(owner)/owner/hackathon/[slug]/tracks/` — list + new + edit,
+  covering `list`/`create`/`get`/`edit`/`delete` and inline error rendering.
+- **Generic list-row component:** `lib/components/hackathon/HackathonRow.svelte`
+  — keep `badge`/`badgePreset` as generic strings so it works for any badge text.
+
+## Known gaps (as of 2026-07-30)
+
+Everything else is wired to real data. These are the exceptions:
+
+| Where | State |
+|---|---|
+| `.../submissions` | Under-construction stub, no `+page.server.ts`. **Not backend-blocked** — `TeamService.CreateSubmission`/`FinalizeSubmission` exist and `team.get` returns a team's submissions. Note submissions hang off a `Team`, which hangs off a `Project`, not off the hackathon. |
+| `(marketing)/hackathon/[slug]` | Fully static; its `+page.server.ts` only redirects signed-in users. `name`/`dates`/`description`/`logo`/`status` are reachable via `publicHackathonClient.list()` (find-by-id client-side — no id filter on `ListRequest`). Richer content needs `Get`, which requires membership, so anonymous visitors can never receive it. |
+| `hackathon/[slug]/+layout.svelte` | `HeroCompact` gets `venue=""`, `organizers={[]}`, and `participantCapacity` faked as `participantCount` — no such backend fields. |
+| `ParticipationCard.svelte` | `REGISTERED` badge is a literal; member avatars are placeholder circles. Its actual data is real. |
+| `(marketing)/+page.svelte` | Hackathon rows real; `carouselSlides` photos/captions hardcoded. |
+| `/owner/hackathon/[slug]/+page.svelte` | Stale copy: "Managing pages, phases and tracks from here is coming soon" — all three sub-pages exist. |
+| `NavBar.svelte` | "About" links to `resolve('/')` — a dead self-link, no about route exists. |
+
+## Two things that are not what they look like
+
+- **There is no pagination in the API** — no `page_size`/`page_token`/`limit`/
+  `offset` on any message, and no handler calls `.Limit()`/`.Offset()`. Any
+  client-side pagination slices an already-fully-fetched list: consistent UX, no
+  payload benefit.
+- **Frontend gates are not security boundaries.** Nothing filters
+  `members[].user.email` by caller role, so every confirmed participant already
+  receives every other member's email in the raw response. Hiding a field
+  client-side is UX, not enforcement.
