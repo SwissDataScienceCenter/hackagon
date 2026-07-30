@@ -24,8 +24,6 @@
 - [hackathon/entities/phase.proto](#hackathon_entities_phase-proto)
     - [Phase](#hackathon-entities-Phase)
   
-    - [PhaseType](#hackathon-entities-PhaseType)
-  
 - [hackathon/entities/project_status.proto](#hackathon_entities_project_status-proto)
     - [ProjectStatus](#hackathon-entities-ProjectStatus)
   
@@ -396,11 +394,11 @@
     - [SingleChoiceVote](#vote-entities-SingleChoiceVote)
     - [Vote](#vote-entities-Vote)
   
-- [vote/entities/voting_method.proto](#vote_entities_voting_method-proto)
-    - [VotingMethod](#vote-entities-VotingMethod)
-  
 - [vote/entities/voter_type.proto](#vote_entities_voter_type-proto)
     - [VoterType](#vote-entities-VoterType)
+  
+- [vote/entities/voting_method.proto](#vote_entities_voting_method-proto)
+    - [VotingMethod](#vote-entities-VotingMethod)
   
 - [vote/entities/vote_category.proto](#vote_entities_vote_category-proto)
     - [VoteCategory](#vote-entities-VoteCategory)
@@ -736,26 +734,12 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | page_id | [string](#string) | optional |  |
 | creator_id | [string](#string) |  |  |
 | modifier_id | [string](#string) |  |  |
-| phase_type | [PhaseType](#hackathon-entities-PhaseType) |  |  |
 
 
 
 
 
  
-
-
-<a name="hackathon-entities-PhaseType"></a>
-
-### PhaseType
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| PHASE_TYPE_UNSPECIFIED | 0 |  |
-| PHASE_TYPE_VOTING | 1 |  |
-| PHASE_TYPE_INFORMATIVE | 2 |  |
-
 
  
 
@@ -4655,6 +4639,35 @@ within one category. The vote payload is method-specific.
 
 
 
+<a name="vote_entities_voter_type-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/entities/voter_type.proto
+
+
+ 
+
+
+<a name="vote-entities-VoterType"></a>
+
+### VoterType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| VOTER_TYPE_UNSPECIFIED | 0 |  |
+| VOTER_TYPE_ALL_PARTICIPANTS | 1 |  |
+| VOTER_TYPE_JURY | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="vote_entities_voting_method-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -4675,35 +4688,6 @@ within one category. The vote payload is method-specific.
 | VOTING_METHOD_SINGLE_CHOICE | 1 |  |
 | VOTING_METHOD_RANKED | 2 |  |
 | VOTING_METHOD_POINTS | 3 |  |
-
-
- 
-
- 
-
- 
-
-
-
-<a name="vote_entities_voter_type-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## vote/entities/voter_type.proto
-
-
- 
-
-
-<a name="vote-entities-VoterType"></a>
-
-### VoterType
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| VOTER_TYPE_UNSPECIFIED | 0 |  |
-| VOTER_TYPE_ALL_PARTICIPANTS | 1 |  |
-| VOTER_TYPE_JURY | 2 |  |
 
 
  

@@ -64,6 +64,8 @@ func (Hackathon) Edges() []ent.Edge {
 			Comment("Content pages associated with this hackathon."),
 		edge.To("phases", Phase.Type).
 			Comment("Temporal phases (e.g. ideation, hacking, judging)."),
+		edge.To("vote_categories", VoteCategory.Type).
+			Comment("Voting categories scoped to this hackathon."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),
