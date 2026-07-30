@@ -43,7 +43,13 @@
                         <tr class="border-b border-surface-200-800 last:border-0">
                             <td class="px-3 py-2 font-semibold text-surface-950-50">{t.name}</td>
                             <td class="px-3 py-2 text-surface-500">{t.projectTitle}</td>
-                            <td class="px-3 py-2 text-surface-500">{t.members.length}</td>
+                            <td class="px-3 py-2 text-surface-500">
+                                {#if t.members.length === 0}
+                                    <span class="text-surface-400">None</span>
+                                {:else}
+                                    {t.members.map((m) => m.name).join(', ')}
+                                {/if}
+                            </td>
                             <td class="px-3 py-2">
                                 <div class="flex items-center gap-2">
                                     <button
