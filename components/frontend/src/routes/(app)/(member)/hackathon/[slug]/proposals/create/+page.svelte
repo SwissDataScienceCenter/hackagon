@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
+    import Select from '$lib/components/forms/Select.svelte';
     import type { PageData, ActionData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -41,16 +42,11 @@
         {#if tracks.length > 0}
             <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
                 Track (optional)
-                <select
+                <Select
                     name="trackId"
-                    class="h-9 border border-surface-200-800 bg-surface-50-950 px-3 text-sm
-                           text-surface-950-50 focus:border-primary-500 focus:outline-none"
-                >
-                    <option value="">No track</option>
-                    {#each tracks as track (track.id)}
-                        <option value={track.id}>{track.name}</option>
-                    {/each}
-                </select>
+                    placeholder="No track"
+                    options={[{ label: 'No track', value: '' }, ...tracks.map((t) => ({ label: t.name, value: t.id }))]}
+                />
             </label>
         {/if}
         <button type="submit" class="btn btn-sm preset-filled-primary-500 self-start">

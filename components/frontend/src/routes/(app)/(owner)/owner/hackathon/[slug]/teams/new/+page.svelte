@@ -2,6 +2,7 @@
     import { page } from '$app/stores';
     import { resolve } from '$app/paths';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
+    import Select from '$lib/components/forms/Select.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -36,16 +37,11 @@
         {:else}
             <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
                 Project
-                <select
+                <Select
                     name="projectId"
-                    required
-                    class="h-9 border border-surface-200-800 bg-surface-50-950 px-3 text-sm
-                           text-surface-950-50 focus:border-primary-500 focus:outline-none"
-                >
-                    {#each projects as p (p.id)}
-                        <option value={p.id}>{p.title} ({p.statusLabel})</option>
-                    {/each}
-                </select>
+                    value={projects[0]?.id ?? ''}
+                    options={projects.map((p) => ({ label: `${p.title} (${p.statusLabel})`, value: p.id }))}
+                />
             </label>
         {/if}
 

@@ -2,6 +2,7 @@
     import { page as pageStore } from '$app/stores';
     import { resolve } from '$app/paths';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
+    import Select from '$lib/components/forms/Select.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -62,16 +63,11 @@
         </div>
         <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
             Linked page (optional)
-            <select
+            <Select
                 name="pageId"
-                class="h-9 border border-surface-200-800 bg-surface-50-950 px-3 text-sm
-                       text-surface-950-50 focus:border-primary-500 focus:outline-none"
-            >
-                <option value="">None</option>
-                {#each pages as p (p.id)}
-                    <option value={p.id}>{p.title}</option>
-                {/each}
-            </select>
+                placeholder="None"
+                options={[{ label: 'None', value: '' }, ...pages.map((p) => ({ label: p.title, value: p.id }))]}
+            />
         </label>
         <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
             Description
