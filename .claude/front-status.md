@@ -1,7 +1,6 @@
 # Frontend wiring status — real backend data vs. fake data
 
-Branch: `feat/frontend` · Last audited: 2026-07-30 (full route sweep after the
-sidebar/nav redesign)
+Branch: `feat/frontend` · Last audited: 2026-07-30 (full route sweep)
 
 Route-by-route: does this page's `load` call a real gRPC method and render what
 comes back, or is the content hardcoded in the `.svelte` file? See the

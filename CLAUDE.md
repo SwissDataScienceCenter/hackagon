@@ -353,14 +353,11 @@ Rules that exist because breaking them broke the sidebar before:
 The member/owner overlap is presented as one mode switch (`NavModeSwitch`, shown
 to hackathon owners and global admins), not two simultaneous menus — one
 hackathon section renders at a time. Platform nav is pinned outside the scrolling
-`<nav>` because it is not scoped to the current hackathon.
+`<nav>` because it is not scoped to the current hackathon. Owner routes live at
+`/owner/hackathon/[slug]/*`.
 
-Owner routes deliberately still live at `/owner/hackathon/[slug]/*` rather than
-nested under `/hackathon/[slug]/manage/*`. Re-parenting was considered and
-declined: nesting them under the member `[slug]` layout would inherit its hero
-chrome (that layout picks hero variants by matching path segments), and escaping
-that with a layout reset would give back the shared-`hackathon.get` saving that
-motivated the move.
+The navigation is settled — treat this section as describing how it works, not as
+an open design question.
 
 ## Don't
 
