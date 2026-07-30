@@ -6,12 +6,17 @@
         title,
         description,
         imageUrl,
+        badge,
+        badgePreset,
         moreInfoHref = '#',
     }: {
         num: number;
         title: string;
         description: string;
         imageUrl?: string;
+        /** Generic badge text, kept a plain string so any caller can label it. */
+        badge?: string;
+        badgePreset?: string;
         moreInfoHref?: string;
     } = $props();
 </script>
@@ -39,8 +44,14 @@
     {/if}
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-        <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
-            {num}. {title}
+        <h3
+            class="m-0 flex flex-wrap items-center gap-2 text-sm font-bold leading-snug
+                   text-surface-950-50"
+        >
+            <span>{num}. {title}</span>
+            {#if badge}
+                <span class="badge {badgePreset ?? 'preset-tonal-surface'} text-xs">{badge}</span>
+            {/if}
         </h3>
         <div class="block w-2/3 min-w-0">
             <p class="m-0 text-xs leading-snug text-surface-600-400">

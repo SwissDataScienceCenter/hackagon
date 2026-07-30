@@ -64,7 +64,7 @@ export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
     },
     {
       id: "member:proposals",
-      label: "Proposals",
+      label: "Projects",
       icon: Lightbulb,
       href: resolve(`/hackathon/${slug}/proposals`),
     },
