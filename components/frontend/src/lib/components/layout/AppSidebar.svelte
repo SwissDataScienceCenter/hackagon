@@ -11,6 +11,7 @@
     import { isOwnerRole } from '$lib/utils/hackathonStatus';
     import {
         activeNavId,
+        counterpartHref,
         manageNav,
         memberNav,
         navModeFromRouteId,
@@ -77,6 +78,13 @@
     const platformItems = $derived(isGlobalAdmin ? platformNav() : []);
     const activeId = $derived(
         activeNavId($page.url.pathname, [...hackathonItems, ...platformItems]),
+    );
+
+    const viewHref = $derived(
+        activeSlug ? counterpartHref(activeId, 'view', activeSlug, hackathonPages) : '',
+    );
+    const manageHref = $derived(
+        activeSlug ? counterpartHref(activeId, 'manage', activeSlug, hackathonPages) : '',
     );
 
     $effect(() => {
@@ -205,7 +213,7 @@
     <HackathonSwitcher hackathons={myHackathons} collapsed={effectiveCollapsed} />
 
     {#if showModeSwitch && activeSlug}
-        <NavModeSwitch slug={activeSlug} {mode} collapsed={effectiveCollapsed} />
+        <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
     {/if}
 
     <nav class="flex-1 overflow-y-auto">

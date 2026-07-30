@@ -162,6 +162,33 @@ export function platformNav(): NavItem[] {
 }
 
 /**
+ * Href of the equivalent entry in `targetMode`'s nav, so switching modes keeps
+ * the user on "the same" item (e.g. member Teams -> manage Teams) instead of
+ * always dropping them back to that mode's overview.
+ *
+ * Falls back to the target mode's overview when `activeId` has no counterpart
+ * there — e.g. member-only pages (Proposals, Submissions, Timeline, a linked
+ * page) or owner-only pages (Pages, Tracks) don't exist in the other mode.
+ */
+export function counterpartHref(
+  activeId: string | undefined,
+  targetMode: NavMode,
+  slug: string,
+  pages: HackathonPageRef[],
+): string {
+  const targetItems =
+    targetMode === "manage" ? manageNav(slug) : memberNav(slug, pages)
+  const fallback = targetItems[0]!.href!
+
+  if (!activeId) return fallback
+
+  const key = activeId.slice(activeId.indexOf(":") + 1)
+  const targetId = `${targetMode === "manage" ? "manage" : "member"}:${key}`
+
+  return targetItems.find((i) => i.id === targetId)?.href ?? fallback
+}
+
+/**
  * Id of the entry matching `pathname`, longest match winning so that
  * `/hackathons/new` beats `/hackathons`.
  *

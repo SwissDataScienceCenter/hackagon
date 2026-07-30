@@ -1,14 +1,14 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import Eye from 'lucide-svelte/icons/eye';
     import Settings from 'lucide-svelte/icons/settings';
     import type { NavMode } from '$lib/navigation';
 
     let {
-        slug,
+        viewHref,
+        manageHref,
         mode,
         collapsed,
-    }: { slug: string; mode: NavMode; collapsed: boolean } = $props();
+    }: { viewHref: string; manageHref: string; mode: NavMode; collapsed: boolean } = $props();
 
     const BASE =
         'flex h-8 items-center justify-center gap-1.5 rounded-md text-xs no-underline transition-colors';
@@ -24,7 +24,7 @@
                {collapsed ? 'grid-cols-1' : 'grid-cols-2'}"
     >
         <a
-            href={resolve(`/hackathon/${slug}/overview`)}
+            href={viewHref}
             aria-current={mode === 'view' ? 'page' : undefined}
             title={collapsed ? 'Participant view' : undefined}
             class="{BASE} {mode === 'view' ? ACTIVE : IDLE}"
@@ -35,7 +35,7 @@
             {/if}
         </a>
         <a
-            href={resolve(`/owner/hackathon/${slug}`)}
+            href={manageHref}
             aria-current={mode === 'manage' ? 'page' : undefined}
             title={collapsed ? 'Manage hackathon' : undefined}
             class="{BASE} {mode === 'manage' ? ACTIVE : IDLE}"
