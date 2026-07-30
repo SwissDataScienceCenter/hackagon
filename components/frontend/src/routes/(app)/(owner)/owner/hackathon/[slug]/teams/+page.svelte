@@ -15,14 +15,30 @@
     function toggle(teamId: string) {
         expanded[teamId] = !expanded[teamId];
     }
+
+    const allExpanded = $derived(teams.length > 0 && teams.every((t) => expanded[t.id]));
+
+    function toggleAll() {
+        const next = !allExpanded;
+        for (const t of teams) {
+            expanded[t.id] = next;
+        }
+    }
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex items-center justify-between gap-4">
         <h1 class="m-0 text-lg font-bold text-surface-950-50">Teams</h1>
-        <a href={resolve(`/owner/hackathon/${slug}/teams/new`)} class="btn btn-sm preset-filled-primary">
-            New Team
-        </a>
+        <div class="flex items-center gap-2">
+            {#if teams.length > 0}
+                <button type="button" class="btn btn-sm preset-tonal-surface" onclick={toggleAll}>
+                    {allExpanded ? 'Close all' : 'Manage all'}
+                </button>
+            {/if}
+            <a href={resolve(`/owner/hackathon/${slug}/teams/new`)} class="btn btn-sm preset-filled-primary">
+                New Team
+            </a>
+        </div>
     </div>
 
     {#if teams.length === 0}
@@ -57,7 +73,7 @@
                                         class="btn btn-sm preset-tonal-surface"
                                         onclick={() => toggle(t.id)}
                                     >
-                                        {expanded[t.id] ? 'Hide members' : 'Manage members'}
+                                        {expanded[t.id] ? 'Close' : 'Manage'}
                                     </button>
                                     <a
                                         href={resolve(`/owner/hackathon/${slug}/teams/${t.id}/edit`)}
