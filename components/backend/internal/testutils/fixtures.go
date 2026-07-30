@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck // dot import in test file is fine
 	. "github.com/onsi/gomega"    //nolint:staticcheck // dot import in test file is fine
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime" // registers schema hooks and default values
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	config "github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 
