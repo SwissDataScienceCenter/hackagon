@@ -16,8 +16,12 @@ import "hackathon/messages/team_svc/finalize_submission_request.proto";
 import "hackathon/messages/team_svc/finalize_submission_response.proto";
 import "hackathon/messages/team_svc/get_request.proto";
 import "hackathon/messages/team_svc/get_response.proto";
+import "hackathon/messages/team_svc/get_submission_request.proto";
+import "hackathon/messages/team_svc/get_submission_response.proto";
 import "hackathon/messages/team_svc/list_request.proto";
 import "hackathon/messages/team_svc/list_response.proto";
+import "hackathon/messages/team_svc/list_submissions_request.proto";
+import "hackathon/messages/team_svc/list_submissions_response.proto";
 import "hackathon/messages/team_svc/remove_user_request.proto";
 import "hackathon/messages/team_svc/remove_user_response.proto";
 
@@ -32,5 +36,7 @@ service TeamService {
   rpc AssignUser(hackathon.messages.team_svc.AssignUserRequest) returns (hackathon.messages.team_svc.AssignUserResponse);
   rpc RemoveUser(hackathon.messages.team_svc.RemoveUserRequest) returns (hackathon.messages.team_svc.RemoveUserResponse);
   rpc CreateSubmission(hackathon.messages.team_svc.CreateSubmissionRequest) returns (hackathon.messages.team_svc.CreateSubmissionResponse);
+  rpc GetSubmission(hackathon.messages.team_svc.GetSubmissionRequest) returns (hackathon.messages.team_svc.GetSubmissionResponse);
+  rpc ListSubmissions(hackathon.messages.team_svc.ListSubmissionsRequest) returns (hackathon.messages.team_svc.ListSubmissionsResponse);
   rpc FinalizeSubmission(hackathon.messages.team_svc.FinalizeSubmissionRequest) returns (hackathon.messages.team_svc.FinalizeSubmissionResponse);
 }

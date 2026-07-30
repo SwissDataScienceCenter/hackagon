@@ -526,6 +526,126 @@ func (s *TeamService) CreateSubmission(
 	return &msgs.CreateSubmissionResponse{Id: subm.ID.String()}, nil
 }
 
+func (s *TeamService) GetSubmission(
+	ctx context.Context,
+	req *msgs.GetSubmissionRequest,
+) (*msgs.GetSubmissionResponse, error) {
+	teamID, err := uuid.Parse(req.GetTeamId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
+	}
+
+	// Query team with project to get hackathon ID for RBAC.
+	t, err := s.dbClient.Team.Query().
+		Where(entteam.IDEQ(teamID)).
+		WithProject(func(pq *ent.ProjectQuery) {
+			pq.WithHackathon()
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
+		}
+		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+	}
+
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
+	}
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Submission, m.Read,
+		m.WithTeam(t.ID.String()),
+	); err != nil {
+		if err := s.enforcer.RequirePermission(
+			ctx, hackathonID, m.Submission, m.Read,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	// Find the latest submission for this team (highest version).
+	subm, err := s.dbClient.Submission.Query().
+		Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID))).
+		WithTeam().
+		WithProject().
+		WithCreator().
+		WithModifier().
+		Order(ent.Desc(entsubmission.FieldVersion)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"no submission found for team %s",
+				req.GetTeamId(),
+			)
+		}
+		return nil, status.Errorf(codes.Internal, "query submission: %v", err)
+	}
+
+	return &msgs.GetSubmissionResponse{Submission: submissionEntryFromEnt(subm)}, nil
+}
+
+func (s *TeamService) ListSubmissions(
+	ctx context.Context,
+	req *msgs.ListSubmissionsRequest,
+) (*msgs.ListSubmissionsResponse, error) {
+	teamID, err := uuid.Parse(req.GetTeamId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
+	}
+
+	// Query team with project to get hackathon ID for RBAC.
+	t, err := s.dbClient.Team.Query().
+		Where(entteam.IDEQ(teamID)).
+		WithProject(func(pq *ent.ProjectQuery) {
+			pq.WithHackathon()
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
+		}
+		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+	}
+
+	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "team project or hackathon not found")
+	}
+
+	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID, m.Submission, m.Read,
+		m.WithTeam(t.ID.String()),
+	); err != nil {
+		if err := s.enforcer.RequirePermission(
+			ctx, hackathonID, m.Submission, m.Read,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	submissions, err := s.dbClient.Submission.Query().
+		Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID))).
+		WithTeam().
+		WithProject().
+		WithCreator().
+		WithModifier().
+		All(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "query submissions: %v", err)
+	}
+
+	entries := make([]*hackEnts.Submission, 0, len(submissions))
+	for _, s := range submissions {
+		entries = append(entries, submissionEntryFromEnt(s))
+	}
+
+	return &msgs.ListSubmissionsResponse{Submissions: entries}, nil
+}
+
 func (s *TeamService) FinalizeSubmission(
 	ctx context.Context,
 	req *msgs.FinalizeSubmissionRequest,
