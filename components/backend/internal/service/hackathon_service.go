@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -83,6 +84,18 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
+	// Create default settings (both flags false).
+	_, err = s.dbClient.HackathonSettings.Create().
+		SetHackathonID(h.ID).
+		SetModifier(creator).
+		Save(ctx)
+	if err != nil {
+		slog.Error("create hackathon settings", "err", err)
+		// Best-effort cleanup.
+		_ = s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
+		return nil, status.Errorf(codes.Internal, "couldn't create hackathon settings")
+	}
+
 	if _, err := s.enforcer.AddRole(uid, m.Owner, h.ID.String()); err != nil {
 		slog.Error("add hackathon owner", "err", err)
 		err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
@@ -118,6 +131,7 @@ func (s *HackathonService) Get(
 		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
 		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
+		WithSettings().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -155,6 +169,10 @@ func (s *HackathonService) Get(
 	entry.Phases = make([]*ents.Phase, 0, len(h.Edges.Phases))
 	for _, p := range h.Edges.Phases {
 		entry.Phases = append(entry.Phases, phaseEntryFromEnt(p, id))
+	}
+
+	if h.Edges.Settings != nil {
+		entry.Settings = settingsEntryFromEnt(h.Edges.Settings)
 	}
 
 	entry.Members = make([]*ents.HackathonMember, 0, len(h.Edges.Participants))
@@ -531,6 +549,73 @@ func (s *HackathonService) Edit(
 	entry.Modifier = userEntryFromEnt(updated.Edges.Modifier)
 
 	return &msgs.EditResponse{Hackathon: entry}, nil
+}
+
+func (s *HackathonService) EditSettings(
+	ctx context.Context,
+	req *msgs.EditSettingsRequest,
+) (*msgs.EditSettingsResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Write permission on hackathon
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Ensure user exists
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Build update query
+	update := s.dbClient.HackathonSettings.Update().
+		Where(enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id))).
+		SetModifier(user)
+
+	if req.RegistrationsEnabled != nil {
+		update = update.SetRegistrationsEnabled(req.GetRegistrationsEnabled())
+	}
+	if req.VotingEnabled != nil {
+		update = update.SetVotingEnabled(req.GetVotingEnabled())
+	}
+
+	_, err = update.Save(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon settings not found")
+		}
+		slog.Error("update hackathon settings", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't update hackathon settings")
+	}
+
+	settings, err := s.dbClient.HackathonSettings.Query().
+		Where(
+			enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id)),
+		).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon settings not found")
+		}
+		slog.Error("query updated settings", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query updated settings")
+	}
+
+	return &msgs.EditSettingsResponse{
+		Settings: settingsEntryFromEnt(settings),
+	}, nil
 }
 
 func (s *HackathonService) List(

@@ -27,6 +27,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `vote_categories` | VoteCategory | O2M | no | no | Voting categories scoped to this hackathon. |
+| `settings` | HackathonSettings | O2O | no | no | Configuration settings for this hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -37,6 +38,26 @@ A hackathon event containing tracks, projects, phases, and participants.
 - `starts_at`
 - `ends_at`
 - `visibility`
+
+## HackathonSettings
+
+Configuration settings for a hackathon.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `registrations_enabled` | bool | yes | no | no | yes | Whether new participants can register for this hackathon. |
+| `voting_enabled` | bool | yes | no | no | yes | Whether voting is enabled for this hackathon. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the settings were created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | O2O | yes | yes | The hackathon this settings entry belongs to. |
+| `modifier` | User | M2O | yes | yes | The user who last modified these settings. |
 
 ## Page
 
@@ -282,6 +303,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
 | `created_tracks` | Track | O2M | no | no | Tracks this user created. |
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
+| `modified_settings` | HackathonSettings | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |
 | `jury_categories` | VoteCategory | M2M | no | no | Vote categories where this user is a jury member. |
