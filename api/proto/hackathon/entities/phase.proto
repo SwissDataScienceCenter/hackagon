@@ -26,4 +26,11 @@ message Phase {
   optional string page_id = 9;
   string creator_id = 10;
   string modifier_id = 11;
+  PhaseType phase_type = 12;
+}
+
+enum PhaseType {
+  PHASE_TYPE_UNSPECIFIED = 0;
+  PHASE_TYPE_VOTING = 1;
+  PHASE_TYPE_INFORMATIVE = 2;
 }

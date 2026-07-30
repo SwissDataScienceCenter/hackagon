@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package vote.messages.vote_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
+
+message ExportVotesRequest {
+  string category_id = 1 [(buf.validate.field).string.uuid = true];
+  ExportFormat format = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+enum ExportFormat {
+  EXPORT_FORMAT_UNSPECIFIED = 0;
+  EXPORT_FORMAT_CSV = 1;
+  EXPORT_FORMAT_JSON = 2;
+}
