@@ -111,6 +111,12 @@ export function manageNav(slug: string): NavItem[] {
       href: resolve(`/owner/hackathon/${slug}/participants`),
     },
     {
+      id: "manage:proposals",
+      label: "Projects",
+      icon: Lightbulb,
+      href: resolve(`/owner/hackathon/${slug}/projects`),
+    },
+    {
       id: "manage:pages",
       label: "Pages",
       icon: FileText,
