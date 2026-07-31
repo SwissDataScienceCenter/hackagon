@@ -1120,6 +1120,7 @@ var _ = Describe("TeamService", func() {
 	Describe("GetSubmission", func() {
 		var teamID string
 		var projectID string
+		var hackathonID string
 		var ownerID string
 		var memberID string
 
@@ -1147,6 +1148,7 @@ var _ = Describe("TeamService", func() {
 				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -1292,11 +1294,51 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
+
+		It("allows owner to get submission", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: teamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmission()).NotTo(BeNil())
+			Expect(resp.GetSubmission().GetVersion()).To(Equal(int32(2)))
+		})
+
+		It("denies get for hackathon member not in team", func() {
+			hackathonMemberID := "hackathon-member-not-in-team-getsub"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-getsub").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: teamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
 	})
 
 	Describe("ListSubmissions", func() {
 		var teamID string
 		var projectID string
+		var hackathonID string
 		var ownerID string
 		var memberID string
 
@@ -1324,6 +1366,7 @@ var _ = Describe("TeamService", func() {
 				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -1463,6 +1506,44 @@ var _ = Describe("TeamService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(nonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: teamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("allows owner to list submissions", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: teamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmissions()).To(HaveLen(3))
+		})
+
+		It("denies list for hackathon member not in team", func() {
+			hackathonMemberID := "hackathon-member-not-in-team-listsub"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-listsub").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
 			ctx := metadata.NewOutgoingContext(
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),

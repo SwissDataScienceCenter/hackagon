@@ -181,18 +181,9 @@ func (s *TeamService) Edit(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -265,18 +256,9 @@ func (s *TeamService) Delete(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -325,18 +307,9 @@ func (s *TeamService) AssignUser(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -390,18 +363,9 @@ func (s *TeamService) RemoveUser(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -469,18 +433,9 @@ func (s *TeamService) CreateSubmission(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -535,18 +490,9 @@ func (s *TeamService) GetSubmission(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -597,18 +543,9 @@ func (s *TeamService) ListSubmissions(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid team_id: %v", err)
 	}
 
-	// Query team with project to get hackathon ID for RBAC.
-	t, err := s.dbClient.Team.Query().
-		Where(entteam.IDEQ(teamID)).
-		WithProject(func(pq *ent.ProjectQuery) {
-			pq.WithHackathon()
-		}).
-		Only(ctx)
+	t, err := getTeamById(ctx, s, teamID)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "team %s not found", req.GetTeamId())
-		}
-		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+		return nil, err
 	}
 
 	if t.Edges.Project == nil || t.Edges.Project.Edges.Hackathon == nil {
@@ -633,6 +570,7 @@ func (s *TeamService) ListSubmissions(
 		WithProject().
 		WithCreator().
 		WithModifier().
+		Order(ent.Asc(entsubmission.FieldVersion)).
 		All(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "query submissions: %v", err)
@@ -727,4 +665,21 @@ func (s *TeamService) FinalizeSubmission(
 	}
 
 	return &msgs.FinalizeSubmissionResponse{Submission: submissionEntryFromEnt(updatedSubm)}, nil
+}
+
+func getTeamById(ctx context.Context, s *TeamService, teamID uuid.UUID) (*ent.Team, error) {
+	t, err := s.dbClient.Team.Query().
+		Where(entteam.IDEQ(teamID)).
+		WithProject(func(pq *ent.ProjectQuery) {
+			pq.WithHackathon()
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "team %s not found", teamID)
+		}
+		slog.Error("get team", "err", err)
+		return nil, status.Errorf(codes.Internal, "query team: %v", err)
+	}
+	return t, nil
 }
