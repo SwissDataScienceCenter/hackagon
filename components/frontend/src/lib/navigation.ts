@@ -116,6 +116,12 @@ export function manageNav(slug: string): NavItem[] {
       href: resolve(`/owner/hackathon/${slug}/timeline`),
     },
     {
+      id: "manage:tracks",
+      label: "Tracks",
+      icon: Route,
+      href: resolve(`/owner/hackathon/${slug}/tracks`),
+    },
+    {
       id: "manage:participants",
       label: "Participants",
       icon: Users,
@@ -138,12 +144,6 @@ export function manageNav(slug: string): NavItem[] {
       label: "Pages",
       icon: FileText,
       href: resolve(`/owner/hackathon/${slug}/pages`),
-    },
-    {
-      id: "manage:tracks",
-      label: "Tracks",
-      icon: Route,
-      href: resolve(`/owner/hackathon/${slug}/tracks`),
     },
   ]
 }
