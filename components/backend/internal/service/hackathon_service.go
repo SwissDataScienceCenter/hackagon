@@ -232,6 +232,21 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
 	}
 
+	// Check that registrations are enabled
+	settings, err := s.dbClient.HackathonSettings.Query().
+		Where(enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id))).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon settings not found")
+		}
+		slog.Error("query hackathon settings", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query hackathon settings")
+	}
+	if !settings.RegistrationsEnabled {
+		return nil, status.Error(codes.FailedPrecondition, "registrations are closed")
+	}
+
 	// First ensure user exists and get their entity ID
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {
