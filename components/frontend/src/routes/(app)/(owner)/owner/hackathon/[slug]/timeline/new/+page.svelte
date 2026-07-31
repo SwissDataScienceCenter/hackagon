@@ -1,7 +1,6 @@
 <script lang="ts">
     import { page as pageStore } from '$app/stores';
     import { resolve } from '$app/paths';
-    import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import Select from '$lib/components/forms/Select.svelte';
     import type { ActionData, PageData } from './$types';
 
@@ -62,16 +61,27 @@
             </label>
         </div>
         <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
+            Description
+            <textarea
+                name="description"
+                required
+                minlength="1"
+                rows="3"
+                class="border border-surface-200-800 bg-surface-50-950 px-3 py-2 text-sm
+                       text-surface-950-50 focus:border-primary-500 focus:outline-none"
+            ></textarea>
+            <span class="font-normal text-[10px] text-surface-500">
+                Short plain-text summary shown next to the phase. Long-form content belongs on the
+                linked page.
+            </span>
+        </label>
+        <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
             Linked page (optional)
             <Select
                 name="pageId"
                 placeholder="None"
                 options={[{ label: 'None', value: '' }, ...pages.map((p) => ({ label: p.title, value: p.id }))]}
             />
-        </label>
-        <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
-            Description
-            <MarkdownEditor name="description" value="" maxlength={10000} rows={10} />
         </label>
         <button type="submit" class="btn btn-sm preset-filled-primary-500 self-start">
             Create Phase

@@ -4,11 +4,25 @@ import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
-  const { phase } = requireGrpc(event.locals.grpc)
+  const { phase, page } = requireGrpc(event.locals.grpc)
 
-  const result = await phase.list({ hackathonId: event.params.slug })
+  const [phaseResult, pageResult] = await Promise.all([
+    phase.list({ hackathonId: event.params.slug }),
+    page.list({ hackathonId: event.params.slug }),
+  ])
 
-  return { hackathonId: event.params.slug, phases: result.phases }
+  const pageTitles = new Map(pageResult.pages.map((p) => [p.id, p.title]))
+
+  const phases = phaseResult.phases.map((p) => ({
+    id: p.id,
+    name: p.name,
+    startsAt: p.startsAt,
+    endsAt: p.endsAt,
+    pageId: p.pageId,
+    pageTitle: p.pageId ? pageTitles.get(p.pageId) : undefined,
+  }))
+
+  return { hackathonId: event.params.slug, phases }
 }
 
 export const actions: Actions = {

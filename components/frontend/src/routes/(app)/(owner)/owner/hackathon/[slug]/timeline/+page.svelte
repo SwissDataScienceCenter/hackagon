@@ -34,6 +34,7 @@
                         <th class="px-3 py-2 font-semibold">Name</th>
                         <th class="px-3 py-2 font-semibold">Starts</th>
                         <th class="px-3 py-2 font-semibold">Ends</th>
+                        <th class="px-3 py-2 font-semibold">Page</th>
                         <th class="px-3 py-2 font-semibold">Actions</th>
                     </tr>
                 </thead>
@@ -43,6 +44,7 @@
                             <td class="px-3 py-2 font-semibold text-surface-950-50">{p.name}</td>
                             <td class="px-3 py-2 text-surface-500">{formatDate(p.startsAt)}</td>
                             <td class="px-3 py-2 text-surface-500">{formatDate(p.endsAt)}</td>
+                            <td class="px-3 py-2 text-surface-500">{p.pageTitle ?? '—'}</td>
                             <td class="px-3 py-2">
                                 <div class="flex items-center gap-2">
                                     <a
@@ -51,6 +53,21 @@
                                     >
                                         Edit
                                     </a>
+                                    {#if p.pageId}
+                                        <a
+                                            href={resolve(`/owner/hackathon/${slug}/pages/${p.pageId}/edit`)}
+                                            class="btn btn-sm preset-tonal-surface"
+                                        >
+                                            Edit page
+                                        </a>
+                                    {:else}
+                                        <a
+                                            href={resolve(`/owner/hackathon/${slug}/timeline/${p.id}/page/new`)}
+                                            class="btn btn-sm preset-tonal-surface"
+                                        >
+                                            Add page
+                                        </a>
+                                    {/if}
                                     <form
                                         method="POST"
                                         action="?/delete"

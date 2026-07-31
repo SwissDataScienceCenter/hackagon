@@ -28,6 +28,7 @@
                     <tr class="border-b border-surface-200-800 bg-surface-100-900 text-surface-500">
                         <th class="px-3 py-2 font-semibold">Title</th>
                         <th class="px-3 py-2 font-semibold">Visibility</th>
+                        <th class="px-3 py-2 font-semibold">Phase</th>
                         <th class="px-3 py-2 font-semibold">Order</th>
                         <th class="px-3 py-2 font-semibold">Actions</th>
                     </tr>
@@ -40,6 +41,18 @@
                                 <span class="badge {p.visible ? 'preset-tonal-primary' : 'preset-tonal-surface'}">
                                     {p.visible ? 'Visible' : 'Hidden'}
                                 </span>
+                            </td>
+                            <td class="px-3 py-2 text-surface-500">
+                                {#if p.phaseId}
+                                    <a
+                                        href="{resolve(`/hackathon/${slug}/timeline`)}?phase={p.phaseId}"
+                                        class="text-primary-700-300 no-underline hover:underline"
+                                    >
+                                        {p.phaseName ?? 'Linked phase'}
+                                    </a>
+                                {:else}
+                                    —
+                                {/if}
                             </td>
                             <td class="px-3 py-2 text-surface-500">{p.order}</td>
                             <td class="px-3 py-2">
