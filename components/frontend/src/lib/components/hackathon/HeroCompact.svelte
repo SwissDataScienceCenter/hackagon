@@ -38,7 +38,9 @@
         <h1 class="text-lg font-bold sm:text-xl">{title}</h1>
         {#if badges.length > 0}
             <div class="flex flex-wrap gap-1.5">
-                {#each badges as b (b.label)}
+                <!-- Keyed by position, not label: badge text can carry
+                     user-supplied names (e.g. a team), which are not unique. -->
+                {#each badges as b, i (i)}
                     <span class="badge {b.preset} text-xs">{b.label}</span>
                 {/each}
             </div>

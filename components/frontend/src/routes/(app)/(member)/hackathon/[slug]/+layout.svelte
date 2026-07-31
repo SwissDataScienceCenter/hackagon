@@ -42,6 +42,11 @@
         if (vl) chips.push({ label: vl, preset: visibilityBadgePreset(hackathon.visibility) ?? 'preset-tonal-surface' });
         const mem = data.myMembership;
         if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), preset: membershipBadgePreset(mem.isWaiting) });
+        // The viewer's team(s), so "which team am I on" is answered from any
+        // member page. Names are user-supplied, hence no keying on them.
+        for (const t of data.myTeams) {
+            chips.push({ label: t.name, preset: 'preset-tonal-secondary' });
+        }
         return chips;
     })());
 
