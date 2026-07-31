@@ -1117,4 +1117,443 @@ var _ = Describe("TeamService", func() {
 		})
 	})
 
+	Describe("GetSubmission", func() {
+		var teamID string
+		var projectID string
+		var hackathonID string
+		var ownerID string
+		var memberID string
+
+		BeforeEach(func() {
+			ownerID = "team-getsub-owner"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(ownerID).
+				SetUsername("team-getsub-owner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			Expect(err).NotTo(HaveOccurred())
+
+			now := time.Now()
+			hResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "GetSubmission Test Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
+
+			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Title:       "GetSubmission Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			projectID = pResp.GetProjectId()
+
+			teamID = uuid.NewString()
+			resp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "GetSubmission Team",
+				ProjectId: projectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			teamID = resp.GetTeamId()
+
+			// Create a team member.
+			memberID = "team-getsub-member"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(memberID).
+				SetUsername("team-getsub-member").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			memberUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(memberID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamID,
+				UserId: memberUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create two submissions so we can verify "latest" is returned.
+			token = testutils.CreateTestJWTToken(memberID)
+			ctx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
+				TeamId:    teamID,
+				ProjectId: projectID,
+				Result:    testutils.StringPtr("https://github.com/test/repo/v1"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
+				TeamId:    teamID,
+				ProjectId: projectID,
+				Result:    testutils.StringPtr("https://github.com/test/repo/v2"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the latest submission for a team", func() {
+			token := testutils.CreateTestJWTToken(memberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: teamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmission()).NotTo(BeNil())
+			Expect(resp.GetSubmission().GetVersion()).To(Equal(int32(2)))
+			Expect(resp.GetSubmission().GetResult()).To(Equal("https://github.com/test/repo/v2"))
+		})
+
+		It("returns NOT_FOUND when no submission exists for team", func() {
+			// Create a team without submissions.
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			hResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "Empty Team Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Title:       "Empty Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			teamResp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Empty Team",
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			emptyTeamID := teamResp.GetTeamId()
+
+			_, err = teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: emptyTeamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for invalid team ID", func() {
+			token := testutils.CreateTestJWTToken(memberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: uuid.NewString(),
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("denies get for non-member", func() {
+			nonMemberID := "non-member-getsub"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonMemberID).
+				SetUsername("non-member-getsub").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: teamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("allows owner to get submission", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: teamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmission()).NotTo(BeNil())
+			Expect(resp.GetSubmission().GetVersion()).To(Equal(int32(2)))
+		})
+
+		It("denies get for hackathon member not in team", func() {
+			hackathonMemberID := "hackathon-member-not-in-team-getsub"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-getsub").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+				TeamId: teamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("ListSubmissions", func() {
+		var teamID string
+		var projectID string
+		var hackathonID string
+		var ownerID string
+		var memberID string
+
+		BeforeEach(func() {
+			ownerID = "team-listsub-owner"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(ownerID).
+				SetUsername("team-listsub-owner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			Expect(err).NotTo(HaveOccurred())
+
+			now := time.Now()
+			hResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "ListSubmissions Test Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
+
+			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Title:       "ListSubmissions Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			projectID = pResp.GetProjectId()
+
+			teamID = uuid.NewString()
+			resp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "ListSubmissions Team",
+				ProjectId: projectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			teamID = resp.GetTeamId()
+
+			// Create a team member.
+			memberID = "team-listsub-member"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(memberID).
+				SetUsername("team-listsub-member").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			memberUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(memberID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamID,
+				UserId: memberUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create multiple submissions.
+			token = testutils.CreateTestJWTToken(memberID)
+			ctx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
+				TeamId:    teamID,
+				ProjectId: projectID,
+				Result:    testutils.StringPtr("https://github.com/test/repo/v1"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
+				TeamId:    teamID,
+				ProjectId: projectID,
+				Result:    testutils.StringPtr("https://github.com/test/repo/v2"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.CreateSubmission(ctx, &teamMsgs.CreateSubmissionRequest{
+				TeamId:    teamID,
+				ProjectId: projectID,
+				Result:    testutils.StringPtr("https://github.com/test/repo/v3"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("lists all submissions for a team", func() {
+			token := testutils.CreateTestJWTToken(memberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: teamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmissions()).To(HaveLen(3))
+		})
+
+		It("returns empty list when no submissions exist", func() {
+			// Create a team without submissions.
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			hResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "Empty Team List Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Title:       "Empty List Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			teamResp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Empty List Team",
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			emptyTeamID := teamResp.GetTeamId()
+
+			resp, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: emptyTeamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmissions()).To(HaveLen(0))
+		})
+
+		It("returns NOT_FOUND for invalid team ID", func() {
+			token := testutils.CreateTestJWTToken(memberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: uuid.NewString(),
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
+
+		It("denies list for non-member", func() {
+			nonMemberID := "non-member-listsub"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonMemberID).
+				SetUsername("non-member-listsub").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: teamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("allows owner to list submissions", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: teamID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmissions()).To(HaveLen(3))
+		})
+
+		It("denies list for hackathon member not in team", func() {
+			hackathonMemberID := "hackathon-member-not-in-team-listsub"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(hackathonMemberID).
+				SetUsername("hackathon-member-not-in-team-listsub").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole(hackathonMemberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(hackathonMemberID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+				TeamId: teamID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+	})
 })
