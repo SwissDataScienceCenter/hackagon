@@ -151,13 +151,35 @@ Everything else is wired to real data. These are the exceptions:
 
 | Where | State |
 |---|---|
-| `.../submissions` | Under-construction stub, no `+page.server.ts`. **Not backend-blocked** — `TeamService.CreateSubmission`/`FinalizeSubmission` exist and `team.get` returns a team's submissions. Note submissions hang off a `Team`, which hangs off a `Project`, not off the hackathon. |
+| `.../submissions` (member) and `/owner/.../submissions` (owner, doesn't exist yet) | Under-construction stub. **Partly backend-blocked — see "Submissions" below.** |
 | `(marketing)/hackathon/[slug]` | Fully static; its `+page.server.ts` only redirects signed-in users. `name`/`dates`/`description`/`logo`/`status` are reachable via `publicHackathonClient.list()` (find-by-id client-side — no id filter on `ListRequest`). Richer content needs `Get`, which requires membership, so anonymous visitors can never receive it. |
 | `hackathon/[slug]/+layout.svelte` | `HeroCompact` gets `venue=""`, `organizers={[]}`, and `participantCapacity` faked as `participantCount` — no such backend fields. |
 | `ParticipationCard.svelte` | `REGISTERED` badge is a literal; member avatars are placeholder circles. Its actual data is real. |
 | `(marketing)/+page.svelte` | Hackathon rows real; `carouselSlides` photos/captions hardcoded. |
 | `/owner/hackathon/[slug]/+page.svelte` | Stale copy: "Managing pages, phases and tracks from here is coming soon" — all three sub-pages exist. |
 | `NavBar.svelte` | "About" links to `resolve('/')` — a dead self-link, no about route exists. |
+
+## Submissions — paused, waiting on backend (as of 2026-07-30)
+
+Two pages are wanted: a member view (our submissions vs. other teams') and an
+owner view (which teams have submitted). Both need submissions for *all* teams in
+a hackathon, and that is the blocked part.
+
+- `TeamService.Get` eager-loads submissions; **`TeamService.List` does not**, so
+  `List` silently returns `submissions: []` for every team. There is no
+  `ListSubmissions` RPC and no `SubmissionService` — reading goes through `Team`.
+- Don't work around it with `team.list` then `team.get` per team. That's an N+1,
+  and a missing eager-load is exactly what panicked the backend once before.
+- **Decided: `List` should return `final` submissions only.** It is readable by any
+  confirmed participant (`Hackathon.Read`), so returning drafts would disclose
+  every team's in-progress work and `result` URLs — and filtering that in the
+  frontend would not be enforcement. A member's own drafts still come from
+  `team.get(myTeamId)`, which is already permitted and already eager-loads.
+- Backend submission work is landing separately; **wait for it** rather than
+  patching `List` here.
+- When wiring the nav: `manage:submissions` goes at **position 5**, directly after
+  Teams, so it lines up with `member:submissions`. `counterpartHref` then pairs
+  them automatically by the id suffix.
 
 ## Two things that are not what they look like
 
