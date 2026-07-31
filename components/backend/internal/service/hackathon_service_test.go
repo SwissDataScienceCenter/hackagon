@@ -268,6 +268,13 @@ var _ = Describe("HackathonService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(createResp.GetHackathonId()).NotTo(BeEmpty())
 			createdHackathonID = createResp.GetHackathonId()
+
+			// Enable registrations (disabled by default)
+			_, err = client.EditSettings(ctx, &msgs.EditSettingsRequest{
+				HackathonId:          createdHackathonID,
+				RegistrationsEnabled: testutils.BoolPtr(true),
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("allows authorized user to join hackathon", func() {
@@ -365,6 +372,41 @@ var _ = Describe("HackathonService", func() {
 
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns FAILED_PRECONDITION when registrations are disabled", func() {
+			// Disable registrations via admin
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			_, err := client.EditSettings(adminCtx, &msgs.EditSettingsRequest{
+				HackathonId:          createdHackathonID,
+				RegistrationsEnabled: testutils.BoolPtr(false),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to join as non-admin
+			nonAdminKeycloakID := "non-admin-join"
+			token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = dbClient.User.Create().
+				SetKeycloakID(nonAdminKeycloakID).
+				SetUsername("test-join-user-3").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+			_, err = client.Join(ctx, joinReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.FailedPrecondition))
 		})
 
 		It("requires authentication to join", func() {
@@ -1069,7 +1111,6 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
-
 	Describe("HackathonSettings", func() {
 		var createdHackathonID string
 
@@ -1135,7 +1176,7 @@ var _ = Describe("HackathonService", func() {
 
 				enabled := true
 				req := &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: &enabled,
 				}
 
@@ -1163,7 +1204,7 @@ var _ = Describe("HackathonService", func() {
 
 				enabled := true
 				req := &msgs.EditSettingsRequest{
-					HackathonId: createdHackathonID,
+					HackathonId:   createdHackathonID,
 					VotingEnabled: &enabled,
 				}
 
@@ -1182,9 +1223,9 @@ var _ = Describe("HackathonService", func() {
 
 				enabled := true
 				req := &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: &enabled,
-					VotingEnabled:      &enabled,
+					VotingEnabled:        &enabled,
 				}
 
 				resp, err := client.EditSettings(ctx, req)
@@ -1202,7 +1243,7 @@ var _ = Describe("HackathonService", func() {
 				)
 				enabled := true
 				_, err := client.EditSettings(ctx, &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: &enabled,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -1210,7 +1251,7 @@ var _ = Describe("HackathonService", func() {
 				// Now disable it
 				disabled := false
 				resp, err := client.EditSettings(ctx, &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: &disabled,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -1250,7 +1291,7 @@ var _ = Describe("HackathonService", func() {
 
 				enabled := true
 				req := &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: &enabled,
 				}
 
@@ -1262,7 +1303,7 @@ var _ = Describe("HackathonService", func() {
 
 			It("denies anonymous users", func() {
 				req := &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: testutils.BoolPtr(true),
 				}
 
@@ -1280,7 +1321,7 @@ var _ = Describe("HackathonService", func() {
 				)
 
 				req := &msgs.EditSettingsRequest{
-					HackathonId:        createdHackathonID,
+					HackathonId:          createdHackathonID,
 					RegistrationsEnabled: testutils.BoolPtr(true),
 				}
 
