@@ -21,10 +21,10 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
-            href={resolve(`/owner/hackathon/${slug}/phases`)}
+            href={resolve(`/owner/hackathon/${slug}/timeline`)}
             class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
         >
-            &larr; Back to Phases
+            &larr; Back to Timeline
         </a>
         <h2 class="m-0 text-lg font-bold text-surface-950-50">Edit Phase</h2>
     </div>

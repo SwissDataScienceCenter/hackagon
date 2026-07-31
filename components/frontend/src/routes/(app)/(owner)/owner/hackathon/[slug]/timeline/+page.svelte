@@ -18,8 +18,8 @@
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex items-center justify-between gap-4">
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Phases</h1>
-        <a href={resolve(`/owner/hackathon/${slug}/phases/new`)} class="btn btn-sm preset-filled-primary">
+        <h1 class="m-0 text-lg font-bold text-surface-950-50">Timeline</h1>
+        <a href={resolve(`/owner/hackathon/${slug}/timeline/new`)} class="btn btn-sm preset-filled-primary">
             New Phase
         </a>
     </div>
@@ -46,7 +46,7 @@
                             <td class="px-3 py-2">
                                 <div class="flex items-center gap-2">
                                     <a
-                                        href={resolve(`/owner/hackathon/${slug}/phases/${p.id}/edit`)}
+                                        href={resolve(`/owner/hackathon/${slug}/timeline/${p.id}/edit`)}
                                         class="btn btn-sm preset-tonal-surface"
                                     >
                                         Edit

@@ -8,7 +8,6 @@ import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import FileText from "lucide-svelte/icons/file-text"
-import Milestone from "lucide-svelte/icons/milestone"
 import Route from "lucide-svelte/icons/route"
 import CalendarDays from "lucide-svelte/icons/calendar-days"
 import Plus from "lucide-svelte/icons/plus"
@@ -57,6 +56,12 @@ export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
       href: resolve(`/hackathon/${slug}/overview`),
     },
     {
+      id: "member:timeline",
+      label: "Timeline",
+      icon: CalendarClock,
+      href: resolve(`/hackathon/${slug}/timeline`),
+    },
+    {
       id: "member:participants",
       label: "Participants",
       icon: Users,
@@ -80,12 +85,6 @@ export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
       icon: Send,
       href: resolve(`/hackathon/${slug}/submissions`),
     },
-    {
-      id: "member:timeline",
-      label: "Timeline",
-      icon: CalendarClock,
-      href: resolve(`/hackathon/${slug}/timeline`),
-    },
     ...pages.map((p) => ({
       id: `member:page:${p.id}`,
       label: p.title,
@@ -103,6 +102,12 @@ export function manageNav(slug: string): NavItem[] {
       label: "Overview",
       icon: LayoutDashboard,
       href: resolve(`/owner/hackathon/${slug}`),
+    },
+    {
+      id: "manage:timeline",
+      label: "Timeline",
+      icon: CalendarClock,
+      href: resolve(`/owner/hackathon/${slug}/timeline`),
     },
     {
       id: "manage:participants",
@@ -127,12 +132,6 @@ export function manageNav(slug: string): NavItem[] {
       label: "Pages",
       icon: FileText,
       href: resolve(`/owner/hackathon/${slug}/pages`),
-    },
-    {
-      id: "manage:phases",
-      label: "Phases",
-      icon: Milestone,
-      href: resolve(`/owner/hackathon/${slug}/phases`),
     },
     {
       id: "manage:tracks",
@@ -173,8 +172,8 @@ export function platformNav(): NavItem[] {
  * always dropping them back to that mode's overview.
  *
  * Falls back to the target mode's overview when `activeId` has no counterpart
- * there — e.g. member-only pages (Proposals, Submissions, Timeline, a linked
- * page) or owner-only pages (Pages, Tracks) don't exist in the other mode.
+ * there — e.g. member-only pages (Submissions, a content page) or owner-only
+ * pages (Pages, Tracks) don't exist in the other mode.
  */
 export function counterpartHref(
   activeId: string | undefined,
