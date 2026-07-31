@@ -2,20 +2,53 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
+import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
+import type { Project } from "$lib/server/grpc/generated/hackathon/entities/project"
+
+interface ProjectRow {
+  id: string
+  title: string
+  creatorName: string
+  createdAt: Date | undefined
+  modifiedAt: Date | undefined
+}
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon } = await event.parent()
 
-  const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
+  // Project.creator_id is a bare UUID; the layout's member list is the only
+  // place names are available, so resolve them here rather than render ids.
+  const userNames = new Map(
+    hackathon.members
+      .filter((m) => m.user)
+      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
+  )
 
-  const projects = hackathon.projects.map((p) => ({
+  const toRow = (p: Project): ProjectRow => ({
     id: p.id,
     title: p.title,
-    status: p.status,
-    trackName: p.trackId ? (trackNames.get(p.trackId) ?? "Unknown track") : null,
-  }))
+    creatorName: userNames.get(p.creatorId) ?? "Unknown",
+    createdAt: p.createdAt,
+    modifiedAt: p.modifiedAt,
+  })
 
-  return { hackathonId: event.params.slug, projects }
+  const byCreatorThenOldest = (a: ProjectRow, b: ProjectRow) =>
+    a.creatorName.localeCompare(b.creatorName) ||
+    (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)
+
+  const approved = hackathon.projects
+    .filter((p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED)
+    .map(toRow)
+    .sort(byCreatorThenOldest)
+
+  // Anything not approved lands here, so the two tabs stay exhaustive and no
+  // project can hide between them on an unexpected status value.
+  const pending = hackathon.projects
+    .filter((p) => p.status !== ProjectStatus.PROJECT_STATUS_APPROVED)
+    .map(toRow)
+    .sort(byCreatorThenOldest)
+
+  return { hackathonId: event.params.slug, approved, pending }
 }
 
 export const actions: Actions = {
