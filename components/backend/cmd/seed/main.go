@@ -288,7 +288,10 @@ func seedH1(
 	if err != nil {
 		return fmt.Errorf("project AutoML: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projAutoML.ID.String())); err != nil {
+		return fmt.Errorf("assign AutoML owner: %w", err)
+	}
+	projFederated, err := db.Project.Create().
 		SetTitle("Federated Learning Framework").
 		SetDescription("Privacy-preserving ML training across distributed data sources without ever sharing raw data with a central server.").
 		SetStatus(project.StatusProposed).
@@ -296,8 +299,12 @@ func seedH1(
 		SetHackathon(h).
 		SetCreator(bob).
 		SetModifier(bob).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project Federated: %w", err)
+	}
+	if _, err := enf.AddRole(bob.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projFederated.ID.String())); err != nil {
+		return fmt.Errorf("assign Federated owner: %w", err)
 	}
 	projChatbot, err := db.Project.Create().
 		SetTitle("Multilingual Chatbot").
@@ -311,7 +318,10 @@ func seedH1(
 	if err != nil {
 		return fmt.Errorf("project Chatbot: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projChatbot.ID.String())); err != nil {
+		return fmt.Errorf("assign Chatbot owner: %w", err)
+	}
+	projDocSum, err := db.Project.Create().
 		SetTitle("Document Summarizer").
 		SetDescription("Automatic abstractive summarization of legal and scientific documents using transformer models, with citation tracking.").
 		SetStatus(project.StatusProposed).
@@ -319,10 +329,14 @@ func seedH1(
 		SetHackathon(h).
 		SetCreator(bob).
 		SetModifier(bob).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project DocSummarizer: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(bob.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projDocSum.ID.String())); err != nil {
+		return fmt.Errorf("assign DocSummarizer owner: %w", err)
+	}
+	projObjectDet, err := db.Project.Create().
 		SetTitle("Real-time Object Detection").
 		SetDescription("Edge-deployed object detection for retail shelf monitoring, running on low-power ARM hardware with under 50 ms latency.").
 		SetStatus(project.StatusApproved).
@@ -330,8 +344,12 @@ func seedH1(
 		SetHackathon(h).
 		SetCreator(bob).
 		SetModifier(admin).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project ObjectDetection: %w", err)
+	}
+	if _, err := enf.AddRole(bob.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projObjectDet.ID.String())); err != nil {
+		return fmt.Errorf("assign ObjectDetection owner: %w", err)
 	}
 
 	// alice (organizer) and bob confirmed; charles waitlisted; admin also confirmed
@@ -368,6 +386,9 @@ func seedH1(
 		if _, err := db.TeamParticipant.Create().SetTeam(teamAlpha).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Alpha member %s: %w", u.Username, err)
 		}
+		if _, err := enf.AddRole(u.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamAlpha.ID.String())); err != nil {
+			return fmt.Errorf("assign Alpha member %s: %w", u.Username, err)
+		}
 	}
 
 	teamBeta, err := db.Team.Create().
@@ -382,6 +403,9 @@ func seedH1(
 	}
 	if _, err := db.TeamParticipant.Create().SetTeam(teamBeta).SetUser(alice).Save(ctx); err != nil {
 		return fmt.Errorf("team Beta member alice: %w", err)
+	}
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamBeta.ID.String())); err != nil {
+		return fmt.Errorf("assign Beta member alice: %w", err)
 	}
 
 	// Submissions for team Alpha: draft v1, then final v2
@@ -532,7 +556,10 @@ func seedH2(
 	if err != nil {
 		return fmt.Errorf("project Solar: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(bob.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projSolar.ID.String())); err != nil {
+		return fmt.Errorf("assign Solar owner: %w", err)
+	}
+	projSmartGrid, err := db.Project.Create().
 		SetTitle("Smart Grid Monitor").
 		SetDescription("Real-time dashboard for detecting grid imbalances and automating load shedding decisions using time-series anomaly detection.").
 		SetStatus(project.StatusProposed).
@@ -540,10 +567,14 @@ func seedH2(
 		SetHackathon(h).
 		SetCreator(alice).
 		SetModifier(alice).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project SmartGrid: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projSmartGrid.ID.String())); err != nil {
+		return fmt.Errorf("assign SmartGrid owner: %w", err)
+	}
+	projCropDisease, err := db.Project.Create().
 		SetTitle("Crop Disease Detector").
 		SetDescription("Mobile app using computer vision to identify crop diseases from field photos, providing treatment recommendations and outbreak tracking.").
 		SetStatus(project.StatusApproved).
@@ -551,8 +582,12 @@ func seedH2(
 		SetHackathon(h).
 		SetCreator(alice).
 		SetModifier(alice).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project CropDisease: %w", err)
+	}
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projCropDisease.ID.String())); err != nil {
+		return fmt.Errorf("assign CropDisease owner: %w", err)
 	}
 
 	// Participants: all three confirmed
@@ -579,6 +614,9 @@ func seedH2(
 	for _, u := range []*ent.User{bob, admin} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamGamma).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Gamma member %s: %w", u.Username, err)
+		}
+		if _, err := enf.AddRole(u.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamGamma.ID.String())); err != nil {
+			return fmt.Errorf("assign Gamma member %s: %w", u.Username, err)
 		}
 	}
 
@@ -719,7 +757,10 @@ func seedH3(
 	if err != nil {
 		return fmt.Errorf("project CLI: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(admin.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projCLI.ID.String())); err != nil {
+		return fmt.Errorf("assign CLI owner: %w", err)
+	}
+	projTestCoverage, err := db.Project.Create().
 		SetTitle("Test Coverage Dashboard").
 		SetDescription("A web dashboard that tracks test coverage trends across all repositories over time and surfaces regressions directly in CI checks.").
 		SetStatus(project.StatusProposed).
@@ -727,10 +768,14 @@ func seedH3(
 		SetHackathon(h).
 		SetCreator(alice).
 		SetModifier(alice).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project TestCoverage: %w", err)
 	}
-	if _, err := db.Project.Create().
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projTestCoverage.ID.String())); err != nil {
+		return fmt.Errorf("assign TestCoverage owner: %w", err)
+	}
+	projPipelineViz, err := db.Project.Create().
 		SetTitle("Data Pipeline Visualizer").
 		SetDescription("Interactive graph visualization of data pipeline dependencies with live execution status, SLA tracking, and error highlighting.").
 		SetStatus(project.StatusApproved).
@@ -738,8 +783,12 @@ func seedH3(
 		SetHackathon(h).
 		SetCreator(alice).
 		SetModifier(alice).
-		Save(ctx); err != nil {
+		Save(ctx)
+	if err != nil {
 		return fmt.Errorf("project PipelineViz: %w", err)
+	}
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(projPipelineViz.ID.String())); err != nil {
+		return fmt.Errorf("assign PipelineViz owner: %w", err)
 	}
 
 	// Participants: admin + alice confirmed
@@ -766,6 +815,9 @@ func seedH3(
 	for _, u := range []*ent.User{admin, alice} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamDelta).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Delta member %s: %w", u.Username, err)
+		}
+		if _, err := enf.AddRole(u.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamDelta.ID.String())); err != nil {
+			return fmt.Errorf("assign Delta member %s: %w", u.Username, err)
 		}
 	}
 

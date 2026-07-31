@@ -217,6 +217,10 @@ func (s *ProjectService) Propose(
 		return nil, status.Errorf(codes.Internal, "couldn't create project in database")
 	}
 
+	if _, err = s.enforcer.AddRole(uid, mw.Owner, hackathonID.String(), mw.WithProject(p.ID.String())); err != nil {
+		return nil, status.Errorf(codes.Internal, "couldn't add project owner permission: %v", err)
+	}
+
 	return &msgs.ProposeResponse{ProjectId: p.ID.String()}, nil
 }
 
@@ -433,7 +437,7 @@ func (s *ProjectService) Edit(
 	ctx context.Context,
 	req *msgs.EditRequest,
 ) (*msgs.EditResponse, error) {
-	uid, _, err := mw.RequireSubject(ctx)
+	_, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -460,22 +464,18 @@ func (s *ProjectService) Edit(
 
 	hackathonID := project.Edges.Hackathon.ID
 
-	// Check if user is hackathon owner (has Write permission) OR project creator
-	canEdit, err := s.enforcer.CheckPermission(uid, hackathonID.String(), mw.Project, mw.Write)
+	err = s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Write,
+		mw.WithProject(projectID.String()),
+	)
 	if err != nil {
-		slog.Error("check owner permission", "err", err)
-		return nil, status.Error(codes.Internal, "authorization error")
-	}
-
-	// If not an owner, check if user is the project creator
-	if !canEdit {
-		if project.Edges.Creator.KeycloakID == uid {
-			canEdit = true
+		err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write)
+		if err != nil {
+			return nil, status.Error(codes.PermissionDenied, "permission denied")
 		}
-	}
-
-	if !canEdit {
-		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 
 	// Build the update query with only provided fields
@@ -549,7 +549,7 @@ func (s *ProjectService) Delete(
 	ctx context.Context,
 	req *msgs.DeleteRequest,
 ) (*msgs.DeleteResponse, error) {
-	uid, _, err := mw.RequireSubject(ctx)
+	_, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -576,28 +576,36 @@ func (s *ProjectService) Delete(
 
 	hackathonID := project.Edges.Hackathon.ID
 
-	// Check if user is hackathon owner (has Write permission) OR project creator
-	canEdit, err := s.enforcer.CheckPermission(uid, hackathonID.String(), mw.Project, mw.Write)
+	err = s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Write,
+		mw.WithProject(projectID.String()),
+	)
 	if err != nil {
-		slog.Error("check owner permission", "err", err)
-		return nil, status.Error(codes.Internal, "authorization error")
-	}
-
-	// If not an owner, check if user is the project creator
-	if !canEdit {
-		if project.Edges.Creator.KeycloakID == uid {
-			canEdit = true
+		err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write)
+		if err != nil {
+			return nil, status.Error(codes.PermissionDenied, "permission denied")
 		}
-	}
-
-	if !canEdit {
-		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 
 	// Delete the project
 	if err := s.dbClient.Project.DeleteOne(project).Exec(ctx); err != nil {
 		slog.Error("delete project", "err", err)
 		return nil, status.Errorf(codes.Internal, "couldn't delete project from database")
+	}
+	if _, err = s.enforcer.RemoveRole(
+		project.Edges.Creator.KeycloakID,
+		mw.Owner,
+		hackathonID.String(),
+		mw.WithProject(project.ID.String()),
+	); err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"couldn't remove project owner permission: %v",
+			err,
+		)
 	}
 
 	return &msgs.DeleteResponse{}, nil
