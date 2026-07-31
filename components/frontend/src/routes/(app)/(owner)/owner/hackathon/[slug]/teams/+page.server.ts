@@ -18,18 +18,18 @@ export const load: PageServerLoad = async (event) => {
       name: m.user!.displayName || m.user!.username,
     }))
 
-  const teams = result.teams.map((t) => {
-    const memberIds = new Set(t.members.map((m) => m.id))
-    return {
-      id: t.id,
-      name: t.name,
-      projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-      members: t.members.map((m) => ({ id: m.id, name: m.displayName || m.username })),
-      available: confirmedParticipants.filter((p) => !memberIds.has(p.id)),
-    }
-  })
+  const teams = result.teams.map((t) => ({
+    id: t.id,
+    name: t.name,
+    projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
+    members: t.members.map((m) => ({ id: m.id, name: m.displayName || m.username })),
+  }))
 
-  return { hackathonId: event.params.slug, teams }
+  // A participant belongs to at most one team, so anyone not on a team is in the pool.
+  const assignedIds = new Set(result.teams.flatMap((t) => t.members.map((m) => m.id)))
+  const unassigned = confirmedParticipants.filter((p) => !assignedIds.has(p.id))
+
+  return { hackathonId: event.params.slug, teams, unassigned }
 }
 
 export const actions: Actions = {
@@ -57,52 +57,37 @@ export const actions: Actions = {
     return { success: true }
   },
 
-  assign: async (event) => {
+  // Moves a participant to `toTeamId`, or unassigns them when it is empty. The
+  // backend allows a user on several teams, so the single-team rule is enforced
+  // here: every other team membership in this hackathon is removed first.
+  move: async (event) => {
     const { team } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
-    const teamId = form.get("teamId")
     const userId = form.get("userId")
-    if (typeof teamId !== "string" || teamId === "") {
-      return fail(400, { message: "Missing team id" })
-    }
+    const toTeamId = form.get("toTeamId")
     if (typeof userId !== "string" || userId === "") {
-      return fail(400, { message: "Select a participant to add" })
+      return fail(400, { message: "Select a participant to move" })
+    }
+    if (typeof toTeamId !== "string") {
+      return fail(400, { message: "Missing target team" })
     }
 
     try {
-      await team.assignUser({ teamId, userId })
+      const current = await team.list({ hackathonId: event.params.slug })
+      const leaving = current.teams.filter(
+        (t) => t.id !== toTeamId && t.members.some((m) => m.id === userId),
+      )
+
+      for (const t of leaving) {
+        await team.removeUser({ teamId: t.id, userId })
+      }
+      if (toTeamId !== "") {
+        await team.assignUser({ teamId: toTeamId, userId })
+      }
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to manage this team" })
-      }
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { message: "Team or user not found" })
-      }
-      throw e
-    }
-
-    return { success: true }
-  },
-
-  removeMember: async (event) => {
-    const { team } = requireGrpc(event.locals.grpc)
-    const form = await event.request.formData()
-
-    const teamId = form.get("teamId")
-    const userId = form.get("userId")
-    if (typeof teamId !== "string" || teamId === "") {
-      return fail(400, { message: "Missing team id" })
-    }
-    if (typeof userId !== "string" || userId === "") {
-      return fail(400, { message: "Missing user id" })
-    }
-
-    try {
-      await team.removeUser({ teamId, userId })
-    } catch (e) {
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to manage this team" })
+        return fail(403, { message: "You don't have permission to manage these teams" })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Team or user not found" })
