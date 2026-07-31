@@ -62,6 +62,12 @@ export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
       href: resolve(`/hackathon/${slug}/timeline`),
     },
     {
+      id: "member:tracks",
+      label: "Tracks",
+      icon: Route,
+      href: resolve(`/hackathon/${slug}/tracks`),
+    },
+    {
       id: "member:participants",
       label: "Participants",
       icon: Users,
@@ -173,7 +179,8 @@ export function platformNav(): NavItem[] {
  *
  * Falls back to the target mode's overview when `activeId` has no counterpart
  * there — e.g. member-only pages (Submissions, a content page) or owner-only
- * pages (Pages, Tracks) don't exist in the other mode.
+ * pages (Pages) don't exist in the other mode. Matching is by the id suffix, so
+ * a pair need not sit at the same position in both navs.
  */
 export function counterpartHref(
   activeId: string | undefined,
