@@ -233,7 +233,9 @@ func (s *TeamService) Edit(
 		WithCreator().
 		WithModifier().
 		WithMembers().
-		WithSubmissions().
+		WithSubmissions(func(sq *ent.SubmissionQuery) {
+			sq.WithTeam().WithProject().WithCreator().WithModifier()
+		}).
 		Only(ctx)
 	if err != nil {
 		slog.Error("re-query team", "err", err)
@@ -406,7 +408,9 @@ func (s *TeamService) RemoveUser(
 		WithCreator().
 		WithModifier().
 		WithMembers().
-		WithSubmissions().
+		WithSubmissions(func(sq *ent.SubmissionQuery) {
+			sq.WithTeam().WithProject().WithCreator().WithModifier()
+		}).
 		Only(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "query updated team: %v", err)
