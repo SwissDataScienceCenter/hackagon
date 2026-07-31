@@ -549,7 +549,7 @@ func (s *ProjectService) Delete(
 	ctx context.Context,
 	req *msgs.DeleteRequest,
 ) (*msgs.DeleteResponse, error) {
-	uid, _, err := mw.RequireSubject(ctx)
+	_, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -596,12 +596,16 @@ func (s *ProjectService) Delete(
 		return nil, status.Errorf(codes.Internal, "couldn't delete project from database")
 	}
 	if _, err = s.enforcer.RemoveRole(
-		uid,
+		project.Edges.Creator.KeycloakID,
 		mw.Owner,
 		hackathonID.String(),
 		mw.WithProject(project.ID.String()),
 	); err != nil {
-		return nil, status.Errorf(codes.Internal, "couldn't add project owner permission: %v", err)
+		return nil, status.Errorf(
+			codes.Internal,
+			"couldn't remove project owner permission: %v",
+			err,
+		)
 	}
 
 	return &msgs.DeleteResponse{}, nil
