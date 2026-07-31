@@ -1,16 +1,13 @@
 <script lang="ts">
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
+    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import { phaseStateLabel, phaseStateBadgePreset } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
     const phases = $derived(data.phases);
-
-    let selectedId: string | undefined = $state(undefined);
-
-    const defaultId = $derived(phases.find((p) => p.status === 'active')?.id ?? phases[0]?.id);
-    const effectiveId = $derived(selectedId ?? defaultId);
-    const selectedPhase = $derived(phases.find((p) => p.id === effectiveId));
+    const selectedPhase = $derived(phases.find((p) => p.id === data.selectedId));
+    const linkedPage = $derived(data.linkedPage);
 
     function formatRange(startsAt: Date | undefined, endsAt: Date | undefined): string {
         if (!startsAt) return 'No dates set';
@@ -36,8 +33,8 @@
     {:else}
         <PhaseTimeline
             phases={phases.map((p) => ({ id: p.id, name: p.name, status: p.status }))}
-            selectedId={effectiveId}
-            onSelect={(id) => (selectedId = id)}
+            selectedId={data.selectedId}
+            hrefFor={(id) => `?phase=${id}`}
         />
 
         {#if selectedPhase}
@@ -57,6 +54,17 @@
                     <p class="m-0 text-xs text-surface-500">No description provided.</p>
                 {/if}
             </div>
+
+            <!-- A phase's page is read here rather than from the sidebar: it
+                 belongs to this phase, so this is its one home. -->
+            {#if linkedPage}
+                <div class="card preset-outlined-surface-200-800 flex w-full flex-col gap-4 p-5">
+                    <h3 class="m-0 text-base font-bold text-surface-950-50">{linkedPage.title}</h3>
+                    <div class="text-sm leading-relaxed text-surface-700-300">
+                        <MarkdownContent content={linkedPage.content} />
+                    </div>
+                </div>
+            {/if}
         {/if}
     {/if}
 </div>
