@@ -71,6 +71,7 @@ func (s *PageService) List(
 	pages, err := pageQuery.
 		WithCreator().
 		WithModifier().
+		WithPhase().
 		Order(entpage.ByOrder()).
 		All(ctx)
 	if err != nil {
@@ -102,6 +103,7 @@ func (s *PageService) Get(
 		WithCreator().
 		WithModifier().
 		WithHackathon().
+		WithPhase().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -275,11 +277,12 @@ func (s *PageService) Edit(
 		return nil, status.Errorf(codes.Internal, "couldn't update page in database")
 	}
 
-	// Fetch the updated page with creator and modifier
+	// Fetch the updated page with creator, modifier and linked phase
 	updated, err := s.dbClient.Page.Query().
 		Where(entpage.IDEQ(pageID)).
 		WithCreator().
 		WithModifier().
+		WithPhase().
 		Only(ctx)
 	if err != nil {
 		slog.Error("query updated page", "err", err)
