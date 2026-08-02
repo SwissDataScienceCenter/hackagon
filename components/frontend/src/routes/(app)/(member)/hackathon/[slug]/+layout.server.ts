@@ -1,5 +1,6 @@
 import type { LayoutServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { readCapabilities } from "$lib/utils/capabilities"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -41,5 +42,14 @@ export const load: LayoutServerLoad = async (event) => {
     myTeams = []
   }
 
-  return { hackathon: result.hackathon, myMembership, myTeams }
+  // Every page under this layout gets the same answer to "what is open right
+  // now". Layout data is the shared accessor — no store needed — so no page has
+  // to re-derive it and none can disagree with another.
+  //
+  // The server resolved these at request time, so a page left open across a
+  // deadline goes stale until the next navigation. Same property `status`
+  // already has.
+  const capabilities = readCapabilities(result.hackathon.capabilities)
+
+  return { hackathon: result.hackathon, myMembership, myTeams, capabilities }
 }

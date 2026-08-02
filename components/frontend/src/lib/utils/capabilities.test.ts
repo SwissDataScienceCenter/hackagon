@@ -3,67 +3,102 @@ import {
   CAPABILITIES,
   isAvailable,
   isBlocked,
-  resolveCapabilities,
+  lockReason,
+  nextDeadline,
+  readCapabilities,
   type Capability,
   type CapabilityState,
 } from "./capabilities"
 
-function settings(registrationsEnabled: boolean, votingEnabled = false) {
-  return { settings: { registrationsEnabled, votingEnabled } }
+// Wire values, mirroring hackathon.entities.Capability / CapabilityState.
+const REGISTER = 1
+const SUBMIT_PROPOSAL = 2
+const VOTE = 5
+const COMING = 1
+const OPEN = 2
+const CLOSED = 3
+const UNGOVERNED = 4
+
+const NOW = new Date("2026-07-15T12:00:00Z")
+
+function at(days: number): Date {
+  const d = new Date(NOW)
+  d.setUTCDate(d.getUTCDate() + days)
+
+  return d
 }
 
-describe("resolveCapabilities", () => {
-  it("opens register when the toggle is on", () => {
-    expect(resolveCapabilities(settings(true)).register).toBe("open")
+describe("readCapabilities", () => {
+  it("translates the wire enums", () => {
+    const caps = readCapabilities([
+      { capability: REGISTER, state: OPEN },
+      { capability: SUBMIT_PROPOSAL, state: CLOSED },
+      { capability: VOTE, state: COMING },
+    ])
+
+    expect(caps.register.state).toBe("open")
+    expect(caps.submit_proposal.state).toBe("closed")
+    expect(caps.vote.state).toBe("coming")
   })
 
-  it("closes register when the toggle is off", () => {
-    expect(resolveCapabilities(settings(false)).register).toBe("closed")
+  it("carries the schedule through", () => {
+    const opensAt = at(3)
+    const closesAt = at(10)
+    const caps = readCapabilities([
+      { capability: REGISTER, state: OPEN, opensAt, closesAt },
+    ])
+
+    expect(caps.register.opensAt).toBe(opensAt)
+    expect(caps.register.closesAt).toBe(closesAt)
   })
 
-  it("resolves vote from its own toggle, independently of register", () => {
-    const states = resolveCapabilities(settings(false, true))
+  it("fills capabilities the server did not mention as ungoverned", () => {
+    const caps = readCapabilities([{ capability: REGISTER, state: OPEN }])
 
-    expect(states.vote).toBe("open")
-    expect(states.register).toBe("closed")
+    expect(caps.submit_proposal.state).toBe("ungoverned")
+    expect(caps.view_results.state).toBe("ungoverned")
   })
 
-  it.each([undefined, null])(
-    "closes the governed capabilities when settings are %s",
-    (missing) => {
-      // Hackathons predating the settings table have no row, and the backend
-      // rejects the mutation outright — so `closed` is the truthful answer.
-      const states = resolveCapabilities({ settings: missing })
+  it.each([undefined, []])(
+    "reports everything ungoverned for %s input",
+    (input) => {
+      // An older backend, or a hackathon predating capabilities, must not have
+      // every action vanish.
+      const caps = readCapabilities(input)
 
-      expect(states.register).toBe("closed")
-      expect(states.vote).toBe("closed")
+      for (const c of CAPABILITIES) {
+        expect(caps[c].state).toBe("ungoverned")
+      }
     },
   )
 
-  it("leaves capabilities with no backend gate ungoverned", () => {
-    const states = resolveCapabilities(settings(true))
-
-    expect(states.submit_proposal).toBe("ungoverned")
-    expect(states.set_team_preferences).toBe("ungoverned")
-    expect(states.submit_project).toBe("ungoverned")
-    expect(states.view_results).toBe("ungoverned")
-  })
-
-  it("keeps ungoverned capabilities available regardless of the toggles", () => {
-    // The regression this guards: gating the Propose CTA on a resolver that
-    // called every ungated capability `closed` would hide the button forever.
-    for (const input of [settings(false), settings(true), { settings: null }]) {
-      expect(isAvailable(resolveCapabilities(input).submit_proposal)).toBe(true)
-    }
-  })
-
   it("answers for every capability in the vocabulary", () => {
-    const states = resolveCapabilities(settings(true))
+    const caps = readCapabilities([{ capability: REGISTER, state: OPEN }])
 
-    for (const capability of CAPABILITIES) {
-      expect(states[capability]).toBeDefined()
-    }
-    expect(Object.keys(states).sort()).toEqual([...CAPABILITIES].sort())
+    expect(Object.keys(caps).sort()).toEqual([...CAPABILITIES].sort())
+  })
+
+  it("ignores capabilities it does not recognize", () => {
+    const caps = readCapabilities([
+      { capability: REGISTER, state: OPEN },
+      { capability: 99, state: OPEN },
+      { capability: -1, state: OPEN },
+    ])
+
+    expect(Object.keys(caps).sort()).toEqual([...CAPABILITIES].sort())
+    expect(caps.register.state).toBe("open")
+  })
+
+  it("treats an unrecognized state as ungoverned", () => {
+    const caps = readCapabilities([{ capability: REGISTER, state: 0 }])
+
+    expect(caps.register.state).toBe("ungoverned")
+  })
+
+  it("passes an explicit ungoverned state through", () => {
+    const caps = readCapabilities([{ capability: REGISTER, state: UNGOVERNED }])
+
+    expect(caps.register.state).toBe("ungoverned")
   })
 })
 
@@ -81,10 +116,98 @@ describe("isAvailable / isBlocked", () => {
     expect(isBlocked(state)).toBe(blocked)
   })
 
+  it("keeps an ungoverned capability usable", () => {
+    // The regression this guards: gating a CTA on `state === "open"` would hide
+    // it on every hackathon the server has no row for.
+    const caps = readCapabilities([])
+
+    expect(isAvailable(caps.submit_proposal.state)).toBe(true)
+  })
+
   it("never reports a state as both available and blocked", () => {
     for (const [state] of cases) {
       expect(isAvailable(state) && isBlocked(state)).toBe(false)
     }
+  })
+})
+
+describe("lockReason", () => {
+  it("names the opening date for a coming capability", () => {
+    const reason = lockReason("submit_proposal", {
+      state: "coming",
+      opensAt: new Date("2026-08-21T09:00:00Z"),
+    })
+
+    expect(reason).toBe("Proposals open Aug 21")
+  })
+
+  it("avoids promising a date when a coming capability has none", () => {
+    expect(lockReason("vote", { state: "coming" })).toBe("Voting not open yet")
+  })
+
+  it("says closed without a date", () => {
+    expect(lockReason("submit_proposal", { state: "closed" })).toBe(
+      "Proposals closed",
+    )
+  })
+
+  it("returns nothing for an available capability", () => {
+    // So a caller cannot render a lock reason beside a working button.
+    expect(lockReason("submit_proposal", { state: "open" })).toBeUndefined()
+    expect(lockReason("submit_proposal", { state: "ungoverned" })).toBeUndefined()
+  })
+})
+
+describe("nextDeadline", () => {
+  it("returns the soonest closing of an open capability", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROPOSAL, state: OPEN, closesAt: at(2) },
+      { capability: REGISTER, state: OPEN, closesAt: at(9) },
+    ])
+
+    expect(nextDeadline(caps, NOW)).toEqual({
+      capability: "submit_proposal",
+      label: "Proposals due",
+      at: at(2),
+    })
+  })
+
+  it("considers a coming capability opening", () => {
+    const caps = readCapabilities([
+      { capability: REGISTER, state: OPEN, closesAt: at(9) },
+      { capability: SUBMIT_PROPOSAL, state: COMING, opensAt: at(1) },
+    ])
+
+    expect(nextDeadline(caps, NOW)?.label).toBe("Proposals open")
+  })
+
+  it("skips dates already in the past", () => {
+    // The server's state is the truth; a stale schedule must not produce a
+    // countdown that already elapsed.
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROPOSAL, state: OPEN, closesAt: at(-1) },
+      { capability: REGISTER, state: OPEN, closesAt: at(4) },
+    ])
+
+    expect(nextDeadline(caps, NOW)?.capability).toBe("register")
+  })
+
+  it("ignores the schedule of a closed capability", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROPOSAL, state: CLOSED, closesAt: at(2) },
+    ])
+
+    expect(nextDeadline(caps, NOW)).toBeUndefined()
+  })
+
+  it("ignores an open capability with no closing date", () => {
+    const caps = readCapabilities([{ capability: REGISTER, state: OPEN }])
+
+    expect(nextDeadline(caps, NOW)).toBeUndefined()
+  })
+
+  it("returns nothing when there are no capabilities at all", () => {
+    expect(nextDeadline(readCapabilities([]), NOW)).toBeUndefined()
   })
 })
 

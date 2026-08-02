@@ -1,11 +1,19 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import { Plus } from 'lucide-svelte';
+    import Lock from 'lucide-svelte/icons/lock';
     import ProposalCard from '$lib/components/hackathon/ProposalCard.svelte';
+    import { isAvailable, lockReason } from '$lib/utils/capabilities';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
     const slug = $derived(data.slug);
+
+    // Proposing is gated server-side too — ProjectService.Propose rejects a
+    // closed window — so this is the explanation, not the enforcement.
+    const proposing = $derived(data.capabilities.submit_proposal);
+    const canPropose = $derived(isAvailable(proposing.state));
+    const proposeBlockedBecause = $derived(lockReason('submit_proposal', proposing));
 
     let tab: 'approved' | 'mine' = $state('approved');
     const shown = $derived(tab === 'approved' ? data.approved : data.mine);
@@ -37,15 +45,30 @@
                 {shown.length} {tab === 'approved' ? 'approved' : 'proposed by you'}
             </span>
         </div>
-        <a
-            href={resolve(`/hackathon/${slug}/proposals/create`)}
-            class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                   rounded-none px-3 text-center text-xs font-semibold no-underline
-                   sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
-        >
-            <Plus class="h-3.5 w-3.5 shrink-0" />
-            Propose a Project
-        </a>
+        {#if canPropose}
+            <a
+                href={resolve(`/hackathon/${slug}/proposals/create`)}
+                class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
+                       rounded-none px-3 text-center text-xs font-semibold no-underline
+                       sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
+            >
+                <Plus class="h-3.5 w-3.5 shrink-0" />
+                Propose a Project
+            </a>
+        {:else}
+            <!-- Says why rather than vanishing: a missing button reads as a bug,
+                 and "opens Aug 21" is the thing the member actually wants. -->
+            <span
+                aria-disabled="true"
+                class="inline-flex h-9 w-full shrink-0 cursor-not-allowed items-center
+                       justify-center gap-1.5 rounded-none px-3 text-center text-xs
+                       font-semibold sm:w-auto sm:min-w-[9rem] preset-tonal-surface
+                       text-surface-600-400"
+            >
+                <Lock class="h-3.5 w-3.5 shrink-0" />
+                {proposeBlockedBecause}
+            </span>
+        {/if}
     </div>
 
     <div class="flex gap-1">
