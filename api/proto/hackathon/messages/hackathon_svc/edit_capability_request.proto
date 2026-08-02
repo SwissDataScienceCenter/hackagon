@@ -15,5 +15,24 @@ message EditCapabilityRequest {
     (buf.validate.field).enum.defined_only = true,
     (buf.validate.field).enum.not_in = 0
   ];
-  bool enabled = 3;
+  optional bool enabled = 3;
+
+  // Schedule links, for display only — setting these never opens or closes
+  // anything, only `enabled` does.
+  //
+  // Empty string = unlink, non-empty = link to that phase, not set = no change.
+  // Same convention as phase_svc/edit_request.proto's page_id.
+  optional string opens_phase_id = 4;
+  optional string closes_phase_id = 5;
+
+  option (buf.validate.message).cel = {
+    id: "opens_phase_id_uuid"
+    message: "opens_phase_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.opens_phase_id) || this.opens_phase_id == '' || this.opens_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
+  option (buf.validate.message).cel = {
+    id: "closes_phase_id_uuid"
+    message: "closes_phase_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.closes_phase_id) || this.closes_phase_id == '' || this.closes_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
 }

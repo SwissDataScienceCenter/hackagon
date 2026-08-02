@@ -85,9 +85,9 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
-	// One row per capability, all closed. A new hackathon is therefore explicitly
-	// shut rather than ambiguously ungoverned, and every later edit is a plain
-	// update instead of an upsert.
+	// One row per capability, so the hackathon states its policy explicitly
+	// rather than being ambiguously ungoverned, and every later edit is a plain
+	// update instead of an upsert. See defaultCapabilityEnabled for the default.
 	if err := createDefaultCapabilities(ctx, s.dbClient, h.ID, creator); err != nil {
 		slog.Error("create hackathon capabilities", "err", err)
 		if err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx); err != nil {
@@ -151,7 +151,9 @@ func (s *HackathonService) Get(
 		WithProjects(func(q *ent.ProjectQuery) { q.WithCreator().WithModifier().WithTrack() }).
 		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
 		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
-		WithCapabilities(func(q *ent.CapabilityQuery) { q.WithModifier() }).
+		WithCapabilities(func(q *ent.CapabilityQuery) {
+			q.WithModifier().WithOpensPhase().WithClosesPhase()
+		}).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
 		Only(ctx)
 	if err != nil {
@@ -167,7 +169,10 @@ func (s *HackathonService) Get(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	entry := hackathonEntryFromEnt(h, time.Now())
+	// One instant for the whole response, so the status badge and the capability
+	// states cannot disagree about what time it is.
+	now := time.Now()
+	entry := hackathonEntryFromEnt(h, now)
 
 	entry.Creator = userEntryFromEnt(h.Edges.Creator)
 	entry.Modifier = userEntryFromEnt(h.Edges.Modifier)
@@ -192,7 +197,7 @@ func (s *HackathonService) Get(
 		entry.Phases = append(entry.Phases, phaseEntryFromEnt(p, id))
 	}
 
-	entry.Capabilities = capabilityStatusesFromEnt(h.Edges.Capabilities)
+	entry.Capabilities = capabilityStatusesFromEnt(h.Edges.Capabilities, now)
 
 	entry.Members = make([]*ents.HackathonMember, 0, len(h.Edges.Participants))
 	for _, p := range h.Edges.Participants {
@@ -639,19 +644,52 @@ func (s *HackathonService) EditCapability(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	updated, err := row.Update().
-		SetEnabled(req.GetEnabled()).
-		SetModifier(user).
-		Save(ctx)
-	if err != nil {
+	update := row.Update().SetModifier(user)
+
+	if req.Enabled != nil {
+		update = update.SetEnabled(req.GetEnabled())
+	}
+
+	// Empty string unlinks, a UUID links, unset leaves it alone. Linking never
+	// opens anything — only `enabled` does — so these are safe to set at any time.
+	if req.OpensPhaseId != nil {
+		if err := applyPhaseLink(
+			ctx, s.dbClient, id, req.GetOpensPhaseId(),
+			update.ClearOpensPhase, update.SetOpensPhaseID,
+		); err != nil {
+			return nil, err
+		}
+	}
+	if req.ClosesPhaseId != nil {
+		if err := applyPhaseLink(
+			ctx, s.dbClient, id, req.GetClosesPhaseId(),
+			update.ClearClosesPhase, update.SetClosesPhaseID,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := update.Save(ctx); err != nil {
 		slog.Error("update capability", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't update capability")
 	}
-	updated.Edges.Modifier = user
+
+	// Re-query: Save() returns no edges, and the response reports the schedule.
+	updated, err := s.dbClient.Capability.Query().
+		Where(entcapability.IDEQ(row.ID)).
+		WithModifier().
+		WithOpensPhase().
+		WithClosesPhase().
+		Only(ctx)
+	if err != nil {
+		slog.Error("re-query capability", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query updated capability")
+	}
 
 	return &msgs.EditCapabilityResponse{
-		Capability: capabilityStatusFromEnt(updated),
+		Capability: capabilityStatusFromEnt(updated, time.Now()),
 	}, nil
 }
 

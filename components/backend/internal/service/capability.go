@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -109,14 +111,33 @@ func capabilityToEnt(c capability.Capability) (entcapability.Capability, bool) {
 	return ec, true
 }
 
+// capabilityRowFromEnt reduces a stored row to what the resolver needs.
+//
+// Requires `.WithOpensPhase()` / `.WithClosesPhase()`; an unloaded edge is
+// indistinguishable from an unlinked one, which would silently downgrade a
+// COMING capability to CLOSED.
+func capabilityRowFromEnt(r *ent.Capability) capability.Row {
+	row := capability.Row{
+		Capability: capability.Capability(r.Capability),
+		Enabled:    r.Enabled,
+		OpensAt:    nil,
+		ClosesAt:   nil,
+	}
+	if p := r.Edges.OpensPhase; p != nil {
+		row.OpensAt = p.StartsAt
+	}
+	if p := r.Edges.ClosesPhase; p != nil {
+		row.ClosesAt = p.StartsAt
+	}
+
+	return row
+}
+
 // capabilityRows reduces stored rows to what the resolver needs.
 func capabilityRows(rows []*ent.Capability) []capability.Row {
 	out := make([]capability.Row, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, capability.Row{
-			Capability: capability.Capability(r.Capability),
-			Enabled:    r.Enabled,
-		})
+		out = append(out, capabilityRowFromEnt(r))
 	}
 
 	return out
@@ -124,15 +145,10 @@ func capabilityRows(rows []*ent.Capability) []capability.Row {
 
 // capabilityStatusFromEnt maps one stored row.
 //
-// Requires `.WithModifier()` on the query; a missing modifier is tolerated
-// because seeded and backfilled rows have none.
-func capabilityStatusFromEnt(row *ent.Capability) *hackEnts.CapabilityStatus {
-	c := capability.Capability(row.Capability)
-
-	state := capability.StateClosed
-	if row.Enabled {
-		state = capability.StateOpen
-	}
+// Requires `.WithModifier()`, `.WithOpensPhase()` and `.WithClosesPhase()`. A
+// missing modifier is tolerated because seeded and backfilled rows have none.
+func capabilityStatusFromEnt(row *ent.Capability, now time.Time) *hackEnts.CapabilityStatus {
+	r := capabilityRowFromEnt(row)
 
 	var modifierID *string
 	if row.Edges.Modifier != nil {
@@ -140,18 +156,43 @@ func capabilityStatusFromEnt(row *ent.Capability) *hackEnts.CapabilityStatus {
 		modifierID = &id
 	}
 
-	return &hackEnts.CapabilityStatus{
-		Capability: capabilityToProto(c),
-		State:      capabilityStateToProto(state),
-		ModifiedAt: timestamppb.New(row.ModifiedAt),
-		ModifierId: modifierID,
+	var opensPhaseID, closesPhaseID *string
+	if p := row.Edges.OpensPhase; p != nil {
+		id := p.ID.String()
+		opensPhaseID = &id
 	}
+	if p := row.Edges.ClosesPhase; p != nil {
+		id := p.ID.String()
+		closesPhaseID = &id
+	}
+
+	return &hackEnts.CapabilityStatus{
+		Capability:    capabilityToProto(r.Capability),
+		State:         capabilityStateToProto(capability.ResolveRow(r, now)),
+		ModifiedAt:    timestamppb.New(row.ModifiedAt),
+		ModifierId:    modifierID,
+		OpensAt:       optionalTimestamp(r.OpensAt),
+		ClosesAt:      optionalTimestamp(r.ClosesAt),
+		OpensPhaseId:  opensPhaseID,
+		ClosesPhaseId: closesPhaseID,
+	}
+}
+
+func optionalTimestamp(t *time.Time) *timestamppb.Timestamp {
+	if t == nil {
+		return nil
+	}
+
+	return timestamppb.New(*t)
 }
 
 // capabilityStatusesFromEnt maps stored rows to one status per capability in the
 // vocabulary — including the ones with no row, which report UNGOVERNED. Emitting
 // the full set means clients never have to know the vocabulary themselves.
-func capabilityStatusesFromEnt(rows []*ent.Capability) []*hackEnts.CapabilityStatus {
+func capabilityStatusesFromEnt(
+	rows []*ent.Capability,
+	now time.Time,
+) []*hackEnts.CapabilityStatus {
 	byCapability := make(map[capability.Capability]*ent.Capability, len(rows))
 	for _, r := range rows {
 		byCapability[capability.Capability(r.Capability)] = r
@@ -163,15 +204,19 @@ func capabilityStatusesFromEnt(rows []*ent.Capability) []*hackEnts.CapabilitySta
 		row, ok := byCapability[c]
 		if !ok {
 			out = append(out, &hackEnts.CapabilityStatus{
-				Capability: capabilityToProto(c),
-				State:      hackEnts.CapabilityState_CAPABILITY_STATE_UNGOVERNED,
-				ModifiedAt: nil,
-				ModifierId: nil,
+				Capability:    capabilityToProto(c),
+				State:         hackEnts.CapabilityState_CAPABILITY_STATE_UNGOVERNED,
+				ModifiedAt:    nil,
+				ModifierId:    nil,
+				OpensAt:       nil,
+				ClosesAt:      nil,
+				OpensPhaseId:  nil,
+				ClosesPhaseId: nil,
 			})
 
 			continue
 		}
-		out = append(out, capabilityStatusFromEnt(row))
+		out = append(out, capabilityStatusFromEnt(row, now))
 	}
 
 	return out
@@ -225,9 +270,12 @@ func loadCapabilityStates(
 	ctx context.Context,
 	db *ent.Client,
 	hackathonID uuid.UUID,
+	now time.Time,
 ) (capability.States, error) {
 	rows, err := db.Capability.Query().
 		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		WithOpensPhase().
+		WithClosesPhase().
 		All(ctx)
 	if err != nil {
 		slog.Error("query capabilities", "err", err)
@@ -235,7 +283,66 @@ func loadCapabilityStates(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	return capability.Resolve(capabilityRows(rows)), nil
+	return capability.Resolve(capabilityRows(rows), now), nil
+}
+
+// applyPhaseLink resolves one schedule field of an EditCapability request onto
+// the update builder: empty string unlinks, a UUID links after checking the
+// phase belongs to this hackathon.
+func applyPhaseLink(
+	ctx context.Context,
+	db *ent.Client,
+	hackathonID uuid.UUID,
+	phaseID string,
+	unlink func() *ent.CapabilityUpdateOne,
+	link func(uuid.UUID) *ent.CapabilityUpdateOne,
+) error {
+	if phaseID == "" {
+		unlink()
+
+		return nil
+	}
+
+	pid, err := uuid.Parse(phaseID)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "invalid phase id %q: %v", phaseID, err)
+	}
+	if err := phaseInHackathon(ctx, db, hackathonID, pid); err != nil {
+		return err
+	}
+	link(pid)
+
+	return nil
+}
+
+// phaseInHackathon rejects a schedule link pointing at another hackathon's
+// phase, which would otherwise let an organizer read a date they do not own —
+// and produce a countdown to a phase their members cannot see.
+func phaseInHackathon(
+	ctx context.Context,
+	db *ent.Client,
+	hackathonID, phaseID uuid.UUID,
+) error {
+	ok, err := db.Phase.Query().
+		Where(
+			entphase.IDEQ(phaseID),
+			entphase.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+		).
+		Exist(ctx)
+	if err != nil {
+		slog.Error("query phase for capability link", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if !ok {
+		return status.Errorf(
+			codes.NotFound,
+			"phase %s not found in hackathon %s",
+			phaseID, hackathonID,
+		)
+	}
+
+	return nil
 }
 
 // requireCapability blocks a mutation whose capability is closed.
@@ -263,7 +370,7 @@ func requireCapability(
 		return nil
 	}
 
-	states, err := loadCapabilityStates(ctx, db, hackathonID)
+	states, err := loadCapabilityStates(ctx, db, hackathonID, time.Now())
 	if err != nil {
 		return err
 	}

@@ -31,8 +31,8 @@ enum Capability {
 
 enum CapabilityState {
   CAPABILITY_STATE_UNSPECIFIED = 0;
-  // Closed now, but scheduled to open. Not yet produced: capabilities are not
-  // linked to phases until the phase-link step.
+  // Closed now, but its opens_phase starts in the future, so clients can show
+  // "opens 12 Aug" and count down to it.
   CAPABILITY_STATE_COMING = 1;
   CAPABILITY_STATE_OPEN = 2;
   CAPABILITY_STATE_CLOSED = 3;
@@ -49,4 +49,13 @@ message CapabilityStatus {
   // first question asked when something goes wrong during a live event.
   google.protobuf.Timestamp modified_at = 3;
   optional string modifier_id = 4;
+
+  // The schedule, derived from the linked phases. Display only: `state` is what
+  // the server enforces, and these never widen it. Absent when the capability
+  // is manually driven (no linked phase), which is the correct answer for
+  // anything that opens abruptly — a countdown would be a lie.
+  optional google.protobuf.Timestamp opens_at = 5;
+  optional google.protobuf.Timestamp closes_at = 6;
+  optional string opens_phase_id = 7;
+  optional string closes_phase_id = 8;
 }

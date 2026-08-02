@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
@@ -67,6 +68,20 @@ func (Capability) Edges() []ent.Edge {
 				"Who last flipped the flag. Optional so seeded and backfilled rows " +
 					"need no attribution; set on every edit.",
 			),
+		// Schedule, for display only — these never change `enabled`. Both
+		// optional: capabilities that open abruptly (voting) leave them null and
+		// stay purely manual, which is why the link cannot be required.
+		//
+		// SET NULL rather than cascade: the owner UI can delete a phase, and
+		// that must not delete the capability along with it.
+		edge.From("opens_phase", Phase.Type).
+			Ref("opens_capabilities").Unique().
+			Annotations(entsql.OnDelete(entsql.SetNull)).
+			Comment("Phase from whose start this is expected open; null = manually driven."),
+		edge.From("closes_phase", Phase.Type).
+			Ref("closes_capabilities").Unique().
+			Annotations(entsql.OnDelete(entsql.SetNull)).
+			Comment("Phase at whose start this is expected to close; null = stays open."),
 	}
 }
 

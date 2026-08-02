@@ -19,6 +19,8 @@ Whether one member-facing action is currently open in a hackathon. One row per c
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this capability belongs to. |
 | `modifier` | User | M2O | yes | no | Who last flipped the flag. Optional so seeded and backfilled rows need no attribution; set on every edit. |
+| `opens_phase` | Phase | M2O | yes | no | Phase from whose start this is expected open; null = manually driven. |
+| `closes_phase` | Phase | M2O | yes | no | Phase at whose start this is expected to close; null = stays open. |
 
 ### Indexes
 
@@ -132,6 +134,8 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this phase belongs to. |
 | `page` | Page | O2O | no | no | Content page linked to this phase. |
+| `opens_capabilities` | Capability | O2M | no | no | Capabilities expected to open when this phase starts. |
+| `closes_capabilities` | Capability | O2M | no | no | Capabilities expected to close when this phase starts. |
 | `creator` | User | M2O | yes | yes | The user who created this phase. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this phase. |
 

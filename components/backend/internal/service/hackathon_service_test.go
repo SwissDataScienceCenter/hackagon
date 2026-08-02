@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -1273,7 +1275,7 @@ var _ = Describe("HackathonService", func() {
 			resp, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
 				HackathonId: hackathonID,
 				Capability:  entities.Capability_CAPABILITY_REGISTER,
-				Enabled:     false,
+				Enabled:     proto.Bool(false),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.GetCapability().GetState()).To(
@@ -1285,7 +1287,7 @@ var _ = Describe("HackathonService", func() {
 			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
 				HackathonId: hackathonID,
 				Capability:  entities.Capability_CAPABILITY_REGISTER,
-				Enabled:     false,
+				Enabled:     proto.Bool(false),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1310,7 +1312,7 @@ var _ = Describe("HackathonService", func() {
 			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
 				HackathonId: hackathonID,
 				Capability:  entities.Capability_CAPABILITY_REGISTER,
-				Enabled:     false,
+				Enabled:     proto.Bool(false),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1322,7 +1324,7 @@ var _ = Describe("HackathonService", func() {
 			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
 				HackathonId: hackathonID,
 				Capability:  entities.Capability_CAPABILITY_VOTE,
-				Enabled:     false,
+				Enabled:     proto.Bool(false),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1350,7 +1352,7 @@ var _ = Describe("HackathonService", func() {
 				&msgs.EditCapabilityRequest{
 					HackathonId: hackathonID,
 					Capability:  entities.Capability_CAPABILITY_REGISTER,
-					Enabled:     false,
+					Enabled:     proto.Bool(false),
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -1361,7 +1363,7 @@ var _ = Describe("HackathonService", func() {
 			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
 				HackathonId: hackathonID,
 				Capability:  entities.Capability_CAPABILITY_UNSPECIFIED,
-				Enabled:     true,
+				Enabled:     proto.Bool(true),
 			})
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
@@ -1371,10 +1373,208 @@ var _ = Describe("HackathonService", func() {
 			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
 				HackathonId: uuid.NewString(),
 				Capability:  entities.Capability_CAPABILITY_REGISTER,
-				Enabled:     false,
+				Enabled:     proto.Bool(false),
 			})
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(BeElementOf(codes.NotFound, codes.PermissionDenied))
+		})
+
+		Describe("phase schedule", func() {
+			var adminUserID uuid.UUID
+
+			BeforeEach(func() {
+				u, err := dbClient.User.Query().
+					Where(entuser.KeycloakIDEQ(testAdmin)).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				adminUserID = u.ID
+			})
+
+			// phaseOn creates a phase on `onHackathon` starting `days` from now.
+			phaseOn := func(onHackathon, name string, days int) *ent.Phase {
+				p, err := dbClient.Phase.Create().
+					SetName(name).
+					SetStartsAt(time.Now().AddDate(0, 0, days)).
+					SetEndsAt(time.Now().AddDate(0, 0, days+1)).
+					SetHackathonID(uuid.MustParse(onHackathon)).
+					SetCreatorID(adminUserID).
+					SetModifierID(adminUserID).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				return p
+			}
+
+			// newPhase creates a phase on the hackathon under test.
+			newPhase := func(name string, days int) string {
+				return phaseOn(hackathonID, name, days).ID.String()
+			}
+
+			// statusOf pulls one capability out of a Get response.
+			statusOf := func(c entities.Capability) *entities.CapabilityStatus {
+				resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+				Expect(err).NotTo(HaveOccurred())
+				for _, s := range resp.GetHackathon().GetCapabilities() {
+					if s.GetCapability() == c {
+						return s
+					}
+				}
+				Fail("capability not present in Get response")
+
+				return nil
+			}
+
+			It("reports COMING with an opens_at once linked to a future phase", func() {
+				phaseID := newPhase("Proposals", 5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				Expect(got.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_COMING),
+				)
+				Expect(got.GetOpensAt()).NotTo(BeNil())
+				Expect(got.GetOpensPhaseId()).To(Equal(phaseID))
+			})
+
+			It("reports CLOSED when the linked phase has already started", func() {
+				phaseID := newPhase("Past Proposals", -5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+			})
+
+			It("keeps a scheduled capability blocked for enforcement", func() {
+				// COMING is a better message, not a weaker gate.
+				phaseID := newPhase("Registration", 5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_REGISTER,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.Join(newUser("too-early"), &msgs.JoinRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+			})
+
+			It("lets the flag win over a future phase", func() {
+				// The decisive property: an organizer opening something early is
+				// not overruled by its schedule.
+				phaseID := newPhase("Later", 5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(true),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+				)
+			})
+
+			It("unlinks on an empty phase id", func() {
+				phaseID := newPhase("Proposals", 5)
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					OpensPhaseId: proto.String(""),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				Expect(got.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+				Expect(got.OpensAt).To(BeNil())
+				Expect(got.OpensPhaseId).To(BeNil())
+			})
+
+			It("leaves the flag alone when only the schedule is edited", func() {
+				phaseID := newPhase("Proposals", 5)
+
+				// submit_proposal starts open; editing only the link must not
+				// close it.
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+				)
+			})
+
+			It("rejects a phase belonging to another hackathon", func() {
+				other, err := client.Create(adminCtx, &msgs.CreateRequest{
+					Name:       "Other Hackathon",
+					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				foreign := phaseOn(other.GetHackathonId(), "Foreign Phase", 5)
+
+				_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					OpensPhaseId: proto.String(foreign.ID.String()),
+				})
+				Expect(status.Code(err)).To(Equal(codes.NotFound))
+			})
+
+			It("survives deletion of the linked phase", func() {
+				phaseID := newPhase("Doomed", 5)
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// The owner UI can delete phases; that must not take the
+				// capability with it.
+				Expect(dbClient.Phase.DeleteOneID(uuid.MustParse(phaseID)).
+					Exec(context.Background())).To(Succeed())
+
+				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				Expect(got.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+				Expect(got.OpensPhaseId).To(BeNil())
+			})
 		})
 	})
 

@@ -297,17 +297,25 @@ where the table's uniformity pays off immediately.
    `SetPreference`, `CreateSubmission`, `FinalizeSubmission`. **Owners and admins
    bypass**, so organizers can fix things outside a window.
 
-**v2b**
+**v2b-1 (done)**
 
-10. `db/schema/capability.go` — add the `opens_phase` / `closes_phase` edges;
-    `db/schema/hackathon.go` — add `current_phase`; `Phase` gains the
-    `opens_capabilities` / `closes_capabilities` back-edges.
-11. `AdvancePhase` RPC — casbin `Hackathon`/`Write`, one transaction over the
+10. `db/schema/capability.go` — `opens_phase` / `closes_phase` edges, `SET NULL`;
+    `Phase` gains the `opens_capabilities` / `closes_capabilities` back-edges.
+11. Resolver gains `ResolveRow`, the single home of the rule, with the `COMING`
+    branch. `Enabled` is checked first and unconditionally, so a wrong date
+    cannot open anything.
+12. `CapabilityStatus` gains `opens_at` / `closes_at` / `opens_phase_id` /
+    `closes_phase_id`; `EditCapability` gains the two link fields and validates
+    that the phase belongs to the same hackathon.
+
+**v2b-2**
+
+13. `db/schema/hackathon.go` — add `current_phase`.
+14. `AdvancePhase` RPC — casbin `Hackathon`/`Write`, one transaction over the
     capability rows plus `current_phase`. Must be idempotent: advancing to the
     phase you are already in is a no-op, so a double-click at a live event is
     harmless. Returns the updated capability set so the owner UI can show what
     changed.
-12. Resolver gains the `COMING` branch and `opens_at` / `closes_at`.
 
 ---
 
@@ -349,11 +357,20 @@ yet). Complete and useful on its own.
 control for a capability that opens abruptly, so `vote` and `view_results` are
 done at v2a and need nothing from the phase machinery.
 
-**v2b — phase links + the advance action.**
-Add `opens_phase` / `closes_phase` / `current_phase`, the `AdvancePhase` RPC, and
-the organizer's "we are in Judging now" control. Compute `COMING` with `opens_at`.
-This buys "Registration opens in 3 days", the Timeline explaining each phase, and
-a live-event control surface that is one click instead of six.
+**v2b-1 — phase links (members). DONE.**
+`opens_phase` / `closes_phase` as nullable FKs, `COMING` reachable, and
+`opens_at` / `closes_at` / phase ids on `CapabilityStatus`. `EditCapability`
+sets the links with the empty-string-unlinks convention, rejecting phases from
+another hackathon. This is what buys "Registration opens in 3 days" and lets the
+Timeline say what each phase unlocks.
+
+`vote` is deliberately left unlinked in the seed: it opens abruptly, so it stays
+a manual toggle and reports no countdown.
+
+**v2b-2 — the advance action (organizers).**
+Add `current_phase` on `Hackathon` and the `AdvancePhase` RPC — the "we are in
+Judging now" control, one transactional bulk write over the capability rows.
+Turns six clicks at the busiest moment of an event into one.
 
 **v3 — close the loop (optional, and possibly never).**
 A scheduled job advances phases automatically when their `starts_at` passes —

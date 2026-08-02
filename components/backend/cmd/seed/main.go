@@ -174,17 +174,26 @@ func seedInTx(
 	return nil
 }
 
-// seedCapabilities creates the full capability set for a hackathon, switching on
-// only those named.
+// phaseWindow is the pair of phases describing when a capability is expected to
+// open and close. Either may be nil; both nil means the capability is manually
+// driven and shows members no countdown.
+type phaseWindow struct {
+	opens  *ent.Phase
+	closes *ent.Phase
+}
+
+// seedCapabilities creates the full capability set for a hackathon: `enabled`
+// names the ones switched on, `schedule` optionally links them to phases.
 //
 // Every hackathon gets every row, so none is left ungoverned — dev data should
-// exercise the gates rather than bypass them.
+// exercise the gates rather than bypass them. Must run after the phases exist.
 func seedCapabilities(
 	ctx context.Context,
 	db *ent.Client,
 	h *ent.Hackathon,
 	modifier *ent.User,
-	enabled ...capability.Capability,
+	enabled []capability.Capability,
+	schedule map[capability.Capability]phaseWindow,
 ) error {
 	on := make(map[capability.Capability]bool, len(enabled))
 	for _, c := range enabled {
@@ -194,11 +203,20 @@ func seedCapabilities(
 	all := capability.All()
 	builders := make([]*ent.CapabilityCreate, 0, len(all))
 	for _, c := range all {
-		builders = append(builders, db.Capability.Create().
+		b := db.Capability.Create().
 			SetCapability(entcapability.Capability(c)).
 			SetEnabled(on[c]).
 			SetHackathon(h).
-			SetModifier(modifier))
+			SetModifier(modifier)
+		if w, ok := schedule[c]; ok {
+			if w.opens != nil {
+				b = b.SetOpensPhase(w.opens)
+			}
+			if w.closes != nil {
+				b = b.SetClosesPhase(w.closes)
+			}
+		}
+		builders = append(builders, b)
 	}
 
 	if err := db.Capability.CreateBulk(builders...).Exec(ctx); err != nil {
@@ -230,11 +248,7 @@ func seedH1(
 		return err
 	}
 
-	// Upcoming: sign-ups are open, nothing else has started.
-	if err := seedCapabilities(ctx, db, h, alice, capability.Register); err != nil {
-		return err
-	}
-
+	phases := map[string]*ent.Phase{}
 	for _, ph := range []struct {
 		name, desc string
 		start, end time.Time
@@ -243,7 +257,7 @@ func seedH1(
 		{"Hacking", "Build your project. Mentors available throughout the day.", now.AddDate(0, 0, 20).Add(9 * time.Hour), now.AddDate(0, 0, 20).Add(21 * time.Hour)},
 		{"Judging", "Present your project to the judges. Top 3 teams win prizes.", now.AddDate(0, 0, 21).Add(10 * time.Hour), now.AddDate(0, 0, 21).Add(16 * time.Hour)},
 	} {
-		if _, err := db.Phase.Create().
+		p, err := db.Phase.Create().
 			SetName(ph.name).
 			SetDescription(ph.desc).
 			SetStartsAt(ph.start).
@@ -251,9 +265,31 @@ func seedH1(
 			SetHackathon(h).
 			SetCreator(alice).
 			SetModifier(alice).
-			Save(ctx); err != nil {
+			Save(ctx)
+		if err != nil {
 			return fmt.Errorf("phase %q: %w", ph.name, err)
 		}
+		phases[ph.name] = p
+	}
+
+	// Upcoming: sign-ups are open, nothing else has started. The rest are
+	// scheduled against the phases, so members see "opens in 19 days" rather
+	// than a bare "closed" — except voting, which is left unlinked because it
+	// opens abruptly on the day.
+	if err := seedCapabilities(ctx, db, h, alice,
+		[]capability.Capability{capability.Register},
+		map[capability.Capability]phaseWindow{
+			capability.SubmitProposal:     {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.SetTeamPreferences: {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.SubmitProject:      {opens: phases["Hacking"], closes: phases["Judging"]},
+			capability.ViewResults:        {opens: phases["Judging"], closes: nil},
+			// Unscheduled on purpose: registration is driven by hand, and voting
+			// opens abruptly on the day, so any countdown would be a guess.
+			capability.Register: {opens: nil, closes: nil},
+			capability.Vote:     {opens: nil, closes: nil},
+		},
+	); err != nil {
+		return err
 	}
 
 	for i, pg := range []struct {
@@ -513,15 +549,7 @@ func seedH2(
 		return err
 	}
 
-	// Mid-event: registration has closed, the building actions are open.
-	if err := seedCapabilities(ctx, db, h, admin,
-		capability.SubmitProposal,
-		capability.SetTeamPreferences,
-		capability.SubmitProject,
-	); err != nil {
-		return err
-	}
-
+	phases := map[string]*ent.Phase{}
 	for _, ph := range []struct {
 		name, desc string
 		start, end time.Time
@@ -530,7 +558,7 @@ func seedH2(
 		{"Hacking", "Build your climate tech solution with support from domain experts.", now.AddDate(0, 0, 0), now.AddDate(0, 0, 1)},
 		{"Judging", "Demo day: present your solution to a panel of sustainability experts.", now.AddDate(0, 0, 2).Add(9 * time.Hour), now.AddDate(0, 0, 2).Add(17 * time.Hour)},
 	} {
-		if _, err := db.Phase.Create().
+		p, err := db.Phase.Create().
 			SetName(ph.name).
 			SetDescription(ph.desc).
 			SetStartsAt(ph.start).
@@ -538,9 +566,34 @@ func seedH2(
 			SetHackathon(h).
 			SetCreator(admin).
 			SetModifier(admin).
-			Save(ctx); err != nil {
+			Save(ctx)
+		if err != nil {
 			return fmt.Errorf("phase %q: %w", ph.name, err)
 		}
+		phases[ph.name] = p
+	}
+
+	// Mid-event: registration has closed, the building actions are open. Their
+	// closing phases give the open capabilities a real deadline to show, which is
+	// the case an upcoming hackathon cannot exercise.
+	if err := seedCapabilities(ctx, db, h, admin,
+		[]capability.Capability{
+			capability.SubmitProposal,
+			capability.SetTeamPreferences,
+			capability.SubmitProject,
+		},
+		map[capability.Capability]phaseWindow{
+			capability.SubmitProposal:     {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.SetTeamPreferences: {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.SubmitProject:      {opens: phases["Hacking"], closes: phases["Judging"]},
+			capability.ViewResults:        {opens: phases["Judging"], closes: nil},
+			// Unscheduled on purpose: registration is driven by hand, and voting
+			// opens abruptly on the day, so any countdown would be a guess.
+			capability.Register: {opens: nil, closes: nil},
+			capability.Vote:     {opens: nil, closes: nil},
+		},
+	); err != nil {
+		return err
 	}
 
 	for i, pg := range []struct {
@@ -723,8 +776,12 @@ func seedH3(
 		return err
 	}
 
-	// Finished: everything shut except the published results.
-	if err := seedCapabilities(ctx, db, h, admin, capability.ViewResults); err != nil {
+	// Finished: everything shut except the published results. Left unscheduled —
+	// there is nothing left to count down to, so members should see a plain
+	// "closed" rather than a date in the past.
+	if err := seedCapabilities(ctx, db, h, admin,
+		[]capability.Capability{capability.ViewResults}, nil,
+	); err != nil {
 		return err
 	}
 

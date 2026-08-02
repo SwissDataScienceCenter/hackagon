@@ -434,6 +434,10 @@
 | state | [CapabilityState](#hackathon-entities-CapabilityState) |  |  |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | When the flag was last flipped, and by whom — &#34;who opened voting&#34; is the first question asked when something goes wrong during a live event. |
 | modifier_id | [string](#string) | optional |  |
+| opens_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional | The schedule, derived from the linked phases. Display only: `state` is what the server enforces, and these never widen it. Absent when the capability is manually driven (no linked phase), which is the correct answer for anything that opens abruptly — a countdown would be a lie. |
+| closes_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| opens_phase_id | [string](#string) | optional |  |
+| closes_phase_id | [string](#string) | optional |  |
 
 
 
@@ -471,7 +475,7 @@ therefore an enum value plus a row — no schema or message change.
 | Name | Number | Description |
 | ---- | ------ | ----------- |
 | CAPABILITY_STATE_UNSPECIFIED | 0 |  |
-| CAPABILITY_STATE_COMING | 1 | Closed now, but scheduled to open. Not yet produced: capabilities are not linked to phases until the phase-link step. |
+| CAPABILITY_STATE_COMING | 1 | Closed now, but its opens_phase starts in the future, so clients can show &#34;opens 12 Aug&#34; and count down to it. |
 | CAPABILITY_STATE_OPEN | 2 |  |
 | CAPABILITY_STATE_CLOSED | 3 |  |
 | CAPABILITY_STATE_UNGOVERNED | 4 | No row exists for this capability, so the server has no opinion and does not enforce it. Clients must render exactly as they did before capabilities existed. This is what makes partial adoption safe. |
@@ -1266,7 +1270,11 @@ Computed server-side from the stored capability rows; not persisted as a whole. 
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
 | capability | [hackathon.entities.Capability](#hackathon-entities-Capability) |  | Identifies the row, so it is required rather than optional — unlike the mutable fields of the other Edit requests. |
-| enabled | [bool](#bool) |  |  |
+| enabled | [bool](#bool) | optional |  |
+| opens_phase_id | [string](#string) | optional | Schedule links, for display only — setting these never opens or closes anything, only `enabled` does.
+
+Empty string = unlink, non-empty = link to that phase, not set = no change. Same convention as phase_svc/edit_request.proto&#39;s page_id. |
+| closes_phase_id | [string](#string) | optional |  |
 
 
 
