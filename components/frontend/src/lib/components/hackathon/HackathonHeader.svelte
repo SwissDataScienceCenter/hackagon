@@ -10,6 +10,7 @@
     import User from 'lucide-svelte/icons/user';
     import Hourglass from 'lucide-svelte/icons/hourglass';
     import UsersRound from 'lucide-svelte/icons/users-round';
+    import Clock from 'lucide-svelte/icons/clock';
     import {
         statusLabel,
         statusBadgePreset,
@@ -18,6 +19,7 @@
         membershipBadgeLabel,
         membershipBadgePreset,
     } from '$lib/utils/hackathonStatus';
+    import { deadlineLabel, nextDeadline, type Capabilities } from '$lib/utils/capabilities';
 
     /** The one header every hackathon page wears — member and owner shells alike.
      *  Both layouts render this so the chips and dates cannot drift apart. */
@@ -25,6 +27,7 @@
         hackathon,
         myMembership = null,
         myTeams = [],
+        capabilities = null,
     }: {
         hackathon: {
             name: string;
@@ -35,6 +38,8 @@
         };
         myMembership?: { isWaiting: boolean; role: number } | null;
         myTeams?: { id: string; name: string }[];
+        /** Omitted by the owner shell, which does not load them — no chip then. */
+        capabilities?: Capabilities | null;
     } = $props();
 
     function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
@@ -59,6 +64,11 @@
     // Visibility: PUBLIC=1, PRIVATE=2
     const VISIBILITY_ICON = { 1: Globe, 2: Lock };
 
+    // The soonest thing that changes — a window closing or the next one opening.
+    // Undefined whenever nothing is scheduled, which is the honest answer for a
+    // hackathon whose capabilities are all driven by hand.
+    const deadline = $derived(capabilities ? nextDeadline(capabilities) : undefined);
+
     /** Row 1 — what the hackathon is. */
     const badges = $derived((() => {
         const chips: HeroBadge[] = [];
@@ -75,6 +85,14 @@
                 label: vl,
                 preset: visibilityBadgePreset(hackathon.visibility) ?? 'preset-tonal-surface',
                 icon: VISIBILITY_ICON[hackathon.visibility as keyof typeof VISIBILITY_ICON],
+            });
+        // Last so it reads as the newest information, and warning-toned so it
+        // stands out against the two steady facts beside it.
+        if (deadline)
+            chips.push({
+                label: deadlineLabel(deadline),
+                preset: 'preset-tonal-warning',
+                icon: Clock,
             });
         return chips;
     })());

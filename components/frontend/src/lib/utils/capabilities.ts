@@ -231,3 +231,19 @@ export function nextDeadline(
 
   return soonest
 }
+
+/**
+ * A deadline as one phrase, e.g. "Proposals due Aug 21".
+ *
+ * Same-day deadlines show a time instead of the date: "Submissions due Aug 2" on
+ * Aug 2 tells a member nothing, and same-day is exactly when the deadline
+ * matters most.
+ */
+export function deadlineLabel(d: Deadline, now: Date = new Date()): string {
+  const when =
+    d.at.toDateString() === now.toDateString()
+      ? d.at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      : formatDay(d.at)
+
+  return `${d.label} ${when}`
+}

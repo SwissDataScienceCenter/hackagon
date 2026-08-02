@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   CAPABILITIES,
+  deadlineLabel,
   isAvailable,
   isBlocked,
   lockReason,
@@ -13,6 +14,7 @@ import {
 // Wire values, mirroring hackathon.entities.Capability / CapabilityState.
 const REGISTER = 1
 const SUBMIT_PROPOSAL = 2
+const SUBMIT_PROJECT = 4
 const VOTE = 5
 const COMING = 1
 const OPEN = 2
@@ -208,6 +210,29 @@ describe("nextDeadline", () => {
 
   it("returns nothing when there are no capabilities at all", () => {
     expect(nextDeadline(readCapabilities([]), NOW)).toBeUndefined()
+  })
+})
+
+describe("deadlineLabel", () => {
+  it("shows the date for a deadline on another day", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROPOSAL, state: OPEN, closesAt: at(3) },
+    ])
+    const deadline = nextDeadline(caps, NOW)!
+
+    expect(deadlineLabel(deadline, NOW)).toBe("Proposals due Jul 18")
+  })
+
+  it("shows a time instead when the deadline is today", () => {
+    // "due Jul 15" on Jul 15 tells a member nothing, and same-day is when the
+    // deadline matters most.
+    const closesAt = new Date("2026-07-15T17:00:00Z")
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROJECT, state: OPEN, closesAt },
+    ])
+    const deadline = nextDeadline(caps, NOW)!
+
+    expect(deadlineLabel(deadline, NOW)).toMatch(/^Submissions due \d{1,2}:\d{2}/)
   })
 })
 

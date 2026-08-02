@@ -11,6 +11,7 @@
     hackathon={data.hackathon}
     myMembership={data.myMembership}
     myTeams={data.myTeams}
+    capabilities={data.capabilities}
 />
 
 <div class="mx-auto w-full max-w-7xl">
