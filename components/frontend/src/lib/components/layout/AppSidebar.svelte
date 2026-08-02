@@ -4,7 +4,6 @@
     import Menu from 'lucide-svelte/icons/menu';
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
-    import HackathonSwitcher from './HackathonSwitcher.svelte';
     import SidebarNavSection from './SidebarNavSection.svelte';
     import NavModeSwitch from './NavModeSwitch.svelte';
     import SidebarUserFooter from './SidebarUserFooter.svelte';
@@ -214,8 +213,6 @@
         {/if}
     </div>
 
-    <HackathonSwitcher hackathons={myHackathons} collapsed={effectiveCollapsed} />
-
     {#if showModeSwitch && activeSlug}
         <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
     {/if}
@@ -230,8 +227,11 @@
         />
 
         {#if activeSlug}
-            <!-- No section heading: the switcher above names the hackathon and the
-                 mode switch names the mode, so a third label is just noise. -->
+            <!-- No section heading: the page header names the hackathon on every
+                 screen, and the mode switch above names the mode. There is
+                 deliberately no way to hop sideways into another hackathon from
+                 here — being inside one should mean being inside one. My
+                 Hackathons above is the single way back out. -->
             <SidebarNavSection
                 items={hackathonItems}
                 {activeId}
