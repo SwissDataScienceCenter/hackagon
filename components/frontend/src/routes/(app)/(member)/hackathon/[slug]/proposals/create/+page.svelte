@@ -1,7 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
-    import Select from '$lib/components/forms/Select.svelte';
+    import TrackPicker from '$lib/components/hackathon/TrackPicker.svelte';
     import type { PageData, ActionData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -40,14 +40,10 @@
             <MarkdownEditor name="description" required maxlength={10000} rows={10} />
         </label>
         {#if tracks.length > 0}
-            <label class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
+            <div class="flex flex-col gap-1 text-xs font-semibold text-surface-500">
                 Track (optional)
-                <Select
-                    name="trackId"
-                    placeholder="No track"
-                    options={[{ label: 'No track', value: '' }, ...tracks.map((t) => ({ label: t.name, value: t.id }))]}
-                />
-            </label>
+                <TrackPicker name="trackId" {tracks} />
+            </div>
         {/if}
         <button type="submit" class="btn btn-sm preset-filled-primary-500 self-start">
             Submit proposal

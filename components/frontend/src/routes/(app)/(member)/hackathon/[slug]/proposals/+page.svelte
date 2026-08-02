@@ -87,6 +87,7 @@
                     imageUrl={proposal.imageUrl}
                     badge={proposal.badge}
                     badgePreset={proposal.badgePreset}
+                    track={proposal.track}
                     moreInfoHref="/hackathon/{slug}/proposals/{proposal.id}"
                 />
             {/each}

@@ -8,6 +8,7 @@
         imageUrl,
         badge,
         badgePreset,
+        track,
         moreInfoHref = '#',
     }: {
         num: number;
@@ -17,6 +18,8 @@
         /** Generic badge text, kept a plain string so any caller can label it. */
         badge?: string;
         badgePreset?: string;
+        /** Track name, omitted when the project isn't tied to a track. */
+        track?: string;
         moreInfoHref?: string;
     } = $props();
 </script>
@@ -51,6 +54,9 @@
             <span>{num}. {title}</span>
             {#if badge}
                 <span class="badge {badgePreset ?? 'preset-tonal-surface'} text-xs">{badge}</span>
+            {/if}
+            {#if track}
+                <span class="badge preset-outlined-primary-500 text-xs font-semibold">{track}</span>
             {/if}
         </h3>
         <div class="block w-2/3 min-w-0">

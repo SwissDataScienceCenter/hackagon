@@ -8,7 +8,13 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     slug: event.params.slug,
-    tracks: hackathon.tracks.map((t) => ({ id: t.id, name: t.name })),
+    // Descriptions come along so the track picker can explain each track in its
+    // dialog — participants no longer have a Tracks page to read them on.
+    tracks: hackathon.tracks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+    })),
   }
 }
 

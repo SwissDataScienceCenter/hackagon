@@ -62,12 +62,6 @@ export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
       href: resolve(`/hackathon/${slug}/timeline`),
     },
     {
-      id: "member:tracks",
-      label: "Tracks",
-      icon: Route,
-      href: resolve(`/hackathon/${slug}/tracks`),
-    },
-    {
       id: "member:participants",
       label: "Participants",
       icon: Users,
