@@ -11,6 +11,7 @@
         myHackathons={data.myHackathons}
         hackathonPages={data.hackathonPages}
         isGlobalAdmin={data.isGlobalAdmin}
+        isHackathonOrganizer={data.isHackathonOrganizer}
         session={data.session ?? null}
     />
     <main class="flex-1 overflow-y-auto">

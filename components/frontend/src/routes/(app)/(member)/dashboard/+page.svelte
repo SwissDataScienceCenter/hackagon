@@ -10,5 +10,6 @@
         myHackathons={data.myHackathons}
         otherHackathons={data.otherHackathons}
         isGlobalAdmin={data.isGlobalAdmin}
+        isHackathonOrganizer={data.isHackathonOrganizer}
     />
 </div>

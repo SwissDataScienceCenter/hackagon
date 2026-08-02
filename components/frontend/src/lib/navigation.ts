@@ -148,28 +148,47 @@ export function manageNav(slug: string): NavItem[] {
   ]
 }
 
-/** Platform-wide administration — not scoped to any hackathon. */
-export function platformNav(): NavItem[] {
-  return [
-    {
-      id: "platform:users",
-      label: "Users",
-      icon: Users,
-      href: resolve("/(app)/(admin)/users"),
-    },
-    {
-      id: "platform:hackathons",
-      label: "All Hackathons",
-      icon: CalendarDays,
-      href: resolve("/(app)/(admin)/hackathons"),
-    },
-    {
+/**
+ * Platform-wide administration — not scoped to any hackathon.
+ *
+ * Entries follow what the backend grants each global role, so the section never
+ * offers a link that lands on a 403. A hackathon organizer holds exactly one
+ * permission — `hackathon:create` — so they get the create entry only; Users and
+ * All Hackathons stay admin-only (`UserService.List` denies anyone but admin).
+ */
+export function platformNav(roles: {
+  isGlobalAdmin: boolean
+  isHackathonOrganizer: boolean
+}): NavItem[] {
+  const items: NavItem[] = []
+
+  if (roles.isGlobalAdmin) {
+    items.push(
+      {
+        id: "platform:users",
+        label: "Users",
+        icon: Users,
+        href: resolve("/(app)/(admin)/users"),
+      },
+      {
+        id: "platform:hackathons",
+        label: "All Hackathons",
+        icon: CalendarDays,
+        href: resolve("/(app)/(admin)/hackathons"),
+      },
+    )
+  }
+
+  if (roles.isGlobalAdmin || roles.isHackathonOrganizer) {
+    items.push({
       id: "platform:hackathon-new",
       label: "Create Hackathon",
       icon: Plus,
       href: resolve("/(app)/(admin)/hackathons/new"),
-    },
-  ]
+    })
+  }
+
+  return items
 }
 
 /**

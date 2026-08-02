@@ -27,10 +27,18 @@
         myHackathons: HackathonEntry[];
         otherHackathons: HackathonEntry[];
         isGlobalAdmin: boolean;
+        isHackathonOrganizer: boolean;
     }
 
-    const { session, myHackathons, otherHackathons, isGlobalAdmin }: Props = $props();
+    const { session, myHackathons, otherHackathons, isGlobalAdmin, isHackathonOrganizer }: Props =
+        $props();
     const userName = session?.user?.name ?? 'there';
+
+    // Admin outranks organizer, so only the higher one is shown — a user holding
+    // both would otherwise read as two separate accounts.
+    const globalRoleLabel = $derived(
+        isGlobalAdmin ? 'Site Admin' : isHackathonOrganizer ? 'Hackathon Organizer' : '',
+    );
 
     const GRADIENTS = [
         { from: 'var(--color-primary-700)', to: 'var(--color-primary-950)' },
@@ -57,16 +65,16 @@
 <div class="px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex flex-col gap-1">
-            <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
+                {#if globalRoleLabel}
+                    <span class="badge preset-tonal-tertiary">{globalRoleLabel}</span>
+                {/if}
+            </div>
             <p class="text-sm text-surface-500">
                 You are connected to {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
             </p>
         </div>
-        {#if isGlobalAdmin}
-            <a href={resolve('/(app)/(admin)/users')} class="btn btn-sm preset-filled-primary-500 no-underline shrink-0">
-                Site Admin
-            </a>
-        {/if}
     </div>
 </div>
 

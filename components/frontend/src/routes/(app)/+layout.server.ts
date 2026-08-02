@@ -39,11 +39,14 @@ export const load: LayoutServerLoad = async (event) => {
     }
   }
 
+  const roles = event.locals.platformUser?.roles ?? []
+
   return {
     myHackathons,
     hackathonPages,
-    isGlobalAdmin:
-      event.locals.platformUser?.roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN) ??
-      false,
+    isGlobalAdmin: roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN),
+    isHackathonOrganizer: roles.includes(
+      GlobalRole.GLOBAL_ROLE_HACKATHON_ORGANIZER,
+    ),
   }
 }

@@ -39,11 +39,13 @@
         myHackathons,
         hackathonPages,
         isGlobalAdmin,
+        isHackathonOrganizer,
         session,
     }: {
         myHackathons: HackathonEntry[];
         hackathonPages: HackathonPage[];
         isGlobalAdmin: boolean;
+        isHackathonOrganizer: boolean;
         session: Omit<Session, 'accessToken'> | null;
     } = $props();
 
@@ -75,7 +77,7 @@
                 : memberNav(activeSlug, hackathonPages)
             : [],
     );
-    const platformItems = $derived(isGlobalAdmin ? platformNav() : []);
+    const platformItems = $derived(platformNav({ isGlobalAdmin, isHackathonOrganizer }));
     const activeId = $derived(
         activeNavId($page.url.pathname, [...hackathonItems, ...platformItems]),
     );
@@ -231,7 +233,7 @@
 
     <!-- Platform scope is not part of the current hackathon, so it sits pinned
          outside the scrolling hackathon nav rather than trailing it. -->
-    {#if isGlobalAdmin}
+    {#if platformItems.length > 0}
         <SidebarNavSection
             label="Platform"
             items={platformItems}
