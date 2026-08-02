@@ -117,6 +117,46 @@ var _ = Describe("HackathonService", func() {
 			Expect(role).To(Equal(entities.HackathonRole_HACKATHON_ROLE_OWNER))
 		})
 
+		// The owner shell reads membership from the participants table, not from
+		// casbin, so a creator missing here is an owner who cannot open their own
+		// hackathon and does not see it listed on their dashboard.
+		It("enrolls the creator as a confirmed participant", func() {
+			organizer := newUser("organizer")
+			_, err := enf.AddGlobalRole(organizer, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(organizer)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			created, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Owned Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PRIVATE,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := dbClient.Participant.Query().
+				Where(entparticipant.HackathonIDEQ(uuid.MustParse(created.GetHackathonId()))).
+				WithUser().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.IsWaiting).To(BeFalse())
+			Expect(p.Edges.User.KeycloakID).To(Equal(organizer))
+
+			// ...and surfaces through Get as an owner, which is what the owner
+			// shell gates on.
+			got, err := client.Get(ctx, &msgs.GetRequest{
+				HackathonId: created.GetHackathonId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.GetHackathon().GetMembers()).To(HaveLen(1))
+			member := got.GetHackathon().GetMembers()[0]
+			Expect(member.GetUser().GetKeycloakId()).To(Equal(organizer))
+			Expect(member.GetRole()).To(Equal(entities.HackathonRole_HACKATHON_ROLE_OWNER))
+		})
+
 		It("denies a user without the organizer role", func() {
 			plain := newUser("plain")
 

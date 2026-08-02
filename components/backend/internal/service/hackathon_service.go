@@ -93,6 +93,26 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't set hackathon owner")
 	}
 
+	// The casbin role above carries permissions only. Membership is read from the
+	// participants table — Get builds members from it, and List filters on it —
+	// so without this row the creator would be an owner nobody can see: absent
+	// from members, and their own hackathon missing from their dashboard.
+	if _, err := s.dbClient.Participant.Create().
+		SetHackathonID(h.ID).
+		SetUserID(creator.ID).
+		SetIsWaiting(false).
+		Save(ctx); err != nil {
+		slog.Error("add creator as participant", "err", err)
+		if _, rerr := s.enforcer.RemoveRole(uid, m.Owner, h.ID.String()); rerr != nil {
+			slog.Error("cleanup hackathon owner role", "err", rerr)
+		}
+		if derr := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx); derr != nil {
+			slog.Error("cleanup hackathon creation error", "err", derr)
+		}
+
+		return nil, status.Errorf(codes.Internal, "couldn't add creator as participant")
+	}
+
 	return &msgs.CreateResponse{HackathonId: h.ID.String()}, nil
 }
 
