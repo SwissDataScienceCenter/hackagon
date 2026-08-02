@@ -1742,6 +1742,103 @@ var _ = Describe("HackathonService", func() {
 				})
 			})
 
+			Describe("List", func() {
+				// statesFromList pulls this hackathon's capability states out of a
+				// List response.
+				statesFromList := func() map[entities.Capability]entities.CapabilityState {
+					resp, err := client.List(adminCtx, &msgs.ListRequest{})
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, h := range resp.GetHackathons() {
+						if h.GetId() != hackathonID {
+							continue
+						}
+						out := map[entities.Capability]entities.CapabilityState{}
+						for _, c := range h.GetCapabilities() {
+							out[c.GetCapability()] = c.GetState()
+						}
+
+						return out
+					}
+					Fail("hackathon missing from List response")
+
+					return nil
+				}
+
+				It("reports every capability", func() {
+					Expect(statesFromList()).To(HaveLen(6))
+				})
+
+				It("agrees with Get", func() {
+					phaseID := newPhase("Proposals", 5)
+					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId:  hackathonID,
+						Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+						Enabled:      proto.Bool(false),
+						OpensPhaseId: proto.String(phaseID),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+
+					listed := statesFromList()
+					for _, c := range got.GetHackathon().GetCapabilities() {
+						Expect(listed[c.GetCapability()]).To(
+							Equal(c.GetState()),
+							"List and Get disagree about %v", c.GetCapability(),
+						)
+					}
+				})
+
+				It("resolves COMING by position once advanced, as Get does", func() {
+					// The reason List loads phases at all. Every phase here is in
+					// the future, so dates alone would call both capabilities
+					// COMING; only the organizer's position separates them.
+					early := newPhase("Early", 5)
+					current := newPhase("Current", 6)
+					ahead := newPhase("Ahead", 7)
+
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: current,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					// Disabled after advancing, so the advance cannot re-open them.
+					for _, link := range []struct {
+						capability entities.Capability
+						opens      string
+					}{
+						{entities.Capability_CAPABILITY_SUBMIT_PROPOSAL, early},
+						{entities.Capability_CAPABILITY_SUBMIT_PROJECT, ahead},
+					} {
+						_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+							HackathonId:  hackathonID,
+							Capability:   link.capability,
+							Enabled:      proto.Bool(false),
+							OpensPhaseId: proto.String(link.opens),
+						})
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					listed := statesFromList()
+
+					// Behind the current phase: closed, despite a future date.
+					Expect(listed[entities.Capability_CAPABILITY_SUBMIT_PROPOSAL]).
+						To(Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED))
+					// Still ahead of it: coming.
+					Expect(listed[entities.Capability_CAPABILITY_SUBMIT_PROJECT]).
+						To(Equal(entities.CapabilityState_CAPABILITY_STATE_COMING))
+
+					// And the detail page must say the same.
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+					for _, c := range got.GetHackathon().GetCapabilities() {
+						Expect(listed[c.GetCapability()]).To(Equal(c.GetState()))
+					}
+				})
+			})
+
 			It("survives deletion of the linked phase", func() {
 				phaseID := newPhase("Doomed", 5)
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{

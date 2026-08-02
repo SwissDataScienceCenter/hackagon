@@ -50,8 +50,11 @@ message Hackathon {
   // by feat/vote-service. Keep it free so the two branches merge cleanly.
   //
   // Computed server-side from the stored capability rows; not persisted as a
-  // whole. Populated on Get responses only. Once VoteService lands this becomes
-  // caller-dependent (jury vs participant), so it must not be cached across users.
+  // whole. Populated on both Get and List, so a list can gate its own buttons
+  // rather than firing a mutation to discover something is closed.
+  //
+  // Once VoteService lands this becomes caller-dependent (jury vs participant),
+  // so it must not be cached across users.
   repeated CapabilityStatus capabilities = 20;
   // The phase an organizer declared current via AdvancePhase. Absent means
   // clients should derive it from phase dates instead — correct before an event,

@@ -884,6 +884,22 @@ func (s *HackathonService) List(
 				pq.Where(entparticipant.UserIDEQ(uid)).WithUser()
 			})
 	}
+	// Capabilities and phases, so a list can gate its own buttons instead of
+	// firing a mutation to discover it is closed.
+	//
+	// Phases come too, not just the linked ones: resolving COMING for a hackathon
+	// an organizer has advanced compares phase *positions*, which needs the whole
+	// ordering. Without them a list would resolve COMING from dates while the
+	// detail page resolved it from position, and the two would disagree.
+	//
+	// Four extra queries regardless of how many hackathons come back, since ent
+	// batches each eager load.
+	q = q.
+		WithPhases().
+		WithCapabilities(func(cq *ent.CapabilityQuery) {
+			cq.WithModifier().WithOpensPhase().WithClosesPhase()
+		})
+
 	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
@@ -916,6 +932,13 @@ func (s *HackathonService) List(
 				continue
 			}
 		}
+		// Resolved after the status filter so skipped hackathons cost nothing.
+		// Same clock as Get builds, which is what keeps the two agreeing.
+		e.Capabilities = capabilityStatusesFromEnt(
+			h.Edges.Capabilities,
+			newCapabilityClock(phaseOrderFrom(h.Edges.Phases), h.CurrentPhaseID),
+			now,
+		)
 		if participantUID != nil && len(h.Edges.Participants) > 0 {
 			p := h.Edges.Participants[0]
 			role, err := s.enforcer.GetHackathonRole(p.Edges.User.KeycloakID, h.ID.String())

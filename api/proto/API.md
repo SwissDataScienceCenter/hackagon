@@ -911,7 +911,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | viewer_membership | [HackathonMember](#hackathon-entities-HackathonMember) | optional | Populated in List responses only when participant_id filter is set. Contains the requesting user&#39;s membership in this hackathon (role &#43; is_waiting). |
 | capabilities | [CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | Field 19 is deliberately skipped: `HackathonSettings settings = 19` is taken by feat/vote-service. Keep it free so the two branches merge cleanly.
 
-Computed server-side from the stored capability rows; not persisted as a whole. Populated on Get responses only. Once VoteService lands this becomes caller-dependent (jury vs participant), so it must not be cached across users. |
+Computed server-side from the stored capability rows; not persisted as a whole. Populated on both Get and List, so a list can gate its own buttons rather than firing a mutation to discover something is closed.
+
+Once VoteService lands this becomes caller-dependent (jury vs participant), so it must not be cached across users. |
 | current_phase_id | [string](#string) | optional | The phase an organizer declared current via AdvancePhase. Absent means clients should derive it from phase dates instead — correct before an event, wrong during one, where the schedule slips. |
 
 
