@@ -324,17 +324,30 @@ where the table's uniformity pays off immediately.
 Per `CLAUDE.md`, frontend work goes in small single-focus steps driven by the
 user; this is the intended shape, not a batch to implement in one go.
 
-1. `src/lib/utils/capabilities.ts` — pure resolver over
-   `{capabilities, phases, viewer}`; `nextDeadline()`; `primaryActionFor(role, state)`;
-   label and lock-reason copy. `now` injected. Vitest alongside `phase.test.ts`.
-   Must treat missing data as all-closed.
-2. `(member)/hackathon/[slug]/+layout.server.ts` — pass capabilities through.
-   **Layout data is the shared accessor** — no store, no hook. The original plan's
-   `useHackathonState()` is React-shaped and does not apply.
-3. Gate the one real CTA — *Propose a Project* in `proposals/+page.svelte` —
-   with a visible reason rather than a silent hide.
-4. Later: Timeline showing what each phase unlocks; Overview "what now" line;
-   nav badges on gated tabs.
+Done:
+
+1. `src/lib/utils/capabilities.ts` — reads the wire statuses, plus `lockReason`,
+   `nextDeadline` / `deadlineLabel`, `capabilitiesByPhase` / `capabilityNoun`,
+   and `primaryAction`. `now` injected everywhere. Conventions and the
+   `isAvailable` trap are recorded in the **frontend-data-wiring** skill (§6b).
+2. `(member)/hackathon/[slug]/+layout.server.ts` — **layout data is the shared
+   accessor**, no store. The original plan's `useHackathonState()` is
+   React-shaped and does not apply.
+3. *Propose a Project* gated with a visible reason rather than a silent hide.
+4. Header deadline chip; Timeline showing what each phase opens and closes;
+   Overview "what now" card; owner Timeline advance control with a per-phase
+   preview of what it would change.
+
+Still open:
+
+- Dashboard: gate the Join button proactively instead of letting it fire and
+  fail. `List` now carries capabilities, so this is unblocked.
+- Member "you are here" still derives from dates via `currentPhase()` and
+  ignores `current_phase_id`, so an organizer advancing does not move it.
+- Drift is not surfaced: the owner Timeline shows what a phase governs, not
+  which flags currently disagree with it. Needs `capability.Advance` ported to
+  TypeScript.
+- Nav badges on gated tabs.
 
 Labels, priorities and target tabs stay in the frontend. They are product copy,
 not domain truth, and do not belong in proto.

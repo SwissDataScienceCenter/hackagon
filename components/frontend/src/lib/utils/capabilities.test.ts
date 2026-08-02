@@ -5,7 +5,6 @@ import {
   capabilityNoun,
   deadlineLabel,
   isAvailable,
-  isBlocked,
   lockReason,
   nextDeadline,
   primaryAction,
@@ -108,7 +107,9 @@ describe("readCapabilities", () => {
   })
 })
 
-describe("isAvailable / isBlocked", () => {
+describe("isAvailable", () => {
+  // "blocked" is observed through lockReason, the only public way to ask: it
+  // returns a sentence when blocked and undefined otherwise.
   const cases: [CapabilityState, boolean, boolean][] = [
     // state, available, blocked
     ["open", true, false],
@@ -119,7 +120,7 @@ describe("isAvailable / isBlocked", () => {
 
   it.each(cases)("%s → available %s, blocked %s", (state, available, blocked) => {
     expect(isAvailable(state)).toBe(available)
-    expect(isBlocked(state)).toBe(blocked)
+    expect(lockReason("submit_proposal", { state }) !== undefined).toBe(blocked)
   })
 
   it("keeps an ungoverned capability usable", () => {
@@ -130,9 +131,10 @@ describe("isAvailable / isBlocked", () => {
     expect(isAvailable(caps.submit_proposal.state)).toBe(true)
   })
 
-  it("never reports a state as both available and blocked", () => {
+  it("never both offers an action and explains its absence", () => {
     for (const [state] of cases) {
-      expect(isAvailable(state) && isBlocked(state)).toBe(false)
+      const blocked = lockReason("submit_proposal", { state }) !== undefined
+      expect(isAvailable(state) && blocked).toBe(false)
     }
   })
 })

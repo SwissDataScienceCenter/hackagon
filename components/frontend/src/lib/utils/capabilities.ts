@@ -126,8 +126,12 @@ export function isAvailable(state: CapabilityState): boolean {
 /**
  * Whether to explain the absence. `ungoverned` is excluded on purpose: there is
  * nothing to explain when the server has no opinion.
+ *
+ * Deliberately not exported — `lockReason` returns undefined when nothing is
+ * blocked, which is the one way call sites should ask. A second public predicate
+ * only invites the same branch to be written twice.
  */
-export function isBlocked(state: CapabilityState): boolean {
+function isBlocked(state: CapabilityState): boolean {
   return state === "closed" || state === "coming"
 }
 

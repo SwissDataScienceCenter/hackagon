@@ -94,6 +94,32 @@ enum values type as `string | undefined`.
 `$lib/server/` is server-only. Pass raw numbers and look them up with
 `Partial<Record<...>>`.
 
+## 6b. Gating a member action on a capability
+
+The backend decides what is open. `Hackathon.capabilities` comes back on both
+`Get` and `List`, and the member layout
+(`(app)/(member)/hackathon/[slug]/+layout.server.ts`) already runs it through
+`readCapabilities()`, so **every page under it has `data.capabilities`** — layout
+data is the accessor, no store. Don't re-read or re-derive it.
+
+Helpers live in `src/lib/utils/capabilities.ts`: `isAvailable` / `isBlocked`,
+`lockReason` (a member-facing sentence for a blocked action), `nextDeadline` +
+`deadlineLabel`, `capabilitiesByPhase` + `capabilityNoun`, `primaryAction`.
+
+- **Gate with `isAvailable(state)`, never `state === "open"`.** A capability the
+  server has no row for resolves `ungoverned`, which means "no opinion — behave
+  as before". Comparing against `"open"` disables it, which is how you hide a
+  button on every hackathon predating that capability.
+- **`primaryAction` deliberately does the opposite** and considers only `"open"`.
+  Not knowing whether something is open is a reason to leave a button working,
+  but not a reason to headline it. Keep that asymmetry.
+- **This is UX, not enforcement.** The matching RPC re-checks and returns
+  `FAILED_PRECONDITION`. Show `ClientError.details` rather than inventing copy —
+  that code now covers several distinct refusals, and guessing produced "this
+  hackathon has already finished" for one that had not started.
+- States are resolved server-side at request time, so a page open across a
+  deadline is stale until the next navigation. Same as `status`.
+
 ## 7. Keep participant pages free of viewer-role distinctions
 
 Pages under `hackathon/[slug]/*` render the same thing for every viewer — no
@@ -104,7 +130,8 @@ Organizer concerns belong in the owner shell, platform concerns in `(admin)/*`.
 ## 8. If the route needs a sidebar entry
 
 **All nav entries live in `src/lib/navigation.ts`** — nothing else builds nav
-hrefs. Add to `memberNav(slug, pages)` (participant pages), `manageNav(slug)`
+hrefs. Add to `homeNav()` (not scoped to a hackathon — currently just the
+dashboard), `memberNav(slug, pages)` (participant pages), `manageNav(slug)`
 (organizer tools, under `/owner/hackathon/[slug]/*`), or `platformNav()`
 (platform admin).
 
