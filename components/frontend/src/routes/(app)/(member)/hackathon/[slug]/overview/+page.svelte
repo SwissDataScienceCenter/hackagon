@@ -3,7 +3,10 @@
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
+    import ArrowRight from 'lucide-svelte/icons/arrow-right';
+    import Clock from 'lucide-svelte/icons/clock';
     import { currentPhase, phaseStatus } from '$lib/utils/phase';
+    import { deadlineLabel, nextDeadline, primaryAction } from '$lib/utils/capabilities';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -23,6 +26,12 @@
     );
     const now = $derived(currentPhase(hackathon.phases));
 
+    // "What now": where the event is, what changes next, and the one thing worth
+    // doing. All three come from the server's capability states, so this cannot
+    // disagree with what the gated pages actually allow.
+    const deadline = $derived(nextDeadline(data.capabilities));
+    const action = $derived(primaryAction(data.capabilities));
+
     const facts = $derived([
         { label: 'Participants', value: participantCount },
         { label: 'Tracks', value: hackathon.tracks.length },
@@ -37,6 +46,48 @@
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    <!-- Where the member stands and what to do about it. First on the page
+         because it is the only part that changes day to day. -->
+    <section class="card preset-tonal-primary flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 flex-col gap-1">
+            <span class="text-xs font-semibold uppercase tracking-wide text-primary-800-200">
+                What now
+            </span>
+            {#if now}
+                <span class="text-base font-bold text-surface-950-50">
+                    {#if now.active}
+                        {now.phase.name}
+                    {:else}
+                        Up next: {now.phase.name}
+                        {#if now.phase.startsAt}· {formatDate(now.phase.startsAt)}{/if}
+                    {/if}
+                </span>
+            {:else}
+                <!-- currentPhase returns nothing both when no phase has dates and
+                     when every one has ended, which are opposite situations. -->
+                <span class="text-base font-bold text-surface-950-50">
+                    {phases.length === 0 ? 'No phases scheduled yet' : 'All phases complete'}
+                </span>
+            {/if}
+            {#if deadline}
+                <span class="flex items-center gap-1 text-xs text-surface-700-300">
+                    <Clock size={13} aria-hidden="true" />
+                    {deadlineLabel(deadline)}
+                </span>
+            {/if}
+        </div>
+
+        <a
+            href={resolve(`/hackathon/${hackathon.id}/${action.target}`)}
+            class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-none
+                   px-4 text-center text-xs font-semibold no-underline
+                   preset-filled-primary-500"
+        >
+            {action.label}
+            <ArrowRight class="h-3.5 w-3.5 shrink-0" />
+        </a>
+    </section>
+
     <!-- At a glance: logo, blurb and the counts that used to sit in the hero. -->
     <section class="card preset-outlined-surface-200-800 overflow-hidden">
         <div class="flex flex-col md:flex-row">

@@ -8,6 +8,7 @@ import {
   isBlocked,
   lockReason,
   nextDeadline,
+  primaryAction,
   readCapabilities,
   type Capability,
   type CapabilityState,
@@ -18,6 +19,7 @@ const REGISTER = 1
 const SUBMIT_PROPOSAL = 2
 const SUBMIT_PROJECT = 4
 const VOTE = 5
+const VIEW_RESULTS = 6
 const COMING = 1
 const OPEN = 2
 const CLOSED = 3
@@ -235,6 +237,61 @@ describe("deadlineLabel", () => {
     const deadline = nextDeadline(caps, NOW)!
 
     expect(deadlineLabel(deadline, NOW)).toMatch(/^Submissions due \d{1,2}:\d{2}/)
+  })
+})
+
+describe("primaryAction", () => {
+  it("picks the most urgent open capability", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROPOSAL, state: OPEN },
+      { capability: SUBMIT_PROJECT, state: OPEN },
+    ])
+
+    expect(primaryAction(caps)).toEqual({
+      capability: "submit_project",
+      label: "Submit your project",
+      target: "submissions",
+    })
+  })
+
+  it("falls through to a lower priority when the top one is closed", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROJECT, state: CLOSED },
+      { capability: SUBMIT_PROPOSAL, state: OPEN },
+    ])
+
+    expect(primaryAction(caps).capability).toBe("submit_proposal")
+  })
+
+  it("falls back to the timeline when nothing is open", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROJECT, state: CLOSED },
+      { capability: SUBMIT_PROPOSAL, state: COMING },
+    ])
+
+    expect(primaryAction(caps)).toEqual({
+      label: "View timeline",
+      target: "timeline",
+    })
+  })
+
+  it("does not advertise an ungoverned capability", () => {
+    // Deliberately unlike isAvailable: not knowing whether something is open is
+    // a reason to leave a button working, not to headline it.
+    const caps = readCapabilities([])
+
+    expect(primaryAction(caps).target).toBe("timeline")
+    expect(primaryAction(caps).capability).toBeUndefined()
+  })
+
+  it("never headlines a capability with nowhere to go", () => {
+    // vote and view_results rank highly in principle but have no UI yet.
+    const caps = readCapabilities([
+      { capability: VOTE, state: OPEN },
+      { capability: VIEW_RESULTS, state: OPEN },
+    ])
+
+    expect(primaryAction(caps).target).toBe("timeline")
   })
 })
 

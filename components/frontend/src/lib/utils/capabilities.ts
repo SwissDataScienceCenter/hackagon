@@ -176,6 +176,57 @@ export function capabilityNoun(capability: Capability): string {
   return COPY[capability].noun
 }
 
+export interface PrimaryAction {
+  label: string
+  /** Route under `/hackathon/<slug>/`, so the caller resolves the URL. */
+  target: string
+  /** Absent for the fallback, which is not tied to a capability. */
+  capability?: Capability
+}
+
+/**
+ * The one thing a member is most usefully doing right now, most urgent first.
+ *
+ * Only capabilities with a real destination appear. `vote` and `view_results`
+ * are deliberately absent: they would rank highly, but VoteService is not
+ * implemented, so there is nowhere to send anyone. `register` is absent because
+ * a viewer inside the member shell has already joined.
+ */
+const PRIMARY_ACTIONS: readonly Required<PrimaryAction>[] = [
+  {
+    capability: "submit_project",
+    label: "Submit your project",
+    target: "submissions",
+  },
+  {
+    capability: "set_team_preferences",
+    label: "Set your project preferences",
+    target: "proposals",
+  },
+  {
+    capability: "submit_proposal",
+    label: "Propose a project",
+    target: "proposals/create",
+  },
+]
+
+/**
+ * What to put in front of a member as the next thing to do.
+ *
+ * Note this tests `state === "open"` where CTA gating uses `isAvailable`, which
+ * also accepts `ungoverned`. The asymmetry is deliberate: not knowing whether
+ * something is open is a reason to leave a button working, but not a reason to
+ * advertise it as the headline action. An entirely ungoverned hackathon
+ * therefore falls back to the timeline rather than inventing urgency.
+ */
+export function primaryAction(capabilities: Capabilities): PrimaryAction {
+  for (const candidate of PRIMARY_ACTIONS) {
+    if (capabilities[candidate.capability].state === "open") return candidate
+  }
+
+  return { label: "View timeline", target: "timeline" }
+}
+
 /** What one phase is scheduled to open and to close. */
 export interface PhaseCapabilities {
   opens: Capability[]
