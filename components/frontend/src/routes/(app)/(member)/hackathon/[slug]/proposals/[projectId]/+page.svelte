@@ -39,7 +39,9 @@
                         {projectStatusLabel(project.status) ?? 'Unknown'}
                     </span>
                     {#if data.trackName}
-                        <span class="badge preset-tonal-surface">{data.trackName}</span>
+                        <span class="badge preset-outlined-primary-500 text-xs font-semibold">
+                            {data.trackName}
+                        </span>
                     {/if}
                 </div>
             </div>
