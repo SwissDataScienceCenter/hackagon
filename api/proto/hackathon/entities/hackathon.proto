@@ -4,6 +4,7 @@ package hackathon.entities;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "hackathon/entities/capability.proto";
 import "hackathon/entities/hackathon_member.proto";
 import "hackathon/entities/hackathon_status.proto";
 import "hackathon/entities/page.proto";
@@ -45,4 +46,11 @@ message Hackathon {
   // Populated in List responses only when participant_id filter is set.
   // Contains the requesting user's membership in this hackathon (role + is_waiting).
   optional HackathonMember viewer_membership = 18;
+  // Field 19 is deliberately skipped: `HackathonSettings settings = 19` is taken
+  // by feat/vote-service. Keep it free so the two branches merge cleanly.
+  //
+  // Computed server-side from the stored capability rows; not persisted as a
+  // whole. Populated on Get responses only. Once VoteService lands this becomes
+  // caller-dependent (jury vs participant), so it must not be cached across users.
+  repeated CapabilityStatus capabilities = 20;
 }

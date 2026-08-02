@@ -1,5 +1,29 @@
 # Database Schema
 
+## Capability
+
+Whether one member-facing action is currently open in a hackathon. One row per capability per hackathon, pre-created on hackathon creation.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `capability` | enum(register, submit_proposal, set_team_preferences, submit_project, vote, view_results) | yes | no | yes | no | Which action this row gates. Immutable: it identifies the row. |
+| `enabled` | bool | yes | no | no | yes | The authoritative gate. Phases may describe when this is expected to change, but never change it themselves — a wrong date can only produce a wrong countdown, never an unauthorized action. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the capability row was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this capability belongs to. |
+| `modifier` | User | M2O | yes | no | Who last flipped the flag. Optional so seeded and backfilled rows need no attribution; set on every edit. |
+
+### Indexes
+
+- `capability, hackathon_capabilities` *(unique)*
+
 ## Hackathon
 
 A hackathon event containing tracks, projects, phases, and participants.
@@ -26,6 +50,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `participating_users` | User | M2M | yes | no | Users who are participating or waitlisted. |
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
+| `capabilities` | Capability | O2M | no | no | Which member-facing actions are currently open. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -279,6 +304,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
 | `created_tracks` | Track | O2M | no | no | Tracks this user created. |
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
+| `modified_capabilities` | Capability | O2M | no | no | Hackathon capabilities this user last opened or closed. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `participations` | Participant | O2M | yes | no |  |
 | `team_participations` | TeamParticipant | O2M | yes | no |  |

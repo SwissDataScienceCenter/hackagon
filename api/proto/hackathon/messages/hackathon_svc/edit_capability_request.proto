@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+import "hackathon/entities/capability.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+message EditCapabilityRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  // Identifies the row, so it is required rather than optional — unlike the
+  // mutable fields of the other Edit requests.
+  hackathon.entities.Capability capability = 2 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+  bool enabled = 3;
+}

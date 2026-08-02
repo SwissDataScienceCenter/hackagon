@@ -1196,4 +1196,186 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
+	Describe("EditCapability", func() {
+		var (
+			adminCtx    context.Context
+			hackathonID string
+		)
+
+		// newUser inserts a user and returns a context carrying its token.
+		newUser := func(username string) context.Context {
+			keycloakID := "keycloak-" + username
+			_, err := dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername(username).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			return metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(keycloakID),
+				),
+			)
+		}
+
+		BeforeEach(func() {
+			adminCtx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+				),
+			)
+
+			now := time.Now()
+			createResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Capability Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+		})
+
+		It("reports a status for every capability on Get", func() {
+			resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			caps := resp.GetHackathon().GetCapabilities()
+			Expect(caps).To(HaveLen(6))
+
+			seen := map[entities.Capability]entities.CapabilityState{}
+			for _, c := range caps {
+				seen[c.GetCapability()] = c.GetState()
+			}
+			Expect(seen).To(HaveKey(entities.Capability_CAPABILITY_REGISTER))
+			Expect(seen).To(HaveKey(entities.Capability_CAPABILITY_VOTE))
+		})
+
+		It("creates a new hackathon with every capability open", func() {
+			// Introducing capabilities must not change behavior for existing
+			// callers, so a fresh hackathon starts permissive.
+			resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, c := range resp.GetHackathon().GetCapabilities() {
+				Expect(c.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					"capability %v should start open", c.GetCapability(),
+				)
+			}
+		})
+
+		It("closes a capability and reports it back", func() {
+			resp, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     false,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetCapability().GetState()).To(
+				Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+			)
+		})
+
+		It("blocks Join once registration is closed", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     false,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Join(newUser("late-joiner"), &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+			Expect(err.Error()).To(ContainSubstring("registrations are closed"))
+		})
+
+		It("still allows Join while registration is open", func() {
+			_, err := client.Join(newUser("early-joiner"), &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("lets an owner join even when registration is closed", func() {
+			// Organizers must be able to act outside the window; a participant
+			// who missed a deadline is a support request, not a lockout.
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     false,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Join(adminCtx, &msgs.JoinRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("closes each capability independently", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_VOTE,
+				Enabled:     false,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, c := range resp.GetHackathon().GetCapabilities() {
+				if c.GetCapability() == entities.Capability_CAPABILITY_VOTE {
+					Expect(c.GetState()).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+					)
+
+					continue
+				}
+				Expect(c.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					"capability %v should be untouched", c.GetCapability(),
+				)
+			}
+		})
+
+		It("denies a non-owner from editing capabilities", func() {
+			_, err := client.EditCapability(
+				newUser("meddler"),
+				&msgs.EditCapabilityRequest{
+					HackathonId: hackathonID,
+					Capability:  entities.Capability_CAPABILITY_REGISTER,
+					Enabled:     false,
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("rejects an unspecified capability", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_UNSPECIFIED,
+				Enabled:     true,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns NOT_FOUND for an unknown hackathon", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: uuid.NewString(),
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     false,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(BeElementOf(codes.NotFound, codes.PermissionDenied))
+		})
+	})
+
 })

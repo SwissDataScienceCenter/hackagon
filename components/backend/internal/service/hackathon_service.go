@@ -7,9 +7,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -83,6 +85,18 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
+	// One row per capability, all closed. A new hackathon is therefore explicitly
+	// shut rather than ambiguously ungoverned, and every later edit is a plain
+	// update instead of an upsert.
+	if err := createDefaultCapabilities(ctx, s.dbClient, h.ID, creator); err != nil {
+		slog.Error("create hackathon capabilities", "err", err)
+		if err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx); err != nil {
+			slog.Error("cleanup hackathon creation error", "err", err)
+		}
+
+		return nil, status.Errorf(codes.Internal, "couldn't create hackathon capabilities")
+	}
+
 	if _, err := s.enforcer.AddRole(uid, m.Owner, h.ID.String()); err != nil {
 		slog.Error("add hackathon owner", "err", err)
 		err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
@@ -137,6 +151,7 @@ func (s *HackathonService) Get(
 		WithProjects(func(q *ent.ProjectQuery) { q.WithCreator().WithModifier().WithTrack() }).
 		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
 		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
+		WithCapabilities(func(q *ent.CapabilityQuery) { q.WithModifier() }).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
 		Only(ctx)
 	if err != nil {
@@ -176,6 +191,8 @@ func (s *HackathonService) Get(
 	for _, p := range h.Edges.Phases {
 		entry.Phases = append(entry.Phases, phaseEntryFromEnt(p, id))
 	}
+
+	entry.Capabilities = capabilityStatusesFromEnt(h.Edges.Capabilities)
 
 	entry.Members = make([]*ents.HackathonMember, 0, len(h.Edges.Participants))
 	for _, p := range h.Edges.Participants {
@@ -232,6 +249,12 @@ func (s *HackathonService) Join(
 
 	if h.EndsAt.Before(time.Now()) {
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
+	}
+
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer, id, capability.Register,
+	); err != nil {
+		return nil, err
 	}
 
 	// First ensure user exists and get their entity ID
@@ -551,6 +574,85 @@ func (s *HackathonService) Edit(
 	entry.Modifier = userEntryFromEnt(updated.Edges.Modifier)
 
 	return &msgs.EditResponse{Hackathon: entry}, nil
+}
+
+// EditCapability opens or closes one member-facing action.
+//
+// Only the flag is mutable: the capability itself identifies the row, and rows
+// are pre-created with the hackathon, so this is deliberately an update and
+// never an upsert.
+func (s *HackathonService) EditCapability(
+	ctx context.Context,
+	req *msgs.EditCapabilityRequest,
+) (*msgs.EditCapabilityResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	c, ok := CapabilityFromProto(req.GetCapability())
+	if !ok {
+		return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", req.GetCapability())
+	}
+	entCapability, ok := capabilityToEnt(c)
+	if !ok {
+		return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", req.GetCapability())
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Fetch first so a hackathon with no row for this capability reports
+	// NotFound rather than silently updating zero rows.
+	row, err := s.dbClient.Capability.Query().
+		Where(
+			entcapability.HasHackathonWith(enthackathon.IDEQ(id)),
+			entcapability.CapabilityEQ(entCapability),
+		).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s has no %s capability",
+				req.GetHackathonId(), c,
+			)
+		}
+		slog.Error("query capability", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	updated, err := row.Update().
+		SetEnabled(req.GetEnabled()).
+		SetModifier(user).
+		Save(ctx)
+	if err != nil {
+		slog.Error("update capability", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update capability")
+	}
+	updated.Edges.Modifier = user
+
+	return &msgs.EditCapabilityResponse{
+		Capability: capabilityStatusFromEnt(updated),
+	}, nil
 }
 
 func (s *HackathonService) List(

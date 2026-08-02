@@ -9,10 +9,12 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
 	middleware "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -172,6 +174,40 @@ func seedInTx(
 	return nil
 }
 
+// seedCapabilities creates the full capability set for a hackathon, switching on
+// only those named.
+//
+// Every hackathon gets every row, so none is left ungoverned — dev data should
+// exercise the gates rather than bypass them.
+func seedCapabilities(
+	ctx context.Context,
+	db *ent.Client,
+	h *ent.Hackathon,
+	modifier *ent.User,
+	enabled ...capability.Capability,
+) error {
+	on := make(map[capability.Capability]bool, len(enabled))
+	for _, c := range enabled {
+		on[c] = true
+	}
+
+	all := capability.All()
+	builders := make([]*ent.CapabilityCreate, 0, len(all))
+	for _, c := range all {
+		builders = append(builders, db.Capability.Create().
+			SetCapability(entcapability.Capability(c)).
+			SetEnabled(on[c]).
+			SetHackathon(h).
+			SetModifier(modifier))
+	}
+
+	if err := db.Capability.CreateBulk(builders...).Exec(ctx); err != nil {
+		return fmt.Errorf("capabilities for %q: %w", h.Name, err)
+	}
+
+	return nil
+}
+
 // seedH1 seeds the upcoming public AI Innovation Challenge hackathon.
 // alice acts as organizer (creator); charles is waitlisted.
 func seedH1(
@@ -191,6 +227,11 @@ func seedH1(
 		SetModifier(alice).
 		Save(ctx)
 	if err != nil {
+		return err
+	}
+
+	// Upcoming: sign-ups are open, nothing else has started.
+	if err := seedCapabilities(ctx, db, h, alice, capability.Register); err != nil {
 		return err
 	}
 
@@ -472,6 +513,15 @@ func seedH2(
 		return err
 	}
 
+	// Mid-event: registration has closed, the building actions are open.
+	if err := seedCapabilities(ctx, db, h, admin,
+		capability.SubmitProposal,
+		capability.SetTeamPreferences,
+		capability.SubmitProject,
+	); err != nil {
+		return err
+	}
+
 	for _, ph := range []struct {
 		name, desc string
 		start, end time.Time
@@ -670,6 +720,11 @@ func seedH3(
 		SetModifier(admin).
 		Save(ctx)
 	if err != nil {
+		return err
+	}
+
+	// Finished: everything shut except the published results.
+	if err := seedCapabilities(ctx, db, h, admin, capability.ViewResults); err != nil {
 		return err
 	}
 

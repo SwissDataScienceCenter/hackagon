@@ -3,6 +3,12 @@
 
 ## Table of Contents
 
+- [hackathon/entities/capability.proto](#hackathon_entities_capability-proto)
+    - [CapabilityStatus](#hackathon-entities-CapabilityStatus)
+  
+    - [Capability](#hackathon-entities-Capability)
+    - [CapabilityState](#hackathon-entities-CapabilityState)
+  
 - [hackathon/entities/hackathon_role.proto](#hackathon_entities_hackathon_role-proto)
     - [HackathonRole](#hackathon-entities-HackathonRole)
   
@@ -68,6 +74,12 @@
   
 - [hackathon/messages/hackathon_svc/create_response.proto](#hackathon_messages_hackathon_svc_create_response-proto)
     - [CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse)
+  
+- [hackathon/messages/hackathon_svc/edit_capability_request.proto](#hackathon_messages_hackathon_svc_edit_capability_request-proto)
+    - [EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest)
+  
+- [hackathon/messages/hackathon_svc/edit_capability_response.proto](#hackathon_messages_hackathon_svc_edit_capability_response-proto)
+    - [EditCapabilityResponse](#hackathon-messages-hackathon_svc-EditCapabilityResponse)
   
 - [hackathon/messages/hackathon_svc/edit_request.proto](#hackathon_messages_hackathon_svc_edit_request-proto)
     - [EditRequest](#hackathon-messages-hackathon_svc-EditRequest)
@@ -400,6 +412,76 @@
     - [UserService](#user-UserService)
   
 - [Scalar Value Types](#scalar-value-types)
+
+
+
+<a name="hackathon_entities_capability-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/capability.proto
+
+
+
+<a name="hackathon-entities-CapabilityStatus"></a>
+
+### CapabilityStatus
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| capability | [Capability](#hackathon-entities-Capability) |  |  |
+| state | [CapabilityState](#hackathon-entities-CapabilityState) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | When the flag was last flipped, and by whom — &#34;who opened voting&#34; is the first question asked when something goes wrong during a live event. |
+| modifier_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+
+<a name="hackathon-entities-Capability"></a>
+
+### Capability
+What a member is allowed to do in a hackathon right now.
+
+Each value is backed by exactly one stored row per hackathon carrying an
+`enabled` flag, which is the authoritative gate. Adding a capability is
+therefore an enum value plus a row — no schema or message change.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| CAPABILITY_UNSPECIFIED | 0 |  |
+| CAPABILITY_REGISTER | 1 | HackathonService.Join |
+| CAPABILITY_SUBMIT_PROPOSAL | 2 | ProjectService.Propose |
+| CAPABILITY_SET_TEAM_PREFERENCES | 3 | ProjectService.SetPreference |
+| CAPABILITY_SUBMIT_PROJECT | 4 | TeamService.CreateSubmission / FinalizeSubmission |
+| CAPABILITY_VOTE | 5 | VoteService.SubmitVote — service not implemented yet. |
+| CAPABILITY_VIEW_RESULTS | 6 | VoteService.ListVoteResults — the flag doubles as the publish switch, since results are entered one placement at a time and must not leak partial standings. |
+
+
+
+<a name="hackathon-entities-CapabilityState"></a>
+
+### CapabilityState
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| CAPABILITY_STATE_UNSPECIFIED | 0 |  |
+| CAPABILITY_STATE_COMING | 1 | Closed now, but scheduled to open. Not yet produced: capabilities are not linked to phases until the phase-link step. |
+| CAPABILITY_STATE_OPEN | 2 |  |
+| CAPABILITY_STATE_CLOSED | 3 |  |
+| CAPABILITY_STATE_UNGOVERNED | 4 | No row exists for this capability, so the server has no opinion and does not enforce it. Clients must render exactly as they did before capabilities existed. This is what makes partial adoption safe. |
+
+
+ 
+
+ 
+
+ 
 
 
 
@@ -817,6 +899,9 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | pages | [Page](#hackathon-entities-Page) | repeated |  |
 | phases | [Phase](#hackathon-entities-Phase) | repeated |  |
 | viewer_membership | [HackathonMember](#hackathon-entities-HackathonMember) | optional | Populated in List responses only when participant_id filter is set. Contains the requesting user&#39;s membership in this hackathon (role &#43; is_waiting). |
+| capabilities | [CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | Field 19 is deliberately skipped: `HackathonSettings settings = 19` is taken by feat/vote-service. Keep it free so the two branches merge cleanly.
+
+Computed server-side from the stored capability rows; not persisted as a whole. Populated on Get responses only. Once VoteService lands this becomes caller-dependent (jury vs participant), so it must not be cached across users. |
 
 
 
@@ -1149,6 +1234,70 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_edit_capability_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/edit_capability_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-EditCapabilityRequest"></a>
+
+### EditCapabilityRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| capability | [hackathon.entities.Capability](#hackathon-entities-Capability) |  | Identifies the row, so it is required rather than optional — unlike the mutable fields of the other Edit requests. |
+| enabled | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_edit_capability_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/edit_capability_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-EditCapabilityResponse"></a>
+
+### EditCapabilityResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| capability | [hackathon.entities.CapabilityStatus](#hackathon-entities-CapabilityStatus) |  |  |
 
 
 
@@ -1561,6 +1710,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Get | [messages.hackathon_svc.GetRequest](#hackathon-messages-hackathon_svc-GetRequest) | [messages.hackathon_svc.GetResponse](#hackathon-messages-hackathon_svc-GetResponse) |  |
 | Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
+| EditCapability | [messages.hackathon_svc.EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest) | [messages.hackathon_svc.EditCapabilityResponse](#hackathon-messages-hackathon_svc-EditCapabilityResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
