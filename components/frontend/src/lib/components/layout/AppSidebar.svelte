@@ -213,10 +213,6 @@
         {/if}
     </div>
 
-    {#if showModeSwitch && activeSlug}
-        <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
-    {/if}
-
     <nav class="flex-1 overflow-y-auto">
         <!-- The way back out of a hackathon, so it stays put whether or not one
              is open. -->
@@ -225,6 +221,12 @@
             {activeId}
             collapsed={effectiveCollapsed}
         />
+
+        <!-- Below My Hackathons and above the hackathon's own entries, because it
+             scopes those entries and nothing above it. -->
+        {#if showModeSwitch && activeSlug}
+            <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
+        {/if}
 
         {#if activeSlug}
             <!-- No section heading: the page header names the hackathon on every
