@@ -11,6 +11,7 @@
     import {
         activeNavId,
         counterpartHref,
+        defaultHackathon,
         homeNav,
         manageNav,
         memberNav,
@@ -27,6 +28,9 @@
     interface HackathonEntry {
         id: string;
         name: string;
+        /** HackathonStatus: PENDING=1, ACTIVE=2, FINISHED=3. */
+        status: number;
+        startsAt?: Date;
         viewerMembership?: HackathonMember;
     }
 
@@ -70,11 +74,16 @@
             (isGlobalAdmin || isOwnerRole(activeHackathon?.viewerMembership?.role ?? 0)),
     );
 
+    // With no hackathon in the URL the nav still shows one — the one you are
+    // most likely to want — so the sidebar is not a dead end on the dashboard.
+    const navSlug = $derived(activeSlug ?? defaultHackathon(myHackathons)?.id);
+    const navHackathonName = $derived(myHackathons.find((h) => h.id === navSlug)?.name);
+
     const hackathonItems = $derived(
-        activeSlug
+        navSlug
             ? mode === 'manage'
-                ? manageNav(activeSlug)
-                : memberNav(activeSlug, hackathonPages)
+                ? manageNav(navSlug)
+                : memberNav(navSlug, hackathonPages)
             : [],
     );
     const homeItems = $derived(homeNav());
@@ -213,38 +222,41 @@
         {/if}
     </div>
 
+    <!-- Scope widens downwards: the hackathon you are in, then all of them, then
+         the platform. Only the hackathon's own nav scrolls — it is the one that
+         grows with content pages, and the two below it have to stay reachable
+         when it does. -->
     <nav class="flex-1 overflow-y-auto">
-        <!-- The way back out of a hackathon, so it stays put whether or not one
-             is open. -->
-        <SidebarNavSection
-            items={homeItems}
-            {activeId}
-            collapsed={effectiveCollapsed}
-        />
-
-        <!-- Below My Hackathons and above the hackathon's own entries, because it
-             scopes those entries and nothing above it. -->
-        {#if showModeSwitch && activeSlug}
-            <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
-        {/if}
-
-        {#if activeSlug}
-            <!-- No section heading: the page header names the hackathon on every
-                 screen, and the mode switch above names the mode. There is
-                 deliberately no way to hop sideways into another hackathon from
-                 here — being inside one should mean being inside one. My
-                 Hackathons above is the single way back out. -->
+        {#if hackathonItems.length > 0}
+            <!-- Headed by the hackathon's own name, which is load-bearing rather
+                 than decorative: with no slug in the URL these entries belong to
+                 a hackathon nothing else on the page names. There is deliberately
+                 no way to hop sideways into another one from here — Hackathons
+                 below is the single way out. -->
             <SidebarNavSection
+                label={navHackathonName}
                 items={hackathonItems}
                 {activeId}
                 collapsed={effectiveCollapsed}
                 activeColor={mode === 'manage' ? 'secondary' : 'primary'}
             />
+
+            <!-- Under the hackathon it scopes, not above it. -->
+            {#if showModeSwitch && activeSlug}
+                <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
+            {/if}
         {/if}
     </nav>
 
-    <!-- Platform scope is not part of the current hackathon, so it sits pinned
-         outside the scrolling hackathon nav rather than trailing it. -->
+    <!-- The way back out to all of them, so it stays put whether or not one is
+         open. -->
+    <SidebarNavSection
+        label="Hackathons"
+        items={homeItems}
+        {activeId}
+        collapsed={effectiveCollapsed}
+    />
+
     {#if platformItems.length > 0}
         <SidebarNavSection
             label="Platform"

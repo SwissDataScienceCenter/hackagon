@@ -66,6 +66,56 @@ export function homeNav(): NavItem[] {
   ]
 }
 
+/** Minimum a hackathon needs for `defaultHackathon` to rank it. */
+export interface RankableHackathon {
+  id: string
+  /** HackathonStatus: PENDING=1, ACTIVE=2, FINISHED=3. */
+  status: number
+  startsAt?: Date
+}
+
+// Lower sorts first. Anything unrecognized, including UNSPECIFIED, goes last
+// rather than being treated as one of the real states.
+const STATUS_RANK: Partial<Record<number, number>> = { 2: 0, 1: 1, 3: 2 }
+const FINISHED = 3
+
+/**
+ * Which hackathon to show in the nav when the URL names none.
+ *
+ * "The one you most likely want": happening now, else starting soonest, else
+ * finished most recently. Undated hackathons sort last within their group, and
+ * the id breaks ties so the sidebar cannot reorder itself between renders.
+ *
+ * Deliberately not "most recently visited" — that needs client storage and would
+ * disagree between devices. This is derivable from data the sidebar already has.
+ */
+export function defaultHackathon<T extends RankableHackathon>(
+  hackathons: T[],
+): T | undefined {
+  const byPreference = [...hackathons].sort((a, b) => {
+    const rank = (h: T) => STATUS_RANK[h.status] ?? 3
+    if (rank(a) !== rank(b)) return rank(a) - rank(b)
+
+    // Undated last, whichever direction the group sorts in.
+    if (!a.startsAt || !b.startsAt) {
+      if (a.startsAt) return -1
+      if (b.startsAt) return 1
+
+      return a.id < b.id ? -1 : 1
+    }
+
+    const diff = a.startsAt.getTime() - b.startsAt.getTime()
+    if (diff !== 0) {
+      // Finished hackathons read newest-first; upcoming ones soonest-first.
+      return a.status === FINISHED ? -diff : diff
+    }
+
+    return a.id < b.id ? -1 : 1
+  })
+
+  return byPreference[0]
+}
+
 /** Participant-facing nav for one hackathon, plus its visible content pages. */
 export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
   return [
