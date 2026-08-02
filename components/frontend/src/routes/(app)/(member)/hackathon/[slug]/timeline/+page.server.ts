@@ -1,8 +1,9 @@
 import type { PageServerLoad } from "./$types"
 import { currentPhase, phaseStatus } from "$lib/utils/phase"
+import { capabilitiesByPhase, capabilityNoun } from "$lib/utils/capabilities"
 
 export const load: PageServerLoad = async (event) => {
-  const { hackathon } = await event.parent()
+  const { hackathon, capabilities } = await event.parent()
 
   const ordered = [...hackathon.phases].sort(
     (a, b) => (a.startsAt?.getTime() ?? 0) - (b.startsAt?.getTime() ?? 0),
@@ -27,14 +28,25 @@ export const load: PageServerLoad = async (event) => {
     ? hackathon.pages.find((p) => p.id === selected.pageId && p.visible)
     : undefined
 
-  const phases = ordered.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description,
-    startsAt: p.startsAt,
-    endsAt: p.endsAt,
-    status: phaseStatus(p.startsAt, p.endsAt),
-  }))
+  // What each phase turns on and off, resolved to member-facing nouns here so
+  // the component renders strings rather than reasoning about capabilities.
+  // A phase with neither gets empty lists and shows nothing.
+  const unlocks = capabilitiesByPhase(capabilities)
+
+  const phases = ordered.map((p) => {
+    const forPhase = unlocks.get(p.id)
+
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      startsAt: p.startsAt,
+      endsAt: p.endsAt,
+      status: phaseStatus(p.startsAt, p.endsAt),
+      opens: (forPhase?.opens ?? []).map(capabilityNoun),
+      closes: (forPhase?.closes ?? []).map(capabilityNoun),
+    }
+  })
 
   return {
     phases,

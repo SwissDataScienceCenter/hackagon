@@ -64,6 +64,8 @@ export interface CapabilityStatusRef {
   state: number
   opensAt?: Date
   closesAt?: Date
+  opensPhaseId?: string
+  closesPhaseId?: string
 }
 
 export interface CapabilityInfo {
@@ -72,6 +74,9 @@ export interface CapabilityInfo {
   opensAt?: Date
   /** When it is expected to close. Absent when nothing schedules the end. */
   closesAt?: Date
+  /** Which phase the schedule came from, so a timeline can name it. */
+  opensPhaseId?: string
+  closesPhaseId?: string
 }
 
 export type Capabilities = Record<Capability, CapabilityInfo>
@@ -99,6 +104,8 @@ export function readCapabilities(
       state: STATE_BY_WIRE[s.state] ?? "ungoverned",
       opensAt: s.opensAt,
       closesAt: s.closesAt,
+      opensPhaseId: s.opensPhaseId,
+      closesPhaseId: s.closesPhaseId,
     }
   }
 
@@ -162,6 +169,50 @@ const COPY: Readonly<
 
 function formatDay(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+/** Short member-facing name, e.g. "Proposals". */
+export function capabilityNoun(capability: Capability): string {
+  return COPY[capability].noun
+}
+
+/** What one phase is scheduled to open and to close. */
+export interface PhaseCapabilities {
+  opens: Capability[]
+  closes: Capability[]
+}
+
+/**
+ * Group capabilities by the phase that schedules them, so a timeline node can
+ * say what it unlocks — the thing that makes a phase mean something to a member
+ * rather than being a name and a date.
+ *
+ * Only scheduled capabilities appear. Manually driven ones (voting) belong to no
+ * phase by design and are absent from every bucket. Iterated in vocabulary order
+ * so the lists are stable rather than dependent on server ordering.
+ */
+export function capabilitiesByPhase(
+  capabilities: Capabilities,
+): Map<string, PhaseCapabilities> {
+  const byPhase = new Map<string, PhaseCapabilities>()
+
+  const bucket = (phaseId: string): PhaseCapabilities => {
+    let existing = byPhase.get(phaseId)
+    if (!existing) {
+      existing = { opens: [], closes: [] }
+      byPhase.set(phaseId, existing)
+    }
+
+    return existing
+  }
+
+  for (const capability of CAPABILITIES) {
+    const info = capabilities[capability]
+    if (info.opensPhaseId) bucket(info.opensPhaseId).opens.push(capability)
+    if (info.closesPhaseId) bucket(info.closesPhaseId).closes.push(capability)
+  }
+
+  return byPhase
 }
 
 /**

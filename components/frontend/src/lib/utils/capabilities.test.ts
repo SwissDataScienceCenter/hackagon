@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest"
 import {
   CAPABILITIES,
+  capabilitiesByPhase,
+  capabilityNoun,
   deadlineLabel,
   isAvailable,
   isBlocked,
@@ -233,6 +235,75 @@ describe("deadlineLabel", () => {
     const deadline = nextDeadline(caps, NOW)!
 
     expect(deadlineLabel(deadline, NOW)).toMatch(/^Submissions due \d{1,2}:\d{2}/)
+  })
+})
+
+describe("capabilitiesByPhase", () => {
+  it("groups capabilities under the phase that opens or closes them", () => {
+    const caps = readCapabilities([
+      {
+        capability: SUBMIT_PROPOSAL,
+        state: COMING,
+        opensPhaseId: "ideation",
+        closesPhaseId: "hacking",
+      },
+      { capability: SUBMIT_PROJECT, state: COMING, opensPhaseId: "hacking" },
+    ])
+
+    const byPhase = capabilitiesByPhase(caps)
+
+    expect(byPhase.get("ideation")).toEqual({
+      opens: ["submit_proposal"],
+      closes: [],
+    })
+    expect(byPhase.get("hacking")).toEqual({
+      opens: ["submit_project"],
+      closes: ["submit_proposal"],
+    })
+  })
+
+  it("collects several capabilities sharing one phase", () => {
+    const caps = readCapabilities([
+      { capability: SUBMIT_PROPOSAL, state: COMING, opensPhaseId: "ideation" },
+      { capability: 3, state: COMING, opensPhaseId: "ideation" },
+    ])
+
+    expect(capabilitiesByPhase(caps).get("ideation")?.opens).toEqual([
+      "submit_proposal",
+      "set_team_preferences",
+    ])
+  })
+
+  it("omits manually driven capabilities entirely", () => {
+    // Voting links to no phase by design, so no phase should claim it.
+    const caps = readCapabilities([
+      { capability: VOTE, state: CLOSED },
+      { capability: SUBMIT_PROPOSAL, state: COMING, opensPhaseId: "ideation" },
+    ])
+
+    const byPhase = capabilitiesByPhase(caps)
+
+    expect(byPhase.size).toBe(1)
+    expect([...byPhase.values()].flatMap((p) => [...p.opens, ...p.closes])).not.toContain(
+      "vote",
+    )
+  })
+
+  it("is empty when nothing is scheduled", () => {
+    expect(capabilitiesByPhase(readCapabilities([])).size).toBe(0)
+  })
+})
+
+describe("capabilityNoun", () => {
+  it("gives a short member-facing name", () => {
+    expect(capabilityNoun("submit_proposal")).toBe("Proposals")
+    expect(capabilityNoun("register")).toBe("Registration")
+  })
+
+  it("names every capability in the vocabulary", () => {
+    for (const c of CAPABILITIES) {
+      expect(capabilityNoun(c)).toBeTruthy()
+    }
   })
 })
 

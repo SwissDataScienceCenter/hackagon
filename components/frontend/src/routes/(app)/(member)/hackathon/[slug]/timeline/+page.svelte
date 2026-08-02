@@ -1,6 +1,8 @@
 <script lang="ts">
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import Lock from 'lucide-svelte/icons/lock';
+    import Unlock from 'lucide-svelte/icons/unlock';
     import { phaseStateLabel, phaseStateBadgePreset } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
@@ -52,6 +54,36 @@
                     <p class="m-0 text-xs leading-relaxed text-surface-600-400">{selectedPhase.description}</p>
                 {:else}
                     <p class="m-0 text-xs text-surface-500">No description provided.</p>
+                {/if}
+
+                <!-- What the phase actually changes for you. Absent when the
+                     organizer has scheduled nothing against it, rather than
+                     showing an empty "Opens:" label. -->
+                {#if selectedPhase.opens.length > 0 || selectedPhase.closes.length > 0}
+                    <div class="flex flex-col gap-1.5 border-t border-surface-200-800 pt-2">
+                        {#if selectedPhase.opens.length > 0}
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="flex items-center gap-1 text-xs text-surface-500">
+                                    <Unlock size={12} aria-hidden="true" />
+                                    Opens
+                                </span>
+                                {#each selectedPhase.opens as name (name)}
+                                    <span class="badge preset-tonal-primary text-xs">{name}</span>
+                                {/each}
+                            </div>
+                        {/if}
+                        {#if selectedPhase.closes.length > 0}
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="flex items-center gap-1 text-xs text-surface-500">
+                                    <Lock size={12} aria-hidden="true" />
+                                    Closes
+                                </span>
+                                {#each selectedPhase.closes as name (name)}
+                                    <span class="badge preset-tonal-surface text-xs">{name}</span>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
                 {/if}
             </div>
 
