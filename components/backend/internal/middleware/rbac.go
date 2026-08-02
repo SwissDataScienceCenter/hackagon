@@ -25,6 +25,9 @@ var modelFile string
 
 const minPolicyFields = 2 // casbin policy tuples have at least 2 fields: subject and role
 
+// ErrNotAGlobalRole is returned when a hackathon-scoped role is granted globally.
+var ErrNotAGlobalRole = errors.New("role cannot be granted globally")
+
 type Role int
 
 const (
@@ -275,8 +278,37 @@ func (e *Enforcer) RemoveRole(
 	return e.enforcer.RemoveGroupingPolicy(user, role.String(), domain)
 }
 
+// IsGlobal reports whether a role is meaningful outside a single hackathon.
+// Owner and Member describe a user's standing in one hackathon, so granting them
+// globally is always a mistake.
+func (r Role) IsGlobal() bool {
+	return r == Admin || r == HackathonOrganizer
+}
+
+// AddGlobalRole grants a role to a user across all hackathons.
+//
+// It writes both grouping tables, because each is read by a different consumer:
+//   - g2 (user, role) is what GetGlobalRoles — and therefore WhoAmI — reports.
+//   - g (user, role, /hackathon/*) is what the matcher can actually enforce. The
+//     model only consults g2 through the hard-coded g2(r.sub, "admin") clause, so
+//     a g2 row alone leaves every role other than admin unenforceable.
+//
+// The g domain is the literal string "/hackathon/*", which is what handlers
+// enforcing against all hackathons pass (see HackathonService.Create). No domain
+// matching function is registered for g, so g lookups are exact string compares:
+// this row cannot match a request scoped to a concrete /hackathon/<id>.
+//
+// Use AddRole for roles that belong to one hackathon.
 func (e *Enforcer) AddGlobalRole(user string, role Role) (bool, error) {
-	return e.enforcer.AddNamedGroupingPolicy("g2", user, role.String())
+	if !role.IsGlobal() {
+		return false, fmt.Errorf("%w: %s is scoped to a single hackathon", ErrNotAGlobalRole, role)
+	}
+
+	if _, err := e.enforcer.AddNamedGroupingPolicy("g2", user, role.String()); err != nil {
+		return false, fmt.Errorf("add global role %s for %s: %w", role, user, err)
+	}
+
+	return e.enforcer.AddGroupingPolicy(user, role.String(), hackathonIdToPath("*"))
 }
 
 func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {

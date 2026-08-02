@@ -51,6 +51,19 @@ func main() {
 		logx.Fatal("migrate schema", "err", err)
 	}
 
+	enf, err := middleware.NewRBACEnforcer(cfg)
+	if err != nil {
+		logx.Fatal("create enforcer", "err", err)
+	}
+
+	// alice is a hackathon organizer globally (can create new hackathons).
+	// Granted before the sentinel check so that re-running the seeder backfills
+	// the role on an already-seeded database. Casbin grouping writes are
+	// idempotent, so repeat runs are harmless.
+	if _, err := enf.AddGlobalRole(aliceKeycloakID, middleware.HackathonOrganizer); err != nil {
+		logx.Fatal("assign organizer role to alice", "err", err)
+	}
+
 	exists, err := db.Hackathon.Query().Where(hackathon.NameEQ(sentinelHackathon)).Exist(ctx)
 	if err != nil {
 		logx.Fatal("check sentinel", "err", err)
@@ -59,16 +72,6 @@ func main() {
 		slog.Info("seed data already present, skipping")
 
 		return
-	}
-
-	enf, err := middleware.NewRBACEnforcer(cfg)
-	if err != nil {
-		logx.Fatal("create enforcer", "err", err)
-	}
-
-	// alice is a hackathon organizer globally (can create new hackathons).
-	if _, err := enf.AddGlobalRole(aliceKeycloakID, middleware.HackathonOrganizer); err != nil {
-		logx.Fatal("assign organizer role to alice", "err", err)
 	}
 
 	if err := seed(ctx, db, cfg, enf); err != nil {

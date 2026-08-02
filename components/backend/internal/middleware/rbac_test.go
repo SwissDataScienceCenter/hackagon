@@ -139,6 +139,45 @@ var _ = Describe("RBAC Enforcer", func() {
 		)
 	})
 
+	Describe("Global Roles", func() {
+		organizerID := "organizer-uuid"
+
+		It("lets a global organizer create hackathons", func() {
+			enf := testutils.NewMockEnforcer("admin-uuid")
+			_, err := enf.AddGlobalRole(organizerID, HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			allowed, err := enf.CheckPermission(organizerID, "*", Hackathon, Create)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(allowed).To(BeTrue())
+		})
+
+		It("keeps a global organizer out of an individual hackathon", func() {
+			enf := testutils.NewMockEnforcer("admin-uuid")
+			_, err := enf.AddGlobalRole(organizerID, HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			allowed, err := enf.CheckPermission(organizerID, "h1", Hackathon, Write)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(allowed).To(BeFalse())
+		})
+
+		DescribeTable("refuses to grant a hackathon-scoped role globally",
+			func(role Role) {
+				enf := testutils.NewMockEnforcer("admin-uuid")
+
+				_, err := enf.AddGlobalRole("mallory", role)
+				Expect(err).To(MatchError(ErrNotAGlobalRole))
+
+				allowed, err := enf.CheckPermission("mallory", "h1", Hackathon, Write)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allowed).To(BeFalse())
+			},
+			Entry("owner", Owner),
+			Entry("member", Member),
+		)
+	})
+
 	Describe("RequirePermission", func() {
 		var enf *Enforcer
 		adminID := "admin-uuid"

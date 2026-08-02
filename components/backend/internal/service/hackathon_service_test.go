@@ -19,6 +19,7 @@ import (
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -30,18 +31,32 @@ var _ = Describe("HackathonService", func() {
 	var (
 		dbClient  *ent.Client
 		conn      *grpc.ClientConn
+		enf       *middleware.Enforcer
 		client    hackathonSvc.HackathonServiceClient
 		testAdmin string
 	)
 
 	BeforeEach(func() {
-		dbClient, conn, _ = testutils.CreateTestServer()
+		dbClient, conn, enf = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewHackathonServiceClient(conn)
 	})
 
 	Describe("Create", func() {
+		// newUser inserts a user and returns its Keycloak ID. Create looks the
+		// caller up in the users table, so a token alone is not enough.
+		newUser := func(username string) string {
+			keycloakID := "keycloak-" + username
+			_, err := dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername(username).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			return keycloakID
+		}
+
 		It("creates hackathon successfully with admin token", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
@@ -73,6 +88,79 @@ var _ = Describe("HackathonService", func() {
 			Expect(h.Visibility).To(Equal(enthackathon.VisibilityPublic))
 			Expect(h.Edges.Creator).NotTo(BeNil())
 			Expect(h.Edges.Creator.KeycloakID).To(Equal(testAdmin))
+		})
+
+		It("creates hackathon successfully for a global hackathon organizer", func() {
+			organizer := newUser("organizer")
+			_, err := enf.AddGlobalRole(organizer, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(organizer)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			resp, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Organizer Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetHackathonId()).NotTo(BeEmpty())
+
+			// The creator must also come out as owner of what they just created.
+			role, err := enf.GetHackathonRole(organizer, resp.GetHackathonId())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(role).To(Equal(entities.HackathonRole_HACKATHON_ROLE_OWNER))
+		})
+
+		It("denies a user without the organizer role", func() {
+			plain := newUser("plain")
+
+			token := testutils.CreateTestJWTToken(plain)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Should Not Exist",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("does not let an organizer write another owner's hackathon", func() {
+			organizer := newUser("organizer")
+			_, err := enf.AddGlobalRole(organizer, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			// A hackathon the organizer has no role in.
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			created, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Admin Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PRIVATE,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(organizer)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			newName := "Hijacked"
+			_, err = client.Edit(ctx, &msgs.EditRequest{
+				HackathonId: created.GetHackathonId(),
+				Name:        &newName,
+			})
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 	})
 
