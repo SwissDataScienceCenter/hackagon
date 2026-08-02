@@ -197,7 +197,10 @@ func (s *HackathonService) Get(
 		entry.Phases = append(entry.Phases, phaseEntryFromEnt(p, id))
 	}
 
-	entry.Capabilities = capabilityStatusesFromEnt(h.Edges.Capabilities, now)
+	// The organizer's declared phase outranks the dates when resolving COMING,
+	// so the clock has to reach the mapper.
+	clock := newCapabilityClock(phaseOrderFrom(h.Edges.Phases), h.CurrentPhaseID)
+	entry.Capabilities = capabilityStatusesFromEnt(h.Edges.Capabilities, clock, now)
 
 	entry.Members = make([]*ents.HackathonMember, 0, len(h.Edges.Participants))
 	for _, p := range h.Edges.Participants {
@@ -688,8 +691,160 @@ func (s *HackathonService) EditCapability(
 		return nil, status.Error(codes.Internal, "couldn't query updated capability")
 	}
 
+	order, err := phaseOrder(ctx, s.dbClient, id)
+	if err != nil {
+		return nil, err
+	}
+	hack, err := s.dbClient.Hackathon.Get(ctx, id)
+	if err != nil {
+		slog.Error("query hackathon for capability clock", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
 	return &msgs.EditCapabilityResponse{
-		Capability: capabilityStatusFromEnt(updated, time.Now()),
+		Capability: capabilityStatusFromEnt(
+			updated,
+			newCapabilityClock(order, hack.CurrentPhaseID),
+			time.Now(),
+		),
+	}, nil
+}
+
+// AdvancePhase declares which phase a hackathon is now in, and switches its
+// scheduled capabilities to match.
+//
+// One control instead of six checkboxes, because organizers reach for this at
+// the busiest moment of an event. `enabled` stays the authoritative gate — this
+// writes those flags rather than introducing a second source of truth, so every
+// enforcement site keeps reading a single boolean.
+//
+// Capabilities with no opening phase are left exactly as they are. That is what
+// keeps voting, which opens abruptly and by hand, immune to advancing.
+func (s *HackathonService) AdvancePhase(
+	ctx context.Context,
+	req *msgs.AdvancePhaseRequest,
+) (*msgs.AdvancePhaseResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	phaseID, err := uuid.Parse(req.GetPhaseId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid phase_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	if err := phaseInHackathon(ctx, s.dbClient, id, phaseID); err != nil {
+		return nil, err
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	order, err := phaseOrder(ctx, s.dbClient, id)
+	if err != nil {
+		return nil, err
+	}
+	target, ok := order[phaseID]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "phase %s not found", req.GetPhaseId())
+	}
+
+	rows, err := s.dbClient.Capability.Query().
+		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
+		WithModifier().
+		WithOpensPhase().
+		WithClosesPhase().
+		All(ctx)
+	if err != nil {
+		slog.Error("query capabilities", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	desired := capability.Advance(advanceRows(rows, order), target)
+
+	txn, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		slog.Error("start transaction", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't start transaction")
+	}
+	rollback := func(cause error) {
+		if rbErr := txn.Rollback(); rbErr != nil {
+			slog.Error("rollback advance phase", "err", cause, "rollback", rbErr)
+		}
+	}
+
+	for _, row := range rows {
+		want, scheduled := desired[capability.Capability(row.Capability)]
+		// Unscheduled, or already correct. Skipping the write keeps modified_at
+		// and the modifier meaningful, and makes re-advancing a true no-op.
+		if !scheduled || row.Enabled == want {
+			continue
+		}
+		if _, err := txn.Capability.UpdateOne(row).
+			SetEnabled(want).
+			SetModifier(user).
+			Save(ctx); err != nil {
+			rollback(err)
+			slog.Error("update capability during advance", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't update capabilities")
+		}
+	}
+
+	if _, err := txn.Hackathon.UpdateOneID(id).
+		SetCurrentPhaseID(phaseID).
+		SetModifier(user).
+		Save(ctx); err != nil {
+		rollback(err)
+		slog.Error("set current phase", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't set current phase")
+	}
+
+	if err := txn.Commit(); err != nil {
+		slog.Error("commit advance phase", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't commit transaction")
+	}
+
+	updated, err := s.dbClient.Capability.Query().
+		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
+		WithModifier().
+		WithOpensPhase().
+		WithClosesPhase().
+		All(ctx)
+	if err != nil {
+		slog.Error("re-query capabilities", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query updated capabilities")
+	}
+
+	// Clock built from the phase just declared, so the response reports states
+	// consistent with the move rather than with the old dates.
+	clock := newCapabilityClock(order, &phaseID)
+
+	return &msgs.AdvancePhaseResponse{
+		CurrentPhaseId: phaseID.String(),
+		Capabilities:   capabilityStatusesFromEnt(updated, clock, time.Now()),
 	}, nil
 }
 

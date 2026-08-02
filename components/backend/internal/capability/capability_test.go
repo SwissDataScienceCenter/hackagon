@@ -150,6 +150,156 @@ var _ = Describe("Capability", func() {
 		})
 	})
 
+	Describe("ResolveRow after a manual advance", func() {
+		pos := func(i int) *int { return &i }
+
+		// A future date on the opening phase, as happens whenever an event runs
+		// ahead of its published schedule.
+		future := now.AddDate(0, 0, 5)
+
+		It("ignores a future date once the organizer has advanced past the phase", func() {
+			// Without this, a member is told "opens in 5 days" about something the
+			// organizer has already declared finished.
+			r := Row{
+				Capability: SubmitProposal, Enabled: false,
+				OpensAt: &future, ClosesAt: nil,
+				OpensPhase: pos(0), CurrentPhase: pos(2),
+			}
+
+			Expect(ResolveRow(r, now)).To(Equal(StateClosed))
+		})
+
+		It("still reports coming for a phase the organizer has not reached", func() {
+			r := Row{
+				Capability: SubmitProposal, Enabled: false,
+				OpensAt: &future, ClosesAt: nil,
+				OpensPhase: pos(3), CurrentPhase: pos(1),
+			}
+
+			Expect(ResolveRow(r, now)).To(Equal(StateComing))
+		})
+
+		It("reports coming at the boundary only before the phase is reached", func() {
+			atPhase := Row{
+				Capability: SubmitProposal, Enabled: false,
+				OpensAt: &future, ClosesAt: nil,
+				OpensPhase: pos(2), CurrentPhase: pos(2),
+			}
+
+			Expect(ResolveRow(atPhase, now)).To(Equal(StateClosed))
+		})
+
+		It("never reports coming for an unscheduled capability", func() {
+			// Voting has no position to compare, so advancing cannot make it
+			// look imminent.
+			r := Row{
+				Capability: Vote, Enabled: false,
+				OpensAt: nil, ClosesAt: nil,
+				OpensPhase: nil, CurrentPhase: pos(1),
+			}
+
+			Expect(ResolveRow(r, now)).To(Equal(StateClosed))
+		})
+
+		It("falls back to dates when no advance has happened", func() {
+			r := Row{
+				Capability: SubmitProposal, Enabled: false,
+				OpensAt: &future, ClosesAt: nil,
+				OpensPhase: pos(0), CurrentPhase: nil,
+			}
+
+			Expect(ResolveRow(r, now)).To(Equal(StateComing))
+		})
+
+		It("keeps the flag decisive regardless of position", func() {
+			r := Row{
+				Capability: SubmitProposal, Enabled: true,
+				OpensAt: &future, ClosesAt: nil,
+				OpensPhase: pos(5), CurrentPhase: pos(0),
+			}
+
+			Expect(ResolveRow(r, now)).To(Equal(StateOpen))
+		})
+	})
+
+	Describe("Advance", func() {
+		pos := func(i int) *int { return &i }
+
+		// The SDSC-shaped template: registration spans several phases, the rest
+		// occupy one each, voting is driven by hand.
+		template := []AdvanceRow{
+			{Capability: Register, OpensPhase: pos(0), ClosesPhase: pos(3)},
+			{Capability: SubmitProposal, OpensPhase: pos(1), ClosesPhase: pos(2)},
+			{Capability: SubmitProject, OpensPhase: pos(3), ClosesPhase: pos(4)},
+			{Capability: ViewResults, OpensPhase: pos(4), ClosesPhase: nil},
+			{Capability: Vote, OpensPhase: nil, ClosesPhase: nil},
+		}
+
+		It("opens a capability once its phase is reached", func() {
+			Expect(Advance(template, 1)[SubmitProposal]).To(BeTrue())
+		})
+
+		It("keeps a capability closed before its phase", func() {
+			Expect(Advance(template, 0)[SubmitProposal]).To(BeFalse())
+		})
+
+		It("closes a capability once its closing phase is reached", func() {
+			Expect(Advance(template, 2)[SubmitProposal]).To(BeFalse())
+		})
+
+		It("keeps a spanning capability open across intermediate phases", func() {
+			// Registration runs from phase 0 to 3, which a single phase link
+			// could not express.
+			for _, target := range []int{0, 1, 2} {
+				Expect(Advance(template, target)[Register]).
+					To(BeTrue(), "register should be open at phase %d", target)
+			}
+			Expect(Advance(template, 3)[Register]).To(BeFalse())
+		})
+
+		It("keeps an open-ended capability open once reached", func() {
+			Expect(Advance(template, 4)[ViewResults]).To(BeTrue())
+			Expect(Advance(template, 99)[ViewResults]).To(BeTrue())
+		})
+
+		It("omits manually driven capabilities so they are left untouched", func() {
+			// The property that protects voting from being closed by advancing.
+			for _, target := range []int{0, 1, 2, 3, 4} {
+				_, present := Advance(template, target)[Vote]
+				Expect(present).To(BeFalse(), "vote must not be decided at phase %d", target)
+			}
+		})
+
+		It("is idempotent for the same target", func() {
+			Expect(Advance(template, 2)).To(Equal(Advance(template, 2)))
+		})
+
+		It("restores the earlier flags when advancing backwards", func() {
+			forward := Advance(template, 1)
+			Expect(Advance(template, 3)).NotTo(Equal(forward))
+			Expect(Advance(template, 1)).To(Equal(forward))
+		})
+
+		It("returns an empty result when nothing is scheduled", func() {
+			rows := []AdvanceRow{{Capability: Vote, OpensPhase: nil, ClosesPhase: nil}}
+
+			Expect(Advance(rows, 0)).To(BeEmpty())
+		})
+
+		It("closes a capability whose window is inverted", func() {
+			// An organizer can set closes before opens; it must resolve to one
+			// answer rather than panicking or flapping.
+			rows := []AdvanceRow{
+				{Capability: Register, OpensPhase: pos(3), ClosesPhase: pos(1)},
+			}
+
+			for _, target := range []int{0, 1, 2, 3, 4} {
+				Expect(Advance(rows, target)[Register]).
+					To(BeFalse(), "should stay closed at phase %d", target)
+			}
+		})
+	})
+
 	Describe("Allowed", func() {
 		It("allows an open capability", func() {
 			Expect(Resolve([]Row{row(Register, true)}, now).Allowed(Register)).To(BeTrue())

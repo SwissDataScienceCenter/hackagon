@@ -42,6 +42,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `visibility` | enum(public, private) | yes | no | no | no | Controls whether non-participants can discover this hackathon. |
 | `description` | string | no | no | no | no | Detailed description of the hackathon, supports rich text. |
 | `logo` | string | no | no | no | no | URL or path to the hackathon logo image. |
+| `current_phase_id` | uuid.UUID | no | no | no | no | The phase an organizer has declared current. Nil means fall back to deriving it from phase dates, which is right before the event but wrong during one, where the schedule always slips. |
 
 ### Relationships
 
@@ -53,6 +54,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `capabilities` | Capability | O2M | no | no | Which member-facing actions are currently open. |
+| `current_phase` | Phase | M2O | yes | no | Set by AdvancePhase; SET NULL so deleting a phase does not orphan it. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -136,6 +138,7 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 | `page` | Page | O2O | no | no | Content page linked to this phase. |
 | `opens_capabilities` | Capability | O2M | no | no | Capabilities expected to open when this phase starts. |
 | `closes_capabilities` | Capability | O2M | no | no | Capabilities expected to close when this phase starts. |
+| `current_of` | Hackathon | O2M | no | no | The hackathon currently sitting in this phase, if an organizer has advanced to it. At most one in practice, since a phase belongs to exactly one hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this phase. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this phase. |
 

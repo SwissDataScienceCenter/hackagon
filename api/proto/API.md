@@ -60,6 +60,12 @@
 - [hackathon/messages/hackathon_svc/add_owner_request.proto](#hackathon_messages_hackathon_svc_add_owner_request-proto)
     - [AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest)
   
+- [hackathon/messages/hackathon_svc/advance_phase_request.proto](#hackathon_messages_hackathon_svc_advance_phase_request-proto)
+    - [AdvancePhaseRequest](#hackathon-messages-hackathon_svc-AdvancePhaseRequest)
+  
+- [hackathon/messages/hackathon_svc/advance_phase_response.proto](#hackathon_messages_hackathon_svc_advance_phase_response-proto)
+    - [AdvancePhaseResponse](#hackathon-messages-hackathon_svc-AdvancePhaseResponse)
+  
 - [hackathon/messages/hackathon_svc/add_owner_response.proto](#hackathon_messages_hackathon_svc_add_owner_response-proto)
     - [AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse)
   
@@ -906,6 +912,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | capabilities | [CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | Field 19 is deliberately skipped: `HackathonSettings settings = 19` is taken by feat/vote-service. Keep it free so the two branches merge cleanly.
 
 Computed server-side from the stored capability rows; not persisted as a whole. Populated on Get responses only. Once VoteService lands this becomes caller-dependent (jury vs participant), so it must not be cached across users. |
+| current_phase_id | [string](#string) | optional | The phase an organizer declared current via AdvancePhase. Absent means clients should derive it from phase dates instead — correct before an event, wrong during one, where the schedule slips. |
 
 
 
@@ -1087,6 +1094,70 @@ Computed server-side from the stored capability rows; not persisted as a whole. 
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
 | user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_advance_phase_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/advance_phase_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-AdvancePhaseRequest"></a>
+
+### AdvancePhaseRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| phase_id | [string](#string) |  | The phase the hackathon is now in. Must belong to this hackathon. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_advance_phase_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/advance_phase_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-AdvancePhaseResponse"></a>
+
+### AdvancePhaseResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| current_phase_id | [string](#string) |  |  |
+| capabilities | [hackathon.entities.CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | Every capability after the move, so the caller can show what changed rather than re-fetching the hackathon. |
 
 
 
@@ -1719,6 +1790,7 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 | Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
 | EditCapability | [messages.hackathon_svc.EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest) | [messages.hackathon_svc.EditCapabilityResponse](#hackathon-messages-hackathon_svc-EditCapabilityResponse) |  |
+| AdvancePhase | [messages.hackathon_svc.AdvancePhaseRequest](#hackathon-messages-hackathon_svc-AdvancePhaseRequest) | [messages.hackathon_svc.AdvancePhaseResponse](#hackathon-messages-hackathon_svc-AdvancePhaseResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |

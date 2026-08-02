@@ -3,6 +3,8 @@ syntax = "proto3";
 package hackathon;
 
 import "hackathon/messages/hackathon_svc/add_owner_request.proto";
+import "hackathon/messages/hackathon_svc/advance_phase_request.proto";
+import "hackathon/messages/hackathon_svc/advance_phase_response.proto";
 import "hackathon/messages/hackathon_svc/add_owner_response.proto";
 import "hackathon/messages/hackathon_svc/approve_participant_request.proto";
 import "hackathon/messages/hackathon_svc/approve_participant_response.proto";
@@ -31,6 +33,7 @@ service HackathonService {
   rpc Create(hackathon.messages.hackathon_svc.CreateRequest) returns (hackathon.messages.hackathon_svc.CreateResponse);
   rpc Edit(hackathon.messages.hackathon_svc.EditRequest) returns (hackathon.messages.hackathon_svc.EditResponse);
   rpc EditCapability(hackathon.messages.hackathon_svc.EditCapabilityRequest) returns (hackathon.messages.hackathon_svc.EditCapabilityResponse);
+  rpc AdvancePhase(hackathon.messages.hackathon_svc.AdvancePhaseRequest) returns (hackathon.messages.hackathon_svc.AdvancePhaseResponse);
   rpc Join(hackathon.messages.hackathon_svc.JoinRequest) returns (hackathon.messages.hackathon_svc.JoinResponse);
   rpc ApproveParticipant(hackathon.messages.hackathon_svc.ApproveParticipantRequest) returns (hackathon.messages.hackathon_svc.ApproveParticipantResponse);
   rpc RemoveParticipant(hackathon.messages.hackathon_svc.RemoveParticipantRequest) returns (hackathon.messages.hackathon_svc.RemoveParticipantResponse);

@@ -56,6 +56,12 @@ func (Phase) Edges() []ent.Edge {
 			Comment("Capabilities expected to open when this phase starts."),
 		edge.To("closes_capabilities", Capability.Type).
 			Comment("Capabilities expected to close when this phase starts."),
+		edge.To("current_of", Hackathon.Type).
+			Comment(
+				"The hackathon currently sitting in this phase, if an organizer has " +
+					"advanced to it. At most one in practice, since a phase belongs to " +
+					"exactly one hackathon.",
+			),
 		edge.From("creator", User.Type).
 			Ref("created_phases").Unique().Required().Immutable().
 			Comment("The user who created this phase."),

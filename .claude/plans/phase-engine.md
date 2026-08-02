@@ -367,10 +367,22 @@ Timeline say what each phase unlocks.
 `vote` is deliberately left unlinked in the seed: it opens abruptly, so it stays
 a manual toggle and reports no countdown.
 
-**v2b-2 — the advance action (organizers).**
-Add `current_phase` on `Hackathon` and the `AdvancePhase` RPC — the "we are in
-Judging now" control, one transactional bulk write over the capability rows.
-Turns six clicks at the busiest moment of an event into one.
+**v2b-2 — the advance action (organizers). Backend DONE.**
+`current_phase_id` on `Hackathon` and the `AdvancePhase` RPC — one transactional
+bulk write over the capability rows, turning six clicks at the busiest moment of
+an event into one. `enabled` stays the authoritative gate; advancing writes those
+flags rather than adding a second source of truth.
+
+Implementing this surfaced a real interaction bug with v2b-1: once an organizer
+advances, comparing *dates* to decide `COMING` contradicts them — a phase whose
+published date is still in the future would tell members "opens Friday" about
+something the organizer had already closed. So `COMING` is now decided by phase
+**position** whenever `current_phase_id` is set, and by dates only when it is not.
+That is the same principle as the field itself: the organizer's declaration
+outranks a schedule that has stopped matching reality.
+
+Still to do: the organizer UI (a phase picker calling `AdvancePhase`, showing
+which capabilities differ from what the target phase implies).
 
 **v3 — close the loop (optional, and possibly never).**
 A scheduled job advances phases automatically when their `starts_at` passes —

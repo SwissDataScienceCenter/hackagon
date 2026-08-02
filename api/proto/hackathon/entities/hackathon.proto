@@ -53,4 +53,8 @@ message Hackathon {
   // whole. Populated on Get responses only. Once VoteService lands this becomes
   // caller-dependent (jury vs participant), so it must not be cached across users.
   repeated CapabilityStatus capabilities = 20;
+  // The phase an organizer declared current via AdvancePhase. Absent means
+  // clients should derive it from phase dates instead — correct before an event,
+  // wrong during one, where the schedule slips.
+  optional string current_phase_id = 21;
 }

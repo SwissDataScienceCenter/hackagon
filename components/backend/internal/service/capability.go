@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -111,17 +112,55 @@ func capabilityToEnt(c capability.Capability) (entcapability.Capability, bool) {
 	return ec, true
 }
 
+// capabilityClock is what a stored row needs to become a resolvable one: the
+// hackathon's phase order, and where the organizer says it currently is.
+//
+// The zero value means "no manual advance", which falls back to comparing dates.
+// That is the right default and the right choice for enforcement, where COMING
+// and CLOSED are both blocked so the clock cannot change the outcome.
+type capabilityClock struct {
+	order        map[uuid.UUID]int
+	currentPhase *int
+}
+
+func newCapabilityClock(
+	order map[uuid.UUID]int,
+	currentPhaseID *uuid.UUID,
+) capabilityClock {
+	clock := capabilityClock{order: order, currentPhase: nil}
+	if currentPhaseID != nil {
+		if pos, ok := order[*currentPhaseID]; ok {
+			clock.currentPhase = &pos
+		}
+	}
+
+	return clock
+}
+
+func (c capabilityClock) positionOf(phase *ent.Phase) *int {
+	if phase == nil || c.order == nil {
+		return nil
+	}
+	if pos, ok := c.order[phase.ID]; ok {
+		return &pos
+	}
+
+	return nil
+}
+
 // capabilityRowFromEnt reduces a stored row to what the resolver needs.
 //
 // Requires `.WithOpensPhase()` / `.WithClosesPhase()`; an unloaded edge is
 // indistinguishable from an unlinked one, which would silently downgrade a
 // COMING capability to CLOSED.
-func capabilityRowFromEnt(r *ent.Capability) capability.Row {
+func capabilityRowFromEnt(r *ent.Capability, clock capabilityClock) capability.Row {
 	row := capability.Row{
-		Capability: capability.Capability(r.Capability),
-		Enabled:    r.Enabled,
-		OpensAt:    nil,
-		ClosesAt:   nil,
+		Capability:   capability.Capability(r.Capability),
+		Enabled:      r.Enabled,
+		OpensAt:      nil,
+		ClosesAt:     nil,
+		OpensPhase:   clock.positionOf(r.Edges.OpensPhase),
+		CurrentPhase: clock.currentPhase,
 	}
 	if p := r.Edges.OpensPhase; p != nil {
 		row.OpensAt = p.StartsAt
@@ -134,10 +173,10 @@ func capabilityRowFromEnt(r *ent.Capability) capability.Row {
 }
 
 // capabilityRows reduces stored rows to what the resolver needs.
-func capabilityRows(rows []*ent.Capability) []capability.Row {
+func capabilityRows(rows []*ent.Capability, clock capabilityClock) []capability.Row {
 	out := make([]capability.Row, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, capabilityRowFromEnt(r))
+		out = append(out, capabilityRowFromEnt(r, clock))
 	}
 
 	return out
@@ -147,8 +186,12 @@ func capabilityRows(rows []*ent.Capability) []capability.Row {
 //
 // Requires `.WithModifier()`, `.WithOpensPhase()` and `.WithClosesPhase()`. A
 // missing modifier is tolerated because seeded and backfilled rows have none.
-func capabilityStatusFromEnt(row *ent.Capability, now time.Time) *hackEnts.CapabilityStatus {
-	r := capabilityRowFromEnt(row)
+func capabilityStatusFromEnt(
+	row *ent.Capability,
+	clock capabilityClock,
+	now time.Time,
+) *hackEnts.CapabilityStatus {
+	r := capabilityRowFromEnt(row, clock)
 
 	var modifierID *string
 	if row.Edges.Modifier != nil {
@@ -191,6 +234,7 @@ func optionalTimestamp(t *time.Time) *timestamppb.Timestamp {
 // the full set means clients never have to know the vocabulary themselves.
 func capabilityStatusesFromEnt(
 	rows []*ent.Capability,
+	clock capabilityClock,
 	now time.Time,
 ) []*hackEnts.CapabilityStatus {
 	byCapability := make(map[capability.Capability]*ent.Capability, len(rows))
@@ -216,7 +260,7 @@ func capabilityStatusesFromEnt(
 
 			continue
 		}
-		out = append(out, capabilityStatusFromEnt(row, now))
+		out = append(out, capabilityStatusFromEnt(row, clock, now))
 	}
 
 	return out
@@ -270,6 +314,7 @@ func loadCapabilityStates(
 	ctx context.Context,
 	db *ent.Client,
 	hackathonID uuid.UUID,
+	clock capabilityClock,
 	now time.Time,
 ) (capability.States, error) {
 	rows, err := db.Capability.Query().
@@ -283,7 +328,87 @@ func loadCapabilityStates(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	return capability.Resolve(capabilityRows(rows), now), nil
+	return capability.Resolve(capabilityRows(rows, clock), now), nil
+}
+
+// phaseOrderFrom maps each phase to its position in the timeline.
+//
+// Sorted by starts_at with the id as a tiebreaker, so two phases sharing a start
+// still get a stable order — advancing must not depend on which row the database
+// happened to return first. Undated phases sort last, matching Postgres' NULLS
+// LAST default for ascending order so the query and slice forms agree.
+func phaseOrderFrom(phases []*ent.Phase) map[uuid.UUID]int {
+	sorted := make([]*ent.Phase, len(phases))
+	copy(sorted, phases)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		a, b := sorted[i], sorted[j]
+		switch {
+		case a.StartsAt == nil && b.StartsAt == nil:
+			return a.ID.String() < b.ID.String()
+		case a.StartsAt == nil:
+			return false
+		case b.StartsAt == nil:
+			return true
+		case a.StartsAt.Equal(*b.StartsAt):
+			return a.ID.String() < b.ID.String()
+		default:
+			return a.StartsAt.Before(*b.StartsAt)
+		}
+	})
+
+	order := make(map[uuid.UUID]int, len(sorted))
+	for i, p := range sorted {
+		order[p.ID] = i
+	}
+
+	return order
+}
+
+// phaseOrder is phaseOrderFrom for callers that have not already loaded phases.
+func phaseOrder(
+	ctx context.Context,
+	db *ent.Client,
+	hackathonID uuid.UUID,
+) (map[uuid.UUID]int, error) {
+	phases, err := db.Phase.Query().
+		Where(entphase.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		All(ctx)
+	if err != nil {
+		slog.Error("query phases for ordering", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return phaseOrderFrom(phases), nil
+}
+
+// advanceRows expresses each capability's schedule as phase positions.
+//
+// A link pointing at a phase missing from `order` is treated as unlinked, so a
+// capability whose phase was deleted concurrently is left untouched rather than
+// being closed by an out-of-range comparison.
+func advanceRows(rows []*ent.Capability, order map[uuid.UUID]int) []capability.AdvanceRow {
+	out := make([]capability.AdvanceRow, 0, len(rows))
+	for _, r := range rows {
+		row := capability.AdvanceRow{
+			Capability:  capability.Capability(r.Capability),
+			OpensPhase:  nil,
+			ClosesPhase: nil,
+		}
+		if p := r.Edges.OpensPhase; p != nil {
+			if pos, ok := order[p.ID]; ok {
+				row.OpensPhase = &pos
+			}
+		}
+		if p := r.Edges.ClosesPhase; p != nil {
+			if pos, ok := order[p.ID]; ok {
+				row.ClosesPhase = &pos
+			}
+		}
+		out = append(out, row)
+	}
+
+	return out
 }
 
 // applyPhaseLink resolves one schedule field of an EditCapability request onto
@@ -370,7 +495,11 @@ func requireCapability(
 		return nil
 	}
 
-	states, err := loadCapabilityStates(ctx, db, hackathonID, time.Now())
+	// No clock: COMING and CLOSED are both blocked, so the manual-advance
+	// distinction cannot change whether this mutation is allowed. Skipping it
+	// keeps every gated mutation off the phase-ordering query.
+	unclocked := capabilityClock{order: nil, currentPhase: nil}
+	states, err := loadCapabilityStates(ctx, db, hackathonID, unclocked, time.Now())
 	if err != nil {
 		return err
 	}

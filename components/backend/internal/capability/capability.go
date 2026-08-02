@@ -74,6 +74,26 @@ type Row struct {
 	// ClosesAt is the start of the linked closes_phase, for display alongside an
 	// open capability. Nil when unlinked.
 	ClosesAt *time.Time
+	// OpensPhase and CurrentPhase are positions in the hackathon's phase order,
+	// set only once an organizer has advanced the hackathon by hand.
+	//
+	// When CurrentPhase is present it replaces the date comparison below. It has
+	// to: an organizer advances precisely when the schedule has stopped matching
+	// reality, and judging by dates then tells members "opens Friday" about
+	// something the organizer has already declared finished.
+	OpensPhase   *int
+	CurrentPhase *int
+}
+
+// pending reports whether the opening moment is still ahead of us.
+func (r Row) pending(now time.Time) bool {
+	if r.CurrentPhase != nil {
+		// Advanced by hand: order decides, and an unscheduled capability is
+		// never "coming" because there is no position to compare.
+		return r.OpensPhase != nil && *r.OpensPhase > *r.CurrentPhase
+	}
+
+	return r.OpensAt != nil && now.Before(*r.OpensAt)
 }
 
 // States is the resolved answer for every capability in the vocabulary.
@@ -89,7 +109,7 @@ func ResolveRow(r Row, now time.Time) State {
 	if r.Enabled {
 		return StateOpen
 	}
-	if r.OpensAt != nil && now.Before(*r.OpensAt) {
+	if r.pending(now) {
 		return StateComing
 	}
 
@@ -120,6 +140,47 @@ func Resolve(rows []Row, now time.Time) States {
 	}
 
 	return states
+}
+
+// AdvanceRow is one capability's schedule expressed as positions in the
+// hackathon's phase order, which is what advancing compares against.
+//
+// Positions rather than dates: advancing is "we are in Judging now", a statement
+// about order, and organizers reach for it precisely when the clock has stopped
+// matching reality.
+type AdvanceRow struct {
+	Capability Capability
+	// OpensPhase is the position of the phase that opens this capability. Nil
+	// means manually driven, and advancing must not touch it.
+	OpensPhase *int
+	// ClosesPhase is the position of the phase at whose start it closes. Nil
+	// means it stays open once opened.
+	ClosesPhase *int
+}
+
+// Advance computes the `enabled` flag each scheduled capability should take when
+// the hackathon moves to the phase at position `target`.
+//
+// Capabilities with no opening phase are absent from the result and must be left
+// exactly as they are — that is what keeps voting, and anything else an
+// organizer drives by hand, immune to advancing.
+//
+// A capability spanning several phases stays open across them, which is why the
+// window is a pair of positions rather than a single one: registration running
+// from "registration opens" to "registration closes" cannot be expressed
+// otherwise.
+func Advance(rows []AdvanceRow, target int) map[Capability]bool {
+	out := make(map[Capability]bool, len(rows))
+	for _, r := range rows {
+		if r.OpensPhase == nil {
+			continue
+		}
+		opened := *r.OpensPhase <= target
+		closed := r.ClosesPhase != nil && target >= *r.ClosesPhase
+		out[r.Capability] = opened && !closed
+	}
+
+	return out
 }
 
 // Allowed reports whether a mutation guarded by c may proceed.
