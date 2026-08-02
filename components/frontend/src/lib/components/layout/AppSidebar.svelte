@@ -12,6 +12,7 @@
     import {
         activeNavId,
         counterpartHref,
+        homeNav,
         manageNav,
         memberNav,
         navModeFromRouteId,
@@ -77,9 +78,10 @@
                 : memberNav(activeSlug, hackathonPages)
             : [],
     );
+    const homeItems = $derived(homeNav());
     const platformItems = $derived(platformNav({ isGlobalAdmin, isHackathonOrganizer }));
     const activeId = $derived(
-        activeNavId($page.url.pathname, [...hackathonItems, ...platformItems]),
+        activeNavId($page.url.pathname, [...homeItems, ...hackathonItems, ...platformItems]),
     );
 
     const viewHref = $derived(
@@ -219,6 +221,14 @@
     {/if}
 
     <nav class="flex-1 overflow-y-auto">
+        <!-- The way back out of a hackathon, so it stays put whether or not one
+             is open. -->
+        <SidebarNavSection
+            items={homeItems}
+            {activeId}
+            collapsed={effectiveCollapsed}
+        />
+
         {#if activeSlug}
             <!-- No section heading: the switcher above names the hackathon and the
                  mode switch names the mode, so a third label is just noise. -->

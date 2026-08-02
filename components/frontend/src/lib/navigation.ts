@@ -11,6 +11,7 @@ import FileText from "lucide-svelte/icons/file-text"
 import Route from "lucide-svelte/icons/route"
 import CalendarDays from "lucide-svelte/icons/calendar-days"
 import Plus from "lucide-svelte/icons/plus"
+import House from "lucide-svelte/icons/house"
 
 /**
  * A single sidebar entry.
@@ -44,6 +45,25 @@ export type NavMode = "view" | "manage"
  */
 export function navModeFromRouteId(routeId: string | null): NavMode {
   return routeId?.includes("/(owner)/") ? "manage" : "view"
+}
+
+/**
+ * The participant's home — the hackathons they are in, and the ones they could
+ * join.
+ *
+ * Always present, including inside a hackathon, so leaving one does not mean
+ * hunting for the logo. Not scoped to a hackathon, hence its own section rather
+ * than a `memberNav` entry.
+ */
+export function homeNav(): NavItem[] {
+  return [
+    {
+      id: "home:dashboard",
+      label: "My Hackathons",
+      icon: House,
+      href: resolve("/(app)/(member)/dashboard"),
+    },
+  ]
 }
 
 /** Participant-facing nav for one hackathon, plus its visible content pages. */
