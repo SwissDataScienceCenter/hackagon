@@ -2,7 +2,7 @@
     import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
-    import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset, isOwnerRole } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
 
     interface HackathonMember {
         role: number;
@@ -111,29 +111,18 @@
                                         {membershipBadgeLabel(mem.isWaiting, mem.role)}
                                     </span>
                                     {#if !mem.isWaiting}
-                                        <div class="flex items-center gap-2">
-                                            {#if isOwnerRole(mem.role)}
-                                                <a
-                                                    href={resolve(`/hackathon/${h.id}/overview`)}
-                                                    class="btn btn-sm preset-outlined-primary-500 no-underline"
-                                                >
-                                                    Enter as Participant
-                                                </a>
-                                                <a
-                                                    href={resolve(`/owner/hackathon/${h.id}`)}
-                                                    class="btn btn-sm preset-filled-primary-500 no-underline"
-                                                >
-                                                    Enter as Owner
-                                                </a>
-                                            {:else}
-                                                <a
-                                                    href={resolve(`/hackathon/${h.id}/overview`)}
-                                                    class="btn btn-sm preset-filled-primary-500 no-underline"
-                                                >
-                                                    Enter
-                                                </a>
-                                            {/if}
-                                        </div>
+                                        <!-- One way in for everyone. Owners switch to
+                                             manage mode from the sidebar once inside,
+                                             so a second button here only asked them to
+                                             choose a mode before they had any context
+                                             to choose with. Their role is still visible
+                                             in the badge beside this. -->
+                                        <a
+                                            href={resolve(`/hackathon/${h.id}/overview`)}
+                                            class="btn btn-sm preset-filled-primary-500 no-underline"
+                                        >
+                                            Enter
+                                        </a>
                                     {/if}
                                 </div>
                             {/if}
