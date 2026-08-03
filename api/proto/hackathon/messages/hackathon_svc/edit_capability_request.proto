@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+import "hackathon/entities/capability.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+message EditCapabilityRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  // Identifies the row, so it is required rather than optional — unlike the
+  // mutable fields of the other Edit requests.
+  hackathon.entities.Capability capability = 2 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+  optional bool enabled = 3;
+
+  // Schedule links, for display only — setting these never opens or closes
+  // anything, only `enabled` does.
+  //
+  // Empty string = unlink, non-empty = link to that phase, not set = no change.
+  // Same convention as phase_svc/edit_request.proto's page_id.
+  optional string open_in_phase_id = 4;
+  optional string closed_in_phase_id = 5;
+
+  option (buf.validate.message).cel = {
+    id: "open_in_phase_id_uuid"
+    message: "open_in_phase_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.open_in_phase_id) || this.open_in_phase_id == '' || this.open_in_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
+  option (buf.validate.message).cel = {
+    id: "closed_in_phase_id_uuid"
+    message: "closed_in_phase_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.closed_in_phase_id) || this.closed_in_phase_id == '' || this.closed_in_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
+}

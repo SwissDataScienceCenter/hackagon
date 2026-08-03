@@ -81,6 +81,12 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		l := h.Logo
 		e.Logo = &l
 	}
+	// A plain column on `hackathons`, not an edge, so this is populated on List
+	// as well as Get — no eager load needed.
+	if h.CurrentPhaseID != nil {
+		p := h.CurrentPhaseID.String()
+		e.CurrentPhaseId = &p
+	}
 
 	return e
 }

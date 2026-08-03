@@ -11,6 +11,7 @@ import (
 	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	enttrack "github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -135,6 +136,12 @@ func (s *ProjectService) Propose(
 
 	// Check Project.Propose permission
 	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Propose); err != nil {
+		return nil, err
+	}
+
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer, hackathonID, capability.ProposeProjects,
+	); err != nil {
 		return nil, err
 	}
 
@@ -325,6 +332,12 @@ func (s *ProjectService) SetPreference(
 	}
 
 	hackathonID := project.Edges.Hackathon.ID
+
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer, hackathonID, capability.SetTeamPreferences,
+	); err != nil {
+		return nil, err
+	}
 
 	// Verify user is a participant in the hackathon
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
