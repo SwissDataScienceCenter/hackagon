@@ -21,11 +21,9 @@ enum Capability {
   CAPABILITY_SET_TEAM_PREFERENCES = 3;
   // TeamService.CreateSubmission / FinalizeSubmission
   CAPABILITY_CREATE_PROJECT_SUBMISSIONS = 4;
-  // VoteService.SubmitVote
   CAPABILITY_VOTE = 5;
-  // VoteService.ListVoteResults — the flag doubles as the publish switch, since
-  // results are entered one placement at a time and must not leak partial
-  // standings.
+  // The flag doubles as the publish switch, since results are entered one
+  // placement at a time and must not leak partial standings.
   CAPABILITY_VIEW_RESULTS = 6;
 }
 

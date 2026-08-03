@@ -468,8 +468,8 @@ therefore an enum value plus a row — no schema or message change.
 | CAPABILITY_PROPOSE_PROJECTS | 2 | ProjectService.Propose |
 | CAPABILITY_SET_TEAM_PREFERENCES | 3 | ProjectService.SetPreference |
 | CAPABILITY_CREATE_PROJECT_SUBMISSIONS | 4 | TeamService.CreateSubmission / FinalizeSubmission |
-| CAPABILITY_VOTE | 5 | VoteService.SubmitVote |
-| CAPABILITY_VIEW_RESULTS | 6 | VoteService.ListVoteResults — the flag doubles as the publish switch, since results are entered one placement at a time and must not leak partial standings. |
+| CAPABILITY_VOTE | 5 |  |
+| CAPABILITY_VIEW_RESULTS | 6 | The flag doubles as the publish switch, since results are entered one placement at a time and must not leak partial standings. |
 
 
 
@@ -909,11 +909,11 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | pages | [Page](#hackathon-entities-Page) | repeated |  |
 | phases | [Phase](#hackathon-entities-Phase) | repeated |  |
 | viewer_membership | [HackathonMember](#hackathon-entities-HackathonMember) | optional | Populated in List responses only when participant_id filter is set. Contains the requesting user&#39;s membership in this hackathon (role &#43; is_waiting). |
-| capabilities | [CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | Field 19 is deliberately skipped: `HackathonSettings settings = 19` is taken by feat/vote-service. Keep it free so the two branches merge cleanly.
+| capabilities | [CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | 19 is held for HackathonSettings.
 
 Computed server-side from the stored capability rows; not persisted as a whole. Populated on both Get and List, so a list can gate its own buttons rather than firing a mutation to discover something is closed.
 
-Once VoteService lands this becomes caller-dependent (jury vs participant), so it must not be cached across users. |
+Will become caller-dependent, so clients must not cache it across users. |
 | current_phase_id | [string](#string) | optional | The phase an organizer declared current via AdvancePhase. Absent means clients should derive it from phase dates instead — correct before an event, wrong during one, where the schedule slips. |
 
 
