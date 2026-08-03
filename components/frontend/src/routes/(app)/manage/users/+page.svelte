@@ -18,7 +18,7 @@
             <tbody>
                 {#each data.users as user (user.keycloakId)}
                     <tr class="border-b">
-                        <td class="py-2 pr-4">{user.name}</td>
+                        <td class="py-2 pr-4">{user.displayName}</td>
                         <td class="py-2 pr-4 font-mono text-sm">{user.keycloakId}</td>
                         <td class="py-2">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</td>
                     </tr>
