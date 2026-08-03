@@ -166,8 +166,8 @@
             projectName={myTeam.projectName}
             projectTrack={myTeam.projectTrack}
             projectStatus={myTeam.projectStatus}
-            nextAction="View Team"
-            nextActionHref="/hackathon/{hackathon.id}/teams/{myTeam.id}"
+            submissionStatus={myTeam.submissionStatus}
+            submitProject={data.capabilities.submit_project}
         />
     {:else}
         <div class="card preset-outlined-surface-200-800 p-5">

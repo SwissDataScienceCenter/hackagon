@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
-    import { ArrowRight } from 'lucide-svelte';
+    import { submissionSummary } from '$lib/utils/submissionStatus';
+    import type { CapabilityInfo } from '$lib/utils/capabilities';
 
     let {
         teamName,
@@ -8,17 +8,28 @@
         projectName,
         projectTrack,
         projectStatus,
-        nextAction,
-        nextActionHref,
+        submissionStatus,
+        submitProject,
     }: {
         teamName: string;
         teamMemberCount: number;
         projectName: string;
         projectTrack: string;
         projectStatus: string;
-        nextAction: string;
-        nextActionHref: string;
+        /** SubmissionStatus of the team's current submission; absent if none. */
+        submissionStatus?: number;
+        /** The `submit_project` capability, which decides whether the status
+         *  above is a to-do, a deadline or a record. */
+        submitProject: CapabilityInfo;
     } = $props();
+
+    const submission = $derived(submissionSummary(submissionStatus, submitProject));
+
+    const TONE_CLASS = {
+        success: 'text-success-700-300',
+        warning: 'text-warning-700-300',
+        muted: 'text-surface-500',
+    };
 </script>
 
 <div class="card preset-outlined-surface-200-800 p-5">
@@ -45,16 +56,18 @@
             <span class="text-xs text-surface-500">Status: {projectStatus}</span>
         </div>
 
-        <div
-            class="flex flex-col gap-2 border-t border-surface-200-800 pt-4 md:min-w-[10rem] md:items-end
-                   md:border-0 md:pt-0"
-        >
-            <span class="text-xs font-bold tracking-widest text-surface-500">NEXT STEP</span>
-            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-            <a href={resolve(nextActionHref as any)} class="btn btn-sm w-full preset-filled-primary-500 no-underline md:w-auto">
-                <ArrowRight class="h-3.5 w-3.5" />
-                {nextAction}
-            </a>
+        <!-- Where NEXT STEP used to be. It was hardcoded to "View Team" while the
+             "What now" card above computed the real one from capabilities, so the
+             page could recommend two different things at once. One CTA, at the
+             top; this slot now answers the question a member actually has here. -->
+        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span class="text-xs font-bold tracking-widest text-surface-500">SUBMISSION</span>
+            <span class="text-sm font-semibold {TONE_CLASS[submission.tone]}">
+                {submission.label}
+            </span>
+            {#if submission.detail}
+                <span class="text-xs text-surface-500">{submission.detail}</span>
+            {/if}
         </div>
     </div>
 </div>
