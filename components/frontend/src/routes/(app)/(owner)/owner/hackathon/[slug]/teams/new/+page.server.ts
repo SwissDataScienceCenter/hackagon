@@ -42,7 +42,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to create teams" })
+        return fail(403, {
+          message: "You don't have permission to create teams",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Project not found" })

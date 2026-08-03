@@ -16,10 +16,15 @@ export const actions: Actions = {
     if (!userId) return fail(400, { message: "Missing user id" })
 
     try {
-      await hackathon.approveParticipant({ hackathonId: event.params.slug, userId })
+      await hackathon.approveParticipant({
+        hackathonId: event.params.slug,
+        userId,
+      })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to approve participants" })
+        return fail(403, {
+          message: "You don't have permission to approve participants",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Participant not found" })
@@ -34,10 +39,15 @@ export const actions: Actions = {
     if (!userId) return fail(400, { message: "Missing user id" })
 
     try {
-      await hackathon.removeParticipant({ hackathonId: event.params.slug, userId })
+      await hackathon.removeParticipant({
+        hackathonId: event.params.slug,
+        userId,
+      })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to remove participants" })
+        return fail(403, {
+          message: "You don't have permission to remove participants",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Participant not found" })

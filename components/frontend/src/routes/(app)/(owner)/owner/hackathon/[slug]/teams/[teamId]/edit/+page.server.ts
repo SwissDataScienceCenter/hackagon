@@ -52,7 +52,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to edit this team" })
+        return fail(403, {
+          message: "You don't have permission to edit this team",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Team not found" })
@@ -70,7 +72,9 @@ export const actions: Actions = {
       await team.delete({ id: event.params.teamId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to delete this team" })
+        return fail(403, {
+          message: "You don't have permission to delete this team",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Team not found" })

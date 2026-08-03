@@ -92,7 +92,9 @@ export const actions: Actions = {
       await phase.delete({ phaseId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to delete this phase" })
+        return fail(403, {
+          message: "You don't have permission to delete this phase",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Phase not found" })

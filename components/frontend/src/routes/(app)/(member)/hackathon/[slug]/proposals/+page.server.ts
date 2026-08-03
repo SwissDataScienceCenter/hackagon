@@ -1,6 +1,9 @@
 import type { PageServerLoad } from "./$types"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
-import { projectStatusBadgePreset, projectStatusLabel } from "$lib/utils/projectStatus"
+import {
+  projectStatusBadgePreset,
+  projectStatusLabel,
+} from "$lib/utils/projectStatus"
 
 interface ProposalCardData {
   num: number

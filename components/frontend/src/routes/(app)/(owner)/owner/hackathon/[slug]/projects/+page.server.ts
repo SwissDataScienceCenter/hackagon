@@ -65,7 +65,9 @@ export const actions: Actions = {
       await project.approve({ projectId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to approve this project" })
+        return fail(403, {
+          message: "You don't have permission to approve this project",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Project not found" })
@@ -89,7 +91,9 @@ export const actions: Actions = {
       await project.disapprove({ projectId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to update this project" })
+        return fail(403, {
+          message: "You don't have permission to update this project",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Project not found" })

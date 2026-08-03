@@ -25,7 +25,9 @@ export const actions: Actions = {
     const hasStartsAt = typeof startsAt === "string" && startsAt !== ""
     const hasEndsAt = typeof endsAt === "string" && endsAt !== ""
     if (hasStartsAt !== hasEndsAt) {
-      return fail(400, { message: "Both starts at and ends at must be set together" })
+      return fail(400, {
+        message: "Both starts at and ends at must be set together",
+      })
     }
 
     let hackathonId: string
@@ -33,8 +35,13 @@ export const actions: Actions = {
       const result = await hackathon.create({
         name,
         visibility:
-          visibility === "public" ? Visibility.VISIBILITY_PUBLIC : Visibility.VISIBILITY_PRIVATE,
-        description: typeof description === "string" && description.trim() !== "" ? description : undefined,
+          visibility === "public"
+            ? Visibility.VISIBILITY_PUBLIC
+            : Visibility.VISIBILITY_PRIVATE,
+        description:
+          typeof description === "string" && description.trim() !== ""
+            ? description
+            : undefined,
         startsAt: hasStartsAt ? new Date(startsAt) : undefined,
         endsAt: hasEndsAt ? new Date(endsAt as string) : undefined,
         logo: typeof logo === "string" && logo.trim() !== "" ? logo : undefined,
@@ -45,7 +52,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to create a hackathon" })
+        return fail(403, {
+          message: "You don't have permission to create a hackathon",
+        })
       }
       throw e
     }

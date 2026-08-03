@@ -6,7 +6,9 @@ export const load: PageServerLoad = async (event) => {
   const { team } = requireGrpc(event.locals.grpc)
 
   const result = await team.list({ hackathonId: event.params.slug })
-  const projectTitleById = new Map(hackathon.projects.map((p) => [p.id, p.title]))
+  const projectTitleById = new Map(
+    hackathon.projects.map((p) => [p.id, p.title]),
+  )
 
   const teams = result.teams.map((t, i) => {
     const projectTitle = projectTitleById.get(t.projectId)
@@ -14,7 +16,8 @@ export const load: PageServerLoad = async (event) => {
       num: i + 1,
       id: t.id,
       title: t.name,
-      projectDescription: t.description || `Project: ${projectTitle ?? "unknown"}`,
+      projectDescription:
+        t.description || `Project: ${projectTitle ?? "unknown"}`,
       members: t.members.map((m) => ({ name: m.displayName || m.username })),
     }
   })

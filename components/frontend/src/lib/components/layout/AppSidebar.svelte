@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
+    import { afterNavigate } from '$app/navigation';
     import { resolve } from '$app/paths';
     import Menu from 'lucide-svelte/icons/menu';
     import X from 'lucide-svelte/icons/x';
@@ -115,8 +116,9 @@
         return () => mq.removeEventListener('change', handler);
     });
 
-    $effect(() => {
-        $page.url.pathname;
+    // Any navigation closes the mobile drawer — it overlays the page, so leaving
+    // it open over the destination would hide what the user just navigated to.
+    afterNavigate(() => {
         mobileOpen = false;
     });
 

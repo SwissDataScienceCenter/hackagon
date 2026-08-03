@@ -29,7 +29,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to create tracks" })
+        return fail(403, {
+          message: "You don't have permission to create tracks",
+        })
       }
       throw e
     }

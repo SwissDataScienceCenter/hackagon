@@ -118,10 +118,15 @@ describe("isAvailable", () => {
     ["coming", false, true],
   ]
 
-  it.each(cases)("%s → available %s, blocked %s", (state, available, blocked) => {
-    expect(isAvailable(state)).toBe(available)
-    expect(lockReason("submit_proposal", { state }) !== undefined).toBe(blocked)
-  })
+  it.each(cases)(
+    "%s → available %s, blocked %s",
+    (state, available, blocked) => {
+      expect(isAvailable(state)).toBe(available)
+      expect(lockReason("submit_proposal", { state }) !== undefined).toBe(
+        blocked,
+      )
+    },
+  )
 
   it("keeps an ungoverned capability usable", () => {
     // The regression this guards: gating a CTA on `state === "open"` would hide
@@ -162,7 +167,9 @@ describe("lockReason", () => {
   it("returns nothing for an available capability", () => {
     // So a caller cannot render a lock reason beside a working button.
     expect(lockReason("submit_proposal", { state: "open" })).toBeUndefined()
-    expect(lockReason("submit_proposal", { state: "ungoverned" })).toBeUndefined()
+    expect(
+      lockReason("submit_proposal", { state: "ungoverned" }),
+    ).toBeUndefined()
   })
 })
 
@@ -238,7 +245,9 @@ describe("deadlineLabel", () => {
     ])
     const deadline = nextDeadline(caps, NOW)!
 
-    expect(deadlineLabel(deadline, NOW)).toMatch(/^Submissions due \d{1,2}:\d{2}/)
+    expect(deadlineLabel(deadline, NOW)).toMatch(
+      /^Submissions due \d{1,2}:\d{2}/,
+    )
   })
 })
 
@@ -343,9 +352,9 @@ describe("capabilitiesByPhase", () => {
     const byPhase = capabilitiesByPhase(caps)
 
     expect(byPhase.size).toBe(1)
-    expect([...byPhase.values()].flatMap((p) => [...p.opens, ...p.closes])).not.toContain(
-      "vote",
-    )
+    expect(
+      [...byPhase.values()].flatMap((p) => [...p.opens, ...p.closes]),
+    ).not.toContain("vote")
   })
 
   it("is empty when nothing is scheduled", () => {

@@ -22,11 +22,16 @@ export const load: PageServerLoad = async (event) => {
     id: t.id,
     name: t.name,
     projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-    members: t.members.map((m) => ({ id: m.id, name: m.displayName || m.username })),
+    members: t.members.map((m) => ({
+      id: m.id,
+      name: m.displayName || m.username,
+    })),
   }))
 
   // A participant belongs to at most one team, so anyone not on a team is in the pool.
-  const assignedIds = new Set(result.teams.flatMap((t) => t.members.map((m) => m.id)))
+  const assignedIds = new Set(
+    result.teams.flatMap((t) => t.members.map((m) => m.id)),
+  )
   const unassigned = confirmedParticipants.filter((p) => !assignedIds.has(p.id))
 
   return { hackathonId: event.params.slug, teams, unassigned }
@@ -46,7 +51,9 @@ export const actions: Actions = {
       await team.delete({ id: teamId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to delete this team" })
+        return fail(403, {
+          message: "You don't have permission to delete this team",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Team not found" })
@@ -87,7 +94,9 @@ export const actions: Actions = {
       }
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to manage these teams" })
+        return fail(403, {
+          message: "You don't have permission to manage these teams",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Team or user not found" })

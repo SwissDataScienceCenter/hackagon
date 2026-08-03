@@ -23,6 +23,10 @@
         class="grid gap-1 rounded-lg bg-surface-100-900 p-1
                {collapsed ? 'grid-cols-1' : 'grid-cols-2'}"
     >
+        <!-- eslint-disable svelte/no-navigation-without-resolve -- both hrefs come
+             from counterpartHref(), which returns nav entries built with resolve()
+             in $lib/navigation; the rule only recognizes a literal resolve() call
+             in the attribute itself. -->
         <a
             href={viewHref}
             aria-current={mode === 'view' ? 'page' : undefined}
@@ -45,5 +49,6 @@
                 <span>Manage</span>
             {/if}
         </a>
+        <!-- eslint-enable svelte/no-navigation-without-resolve -->
     </div>
 </div>

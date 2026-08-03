@@ -25,7 +25,9 @@ export const actions: Actions = {
       await track.delete({ trackId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to delete this track" })
+        return fail(403, {
+          message: "You don't have permission to delete this track",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Track not found" })

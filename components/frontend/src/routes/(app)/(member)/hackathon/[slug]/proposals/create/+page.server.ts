@@ -40,7 +40,8 @@ export const actions: Actions = {
         hackathonId: event.params.slug,
         title,
         description,
-        trackId: typeof trackId === "string" && trackId !== "" ? trackId : undefined,
+        trackId:
+          typeof trackId === "string" && trackId !== "" ? trackId : undefined,
       })
       projectId = result.projectId
     } catch (e) {
@@ -48,7 +49,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to propose a project" })
+        return fail(403, {
+          message: "You don't have permission to propose a project",
+        })
       }
       throw e
     }

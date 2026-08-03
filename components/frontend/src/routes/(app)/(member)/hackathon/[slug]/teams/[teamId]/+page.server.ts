@@ -24,7 +24,9 @@ export const load: PageServerLoad = async (event) => {
     error(404, "Team not found")
   }
 
-  const project = hackathon.projects.find((p) => p.id === result.team!.projectId)
+  const project = hackathon.projects.find(
+    (p) => p.id === result.team!.projectId,
+  )
 
   return { slug: event.params.slug, team: result.team, project }
 }

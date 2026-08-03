@@ -48,7 +48,9 @@ export const actions: Actions = {
     const hasStartsAt = typeof startsAt === "string" && startsAt !== ""
     const hasEndsAt = typeof endsAt === "string" && endsAt !== ""
     if (hasStartsAt !== hasEndsAt) {
-      return fail(400, { message: "Both starts at and ends at must be set together" })
+      return fail(400, {
+        message: "Both starts at and ends at must be set together",
+      })
     }
 
     try {
@@ -56,7 +58,9 @@ export const actions: Actions = {
         hackathonId: event.params.slug,
         name,
         visibility:
-          visibility === "public" ? Visibility.VISIBILITY_PUBLIC : Visibility.VISIBILITY_PRIVATE,
+          visibility === "public"
+            ? Visibility.VISIBILITY_PUBLIC
+            : Visibility.VISIBILITY_PRIVATE,
         description: typeof description === "string" ? description : undefined,
         startsAt: hasStartsAt ? new Date(startsAt) : undefined,
         endsAt: hasEndsAt ? new Date(endsAt as string) : undefined,
@@ -67,7 +71,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to edit this hackathon" })
+        return fail(403, {
+          message: "You don't have permission to edit this hackathon",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Hackathon not found" })

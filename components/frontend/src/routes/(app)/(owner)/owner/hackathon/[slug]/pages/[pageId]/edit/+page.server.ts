@@ -54,7 +54,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to edit this page" })
+        return fail(403, {
+          message: "You don't have permission to edit this page",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Page not found" })
@@ -72,7 +74,9 @@ export const actions: Actions = {
       await page.delete({ pageId: event.params.pageId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to delete this page" })
+        return fail(403, {
+          message: "You don't have permission to delete this page",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Page not found" })

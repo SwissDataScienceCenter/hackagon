@@ -39,7 +39,9 @@ export const load: PageServerLoad = async (event) => {
 
   // Every team the viewer is on, not just the first match — nothing stops a
   // participant from being assigned to more than one team in one hackathon.
-  const myTeams = teams.filter((t) => t.members.some((m) => m.id === platformUserId))
+  const myTeams = teams.filter((t) =>
+    t.members.some((m) => m.id === platformUserId),
+  )
 
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
 

@@ -19,14 +19,18 @@ export const load: PageServerLoad = async (event) => {
   }))
 
   const result = await team.list({ hackathonId: event.params.slug })
-  const myTeam = result.teams.find((t) => t.members.some((m) => m.id === platformUserId))
+  const myTeam = result.teams.find((t) =>
+    t.members.some((m) => m.id === platformUserId),
+  )
 
   if (!myTeam) {
     return { myTeam: null, approvedCount: approved.length, trackCounts }
   }
 
   const project = hackathon.projects.find((p) => p.id === myTeam.projectId)
-  const track = project ? hackathon.tracks.find((t) => t.id === project.trackId) : undefined
+  const track = project
+    ? hackathon.tracks.find((t) => t.id === project.trackId)
+    : undefined
 
   return {
     myTeam: {
@@ -35,7 +39,9 @@ export const load: PageServerLoad = async (event) => {
       memberCount: myTeam.members.length,
       projectName: project?.title ?? "Unknown project",
       projectTrack: track?.name ?? "No track",
-      projectStatus: project ? (projectStatusLabel(project.status) ?? "Unknown") : "Unknown",
+      projectStatus: project
+        ? (projectStatusLabel(project.status) ?? "Unknown")
+        : "Unknown",
     },
     approvedCount: approved.length,
     trackCounts,

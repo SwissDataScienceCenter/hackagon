@@ -48,7 +48,9 @@ export const actions: Actions = {
     const hasStartsAt = typeof startsAt === "string" && startsAt !== ""
     const hasEndsAt = typeof endsAt === "string" && endsAt !== ""
     if (hasStartsAt !== hasEndsAt) {
-      return fail(400, { message: "Both starts at and ends at must be set together" })
+      return fail(400, {
+        message: "Both starts at and ends at must be set together",
+      })
     }
 
     try {
@@ -65,7 +67,9 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to edit this phase" })
+        return fail(403, {
+          message: "You don't have permission to edit this phase",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Phase not found" })
@@ -83,7 +87,9 @@ export const actions: Actions = {
       await phase.delete({ phaseId: event.params.phaseId })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to delete this phase" })
+        return fail(403, {
+          message: "You don't have permission to delete this phase",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Phase not found" })

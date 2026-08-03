@@ -55,22 +55,33 @@ export const actions: Actions = {
         return fail(400, { message: e.details })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "You don't have permission to create pages" })
+        return fail(403, {
+          message: "You don't have permission to create pages",
+        })
       }
       throw e
     }
 
     try {
-      await phase.edit({ phaseId: event.params.phaseId, pageId: created.pageId })
+      await phase.edit({
+        phaseId: event.params.phaseId,
+        pageId: created.pageId,
+      })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { message: `Page created, but linking it failed: ${e.details}` })
+        return fail(400, {
+          message: `Page created, but linking it failed: ${e.details}`,
+        })
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, { message: "Page created, but you don't have permission to link it" })
+        return fail(403, {
+          message: "Page created, but you don't have permission to link it",
+        })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { message: "Page created, but the phase was not found" })
+        return fail(404, {
+          message: "Page created, but the phase was not found",
+        })
       }
       throw e
     }
