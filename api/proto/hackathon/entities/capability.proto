@@ -21,7 +21,7 @@ enum Capability {
   CAPABILITY_SET_TEAM_PREFERENCES = 3;
   // TeamService.CreateSubmission / FinalizeSubmission
   CAPABILITY_CREATE_PROJECT_SUBMISSIONS = 4;
-  // VoteService.SubmitVote — service not implemented yet.
+  // VoteService.SubmitVote
   CAPABILITY_VOTE = 5;
   // VoteService.ListVoteResults — the flag doubles as the publish switch, since
   // results are entered one placement at a time and must not leak partial
@@ -45,15 +45,12 @@ enum CapabilityState {
 message CapabilityStatus {
   Capability capability = 1;
   CapabilityState state = 2;
-  // When the flag was last flipped, and by whom — "who opened voting" is the
-  // first question asked when something goes wrong during a live event.
   google.protobuf.Timestamp modified_at = 3;
   optional string modifier_id = 4;
 
   // The schedule, derived from the linked phases. Display only: `state` is what
   // the server enforces, and these never widen it. Absent when the capability
-  // is manually driven (no linked phase), which is the correct answer for
-  // anything that opens abruptly — a countdown would be a lie.
+  // is manually driven (no linked phase).
   optional google.protobuf.Timestamp opens_at = 5;
   optional google.protobuf.Timestamp closes_at = 6;
   optional string open_in_phase_id = 7;

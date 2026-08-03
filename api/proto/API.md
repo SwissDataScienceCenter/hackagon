@@ -438,9 +438,9 @@
 | ----- | ---- | ----- | ----------- |
 | capability | [Capability](#hackathon-entities-Capability) |  |  |
 | state | [CapabilityState](#hackathon-entities-CapabilityState) |  |  |
-| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | When the flag was last flipped, and by whom — &#34;who opened voting&#34; is the first question asked when something goes wrong during a live event. |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 | modifier_id | [string](#string) | optional |  |
-| opens_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional | The schedule, derived from the linked phases. Display only: `state` is what the server enforces, and these never widen it. Absent when the capability is manually driven (no linked phase), which is the correct answer for anything that opens abruptly — a countdown would be a lie. |
+| opens_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional | The schedule, derived from the linked phases. Display only: `state` is what the server enforces, and these never widen it. Absent when the capability is manually driven (no linked phase). |
 | closes_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | open_in_phase_id | [string](#string) | optional |  |
 | closed_in_phase_id | [string](#string) | optional |  |
@@ -468,7 +468,7 @@ therefore an enum value plus a row — no schema or message change.
 | CAPABILITY_PROPOSE_PROJECTS | 2 | ProjectService.Propose |
 | CAPABILITY_SET_TEAM_PREFERENCES | 3 | ProjectService.SetPreference |
 | CAPABILITY_CREATE_PROJECT_SUBMISSIONS | 4 | TeamService.CreateSubmission / FinalizeSubmission |
-| CAPABILITY_VOTE | 5 | VoteService.SubmitVote — service not implemented yet. |
+| CAPABILITY_VOTE | 5 | VoteService.SubmitVote |
 | CAPABILITY_VIEW_RESULTS | 6 | VoteService.ListVoteResults — the flag doubles as the publish switch, since results are entered one placement at a time and must not leak partial standings. |
 
 
