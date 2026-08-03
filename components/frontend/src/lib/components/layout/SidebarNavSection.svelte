@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ComponentType } from 'svelte';
     import Lock from 'lucide-svelte/icons/lock';
+    import Check from 'lucide-svelte/icons/check';
     import type { NavItem } from '$lib/navigation';
     import { lockReason } from '$lib/utils/capabilities';
 
@@ -30,13 +31,15 @@
          *  no visible label the tooltip is also the link's accessible name, so
          *  three sections owning a Users icon otherwise read identically. */
         titlePrefix?: string;
-        /** What a closed capability means for *this* viewer.
+        /** What a shut capability means for *this* viewer.
          *
-         *  `blocking` — they cannot act, so the row dims.
+         *  `blocking` — they cannot act. The row dims, and a `coming` one stops
+         *  being a link entirely; see the each-block below for why `closed` does
+         *  not.
          *  `advisory` — the capability is shut for participants but the viewer
          *  is not, which is every organizer: `requireCapability` waves through
-         *  anyone who can write the hackathon. Dimming those rows would claim a
-         *  lockout the backend does not enforce. */
+         *  anyone who can write the hackathon. Dimming or disabling those rows
+         *  would claim a lockout the backend does not enforce. */
         gateStyle?: 'blocking' | 'advisory';
     } = $props();
 
@@ -94,13 +97,20 @@
         {@const Icon = item.icon}
         {@const isActive = item.id === activeId}
         {@const reason = reasonFor(item)}
-        {#if item.href}
+        <!-- Only what has not happened yet stops being a link. A phase that is
+             over still has something to show — the proposals that were made, the
+             projects that were submitted — and a member reviewing a finished
+             hackathon must not be locked out of its own record. `coming` has no
+             such record: the page would be empty and the lock is the whole
+             answer.
+
+             `blocking` only. An organizer is never held out by a capability, so
+             their locks are advisory and every manage row stays clickable. -->
+        {@const notYet = gateStyle === 'blocking' && item.gate?.state === 'coming'}
+        {#if item.href && !notYet}
             <!-- eslint-disable svelte/no-navigation-without-resolve -- these hrefs are
                  built with resolve() in $lib/navigation; the rule only recognizes a
                  literal resolve() call in the attribute itself. -->
-            <!-- Still a link when locked, and deliberately so: the action is shut,
-                 the page is not. A member whose submissions closed still needs to
-                 read what they submitted. -->
             <a
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
@@ -114,24 +124,40 @@
                 <Icon class="h-4 w-4 shrink-0" />
                 {#if !collapsed}
                     <span class="truncate">{item.label}</span>
-                    <!-- No date here — the header chip owns the one deadline that
-                         matters, and repeating it on every row makes four dates
-                         compete. The tooltip has it for anyone who asks. -->
+                    <!-- A lock is the wrong word for something that already
+                         happened: nothing is being withheld, the window simply
+                         closed. A check says "done, and still here to read",
+                         which is what a clickable past row is.
+
+                         No date either way — the header chip owns the one
+                         deadline that matters, and repeating it on every row
+                         makes four dates compete. The tooltip has it. -->
                     {#if reason}
-                        <Lock class="ml-auto h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
+                        {@const GateIcon = item.gate?.state === 'coming' ? Lock : Check}
+                        <GateIcon class="ml-auto h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
                     {/if}
                 {/if}
             </a>
             <!-- eslint-enable svelte/no-navigation-without-resolve -->
         {:else}
             <span
-                title="Not available yet"
+                aria-disabled="true"
+                title={notYet ? tooltip(item) : 'Not available yet'}
                 class="flex h-10 cursor-not-allowed items-center gap-2 rounded-lg px-2 text-sm
                        text-surface-500 opacity-50 {collapsed ? 'justify-center' : ''}"
             >
                 <Icon class="h-4 w-4 shrink-0" />
+                <!-- The reason is the whole point of the row, and a non-focusable
+                     span keeps it out of the tab order — so it goes in the
+                     accessible name rather than the tooltip alone. -->
+                {#if notYet}
+                    <span class="sr-only">{reason}</span>
+                {/if}
                 {#if !collapsed}
                     <span class="truncate">{item.label}</span>
+                    {#if notYet}
+                        <Lock class="ml-auto h-3 w-3 shrink-0" aria-hidden="true" />
+                    {/if}
                 {/if}
             </span>
         {/if}
