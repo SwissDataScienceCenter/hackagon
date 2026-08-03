@@ -1,17 +1,12 @@
 <script lang="ts">
-    // The app shell is intentionally identical to (public) for now. It exists as
-    // its own layout so authenticated chrome (sidebar, hackathon switcher) can
-    // land here later without touching the public marketing pages.
-    import NavBar from '$lib/components/layout/NavBar.svelte';
-    import AppFooter from '$lib/components/layout/AppFooter.svelte';
-
-    const { children, data } = $props();
+    // No header/footer in the app shell — authenticated chrome (sidebar,
+    // hackathon switcher) lands in the left column instead. The row layout is
+    // already in place so the sidebar can slot in without reshaping this file.
+    const { children } = $props();
 </script>
 
-<div class="flex min-h-screen flex-col">
-    <NavBar session={data.session ?? null} />
-    <main class="flex-1">
+<div class="flex min-h-screen flex-col md:flex-row">
+    <main class="flex-1 overflow-y-auto">
         {@render children()}
     </main>
-    <AppFooter />
 </div>
