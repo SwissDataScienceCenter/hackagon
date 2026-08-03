@@ -17,22 +17,25 @@ import type {
   Capabilities,
   Capability,
   CapabilityInfo,
+  CapabilityState,
 } from "$lib/utils/capabilities"
 
 /**
  * The capability governing a nav item, resolved for right now.
  *
- * Present only where a capability actually decides something on the page. It
- * annotates the entry; it never removes it — a member whose submissions have
+ * It annotates the entry; it never removes it — a member whose submissions have
  * closed still needs to reach the page to see what they submitted, and hiding
  * the entry reads as a broken app rather than a closed phase.
  *
- * Read it through `lockReason` / `isAvailable`, never by comparing
- * `state === "open"`: an `ungoverned` gate means the server has no opinion and
- * must render exactly as it did before capabilities existed.
+ * A gate being present is a positive statement that the server has an opinion
+ * about this entry. `ungoverned` is therefore excluded from `state` rather than
+ * being a case renderers must remember to skip: the usual trap is writing
+ * `state !== "open"` and locking every hackathon that predates a capability, and
+ * a state that cannot occur cannot be got wrong.
  */
 export interface NavGate extends CapabilityInfo {
   capability: Capability
+  state: Exclude<CapabilityState, "ungoverned">
 }
 
 /**
@@ -48,7 +51,8 @@ export interface NavItem {
   icon: ComponentType
   /** Omit for a "not available yet" stub entry. */
   href?: string
-  /** Absent when the entry is ungated, or when no capability data was passed. */
+  /** Absent when the entry is ungated, when the server has no opinion about it,
+   *  or when no capability data was passed. */
   gate?: NavGate
 }
 
@@ -205,10 +209,15 @@ export function memberNav(
 
   return items.map((item) => {
     const capability = MEMBER_GATES[item.id]
+    if (!capability) return item
 
-    return capability
-      ? { ...item, gate: { capability, ...capabilities[capability] } }
-      : item
+    // Dropped rather than passed through: a hackathon predating this capability
+    // has to look exactly as it did before, and the surest way to guarantee that
+    // is to hand the renderer nothing to misread.
+    const info = capabilities[capability]
+    if (info.state === "ungoverned") return item
+
+    return { ...item, gate: { capability, ...info, state: info.state } }
   })
 }
 

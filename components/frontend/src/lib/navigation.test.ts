@@ -138,9 +138,19 @@ describe("memberNav gates", () => {
     expect(gateOf(items, "member:participants")).toBeUndefined()
   })
 
-  it("reports an unmentioned capability as ungoverned, not closed", () => {
+  // The trap this whole shape exists to prevent: an unmentioned capability means
+  // the server has no opinion, so the entry must look untouched. Omitting the
+  // gate is what makes that unmissable — there is no ungoverned state left for a
+  // renderer to mistake for closed.
+  it("omits the gate for a capability the server did not mention", () => {
     const items = memberNav("h1", [], closedSubmissions)
 
-    expect(gateOf(items, "member:teams")?.state).toBe("ungoverned")
+    expect(gateOf(items, "member:teams")).toBeUndefined()
+  })
+
+  it("omits every gate when the server governs nothing", () => {
+    const items = memberNav("h1", [], readCapabilities([]))
+
+    expect(items.every((i) => i.gate === undefined)).toBe(true)
   })
 })
