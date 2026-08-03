@@ -1,0 +1,42 @@
+{
+  "name": "Hackagon",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspaces/hackagon",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "vscode",
+
+  "features": {
+    // Nix is required: the whole toolchain comes from tools/nix via devenv.
+    "ghcr.io/devcontainers/features/nix:1": {
+      "multiUser": true,
+      "extraNixConfig": "experimental-features = nix-command flakes,sandbox = false"
+    }
+    // Optional — uncomment to build/run containers inside the dev container:
+    // ,"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // Services run inside this container via process-compose (`just start`);
+  // forwarding reaches them even when they bind to 127.0.0.1.
+  "forwardPorts": [3000, 5432, 8081, 8180],
+  "portsAttributes": {
+    "3000": { "label": "backend (gRPC)" },
+    "5432": { "label": "postgres" },
+    "8081": { "label": "frontend" },
+    "8180": { "label": "keycloak" }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "jnoortheen.nix-ide",
+        "mkhl.direnv",
+        "golang.go",
+        "svelte.svelte-vscode",
+        "zxh404.vscode-proto3"
+      ]
+    }
+  }
+}

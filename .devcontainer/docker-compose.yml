@@ -1,0 +1,39 @@
+# Devcontainer compose stack.
+#
+# Every knob is overridable via `.devcontainer/.env` (see `.env.example`);
+# defaults reproduce the standard dev setup. Keycloak, Postgres, backend and
+# frontend all run *inside* the `dev` service via `just start`
+# (process-compose), so there are no sidecar service containers by default —
+# add your own services below if you need external ones.
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${HACKAGON_DEV_BASE_IMAGE:-mcr.microsoft.com/devcontainers/base:ubuntu-24.04}
+        EXTRA_APT_PACKAGES: ${HACKAGON_DEV_EXTRA_APT_PACKAGES:-}
+    init: true
+    command: sleep infinity
+    environment:
+      TZ: ${HACKAGON_DEV_TZ:-UTC}
+    volumes:
+      - ..:/workspaces/hackagon:cached
+      # Persist the Nix store across container rebuilds (devenv downloads a lot).
+      - nix-store:/nix
+      # Keep devenv/direnv state off the (slow) host bind mount.
+      - devenv-state:/workspaces/hackagon/.devenv
+      - direnv-state:/workspaces/hackagon/.direnv
+    # Only reachable from the host for services binding 0.0.0.0 (keycloak);
+    # VS Code / devcontainer CLI port forwarding covers the 127.0.0.1 ones.
+    ports:
+      - "${HACKAGON_BACKEND_PORT:-3000}:3000"
+      - "${HACKAGON_FRONTEND_PORT:-8081}:8081"
+      - "${HACKAGON_KEYCLOAK_PORT:-8180}:8180"
+      - "${HACKAGON_POSTGRES_PORT:-5432}:5432"
+
+volumes:
+  nix-store:
+  devenv-state:
+  direnv-state:

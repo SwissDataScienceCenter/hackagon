@@ -23,8 +23,8 @@ result
 # Cursor CLI config (machine-specific permissions)
 .cursor/cli.json
 
-# Claude local permissions file (machine-specific permissions)
-.claude/settings.local.json
+# Claude Code config (machine-specific)
+.claude/
 
 ## Sensitive Information ======================================================
 # All .env files
