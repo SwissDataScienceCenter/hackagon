@@ -9,7 +9,7 @@ export const load: LayoutServerLoad = async (event) => {
 
   let result
   try {
-    result = await hackathon.get({ hackathonId: event.params.slug })
+    result = await hackathon.get({ hackathonId: event.params.id })
   } catch (e) {
     if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
       error(403, "You are not a confirmed member of this hackathon")

@@ -10,7 +10,7 @@
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-    const slug = $derived($page.params.slug);
+    const hackathonId = $derived($page.params.id);
 
     const tabs = [
         { id: 'overview', label: 'Overview' },
@@ -83,7 +83,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-7xl">
-    <HackathonSubNav {tabs} slug={slug ?? ''} />
+    <HackathonSubNav {tabs} hackathonId={hackathonId ?? ''} />
 </div>
 
 {#if !hideHeroAndTimeline}

@@ -27,7 +27,7 @@
     capacity={100}
     breadcrumbs={[
         { label: 'Hackathons', href: '/' },
-        { label: 'ORD Hackathon 2026', href: '/hackathon/ord-2026' },
+        { label: 'ORD Hackathon 2026', href: `/hackathon/${page.params.id}` },
     ]}
 />
 
@@ -102,7 +102,7 @@
     heading="Ready to participate?"
     subtitle="42 of 100 spots taken. Free participation, registration mandatory."
     buttonLabel="Register Now"
-    buttonHref={resolve(`/hackathon/${page.params.slug}/overview`)}
+    buttonHref={resolve(`/my/hackathon/${page.params.id}/overview`)}
     note="Registration closes 17 Oct 2026"
 />
 </div>
