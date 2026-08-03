@@ -25,6 +25,8 @@ services:
       - ..:/workspaces/hackagon:cached
       # Persist the Nix store across container rebuilds (devenv downloads a lot).
       - nix-store:/nix
+      # Persist the user's home: nix profile links, shell rc, tool caches.
+      - home-vscode:/home/vscode
       # Keep devenv/direnv state off the (slow) host bind mount.
       - devenv-state:/workspaces/hackagon/.devenv
       - direnv-state:/workspaces/hackagon/.direnv
@@ -39,6 +41,8 @@ services:
 volumes:
   # Nix store — the whole toolchain; survives container rebuilds.
   nix-store:
+  # Home dir — nix profile symlinks, .bashrc additions, caches.
+  home-vscode:
   # devenv state — includes the Postgres data directory
   # (.devenv/state/postgres), so the database also survives rebuilds.
   devenv-state:

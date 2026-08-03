@@ -86,6 +86,8 @@ Named volumes keep expensive state out of the (slow, host-bound) workspace
 bind mount and survive container rebuilds:
 
 - `nix-store` (`/nix`) — the Nix store / toolchain.
+- `home-vscode` (`/home/vscode`) — nix profile symlinks, shell rc, caches;
+  makes a manually installed Nix survive container recreation.
 - `devenv-state` (`.devenv`) — devenv state, **including the Postgres data
   directory** (`.devenv/state/postgres`).
 - `direnv-state` (`.direnv`) — direnv cache.
