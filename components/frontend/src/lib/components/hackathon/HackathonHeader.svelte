@@ -1,0 +1,143 @@
+<script lang="ts">
+    import HeroSlim from '$lib/components/hackathon/HeroSlim.svelte';
+    import type { HeroBadge } from '$lib/components/hackathon/HeroSlim.svelte';
+    import CalendarClock from 'lucide-svelte/icons/calendar-clock';
+    import Zap from 'lucide-svelte/icons/zap';
+    import CircleCheck from 'lucide-svelte/icons/circle-check';
+    import Globe from 'lucide-svelte/icons/globe';
+    import Lock from 'lucide-svelte/icons/lock';
+    import Crown from 'lucide-svelte/icons/crown';
+    import User from 'lucide-svelte/icons/user';
+    import Hourglass from 'lucide-svelte/icons/hourglass';
+    import UsersRound from 'lucide-svelte/icons/users-round';
+    import Clock from 'lucide-svelte/icons/clock';
+    import Milestone from 'lucide-svelte/icons/milestone';
+    import {
+        statusLabel,
+        statusBadgePreset,
+        visibilityLabel,
+        visibilityBadgePreset,
+        membershipBadgeLabel,
+        membershipBadgePreset,
+    } from '$lib/utils/hackathonStatus';
+    import { deadlineLabel, nextDeadline, type Capabilities } from '$lib/utils/capabilities';
+    import { activePhase } from '$lib/utils/phase';
+
+    /** The one header every hackathon page wears — member and owner shells alike.
+     *  Both layouts render this so the chips and dates cannot drift apart. */
+    let {
+        hackathon,
+        myMembership = null,
+        myTeams = [],
+        capabilities = null,
+    }: {
+        hackathon: {
+            name: string;
+            startsAt?: Date;
+            endsAt?: Date;
+            status: number;
+            visibility: number;
+            phases?: { id: string; name: string; startsAt?: Date; endsAt?: Date }[];
+            /** Set by AdvancePhase; outranks the dates when present. */
+            currentPhaseId?: string;
+        };
+        myMembership?: { isWaiting: boolean; role: number } | null;
+        myTeams?: { id: string; name: string }[];
+        /** Omitted by the owner shell, which does not load them — no chip then. */
+        capabilities?: Capabilities | null;
+    } = $props();
+
+    function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
+        if (!startsAt) return '';
+        const fmt = (d: Date) =>
+            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (!endsAt) return fmt(startsAt);
+        if (
+            startsAt.getFullYear() === endsAt.getFullYear() &&
+            startsAt.getMonth() === endsAt.getMonth()
+        ) {
+            const month = startsAt.toLocaleDateString('en-US', { month: 'short' });
+            return `${month} ${startsAt.getDate()} – ${endsAt.getDate()}, ${startsAt.getFullYear()}`;
+        }
+        return `${fmt(startsAt)} – ${fmt(endsAt)}`;
+    }
+
+    const dates = $derived(formatDates(hackathon.startsAt, hackathon.endsAt));
+
+    // HackathonStatus: PENDING=1, ACTIVE=2, FINISHED=3
+    const STATUS_ICON = { 1: CalendarClock, 2: Zap, 3: CircleCheck };
+    // Visibility: PUBLIC=1, PRIVATE=2
+    const VISIBILITY_ICON = { 1: Globe, 2: Lock };
+
+    // The soonest thing that changes — a window closing or the next one opening.
+    // Undefined whenever nothing is scheduled, which is the honest answer for a
+    // hackathon whose capabilities are all driven by hand.
+    const deadline = $derived(capabilities ? nextDeadline(capabilities) : undefined);
+
+    // Where the event is, as the organizer sees it — declared phase first, dates
+    // only as a fallback. Both shells pass the full hackathon, so this works in
+    // the owner header too.
+    const phase = $derived(
+        activePhase(hackathon.phases ?? [], hackathon.currentPhaseId),
+    );
+
+    /** Row 1 — what the hackathon is. */
+    const badges = $derived((() => {
+        const chips: HeroBadge[] = [];
+        const sl = statusLabel(hackathon.status);
+        if (sl)
+            chips.push({
+                label: sl,
+                preset: statusBadgePreset(hackathon.status) ?? 'preset-tonal-surface',
+                icon: STATUS_ICON[hackathon.status as keyof typeof STATUS_ICON],
+            });
+        const vl = visibilityLabel(hackathon.visibility);
+        if (vl)
+            chips.push({
+                label: vl,
+                preset: visibilityBadgePreset(hackathon.visibility) ?? 'preset-tonal-surface',
+                icon: VISIBILITY_ICON[hackathon.visibility as keyof typeof VISIBILITY_ICON],
+            });
+        // Between the lifecycle and the deadline: status says which era, this
+        // says where inside it, the deadline says what changes next.
+        if (phase)
+            chips.push({
+                label: phase.active ? phase.phase.name : `Next: ${phase.phase.name}`,
+                preset: 'preset-tonal-secondary',
+                icon: Milestone,
+            });
+        // Last so it reads as the newest information, and warning-toned so it
+        // stands out against the two steady facts beside it.
+        if (deadline)
+            chips.push({
+                label: deadlineLabel(deadline),
+                preset: 'preset-tonal-warning',
+                icon: Clock,
+            });
+        return chips;
+    })());
+
+    /** Row 2 — where the viewer stands in it. */
+    const roleBadges = $derived((() => {
+        const chips: HeroBadge[] = [];
+        if (myMembership) {
+            chips.push({
+                label: membershipBadgeLabel(myMembership.isWaiting, myMembership.role),
+                preset: membershipBadgePreset(myMembership.isWaiting),
+                icon: myMembership.isWaiting
+                    ? Hourglass
+                    : myMembership.role === 1
+                      ? Crown
+                      : User,
+            });
+        }
+        // The viewer's team(s), so "which team am I on" is answered from any
+        // page. Names are user-supplied, hence no keying on them.
+        for (const t of myTeams) {
+            chips.push({ label: t.name, preset: 'preset-tonal-secondary', icon: UsersRound });
+        }
+        return chips;
+    })());
+</script>
+
+<HeroSlim title={hackathon.name} {dates} {badges} {roleBadges} />

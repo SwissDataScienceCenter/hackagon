@@ -13,7 +13,7 @@
            border-surface-200-800 bg-surface-50-950 px-4 sm:px-10 md:px-20"
 >
     {#if session?.user}
-        <a href={resolve('/(participant)/dashboard')} class="flex items-center gap-3 no-underline">
+        <a href={resolve('/(app)/(member)/dashboard')} class="flex items-center gap-3 no-underline">
             <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
             <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
             <span class="text-base font-bold">Hackathons</span>
@@ -29,7 +29,7 @@
     <nav class="hidden items-center gap-6 md:flex">
         {#if session?.user}
             <a
-                href={resolve('/(participant)/dashboard')}
+                href={resolve('/(app)/(member)/dashboard')}
                 class="text-sm font-medium no-underline hover:text-primary-500"
             >
                 Hackathons
@@ -42,12 +42,6 @@
                 Hackathons
             </a>
         {/if}
-        <a
-            href={resolve('/')}
-            class="text-sm text-surface-400 no-underline hover:text-primary-500"
-        >
-            Challenges
-        </a>
         <a
             href={resolve('/')}
             class="text-sm text-surface-400 no-underline hover:text-primary-500"

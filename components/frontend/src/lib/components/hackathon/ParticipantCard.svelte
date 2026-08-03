@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
-
     let {
         name,
         affiliation,
@@ -8,16 +6,14 @@
         role: roleProp,
         skills = [],
         linkedinUrl,
-        profileDetailsHref = '#',
     }: {
         name: string;
-        affiliation: string;
+        affiliation?: string;
         avatarUrl?: string;
         /** Job title; if omitted, first skills are shown on the role line. */
         role?: string;
         skills?: string[];
         linkedinUrl?: string;
-        profileDetailsHref?: string;
     } = $props();
 
     const roleLine = $derived(
@@ -71,7 +67,9 @@
                     {#if roleLine}
                         <p class="m-0 text-xs leading-snug text-surface-600-400">{roleLine}</p>
                     {/if}
-                    <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {#if affiliation}
+                        <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {/if}
                     {#if linkedinUrl}
                         <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
                         <a
@@ -88,8 +86,5 @@
                 </div>
             </div>
         </div>
-
-        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a class="btn btn-sm preset-tonal-surface" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
     </div>
 </div>

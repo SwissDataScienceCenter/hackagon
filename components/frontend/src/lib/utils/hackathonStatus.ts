@@ -45,5 +45,9 @@ export function membershipBadgeLabel(isWaiting: boolean, role: number): string {
 }
 
 export function membershipBadgePreset(isWaiting: boolean): string {
-  return isWaiting ? "preset-tonal-warning" : "preset-tonal-success"
+  return isWaiting ? "preset-tonal-warning" : "preset-tonal-surface"
+}
+
+export function isOwnerRole(role: number): boolean {
+  return role === 1
 }

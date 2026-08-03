@@ -1,0 +1,102 @@
+<script lang="ts">
+    import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
+    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import Lock from 'lucide-svelte/icons/lock';
+    import Unlock from 'lucide-svelte/icons/unlock';
+    import { phaseStateLabel, phaseStateBadgePreset } from '$lib/utils/phase';
+    import type { PageData } from './$types';
+
+    let { data }: { data: PageData } = $props();
+    const phases = $derived(data.phases);
+    const selectedPhase = $derived(phases.find((p) => p.id === data.selectedId));
+    const linkedPage = $derived(data.linkedPage);
+
+    function formatRange(startsAt: Date | undefined, endsAt: Date | undefined): string {
+        if (!startsAt) return 'No dates set';
+        const fmt = (d: Date) =>
+            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (!endsAt) return fmt(startsAt);
+        if (startsAt.getFullYear() === endsAt.getFullYear() && startsAt.getMonth() === endsAt.getMonth()) {
+            const month = startsAt.toLocaleDateString('en-US', { month: 'short' });
+            return `${month} ${startsAt.getDate()} – ${endsAt.getDate()}, ${startsAt.getFullYear()}`;
+        }
+        return `${fmt(startsAt)} – ${fmt(endsAt)}`;
+    }
+</script>
+
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    <div class="flex flex-col gap-1">
+        <h2 class="m-0 text-lg font-bold text-surface-950-50">Timeline</h2>
+        <span class="text-xs text-surface-500">{phases.length} phases</span>
+    </div>
+
+    {#if phases.length === 0}
+        <p class="m-0 text-sm text-surface-500">No phases have been set for this hackathon yet.</p>
+    {:else}
+        <PhaseTimeline
+            phases={phases.map((p) => ({ id: p.id, name: p.name, status: p.status }))}
+            selectedId={data.selectedId}
+            hrefFor={(id) => `?phase=${id}`}
+        />
+
+        {#if selectedPhase}
+            <div class="card preset-outlined-surface-200-800 flex flex-col gap-2 p-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge {phaseStateBadgePreset(selectedPhase.status)}">
+                        {phaseStateLabel(selectedPhase.status)}
+                    </span>
+                    <h3 class="m-0 text-sm font-bold text-surface-950-50">{selectedPhase.name}</h3>
+                    <span class="text-xs text-surface-500">
+                        {formatRange(selectedPhase.startsAt, selectedPhase.endsAt)}
+                    </span>
+                </div>
+                {#if selectedPhase.description}
+                    <p class="m-0 text-xs leading-relaxed text-surface-600-400">{selectedPhase.description}</p>
+                {:else}
+                    <p class="m-0 text-xs text-surface-500">No description provided.</p>
+                {/if}
+
+                <!-- What the phase actually changes for you. Absent when the
+                     organizer has scheduled nothing against it, rather than
+                     showing an empty "Opens:" label. -->
+                {#if selectedPhase.opens.length > 0 || selectedPhase.closes.length > 0}
+                    <div class="flex flex-col gap-1.5 border-t border-surface-200-800 pt-2">
+                        {#if selectedPhase.opens.length > 0}
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="flex items-center gap-1 text-xs text-surface-500">
+                                    <Unlock size={12} aria-hidden="true" />
+                                    Opens
+                                </span>
+                                {#each selectedPhase.opens as name (name)}
+                                    <span class="badge preset-tonal-primary text-xs">{name}</span>
+                                {/each}
+                            </div>
+                        {/if}
+                        {#if selectedPhase.closes.length > 0}
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="flex items-center gap-1 text-xs text-surface-500">
+                                    <Lock size={12} aria-hidden="true" />
+                                    Closes
+                                </span>
+                                {#each selectedPhase.closes as name (name)}
+                                    <span class="badge preset-tonal-surface text-xs">{name}</span>
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+            </div>
+
+            <!-- A phase's page is read here rather than from the sidebar: it
+                 belongs to this phase, so this is its one home. -->
+            {#if linkedPage}
+                <div class="card preset-outlined-surface-200-800 flex w-full flex-col gap-4 p-5">
+                    <h3 class="m-0 text-base font-bold text-surface-950-50">{linkedPage.title}</h3>
+                    <div class="text-sm leading-relaxed text-surface-700-300">
+                        <MarkdownContent content={linkedPage.content} />
+                    </div>
+                </div>
+            {/if}
+        {/if}
+    {/if}
+</div>
