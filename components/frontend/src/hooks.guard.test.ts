@@ -2,10 +2,17 @@ import { describe, it, expect } from "vitest"
 import { isProtectedRoute } from "./hooks.server"
 
 describe("isProtectedRoute", () => {
-  it("should protect /users routes", () => {
-    expect(isProtectedRoute("/users")).toBe(true)
-    expect(isProtectedRoute("/users/")).toBe(true)
-    expect(isProtectedRoute("/users/123")).toBe(true)
+  it("should protect /manage routes", () => {
+    expect(isProtectedRoute("/manage/users")).toBe(true)
+    expect(isProtectedRoute("/manage/users/")).toBe(true)
+    expect(isProtectedRoute("/manage/users/123")).toBe(true)
+  })
+
+  it("should protect the member hackathon view but not the public one", () => {
+    expect(isProtectedRoute("/my/hackathon/abc/overview")).toBe(true)
+    expect(isProtectedRoute("/my/hackathon/abc")).toBe(true)
+    expect(isProtectedRoute("/hackathon/abc")).toBe(false)
+    expect(isProtectedRoute("/hackathon/abc/")).toBe(false)
   })
 
   it("should protect /welcome", () => {

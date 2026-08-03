@@ -21,12 +21,14 @@ let configLoader: ConfigLoader
 
 // Routes are protected by default. Only routes matching PUBLIC_ROUTE_PATTERNS
 // are accessible without authentication.
-// Public hackathon marketing page only: /hackathon/<slug> — not /hackathon/<slug>/overview, etc.
-// (Participant routes under (participant)/hackathon/[slug]/... require login.)
+// The public and authenticated hackathon views live in disjoint path spaces:
+// /hackathon/<id>/... is the public (public) subtree, /my/hackathon/<id>/... is
+// the member view under (app) and requires login. (app)/+layout.server.ts
+// guards the same routes by route group as a second line of defence.
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
-  /^\/hackathon\/[^/]+\/?$/,
+  /^\/hackathon(\/|$)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
@@ -190,7 +192,7 @@ const redirectHandle: Handle = async ({ event, resolve }) => {
         { userId: event.locals.session.user.id },
         "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
       )
-      throw redirect(303, resolvePath("/(participant)/dashboard"))
+      throw redirect(303, resolvePath("/(app)/dashboard"))
     }
   }
 

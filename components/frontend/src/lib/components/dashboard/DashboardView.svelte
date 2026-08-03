@@ -84,8 +84,9 @@
                         {@const mem = h.viewerMembership}
                         <div class="flex items-center">
                             <div class="flex-1">
+                                <!-- Member of this one: straight to the member view. -->
                                 <HackathonRow
-                                    href="/hackathon/{h.id}"
+                                    href="/my/hackathon/{h.id}/overview"
                                     name={h.name}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
@@ -116,6 +117,7 @@
                     {#each otherHackathons as h, i (h.id)}
                         <div class="flex items-center border-b border-surface-200-800 last:border-0">
                             <div class="flex-1">
+                                <!-- Not a member: the public page is the only view open to us. -->
                                 <HackathonRow
                                     href="/hackathon/{h.id}"
                                     name={h.name}

@@ -4,14 +4,14 @@
 
     let {
         tabs,
-        slug,
+        hackathonId,
     }: {
         tabs: { id: string; label: string }[];
-        slug: string;
+        hackathonId: string;
     } = $props();
 
     function tabHref(tabId: string) {
-        return resolve(`/hackathon/${slug}/${tabId}`);
+        return resolve(`/my/hackathon/${hackathonId}/${tabId}`);
     }
 </script>
 
