@@ -16,6 +16,7 @@ import (
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
+	voteSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote"
 )
 
 // NewServer creates a gRPC server with all middleware, services, and registration.
@@ -69,6 +70,7 @@ func NewServer(
 	trackService := NewTrackService(dbClient, enf)
 	projectService := NewProjectService(dbClient, enf)
 	teamService := NewTeamService(dbClient, enf)
+	voteService := NewVoteService(dbClient, enf)
 
 	// Register services
 	health.RegisterHealthServiceServer(server, healthService)
@@ -79,6 +81,7 @@ func NewServer(
 	hackathonSvc.RegisterTrackServiceServer(server, trackService)
 	hackathonSvc.RegisterProjectServiceServer(server, projectService)
 	hackathonSvc.RegisterTeamServiceServer(server, teamService)
+	voteSvc.RegisterVoteServiceServer(server, voteService)
 	reflection.Register(server)
 
 	// Cleanup: shutdown the gRPC server

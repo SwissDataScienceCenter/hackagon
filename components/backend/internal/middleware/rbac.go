@@ -216,7 +216,16 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Member.String(), "/hackathon/*/team/*", Submission.String(), Read.String()},
 		// Hackathon owner can read a submission
 		{Owner.String(), "/hackathon/*", Submission.String(), Read.String()},
+		// Owner can manage vote categories
+		{Owner.String(), "/hackathon/*", VoteCategory.String(), Create.String()},
+		{Owner.String(), "/hackathon/*", VoteCategory.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", VoteCategory.String(), Write.String()},
+		// Owner can manage vote results
+		{Owner.String(), "/hackathon/*", VoteResult.String(), Create.String()},
+		{Owner.String(), "/hackathon/*", VoteResult.String(), Read.String()},
+		{Owner.String(), "/hackathon/*", VoteResult.String(), Write.String()},
 	}
+
 	if _, err := e.AddPolicies(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
 	}

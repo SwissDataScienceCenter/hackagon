@@ -333,6 +333,8 @@ A single atomic judgment from one voter on one submission within one category.
 |--------|------|----------|--------|-----------|---------|-------------|
 | `vote_type` | enum(single_choice, ranked, points) | yes | no | no | no | Discriminator for the vote method. |
 | `value` | int | no | no | no | no | Rank position (ranked) or points awarded (points-based). Optional for single_choice. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the vote was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 
 ### Relationships
 
@@ -358,6 +360,9 @@ A voting category within a hackathon, defining the criteria and rules for one di
 | `description` | string | no | no | no | no | Criteria and instructions for voters. |
 | `voting_method` | enum(single_choice, ranked, points) | yes | no | no | no | How votes are cast: single choice, ranked, or points-based. |
 | `voter_type` | enum(all_participants, jury) | yes | no | no | no | Who can vote: all participants or jury only. |
+| `max_points` | int | no | no | no | no | Maximum points a voter can distribute across submissions (points-based voting only). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the category was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 
 ### Relationships
 
@@ -378,6 +383,8 @@ A placement entry within a vote category. Multiple VoteResults can exist per cat
 |--------|------|----------|--------|-----------|---------|-------------|
 | `position` | int | yes | no | no | no | Ordering hint (1 = first place, 2 = second, etc.). Not unique — ties allowed. |
 | `title` | string | no | no | no | no | Optional custom title for the placement (e.g. "Most Innovative"). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the result was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 
 ### Relationships
 

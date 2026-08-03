@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema"
@@ -43,6 +44,13 @@ func (Vote) Fields() []ent.Field {
 		field.Int("value").
 			Optional().
 			Comment("Rank position (ranked) or points awarded (points-based). Optional for single_choice."),
+		field.Time("created_at").
+			Immutable().
+			Default(time.Now).
+			Comment("Timestamp when the vote was created."),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last modification."),
 	}
 }
 

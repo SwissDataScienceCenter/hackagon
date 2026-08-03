@@ -6,7 +6,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
+	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
+	voteEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities"
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -337,4 +340,146 @@ func stateEntryFromEnt(s *ent.HackathonState) *hackEnts.HackathonState {
 			},
 		},
 	}
+}
+
+func votingMethodFromEnt(v entvotecategory.VotingMethod) voteEnts.VotingMethod {
+	switch v {
+	case entvotecategory.VotingMethodSingleChoice:
+		return voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE
+	case entvotecategory.VotingMethodRanked:
+		return voteEnts.VotingMethod_VOTING_METHOD_RANKED
+	case entvotecategory.VotingMethodPoints:
+		return voteEnts.VotingMethod_VOTING_METHOD_POINTS
+	default:
+		return voteEnts.VotingMethod_VOTING_METHOD_UNSPECIFIED
+	}
+}
+
+func votingMethodToEnt(v voteEnts.VotingMethod) (entvotecategory.VotingMethod, bool) {
+	switch v {
+	case voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE:
+		return entvotecategory.VotingMethodSingleChoice, true
+	case voteEnts.VotingMethod_VOTING_METHOD_RANKED:
+		return entvotecategory.VotingMethodRanked, true
+	case voteEnts.VotingMethod_VOTING_METHOD_POINTS:
+		return entvotecategory.VotingMethodPoints, true
+	default:
+		return "", false
+	}
+}
+
+func voterTypeFromEnt(v entvotecategory.VoterType) voteEnts.VoterType {
+	switch v {
+	case entvotecategory.VoterTypeAllParticipants:
+		return voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS
+	case entvotecategory.VoterTypeJury:
+		return voteEnts.VoterType_VOTER_TYPE_JURY
+	default:
+		return voteEnts.VoterType_VOTER_TYPE_UNSPECIFIED
+	}
+}
+
+func voterTypeToEnt(v voteEnts.VoterType) (entvotecategory.VoterType, bool) {
+	switch v {
+	case voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS:
+		return entvotecategory.VoterTypeAllParticipants, true
+	case voteEnts.VoterType_VOTER_TYPE_JURY:
+		return entvotecategory.VoterTypeJury, true
+	default:
+		return "", false
+	}
+}
+
+func voteCategoryEntryFromEnt(c *ent.VoteCategory) *voteEnts.VoteCategory {
+	entry := &voteEnts.VoteCategory{
+		Id:           c.ID.String(),
+		Name:         c.Name,
+		VotingMethod: votingMethodFromEnt(c.VotingMethod),
+		VoterType:    voterTypeFromEnt(c.VoterType),
+		CreatedAt:    c.CreatedAt.Unix(),
+		ModifiedAt:   c.ModifiedAt.Unix(),
+	}
+	if c.Description != "" {
+		entry.Description = c.Description
+	}
+	if c.MaxPoints != 0 {
+		v := int32(c.MaxPoints)
+		entry.MaxPoints = &v
+	}
+	if c.Edges.Hackathon != nil {
+		entry.HackathonId = c.Edges.Hackathon.ID.String()
+	}
+	if len(c.Edges.JuryMembers) > 0 {
+		entry.JuryMembers = make([]*userEnts.User, 0, len(c.Edges.JuryMembers))
+		for _, u := range c.Edges.JuryMembers {
+			entry.JuryMembers = append(entry.JuryMembers, userEntryFromEnt(u))
+		}
+	}
+	return entry
+}
+
+func voteEntryFromEnt(v *ent.Vote) *voteEnts.Vote {
+	entry := &voteEnts.Vote{
+		Id:         v.ID.String(),
+		CreatedAt:  v.CreatedAt.Unix(),
+		ModifiedAt: v.ModifiedAt.Unix(),
+	}
+	if v.Edges.Category != nil {
+		entry.CategoryId = v.Edges.Category.ID.String()
+	}
+	if v.Edges.Voter != nil {
+		entry.VoterId = v.Edges.Voter.KeycloakID
+	}
+	var submissionID string
+	if v.Edges.Submission != nil {
+		submissionID = v.Edges.Submission.ID.String()
+	}
+	switch v.VoteType {
+	case entvote.VoteTypeSingleChoice:
+		if submissionID != "" {
+			entry.Vote = &voteEnts.Vote_SingleChoice{
+				SingleChoice: &voteEnts.SingleChoiceVote{
+					SubmissionId: submissionID,
+				},
+			}
+		}
+	case entvote.VoteTypeRanked:
+		if submissionID != "" {
+			entry.Vote = &voteEnts.Vote_Ranked{
+				Ranked: &voteEnts.RankedVote{
+					SubmissionId: submissionID,
+					Rank:         int32(v.Value),
+				},
+			}
+		}
+	case entvote.VoteTypePoints:
+		if submissionID != "" {
+			entry.Vote = &voteEnts.Vote_Points{
+				Points: &voteEnts.PointsVote{
+					SubmissionId: submissionID,
+					Points:       int32(v.Value),
+				},
+			}
+		}
+	}
+	return entry
+}
+
+func voteResultEntryFromEnt(r *ent.VoteResult) *voteEnts.VoteResult {
+	entry := &voteEnts.VoteResult{
+		Id:         r.ID.String(),
+		Position:   int32(r.Position),
+		CreatedAt:  r.CreatedAt.Unix(),
+		ModifiedAt: r.ModifiedAt.Unix(),
+	}
+	if r.Edges.VoteCategory != nil {
+		entry.CategoryId = r.Edges.VoteCategory.ID.String()
+	}
+	if r.Edges.Submission != nil {
+		entry.SubmissionId = r.Edges.Submission.ID.String()
+	}
+	if r.Title != "" {
+		entry.Title = &r.Title
+	}
+	return entry
 }

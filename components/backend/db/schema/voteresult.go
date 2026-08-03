@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"time"
+
 	"entgo.io/ent"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
@@ -28,6 +30,13 @@ func (VoteResult) Fields() []ent.Field {
 		field.String("title").
 			Optional().
 			Comment("Optional custom title for the placement (e.g. \"Most Innovative\")."),
+		field.Time("created_at").
+			Immutable().
+			Default(time.Now).
+			Comment("Timestamp when the result was created."),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last modification."),
 	}
 }
 
