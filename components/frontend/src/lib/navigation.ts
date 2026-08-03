@@ -150,6 +150,48 @@ const MEMBER_GATES: Readonly<Record<string, Capability>> = {
 }
 
 /**
+ * The same idea for organizers, and it includes the Participants/`register`
+ * pairing the member nav leaves out: "registration closed" is exactly what an
+ * organizer wants on that row.
+ *
+ * These describe the hackathon, not the viewer. `requireCapability` lets anyone
+ * who can write the hackathon through the gate, so an organizer is never blocked
+ * by one — see `gateStyle` on SidebarNavSection, which is what stops the sidebar
+ * claiming otherwise.
+ */
+const MANAGE_GATES: Readonly<Record<string, Capability>> = {
+  "manage:participants": "register",
+  "manage:proposals": "submit_proposal",
+  "manage:teams": "set_team_preferences",
+}
+
+/**
+ * Attach the governing capability, resolved for now, to the entries that have
+ * one.
+ *
+ * An `ungoverned` capability is dropped rather than passed through: a hackathon
+ * predating it has to look exactly as it did before, and the surest way to
+ * guarantee that is to hand the renderer nothing to misread.
+ */
+function withGates(
+  items: NavItem[],
+  gates: Readonly<Record<string, Capability>>,
+  capabilities?: Capabilities,
+): NavItem[] {
+  if (!capabilities) return items
+
+  return items.map((item) => {
+    const capability = gates[item.id]
+    if (!capability) return item
+
+    const info = capabilities[capability]
+    if (info.state === "ungoverned") return item
+
+    return { ...item, gate: { capability, ...info, state: info.state } }
+  })
+}
+
+/**
  * Participant-facing nav for one hackathon, plus its visible content pages.
  *
  * `capabilities` is optional so a caller with no data — or a backend that
@@ -205,25 +247,15 @@ export function memberNav(
     })),
   ]
 
-  if (!capabilities) return items
-
-  return items.map((item) => {
-    const capability = MEMBER_GATES[item.id]
-    if (!capability) return item
-
-    // Dropped rather than passed through: a hackathon predating this capability
-    // has to look exactly as it did before, and the surest way to guarantee that
-    // is to hand the renderer nothing to misread.
-    const info = capabilities[capability]
-    if (info.state === "ungoverned") return item
-
-    return { ...item, gate: { capability, ...info, state: info.state } }
-  })
+  return withGates(items, MEMBER_GATES, capabilities)
 }
 
 /** Organizer tools for one hackathon. */
-export function manageNav(slug: string): NavItem[] {
-  return [
+export function manageNav(
+  slug: string,
+  capabilities?: Capabilities,
+): NavItem[] {
+  const items: NavItem[] = [
     {
       id: "manage:overview",
       label: "Overview",
@@ -267,6 +299,8 @@ export function manageNav(slug: string): NavItem[] {
       href: resolve(`/owner/hackathon/${slug}/pages`),
     },
   ]
+
+  return withGates(items, MANAGE_GATES, capabilities)
 }
 
 /**

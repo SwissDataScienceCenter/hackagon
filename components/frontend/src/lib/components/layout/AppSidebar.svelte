@@ -89,7 +89,9 @@
     const memberItems = $derived(
         navSlug ? memberNav(navSlug, hackathonPages, navCapabilities) : [],
     );
-    const manageItems = $derived(navSlug && showManage ? manageNav(navSlug) : []);
+    const manageItems = $derived(
+        navSlug && showManage ? manageNav(navSlug, navCapabilities) : [],
+    );
     const homeItems = $derived(homeNav());
     const platformItems = $derived(platformNav({ isGlobalAdmin, isHackathonOrganizer }));
     const activeId = $derived(
@@ -260,6 +262,7 @@
                 activeColor="secondary"
                 markerIcon={Settings}
                 titlePrefix="Manage"
+                gateStyle="advisory"
             />
         {/if}
     </nav>

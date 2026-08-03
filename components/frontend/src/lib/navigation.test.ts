@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest"
-import { defaultHackathon, memberNav } from "./navigation"
+import {
+  defaultHackathon,
+  manageNav,
+  memberNav,
+  type NavItem,
+} from "./navigation"
 import { readCapabilities } from "./utils/capabilities"
 
 // HackathonStatus numeric values.
@@ -92,13 +97,14 @@ describe("defaultHackathon", () => {
   })
 })
 
+const gateOf = (items: NavItem[], id: string) =>
+  items.find((i) => i.id === id)?.gate
+
+// Wire values: capability 1 = register, 4 = submit_project; state 3 = closed.
+const closedSubmissions = readCapabilities([{ capability: 4, state: 3 }])
+const closedRegistration = readCapabilities([{ capability: 1, state: 3 }])
+
 describe("memberNav gates", () => {
-  const gateOf = (items: ReturnType<typeof memberNav>, id: string) =>
-    items.find((i) => i.id === id)?.gate
-
-  // Wire values: capability 4 = submit_project, state 3 = closed.
-  const closedSubmissions = readCapabilities([{ capability: 4, state: 3 }])
-
   it("attaches nothing when no capability data is passed", () => {
     const items = memberNav("h1", [])
 
@@ -152,5 +158,36 @@ describe("memberNav gates", () => {
     const items = memberNav("h1", [], readCapabilities([]))
 
     expect(items.every((i) => i.gate === undefined)).toBe(true)
+  })
+})
+
+describe("manageNav gates", () => {
+  // The pairing the member nav deliberately drops: on an organizer's row,
+  // "registration closed" is about the hackathon they are running.
+  it("gates Participants on registration", () => {
+    const items = manageNav("h1", closedRegistration)
+
+    expect(gateOf(items, "manage:participants")).toMatchObject({
+      capability: "register",
+      state: "closed",
+    })
+  })
+
+  it("leaves organizer-only tools ungated", () => {
+    const items = manageNav("h1", closedRegistration)
+
+    expect(gateOf(items, "manage:tracks")).toBeUndefined()
+    expect(gateOf(items, "manage:pages")).toBeUndefined()
+    expect(gateOf(items, "manage:timeline")).toBeUndefined()
+  })
+
+  it("attaches nothing when no capability data is passed", () => {
+    expect(manageNav("h1").every((i) => i.gate === undefined)).toBe(true)
+  })
+
+  it("omits the gate for a capability the server did not mention", () => {
+    const items = manageNav("h1", closedSubmissions)
+
+    expect(gateOf(items, "manage:participants")).toBeUndefined()
   })
 })

@@ -1,6 +1,8 @@
 <script lang="ts">
     import type { ComponentType } from 'svelte';
+    import Lock from 'lucide-svelte/icons/lock';
     import type { NavItem } from '$lib/navigation';
+    import { lockReason } from '$lib/utils/capabilities';
 
     let {
         label,
@@ -10,6 +12,7 @@
         activeColor = 'primary',
         markerIcon,
         titlePrefix,
+        gateStyle = 'blocking',
     }: {
         /** Omit where a heading would just repeat nearby context. */
         label?: string;
@@ -27,6 +30,14 @@
          *  no visible label the tooltip is also the link's accessible name, so
          *  three sections owning a Users icon otherwise read identically. */
         titlePrefix?: string;
+        /** What a closed capability means for *this* viewer.
+         *
+         *  `blocking` — they cannot act, so the row dims.
+         *  `advisory` — the capability is shut for participants but the viewer
+         *  is not, which is every organizer: `requireCapability` waves through
+         *  anyone who can write the hackathon. Dimming those rows would claim a
+         *  lockout the backend does not enforce. */
+        gateStyle?: 'blocking' | 'advisory';
     } = $props();
 
     const ACTIVE_CLASS = {
@@ -41,12 +52,24 @@
         tertiary: 'text-tertiary-500',
     };
 
-    // Only on the rail: expanded, the heading above already says which section
-    // this is, and repeating it in every tooltip is noise.
-    function tooltip(item: NavItem): string | undefined {
-        if (!collapsed) return undefined;
+    // Undefined for an open capability, so this doubles as "is there anything to
+    // say". An ungoverned one never reaches here — memberNav/manageNav omit the
+    // gate outright.
+    function reasonFor(item: NavItem): string | undefined {
+        return item.gate && lockReason(item.gate.capability, item.gate);
+    }
 
-        return titlePrefix ? `${titlePrefix} · ${item.label}` : item.label;
+    // The section prefix is rail-only: expanded, the heading above already says
+    // which section this is, and repeating it in every tooltip is noise. The
+    // reason shows in both — it is the only place the date lives, since the nav
+    // deliberately states availability and leaves deadlines to the header chip.
+    function tooltip(item: NavItem): string | undefined {
+        const reason = reasonFor(item);
+        if (!collapsed) return reason;
+
+        const name = titlePrefix ? `${titlePrefix} · ${item.label}` : item.label;
+
+        return reason ? `${name} — ${reason}` : name;
     }
 </script>
 
@@ -70,10 +93,14 @@
     {#each items as item (item.id)}
         {@const Icon = item.icon}
         {@const isActive = item.id === activeId}
+        {@const reason = reasonFor(item)}
         {#if item.href}
             <!-- eslint-disable svelte/no-navigation-without-resolve -- these hrefs are
                  built with resolve() in $lib/navigation; the rule only recognizes a
                  literal resolve() call in the attribute itself. -->
+            <!-- Still a link when locked, and deliberately so: the action is shut,
+                 the page is not. A member whose submissions closed still needs to
+                 read what they submitted. -->
             <a
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
@@ -81,11 +108,18 @@
                 class="flex h-10 items-center gap-2 rounded-lg px-2 text-sm no-underline
                        transition-colors
                        {isActive ? ACTIVE_CLASS[activeColor] : 'text-surface-500 hover:text-surface-700-300'}
-                       {collapsed ? 'justify-center' : ''}"
+                       {collapsed ? 'justify-center' : ''}
+                       {reason && gateStyle === 'blocking' ? 'opacity-60' : ''}"
             >
                 <Icon class="h-4 w-4 shrink-0" />
                 {#if !collapsed}
                     <span class="truncate">{item.label}</span>
+                    <!-- No date here — the header chip owns the one deadline that
+                         matters, and repeating it on every row makes four dates
+                         compete. The tooltip has it for anyone who asks. -->
+                    {#if reason}
+                        <Lock class="ml-auto h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
+                    {/if}
                 {/if}
             </a>
             <!-- eslint-enable svelte/no-navigation-without-resolve -->
