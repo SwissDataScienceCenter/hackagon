@@ -13,6 +13,28 @@ import CalendarDays from "lucide-svelte/icons/calendar-days"
 import Plus from "lucide-svelte/icons/plus"
 import House from "lucide-svelte/icons/house"
 
+import type {
+  Capabilities,
+  Capability,
+  CapabilityInfo,
+} from "$lib/utils/capabilities"
+
+/**
+ * The capability governing a nav item, resolved for right now.
+ *
+ * Present only where a capability actually decides something on the page. It
+ * annotates the entry; it never removes it — a member whose submissions have
+ * closed still needs to reach the page to see what they submitted, and hiding
+ * the entry reads as a broken app rather than a closed phase.
+ *
+ * Read it through `lockReason` / `isAvailable`, never by comparing
+ * `state === "open"`: an `ungoverned` gate means the server has no opinion and
+ * must render exactly as it did before capabilities existed.
+ */
+export interface NavGate extends CapabilityInfo {
+  capability: Capability
+}
+
 /**
  * A single sidebar entry.
  *
@@ -26,6 +48,8 @@ export interface NavItem {
   icon: ComponentType
   /** Omit for a "not available yet" stub entry. */
   href?: string
+  /** Absent when the entry is ungated, or when no capability data was passed. */
+  gate?: NavGate
 }
 
 /** Shallow page reference — deliberately not the generated `Page` type, since
@@ -104,9 +128,35 @@ export function defaultHackathon<T extends RankableHackathon>(
   return byPreference[0]
 }
 
-/** Participant-facing nav for one hackathon, plus its visible content pages. */
-export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
-  return [
+/**
+ * Which capability decides what a member can do on each page.
+ *
+ * Overview, Timeline and content pages are absent because they gate nothing —
+ * they are readable in every phase.
+ *
+ * Participants is absent on purpose, though `register` governs it: a member
+ * inside this shell has already joined, so "Registration opens Aug 22" on their
+ * Participants tab is a fact about other people. That pairing earns its keep in
+ * the manage nav, not here.
+ */
+const MEMBER_GATES: Readonly<Record<string, Capability>> = {
+  "member:proposals": "submit_proposal",
+  "member:teams": "set_team_preferences",
+  "member:submissions": "submit_project",
+}
+
+/**
+ * Participant-facing nav for one hackathon, plus its visible content pages.
+ *
+ * `capabilities` is optional so a caller with no data — or a backend that
+ * predates them — yields today's plain nav rather than an all-locked one.
+ */
+export function memberNav(
+  slug: string,
+  pages: HackathonPageRef[],
+  capabilities?: Capabilities,
+): NavItem[] {
+  const items: NavItem[] = [
     {
       id: "member:overview",
       label: "Overview",
@@ -150,6 +200,16 @@ export function memberNav(slug: string, pages: HackathonPageRef[]): NavItem[] {
       href: resolve(`/hackathon/${slug}/pages/${p.id}`),
     })),
   ]
+
+  if (!capabilities) return items
+
+  return items.map((item) => {
+    const capability = MEMBER_GATES[item.id]
+
+    return capability
+      ? { ...item, gate: { capability, ...capabilities[capability] } }
+      : item
+  })
 }
 
 /** Organizer tools for one hackathon. */

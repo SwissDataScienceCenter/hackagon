@@ -16,6 +16,7 @@
         memberNav,
         platformNav,
     } from '$lib/navigation';
+    import { readCapabilities, type CapabilityStatusRef } from '$lib/utils/capabilities';
     import type { Session } from '@auth/sveltekit';
 
     interface HackathonMember {
@@ -30,6 +31,7 @@
         status: number;
         startsAt?: Date;
         viewerMembership?: HackathonMember;
+        capabilities?: CapabilityStatusRef[];
     }
 
     interface HackathonPage {
@@ -78,7 +80,15 @@
             (isGlobalAdmin || isOwnerRole(navHackathon?.viewerMembership?.role ?? 0)),
     );
 
-    const memberItems = $derived(navSlug ? memberNav(navSlug, hackathonPages) : []);
+    // From the List response rather than the hackathon's own layout, so the
+    // defaulted hackathon — the one with no slug in the URL — is gated too. That
+    // layout only loads once a slug exists, which is exactly when it is too late
+    // to be the sidebar's source.
+    const navCapabilities = $derived(readCapabilities(navHackathon?.capabilities));
+
+    const memberItems = $derived(
+        navSlug ? memberNav(navSlug, hackathonPages, navCapabilities) : [],
+    );
     const manageItems = $derived(navSlug && showManage ? manageNav(navSlug) : []);
     const homeItems = $derived(homeNav());
     const platformItems = $derived(platformNav({ isGlobalAdmin, isHackathonOrganizer }));
