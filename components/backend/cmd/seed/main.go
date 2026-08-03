@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime" // registers schema hooks and default values
 	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
