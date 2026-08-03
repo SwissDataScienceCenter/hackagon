@@ -7,7 +7,20 @@ import "buf/validate/validate.proto";
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
 
 message ListVotesRequest {
-  string category_id = 1 [(buf.validate.field).string.uuid = true];
-  string voter_id = 2 [(buf.validate.field).string.uuid = true];
-  string submission_id = 3 [(buf.validate.field).string.uuid = true];
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string category_id = 2 [(buf.validate.field).cel = {
+    id: "category_id.optional"
+    message: "must be a valid UUID"
+    expression: "this.size() == 0 ||this.matches(\"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")"
+  }];
+  optional string voter_id = 3 [(buf.validate.field).cel = {
+    id: "voter_id.optional"
+    message: "must be a valid UUID"
+    expression: "this.size() == 0 ||this.matches(\"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")"
+  }];
+  optional string submission_id = 4 [(buf.validate.field).cel = {
+    id: "submission_id.optional"
+    message: "must be a valid UUID"
+    expression: "this.size() == 0 ||this.matches(\"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")"
+  }];
 }

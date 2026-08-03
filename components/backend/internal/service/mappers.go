@@ -6,11 +6,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
+	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
-	voteEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities"
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
+	voteEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -357,6 +357,8 @@ func votingMethodFromEnt(v entvotecategory.VotingMethod) voteEnts.VotingMethod {
 
 func votingMethodToEnt(v voteEnts.VotingMethod) (entvotecategory.VotingMethod, bool) {
 	switch v {
+	case voteEnts.VotingMethod_VOTING_METHOD_UNSPECIFIED:
+		return "", false
 	case voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE:
 		return entvotecategory.VotingMethodSingleChoice, true
 	case voteEnts.VotingMethod_VOTING_METHOD_RANKED:
@@ -381,6 +383,8 @@ func voterTypeFromEnt(v entvotecategory.VoterType) voteEnts.VoterType {
 
 func voterTypeToEnt(v voteEnts.VoterType) (entvotecategory.VoterType, bool) {
 	switch v {
+	case voteEnts.VoterType_VOTER_TYPE_UNSPECIFIED:
+		return "", false
 	case voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS:
 		return entvotecategory.VoterTypeAllParticipants, true
 	case voteEnts.VoterType_VOTER_TYPE_JURY:

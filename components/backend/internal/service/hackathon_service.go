@@ -607,64 +607,126 @@ func (s *HackathonService) SetCapabilities(
 		SetModifier(user)
 
 	var member = mw.Member
+
+	type policyChange struct {
+		enable bool
+		role   *mw.Role
+		obj    mw.ObjectType
+		perm   mw.Permission
+		opts   []mw.EnforceOption
+	}
+
+	var policyChanges []policyChange
+
 	for _, cs := range req.GetCapabilities() {
 		enabled := cs.GetEnabled()
-		var role *mw.Role
-		var obj mw.ObjectType
-		var perm mw.Permission
-		var opts []mw.EnforceOption
 		switch cs.GetCapability() {
 		case ents.Capability_CAPABILITY_REGISTER:
 			update = update.SetRegistrationsEnabled(enabled)
-			role = nil
-			obj = mw.Hackathon
-			perm = mw.Join
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   nil,
+					obj:    mw.Hackathon,
+					perm:   mw.Join,
+					opts:   nil,
+				},
+			)
 		case ents.Capability_CAPABILITY_VOTE:
 			update = update.SetVotingEnabled(enabled)
-			role = &member
-			obj = mw.Vote
-			perm = mw.Create
+			// Add both Vote Create and VoteCategory Read for Members
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.Vote,
+					perm:   mw.Create,
+					opts:   nil,
+				},
+			)
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.VoteCategory,
+					perm:   mw.Read,
+					opts:   nil,
+				},
+			)
+			continue
 		case ents.Capability_CAPABILITY_PROPOSE_PROJECTS:
 			update = update.SetProposeProjectsEnabled(enabled)
-			role = &member
-			obj = mw.Project
-			perm = mw.Propose
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.Project,
+					perm:   mw.Propose,
+					opts:   nil,
+				},
+			)
 		case ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES:
 			update = update.SetSetTeamPreferencesEnabled(enabled)
-			role = &member
-			obj = mw.Project
-			perm = mw.Join
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.Project,
+					perm:   mw.Join,
+					opts:   nil,
+				},
+			)
 		case ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS:
 			update = update.SetCreateProjectSubmissionsEnabled(enabled)
-			role = &member
-			obj = mw.Submission
-			perm = mw.Create
-			opts = append(opts, mw.WithTeam("*"))
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.Submission,
+					perm:   mw.Create,
+					opts:   []mw.EnforceOption{mw.WithTeam("*")},
+				},
+			)
 		case ents.Capability_CAPABILITY_VIEW_RESULTS:
 			update = update.SetViewResultsEnabled(enabled)
-			role = &member
-			obj = mw.VoteResult
-			perm = mw.Read
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.VoteResult,
+					perm:   mw.Read,
+					opts:   nil,
+				},
+			)
 		case ents.Capability_CAPABILITY_UNSPECIFIED:
 			return nil, status.Errorf(
 				codes.InvalidArgument,
 				"capability must not be UNSPECIFIED",
 			)
 		}
-		if enabled {
-			err = s.enforcer.AddPolicy(role, id.String(), obj, perm, opts...)
-			if err != nil {
+	}
+
+	// Apply all policy changes at once
+	for _, c := range policyChanges {
+		if c.enable {
+			if err := s.enforcer.AddPolicy(c.role, id.String(), c.obj, c.perm, c.opts...); err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
 					"couldn't add policy for %s %s",
-					obj,
-					perm,
+					c.obj,
+					c.perm,
 				)
 			}
 		} else {
-			err = s.enforcer.RemovePolicy(role, id.String(), obj, perm, opts...)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "couldn't remove policy for %s %s", obj, perm)
+			if err := s.enforcer.RemovePolicy(c.role, id.String(), c.obj, c.perm, c.opts...); err != nil {
+				return nil, status.Errorf(codes.Internal, "couldn't remove policy for %s %s", c.obj, c.perm)
 			}
 		}
 	}

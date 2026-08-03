@@ -6083,9 +6083,10 @@ VoteResult is a placement entry within a vote category.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| category_id | [string](#string) |  |  |
-| voter_id | [string](#string) |  |  |
-| submission_id | [string](#string) |  |  |
+| hackathon_id | [string](#string) |  |  |
+| category_id | [string](#string) | optional |  |
+| voter_id | [string](#string) | optional |  |
+| submission_id | [string](#string) | optional |  |
 
 
 

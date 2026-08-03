@@ -224,6 +224,7 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "/hackathon/*", VoteResult.String(), Create.String()},
 		{Owner.String(), "/hackathon/*", VoteResult.String(), Read.String()},
 		{Owner.String(), "/hackathon/*", VoteResult.String(), Write.String()},
+		{Owner.String(), "/hackathon/*", Vote.String(), Read.String()},
 	}
 
 	if _, err := e.AddPolicies(policies); err != nil {

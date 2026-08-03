@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -124,7 +124,11 @@ func (s *VoteService) CreateVoteCategory(
 	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", req.GetHackathonId())
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
 		}
 		slog.Error("query hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query hackathon")
@@ -132,25 +136,32 @@ func (s *VoteService) CreateVoteCategory(
 
 	votingMethod, ok := votingMethodToEnt(req.GetVotingMethod())
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "unknown voting_method: %v", req.GetVotingMethod())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown voting_method: %v",
+			req.GetVotingMethod(),
+		)
 	}
 	voterType, ok := voterTypeToEnt(req.GetVoterType())
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "unknown voter_type: %v", req.GetVoterType())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown voter_type: %v",
+			req.GetVoterType(),
+		)
 	}
 
 	// max_points is mandatory for points-based voting
 	if votingMethod == entvotecategory.VotingMethodPoints {
 		if req.MaxPoints == nil {
-			return nil, status.Errorf(codes.InvalidArgument, "max_points is required for points-based voting")
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"max_points is required for points-based voting",
+			)
 		} else if req.GetMaxPoints() <= 0 {
-			return nil, status.Errorf(codes.InvalidArgument, "max_points must be greater than 0")
+			return nil, status.Errorf(codes.InvalidArgument, "max_points must be greater than or equal to 1")
 		}
-
 	}
-
-	// max_points must be positive if provided
-
 	create := s.dbClient.VoteCategory.Create().
 		SetHackathonID(hackathonID).
 		SetName(req.GetName()).
@@ -194,7 +205,9 @@ func (s *VoteService) CreateVoteCategory(
 		return nil, status.Errorf(codes.Internal, "couldn't re-query vote category: %v", err)
 	}
 
-	return &voteMsgs.CreateVoteCategoryResponse{VoteCategory: voteCategoryEntryFromEnt(category)}, nil
+	return &voteMsgs.CreateVoteCategoryResponse{
+		VoteCategory: voteCategoryEntryFromEnt(category),
+	}, nil
 }
 
 func (s *VoteService) EditVoteCategory(
@@ -232,22 +245,30 @@ func (s *VoteService) EditVoteCategory(
 	update := s.dbClient.VoteCategory.UpdateOne(category)
 
 	if req.Name != nil {
-		update.SetName(*req.Name)
+		update.SetName(req.GetName())
 	}
 	if req.Description != nil {
-		update.SetDescription(*req.Description)
+		update.SetDescription(req.GetDescription())
 	}
 	if req.VotingMethod != nil {
-		votingMethod, ok := votingMethodToEnt(*req.VotingMethod)
+		votingMethod, ok := votingMethodToEnt(req.GetVotingMethod())
 		if !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "unknown voting_method: %v", req.GetVotingMethod())
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"unknown voting_method: %v",
+				req.GetVotingMethod(),
+			)
 		}
 		update.SetVotingMethod(votingMethod)
 	}
 	if req.VoterType != nil {
-		voterType, ok := voterTypeToEnt(*req.VoterType)
+		voterType, ok := voterTypeToEnt(req.GetVoterType())
 		if !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "unknown voter_type: %v", req.GetVoterType())
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"unknown voter_type: %v",
+				req.GetVoterType(),
+			)
 		}
 		update.SetVoterType(voterType)
 	}
@@ -255,47 +276,24 @@ func (s *VoteService) EditVoteCategory(
 	// Determine effective voting method after edit (new value if provided, otherwise existing)
 	effectiveVotingMethod := category.VotingMethod
 	if req.VotingMethod != nil {
-		if vm, ok := votingMethodToEnt(*req.VotingMethod); ok {
+		if vm, ok := votingMethodToEnt(req.GetVotingMethod()); ok {
 			effectiveVotingMethod = vm
 		}
 	}
 
-	// Determine effective max_points after edit (new value if provided, otherwise existing)
-	if effectiveVotingMethod == entvotecategory.VotingMethodPoints {
-		effectiveMaxPoints := category.MaxPoints
-		if req.MaxPoints != nil {
-			effectiveMaxPoints = int(req.GetMaxPoints())
-
-		}
-
-		// max_points is mandatory for points-based voting
-		if effectiveMaxPoints <= 0 {
-			return nil, status.Errorf(codes.InvalidArgument, "max_points is required and must be >0 for points-based voting")
-		}
-		if req.MaxPoints != nil {
-			update.SetMaxPoints(int(req.GetMaxPoints()))
-		}
+	// Apply max_points validation and update
+	if _, err := s.applyMaxPoints(update, category, req, effectiveVotingMethod); err != nil {
+		return nil, err
 	}
 
-	// If voting method is being changed, delete existing votes
-	if req.VotingMethod != nil && category.VotingMethod != effectiveVotingMethod {
-		if _, err := s.dbClient.Vote.Delete().Where(entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID))).Exec(ctx); err != nil {
-			slog.Error("delete votes on voting method change", "err", err)
-			return nil, status.Errorf(codes.Internal, "couldn't delete existing votes: %v", err)
-		}
+	// Delete existing votes if voting method changed
+	if err := s.applyVotingMethodChange(ctx, categoryID, category.VotingMethod, effectiveVotingMethod); err != nil {
+		return nil, err
 	}
 
-	// Handle jury members: clear and re-add if specified
-	if req.JuryMemberIds != nil {
-		juryUserIDs := make([]uuid.UUID, 0, len(req.GetJuryMemberIds()))
-		for _, jid := range req.GetJuryMemberIds() {
-			uid, parseErr := uuid.Parse(jid)
-			if parseErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "invalid jury_member_id: %s", jid)
-			}
-			juryUserIDs = append(juryUserIDs, uid)
-		}
-		update = update.ClearJuryMembers().AddJuryMemberIDs(juryUserIDs...)
+	// Apply jury members update
+	if err := s.applyJuryMembers(update, req); err != nil {
+		return nil, err
 	}
 
 	updated, err := update.Save(ctx)
@@ -357,11 +355,6 @@ func (s *VoteService) DeleteVoteCategory(
 		return nil, status.Errorf(codes.Internal, "couldn't delete vote category: %v", err)
 	}
 
-	// Remove jury member assignments from casbin
-	for _, jm := range category.Edges.JuryMembers {
-		s.enforcer.RemoveRole(jm.KeycloakID, m.Member, category.Edges.Hackathon.ID.String())
-	}
-
 	return &voteMsgs.DeleteVoteCategoryResponse{}, nil
 }
 
@@ -389,6 +382,7 @@ func (s *VoteService) SubmitVote(
 	category, err := s.dbClient.VoteCategory.Query().
 		Where(entvotecategory.IDEQ(categoryID)).
 		WithHackathon().
+		WithJuryMembers().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -466,8 +460,10 @@ func (s *VoteService) SubmitVote(
 }
 
 // validateVoteType ensures the request vote type matches the category's voting method.
-func (s *VoteService) validateVoteType(category *ent.VoteCategory, req *voteMsgs.SubmitVoteRequest) error {
-
+func (s *VoteService) validateVoteType(
+	category *ent.VoteCategory,
+	req *voteMsgs.SubmitVoteRequest,
+) error {
 	valid := true
 	switch req.GetVote().(type) {
 	case *voteMsgs.SubmitVoteRequest_SingleChoice:
@@ -490,6 +486,71 @@ func (s *VoteService) validateVoteType(category *ent.VoteCategory, req *voteMsgs
 			category.ID,
 			category.VotingMethod.String(),
 		)
+	}
+	return nil
+}
+
+// applyMaxPoints validates and applies max_points to the update builder.
+// It returns true if max_points was applied, false if it was cleared.
+func (s *VoteService) applyMaxPoints(
+	update *ent.VoteCategoryUpdateOne,
+	category *ent.VoteCategory,
+	req *voteMsgs.EditVoteCategoryRequest,
+	effectiveVotingMethod entvotecategory.VotingMethod,
+) (bool, error) {
+	if effectiveVotingMethod == entvotecategory.VotingMethodPoints {
+		effectiveMaxPoints := category.MaxPoints
+		if req.MaxPoints != nil {
+			effectiveMaxPoints = int(req.GetMaxPoints())
+		}
+		if effectiveMaxPoints <= 0 {
+			return false, status.Errorf(
+				codes.InvalidArgument,
+				"max_points is required and must be >0 for points-based voting",
+			)
+		}
+		if req.MaxPoints != nil {
+			update.SetMaxPoints(int(req.GetMaxPoints()))
+			return true, nil
+		}
+	} else {
+		update.ClearMaxPoints()
+	}
+	return false, nil
+}
+
+// applyVotingMethodChange deletes existing votes if the voting method changed.
+func (s *VoteService) applyVotingMethodChange(
+	ctx context.Context,
+	categoryID uuid.UUID,
+	existingMethod, newMethod entvotecategory.VotingMethod,
+) error {
+	if existingMethod != newMethod {
+		deleteQuery := s.dbClient.Vote.Delete().
+			Where(entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID)))
+		if _, err := deleteQuery.Exec(ctx); err != nil {
+			slog.Error("delete votes on voting method change", "err", err)
+			return status.Errorf(codes.Internal, "couldn't delete existing votes: %v", err)
+		}
+	}
+	return nil
+}
+
+// applyJuryMembers parses and applies jury member IDs to the update builder.
+func (s *VoteService) applyJuryMembers(
+	update *ent.VoteCategoryUpdateOne,
+	req *voteMsgs.EditVoteCategoryRequest,
+) error {
+	if req.JuryMemberIds != nil {
+		juryUserIDs := make([]uuid.UUID, 0, len(req.GetJuryMemberIds()))
+		for _, jid := range req.GetJuryMemberIds() {
+			uid, parseErr := uuid.Parse(jid)
+			if parseErr != nil {
+				return status.Errorf(codes.InvalidArgument, "invalid jury_member_id: %s", jid)
+			}
+			juryUserIDs = append(juryUserIDs, uid)
+		}
+		update.ClearJuryMembers().AddJuryMemberIDs(juryUserIDs...)
 	}
 	return nil
 }
@@ -525,7 +586,10 @@ func (s *VoteService) submitSingleVote(
 
 	for _, member := range submission.Edges.Team.Edges.Members {
 		if member.ID == voterID {
-			return nil, status.Error(codes.PermissionDenied, "cannot vote on your own team's submission")
+			return nil, status.Error(
+				codes.PermissionDenied,
+				"cannot vote on your own team's submission",
+			)
 		}
 	}
 
@@ -540,7 +604,7 @@ func (s *VoteService) submitSingleVote(
 		// Vote already exists — return it (idempotent)
 		return voteEntryFromEnt(existing), nil
 	}
-	if err != nil && !ent.IsNotFound(err) {
+	if !ent.IsNotFound(err) {
 		slog.Error("check existing vote", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't check existing vote")
 	}
@@ -567,7 +631,14 @@ func (s *VoteService) submitSingleChoice(
 	voterID uuid.UUID,
 	submissionIDStr string,
 ) ([]*voteEntities.Vote, error) {
-	vote, err := s.submitSingleVote(ctx, categoryID, voterID, submissionIDStr, entvote.VoteTypeSingleChoice, 0)
+	vote, err := s.submitSingleVote(
+		ctx,
+		categoryID,
+		voterID,
+		submissionIDStr,
+		entvote.VoteTypeSingleChoice,
+		0,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +653,14 @@ func (s *VoteService) submitRanked(
 ) ([]*voteEntities.Vote, error) {
 	votes := make([]*voteEntities.Vote, 0, len(submissions))
 	for _, sub := range submissions {
-		vote, err := s.submitSingleVote(ctx, categoryID, voterID, sub.GetSubmissionId(), entvote.VoteTypeRanked, int(sub.GetRank()))
+		vote, err := s.submitSingleVote(
+			ctx,
+			categoryID,
+			voterID,
+			sub.GetSubmissionId(),
+			entvote.VoteTypeRanked,
+			int(sub.GetRank()),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -613,7 +691,14 @@ func (s *VoteService) submitPoints(
 
 	votes := make([]*voteEntities.Vote, 0, len(submissions))
 	for _, sub := range submissions {
-		vote, err := s.submitSingleVote(ctx, category.ID, voterID, sub.GetSubmissionId(), entvote.VoteTypePoints, int(sub.GetPoints()))
+		vote, err := s.submitSingleVote(
+			ctx,
+			category.ID,
+			voterID,
+			sub.GetSubmissionId(),
+			entvote.VoteTypePoints,
+			int(sub.GetPoints()),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -633,7 +718,7 @@ func (s *VoteService) GetVote(
 
 	vote, err := s.dbClient.Vote.Query().
 		Where(entvote.IDEQ(voteID)).
-		WithCategory().
+		WithCategory(func(cq *ent.VoteCategoryQuery) { cq.WithHackathon() }).
 		WithVoter().
 		WithSubmission().
 		Only(ctx)
@@ -659,6 +744,29 @@ func (s *VoteService) ListVotes(
 	ctx context.Context,
 	req *voteMsgs.ListVotesRequest,
 ) (*voteMsgs.ListVotesResponse, error) {
+	sub, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.dbClient.User.Query().
+		Where(entuser.KeycloakIDEQ(sub)).
+		Only(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// user can read own votes, otherwise use RBAC
+	if voterID := req.GetVoterId(); voterID == "" || voterID != u.ID.String() {
+		if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Vote, m.Read); err != nil {
+			return nil, err
+		}
+	}
+
 	q := s.dbClient.Vote.Query()
 
 	if categoryID := req.GetCategoryId(); categoryID != "" {
@@ -684,7 +792,12 @@ func (s *VoteService) ListVotes(
 	}
 
 	votes, err := q.
-		WithCategory().
+		Where(
+			entvote.HasCategoryWith(
+				entvotecategory.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+			),
+		).
+		WithCategory(func(cq *ent.VoteCategoryQuery) { cq.WithHackathon() }).
 		WithVoter().
 		WithSubmission().
 		All(ctx)
@@ -710,7 +823,21 @@ func (s *VoteService) ExportVotes(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, categoryID.String(), m.VoteCategory, m.Read); err != nil {
+	category, err := s.dbClient.VoteCategory.Query().
+		Where(entvotecategory.IDEQ(categoryID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "vote category %s not found", categoryID)
+		}
+		slog.Error("query vote category", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query vote category")
+	}
+
+	if err := s.enforcer.RequirePermission(
+		ctx, category.Edges.Hackathon.ID.String(), m.Vote, m.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -730,8 +857,17 @@ func (s *VoteService) ExportVotes(
 		data, err = s.exportVotesCSV(votes)
 	case voteMsgs.ExportFormat_EXPORT_FORMAT_JSON:
 		data, err = json.MarshalIndent(votesToExportRows(votes), "", "  ")
+	case voteMsgs.ExportFormat_EXPORT_FORMAT_UNSPECIFIED:
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"export format must not be UNSPECIFIED",
+		)
 	default:
-		return nil, status.Errorf(codes.InvalidArgument, "unknown export format: %v", req.GetFormat())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown export format: %v",
+			req.GetFormat(),
+		)
 	}
 	if err != nil {
 		slog.Error("serialize votes", "err", err)
@@ -764,7 +900,7 @@ func (s *VoteService) exportVotesCSV(votes []*ent.Vote) ([]byte, error) {
 			voterKCID,
 			submissionID,
 			string(v.VoteType),
-			fmt.Sprintf("%d", v.Value),
+			strconv.Itoa(v.Value),
 		}); err != nil {
 			return nil, err
 		}
@@ -775,10 +911,10 @@ func (s *VoteService) exportVotesCSV(votes []*ent.Vote) ([]byte, error) {
 }
 
 type voteExportRow struct {
-	VoteID          string `json:"vote_id"`
-	VoterKeycloakID string `json:"voter_keycloak_id"`
-	SubmissionID    string `json:"submission_id"`
-	VoteType        string `json:"vote_type"`
+	VoteID          string `json:"voteID"`
+	VoterKeycloakID string `json:"voterKeycloakID"`
+	SubmissionID    string `json:"submissionID"`
+	VoteType        string `json:"voteType"`
 	Value           int    `json:"value"`
 }
 
@@ -786,9 +922,11 @@ func votesToExportRows(votes []*ent.Vote) []voteExportRow {
 	rows := make([]voteExportRow, 0, len(votes))
 	for _, v := range votes {
 		row := voteExportRow{
-			VoteID:   v.ID.String(),
-			VoteType: string(v.VoteType),
-			Value:    v.Value,
+			VoteID:          v.ID.String(),
+			VoteType:        string(v.VoteType),
+			Value:           v.Value,
+			VoterKeycloakID: "",
+			SubmissionID:    "",
 		}
 		if v.Edges.Voter != nil {
 			row.VoterKeycloakID = v.Edges.Voter.KeycloakID
@@ -810,7 +948,25 @@ func (s *VoteService) ListVoteResults(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, categoryID.String(), m.VoteResult, m.Read); err != nil {
+	category, err := s.dbClient.VoteCategory.Query().
+		Where(entvotecategory.IDEQ(categoryID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"vote category %s not found",
+				req.GetCategoryId(),
+			)
+		}
+		slog.Error("query vote category", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query vote category")
+	}
+
+	if err := s.enforcer.RequirePermission(
+		ctx, category.Edges.Hackathon.ID.String(), m.VoteResult, m.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -856,7 +1012,11 @@ func (s *VoteService) CreateVoteResult(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "vote category %s not found", req.GetCategoryId())
+			return nil, status.Errorf(
+				codes.NotFound,
+				"vote category %s not found",
+				req.GetCategoryId(),
+			)
 		}
 		slog.Error("query vote category", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query vote category")
@@ -873,7 +1033,7 @@ func (s *VoteService) CreateVoteResult(
 		SetSubmissionID(submissionID).
 		SetPosition(int(req.GetPosition()))
 	if req.Title != nil {
-		create.SetTitle(*req.Title)
+		create.SetTitle(req.GetTitle())
 	}
 
 	result, err := create.Save(ctx)
@@ -930,15 +1090,19 @@ func (s *VoteService) EditVoteResult(
 	update := s.dbClient.VoteResult.UpdateOne(result)
 
 	if req.Position != nil {
-		update.SetPosition(int(*req.Position))
+		update.SetPosition(int(req.GetPosition()))
 	}
 	if req.Title != nil {
-		update.SetTitle(*req.Title)
+		update.SetTitle(req.GetTitle())
 	}
 	if req.SubmissionId != nil {
-		sid, parseErr := uuid.Parse(*req.SubmissionId)
+		sid, parseErr := uuid.Parse(req.GetSubmissionId())
 		if parseErr != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid submission_id: %v", *req.SubmissionId)
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"invalid submission_id: %v",
+				req.GetSubmissionId(),
+			)
 		}
 		update.SetSubmissionID(sid)
 	}
@@ -1011,7 +1175,21 @@ func (s *VoteService) ExportResults(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, categoryID.String(), m.VoteResult, m.Read); err != nil {
+	category, err := s.dbClient.VoteCategory.Query().
+		Where(entvotecategory.IDEQ(categoryID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "vote category %s not found", categoryID)
+		}
+		slog.Error("query vote category", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query vote category")
+	}
+
+	if err := s.enforcer.RequirePermission(
+		ctx, category.Edges.Hackathon.ID.String(), m.VoteResult, m.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1020,6 +1198,13 @@ func (s *VoteService) ExportResults(
 		WithSubmission().
 		All(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"vote result for category %s not found",
+				categoryID,
+			)
+		}
 		slog.Error("query results for export", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query results")
 	}
@@ -1030,8 +1215,17 @@ func (s *VoteService) ExportResults(
 		data, err = s.exportResultsCSV(results)
 	case voteMsgs.ExportFormat_EXPORT_FORMAT_JSON:
 		data, err = json.MarshalIndent(resultsToExportRows(results), "", "  ")
+	case voteMsgs.ExportFormat_EXPORT_FORMAT_UNSPECIFIED:
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"export format must not be UNSPECIFIED",
+		)
 	default:
-		return nil, status.Errorf(codes.InvalidArgument, "unknown export format: %v", req.GetFormat())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown export format: %v",
+			req.GetFormat(),
+		)
 	}
 	if err != nil {
 		slog.Error("serialize results", "err", err)
@@ -1061,7 +1255,7 @@ func (s *VoteService) exportResultsCSV(results []*ent.VoteResult) ([]byte, error
 		if err := w.Write([]string{
 			r.ID.String(),
 			submissionID,
-			fmt.Sprintf("%d", r.Position),
+			strconv.Itoa(r.Position),
 			title,
 		}); err != nil {
 			return nil, err
@@ -1073,8 +1267,8 @@ func (s *VoteService) exportResultsCSV(results []*ent.VoteResult) ([]byte, error
 }
 
 type resultExportRow struct {
-	ResultID     string  `json:"result_id"`
-	SubmissionID string  `json:"submission_id"`
+	ResultID     string  `json:"resultID"`
+	SubmissionID string  `json:"submissionID"`
 	Position     int     `json:"position"`
 	Title        *string `json:"title,omitempty"`
 }
@@ -1083,8 +1277,10 @@ func resultsToExportRows(results []*ent.VoteResult) []resultExportRow {
 	rows := make([]resultExportRow, 0, len(results))
 	for _, r := range results {
 		row := resultExportRow{
-			ResultID: r.ID.String(),
-			Position: r.Position,
+			ResultID:     r.ID.String(),
+			Position:     r.Position,
+			SubmissionID: "",
+			Title:        nil,
 		}
 		if r.Edges.Submission != nil {
 			row.SubmissionID = r.Edges.Submission.ID.String()
