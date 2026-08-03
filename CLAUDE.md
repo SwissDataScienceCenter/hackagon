@@ -47,11 +47,13 @@ components/backend/
 ├── ent/**                        # generated ORM (do not edit)
 ├── internal/service/*.go         # gRPC handlers, one file per service
 ├── internal/service/server.go    # where services are registered
+├── internal/capability/          # what is open right now — pure, no ent/proto
 ├── internal/middleware/rbac.go   # casbin enforcer
 └── Schema.md                     # generated DB reference
 components/frontend/              # SvelteKit
 ├── src/lib/server/grpc/          # clients; generated/ is codegen (do not edit)
 ├── src/lib/navigation.ts         # every sidebar entry
+├── src/lib/utils/capabilities.ts # what a member may do now; see the skill (§6b)
 ├── src/lib/components/           # layout/, hackathon/, forms/
 └── src/routes/(marketing)|(app)  # (app) splits into (member)/(owner)/(admin)
 tools/nix/                        # Nix flake + process-compose config
@@ -79,7 +81,12 @@ the **dev-runtime** skill.
   Regenerate with `just codegen::proto` / `just codegen::db-schema`.
 - Don't run codegen outside the Nix shell — `buf` isn't on PATH. Use
   `just develop`, or stage the proto change and ask the user to regenerate.
-- Don't skip the casbin check on a mutation handler.
+- Don't skip the casbin check on a mutation handler, or the capability gate on one
+  that has it. They answer different questions — "may they ever" vs "is it open
+  now" — and passing one is not passing the other.
+- Don't gate a capability on `state === "open"` / `== StateOpen`. A capability with
+  no row resolves *ungoverned*, meaning "no opinion, behave as before"; comparing
+  against open disables it on every hackathon that predates it.
 - Don't assume a backend service is missing because a doc says so — these notes
   have been wrong in that direction repeatedly. Check `server.go` and the handler
   file first.

@@ -27,7 +27,10 @@ service file.
 
 ## Read path
 
-- `List*Response` returns **shallow** entities — scalars and IDs only.
+- `List*Response` returns **shallow** entities — scalars and IDs only. One
+  deliberate exception: `Hackathon.capabilities` ships on `List` too, so a list can
+  gate its own buttons instead of firing a mutation to find out it is closed. Treat
+  it as an exception that needed justifying, not as license to deepen other lists.
 - `Get*Response` returns the **full tree** — embeds creator, modifier, related
   collections.
 - `ListRequest` carries explicit filter fields (e.g. `string hackathon_id = 1;`),

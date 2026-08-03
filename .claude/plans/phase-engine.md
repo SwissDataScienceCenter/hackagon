@@ -10,6 +10,76 @@ written before the repo was surveyed and assumed a greenfield build; most of wha
 it specified already exists, and `feat/vote-service` had already made a different
 storage decision. What follows is grounded in the actual code.
 
+This is the **only** plan for this work — status lives here, not in a separate
+handoff. Sections 1–10 are the design and its rationale; §0 below is where things
+actually stand.
+
+---
+
+## 0. Status (2026-08-03)
+
+Repo `~/WORK/HACKATHON/hackagon`, branch **`feat/frontend`**. Engine built and
+verified against the running stack; the remaining work is spreading it across the
+rest of the UI.
+
+**Load these skills first:** `frontend-data-wiring` (§6b is the capability
+conventions and the `isAvailable` trap) for UI work, `backend-services`
+("Capability gates") if you touch handlers, `dev-runtime` to run the stack.
+
+### Working end to end
+
+Capability rows per hackathon with `enabled` as the authoritative gate; enforced on
+`Join`, `Propose`, `SetPreference`, `CreateSubmission`, `FinalizeSubmission`;
+`EditCapability` and `AdvancePhase` RPCs; `current_phase_id`; capabilities returned
+on both `Get` and `List`. Member UI: header status/phase/deadline chips, Overview
+"what now" card, Timeline showing what each phase opens and closes, gated *Propose
+a Project*. Owner UI: advance control with a per-phase preview.
+
+### Next up — make the remaining nav items phase-aware
+
+This is the through-line: **every** nav item should tell a member what the
+hackathon expects of them now. Three of six do. Still phase-blind:
+
+| Nav item | Capability | What it should do |
+|---|---|---|
+| Teams | `set_team_preferences` | gate preference-setting; explain when it opens |
+| Submissions | `submit_project` | currently an under-construction stub (see the frontend skill's "Known gaps"); the deadline belongs here most of all |
+| Participants | `register` | show whether registration is open, and to when |
+| Content pages | — | no capability; likely leave alone |
+
+Each is the same shape as the Projects page: read the capability from
+`data.capabilities`, gate with `isAvailable` (never `state === "open"`), surface
+`lockReason` instead of hiding the control. No backend work needed.
+
+Also open, smaller:
+
+- **Dashboard Join button** still fires and fails rather than saying "Registration
+  opens Aug 22". `List` now carries capabilities, so this is unblocked.
+- **Drift is invisible.** The owner Timeline shows what a phase governs, not which
+  flags currently disagree with it. Needs `capability.Advance` ported to
+  TypeScript. This was the original argument for the advance button, so it matters
+  more than it looks.
+- **Nav badges** on gated tabs.
+- **Seed** has no already-advanced hackathon, so `current_phase_id` and the
+  position-over-dates rule are only exercised by hand. Deliberately deferred as its
+  own backend step.
+- `hackathonPages` is only fetched when a slug is in the URL, so the sidebar's
+  defaulted hackathon shows fixed entries but no content pages until you enter.
+
+### Traps worth knowing before touching this
+
+- `ungoverned` ≠ closed. It means "no opinion, behave as before". Gating on
+  `state === "open"` hides controls on every hackathon predating a capability.
+  `primaryAction` inverts this on purpose — see §6.
+- A declared `current_phase_id` outranks dates everywhere, including for `COMING`.
+  Use `activePhase`, not `currentPhase`, for anything user-facing.
+- `just check::lint -c backend` and `svelte-check` both fail on **pre-existing**
+  issues (`go.sum` drift; `HackathonRow.svelte`/`HeroSection.svelte`). Compare
+  against a clean tree before assuming you caused them.
+- The running backend goes stale after codegen — `just deploy::proc-comp process
+  restart backend`. The frontend dev server binds IPv6-only, so use
+  `http://localhost:8081`, not `127.0.0.1`.
+
 ---
 
 ## 1. What already exists
@@ -338,16 +408,11 @@ Done:
    Overview "what now" card; owner Timeline advance control with a per-phase
    preview of what it would change.
 
-Still open:
+5. `activePhase()` — a declared `current_phase_id` outranks the dates. Used by the
+   header chip, the Overview card and the Timeline's default selection, so those
+   three cannot contradict each other on one screen.
 
-- Dashboard: gate the Join button proactively instead of letting it fire and
-  fail. `List` now carries capabilities, so this is unblocked.
-- Member "you are here" still derives from dates via `currentPhase()` and
-  ignores `current_phase_id`, so an organizer advancing does not move it.
-- Drift is not surfaced: the owner Timeline shows what a phase governs, not
-  which flags currently disagree with it. Needs `capability.Advance` ported to
-  TypeScript.
-- Nav badges on gated tabs.
+What remains is listed once, in §0.
 
 Labels, priorities and target tabs stay in the frontend. They are product copy,
 not domain truth, and do not belong in proto.

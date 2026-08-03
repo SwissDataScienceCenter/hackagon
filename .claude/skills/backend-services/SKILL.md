@@ -20,12 +20,17 @@ grep -nE "^func \(s \*XService\)" components/backend/internal/service/x_service.
 just rpc::unauth grpc.health.v1.Health/Check   # or: grpcurl -plaintext localhost:3000 list
 ```
 
-As of 2026-07-30 all eight services are registered **and** implemented:
+As of 2026-08-03 all eight services are registered **and** implemented:
 `Health`, `User`, `Hackathon`, `Page`, `Phase`, `Track`, `Project`, `Team`.
 
-Genuinely absent: `VoteService` (no `Vote`/`VoteCategory` DB tables) and any
-`SubmissionService` — submissions are reached via
-`TeamService.CreateSubmission`/`FinalizeSubmission`.
+Genuinely absent: `VoteService` and any `SubmissionService` — submissions are
+reached via `TeamService.CreateSubmission`/`FinalizeSubmission`.
+
+`VoteService` protos and `Vote`/`VoteCategory`/`VoteResult` **DB schema** exist on
+the unmerged `feat/vote-service` branch, but no handler and no `server.go` entry.
+That branch also adds a `HackathonSettings` table whose two booleans overlap the
+capability rows described below — reconcile before merging, and see
+`.claude/plans/phase-engine.md` §2.
 
 ## Adding a service or RPC
 
@@ -63,11 +68,45 @@ didn't nest-load each submission's own `Team`/`Project`/`Creator`.
 - Only hackathon `Owner`s can create teams (`Team.Create` has exactly one casbin
   grant). Members can only be assigned into existing teams.
 - `HackathonService.Get` eager-loads `Members`, `Tracks`, `Projects`, `Pages`,
-  `Phases` — all fully populated.
+  `Phases`, `Capabilities` — all fully populated.
 - `HackathonStatus` is computed server-side from `starts_at`/`ends_at`, not stored.
+- `Hackathon.capabilities` is also computed, and is returned by **`List` as well as
+  `Get`** — the one place the "List is shallow" rule is broken on purpose, so a
+  list can gate its own buttons. `List` therefore eager-loads `Capabilities` *and*
+  `Phases`; see the capability section below for why phases are needed.
 - Roles (`GlobalRole`, `HackathonRole`) come from casbin, not the DB.
 - There is no pagination anywhere in the API, and no handler calls
   `.Limit()`/`.Offset()`.
+
+## Capability gates (is this action open right now?)
+
+Casbin answers "may this user ever do this". Capabilities answer "is it open right
+now". Every gated mutation needs **both**, side by side.
+
+- One `Capability` row per capability per hackathon, pre-created by
+  `HackathonService.Create`. `enabled` is the **authoritative** gate.
+- Rules live in `internal/capability` — no ent, no proto imports, so the read path
+  (what to show) and the write path (what to allow) cannot disagree. Don't
+  reimplement them in a handler.
+- Enforce with `requireCapability(ctx, db, enf, hackathonID, capability.X)` from
+  `internal/service/capability.go`. It returns `FailedPrecondition`, and **anyone
+  who can write the hackathon bypasses it** — organizers must be able to fix
+  things outside a window.
+- Currently gated: `Join`, `ProjectService.Propose`, `SetPreference`,
+  `TeamService.CreateSubmission`, `FinalizeSubmission`.
+- **A capability with no row resolves `UNGOVERNED` and is not enforced.** Use
+  `States.Allowed`, never `== StateOpen`, or every hackathon predating a capability
+  starts rejecting that mutation.
+- `defaultCapabilityEnabled` (in `internal/service/capability.go`) is why a new
+  hackathon starts permissive. Flipping it is a product decision, not a cleanup.
+
+Phases only *describe* when a capability is expected to change; they never change
+it. But once an organizer calls `AdvancePhase`, `COMING` is decided by phase
+**position** rather than by dates — they advance precisely when the schedule has
+stopped matching reality, so comparing dates then contradicts them. That is why
+anything resolving states for display must build a `capabilityClock` from the
+hackathon's phase order plus `current_phase_id`. Enforcement does not need one:
+`COMING` and `CLOSED` are both blocked.
 
 ## RBAC (casbin)
 
@@ -90,12 +129,13 @@ Roles:
 - Global (`g2`): `Admin`, `HackathonOrganizer`.
 - `Admin` always passes via the `g2(r.sub, "admin")` escape hatch in the matcher.
 
-**Role granting is live** — three handlers call `enforcer.AddRole`:
-`HackathonService.Create` grants the creator `Owner` (`hackathon_service.go:86`),
-`ApproveParticipant` grants `Member` (`:335`), and `TeamService.AssignUser` grants
-a team-scoped `Member` via `m.WithTeam(teamID)` (`team_service.go:368`). That last
-option produces the `/hackathon/*/team/*` domain the submission and team-edit
-policies match on.
+**Role granting is live** — three handlers call `enforcer.AddRole`
+(`grep -n AddRole internal/service/` finds them; line numbers are deliberately not
+quoted here, they drift on every edit):
+`HackathonService.Create` grants the creator `Owner`, `ApproveParticipant` grants
+`Member`, and `TeamService.AssignUser` grants a team-scoped `Member` via
+`m.WithTeam(teamID)`. That last option produces the `/hackathon/*/team/*` domain
+the submission and team-edit policies match on.
 
 `defaultPolicies()` grants `g2 admin` to `cfg.Server.AdminKeycloakID`
 (`hackagon-admin`) on every enforcer startup — not seed-driven. If a global admin
@@ -128,3 +168,5 @@ never reads claims.
 - Don't edit generated code: `internal/proto/**`, `ent/**`. Regenerate instead —
   see the `api-proto` skill.
 - Don't skip the casbin check on a mutation handler.
+- Don't skip the capability gate on a mutation that has one. Casbin and
+  capabilities answer different questions; passing one is not passing the other.
