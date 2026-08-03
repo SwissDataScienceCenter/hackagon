@@ -1,0 +1,90 @@
+erDiagram
+    HACKATHON {
+        uuid id PK
+        string name UK
+        time starts_at
+        time ends_at
+        enum visibility
+        string description
+        string logo
+    }
+    PAGE {
+        uuid id PK
+        string title
+        string content
+        bool visible
+        int order
+    }
+    PHASE {
+        uuid id PK
+        string name
+        string description
+        time starts_at
+        time ends_at
+    }
+    TRACK {
+        uuid id PK
+        string name
+        string description
+    }
+    PROJECT {
+        uuid id PK
+        string title
+        enum status
+        string description
+        string image
+    }
+    TEAM {
+        uuid id PK
+        string name
+        string description
+    }
+    SUBMISSION {
+        uuid id PK
+        int version
+        enum status
+        string result
+    }
+    USER {
+        uuid id PK
+        string username
+        string keycloak_id UK
+        string display_name
+        string email
+    }
+    PARTICIPANT {
+        uuid hackathon_id FK
+        uuid user_id FK
+        bool is_waiting
+    }
+    TEAMPARTICIPANT {
+        uuid team_id FK
+        uuid user_id FK
+    }
+
+    HACKATHON o|--o{ TRACK       : "tracks (optional FK)"
+    HACKATHON ||--o{ PAGE        : pages
+    HACKATHON ||--o{ PHASE       : phases
+    HACKATHON ||--o{ PROJECT     : projects
+
+    TRACK  o|--o{ PROJECT   : "projects (optional FK, new)"
+    PROJECT ||--o{ TEAM     : teams
+    PROJECT }o--o{ USER     : preferred_by
+
+    TEAM ||--o{ SUBMISSION     : submissions
+    PROJECT ||--o{ SUBMISSION  : submissions
+
+    PHASE |o--o| PAGE : "linked page (optional)"
+
+    HACKATHON ||--o{ PARTICIPANT : participants
+    USER      ||--o{ PARTICIPANT : participations
+    TEAM      ||--o{ TEAMPARTICIPANT : team_participants
+    USER      ||--o{ TEAMPARTICIPANT : team_participations
+
+    USER ||--o{ HACKATHON  : "creates/modifies"
+    USER ||--o{ PAGE       : "creates/modifies"
+    USER ||--o{ PHASE      : "creates/modifies"
+    USER ||--o{ TRACK      : "creates/modifies (new, required)"
+    USER ||--o{ PROJECT    : "creates/modifies"
+    USER ||--o{ TEAM       : "creates/modifies"
+    USER ||--o{ SUBMISSION : "creates/modifies"
