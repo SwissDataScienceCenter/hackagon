@@ -1,5 +1,7 @@
 import { redirect } from "@sveltejs/kit"
 import type { LayoutServerLoad } from "./$types"
+import { requireGrpc } from "$lib/server/grpc/client"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 
 // Every authenticated route lives under (app), so this load is the single choke
 // point for "you must be signed in". hooks.server.ts already guards by path
@@ -12,5 +14,35 @@ export const load: LayoutServerLoad = async (event) => {
     redirect(303, `/?returnTo=${returnTo}`)
   }
 
-  return { session: event.locals.session }
+  const { hackathon } = requireGrpc(event.locals.grpc)
+  const participantId = event.locals.platformUser?.id
+
+  // The sidebar is app-shell chrome for every authenticated route, so a backend
+  // hiccup must degrade it to an empty nav rather than fail this load and blank
+  // the whole shell (logo and user footer along with it).
+  let myHackathons: Awaited<ReturnType<typeof hackathon.list>>["hackathons"] =
+    []
+  if (participantId) {
+    try {
+      const result = await hackathon.list({ participantId })
+      myHackathons = result.hackathons
+    } catch (err) {
+      event.locals.logger.warn(
+        { err },
+        "LAYOUT: sidebar hackathon list failed, rendering an empty nav",
+      )
+    }
+  }
+
+  // Global roles come from casbin via WhoAmI, already on locals — no extra RPC.
+  const roles = event.locals.platformUser?.roles ?? []
+
+  return {
+    session: event.locals.session,
+    myHackathons,
+    isGlobalAdmin: roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN),
+    isHackathonOrganizer: roles.includes(
+      GlobalRole.GLOBAL_ROLE_HACKATHON_ORGANIZER,
+    ),
+  }
 }

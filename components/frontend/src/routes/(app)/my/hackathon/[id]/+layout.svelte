@@ -1,6 +1,5 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import HackathonSubNav from '$lib/components/hackathon/HackathonSubNav.svelte';
     import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
 
@@ -10,18 +9,9 @@
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-    const hackathonId = $derived($page.params.id);
-
-    const tabs = [
-        { id: 'overview', label: 'Overview' },
-        { id: 'participants', label: 'Participants' },
-        { id: 'proposals', label: 'Proposals' },
-        { id: 'teams', label: 'Teams' },
-        { id: 'submissions', label: 'Submissions' },
-        { id: 'timeline', label: 'Timeline' },
-        { id: 'webinars', label: 'Webinars' },
-        { id: 'photos', label: 'Photos' },
-    ];
+    // The per-hackathon tabs moved into AppSidebar — see $lib/navigation's
+    // memberNav. Two controls listing the same eight destinations was one too
+    // many, and the sidebar is the one that survives leaving the hackathon.
 
     function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
         if (!startsAt) return '';
@@ -67,7 +57,7 @@
         return chips;
     })());
 
-    /** List pages: only sub-nav + content (no compact hero or phase bar). */
+    /** List pages: content only (no compact hero or phase bar). */
     const listPageSegments = new Set([
         'participants',
         'teams',
@@ -81,10 +71,6 @@
         listPageSegments.has($page.url.pathname.split('/').filter(Boolean).pop() ?? '')
     );
 </script>
-
-<div class="mx-auto w-full max-w-7xl">
-    <HackathonSubNav {tabs} hackathonId={hackathonId ?? ''} />
-</div>
 
 {#if !hideHeroAndTimeline}
     <HeroCompact
