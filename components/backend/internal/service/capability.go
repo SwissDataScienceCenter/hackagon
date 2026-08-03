@@ -79,9 +79,7 @@ func capabilityStateToProto(s capability.State) hackEnts.CapabilityState {
 	}
 }
 
-// capabilityClosedMessage is what a blocked member is told. Phrased for them,
-// and matching the wording the registration check already uses on
-// feat/vote-service.
+// capabilityClosedMessage is what a blocked member is told.
 func capabilityClosedMessage(c capability.Capability) string {
 	switch c {
 	case capability.Register:
@@ -102,7 +100,7 @@ func capabilityClosedMessage(c capability.Capability) string {
 }
 
 // capabilityToEnt converts to the ent enum. The values are identical strings by
-// construction; the switch exists so an unknown value cannot reach the database.
+// construction; the validator is what stops an unknown one reaching the database.
 func capabilityToEnt(c capability.Capability) (entcapability.Capability, bool) {
 	ec := entcapability.Capability(c)
 	if err := entcapability.CapabilityValidator(ec); err != nil {
@@ -172,7 +170,6 @@ func capabilityRowFromEnt(r *ent.Capability, clock capabilityClock) capability.R
 	return row
 }
 
-// capabilityRows reduces stored rows to what the resolver needs.
 func capabilityRows(rows []*ent.Capability, clock capabilityClock) []capability.Row {
 	out := make([]capability.Row, 0, len(rows))
 	for _, r := range rows {
@@ -273,11 +270,8 @@ func capabilityStatusesFromEnt(
 // existing caller changes, and a new hackathon is not bricked before the
 // organizer settings screen exists. Closing an action is then an explicit act.
 //
-// Note this differs from feat/vote-service, which defaults
-// registrations_enabled to false. Flipping this to closed-by-default is a
-// one-line change, but it is a product decision — organizers would have to open
-// every action before members could do anything — so it wants the organizer UI
-// to land first and should be decided on purpose, not inherited from plumbing.
+// Flipping this to closed-by-default is a one-line change, but it is a product
+// decision and wants the organizer UI to land first.
 const defaultCapabilityEnabled = true
 
 // createDefaultCapabilities inserts one row per capability.
@@ -309,7 +303,6 @@ func createDefaultCapabilities(
 	return db.Capability.CreateBulk(builders...).Exec(ctx)
 }
 
-// loadCapabilityStates resolves the capability states of one hackathon.
 func loadCapabilityStates(
 	ctx context.Context,
 	db *ent.Client,

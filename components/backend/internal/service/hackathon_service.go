@@ -609,11 +609,19 @@ func (s *HackathonService) EditCapability(
 
 	c, ok := CapabilityFromProto(req.GetCapability())
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", req.GetCapability())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown capability: %v",
+			req.GetCapability(),
+		)
 	}
 	entCapability, ok := capabilityToEnt(c)
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", req.GetCapability())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown capability: %v",
+			req.GetCapability(),
+		)
 	}
 
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
