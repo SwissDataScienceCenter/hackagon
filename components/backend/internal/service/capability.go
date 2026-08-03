@@ -448,26 +448,38 @@ func phaseInHackathon(
 	db *ent.Client,
 	hackathonID, phaseID uuid.UUID,
 ) error {
-	ok, err := db.Phase.Query().
+	_, err := loadPhaseInHackathon(ctx, db, hackathonID, phaseID)
+
+	return err
+}
+
+// loadPhaseInHackathon is phaseInHackathon for callers that need the phase
+// itself — its dates, specifically — rather than only proof it exists.
+func loadPhaseInHackathon(
+	ctx context.Context,
+	db *ent.Client,
+	hackathonID, phaseID uuid.UUID,
+) (*ent.Phase, error) {
+	phase, err := db.Phase.Query().
 		Where(
 			entphase.IDEQ(phaseID),
 			entphase.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
 		).
-		Exist(ctx)
+		Only(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"phase %s not found in hackathon %s",
+				phaseID, hackathonID,
+			)
+		}
 		slog.Error("query phase for capability link", "err", err)
 
-		return status.Error(codes.Internal, "couldn't query database")
-	}
-	if !ok {
-		return status.Errorf(
-			codes.NotFound,
-			"phase %s not found in hackathon %s",
-			phaseID, hackathonID,
-		)
+		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	return nil
+	return phase, nil
 }
 
 // requireCapability blocks a mutation whose capability is closed.

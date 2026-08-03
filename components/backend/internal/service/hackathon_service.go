@@ -743,8 +743,25 @@ func (s *HackathonService) AdvancePhase(
 		return nil, err
 	}
 
-	if err := phaseInHackathon(ctx, s.dbClient, id, phaseID); err != nil {
+	phase, err := loadPhaseInHackathon(ctx, s.dbClient, id, phaseID)
+	if err != nil {
 		return nil, err
+	}
+
+	// A phase that has not started cannot be the one the event is in. Advancing
+	// into it would open its capabilities ahead of the schedule members were
+	// shown, so the date has to be moved first — deliberately, on the phase —
+	// rather than being overridden by a single click here.
+	//
+	// Only the start is checked. Advancing back into a phase that already ended
+	// is how an organizer undoes a premature move, and stays allowed. An undated
+	// phase is unscheduled, so there is no date to be early for.
+	if phase.StartsAt != nil && phase.StartsAt.After(time.Now()) {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"phase %q starts at %s and cannot be advanced to before then",
+			phase.Name, phase.StartsAt.UTC().Format(time.RFC3339),
+		)
 	}
 
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)

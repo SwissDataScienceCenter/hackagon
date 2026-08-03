@@ -1563,9 +1563,12 @@ var _ = Describe("HackathonService", func() {
 				}
 
 				BeforeEach(func() {
-					ideation = newPhase("Ideation", 1)
-					hacking = newPhase("Hacking", 2)
-					judging = newPhase("Judging", 3)
+					// All three already started: advancing to a phase whose start
+					// is still ahead is refused, so a future-dated fixture would
+					// fail every spec here for the wrong reason.
+					ideation = newPhase("Ideation", -3)
+					hacking = newPhase("Hacking", -2)
+					judging = newPhase("Judging", -1)
 
 					// Proposals span Ideation→Hacking, submissions Hacking→Judging,
 					// results open at Judging. Voting stays unlinked. All start
@@ -1713,6 +1716,50 @@ var _ = Describe("HackathonService", func() {
 					Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 				})
 
+				It("refuses a phase that has not started yet", func() {
+					later := newPhase("Awards", 2)
+
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: later,
+					})
+					Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+
+					// Refused means nothing moved: no half-applied capabilities,
+					// and the declared phase is untouched.
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(got.GetHackathon().CurrentPhaseId).To(BeNil())
+					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+					)
+				})
+
+				It("allows a phase that has already ended", func() {
+					// Advancing backwards is how a premature move is undone, so an
+					// end date in the past must not block it.
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: ideation,
+					})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("allows an undated phase", func() {
+					// No start date is no schedule to be early for.
+					undated, err := dbClient.Phase.Create().
+						SetName("Wrap-up").
+						SetHackathonID(uuid.MustParse(hackathonID)).
+						SetCreatorID(adminUserID).
+						SetModifierID(adminUserID).
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					resp, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: undated.ID.String(),
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resp.GetCurrentPhaseId()).To(Equal(undated.ID.String()))
+				})
+
 				It("rejects a phase from another hackathon", func() {
 					other, err := client.Create(adminCtx, &msgs.CreateRequest{
 						Name:       "Elsewhere",
@@ -1792,17 +1839,30 @@ var _ = Describe("HackathonService", func() {
 				})
 
 				It("resolves COMING by position once advanced, as Get does", func() {
-					// The reason List loads phases at all. Every phase here is in
-					// the future, so dates alone would call both capabilities
-					// COMING; only the organizer's position separates them.
-					early := newPhase("Early", 5)
-					current := newPhase("Current", 6)
-					ahead := newPhase("Ahead", 7)
+					// The reason List loads phases at all: with every phase in the
+					// future, dates alone would call both capabilities COMING, and
+					// only the organizer's position separates them.
+					//
+					// Built in the past and pushed forward afterwards, because
+					// advancing to a phase that has not started is refused. The
+					// order is what the resolver reads, and shifting all three by
+					// the same amount leaves it unchanged.
+					early := newPhase("Early", -3)
+					current := newPhase("Current", -2)
+					ahead := newPhase("Ahead", -1)
 
 					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
 						HackathonId: hackathonID, PhaseId: current,
 					})
 					Expect(err).NotTo(HaveOccurred())
+
+					for i, id := range []string{early, current, ahead} {
+						_, err := dbClient.Phase.UpdateOneID(uuid.MustParse(id)).
+							SetStartsAt(time.Now().AddDate(0, 0, 5+i)).
+							SetEndsAt(time.Now().AddDate(0, 0, 6+i)).
+							Save(context.Background())
+						Expect(err).NotTo(HaveOccurred())
+					}
 
 					// Disabled after advancing, so the advance cannot re-open them.
 					for _, link := range []struct {
