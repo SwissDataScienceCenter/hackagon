@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
+	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
+	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	vote "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote"
@@ -323,6 +328,251 @@ func (s *VoteService) DeleteVoteCategory(
 	}
 
 	return &voteMsgs.DeleteVoteCategoryResponse{}, nil
+}
+
+// ─── Voting ──────────────────────────────────────────────────────────
+
+// voteEntryFromEnt maps an ent Vote (with Category, Voter, Submissions
+// eager-loaded) to its proto entity.
+func voteEntryFromEnt(v *ent.Vote) *voteEnts.Vote {
+	entry := &voteEnts.Vote{Id: v.ID.String()}
+	if v.Edges.Category != nil {
+		entry.CategoryId = v.Edges.Category.ID.String()
+	}
+	if v.Edges.Voter != nil {
+		entry.VoterId = v.Edges.Voter.ID.String()
+	}
+	if v.VoteType == entvote.VoteTypeSingleChoice && len(v.Edges.Submission) > 0 {
+		entry.Vote = &voteEnts.Vote_SingleChoice{
+			SingleChoice: &voteEnts.SingleChoiceVote{
+				SubmissionId: v.Edges.Submission[0].ID.String(),
+			},
+		}
+	}
+
+	return entry
+}
+
+// SubmitVote casts one ballot. The voter must be a confirmed participant of
+// the category's hackathon (organizers/admins are NOT exempt — voting is a
+// participant act), voting must be open (settings.voting_enabled), and for
+// jury categories the voter must be on the jury. One ballot per voter per
+// category — the DB unique index turns double votes into AlreadyExists.
+func (s *VoteService) SubmitVote(
+	ctx context.Context,
+	req *voteMsgs.SubmitVoteRequest,
+) (*voteMsgs.SubmitVoteResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sc := req.GetSingleChoice()
+	if sc == nil {
+		// The Vote schema stores one row per (category, voter); ranked and
+		// points ballots need multiple rows and cannot be persisted until the
+		// schema decision lands (see #78 review).
+		return nil, status.Error(codes.Unimplemented,
+			"only single_choice ballots are supported for now")
+	}
+	categoryID, err := uuid.Parse(sc.GetCategoryId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
+	}
+	submissionID, err := uuid.Parse(sc.GetSubmissionId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid submission_id: %v", err)
+	}
+
+	c, err := s.categoryWithHackathon(ctx, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	hackathonID := c.Edges.Hackathon.ID
+
+	// Voting window: closed unless the settings row explicitly enables it.
+	settings, err := s.dbClient.HackathonSettings.Query().
+		Where(enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		slog.Error("query hackathon settings", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query hackathon settings")
+	}
+	if settings == nil || !settings.VotingEnabled {
+		return nil, status.Error(codes.FailedPrecondition, "voting is closed")
+	}
+
+	voter, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	if c.VoterType == entvotecategory.VoterTypeJury {
+		onJury := false
+		for _, j := range c.Edges.JuryMembers {
+			if j.ID == voter.ID {
+				onJury = true
+
+				break
+			}
+		}
+		if !onJury {
+			return nil, status.Error(codes.PermissionDenied, "only jury members may vote in this category")
+		}
+	} else {
+		confirmed, err := s.dbClient.Participant.Query().
+			Where(
+				entparticipant.HasUserWith(entuser.IDEQ(voter.ID)),
+				entparticipant.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+				entparticipant.IsWaiting(false),
+			).
+			Exist(ctx)
+		if err != nil {
+			slog.Error("query participant", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't query database")
+		}
+		if !confirmed {
+			return nil, status.Error(codes.PermissionDenied,
+				"only confirmed participants may vote")
+		}
+	}
+
+	created, err := s.dbClient.Vote.Create().
+		SetCategoryID(categoryID).
+		SetVoterID(voter.ID).
+		AddSubmissionIDs(submissionID).
+		SetVoteType(entvote.VoteTypeSingleChoice).
+		Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, status.Error(codes.AlreadyExists, "already voted in this category")
+		}
+		slog.Error("create vote", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't create vote")
+	}
+
+	v, err := s.voteByID(ctx, created.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &voteMsgs.SubmitVoteResponse{Vote: voteEntryFromEnt(v)}, nil
+}
+
+func (s *VoteService) voteByID(ctx context.Context, id uuid.UUID) (*ent.Vote, error) {
+	v, err := s.dbClient.Vote.Query().
+		Where(entvote.IDEQ(id)).
+		WithCategory().
+		WithVoter().
+		WithSubmission().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "vote %s not found", id)
+		}
+		slog.Error("query vote", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return v, nil
+}
+
+func (s *VoteService) GetVote(
+	ctx context.Context,
+	req *voteMsgs.GetVoteRequest,
+) (*voteMsgs.GetVoteResponse, error) {
+	if _, _, err := m.RequireSubject(ctx); err != nil {
+		return nil, err
+	}
+	id, err := uuid.Parse(req.GetId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid id: %v", err)
+	}
+	v, err := s.voteByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &voteMsgs.GetVoteResponse{Vote: voteEntryFromEnt(v)}, nil
+}
+
+// ListVotes returns raw ballots — organizer/admin only (ballots are not
+// public). category_id is required to scope the permission check.
+func (s *VoteService) ListVotes(
+	ctx context.Context,
+	req *voteMsgs.ListVotesRequest,
+) (*voteMsgs.ListVotesResponse, error) {
+	votes, err := s.votesForExport(ctx, req.GetCategoryId(), req.GetVoterId(), req.GetSubmissionId())
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]*voteEnts.Vote, 0, len(votes))
+	for _, v := range votes {
+		entries = append(entries, voteEntryFromEnt(v))
+	}
+
+	return &voteMsgs.ListVotesResponse{Votes: entries}, nil
+}
+
+// votesForExport enforces the organizer/admin gate and returns ballots for a
+// category with optional voter/submission filters.
+func (s *VoteService) votesForExport(
+	ctx context.Context,
+	rawCategoryID, rawVoterID, rawSubmissionID string,
+) ([]*ent.Vote, error) {
+	if rawCategoryID == "" {
+		return nil, status.Error(codes.InvalidArgument, "category_id is required")
+	}
+	categoryID, err := uuid.Parse(rawCategoryID)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
+	}
+	c, err := s.categoryWithHackathon(ctx, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.enforcer.RequirePermission(
+		ctx, c.Edges.Hackathon.ID.String(), m.Hackathon, m.Write,
+	); err != nil {
+		return nil, err
+	}
+
+	q := s.dbClient.Vote.Query().
+		Where(entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID))).
+		WithCategory().
+		WithVoter().
+		WithSubmission()
+	if rawVoterID != "" {
+		voterID, err := uuid.Parse(rawVoterID)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid voter_id: %v", err)
+		}
+		q = q.Where(entvote.HasVoterWith(entuser.IDEQ(voterID)))
+	}
+	if rawSubmissionID != "" {
+		submissionID, err := uuid.Parse(rawSubmissionID)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid submission_id: %v", err)
+		}
+		q = q.Where(entvote.HasSubmissionWith(entsubmission.IDEQ(submissionID)))
+	}
+	votes, err := q.All(ctx)
+	if err != nil {
+		slog.Error("query votes", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return votes, nil
 }
 
 // ─── Shared helpers ──────────────────────────────────────────────────
