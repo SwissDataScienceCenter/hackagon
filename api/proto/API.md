@@ -60,14 +60,14 @@
 - [hackathon/messages/hackathon_svc/add_owner_request.proto](#hackathon_messages_hackathon_svc_add_owner_request-proto)
     - [AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest)
   
+- [hackathon/messages/hackathon_svc/add_owner_response.proto](#hackathon_messages_hackathon_svc_add_owner_response-proto)
+    - [AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse)
+  
 - [hackathon/messages/hackathon_svc/advance_phase_request.proto](#hackathon_messages_hackathon_svc_advance_phase_request-proto)
     - [AdvancePhaseRequest](#hackathon-messages-hackathon_svc-AdvancePhaseRequest)
   
 - [hackathon/messages/hackathon_svc/advance_phase_response.proto](#hackathon_messages_hackathon_svc_advance_phase_response-proto)
     - [AdvancePhaseResponse](#hackathon-messages-hackathon_svc-AdvancePhaseResponse)
-  
-- [hackathon/messages/hackathon_svc/add_owner_response.proto](#hackathon_messages_hackathon_svc_add_owner_response-proto)
-    - [AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse)
   
 - [hackathon/messages/hackathon_svc/approve_participant_request.proto](#hackathon_messages_hackathon_svc_approve_participant_request-proto)
     - [ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest)
@@ -1111,6 +1111,32 @@ Once VoteService lands this becomes caller-dependent (jury vs participant), so i
 
 
 
+<a name="hackathon_messages_hackathon_svc_add_owner_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/add_owner_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-AddOwnerResponse"></a>
+
+### AddOwnerResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_advance_phase_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1160,32 +1186,6 @@ Once VoteService lands this becomes caller-dependent (jury vs participant), so i
 | ----- | ---- | ----- | ----------- |
 | current_phase_id | [string](#string) |  |  |
 | capabilities | [hackathon.entities.CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated | Every capability after the move, so the caller can show what changed rather than re-fetching the hackathon. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_add_owner_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/add_owner_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-AddOwnerResponse"></a>
-
-### AddOwnerResponse
-
 
 
 
