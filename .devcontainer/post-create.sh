@@ -18,9 +18,11 @@ sudo chown "$(id -u):$(id -g)" "${workspace}/.devenv" "${workspace}/.direnv"
 # Make a manually installed (single-user) Nix visible to every shell. With the
 # devcontainer Nix feature this file does not exist and these are no-ops.
 if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+    # The USER guard matters: docker exec shells have no USER set, and
+    # nix.sh silently no-ops without it.
+    line='export USER="${USER:-$(whoami)}"; . "$HOME/.nix-profile/etc/profile.d/nix.sh"'
     for rc in "$HOME/.bashrc" "$HOME/.bash_profile"; do
-        grep -qs "nix-profile/etc/profile.d/nix.sh" "$rc" ||
-            echo '. "$HOME/.nix-profile/etc/profile.d/nix.sh"' >> "$rc"
+        grep -qs "nix-profile/etc/profile.d/nix.sh" "$rc" || echo "$line" >> "$rc"
     done
     . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 fi
