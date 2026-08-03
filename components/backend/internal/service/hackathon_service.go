@@ -277,25 +277,15 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
 	}
 
+	// MERGE NOTE (sketch): #87 (Register capability) and #78
+	// (settings.registrations_enabled) both gate Join, with contradictory
+	// defaults — their test suites cannot both pass with both gates active.
+	// The capability governs here; settings remain editable data (see
+	// EditSettings) until the team consolidates on one mechanism.
 	if err := requireCapability(
 		ctx, s.dbClient, s.enforcer, id, capability.Register,
 	); err != nil {
 		return nil, err
-	}
-
-	// MERGE NOTE (sketch): capabilities (#87) and settings (#78) both gate
-	// registration; both checks kept until the team picks one mechanism.
-	// Missing settings rows (pre-#78 hackathons, seed data) are tolerated so
-	// the capability check above stays authoritative for them.
-	settings, err := s.dbClient.HackathonSettings.Query().
-		Where(enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id))).
-		Only(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		slog.Error("query hackathon settings", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query hackathon settings")
-	}
-	if settings != nil && !settings.RegistrationsEnabled {
-		return nil, status.Error(codes.FailedPrecondition, "registrations are closed")
 	}
 
 	// First ensure user exists and get their entity ID

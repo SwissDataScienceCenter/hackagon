@@ -55,6 +55,8 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `capabilities` | Capability | O2M | no | no | Which member-facing actions are available on this hackathon. |
 | `current_phase` | Phase | M2O | yes | no | Set by AdvancePhase; SET NULL so deleting a phase does not orphan it. |
+| `vote_categories` | VoteCategory | O2M | no | no | Voting categories scoped to this hackathon. |
+| `settings` | HackathonSettings | O2O | no | no | Configuration settings for this hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -65,6 +67,26 @@ A hackathon event containing tracks, projects, phases, and participants.
 - `starts_at`
 - `ends_at`
 - `visibility`
+
+## HackathonSettings
+
+Configuration settings for a hackathon.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `registrations_enabled` | bool | yes | no | no | yes | Whether new participants can register for this hackathon. |
+| `voting_enabled` | bool | yes | no | no | yes | Whether voting is enabled for this hackathon. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the settings were created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | O2O | yes | yes | The hackathon this settings entry belongs to. |
+| `modifier` | User | M2O | yes | yes | The user who last modified these settings. |
 
 ## Page
 
@@ -202,6 +224,8 @@ A versioned submission from a team for a project.
 | `project` | Project | M2O | yes | yes | The project this submission is for. |
 | `creator` | User | M2O | yes | yes | The user who created this submission. |
 | `modifier` | User | M2O | yes | no | The user who last modified this submission. |
+| `votes` | Vote | M2M | no | no | Votes cast on this submission. |
+| `vote_results` | VoteResult | O2M | no | no | Vote results placing this submission. |
 
 ### Indexes
 
@@ -312,7 +336,73 @@ An authenticated user, synced from Keycloak on first login.
 | `created_tracks` | Track | O2M | no | no | Tracks this user created. |
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
 | `modified_capabilities` | Capability | O2M | no | no | Hackathon capabilities this user last opened or closed. |
+| `modified_settings` | HackathonSettings | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
+| `votes` | Vote | O2M | no | no | Votes cast by this user. |
+| `jury_categories` | VoteCategory | M2M | no | no | Vote categories where this user is a jury member. |
 | `participations` | Participant | O2M | yes | no |  |
 | `team_participations` | TeamParticipant | O2M | yes | no |  |
+
+## Vote
+
+A single atomic judgment from one voter on one submission within one category.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `vote_type` | enum(single_choice, ranked, points) | yes | no | no | no | Discriminator for the vote method. |
+| `value` | int | no | no | no | no | Rank position (ranked) or points awarded (points-based). Optional for single_choice. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `category` | VoteCategory | M2O | yes | yes | The vote category this vote belongs to. |
+| `voter` | User | M2O | yes | yes | Keycloak user ID of the voter. |
+| `submission` | Submission | M2M | yes | no | The submission this vote is for. |
+
+### Indexes
+
+- `vote_category_votes, user_votes` *(unique)*
+
+## VoteCategory
+
+A voting category within a hackathon, defining the criteria and rules for one dimension of evaluation.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `name` | string | yes | no | no | no | Display name of the category (e.g. "Coolness", "Novelty"). |
+| `description` | string | no | no | no | no | Criteria and instructions for voters. |
+| `voting_method` | enum(single_choice, ranked, points) | yes | no | no | no | How votes are cast: single choice, ranked, or points-based. |
+| `voter_type` | enum(all_participants, jury) | yes | no | no | no | Who can vote: all participants or jury only. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this category belongs to. |
+| `jury_members` | User | M2M | yes | no | Users assigned as jury members for this category (M2M). Only used when voter_type is JURY. |
+| `votes` | Vote | O2M | no | no | All votes cast for this category. |
+| `results` | VoteResult | O2M | no | no | Placements assigned to this category. |
+
+## VoteResult
+
+A placement entry within a vote category. Multiple VoteResults can exist per category.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `position` | int | yes | no | no | no | Ordering hint (1 = first place, 2 = second, etc.). Not unique — ties allowed. |
+| `title` | string | no | no | no | no | Optional custom title for the placement (e.g. "Most Innovative"). |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `vote_category` | VoteCategory | M2O | yes | yes | The category this result belongs to. |
+| `submission` | Submission | M2O | yes | yes | The submission being placed. |
 
