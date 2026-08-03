@@ -19,6 +19,13 @@
         if (!d) return '—';
         return new Date(d).toLocaleDateString('en-CH', { day: 'numeric', month: 'short', year: 'numeric' });
     }
+
+    // The backend refuses to advance into a phase that has not started, so the
+    // button says so up front rather than letting the click fail. An undated
+    // phase is unscheduled and stays advanceable.
+    function notStarted(startsAt?: Date): boolean {
+        return startsAt !== undefined && new Date(startsAt) > new Date();
+    }
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -110,7 +117,14 @@
                                             }}
                                         >
                                             <input type="hidden" name="phaseId" value={p.id} />
-                                            <button type="submit" class="btn btn-sm preset-filled-primary">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm preset-filled-primary"
+                                                disabled={notStarted(p.startsAt)}
+                                                title={notStarted(p.startsAt)
+                                                    ? `Starts ${formatDate(p.startsAt)} — change the start date to advance sooner`
+                                                    : undefined}
+                                            >
                                                 Advance here
                                             </button>
                                         </form>

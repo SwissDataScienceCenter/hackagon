@@ -1,13 +1,11 @@
 import type { PageServerLoad } from "./$types"
-import { activePhase, phaseStatus } from "$lib/utils/phase"
+import { activePhase, orderedPhases, phaseStatus } from "$lib/utils/phase"
 import { capabilitiesByPhase, capabilityNoun } from "$lib/utils/capabilities"
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon, capabilities } = await event.parent()
 
-  const ordered = [...hackathon.phases].sort(
-    (a, b) => (a.startsAt?.getTime() ?? 0) - (b.startsAt?.getTime() ?? 0),
-  )
+  const ordered = orderedPhases(hackathon.phases)
 
   // Selection lives in `?phase=` rather than component state so a phase's
   // content is linkable and bookmarkable. An absent or unrecognized id falls

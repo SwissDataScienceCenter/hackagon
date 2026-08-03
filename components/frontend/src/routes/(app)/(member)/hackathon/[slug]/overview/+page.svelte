@@ -5,7 +5,7 @@
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import Clock from 'lucide-svelte/icons/clock';
-    import { activePhase, phaseStatus } from '$lib/utils/phase';
+    import { activePhase, orderedPhases, phaseStatus } from '$lib/utils/phase';
     import { deadlineLabel, nextDeadline, primaryAction } from '$lib/utils/capabilities';
     import type { PageData } from './$types';
 
@@ -17,8 +17,10 @@
 
     // Everything the hero used to show now lives in the page body.
     const participantCount = $derived(hackathon.members.length);
+    // Chronological, matching the full timeline page — the strip reads as a
+    // sequence, so backend order would put Judging before Ideation.
     const phases = $derived(
-        hackathon.phases.map((p) => ({
+        orderedPhases(hackathon.phases).map((p) => ({
             id: p.id,
             name: p.name,
             status: phaseStatus(p.startsAt, p.endsAt),

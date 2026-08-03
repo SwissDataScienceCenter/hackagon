@@ -73,6 +73,14 @@ export const actions: Actions = {
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Phase not found" })
       }
+      // The button is already disabled for a phase that has not started, so this
+      // is the race: its date moved, or the two clocks disagree. The backend is
+      // the one that decides.
+      if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION) {
+        return fail(409, {
+          message: "That phase hasn't started yet. Change its start date first.",
+        })
+      }
       throw e
     }
 

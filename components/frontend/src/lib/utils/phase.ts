@@ -35,6 +35,21 @@ export interface PhaseWindow {
   endsAt?: Date
 }
 
+/**
+ * Phases in the order an event runs through them.
+ *
+ * The backend returns them in no particular order, so anything that renders a
+ * sequence — the timeline bar, the dashboard strip — has to impose one here, or
+ * it shows Judging before Ideation. Undated phases sort first: they have no
+ * position to claim, and leaving them at the front keeps the sort stable for
+ * the dated ones behind them.
+ */
+export function orderedPhases<T extends PhaseWindow>(phases: T[]): T[] {
+  return [...phases].sort(
+    (a, b) => (a.startsAt?.getTime() ?? 0) - (b.startsAt?.getTime() ?? 0),
+  )
+}
+
 export interface CurrentPhase<T> {
   phase: T
   /** True when `phase` is running now, false when it is only the next one up. */
