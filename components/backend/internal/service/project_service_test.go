@@ -276,6 +276,13 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID := hackathonResp.GetHackathonId()
 
+			// Enable registrations (disabled by default)
+			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
+				HackathonId:          hackathonID,
+				RegistrationsEnabled: testutils.BoolPtr(true),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			// Join the hackathon as the member (creates waitlisted participant)
 			memberToken := testutils.CreateTestJWTToken(memberKeycloakID)
 			memberCtx := metadata.NewOutgoingContext(
@@ -349,6 +356,13 @@ var _ = Describe("ProjectService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID := hackathonResp.GetHackathonId()
+
+			// Enable registrations (disabled by default)
+			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
+				HackathonId:          hackathonID,
+				RegistrationsEnabled: testutils.BoolPtr(true),
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			// Join the hackathon as the waitlisted user (creates is_waiting=true participant)
 			waitlistedToken := testutils.CreateTestJWTToken(waitlistedKeycloakID)
@@ -1081,6 +1095,18 @@ var _ = Describe("ProjectService", func() {
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
+			// Enable registrations (disabled by default)
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
+				HackathonId:          hackathonID,
+				RegistrationsEnabled: testutils.BoolPtr(true),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			// Creator joins the hackathon (creates waitlisted participant)
 			creatorToken := testutils.CreateTestJWTToken(creatorID)
 			creatorCtx := metadata.NewOutgoingContext(
@@ -1093,11 +1119,6 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Approve the participant as admin
-			adminToken := testutils.CreateTestJWTToken(testAdmin)
-			adminCtx := metadata.NewOutgoingContext(
-				context.Background(),
-				metadata.Pairs("authorization", "Bearer "+adminToken),
-			)
 			creatorUser, err := dbClient.User.Query().
 				Where(entuser.KeycloakIDEQ(creatorID)).
 				Only(context.Background())
@@ -1410,6 +1431,18 @@ var _ = Describe("ProjectService", func() {
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
+			// Enable registrations (disabled by default)
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
+				HackathonId:          hackathonID,
+				RegistrationsEnabled: testutils.BoolPtr(true),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			// Creator joins the hackathon (creates waitlisted participant)
 			creatorToken := testutils.CreateTestJWTToken(creatorID)
 			creatorCtx := metadata.NewOutgoingContext(
@@ -1422,11 +1455,6 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Approve the participant as admin
-			adminToken := testutils.CreateTestJWTToken(testAdmin)
-			adminCtx := metadata.NewOutgoingContext(
-				context.Background(),
-				metadata.Pairs("authorization", "Bearer "+adminToken),
-			)
 			creatorUser, err := dbClient.User.Query().
 				Where(entuser.KeycloakIDEQ(creatorID)).
 				Only(context.Background())

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package vote.messages.vote_svc;
+
+import "buf/validate/validate.proto";
+import "vote/entities/voter_type.proto";
+import "vote/entities/voting_method.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
+
+message EditVoteCategoryRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 255
+  ];
+  optional string description = 3 [(buf.validate.field).string.max_len = 10000];
+  optional vote.entities.VotingMethod voting_method = 4 [(buf.validate.field).enum.defined_only = true];
+  optional vote.entities.VoterType voter_type = 5 [(buf.validate.field).enum.defined_only = true];
+  repeated string jury_member_ids = 6 [(buf.validate.field).repeated.items.string.uuid = true];
+}

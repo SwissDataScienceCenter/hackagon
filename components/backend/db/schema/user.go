@@ -94,9 +94,17 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_capabilities", Capability.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Hackathon capabilities this user last opened or closed."),
+		edge.To("modified_settings", HackathonSettings.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Hackathon settings this user last modified."),
 		edge.To("preferred_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Projects this user has marked as preferred."),
+		edge.To("votes", Vote.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Votes cast by this user."),
+		edge.To("jury_categories", VoteCategory.Type).
+			Comment("Vote categories where this user is a jury member."),
 	}
 }
 

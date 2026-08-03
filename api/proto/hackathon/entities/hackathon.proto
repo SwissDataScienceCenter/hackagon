@@ -6,6 +6,7 @@ import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/capability.proto";
 import "hackathon/entities/hackathon_member.proto";
+import "hackathon/entities/hackathon_settings.proto";
 import "hackathon/entities/hackathon_status.proto";
 import "hackathon/entities/page.proto";
 import "hackathon/entities/phase.proto";
@@ -46,8 +47,8 @@ message Hackathon {
   // Populated in List responses only when participant_id filter is set.
   // Contains the requesting user's membership in this hackathon (role + is_waiting).
   optional HackathonMember viewer_membership = 18;
-  // 19 is held for HackathonSettings.
-  //
+  // Populated in Get responses only.
+  HackathonSettings settings = 19;
   // Computed server-side from the stored capability rows; not persisted as a
   // whole. Populated on both Get and List, so a list can gate its own buttons
   // rather than firing a mutation to discover something is closed.

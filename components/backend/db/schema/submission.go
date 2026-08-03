@@ -58,6 +58,10 @@ func (Submission) Edges() []ent.Edge {
 		edge.From("modifier", User.Type).
 			Ref("modified_submissions").Unique().
 			Comment("The user who last modified this submission."),
+		edge.To("votes", Vote.Type).
+			Comment("Votes cast on this submission."),
+		edge.To("vote_results", VoteResult.Type).
+			Comment("Vote results placing this submission."),
 	}
 }
 

@@ -284,3 +284,12 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 
 	return e
 }
+
+func settingsEntryFromEnt(s *ent.HackathonSettings) *hackEnts.HackathonSettings {
+	return &hackEnts.HackathonSettings{
+		Id:                   s.ID.String(),
+		RegistrationsEnabled: s.RegistrationsEnabled,
+		VotingEnabled:        s.VotingEnabled,
+		ModifiedAt:           timestamppb.New(s.ModifiedAt),
+	}
+}

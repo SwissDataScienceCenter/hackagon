@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package vote.entities;
+
+import "user/entities/user.proto";
+import "vote/entities/voter_type.proto";
+import "vote/entities/voting_method.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities";
+
+// VoteCategory represents a voting category within a hackathon, defining
+// the criteria and rules for one dimension of evaluation.
+message VoteCategory {
+  string id = 1;
+  string hackathon_id = 2;
+  string name = 3;
+  string description = 4;
+  VotingMethod voting_method = 5;
+  VoterType voter_type = 6;
+  repeated user.entities.User jury_members = 7;
+  int64 created_at = 8;
+  int64 modified_at = 9;
+}

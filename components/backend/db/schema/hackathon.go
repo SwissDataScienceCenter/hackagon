@@ -81,6 +81,11 @@ func (Hackathon) Edges() []ent.Edge {
 			Field("current_phase_id").
 			Annotations(entsql.OnDelete(entsql.SetNull)).
 			Comment("Set by AdvancePhase; SET NULL so deleting a phase does not orphan it."),
+		edge.To("vote_categories", VoteCategory.Type).
+			Comment("Voting categories scoped to this hackathon."),
+		edge.To("settings", HackathonSettings.Type).
+			Unique().
+			Comment("Configuration settings for this hackathon."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),

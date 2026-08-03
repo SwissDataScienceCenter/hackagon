@@ -37,3 +37,6 @@ components/backend/internal/proto
 components/backend/ent/*
 components/frontend/src/lib/server/grpc/*.proto
 components/frontend/src/lib/server/grpc/generated
+
+# pnpm store created inside containers (bind-mount filesystem boundary)
+.pnpm-store/
