@@ -11,6 +11,7 @@
     import Hourglass from 'lucide-svelte/icons/hourglass';
     import UsersRound from 'lucide-svelte/icons/users-round';
     import Clock from 'lucide-svelte/icons/clock';
+    import Milestone from 'lucide-svelte/icons/milestone';
     import {
         statusLabel,
         statusBadgePreset,
@@ -20,6 +21,7 @@
         membershipBadgePreset,
     } from '$lib/utils/hackathonStatus';
     import { deadlineLabel, nextDeadline, type Capabilities } from '$lib/utils/capabilities';
+    import { activePhase } from '$lib/utils/phase';
 
     /** The one header every hackathon page wears — member and owner shells alike.
      *  Both layouts render this so the chips and dates cannot drift apart. */
@@ -35,6 +37,9 @@
             endsAt?: Date;
             status: number;
             visibility: number;
+            phases?: { id: string; name: string; startsAt?: Date; endsAt?: Date }[];
+            /** Set by AdvancePhase; outranks the dates when present. */
+            currentPhaseId?: string;
         };
         myMembership?: { isWaiting: boolean; role: number } | null;
         myTeams?: { id: string; name: string }[];
@@ -69,6 +74,13 @@
     // hackathon whose capabilities are all driven by hand.
     const deadline = $derived(capabilities ? nextDeadline(capabilities) : undefined);
 
+    // Where the event is, as the organizer sees it — declared phase first, dates
+    // only as a fallback. Both shells pass the full hackathon, so this works in
+    // the owner header too.
+    const phase = $derived(
+        activePhase(hackathon.phases ?? [], hackathon.currentPhaseId),
+    );
+
     /** Row 1 — what the hackathon is. */
     const badges = $derived((() => {
         const chips: HeroBadge[] = [];
@@ -85,6 +97,14 @@
                 label: vl,
                 preset: visibilityBadgePreset(hackathon.visibility) ?? 'preset-tonal-surface',
                 icon: VISIBILITY_ICON[hackathon.visibility as keyof typeof VISIBILITY_ICON],
+            });
+        // Between the lifecycle and the deadline: status says which era, this
+        // says where inside it, the deadline says what changes next.
+        if (phase)
+            chips.push({
+                label: phase.active ? phase.phase.name : `Next: ${phase.phase.name}`,
+                preset: 'preset-tonal-secondary',
+                icon: Milestone,
             });
         // Last so it reads as the newest information, and warning-toned so it
         // stands out against the two steady facts beside it.

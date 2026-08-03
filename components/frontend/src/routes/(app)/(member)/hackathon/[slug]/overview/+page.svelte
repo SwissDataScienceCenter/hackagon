@@ -5,7 +5,7 @@
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import Clock from 'lucide-svelte/icons/clock';
-    import { currentPhase, phaseStatus } from '$lib/utils/phase';
+    import { activePhase, phaseStatus } from '$lib/utils/phase';
     import { deadlineLabel, nextDeadline, primaryAction } from '$lib/utils/capabilities';
     import type { PageData } from './$types';
 
@@ -24,7 +24,9 @@
             status: phaseStatus(p.startsAt, p.endsAt),
         })),
     );
-    const now = $derived(currentPhase(hackathon.phases));
+    // activePhase, not currentPhase: the header on this same screen shows the
+    // organizer's declared phase, and the two must not disagree.
+    const now = $derived(activePhase(hackathon.phases, hackathon.currentPhaseId));
 
     // "What now": where the event is, what changes next, and the one thing worth
     // doing. All three come from the server's capability states, so this cannot
@@ -63,7 +65,7 @@
                     {/if}
                 </span>
             {:else}
-                <!-- currentPhase returns nothing both when no phase has dates and
+                <!-- activePhase returns nothing both when no phase has dates and
                      when every one has ended, which are opposite situations. -->
                 <span class="text-base font-bold text-surface-950-50">
                     {phases.length === 0 ? 'No phases scheduled yet' : 'All phases complete'}

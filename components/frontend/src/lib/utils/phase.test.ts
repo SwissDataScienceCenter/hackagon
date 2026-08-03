@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { currentPhase } from "./phase"
+import { activePhase, currentPhase } from "./phase"
 
 const NOW = new Date("2026-07-15T12:00:00Z")
 
@@ -9,6 +9,10 @@ function phase(name: string, startsAt?: string, endsAt?: string) {
     startsAt: startsAt ? new Date(startsAt) : undefined,
     endsAt: endsAt ? new Date(endsAt) : undefined,
   }
+}
+
+function identified(name: string, startsAt?: string, endsAt?: string) {
+  return { id: name.toLowerCase(), ...phase(name, startsAt, endsAt) }
 }
 
 describe("currentPhase", () => {
@@ -85,5 +89,57 @@ describe("currentPhase", () => {
 
   it("returns undefined for an empty list", () => {
     expect(currentPhase([], NOW)).toBeUndefined()
+  })
+})
+
+describe("activePhase", () => {
+  const kickoff = identified("Kickoff", "2026-07-01", "2026-07-05")
+  const hacking = identified("Hacking", "2026-07-10", "2026-07-20")
+  const judging = identified("Judging", "2026-07-25", "2026-07-26")
+  const all = [kickoff, hacking, judging]
+
+  it("derives from the dates when nothing is declared", () => {
+    expect(activePhase(all, undefined, NOW)).toEqual({
+      phase: hacking,
+      active: true,
+    })
+  })
+
+  it("prefers the declared phase over what the dates say", () => {
+    // The organizer advanced to Judging even though its window has not opened.
+    // Deriving from dates here would contradict them in front of members.
+    expect(activePhase(all, "judging", NOW)).toEqual({
+      phase: judging,
+      active: true,
+    })
+  })
+
+  it("treats a declared past phase as active", () => {
+    // Running behind schedule is the other half of the same case.
+    expect(activePhase(all, "kickoff", NOW)).toEqual({
+      phase: kickoff,
+      active: true,
+    })
+  })
+
+  it("falls back to the dates when the declared phase is gone", () => {
+    // The phase was deleted; the stored id outlives it until the next write.
+    expect(activePhase(all, "deleted-phase", NOW)).toEqual({
+      phase: hacking,
+      active: true,
+    })
+  })
+
+  it("returns undefined when nothing is declared and nothing has dates", () => {
+    expect(activePhase([identified("Someday")], undefined, NOW)).toBeUndefined()
+  })
+
+  it("returns a declared phase even when it has no dates", () => {
+    const undated = identified("Someday")
+
+    expect(activePhase([undated], "someday", NOW)).toEqual({
+      phase: undated,
+      active: true,
+    })
   })
 })

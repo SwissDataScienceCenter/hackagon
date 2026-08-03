@@ -54,6 +54,33 @@ export interface CurrentPhase<T> {
  * against `now`, so a hackathon whose phases are all undated has no current
  * phase and this returns undefined.
  */
+/**
+ * The phase to present as "where the hackathon is right now".
+ *
+ * A phase the organizer declared via AdvancePhase outranks anything the dates
+ * imply — they advance precisely when the schedule has stopped matching reality,
+ * so deriving from dates would contradict them in front of members.
+ *
+ * Falls back to `currentPhase` when nothing is declared, which is correct before
+ * an event, and when the declared phase is missing from the list (it was deleted,
+ * or the caller loaded a filtered set).
+ *
+ * Always `active: true` for a declared phase: an organizer saying "we are in
+ * Judging" is not a prediction.
+ */
+export function activePhase<T extends PhaseWindow & { id: string }>(
+  phases: T[],
+  declaredId?: string,
+  now: Date = new Date(),
+): CurrentPhase<T> | undefined {
+  if (declaredId) {
+    const declared = phases.find((p) => p.id === declaredId)
+    if (declared) return { phase: declared, active: true }
+  }
+
+  return currentPhase(phases, now)
+}
+
 export function currentPhase<T extends PhaseWindow>(
   phases: T[],
   now: Date = new Date(),

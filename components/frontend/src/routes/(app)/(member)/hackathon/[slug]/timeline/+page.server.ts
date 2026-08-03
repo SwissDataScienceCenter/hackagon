@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types"
-import { currentPhase, phaseStatus } from "$lib/utils/phase"
+import { activePhase, phaseStatus } from "$lib/utils/phase"
 import { capabilitiesByPhase, capabilityNoun } from "$lib/utils/capabilities"
 
 export const load: PageServerLoad = async (event) => {
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async (event) => {
   const requested = event.url.searchParams.get("phase")
   const selectedId =
     ordered.find((p) => p.id === requested)?.id ??
-    currentPhase(ordered)?.phase.id ??
+    activePhase(ordered, hackathon.currentPhaseId)?.phase.id ??
     ordered[0]?.id
 
   const selected = ordered.find((p) => p.id === selectedId)
