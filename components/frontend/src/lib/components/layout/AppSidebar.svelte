@@ -4,6 +4,7 @@
     import Menu from 'lucide-svelte/icons/menu';
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
+    import Settings from 'lucide-svelte/icons/settings';
     import SidebarNavSection from './SidebarNavSection.svelte';
     import SidebarUserFooter from './SidebarUserFooter.svelte';
     import { isOwnerRole } from '$lib/utils/hackathonStatus';
@@ -234,7 +235,12 @@
 
         <!-- Below what it manages, and only for those who can. Owners see both
              sections at once rather than toggling: an owner is a participant
-             too, and the manage screens are a click from any member screen. -->
+             too, and the manage screens are a click from any member screen.
+
+             Five of its seven entries repeat a member icon, so on the collapsed
+             rail the gear marker is what tells the two apart. It is not hidden
+             there instead: an owner reading a manage screen would watch the
+             active item disappear. -->
         {#if manageItems.length > 0}
             <SidebarNavSection
                 label={navHackathon?.name ? `Manage ${navHackathon.name}` : 'Manage'}
@@ -242,6 +248,8 @@
                 {activeId}
                 collapsed={effectiveCollapsed}
                 activeColor="secondary"
+                markerIcon={Settings}
+                titlePrefix="Manage"
             />
         {/if}
     </nav>
@@ -255,6 +263,8 @@
         collapsed={effectiveCollapsed}
     />
 
+    <!-- No marker: pinned above the footer, so position identifies it. Its Users
+         entry still collides with two others, hence the tooltip prefix. -->
     {#if platformItems.length > 0}
         <SidebarNavSection
             label="Platform"
@@ -262,6 +272,7 @@
             {activeId}
             collapsed={effectiveCollapsed}
             activeColor="tertiary"
+            titlePrefix="Platform"
         />
     {/if}
 
