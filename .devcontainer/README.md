@@ -109,6 +109,14 @@ docker compose -f .devcontainer/docker-compose.yml down --volumes  # full reset
 Note: because `/nix` lives in a volume, updating the Nix *feature* in
 `devcontainer.json` has no effect until the `nix-store` volume is removed.
 
+Known wrinkle after recreating the container: Keycloak's H2 database (in
+`devenv-state`) keeps a JGroups cluster-membership row for the previous
+container's hostname, so its first boot can hang spamming
+`failed sending message ... SocketTimeoutException`. One
+`just develop just deploy::proc-comp process restart keycloak` fixes it —
+the stale member ages out. The frontend also takes a few minutes on first
+boot (pnpm install + svelte-kit sync before vite listens).
+
 ## Adding sidecar services
 
 The default stack runs all services in-container via process-compose. If you
