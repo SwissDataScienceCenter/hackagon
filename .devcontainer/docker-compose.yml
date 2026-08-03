@@ -16,8 +16,11 @@ services:
         EXTRA_APT_PACKAGES: ${HACKAGON_DEV_EXTRA_APT_PACKAGES:-}
     init: true
     command: sleep infinity
+    restart: ${HACKAGON_DEV_RESTART:-unless-stopped}
     environment:
       TZ: ${HACKAGON_DEV_TZ:-UTC}
+      # Set to 1 to skip the codegen/deps bootstrap in post-create.sh.
+      HACKAGON_SKIP_BOOTSTRAP: ${HACKAGON_SKIP_BOOTSTRAP:-}
     volumes:
       - ..:/workspaces/hackagon:cached
       # Persist the Nix store across container rebuilds (devenv downloads a lot).
@@ -34,6 +37,16 @@ services:
       - "${HACKAGON_POSTGRES_PORT:-5432}:5432"
 
 volumes:
+  # Nix store — the whole toolchain; survives container rebuilds.
   nix-store:
+  # devenv state — includes the Postgres data directory
+  # (.devenv/state/postgres), so the database also survives rebuilds.
   devenv-state:
   direnv-state:
+
+networks:
+  # Explicit name so sidecars and external tooling can attach predictably
+  # (docker run --network hackagon-dev ...). Override when running multiple
+  # checkouts side by side.
+  default:
+    name: ${HACKAGON_DEV_NETWORK:-hackagon-dev}
