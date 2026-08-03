@@ -35,18 +35,6 @@ export interface HackathonPageRef {
   title: string
 }
 
-/** Which of a hackathon's two sidebar modes is showing. */
-export type NavMode = "view" | "manage"
-
-/**
- * Derive the mode from the SvelteKit route id, never from the pathname: a
- * hackathon slug or a page titled "owner" must not flip the sidebar into
- * manage mode. The `(owner)` route group is the real boundary.
- */
-export function navModeFromRouteId(routeId: string | null): NavMode {
-  return routeId?.includes("/(owner)/") ? "manage" : "view"
-}
-
 /**
  * The participant's home — the hackathons they are in, and the ones they could
  * join.
@@ -253,34 +241,6 @@ export function platformNav(roles: {
   }
 
   return items
-}
-
-/**
- * Href of the equivalent entry in `targetMode`'s nav, so switching modes keeps
- * the user on "the same" item (e.g. member Teams -> manage Teams) instead of
- * always dropping them back to that mode's overview.
- *
- * Falls back to the target mode's overview when `activeId` has no counterpart
- * there — e.g. member-only pages (Submissions, a content page) or owner-only
- * pages (Pages) don't exist in the other mode. Matching is by the id suffix, so
- * a pair need not sit at the same position in both navs.
- */
-export function counterpartHref(
-  activeId: string | undefined,
-  targetMode: NavMode,
-  slug: string,
-  pages: HackathonPageRef[],
-): string {
-  const targetItems =
-    targetMode === "manage" ? manageNav(slug) : memberNav(slug, pages)
-  const fallback = targetItems[0]!.href!
-
-  if (!activeId) return fallback
-
-  const key = activeId.slice(activeId.indexOf(":") + 1)
-  const targetId = `${targetMode === "manage" ? "manage" : "member"}:${key}`
-
-  return targetItems.find((i) => i.id === targetId)?.href ?? fallback
 }
 
 /**

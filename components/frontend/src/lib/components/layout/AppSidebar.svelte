@@ -5,17 +5,14 @@
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import SidebarNavSection from './SidebarNavSection.svelte';
-    import NavModeSwitch from './NavModeSwitch.svelte';
     import SidebarUserFooter from './SidebarUserFooter.svelte';
     import { isOwnerRole } from '$lib/utils/hackathonStatus';
     import {
         activeNavId,
-        counterpartHref,
         defaultHackathon,
         homeNav,
         manageNav,
         memberNav,
-        navModeFromRouteId,
         platformNav,
     } from '$lib/navigation';
     import type { Session } from '@auth/sveltekit';
@@ -61,42 +58,36 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
     const activeSlug = $derived($page.params.slug);
-    const activeHackathon = $derived(myHackathons.find((h) => h.id === activeSlug));
-    const mode = $derived(navModeFromRouteId($page.route.id ?? null));
+
+    // With no hackathon in the URL the nav still shows one — the one you are
+    // most likely to want — so the sidebar is not a dead end on the dashboard.
+    const navSlug = $derived(activeSlug ?? defaultHackathon(myHackathons)?.id);
+    const navHackathon = $derived(myHackathons.find((h) => h.id === navSlug));
 
     // Owners of this hackathon, plus global admins (who can manage any of them —
     // and who need the isGlobalAdmin branch because a non-participant admin never
     // appears in myHackathons, so there is no membership row to read a role from).
     // `viewerMembership.role` is sourced from casbin and populated by
     // HackathonService.List whenever participant_id is set — always, here.
-    const showModeSwitch = $derived(
-        Boolean(activeSlug) &&
-            (isGlobalAdmin || isOwnerRole(activeHackathon?.viewerMembership?.role ?? 0)),
+    //
+    // Keyed on navSlug rather than activeSlug so the section does not appear and
+    // vanish as an owner steps out of a hackathon onto the dashboard.
+    const showManage = $derived(
+        Boolean(navSlug) &&
+            (isGlobalAdmin || isOwnerRole(navHackathon?.viewerMembership?.role ?? 0)),
     );
 
-    // With no hackathon in the URL the nav still shows one — the one you are
-    // most likely to want — so the sidebar is not a dead end on the dashboard.
-    const navSlug = $derived(activeSlug ?? defaultHackathon(myHackathons)?.id);
-    const navHackathonName = $derived(myHackathons.find((h) => h.id === navSlug)?.name);
-
-    const hackathonItems = $derived(
-        navSlug
-            ? mode === 'manage'
-                ? manageNav(navSlug)
-                : memberNav(navSlug, hackathonPages)
-            : [],
-    );
+    const memberItems = $derived(navSlug ? memberNav(navSlug, hackathonPages) : []);
+    const manageItems = $derived(navSlug && showManage ? manageNav(navSlug) : []);
     const homeItems = $derived(homeNav());
     const platformItems = $derived(platformNav({ isGlobalAdmin, isHackathonOrganizer }));
     const activeId = $derived(
-        activeNavId($page.url.pathname, [...homeItems, ...hackathonItems, ...platformItems]),
-    );
-
-    const viewHref = $derived(
-        activeSlug ? counterpartHref(activeId, 'view', activeSlug, hackathonPages) : '',
-    );
-    const manageHref = $derived(
-        activeSlug ? counterpartHref(activeId, 'manage', activeSlug, hackathonPages) : '',
+        activeNavId($page.url.pathname, [
+            ...homeItems,
+            ...memberItems,
+            ...manageItems,
+            ...platformItems,
+        ]),
     );
 
     $effect(() => {
@@ -227,24 +218,31 @@
          grows with content pages, and the two below it have to stay reachable
          when it does. -->
     <nav class="flex-1 overflow-y-auto">
-        {#if hackathonItems.length > 0}
+        {#if memberItems.length > 0}
             <!-- Headed by the hackathon's own name, which is load-bearing rather
                  than decorative: with no slug in the URL these entries belong to
                  a hackathon nothing else on the page names. There is deliberately
                  no way to hop sideways into another one from here — Hackathons
                  below is the single way out. -->
             <SidebarNavSection
-                label={navHackathonName}
-                items={hackathonItems}
+                label={navHackathon?.name}
+                items={memberItems}
                 {activeId}
                 collapsed={effectiveCollapsed}
-                activeColor={mode === 'manage' ? 'secondary' : 'primary'}
             />
+        {/if}
 
-            <!-- Under the hackathon it scopes, not above it. -->
-            {#if showModeSwitch && activeSlug}
-                <NavModeSwitch {viewHref} {manageHref} {mode} collapsed={effectiveCollapsed} />
-            {/if}
+        <!-- Below what it manages, and only for those who can. Owners see both
+             sections at once rather than toggling: an owner is a participant
+             too, and the manage screens are a click from any member screen. -->
+        {#if manageItems.length > 0}
+            <SidebarNavSection
+                label={navHackathon?.name ? `Manage ${navHackathon.name}` : 'Manage'}
+                items={manageItems}
+                {activeId}
+                collapsed={effectiveCollapsed}
+                activeColor="secondary"
+            />
         {/if}
     </nav>
 
