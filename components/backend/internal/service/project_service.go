@@ -142,7 +142,7 @@ func (s *ProjectService) Propose(
 	// Casbin says whether this user may ever propose; the capability says whether
 	// the window is open right now.
 	if err := requireCapability(
-		ctx, s.dbClient, s.enforcer, hackathonID, capability.SubmitProposal,
+		ctx, s.dbClient, s.enforcer, hackathonID, capability.ProposeProjects,
 	); err != nil {
 		return nil, err
 	}

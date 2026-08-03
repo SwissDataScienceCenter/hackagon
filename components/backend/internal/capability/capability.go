@@ -20,12 +20,12 @@ import "time"
 type Capability string
 
 const (
-	Register           Capability = "register"
-	SubmitProposal     Capability = "submit_proposal"
-	SetTeamPreferences Capability = "set_team_preferences"
-	SubmitProject      Capability = "submit_project"
-	Vote               Capability = "vote"
-	ViewResults        Capability = "view_results"
+	Register                 Capability = "register"
+	ProposeProjects          Capability = "propose_projects"
+	SetTeamPreferences       Capability = "set_team_preferences"
+	CreateProjectSubmissions Capability = "create_project_submissions"
+	Vote                     Capability = "vote"
+	ViewResults              Capability = "view_results"
 )
 
 // All returns the full vocabulary, in the order rows are created for a new
@@ -34,9 +34,9 @@ const (
 func All() []Capability {
 	return []Capability{
 		Register,
-		SubmitProposal,
+		ProposeProjects,
 		SetTeamPreferences,
-		SubmitProject,
+		CreateProjectSubmissions,
 		Vote,
 		ViewResults,
 	}
@@ -50,7 +50,7 @@ const (
 	StateOpen State = "open"
 	// StateClosed means a row exists and its flag is off.
 	StateClosed State = "closed"
-	// StateComing means closed now, but its opens_phase starts in the future, so
+	// StateComing means closed now, but its open_in_phase starts in the future, so
 	// callers can count down to it. Still closed for enforcement purposes — the
 	// distinction is only what the member is told.
 	StateComing State = "coming"
@@ -67,21 +67,21 @@ const (
 type Row struct {
 	Capability Capability
 	Enabled    bool
-	// OpensAt is the start of the linked opens_phase, nil when unlinked or when
+	// OpensAt is the start of the linked open_in_phase, nil when unlinked or when
 	// that phase has no date. Schedule only: it never opens the capability, it
 	// only distinguishes "not open yet" from "closed" for the member's benefit.
 	OpensAt *time.Time
-	// ClosesAt is the start of the linked closes_phase, for display alongside an
-	// open capability. Nil when unlinked.
+	// ClosesAt is the start of the linked closed_in_phase, for display
+	// alongside an open capability. Nil when unlinked.
 	ClosesAt *time.Time
-	// OpensPhase and CurrentPhase are positions in the hackathon's phase order,
+	// OpenInPhase and CurrentPhase are positions in the hackathon's phase order,
 	// set only once an organizer has advanced the hackathon by hand.
 	//
 	// When CurrentPhase is present it replaces the date comparison below. It has
 	// to: an organizer advances precisely when the schedule has stopped matching
 	// reality, and judging by dates then tells members "opens Friday" about
 	// something the organizer has already declared finished.
-	OpensPhase   *int
+	OpenInPhase  *int
 	CurrentPhase *int
 }
 
@@ -90,7 +90,7 @@ func (r Row) pending(now time.Time) bool {
 	if r.CurrentPhase != nil {
 		// Advanced by hand: order decides, and an unscheduled capability is
 		// never "coming" because there is no position to compare.
-		return r.OpensPhase != nil && *r.OpensPhase > *r.CurrentPhase
+		return r.OpenInPhase != nil && *r.OpenInPhase > *r.CurrentPhase
 	}
 
 	return r.OpensAt != nil && now.Before(*r.OpensAt)
@@ -150,12 +150,12 @@ func Resolve(rows []Row, now time.Time) States {
 // matching reality.
 type AdvanceRow struct {
 	Capability Capability
-	// OpensPhase is the position of the phase that opens this capability. Nil
+	// OpenInPhase is the position of the phase that opens this capability. Nil
 	// means manually driven, and advancing must not touch it.
-	OpensPhase *int
-	// ClosesPhase is the position of the phase at whose start it closes. Nil
+	OpenInPhase *int
+	// ClosedInPhase is the position of the phase at whose start it closes. Nil
 	// means it stays open once opened.
-	ClosesPhase *int
+	ClosedInPhase *int
 }
 
 // Advance computes the `enabled` flag each scheduled capability should take when
@@ -172,11 +172,11 @@ type AdvanceRow struct {
 func Advance(rows []AdvanceRow, target int) map[Capability]bool {
 	out := make(map[Capability]bool, len(rows))
 	for _, r := range rows {
-		if r.OpensPhase == nil {
+		if r.OpenInPhase == nil {
 			continue
 		}
-		opened := *r.OpensPhase <= target
-		closed := r.ClosesPhase != nil && target >= *r.ClosesPhase
+		opened := *r.OpenInPhase <= target
+		closed := r.ClosedInPhase != nil && target >= *r.ClosedInPhase
 		out[r.Capability] = opened && !closed
 	}
 

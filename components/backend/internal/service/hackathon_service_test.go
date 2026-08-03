@@ -1428,33 +1428,33 @@ var _ = Describe("HackathonService", func() {
 				phaseID := newPhase("Proposals", 5)
 
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					Enabled:      proto.Bool(false),
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					Enabled:       proto.Bool(false),
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				got := statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS)
 				Expect(got.GetState()).To(
 					Equal(entities.CapabilityState_CAPABILITY_STATE_COMING),
 				)
 				Expect(got.GetOpensAt()).NotTo(BeNil())
-				Expect(got.GetOpensPhaseId()).To(Equal(phaseID))
+				Expect(got.GetOpenInPhaseId()).To(Equal(phaseID))
 			})
 
 			It("reports CLOSED when the linked phase has already started", func() {
 				phaseID := newPhase("Past Proposals", -5)
 
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					Enabled:      proto.Bool(false),
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					Enabled:       proto.Bool(false),
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+				Expect(statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS).GetState()).To(
 					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
 				)
 			})
@@ -1464,10 +1464,10 @@ var _ = Describe("HackathonService", func() {
 				phaseID := newPhase("Registration", 5)
 
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_REGISTER,
-					Enabled:      proto.Bool(false),
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_REGISTER,
+					Enabled:       proto.Bool(false),
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -1483,14 +1483,14 @@ var _ = Describe("HackathonService", func() {
 				phaseID := newPhase("Later", 5)
 
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					Enabled:      proto.Bool(true),
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					Enabled:       proto.Bool(true),
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+				Expect(statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS).GetState()).To(
 					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
 				)
 			})
@@ -1498,41 +1498,41 @@ var _ = Describe("HackathonService", func() {
 			It("unlinks on an empty phase id", func() {
 				phaseID := newPhase("Proposals", 5)
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					Enabled:      proto.Bool(false),
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					Enabled:       proto.Bool(false),
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					OpensPhaseId: proto.String(""),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					OpenInPhaseId: proto.String(""),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				got := statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS)
 				Expect(got.GetState()).To(
 					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
 				)
 				Expect(got.OpensAt).To(BeNil())
-				Expect(got.OpensPhaseId).To(BeNil())
+				Expect(got.OpenInPhaseId).To(BeNil())
 			})
 
 			It("leaves the flag alone when only the schedule is edited", func() {
 				phaseID := newPhase("Proposals", 5)
 
-				// submit_proposal starts open; editing only the link must not
+				// propose_projects starts open; editing only the link must not
 				// close it.
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+				Expect(statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS).GetState()).To(
 					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
 				)
 			})
@@ -1547,9 +1547,9 @@ var _ = Describe("HackathonService", func() {
 				foreign := phaseOn(other.GetHackathonId(), "Foreign Phase", 5)
 
 				_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					OpensPhaseId: proto.String(foreign.ID.String()),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					OpenInPhaseId: proto.String(foreign.ID.String()),
 				})
 				Expect(status.Code(err)).To(Equal(codes.NotFound))
 			})
@@ -1574,16 +1574,16 @@ var _ = Describe("HackathonService", func() {
 						capability    entities.Capability
 						opens, closes string
 					}{
-						{entities.Capability_CAPABILITY_SUBMIT_PROPOSAL, ideation, hacking},
-						{entities.Capability_CAPABILITY_SUBMIT_PROJECT, hacking, judging},
+						{entities.Capability_CAPABILITY_PROPOSE_PROJECTS, ideation, hacking},
+						{entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS, hacking, judging},
 						{entities.Capability_CAPABILITY_VIEW_RESULTS, judging, ""},
 					} {
 						_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-							HackathonId:   hackathonID,
-							Capability:    link.capability,
-							Enabled:       proto.Bool(false),
-							OpensPhaseId:  proto.String(link.opens),
-							ClosesPhaseId: proto.String(link.closes),
+							HackathonId:     hackathonID,
+							Capability:      link.capability,
+							Enabled:         proto.Bool(false),
+							OpenInPhaseId:   proto.String(link.opens),
+							ClosedInPhaseId: proto.String(link.closes),
 						})
 						Expect(err).NotTo(HaveOccurred())
 					}
@@ -1603,7 +1603,7 @@ var _ = Describe("HackathonService", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(resp.GetCurrentPhaseId()).To(Equal(ideation))
 
-					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)).To(
+					Expect(stateOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS)).To(
 						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
 					)
 				})
@@ -1619,10 +1619,10 @@ var _ = Describe("HackathonService", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)).To(
+					Expect(stateOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS)).To(
 						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
 					)
-					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROJECT)).To(
+					Expect(stateOf(entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS)).To(
 						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
 					)
 				})
@@ -1679,7 +1679,7 @@ var _ = Describe("HackathonService", func() {
 						HackathonId: hackathonID, PhaseId: judging,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROJECT)).To(
+					Expect(stateOf(entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS)).To(
 						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
 					)
 
@@ -1687,7 +1687,7 @@ var _ = Describe("HackathonService", func() {
 						HackathonId: hackathonID, PhaseId: hacking,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROJECT)).To(
+					Expect(stateOf(entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS)).To(
 						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
 					)
 				})
@@ -1772,10 +1772,10 @@ var _ = Describe("HackathonService", func() {
 				It("agrees with Get", func() {
 					phaseID := newPhase("Proposals", 5)
 					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-						HackathonId:  hackathonID,
-						Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-						Enabled:      proto.Bool(false),
-						OpensPhaseId: proto.String(phaseID),
+						HackathonId:   hackathonID,
+						Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+						Enabled:       proto.Bool(false),
+						OpenInPhaseId: proto.String(phaseID),
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -1809,14 +1809,14 @@ var _ = Describe("HackathonService", func() {
 						capability entities.Capability
 						opens      string
 					}{
-						{entities.Capability_CAPABILITY_SUBMIT_PROPOSAL, early},
-						{entities.Capability_CAPABILITY_SUBMIT_PROJECT, ahead},
+						{entities.Capability_CAPABILITY_PROPOSE_PROJECTS, early},
+						{entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS, ahead},
 					} {
 						_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-							HackathonId:  hackathonID,
-							Capability:   link.capability,
-							Enabled:      proto.Bool(false),
-							OpensPhaseId: proto.String(link.opens),
+							HackathonId:   hackathonID,
+							Capability:    link.capability,
+							Enabled:       proto.Bool(false),
+							OpenInPhaseId: proto.String(link.opens),
 						})
 						Expect(err).NotTo(HaveOccurred())
 					}
@@ -1824,10 +1824,10 @@ var _ = Describe("HackathonService", func() {
 					listed := statesFromList()
 
 					// Behind the current phase: closed, despite a future date.
-					Expect(listed[entities.Capability_CAPABILITY_SUBMIT_PROPOSAL]).
+					Expect(listed[entities.Capability_CAPABILITY_PROPOSE_PROJECTS]).
 						To(Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED))
 					// Still ahead of it: coming.
-					Expect(listed[entities.Capability_CAPABILITY_SUBMIT_PROJECT]).
+					Expect(listed[entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS]).
 						To(Equal(entities.CapabilityState_CAPABILITY_STATE_COMING))
 
 					// And the detail page must say the same.
@@ -1842,10 +1842,10 @@ var _ = Describe("HackathonService", func() {
 			It("survives deletion of the linked phase", func() {
 				phaseID := newPhase("Doomed", 5)
 				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
-					HackathonId:  hackathonID,
-					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
-					Enabled:      proto.Bool(false),
-					OpensPhaseId: proto.String(phaseID),
+					HackathonId:   hackathonID,
+					Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					Enabled:       proto.Bool(false),
+					OpenInPhaseId: proto.String(phaseID),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -1854,11 +1854,11 @@ var _ = Describe("HackathonService", func() {
 				Expect(dbClient.Phase.DeleteOneID(uuid.MustParse(phaseID)).
 					Exec(context.Background())).To(Succeed())
 
-				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				got := statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS)
 				Expect(got.GetState()).To(
 					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
 				)
-				Expect(got.OpensPhaseId).To(BeNil())
+				Expect(got.OpenInPhaseId).To(BeNil())
 			})
 		})
 	})

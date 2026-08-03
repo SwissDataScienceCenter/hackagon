@@ -26,12 +26,12 @@ func capabilityToProto(c capability.Capability) hackEnts.Capability {
 	switch c {
 	case capability.Register:
 		return hackEnts.Capability_CAPABILITY_REGISTER
-	case capability.SubmitProposal:
-		return hackEnts.Capability_CAPABILITY_SUBMIT_PROPOSAL
+	case capability.ProposeProjects:
+		return hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS
 	case capability.SetTeamPreferences:
 		return hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES
-	case capability.SubmitProject:
-		return hackEnts.Capability_CAPABILITY_SUBMIT_PROJECT
+	case capability.CreateProjectSubmissions:
+		return hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS
 	case capability.Vote:
 		return hackEnts.Capability_CAPABILITY_VOTE
 	case capability.ViewResults:
@@ -47,12 +47,12 @@ func CapabilityFromProto(c hackEnts.Capability) (capability.Capability, bool) {
 	switch c {
 	case hackEnts.Capability_CAPABILITY_REGISTER:
 		return capability.Register, true
-	case hackEnts.Capability_CAPABILITY_SUBMIT_PROPOSAL:
-		return capability.SubmitProposal, true
+	case hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS:
+		return capability.ProposeProjects, true
 	case hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES:
 		return capability.SetTeamPreferences, true
-	case hackEnts.Capability_CAPABILITY_SUBMIT_PROJECT:
-		return capability.SubmitProject, true
+	case hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS:
+		return capability.CreateProjectSubmissions, true
 	case hackEnts.Capability_CAPABILITY_VOTE:
 		return capability.Vote, true
 	case hackEnts.Capability_CAPABILITY_VIEW_RESULTS:
@@ -86,11 +86,11 @@ func capabilityClosedMessage(c capability.Capability) string {
 	switch c {
 	case capability.Register:
 		return "registrations are closed"
-	case capability.SubmitProposal:
+	case capability.ProposeProjects:
 		return "project proposals are closed"
 	case capability.SetTeamPreferences:
 		return "project preferences are closed"
-	case capability.SubmitProject:
+	case capability.CreateProjectSubmissions:
 		return "project submissions are closed"
 	case capability.Vote:
 		return "voting is closed"
@@ -150,7 +150,7 @@ func (c capabilityClock) positionOf(phase *ent.Phase) *int {
 
 // capabilityRowFromEnt reduces a stored row to what the resolver needs.
 //
-// Requires `.WithOpensPhase()` / `.WithClosesPhase()`; an unloaded edge is
+// Requires `.WithOpenInPhase()` / `.WithClosedInPhase()`; an unloaded edge is
 // indistinguishable from an unlinked one, which would silently downgrade a
 // COMING capability to CLOSED.
 func capabilityRowFromEnt(r *ent.Capability, clock capabilityClock) capability.Row {
@@ -159,13 +159,13 @@ func capabilityRowFromEnt(r *ent.Capability, clock capabilityClock) capability.R
 		Enabled:      r.Enabled,
 		OpensAt:      nil,
 		ClosesAt:     nil,
-		OpensPhase:   clock.positionOf(r.Edges.OpensPhase),
+		OpenInPhase:  clock.positionOf(r.Edges.OpenInPhase),
 		CurrentPhase: clock.currentPhase,
 	}
-	if p := r.Edges.OpensPhase; p != nil {
+	if p := r.Edges.OpenInPhase; p != nil {
 		row.OpensAt = p.StartsAt
 	}
-	if p := r.Edges.ClosesPhase; p != nil {
+	if p := r.Edges.ClosedInPhase; p != nil {
 		row.ClosesAt = p.StartsAt
 	}
 
@@ -184,8 +184,8 @@ func capabilityRows(rows []*ent.Capability, clock capabilityClock) []capability.
 
 // capabilityStatusFromEnt maps one stored row.
 //
-// Requires `.WithModifier()`, `.WithOpensPhase()` and `.WithClosesPhase()`. A
-// missing modifier is tolerated because seeded and backfilled rows have none.
+// Requires `.WithModifier()`, `.WithOpenInPhase()` and `.WithClosedInPhase()`.
+// A missing modifier is tolerated because seeded and backfilled rows have none.
 func capabilityStatusFromEnt(
 	row *ent.Capability,
 	clock capabilityClock,
@@ -199,25 +199,25 @@ func capabilityStatusFromEnt(
 		modifierID = &id
 	}
 
-	var opensPhaseID, closesPhaseID *string
-	if p := row.Edges.OpensPhase; p != nil {
+	var openInPhaseID, closedInPhaseID *string
+	if p := row.Edges.OpenInPhase; p != nil {
 		id := p.ID.String()
-		opensPhaseID = &id
+		openInPhaseID = &id
 	}
-	if p := row.Edges.ClosesPhase; p != nil {
+	if p := row.Edges.ClosedInPhase; p != nil {
 		id := p.ID.String()
-		closesPhaseID = &id
+		closedInPhaseID = &id
 	}
 
 	return &hackEnts.CapabilityStatus{
-		Capability:    capabilityToProto(r.Capability),
-		State:         capabilityStateToProto(capability.ResolveRow(r, now)),
-		ModifiedAt:    timestamppb.New(row.ModifiedAt),
-		ModifierId:    modifierID,
-		OpensAt:       optionalTimestamp(r.OpensAt),
-		ClosesAt:      optionalTimestamp(r.ClosesAt),
-		OpensPhaseId:  opensPhaseID,
-		ClosesPhaseId: closesPhaseID,
+		Capability:      capabilityToProto(r.Capability),
+		State:           capabilityStateToProto(capability.ResolveRow(r, now)),
+		ModifiedAt:      timestamppb.New(row.ModifiedAt),
+		ModifierId:      modifierID,
+		OpensAt:         optionalTimestamp(r.OpensAt),
+		ClosesAt:        optionalTimestamp(r.ClosesAt),
+		OpenInPhaseId:   openInPhaseID,
+		ClosedInPhaseId: closedInPhaseID,
 	}
 }
 
@@ -248,14 +248,14 @@ func capabilityStatusesFromEnt(
 		row, ok := byCapability[c]
 		if !ok {
 			out = append(out, &hackEnts.CapabilityStatus{
-				Capability:    capabilityToProto(c),
-				State:         hackEnts.CapabilityState_CAPABILITY_STATE_UNGOVERNED,
-				ModifiedAt:    nil,
-				ModifierId:    nil,
-				OpensAt:       nil,
-				ClosesAt:      nil,
-				OpensPhaseId:  nil,
-				ClosesPhaseId: nil,
+				Capability:      capabilityToProto(c),
+				State:           hackEnts.CapabilityState_CAPABILITY_STATE_UNGOVERNED,
+				ModifiedAt:      nil,
+				ModifierId:      nil,
+				OpensAt:         nil,
+				ClosesAt:        nil,
+				OpenInPhaseId:   nil,
+				ClosedInPhaseId: nil,
 			})
 
 			continue
@@ -319,8 +319,8 @@ func loadCapabilityStates(
 ) (capability.States, error) {
 	rows, err := db.Capability.Query().
 		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
-		WithOpensPhase().
-		WithClosesPhase().
+		WithOpenInPhase().
+		WithClosedInPhase().
 		All(ctx)
 	if err != nil {
 		slog.Error("query capabilities", "err", err)
@@ -391,18 +391,18 @@ func advanceRows(rows []*ent.Capability, order map[uuid.UUID]int) []capability.A
 	out := make([]capability.AdvanceRow, 0, len(rows))
 	for _, r := range rows {
 		row := capability.AdvanceRow{
-			Capability:  capability.Capability(r.Capability),
-			OpensPhase:  nil,
-			ClosesPhase: nil,
+			Capability:    capability.Capability(r.Capability),
+			OpenInPhase:   nil,
+			ClosedInPhase: nil,
 		}
-		if p := r.Edges.OpensPhase; p != nil {
+		if p := r.Edges.OpenInPhase; p != nil {
 			if pos, ok := order[p.ID]; ok {
-				row.OpensPhase = &pos
+				row.OpenInPhase = &pos
 			}
 		}
-		if p := r.Edges.ClosesPhase; p != nil {
+		if p := r.Edges.ClosedInPhase; p != nil {
 			if pos, ok := order[p.ID]; ok {
-				row.ClosesPhase = &pos
+				row.ClosedInPhase = &pos
 			}
 		}
 		out = append(out, row)

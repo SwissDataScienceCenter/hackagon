@@ -16,11 +16,11 @@ enum Capability {
   // HackathonService.Join
   CAPABILITY_REGISTER = 1;
   // ProjectService.Propose
-  CAPABILITY_SUBMIT_PROPOSAL = 2;
+  CAPABILITY_PROPOSE_PROJECTS = 2;
   // ProjectService.SetPreference
   CAPABILITY_SET_TEAM_PREFERENCES = 3;
   // TeamService.CreateSubmission / FinalizeSubmission
-  CAPABILITY_SUBMIT_PROJECT = 4;
+  CAPABILITY_CREATE_PROJECT_SUBMISSIONS = 4;
   // VoteService.SubmitVote — service not implemented yet.
   CAPABILITY_VOTE = 5;
   // VoteService.ListVoteResults — the flag doubles as the publish switch, since
@@ -31,7 +31,7 @@ enum Capability {
 
 enum CapabilityState {
   CAPABILITY_STATE_UNSPECIFIED = 0;
-  // Closed now, but its opens_phase starts in the future, so clients can show
+  // Closed now, but its open_in_phase starts in the future, so clients can show
   // "opens 12 Aug" and count down to it.
   CAPABILITY_STATE_COMING = 1;
   CAPABILITY_STATE_OPEN = 2;
@@ -56,6 +56,6 @@ message CapabilityStatus {
   // anything that opens abruptly — a countdown would be a lie.
   optional google.protobuf.Timestamp opens_at = 5;
   optional google.protobuf.Timestamp closes_at = 6;
-  optional string opens_phase_id = 7;
-  optional string closes_phase_id = 8;
+  optional string open_in_phase_id = 7;
+  optional string closed_in_phase_id = 8;
 }

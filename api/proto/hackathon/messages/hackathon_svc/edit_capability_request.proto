@@ -22,17 +22,17 @@ message EditCapabilityRequest {
   //
   // Empty string = unlink, non-empty = link to that phase, not set = no change.
   // Same convention as phase_svc/edit_request.proto's page_id.
-  optional string opens_phase_id = 4;
-  optional string closes_phase_id = 5;
+  optional string open_in_phase_id = 4;
+  optional string closed_in_phase_id = 5;
 
   option (buf.validate.message).cel = {
-    id: "opens_phase_id_uuid"
-    message: "opens_phase_id must be a valid UUID if provided and non-empty"
-    expression: "!has(this.opens_phase_id) || this.opens_phase_id == '' || this.opens_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+    id: "open_in_phase_id_uuid"
+    message: "open_in_phase_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.open_in_phase_id) || this.open_in_phase_id == '' || this.open_in_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
   };
   option (buf.validate.message).cel = {
-    id: "closes_phase_id_uuid"
-    message: "closes_phase_id must be a valid UUID if provided and non-empty"
-    expression: "!has(this.closes_phase_id) || this.closes_phase_id == '' || this.closes_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+    id: "closed_in_phase_id_uuid"
+    message: "closed_in_phase_id must be a valid UUID if provided and non-empty"
+    expression: "!has(this.closed_in_phase_id) || this.closed_in_phase_id == '' || this.closed_in_phase_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
   };
 }

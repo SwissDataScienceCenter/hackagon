@@ -210,10 +210,10 @@ func seedCapabilities(
 			SetModifier(modifier)
 		if w, ok := schedule[c]; ok {
 			if w.opens != nil {
-				b = b.SetOpensPhase(w.opens)
+				b = b.SetOpenInPhase(w.opens)
 			}
 			if w.closes != nil {
-				b = b.SetClosesPhase(w.closes)
+				b = b.SetClosedInPhase(w.closes)
 			}
 		}
 		builders = append(builders, b)
@@ -279,10 +279,10 @@ func seedH1(
 	if err := seedCapabilities(ctx, db, h, alice,
 		[]capability.Capability{capability.Register},
 		map[capability.Capability]phaseWindow{
-			capability.SubmitProposal:     {opens: phases["Ideation"], closes: phases["Hacking"]},
-			capability.SetTeamPreferences: {opens: phases["Ideation"], closes: phases["Hacking"]},
-			capability.SubmitProject:      {opens: phases["Hacking"], closes: phases["Judging"]},
-			capability.ViewResults:        {opens: phases["Judging"], closes: nil},
+			capability.ProposeProjects:          {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.SetTeamPreferences:       {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.CreateProjectSubmissions: {opens: phases["Hacking"], closes: phases["Judging"]},
+			capability.ViewResults:              {opens: phases["Judging"], closes: nil},
 			// Unscheduled on purpose: registration is driven by hand, and voting
 			// opens abruptly on the day, so any countdown would be a guess.
 			capability.Register: {opens: nil, closes: nil},
@@ -578,15 +578,15 @@ func seedH2(
 	// the case an upcoming hackathon cannot exercise.
 	if err := seedCapabilities(ctx, db, h, admin,
 		[]capability.Capability{
-			capability.SubmitProposal,
+			capability.ProposeProjects,
 			capability.SetTeamPreferences,
-			capability.SubmitProject,
+			capability.CreateProjectSubmissions,
 		},
 		map[capability.Capability]phaseWindow{
-			capability.SubmitProposal:     {opens: phases["Ideation"], closes: phases["Hacking"]},
-			capability.SetTeamPreferences: {opens: phases["Ideation"], closes: phases["Hacking"]},
-			capability.SubmitProject:      {opens: phases["Hacking"], closes: phases["Judging"]},
-			capability.ViewResults:        {opens: phases["Judging"], closes: nil},
+			capability.ProposeProjects:          {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.SetTeamPreferences:       {opens: phases["Ideation"], closes: phases["Hacking"]},
+			capability.CreateProjectSubmissions: {opens: phases["Hacking"], closes: phases["Judging"]},
+			capability.ViewResults:              {opens: phases["Judging"], closes: nil},
 			// Unscheduled on purpose: registration is driven by hand, and voting
 			// opens abruptly on the day, so any countdown would be a guess.
 			capability.Register: {opens: nil, closes: nil},

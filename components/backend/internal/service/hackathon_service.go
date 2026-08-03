@@ -152,7 +152,7 @@ func (s *HackathonService) Get(
 		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
 		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
 		WithCapabilities(func(q *ent.CapabilityQuery) {
-			q.WithModifier().WithOpensPhase().WithClosesPhase()
+			q.WithModifier().WithOpenInPhase().WithClosedInPhase()
 		}).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
 		Only(ctx)
@@ -655,18 +655,18 @@ func (s *HackathonService) EditCapability(
 
 	// Empty string unlinks, a UUID links, unset leaves it alone. Linking never
 	// opens anything — only `enabled` does — so these are safe to set at any time.
-	if req.OpensPhaseId != nil {
+	if req.OpenInPhaseId != nil {
 		if err := applyPhaseLink(
-			ctx, s.dbClient, id, req.GetOpensPhaseId(),
-			update.ClearOpensPhase, update.SetOpensPhaseID,
+			ctx, s.dbClient, id, req.GetOpenInPhaseId(),
+			update.ClearOpenInPhase, update.SetOpenInPhaseID,
 		); err != nil {
 			return nil, err
 		}
 	}
-	if req.ClosesPhaseId != nil {
+	if req.ClosedInPhaseId != nil {
 		if err := applyPhaseLink(
-			ctx, s.dbClient, id, req.GetClosesPhaseId(),
-			update.ClearClosesPhase, update.SetClosesPhaseID,
+			ctx, s.dbClient, id, req.GetClosedInPhaseId(),
+			update.ClearClosedInPhase, update.SetClosedInPhaseID,
 		); err != nil {
 			return nil, err
 		}
@@ -682,8 +682,8 @@ func (s *HackathonService) EditCapability(
 	updated, err := s.dbClient.Capability.Query().
 		Where(entcapability.IDEQ(row.ID)).
 		WithModifier().
-		WithOpensPhase().
-		WithClosesPhase().
+		WithOpenInPhase().
+		WithClosedInPhase().
 		Only(ctx)
 	if err != nil {
 		slog.Error("re-query capability", "err", err)
@@ -769,8 +769,8 @@ func (s *HackathonService) AdvancePhase(
 	rows, err := s.dbClient.Capability.Query().
 		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
 		WithModifier().
-		WithOpensPhase().
-		WithClosesPhase().
+		WithOpenInPhase().
+		WithClosedInPhase().
 		All(ctx)
 	if err != nil {
 		slog.Error("query capabilities", "err", err)
@@ -829,8 +829,8 @@ func (s *HackathonService) AdvancePhase(
 	updated, err := s.dbClient.Capability.Query().
 		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
 		WithModifier().
-		WithOpensPhase().
-		WithClosesPhase().
+		WithOpenInPhase().
+		WithClosedInPhase().
 		All(ctx)
 	if err != nil {
 		slog.Error("re-query capabilities", "err", err)
@@ -897,7 +897,7 @@ func (s *HackathonService) List(
 	q = q.
 		WithPhases().
 		WithCapabilities(func(cq *ent.CapabilityQuery) {
-			cq.WithModifier().WithOpensPhase().WithClosesPhase()
+			cq.WithModifier().WithOpenInPhase().WithClosedInPhase()
 		})
 
 	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)

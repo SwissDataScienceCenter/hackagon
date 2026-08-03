@@ -457,7 +457,7 @@ func (s *TeamService) CreateSubmission(
 
 	if err := requireCapability(
 		ctx, s.dbClient, s.enforcer,
-		t.Edges.Project.Edges.Hackathon.ID, capability.SubmitProject,
+		t.Edges.Project.Edges.Hackathon.ID, capability.CreateProjectSubmissions,
 	); err != nil {
 		return nil, err
 	}
@@ -652,7 +652,7 @@ func (s *TeamService) FinalizeSubmission(
 	// still be turned in afterwards.
 	if err := requireCapability(
 		ctx, s.dbClient, s.enforcer,
-		subm.Edges.Team.Edges.Project.Edges.Hackathon.ID, capability.SubmitProject,
+		subm.Edges.Team.Edges.Project.Edges.Hackathon.ID, capability.CreateProjectSubmissions,
 	); err != nil {
 		return nil, err
 	}

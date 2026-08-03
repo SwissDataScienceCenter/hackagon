@@ -53,7 +53,7 @@ var _ = Describe("Capability", func() {
 		It("reports capabilities with no row as ungoverned", func() {
 			states := Resolve([]Row{row(Register, true)}, now)
 
-			Expect(states[SubmitProposal]).To(Equal(StateUngoverned))
+			Expect(states[ProposeProjects]).To(Equal(StateUngoverned))
 			Expect(states[ViewResults]).To(Equal(StateUngoverned))
 		})
 
@@ -144,9 +144,9 @@ var _ = Describe("Capability", func() {
 		})
 
 		It("propagates coming through Resolve", func() {
-			states := Resolve([]Row{scheduled(SubmitProposal, false, at(5), nil)}, now)
+			states := Resolve([]Row{scheduled(ProposeProjects, false, at(5), nil)}, now)
 
-			Expect(states[SubmitProposal]).To(Equal(StateComing))
+			Expect(states[ProposeProjects]).To(Equal(StateComing))
 		})
 	})
 
@@ -161,9 +161,9 @@ var _ = Describe("Capability", func() {
 			// Without this, a member is told "opens in 5 days" about something the
 			// organizer has already declared finished.
 			r := Row{
-				Capability: SubmitProposal, Enabled: false,
+				Capability: ProposeProjects, Enabled: false,
 				OpensAt: &future, ClosesAt: nil,
-				OpensPhase: pos(0), CurrentPhase: pos(2),
+				OpenInPhase: pos(0), CurrentPhase: pos(2),
 			}
 
 			Expect(ResolveRow(r, now)).To(Equal(StateClosed))
@@ -171,9 +171,9 @@ var _ = Describe("Capability", func() {
 
 		It("still reports coming for a phase the organizer has not reached", func() {
 			r := Row{
-				Capability: SubmitProposal, Enabled: false,
+				Capability: ProposeProjects, Enabled: false,
 				OpensAt: &future, ClosesAt: nil,
-				OpensPhase: pos(3), CurrentPhase: pos(1),
+				OpenInPhase: pos(3), CurrentPhase: pos(1),
 			}
 
 			Expect(ResolveRow(r, now)).To(Equal(StateComing))
@@ -181,9 +181,9 @@ var _ = Describe("Capability", func() {
 
 		It("reports coming at the boundary only before the phase is reached", func() {
 			atPhase := Row{
-				Capability: SubmitProposal, Enabled: false,
+				Capability: ProposeProjects, Enabled: false,
 				OpensAt: &future, ClosesAt: nil,
-				OpensPhase: pos(2), CurrentPhase: pos(2),
+				OpenInPhase: pos(2), CurrentPhase: pos(2),
 			}
 
 			Expect(ResolveRow(atPhase, now)).To(Equal(StateClosed))
@@ -195,7 +195,7 @@ var _ = Describe("Capability", func() {
 			r := Row{
 				Capability: Vote, Enabled: false,
 				OpensAt: nil, ClosesAt: nil,
-				OpensPhase: nil, CurrentPhase: pos(1),
+				OpenInPhase: nil, CurrentPhase: pos(1),
 			}
 
 			Expect(ResolveRow(r, now)).To(Equal(StateClosed))
@@ -203,9 +203,9 @@ var _ = Describe("Capability", func() {
 
 		It("falls back to dates when no advance has happened", func() {
 			r := Row{
-				Capability: SubmitProposal, Enabled: false,
+				Capability: ProposeProjects, Enabled: false,
 				OpensAt: &future, ClosesAt: nil,
-				OpensPhase: pos(0), CurrentPhase: nil,
+				OpenInPhase: pos(0), CurrentPhase: nil,
 			}
 
 			Expect(ResolveRow(r, now)).To(Equal(StateComing))
@@ -213,9 +213,9 @@ var _ = Describe("Capability", func() {
 
 		It("keeps the flag decisive regardless of position", func() {
 			r := Row{
-				Capability: SubmitProposal, Enabled: true,
+				Capability: ProposeProjects, Enabled: true,
 				OpensAt: &future, ClosesAt: nil,
-				OpensPhase: pos(5), CurrentPhase: pos(0),
+				OpenInPhase: pos(5), CurrentPhase: pos(0),
 			}
 
 			Expect(ResolveRow(r, now)).To(Equal(StateOpen))
@@ -228,23 +228,23 @@ var _ = Describe("Capability", func() {
 		// The SDSC-shaped template: registration spans several phases, the rest
 		// occupy one each, voting is driven by hand.
 		template := []AdvanceRow{
-			{Capability: Register, OpensPhase: pos(0), ClosesPhase: pos(3)},
-			{Capability: SubmitProposal, OpensPhase: pos(1), ClosesPhase: pos(2)},
-			{Capability: SubmitProject, OpensPhase: pos(3), ClosesPhase: pos(4)},
-			{Capability: ViewResults, OpensPhase: pos(4), ClosesPhase: nil},
-			{Capability: Vote, OpensPhase: nil, ClosesPhase: nil},
+			{Capability: Register, OpenInPhase: pos(0), ClosedInPhase: pos(3)},
+			{Capability: ProposeProjects, OpenInPhase: pos(1), ClosedInPhase: pos(2)},
+			{Capability: CreateProjectSubmissions, OpenInPhase: pos(3), ClosedInPhase: pos(4)},
+			{Capability: ViewResults, OpenInPhase: pos(4), ClosedInPhase: nil},
+			{Capability: Vote, OpenInPhase: nil, ClosedInPhase: nil},
 		}
 
 		It("opens a capability once its phase is reached", func() {
-			Expect(Advance(template, 1)[SubmitProposal]).To(BeTrue())
+			Expect(Advance(template, 1)[ProposeProjects]).To(BeTrue())
 		})
 
 		It("keeps a capability closed before its phase", func() {
-			Expect(Advance(template, 0)[SubmitProposal]).To(BeFalse())
+			Expect(Advance(template, 0)[ProposeProjects]).To(BeFalse())
 		})
 
 		It("closes a capability once its closing phase is reached", func() {
-			Expect(Advance(template, 2)[SubmitProposal]).To(BeFalse())
+			Expect(Advance(template, 2)[ProposeProjects]).To(BeFalse())
 		})
 
 		It("keeps a spanning capability open across intermediate phases", func() {
@@ -281,7 +281,7 @@ var _ = Describe("Capability", func() {
 		})
 
 		It("returns an empty result when nothing is scheduled", func() {
-			rows := []AdvanceRow{{Capability: Vote, OpensPhase: nil, ClosesPhase: nil}}
+			rows := []AdvanceRow{{Capability: Vote, OpenInPhase: nil, ClosedInPhase: nil}}
 
 			Expect(Advance(rows, 0)).To(BeEmpty())
 		})
@@ -290,7 +290,7 @@ var _ = Describe("Capability", func() {
 			// An organizer can set closes before opens; it must resolve to one
 			// answer rather than panicking or flapping.
 			rows := []AdvanceRow{
-				{Capability: Register, OpensPhase: pos(3), ClosesPhase: pos(1)},
+				{Capability: Register, OpenInPhase: pos(3), ClosedInPhase: pos(1)},
 			}
 
 			for _, target := range []int{0, 1, 2, 3, 4} {
@@ -321,7 +321,7 @@ var _ = Describe("Capability", func() {
 			// The regression this guards: enforcing with `state == StateOpen`
 			// would reject every mutation on every hackathon that has no row
 			// for the capability yet.
-			Expect(Resolve(nil, now).Allowed(SubmitProposal)).To(BeTrue())
+			Expect(Resolve(nil, now).Allowed(ProposeProjects)).To(BeTrue())
 		})
 
 		It("allows a capability missing from the map entirely", func() {
