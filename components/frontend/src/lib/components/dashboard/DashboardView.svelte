@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
@@ -110,20 +109,6 @@
                                     <span class="badge {membershipBadgePreset(mem.isWaiting)}">
                                         {membershipBadgeLabel(mem.isWaiting, mem.role)}
                                     </span>
-                                    {#if !mem.isWaiting}
-                                        <!-- One way in for everyone. Owners switch to
-                                             manage mode from the sidebar once inside,
-                                             so a second button here only asked them to
-                                             choose a mode before they had any context
-                                             to choose with. Their role is still visible
-                                             in the badge beside this. -->
-                                        <a
-                                            href={resolve(`/hackathon/${h.id}/overview`)}
-                                            class="btn btn-sm preset-filled-primary-500 no-underline"
-                                        >
-                                            Enter
-                                        </a>
-                                    {/if}
                                 </div>
                             {/if}
                         </div>
