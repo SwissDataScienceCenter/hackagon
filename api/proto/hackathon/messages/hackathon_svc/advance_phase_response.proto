@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "hackathon/entities/capability.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+message AdvancePhaseResponse {
+  string current_phase_id = 1;
+  // Every capability after the move, so the caller can show what changed rather
+  // than re-fetching the hackathon.
+  repeated hackathon.entities.CapabilityStatus capabilities = 2;
+}

@@ -31,9 +31,9 @@ func (Capability) Fields() []ent.Field {
 		field.Enum("capability").
 			Values(
 				"register",
-				"propose_projects",
+				"submit_proposal",
 				"set_team_preferences",
-				"create_project_submissions",
+				"submit_project",
 				"vote",
 				"view_results",
 			).
@@ -74,11 +74,11 @@ func (Capability) Edges() []ent.Edge {
 		//
 		// SET NULL rather than cascade: the owner UI can delete a phase, and
 		// that must not delete the capability along with it.
-		edge.From("open_in_phase", Phase.Type).
+		edge.From("opens_phase", Phase.Type).
 			Ref("opens_capabilities").Unique().
 			Annotations(entsql.OnDelete(entsql.SetNull)).
 			Comment("Phase from whose start this is expected open; null = manually driven."),
-		edge.From("closed_in_phase", Phase.Type).
+		edge.From("closes_phase", Phase.Type).
 			Ref("closes_capabilities").Unique().
 			Annotations(entsql.OnDelete(entsql.SetNull)).
 			Comment("Phase at whose start this is expected to close; null = stays open."),

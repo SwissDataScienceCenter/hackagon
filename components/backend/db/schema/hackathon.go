@@ -73,7 +73,7 @@ func (Hackathon) Edges() []ent.Edge {
 		edge.To("phases", Phase.Type).
 			Comment("Temporal phases (e.g. ideation, hacking, judging)."),
 		edge.To("capabilities", Capability.Type).
-			Comment("Which member-facing actions are available on this hackathon."),
+			Comment("Which member-facing actions are currently open."),
 		// Inverse side so the foreign key lands on `hackathons`, letting
 		// current_phase_id be read without joining the phases table.
 		edge.From("current_phase", Phase.Type).

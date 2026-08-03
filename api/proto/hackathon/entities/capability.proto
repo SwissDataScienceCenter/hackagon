@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// What a member is allowed to do in a hackathon right now.
+//
+// Each value is backed by exactly one stored row per hackathon carrying an
+// `enabled` flag, which is the authoritative gate. Adding a capability is
+// therefore an enum value plus a row — no schema or message change.
+enum Capability {
+  CAPABILITY_UNSPECIFIED = 0;
+  // HackathonService.Join
+  CAPABILITY_REGISTER = 1;
+  // ProjectService.Propose
+  CAPABILITY_SUBMIT_PROPOSAL = 2;
+  // ProjectService.SetPreference
+  CAPABILITY_SET_TEAM_PREFERENCES = 3;
+  // TeamService.CreateSubmission / FinalizeSubmission
+  CAPABILITY_SUBMIT_PROJECT = 4;
+  // VoteService.SubmitVote — service not implemented yet.
+  CAPABILITY_VOTE = 5;
+  // VoteService.ListVoteResults — the flag doubles as the publish switch, since
+  // results are entered one placement at a time and must not leak partial
+  // standings.
+  CAPABILITY_VIEW_RESULTS = 6;
+}
+
+enum CapabilityState {
+  CAPABILITY_STATE_UNSPECIFIED = 0;
+  // Closed now, but its opens_phase starts in the future, so clients can show
+  // "opens 12 Aug" and count down to it.
+  CAPABILITY_STATE_COMING = 1;
+  CAPABILITY_STATE_OPEN = 2;
+  CAPABILITY_STATE_CLOSED = 3;
+  // No row exists for this capability, so the server has no opinion and does not
+  // enforce it. Clients must render exactly as they did before capabilities
+  // existed. This is what makes partial adoption safe.
+  CAPABILITY_STATE_UNGOVERNED = 4;
+}
+
+message CapabilityStatus {
+  Capability capability = 1;
+  CapabilityState state = 2;
+  // When the flag was last flipped, and by whom — "who opened voting" is the
+  // first question asked when something goes wrong during a live event.
+  google.protobuf.Timestamp modified_at = 3;
+  optional string modifier_id = 4;
+
+  // The schedule, derived from the linked phases. Display only: `state` is what
+  // the server enforces, and these never widen it. Absent when the capability
+  // is manually driven (no linked phase), which is the correct answer for
+  // anything that opens abruptly — a countdown would be a lie.
+  optional google.protobuf.Timestamp opens_at = 5;
+  optional google.protobuf.Timestamp closes_at = 6;
+  optional string opens_phase_id = 7;
+  optional string closes_phase_id = 8;
+}

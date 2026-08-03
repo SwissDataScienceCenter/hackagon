@@ -3,11 +3,15 @@ syntax = "proto3";
 package hackathon;
 
 import "hackathon/messages/hackathon_svc/add_owner_request.proto";
+import "hackathon/messages/hackathon_svc/advance_phase_request.proto";
+import "hackathon/messages/hackathon_svc/advance_phase_response.proto";
 import "hackathon/messages/hackathon_svc/add_owner_response.proto";
 import "hackathon/messages/hackathon_svc/approve_participant_request.proto";
 import "hackathon/messages/hackathon_svc/approve_participant_response.proto";
 import "hackathon/messages/hackathon_svc/create_request.proto";
 import "hackathon/messages/hackathon_svc/create_response.proto";
+import "hackathon/messages/hackathon_svc/edit_capability_request.proto";
+import "hackathon/messages/hackathon_svc/edit_capability_response.proto";
 import "hackathon/messages/hackathon_svc/edit_request.proto";
 import "hackathon/messages/hackathon_svc/edit_response.proto";
 import "hackathon/messages/hackathon_svc/get_request.proto";
@@ -28,6 +32,8 @@ service HackathonService {
   rpc Get(hackathon.messages.hackathon_svc.GetRequest) returns (hackathon.messages.hackathon_svc.GetResponse);
   rpc Create(hackathon.messages.hackathon_svc.CreateRequest) returns (hackathon.messages.hackathon_svc.CreateResponse);
   rpc Edit(hackathon.messages.hackathon_svc.EditRequest) returns (hackathon.messages.hackathon_svc.EditResponse);
+  rpc EditCapability(hackathon.messages.hackathon_svc.EditCapabilityRequest) returns (hackathon.messages.hackathon_svc.EditCapabilityResponse);
+  rpc AdvancePhase(hackathon.messages.hackathon_svc.AdvancePhaseRequest) returns (hackathon.messages.hackathon_svc.AdvancePhaseResponse);
   rpc Join(hackathon.messages.hackathon_svc.JoinRequest) returns (hackathon.messages.hackathon_svc.JoinResponse);
   rpc ApproveParticipant(hackathon.messages.hackathon_svc.ApproveParticipantRequest) returns (hackathon.messages.hackathon_svc.ApproveParticipantResponse);
   rpc RemoveParticipant(hackathon.messages.hackathon_svc.RemoveParticipantRequest) returns (hackathon.messages.hackathon_svc.RemoveParticipantResponse);

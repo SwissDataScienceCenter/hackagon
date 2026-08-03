@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
@@ -19,6 +20,8 @@ import (
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -30,18 +33,32 @@ var _ = Describe("HackathonService", func() {
 	var (
 		dbClient  *ent.Client
 		conn      *grpc.ClientConn
+		enf       *middleware.Enforcer
 		client    hackathonSvc.HackathonServiceClient
 		testAdmin string
 	)
 
 	BeforeEach(func() {
-		dbClient, conn, _ = testutils.CreateTestServer()
+		dbClient, conn, enf = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewHackathonServiceClient(conn)
 	})
 
 	Describe("Create", func() {
+		// newUser inserts a user and returns its Keycloak ID. Create looks the
+		// caller up in the users table, so a token alone is not enough.
+		newUser := func(username string) string {
+			keycloakID := "keycloak-" + username
+			_, err := dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername(username).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			return keycloakID
+		}
+
 		It("creates hackathon successfully with admin token", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(
@@ -73,6 +90,119 @@ var _ = Describe("HackathonService", func() {
 			Expect(h.Visibility).To(Equal(enthackathon.VisibilityPublic))
 			Expect(h.Edges.Creator).NotTo(BeNil())
 			Expect(h.Edges.Creator.KeycloakID).To(Equal(testAdmin))
+		})
+
+		It("creates hackathon successfully for a global hackathon organizer", func() {
+			organizer := newUser("organizer")
+			_, err := enf.AddGlobalRole(organizer, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(organizer)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			resp, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Organizer Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetHackathonId()).NotTo(BeEmpty())
+
+			// The creator must also come out as owner of what they just created.
+			role, err := enf.GetHackathonRole(organizer, resp.GetHackathonId())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(role).To(Equal(entities.HackathonRole_HACKATHON_ROLE_OWNER))
+		})
+
+		// The owner shell reads membership from the participants table, not from
+		// casbin, so a creator missing here is an owner who cannot open their own
+		// hackathon and does not see it listed on their dashboard.
+		It("enrolls the creator as a confirmed participant", func() {
+			organizer := newUser("organizer")
+			_, err := enf.AddGlobalRole(organizer, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(organizer)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			created, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Owned Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PRIVATE,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := dbClient.Participant.Query().
+				Where(entparticipant.HackathonIDEQ(uuid.MustParse(created.GetHackathonId()))).
+				WithUser().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.IsWaiting).To(BeFalse())
+			Expect(p.Edges.User.KeycloakID).To(Equal(organizer))
+
+			// ...and surfaces through Get as an owner, which is what the owner
+			// shell gates on.
+			got, err := client.Get(ctx, &msgs.GetRequest{
+				HackathonId: created.GetHackathonId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.GetHackathon().GetMembers()).To(HaveLen(1))
+			member := got.GetHackathon().GetMembers()[0]
+			Expect(member.GetUser().GetKeycloakId()).To(Equal(organizer))
+			Expect(member.GetRole()).To(Equal(entities.HackathonRole_HACKATHON_ROLE_OWNER))
+		})
+
+		It("denies a user without the organizer role", func() {
+			plain := newUser("plain")
+
+			token := testutils.CreateTestJWTToken(plain)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Should Not Exist",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("does not let an organizer write another owner's hackathon", func() {
+			organizer := newUser("organizer")
+			_, err := enf.AddGlobalRole(organizer, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			// A hackathon the organizer has no role in.
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+			created, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Admin Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PRIVATE,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(organizer)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			newName := "Hijacked"
+			_, err = client.Edit(ctx, &msgs.EditRequest{
+				HackathonId: created.GetHackathonId(),
+				Name:        &newName,
+			})
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 	})
 
@@ -1064,6 +1194,671 @@ var _ = Describe("HackathonService", func() {
 				Expect(
 					resp.GetHackathons()[0].GetVisibility(),
 				).To(Equal(entities.Visibility_VISIBILITY_PUBLIC))
+			})
+		})
+	})
+
+	Describe("EditCapability", func() {
+		var (
+			adminCtx    context.Context
+			hackathonID string
+		)
+
+		// newUser inserts a user and returns a context carrying its token.
+		newUser := func(username string) context.Context {
+			keycloakID := "keycloak-" + username
+			_, err := dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername(username).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			return metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(keycloakID),
+				),
+			)
+		}
+
+		BeforeEach(func() {
+			adminCtx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+				),
+			)
+
+			now := time.Now()
+			createResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Capability Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+		})
+
+		It("reports a status for every capability on Get", func() {
+			resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			caps := resp.GetHackathon().GetCapabilities()
+			Expect(caps).To(HaveLen(6))
+
+			seen := map[entities.Capability]entities.CapabilityState{}
+			for _, c := range caps {
+				seen[c.GetCapability()] = c.GetState()
+			}
+			Expect(seen).To(HaveKey(entities.Capability_CAPABILITY_REGISTER))
+			Expect(seen).To(HaveKey(entities.Capability_CAPABILITY_VOTE))
+		})
+
+		It("creates a new hackathon with every capability open", func() {
+			// Introducing capabilities must not change behavior for existing
+			// callers, so a fresh hackathon starts permissive.
+			resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, c := range resp.GetHackathon().GetCapabilities() {
+				Expect(c.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					"capability %v should start open", c.GetCapability(),
+				)
+			}
+		})
+
+		It("closes a capability and reports it back", func() {
+			resp, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     proto.Bool(false),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetCapability().GetState()).To(
+				Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+			)
+		})
+
+		It("blocks Join once registration is closed", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     proto.Bool(false),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Join(newUser("late-joiner"), &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+			Expect(err.Error()).To(ContainSubstring("registrations are closed"))
+		})
+
+		It("still allows Join while registration is open", func() {
+			_, err := client.Join(newUser("early-joiner"), &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("lets an owner join even when registration is closed", func() {
+			// Organizers must be able to act outside the window; a participant
+			// who missed a deadline is a support request, not a lockout.
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     proto.Bool(false),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Join(adminCtx, &msgs.JoinRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("closes each capability independently", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_VOTE,
+				Enabled:     proto.Bool(false),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, c := range resp.GetHackathon().GetCapabilities() {
+				if c.GetCapability() == entities.Capability_CAPABILITY_VOTE {
+					Expect(c.GetState()).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+					)
+
+					continue
+				}
+				Expect(c.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					"capability %v should be untouched", c.GetCapability(),
+				)
+			}
+		})
+
+		It("denies a non-owner from editing capabilities", func() {
+			_, err := client.EditCapability(
+				newUser("meddler"),
+				&msgs.EditCapabilityRequest{
+					HackathonId: hackathonID,
+					Capability:  entities.Capability_CAPABILITY_REGISTER,
+					Enabled:     proto.Bool(false),
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+
+		It("rejects an unspecified capability", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: hackathonID,
+				Capability:  entities.Capability_CAPABILITY_UNSPECIFIED,
+				Enabled:     proto.Bool(true),
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns NOT_FOUND for an unknown hackathon", func() {
+			_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+				HackathonId: uuid.NewString(),
+				Capability:  entities.Capability_CAPABILITY_REGISTER,
+				Enabled:     proto.Bool(false),
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(BeElementOf(codes.NotFound, codes.PermissionDenied))
+		})
+
+		Describe("phase schedule", func() {
+			var adminUserID uuid.UUID
+
+			BeforeEach(func() {
+				u, err := dbClient.User.Query().
+					Where(entuser.KeycloakIDEQ(testAdmin)).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				adminUserID = u.ID
+			})
+
+			// phaseOn creates a phase on `onHackathon` starting `days` from now.
+			phaseOn := func(onHackathon, name string, days int) *ent.Phase {
+				p, err := dbClient.Phase.Create().
+					SetName(name).
+					SetStartsAt(time.Now().AddDate(0, 0, days)).
+					SetEndsAt(time.Now().AddDate(0, 0, days+1)).
+					SetHackathonID(uuid.MustParse(onHackathon)).
+					SetCreatorID(adminUserID).
+					SetModifierID(adminUserID).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				return p
+			}
+
+			// newPhase creates a phase on the hackathon under test.
+			newPhase := func(name string, days int) string {
+				return phaseOn(hackathonID, name, days).ID.String()
+			}
+
+			// statusOf pulls one capability out of a Get response.
+			statusOf := func(c entities.Capability) *entities.CapabilityStatus {
+				resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+				Expect(err).NotTo(HaveOccurred())
+				for _, s := range resp.GetHackathon().GetCapabilities() {
+					if s.GetCapability() == c {
+						return s
+					}
+				}
+				Fail("capability not present in Get response")
+
+				return nil
+			}
+
+			It("reports COMING with an opens_at once linked to a future phase", func() {
+				phaseID := newPhase("Proposals", 5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				Expect(got.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_COMING),
+				)
+				Expect(got.GetOpensAt()).NotTo(BeNil())
+				Expect(got.GetOpensPhaseId()).To(Equal(phaseID))
+			})
+
+			It("reports CLOSED when the linked phase has already started", func() {
+				phaseID := newPhase("Past Proposals", -5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+			})
+
+			It("keeps a scheduled capability blocked for enforcement", func() {
+				// COMING is a better message, not a weaker gate.
+				phaseID := newPhase("Registration", 5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_REGISTER,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.Join(newUser("too-early"), &msgs.JoinRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+			})
+
+			It("lets the flag win over a future phase", func() {
+				// The decisive property: an organizer opening something early is
+				// not overruled by its schedule.
+				phaseID := newPhase("Later", 5)
+
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(true),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+				)
+			})
+
+			It("unlinks on an empty phase id", func() {
+				phaseID := newPhase("Proposals", 5)
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					OpensPhaseId: proto.String(""),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				Expect(got.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+				Expect(got.OpensAt).To(BeNil())
+				Expect(got.OpensPhaseId).To(BeNil())
+			})
+
+			It("leaves the flag alone when only the schedule is edited", func() {
+				phaseID := newPhase("Proposals", 5)
+
+				// submit_proposal starts open; editing only the link must not
+				// close it.
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL).GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+				)
+			})
+
+			It("rejects a phase belonging to another hackathon", func() {
+				other, err := client.Create(adminCtx, &msgs.CreateRequest{
+					Name:       "Other Hackathon",
+					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				foreign := phaseOn(other.GetHackathonId(), "Foreign Phase", 5)
+
+				_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					OpensPhaseId: proto.String(foreign.ID.String()),
+				})
+				Expect(status.Code(err)).To(Equal(codes.NotFound))
+			})
+
+			Describe("AdvancePhase", func() {
+				var ideation, hacking, judging string
+
+				// stateOf reads one capability's state back from Get.
+				stateOf := func(c entities.Capability) entities.CapabilityState {
+					return statusOf(c).GetState()
+				}
+
+				BeforeEach(func() {
+					ideation = newPhase("Ideation", 1)
+					hacking = newPhase("Hacking", 2)
+					judging = newPhase("Judging", 3)
+
+					// Proposals span Ideation→Hacking, submissions Hacking→Judging,
+					// results open at Judging. Voting stays unlinked. All start
+					// closed so advancing is what opens them.
+					for _, link := range []struct {
+						capability    entities.Capability
+						opens, closes string
+					}{
+						{entities.Capability_CAPABILITY_SUBMIT_PROPOSAL, ideation, hacking},
+						{entities.Capability_CAPABILITY_SUBMIT_PROJECT, hacking, judging},
+						{entities.Capability_CAPABILITY_VIEW_RESULTS, judging, ""},
+					} {
+						_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+							HackathonId:   hackathonID,
+							Capability:    link.capability,
+							Enabled:       proto.Bool(false),
+							OpensPhaseId:  proto.String(link.opens),
+							ClosesPhaseId: proto.String(link.closes),
+						})
+						Expect(err).NotTo(HaveOccurred())
+					}
+					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId: hackathonID,
+						Capability:  entities.Capability_CAPABILITY_VOTE,
+						Enabled:     proto.Bool(false),
+					})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("opens the capabilities scheduled for the target phase", func() {
+					resp, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID,
+						PhaseId:     ideation,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resp.GetCurrentPhaseId()).To(Equal(ideation))
+
+					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					)
+				})
+
+				It("closes what the previous phase opened when moving on", func() {
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: ideation,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: hacking,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+					)
+					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROJECT)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					)
+				})
+
+				It("leaves an unscheduled capability untouched", func() {
+					// Voting must survive advancing in either direction — it opens
+					// abruptly and by hand.
+					for _, target := range []string{ideation, hacking, judging} {
+						_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+							HackathonId: hackathonID, PhaseId: target,
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(stateOf(entities.Capability_CAPABILITY_VOTE)).To(
+							Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+						)
+					}
+
+					// And an organizer opening it by hand is not undone by a later
+					// advance.
+					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId: hackathonID,
+						Capability:  entities.Capability_CAPABILITY_VOTE,
+						Enabled:     proto.Bool(true),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: ideation,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stateOf(entities.Capability_CAPABILITY_VOTE)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					)
+				})
+
+				It("is idempotent", func() {
+					// A double-click at a live event must be harmless.
+					first, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: hacking,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					second, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: hacking,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(second.GetCurrentPhaseId()).To(Equal(first.GetCurrentPhaseId()))
+					Expect(second.GetCapabilities()).To(HaveLen(len(first.GetCapabilities())))
+				})
+
+				It("restores the earlier flags when advancing backwards", func() {
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: judging,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROJECT)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+					)
+
+					_, err = client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: hacking,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stateOf(entities.Capability_CAPABILITY_SUBMIT_PROJECT)).To(
+						Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+					)
+				})
+
+				It("reports the current phase on Get", func() {
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: hacking,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(got.GetHackathon().GetCurrentPhaseId()).To(Equal(hacking))
+				})
+
+				It("denies a non-owner", func() {
+					_, err := client.AdvancePhase(
+						newUser("bystander"),
+						&msgs.AdvancePhaseRequest{
+							HackathonId: hackathonID, PhaseId: ideation,
+						},
+					)
+					Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+				})
+
+				It("rejects a phase from another hackathon", func() {
+					other, err := client.Create(adminCtx, &msgs.CreateRequest{
+						Name:       "Elsewhere",
+						Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					foreign := phaseOn(other.GetHackathonId(), "Foreign", 1)
+
+					_, err = client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: foreign.ID.String(),
+					})
+					Expect(status.Code(err)).To(Equal(codes.NotFound))
+				})
+
+				It("clears the current phase when that phase is deleted", func() {
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: hacking,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(dbClient.Phase.DeleteOneID(uuid.MustParse(hacking)).
+						Exec(context.Background())).To(Succeed())
+
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(got.GetHackathon().CurrentPhaseId).To(BeNil())
+				})
+			})
+
+			Describe("List", func() {
+				// statesFromList pulls this hackathon's capability states out of a
+				// List response.
+				statesFromList := func() map[entities.Capability]entities.CapabilityState {
+					resp, err := client.List(adminCtx, &msgs.ListRequest{})
+					Expect(err).NotTo(HaveOccurred())
+
+					for _, h := range resp.GetHackathons() {
+						if h.GetId() != hackathonID {
+							continue
+						}
+						out := map[entities.Capability]entities.CapabilityState{}
+						for _, c := range h.GetCapabilities() {
+							out[c.GetCapability()] = c.GetState()
+						}
+
+						return out
+					}
+					Fail("hackathon missing from List response")
+
+					return nil
+				}
+
+				It("reports every capability", func() {
+					Expect(statesFromList()).To(HaveLen(6))
+				})
+
+				It("agrees with Get", func() {
+					phaseID := newPhase("Proposals", 5)
+					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId:  hackathonID,
+						Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+						Enabled:      proto.Bool(false),
+						OpensPhaseId: proto.String(phaseID),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+
+					listed := statesFromList()
+					for _, c := range got.GetHackathon().GetCapabilities() {
+						Expect(listed[c.GetCapability()]).To(
+							Equal(c.GetState()),
+							"List and Get disagree about %v", c.GetCapability(),
+						)
+					}
+				})
+
+				It("resolves COMING by position once advanced, as Get does", func() {
+					// The reason List loads phases at all. Every phase here is in
+					// the future, so dates alone would call both capabilities
+					// COMING; only the organizer's position separates them.
+					early := newPhase("Early", 5)
+					current := newPhase("Current", 6)
+					ahead := newPhase("Ahead", 7)
+
+					_, err := client.AdvancePhase(adminCtx, &msgs.AdvancePhaseRequest{
+						HackathonId: hackathonID, PhaseId: current,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					// Disabled after advancing, so the advance cannot re-open them.
+					for _, link := range []struct {
+						capability entities.Capability
+						opens      string
+					}{
+						{entities.Capability_CAPABILITY_SUBMIT_PROPOSAL, early},
+						{entities.Capability_CAPABILITY_SUBMIT_PROJECT, ahead},
+					} {
+						_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+							HackathonId:  hackathonID,
+							Capability:   link.capability,
+							Enabled:      proto.Bool(false),
+							OpensPhaseId: proto.String(link.opens),
+						})
+						Expect(err).NotTo(HaveOccurred())
+					}
+
+					listed := statesFromList()
+
+					// Behind the current phase: closed, despite a future date.
+					Expect(listed[entities.Capability_CAPABILITY_SUBMIT_PROPOSAL]).
+						To(Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED))
+					// Still ahead of it: coming.
+					Expect(listed[entities.Capability_CAPABILITY_SUBMIT_PROJECT]).
+						To(Equal(entities.CapabilityState_CAPABILITY_STATE_COMING))
+
+					// And the detail page must say the same.
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+					for _, c := range got.GetHackathon().GetCapabilities() {
+						Expect(listed[c.GetCapability()]).To(Equal(c.GetState()))
+					}
+				})
+			})
+
+			It("survives deletion of the linked phase", func() {
+				phaseID := newPhase("Doomed", 5)
+				_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+					HackathonId:  hackathonID,
+					Capability:   entities.Capability_CAPABILITY_SUBMIT_PROPOSAL,
+					Enabled:      proto.Bool(false),
+					OpensPhaseId: proto.String(phaseID),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// The owner UI can delete phases; that must not take the
+				// capability with it.
+				Expect(dbClient.Phase.DeleteOneID(uuid.MustParse(phaseID)).
+					Exec(context.Background())).To(Succeed())
+
+				got := statusOf(entities.Capability_CAPABILITY_SUBMIT_PROPOSAL)
+				Expect(got.GetState()).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+				Expect(got.OpensPhaseId).To(BeNil())
 			})
 		})
 	})

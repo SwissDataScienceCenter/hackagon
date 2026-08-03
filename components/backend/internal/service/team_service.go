@@ -11,6 +11,7 @@ import (
 	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -454,6 +455,13 @@ func (s *TeamService) CreateSubmission(
 		return nil, err
 	}
 
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer,
+		t.Edges.Project.Edges.Hackathon.ID, capability.SubmitProject,
+	); err != nil {
+		return nil, err
+	}
+
 	u, err := s.dbClient.User.Query().
 		Where(entuser.KeycloakIDEQ(sub)).
 		Only(ctx)
@@ -635,6 +643,16 @@ func (s *TeamService) FinalizeSubmission(
 		m.Submission,
 		m.Write,
 		m.WithTeam(subm.Edges.Team.ID.String()),
+	); err != nil {
+		return nil, err
+	}
+
+	// Finalizing is the act the deadline actually bites on, so it is gated as
+	// well as CreateSubmission — otherwise a draft made before the close could
+	// still be turned in afterwards.
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer,
+		subm.Edges.Team.Edges.Project.Edges.Hackathon.ID, capability.SubmitProject,
 	); err != nil {
 		return nil, err
 	}

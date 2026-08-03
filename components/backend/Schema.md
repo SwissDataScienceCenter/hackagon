@@ -8,7 +8,7 @@ Whether one member-facing action is currently open in a hackathon. One row per c
 
 | Column | Type | Required | Unique | Immutable | Default | Description |
 |--------|------|----------|--------|-----------|---------|-------------|
-| `capability` | enum(register, propose_projects, set_team_preferences, create_project_submissions, vote, view_results) | yes | no | yes | no | Which action this row gates. Immutable: it identifies the row. |
+| `capability` | enum(register, submit_proposal, set_team_preferences, submit_project, vote, view_results) | yes | no | yes | no | Which action this row gates. Immutable: it identifies the row. |
 | `enabled` | bool | yes | no | no | yes | The authoritative gate. Phases may describe when this is expected to change, but never change it themselves — a wrong date can only produce a wrong countdown, never an unauthorized action. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the capability row was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
@@ -19,8 +19,8 @@ Whether one member-facing action is currently open in a hackathon. One row per c
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | M2O | yes | yes | The hackathon this capability belongs to. |
 | `modifier` | User | M2O | yes | no | Who last flipped the flag. Optional so seeded and backfilled rows need no attribution; set on every edit. |
-| `open_in_phase` | Phase | M2O | yes | no | Phase from whose start this is expected open; null = manually driven. |
-| `closed_in_phase` | Phase | M2O | yes | no | Phase at whose start this is expected to close; null = stays open. |
+| `opens_phase` | Phase | M2O | yes | no | Phase from whose start this is expected open; null = manually driven. |
+| `closes_phase` | Phase | M2O | yes | no | Phase at whose start this is expected to close; null = stays open. |
 
 ### Indexes
 
@@ -53,7 +53,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `participating_users` | User | M2M | yes | no | Users who are participating or waitlisted. |
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
-| `capabilities` | Capability | O2M | no | no | Which member-facing actions are available on this hackathon. |
+| `capabilities` | Capability | O2M | no | no | Which member-facing actions are currently open. |
 | `current_phase` | Phase | M2O | yes | no | Set by AdvancePhase; SET NULL so deleting a phase does not orphan it. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
