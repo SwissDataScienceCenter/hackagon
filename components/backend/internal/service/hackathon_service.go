@@ -326,6 +326,16 @@ func (s *HackathonService) Join(
 		return nil, status.Errorf(codes.Internal, "couldn't join hackathon")
 	}
 
+	// Everyone on the roster holds the Member role; is_waiting carries the
+	// approved/waitlisted distinction and gates the sensitive paths (member
+	// view, voting). This lets waitlisted registrants propose projects and see
+	// the private hackathons they signed up for.
+	if _, err := s.enforcer.AddRole(user.KeycloakID, m.Member, h.ID.String()); err != nil {
+		slog.Error("add hackathon member on join", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't set hackathon member permission")
+	}
+
 	return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
 }
 

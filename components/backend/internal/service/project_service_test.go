@@ -330,7 +330,7 @@ var _ = Describe("ProjectService", func() {
 			Expect(p.Edges.Creator.KeycloakID).To(Equal(memberKeycloakID))
 		})
 
-		It("denies waitlisted participant from proposing", func() {
+		It("allows a waitlisted participant to propose", func() {
 			// Create a test user
 			waitlistedKeycloakID := "waitlisted-project-proposer"
 			_, err := dbClient.User.Create().
@@ -375,18 +375,18 @@ var _ = Describe("ProjectService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Try to propose — should be denied (not yet approved)
+			// Waitlisted participants MAY propose: joining grants the Member
+			// role; is_waiting only gates the sensitive paths (member view,
+			// voting). Policy pinned by the lifecycle recipe (act 3).
 			req := &projectMsgs.ProposeRequest{
 				HackathonId: hackathonID,
 				Title:       "Waitlisted Project",
-				Description: "Should not be allowed",
+				Description: "Allowed while still on the waitlist",
 			}
 
-			_, err = projectClient.Propose(waitlistedCtx, req)
-			Expect(err).To(HaveOccurred())
-
-			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			resp, err := projectClient.Propose(waitlistedCtx, req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetProjectId()).NotTo(BeEmpty())
 		})
 
 		It("requires Propose permission to propose", func() {
