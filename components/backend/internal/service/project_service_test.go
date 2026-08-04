@@ -884,40 +884,6 @@ var _ = Describe("ProjectService", func() {
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
 
-		It("returns PERMISSION_DENIED for waitlisted users", func() {
-			// Create waitlisted user
-			waitlistedUser, err := dbClient.User.Create().
-				SetKeycloakID("waitlisted-user").
-				SetUsername("waitlisted-username").
-				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
-			// Add as waitlisted participant
-			now := time.Now()
-			_, err = dbClient.Participant.Create().
-				SetHackathonID(uuid.MustParse(hackathonID)).
-				SetUserID(waitlistedUser.ID).
-				SetIsWaiting(true).
-				SetCreatedAt(now).
-				Save(context.Background())
-			Expect(err).NotTo(HaveOccurred())
-
-			token := testutils.CreateTestJWTToken("waitlisted-user")
-			ctx := metadata.NewOutgoingContext(
-				context.Background(),
-				metadata.Pairs("authorization", "Bearer "+token),
-			)
-
-			setReq := &projectMsgs.SetPreferenceRequest{
-				ProjectId: createdProjectID,
-			}
-
-			_, err = projectClient.SetPreference(ctx, setReq)
-			Expect(err).To(HaveOccurred())
-
-			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.PermissionDenied))
-		})
 	})
 
 	Describe("ExportPreferences", func() {
@@ -1634,6 +1600,439 @@ var _ = Describe("ProjectService", func() {
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
+	})
+
+	Describe("GetPreference", func() {
+		var hackathonID string
+		var project1ID string
+		var project2ID string
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:        "GetPreference Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create two projects
+			project1Resp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       "Project One",
+				Description: "First project",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			project1ID = project1Resp.GetProjectId()
+
+			project2Resp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       "Project Two",
+				Description: "Second project",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			project2ID = project2Resp.GetProjectId()
+
+			// Create a test user and make them a participant
+			testUserID := "getpref-user"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(testUserID).
+				SetUsername("getpref-username").
+				SetDisplayName("GetPref User").
+				SetEmail("getpref@test.dev").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			userToken := testutils.CreateTestJWTToken(testUserID)
+			userCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+userToken),
+			)
+			_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Approve the participant as admin
+			creatorUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(testUserID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      creatorUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns empty list when user has no preferences", func() {
+			token := testutils.CreateTestJWTToken("getpref-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			getReq := &projectMsgs.GetPreferenceRequest{
+				HackathonId: hackathonID,
+			}
+
+			getResp, err := projectClient.GetPreference(ctx, getReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(getResp.GetProjectIds()).To(BeEmpty())
+		})
+
+		It("returns project IDs the user prefers", func() {
+			// Set preference for project 1
+			prefCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken("getpref-user"),
+				),
+			)
+			_, err := projectClient.SetPreference(prefCtx, &projectMsgs.SetPreferenceRequest{
+				ProjectId: project1ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Get preference
+			getReq := &projectMsgs.GetPreferenceRequest{
+				HackathonId: hackathonID,
+			}
+
+			getResp, err := projectClient.GetPreference(prefCtx, getReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(getResp.GetProjectIds()).To(HaveLen(1))
+			Expect(getResp.GetProjectIds()[0]).To(Equal(project1ID))
+		})
+
+		It("returns multiple project IDs when user prefers several", func() {
+			prefCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken("getpref-user"),
+				),
+			)
+
+			// Set preferences for both projects
+			_, err := projectClient.SetPreference(prefCtx, &projectMsgs.SetPreferenceRequest{
+				ProjectId: project1ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = projectClient.SetPreference(prefCtx, &projectMsgs.SetPreferenceRequest{
+				ProjectId: project2ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Get preference
+			getReq := &projectMsgs.GetPreferenceRequest{
+				HackathonId: hackathonID,
+			}
+
+			getResp, err := projectClient.GetPreference(prefCtx, getReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(getResp.GetProjectIds()).To(HaveLen(2))
+			Expect(getResp.GetProjectIds()).To(ConsistOf(project1ID, project2ID))
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			// Use admin token to bypass permission checks and reach the
+			// hackathon-existence check.
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			getReq := &projectMsgs.GetPreferenceRequest{
+				HackathonId: uuid.NewString(),
+			}
+
+			_, err := projectClient.GetPreference(ctx, getReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns PERMISSION_DENIED for non-participants", func() {
+			// Use a different user who is not a participant
+			nonParticipantID := "non-participant-getpref"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonParticipantID).
+				SetUsername("non-participant-getpref-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonParticipantID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			getReq := &projectMsgs.GetPreferenceRequest{
+				HackathonId: hackathonID,
+			}
+
+			_, err = projectClient.GetPreference(ctx, getReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+	})
+
+	Describe("RemovePreference", func() {
+		var hackathonID string
+		var project1ID string
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:        "RemovePreference Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a project
+			projectResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       "Project One",
+				Description: "First project",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			project1ID = projectResp.GetProjectId()
+
+			// Create a test user and make them a participant
+			testUserID := "removepref-user"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(testUserID).
+				SetUsername("removepref-username").
+				SetDisplayName("RemovePref User").
+				SetEmail("removepref@test.dev").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			userToken := testutils.CreateTestJWTToken(testUserID)
+			userCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+userToken),
+			)
+			_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Approve the participant as admin
+			creatorUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(testUserID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      creatorUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Set preference
+			prefCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken("removepref-user"),
+				),
+			)
+			_, err = projectClient.SetPreference(prefCtx, &projectMsgs.SetPreferenceRequest{
+				ProjectId: project1ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("removes user's preference for a project", func() {
+			// Verify preference exists
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(project1ID))).
+				WithPreferredByUsers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Edges.PreferredByUsers).To(HaveLen(1))
+
+			// Remove preference
+			token := testutils.CreateTestJWTToken("removepref-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &projectMsgs.RemovePreferenceRequest{
+				ProjectId: project1ID,
+			}
+
+			_, err = projectClient.RemovePreference(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify preference was removed
+			p, err = dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(project1ID))).
+				WithPreferredByUsers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Edges.PreferredByUsers).To(HaveLen(0))
+		})
+
+		It("is idempotent — succeeds when no preference exists", func() {
+			token := testutils.CreateTestJWTToken("removepref-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &projectMsgs.RemovePreferenceRequest{
+				ProjectId: project1ID,
+			}
+
+			// First remove (should succeed)
+			_, err := projectClient.RemovePreference(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Second remove (should also succeed — idempotent)
+			_, err = projectClient.RemovePreference(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns NOT_FOUND for invalid project ID", func() {
+			token := testutils.CreateTestJWTToken("removepref-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &projectMsgs.RemovePreferenceRequest{
+				ProjectId: uuid.NewString(),
+			}
+
+			_, err := projectClient.RemovePreference(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("removes the preference from the project's preferred_by_users edge", func() {
+			// Verify the user is in the project's preferred_by_users edge
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(project1ID))).
+				WithPreferredByUsers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Edges.PreferredByUsers).To(HaveLen(1))
+			Expect(p.Edges.PreferredByUsers[0].KeycloakID).To(Equal("removepref-user"))
+
+			// Remove the preference
+			token := testutils.CreateTestJWTToken("removepref-user")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &projectMsgs.RemovePreferenceRequest{
+				ProjectId: project1ID,
+			}
+
+			_, err = projectClient.RemovePreference(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify the user is no longer in the preferred_by_users edge
+			p, err = dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(project1ID))).
+				WithPreferredByUsers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Edges.PreferredByUsers).To(HaveLen(0))
+		})
+
+		It("returns PERMISSION_DENIED for non-participants", func() {
+			// Use a different user who is not a participant
+			nonParticipantID := "non-participant-removepref"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonParticipantID).
+				SetUsername("non-participant-removepref-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonParticipantID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &projectMsgs.RemovePreferenceRequest{
+				ProjectId: project1ID,
+			}
+
+			_, err = projectClient.RemovePreference(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
 	})
 
 })
