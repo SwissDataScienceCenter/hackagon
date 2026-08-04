@@ -22,21 +22,27 @@ A hackathon management platform built with SvelteKit, Go/gRPC, and Keycloak.
 # Enter Nix development shell
 just dev
 
-# Start all services (Keycloak)
-just up
+# Sync deps and start everything (Keycloak, Postgres, backend, frontend),
+# then attach to the process-compose TUI
+just start
 
 # Stop all services
 just down
 
-# Attach to process-compose TUI
-just attach
+# Re-attach to the process-compose TUI
+just deploy::attach
 
 # Seed the database with sample data (after services are up)
-just seed
+just db::seed
 
 # Show a summary of current DB state
-just db-summary
+just db::summary
 ```
+
+Recipes are grouped into namespaced modules (`tools/just/*.just`) addressed with
+`::`. Run `just --list` for everything, or `just <module>::help` for a module.
+After changing `*.proto` use `just api-change`; after changing `db/schema/*.go`
+use `just schema-change`; `just changes` will tell you which you need.
 
 ## Component READMEs
 

@@ -18,7 +18,7 @@ Keycloak authentication.
 ### Prerequisites
 
 - Nix development shell (`just dev` from repo root)
-- Keycloak running (`just up` from repo root)
+- Keycloak and the backend running (`just start` from repo root)
 - Config files in `data/test/config/` (see Configuration below)
 
 ### Development
@@ -33,6 +33,26 @@ just build        # Build for production
 just lint         # Run ESLint + TypeScript check
 just format       # Format with Prettier
 just test         # Run Vitest tests
+```
+
+Note that `just start` from the repo root already serves the frontend on
+**:8081** via process-compose, so `just serve` will clash on the port if the
+stack is up — use the running instance, or `just down` first.
+
+To run the checks exactly as CI does (from the repo root):
+
+```bash
+just check::lint -c frontend
+just check::test -c frontend
+just ci::all                  # everything CI runs, both components
+```
+
+`just format` is Prettier only. Formatting is enforced tree-wide by `treefmt`,
+which also covers markdown, shell and Nix:
+
+```bash
+nix run ./tools/nix#treefmt -- <path>        # write
+nix run ./tools/nix#treefmt -- <path> --ci   # check
 ```
 
 ### Configuration
