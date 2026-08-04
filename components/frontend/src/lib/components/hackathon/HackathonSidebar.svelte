@@ -41,8 +41,10 @@
     ];
 
     const adminLinks: { icon: Component; label: string; href: string }[] = [
+        // /admin was listed here but never existed — a link to nowhere is
+        // worse than no link. Platform admins manage site pages instead.
         { icon: PlusCircle, label: 'Create Hackathon', href: '/hackathon/create' },
-        { icon: BarChart3, label: 'Admin Dashboard', href: '/admin' },
+        { icon: BarChart3, label: 'Platform pages', href: '/manage/pages' },
     ];
 </script>
 

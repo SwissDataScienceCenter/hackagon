@@ -23,6 +23,14 @@
         { id: 'photos', label: 'Photos' },
     ];
 
+    // Organizers get the management cockpit. The tab is hidden for plain
+    // members — the backend denies them anyway, so this only avoids showing a
+    // door that will not open. HackathonRole: UNSPECIFIED=0, OWNER=1, MEMBER=2.
+    const canManage = $derived(data.myMembership?.role === 1);
+    const visibleTabs = $derived(
+        canManage ? [...tabs, { id: 'manage', label: 'Manage' }] : tabs,
+    );
+
     function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
         if (!startsAt) return '';
         const fmt = (d: Date) =>
@@ -76,6 +84,7 @@
         'timeline',
         'webinars',
         'photos',
+        'manage',
     ]);
     const hideHeroAndTimeline = $derived(
         listPageSegments.has($page.url.pathname.split('/').filter(Boolean).pop() ?? '')
@@ -83,7 +92,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-7xl">
-    <HackathonSubNav {tabs} hackathonId={hackathonId ?? ''} />
+    <HackathonSubNav tabs={visibleTabs} hackathonId={hackathonId ?? ''} />
 </div>
 
 {#if !hideHeroAndTimeline}

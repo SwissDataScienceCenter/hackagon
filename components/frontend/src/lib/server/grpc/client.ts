@@ -57,6 +57,7 @@ export interface AuthorizedGrpc {
   hackathon: HackathonServiceClient
   team: TeamServiceClient
   sitePage: SitePageServiceClient
+  page: PageServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -76,6 +77,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     hackathon: factory.create(HackathonServiceDefinition, getChannel()),
     team: factory.create(TeamServiceDefinition, getChannel()),
     sitePage: factory.create(SitePageServiceDefinition, getChannel()),
+    page: factory.create(PageServiceDefinition, getChannel()),
   }
 }
 
