@@ -40,7 +40,7 @@
 </script>
 
 <!--
-  Aligned with participants/proposals: same shell; title + count left; Create Team + search right
+  Aligned with participants/projects: same shell; title + count left; Create Team + search right
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

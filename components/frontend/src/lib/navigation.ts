@@ -111,10 +111,10 @@ export function memberNav(
       href: resolve(`/my/hackathon/${hackathonId}/participants`),
     },
     {
-      id: "member:proposals",
-      label: "Proposals",
+      id: "member:projects",
+      label: "Projects",
       icon: Lightbulb,
-      href: resolve(`/my/hackathon/${hackathonId}/proposals`),
+      href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
     {
       id: "member:teams",

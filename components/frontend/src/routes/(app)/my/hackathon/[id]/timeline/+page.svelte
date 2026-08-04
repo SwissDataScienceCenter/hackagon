@@ -26,7 +26,7 @@
     } as const;
 </script>
 
-<!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/proposals). -->
+<!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex min-w-0 flex-col gap-1">
         <h2 class="m-0 text-lg font-bold text-surface-950-50">Timeline</h2>

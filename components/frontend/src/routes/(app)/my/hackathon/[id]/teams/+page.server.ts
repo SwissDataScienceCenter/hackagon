@@ -15,7 +15,7 @@ export const load: PageServerLoad = async (event) => {
 
   const projectsById = new Map(hackathon.projects.map((p) => [p.id, p]))
 
-  // Newest first, matching the proposals page.
+  // Newest first, matching the projects page.
   const ordered = [...teams].sort(
     (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
   )
@@ -26,7 +26,7 @@ export const load: PageServerLoad = async (event) => {
     return {
       id: t.id,
       // TODO(backend: display-ordinals): positional, not an identifier — Team
-      // has no display number. See the same note on the proposals page.
+      // has no display number. See the same note on the projects page.
       num: ordered.length - i,
       title: t.name,
       // Which project the team is on is the useful line here; the team's own

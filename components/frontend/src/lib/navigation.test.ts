@@ -249,7 +249,7 @@ describe("memberNav", () => {
     expect(ids()).toEqual([
       "member:overview",
       "member:participants",
-      "member:proposals",
+      "member:projects",
       "member:teams",
       "member:submissions",
       "member:timeline",
@@ -260,7 +260,7 @@ describe("memberNav", () => {
     expect(ids([{ id: "p1", title: "Welcome" }])).toEqual([
       "member:overview",
       "member:participants",
-      "member:proposals",
+      "member:projects",
       "member:teams",
       "member:submissions",
       "member:timeline",
