@@ -197,6 +197,9 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Member.String(), "/hackathon/*", Track.String(), Read.String()},
 		// Member can read hackathon projects
 		{Member.String(), "/hackathon/*", Project.String(), Read.String()},
+		// Members read every team's submissions: demo day and voting both
+		// require seeing what the other teams turned in.
+		{Member.String(), "/hackathon/*", Submission.String(), Read.String()},
 		// Owner can create teams
 		{Owner.String(), "/hackathon/*", Team.String(), Create.String()},
 		// Owner can edit teams
