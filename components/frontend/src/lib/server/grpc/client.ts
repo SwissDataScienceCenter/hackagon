@@ -2,9 +2,11 @@ import { createChannel, createClientFactory, Metadata } from "nice-grpc"
 import { HealthServiceDefinition } from "./generated/health/health_service"
 import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
+import { TeamServiceDefinition } from "./generated/hackathon/team_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
+import type { TeamServiceClient } from "./generated/hackathon/team_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -25,6 +27,7 @@ export interface AuthorizedGrpc {
   user: UserServiceClient
   health: HealthServiceClient
   hackathon: HackathonServiceClient
+  team: TeamServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -42,6 +45,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     user: factory.create(UserServiceDefinition, channel),
     health: factory.create(HealthServiceDefinition, channel),
     hackathon: factory.create(HackathonServiceDefinition, channel),
+    team: factory.create(TeamServiceDefinition, channel),
   }
 }
 
