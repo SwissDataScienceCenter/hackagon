@@ -170,7 +170,34 @@ export const actions: Actions = {
 Courtesy pre-checks (e.g. `mayCreate(roles)` reading `platformUser.roles` from
 casbin/WhoAmI) only decide whether to _offer_ a page — they never replace the
 backend's `Enforce`. Roles live on `platformUser.roles` (sourced from casbin,
-not the DB).
+not the DB). Server-only helpers of this kind live in
+`src/lib/server/hackathon/` (`capabilities.ts`, `projectEdit.ts`) — they read
+generated types, so a `.svelte` file must never import them.
+
+## Capability-gated mutations fail in seeded data — expect it
+
+Several backend mutations are gated on a **capability**, not just a role:
+`SetPreference`/`RemovePreference` need `SET_TEAM_PREFERENCES`, `Propose` needs
+`PROPOSE_PROJECTS`, submissions need `CREATE_PROJECT_SUBMISSIONS`. A capability
+is only "on" if `HackathonService.SetCapabilities` wrote both a `HackathonState`
+boolean and a casbin policy row — and `cmd/seed` creates no `HackathonState` row
+at all. Nothing in the frontend calls `setCapabilities`.
+
+So in a seeded hackathon these calls return `PERMISSION_DENIED` **by
+configuration, not by a bug in your wiring**. Two consequences:
+
+- Don't "fix" it frontend-side. Translate the error into something a user can
+  read and move on.
+- Don't mirror the capability into a courtesy check unless you want the control
+  hidden everywhere. `mayPreferProjects`
+  (`src/lib/server/hackathon/capabilities.ts`) deliberately checks only
+  "confirmed, non-waitlisted participant" and lets the backend refuse — the
+  reasoning, and what to restore once the backend lands, is in the doc comment
+  and in `mydocs/docs/backend-tickets/project-preferences-capability.md`.
+
+Note also that the casbin model has **no role inheritance**: a hackathon _owner_
+does not hold `Member`, and most capability grants target `Member` — so an owner
+is refused even where a member succeeds.
 
 ## Regenerating clients (don't hand-edit `generated/`)
 
@@ -182,8 +209,21 @@ prefer the root `just` target for the full set.
 
 ## Verify a wiring end-to-end
 
-The backend is the source of truth, so test it directly (see the `run-hackagon`
-skill): `just rpc::unauth <svc>/<method>` for public reads,
-`just rpc::as alice aliceandbob <svc>/<method>` for authed reads, and
-`.claude/skills/run-hackagon/smoke.sh` for the whole stack. For UI rendering see
-the `frontend-dev` skill.
+The backend is the source of truth, so test it directly. From the repo root:
+
+```bash
+just start                                              # bring the stack up
+just rpc::unauth hackathon.HackathonService/List        # public read
+just rpc::as alice aliceandbob hackathon.HackathonService/Get '{"hackathonId":"…"}'
+```
+
+Dev users all share the password `aliceandbob`: `hackagon-admin` (global admin),
+`alice` (organizer), `bob`, `charles`. A `PERMISSION_DENIED` here is the backend
+speaking — reproduce it with `rpc::as` before changing any frontend code, and
+check the capability section above.
+
+For the full toolkit — enumerating services via reflection, reading request
+shapes, telling an unimplemented RPC apart from a refused one — use the
+**backend-api-explore** skill (repo root `.claude/skills/`). Don't assume an RPC
+exists or works from a written list; ask the running server. For UI rendering
+see the `frontend-dev` skill.
