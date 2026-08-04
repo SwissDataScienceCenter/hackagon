@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	enttrack "github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
@@ -342,33 +341,6 @@ func (s *ProjectService) SetPreference(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Check if user is a participant in the hackathon
-	participant, err := s.dbClient.Participant.Query().
-		Where(
-			entparticipant.HackathonIDEQ(hackathonID),
-			entparticipant.UserID(user.ID),
-		).Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(
-				codes.PermissionDenied,
-				"user is not a participant in hackathon %s",
-				hackathonID,
-			)
-		}
-		slog.Error("query participant", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't query participant")
-	}
-
-	// If user is waitlisted, deny the action
-	if participant.IsWaiting {
-		return nil, status.Errorf(
-			codes.PermissionDenied,
-			"waitlisted users cannot mark projects as preferred",
-		)
-	}
-
 	// Add the user's preference to the project (edge relation)
 	_, err = project.Update().
 		AddPreferredByUsers(user).
@@ -380,6 +352,124 @@ func (s *ProjectService) SetPreference(
 	}
 
 	return &msgs.SetPreferenceResponse{ProjectId: projectID.String()}, nil
+}
+
+func (s *ProjectService) GetPreference(
+	ctx context.Context,
+	req *msgs.GetPreferenceRequest,
+) (*msgs.GetPreferenceResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Project.Read permission
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Read); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found", req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Get user
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Query projects this user prefers within this hackathon
+	projects, err := s.dbClient.Project.Query().
+		Where(
+			entproject.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+			entproject.HasPreferredByUsersWith(entuser.IDEQ(user.ID)),
+		).
+		All(ctx)
+	if err != nil {
+		slog.Error("query preferred projects", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	ids := make([]string, 0, len(projects))
+	for _, p := range projects {
+		ids = append(ids, p.ID.String())
+	}
+
+	return &msgs.GetPreferenceResponse{ProjectIds: ids}, nil
+}
+
+func (s *ProjectService) RemovePreference(
+	ctx context.Context,
+	req *msgs.RemovePreferenceRequest,
+) (*msgs.RemovePreferenceResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	projectID, err := uuid.Parse(req.GetProjectId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
+	}
+
+	// Get the project to find its hackathon_id
+	project, err := s.dbClient.Project.Query().
+		Where(entproject.IDEQ(projectID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "project %s not found", req.GetProjectId())
+		}
+		slog.Error("query project", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	hackathonID := project.Edges.Hackathon.ID
+
+	// Check set_team_preferences capability (Join on Project)
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Join); err != nil {
+		return nil, err
+	}
+
+	// Get user
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Remove the preference (idempotent — no-op if not set)
+	_, err = project.Update().
+		RemovePreferredByUsers(user).
+		Save(ctx)
+	if err != nil {
+		slog.Error("remove project preference", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't remove project preference")
+	}
+
+	return &msgs.RemovePreferenceResponse{}, nil
 }
 
 func (s *ProjectService) ExportPreferences(

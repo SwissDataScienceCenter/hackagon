@@ -12,12 +12,16 @@ import "hackathon/messages/project_svc/edit_request.proto";
 import "hackathon/messages/project_svc/edit_response.proto";
 import "hackathon/messages/project_svc/export_preferences_request.proto";
 import "hackathon/messages/project_svc/export_preferences_response.proto";
+import "hackathon/messages/project_svc/get_preference_request.proto";
+import "hackathon/messages/project_svc/get_preference_response.proto";
 import "hackathon/messages/project_svc/get_request.proto";
 import "hackathon/messages/project_svc/get_response.proto";
 import "hackathon/messages/project_svc/list_request.proto";
 import "hackathon/messages/project_svc/list_response.proto";
 import "hackathon/messages/project_svc/propose_request.proto";
 import "hackathon/messages/project_svc/propose_response.proto";
+import "hackathon/messages/project_svc/remove_preference_request.proto";
+import "hackathon/messages/project_svc/remove_preference_response.proto";
 import "hackathon/messages/project_svc/set_preference_request.proto";
 import "hackathon/messages/project_svc/set_preference_response.proto";
 
@@ -30,6 +34,8 @@ service ProjectService {
   rpc Approve(hackathon.messages.project_svc.ApproveRequest) returns (hackathon.messages.project_svc.ApproveResponse);
   rpc Disapprove(hackathon.messages.project_svc.DisapproveRequest) returns (hackathon.messages.project_svc.DisapproveResponse);
   rpc SetPreference(hackathon.messages.project_svc.SetPreferenceRequest) returns (hackathon.messages.project_svc.SetPreferenceResponse);
+  rpc GetPreference(hackathon.messages.project_svc.GetPreferenceRequest) returns (hackathon.messages.project_svc.GetPreferenceResponse);
+  rpc RemovePreference(hackathon.messages.project_svc.RemovePreferenceRequest) returns (hackathon.messages.project_svc.RemovePreferenceResponse);
   rpc ExportPreferences(hackathon.messages.project_svc.ExportPreferencesRequest) returns (hackathon.messages.project_svc.ExportPreferencesResponse);
   rpc Edit(hackathon.messages.project_svc.EditRequest) returns (hackathon.messages.project_svc.EditResponse);
   rpc Delete(hackathon.messages.project_svc.DeleteRequest) returns (hackathon.messages.project_svc.DeleteResponse);
