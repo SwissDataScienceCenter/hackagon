@@ -350,13 +350,14 @@ func (s *ProjectService) SetPreference(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Check if user is a participant in the hackathon
-	participant, err := s.dbClient.Participant.Query().
+	// Check if user is a participant in the hackathon. Waitlisted counts:
+	// preferences are expressed before the roster cut so team formation can
+	// consider the whole list — same policy family as waitlisted-may-propose.
+	if _, err := s.dbClient.Participant.Query().
 		Where(
 			entparticipant.HackathonIDEQ(hackathonID),
 			entparticipant.UserID(user.ID),
-		).Only(ctx)
-	if err != nil {
+		).Only(ctx); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
 				codes.PermissionDenied,
@@ -367,14 +368,6 @@ func (s *ProjectService) SetPreference(
 		slog.Error("query participant", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't query participant")
-	}
-
-	// If user is waitlisted, deny the action
-	if participant.IsWaiting {
-		return nil, status.Errorf(
-			codes.PermissionDenied,
-			"waitlisted users cannot mark projects as preferred",
-		)
 	}
 
 	// Add the user's preference to the project (edge relation)
