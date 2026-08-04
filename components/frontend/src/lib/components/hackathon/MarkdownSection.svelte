@@ -1,12 +1,19 @@
 <script lang="ts">
+    import DOMPurify from 'isomorphic-dompurify';
+
     let { content }: { content: string } = $props();
+
+    // HTML in, HTML out — deliberately not run through `marked`. The one caller
+    // passes an indented HTML literal, which markdown would read as a code
+    // block. For user-written markdown use MarkdownContent instead; this stays
+    // sanitized so a description reaching it cannot smuggle in a script.
+    const html = $derived(DOMPurify.sanitize(content));
 </script>
 
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="markdown-content max-w-4xl">
-    <!-- TODO: sanitize before using with user-supplied content (XSS) -->
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        {@html content}
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -- html is DOMPurify-sanitized above -->
+        {@html html}
     </div>
 </section>
 

@@ -3,6 +3,9 @@ import {
   activeNavId,
   defaultHackathon,
   hackathonRoleBadge,
+  hackathonsRoleBadge,
+  homeNav,
+  platformNav,
   platformRoleBadge,
   type NavItem,
 } from "./navigation"
@@ -188,28 +191,65 @@ describe("hackathonRoleBadge", () => {
   })
 })
 
+describe("hackathonsRoleBadge", () => {
+  it("labels an organiser", () => {
+    expect(hackathonsRoleBadge({ isHackathonOrganizer: true })).toBe(
+      "Organiser",
+    )
+  })
+
+  it("has no badge for someone without the role", () => {
+    expect(hackathonsRoleBadge({ isHackathonOrganizer: false })).toBeUndefined()
+  })
+})
+
 describe("platformRoleBadge", () => {
   it("labels an admin", () => {
-    expect(
-      platformRoleBadge({ isGlobalAdmin: true, isHackathonOrganizer: false }),
-    ).toBe("Admin")
-  })
-
-  it("labels an organiser", () => {
-    expect(
-      platformRoleBadge({ isGlobalAdmin: false, isHackathonOrganizer: true }),
-    ).toBe("Organiser")
-  })
-
-  it("prefers Admin when both roles are held", () => {
-    expect(
-      platformRoleBadge({ isGlobalAdmin: true, isHackathonOrganizer: true }),
-    ).toBe("Admin")
+    expect(platformRoleBadge({ isGlobalAdmin: true })).toBe("Admin")
   })
 
   it("has no badge for a plain user", () => {
-    expect(
-      platformRoleBadge({ isGlobalAdmin: false, isHackathonOrganizer: false }),
-    ).toBeUndefined()
+    expect(platformRoleBadge({ isGlobalAdmin: false })).toBeUndefined()
+  })
+})
+
+describe("homeNav", () => {
+  const ids = (roles: {
+    isGlobalAdmin: boolean
+    isHackathonOrganizer: boolean
+  }) => homeNav(roles).map((i) => i.id)
+
+  it("offers only the dashboard to a plain user", () => {
+    expect(ids({ isGlobalAdmin: false, isHackathonOrganizer: false })).toEqual([
+      "home:dashboard",
+    ])
+  })
+
+  it("offers hackathon creation to an organiser", () => {
+    expect(ids({ isGlobalAdmin: false, isHackathonOrganizer: true })).toContain(
+      "home:hackathon-create",
+    )
+  })
+
+  // The admin escape hatch in the casbin matcher passes hackathon:create, so
+  // withholding the entry from an admin would hide something they can do.
+  it("offers hackathon creation to an admin", () => {
+    expect(ids({ isGlobalAdmin: true, isHackathonOrganizer: false })).toContain(
+      "home:hackathon-create",
+    )
+  })
+})
+
+describe("platformNav", () => {
+  // An organiser's one permission is a hackathon action and lives in homeNav, so
+  // Platform has nothing to show them — not even a heading.
+  it("is empty for a non-admin", () => {
+    expect(platformNav({ isGlobalAdmin: false })).toEqual([])
+  })
+
+  it("offers user management to an admin", () => {
+    expect(platformNav({ isGlobalAdmin: true }).map((i) => i.id)).toEqual([
+      "platform:users",
+    ])
   })
 })

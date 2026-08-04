@@ -11,6 +11,7 @@
         activeNavId,
         defaultHackathon,
         hackathonRoleBadge,
+        hackathonsRoleBadge,
         homeNav,
         memberNav,
         platformNav,
@@ -59,7 +60,7 @@
     const navHackathon = $derived(myHackathons.find((h) => h.id === navId));
 
     const hackathonItems = $derived(navId ? memberNav(navId) : []);
-    const homeItems = $derived(homeNav());
+    const homeItems = $derived(homeNav({ isGlobalAdmin, isHackathonOrganizer }));
     const platformItems = $derived(platformNav({ isGlobalAdmin }));
     const activeId = $derived(
         activeNavId($page.url.pathname, [...homeItems, ...hackathonItems, ...platformItems]),
@@ -71,7 +72,8 @@
     const hackathonBadge = $derived(
         hackathonRoleBadge(navHackathon?.viewerMembership, isGlobalAdmin),
     );
-    const platformBadge = $derived(platformRoleBadge({ isGlobalAdmin, isHackathonOrganizer }));
+    const homeBadge = $derived(hackathonsRoleBadge({ isHackathonOrganizer }));
+    const platformBadge = $derived(platformRoleBadge({ isGlobalAdmin }));
 
     $effect(() => {
         if (typeof localStorage === 'undefined') return;
@@ -227,18 +229,19 @@
     </nav>
 
     <!-- The way back out to all of them, so it stays put whether or not one is
-         open. -->
+         open. An organiser's Create Hackathon sits here rather than under
+         Platform — it acts on hackathons, which is what this section is. -->
     <SidebarNavSection
         label="Hackathons"
+        badge={homeBadge}
         items={homeItems}
         {activeId}
         collapsed={effectiveCollapsed}
     />
 
-    <!-- Rendered for an organiser too, who has the role but no page for it yet:
-         the heading and its badge say the role exists without offering a link
-         that would 403. -->
-    {#if platformItems.length > 0 || platformBadge}
+    <!-- Admin-only: platformNav is empty for everyone else, so the section is
+         absent rather than a heading with nothing under it. -->
+    {#if platformItems.length > 0}
         <SidebarNavSection
             label="Platform"
             badge={platformBadge}
