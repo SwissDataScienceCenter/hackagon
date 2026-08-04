@@ -250,12 +250,34 @@
 
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-xl font-bold">Trusted by Swiss research institutions</h2>
-    <div class="flex items-center gap-12">
-        {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
+    <h2 class="text-center text-xl font-bold">Trusted by Swiss research institutions</h2>
+    <!-- flex-wrap: six entries must never force horizontal page overflow on
+         phone widths. Logos render only where the asset actually exists. -->
+    <div class="flex flex-wrap items-end justify-center gap-8">
+        {#each [
+            { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
+            { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
+            { name: 'EPFL', logo: '/images/logos/epfl.svg' },
+            { name: 'Univ. of Bern' },
+            { name: 'Univ. of Zurich' },
+            { name: 'SOAD' }
+        ] as org (org.name)}
             <div class="flex flex-col items-center gap-2">
-                <div class="h-14 w-14 preset-outlined-surface-200-800 flex items-center justify-center"></div>
-                <span class="text-xs font-medium text-surface-500">{name}</span>
+                {#if org.logo}
+                    <img
+                        src={org.logo}
+                        alt="{org.name} logo"
+                        class="h-10 w-auto {org.logoDark ? 'dark:hidden' : 'dark:invert'}"
+                    />
+                    {#if org.logoDark}
+                        <img
+                            src={org.logoDark}
+                            alt="{org.name} logo"
+                            class="hidden h-10 w-auto dark:block"
+                        />
+                    {/if}
+                {/if}
+                <span class="text-xs font-medium text-surface-500">{org.name}</span>
             </div>
         {/each}
     </div>
