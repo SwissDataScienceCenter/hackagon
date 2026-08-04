@@ -3,6 +3,7 @@ import { HealthServiceDefinition } from "./generated/health/health_service"
 import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
+import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
@@ -57,3 +58,10 @@ export function requireGrpc(grpc: AuthorizedGrpc | undefined): AuthorizedGrpc {
   }
   return grpc
 }
+
+// Unauthenticated page client for public hackathon pages (winners, wrap-up
+// posts). The backend serves pages of PUBLIC hackathons to everyone.
+export const publicPageClient = createClientFactory().create(
+  PageServiceDefinition,
+  channel,
+)

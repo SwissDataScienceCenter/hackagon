@@ -43,7 +43,14 @@ func (s *PageService) List(
 	}
 
 	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
-		return nil, err
+		// Pages of a PUBLIC hackathon are public content — winners
+		// announcements and wrap-up posts are meant for everyone.
+		h, herr := s.dbClient.Hackathon.Query().
+			Where(enthackathon.IDEQ(hackathonID)).
+			Only(ctx)
+		if herr != nil || h.Visibility != enthackathon.VisibilityPublic {
+			return nil, err
+		}
 	}
 
 	// Verify hackathon exists

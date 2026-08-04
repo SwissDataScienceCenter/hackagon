@@ -14,6 +14,8 @@
         { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
     ];
 
+    const { data } = $props();
+
     const hackathonTitle = "Open Research Data\nHackathon 2026";
 </script>
 
@@ -97,6 +99,18 @@
     videoUrl="https://www.youtube.com/watch?v=ACDgPmRkniU"
     caption="A look back at last year's event and winning projects."
 />
+
+{#if data.pages.length > 0}
+    <section class="mx-auto w-full max-w-4xl px-4 py-8">
+        <h2 class="text-2xl font-bold mb-6">News &amp; Pages</h2>
+        {#each data.pages as p (p.id)}
+            <article class="mb-8">
+                <h3 class="text-xl font-semibold mb-2">{p.title}</h3>
+                <p class="whitespace-pre-line text-surface-300">{p.content}</p>
+            </article>
+        {/each}
+    </section>
+{/if}
 
 <CtaSection
     heading="Ready to participate?"
