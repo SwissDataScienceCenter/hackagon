@@ -334,6 +334,10 @@ func (s *HackathonService) Join(
 		return nil, err
 	}
 
+	if err := requireWindowOpen(ctx, s.dbClient, id, windowRegistration, time.Now()); err != nil {
+		return nil, err
+	}
+
 	// First ensure user exists and get their entity ID
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {

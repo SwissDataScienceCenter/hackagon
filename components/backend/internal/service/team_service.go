@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
@@ -451,6 +452,12 @@ func (s *TeamService) CreateSubmission(
 	if err := s.enforcer.RequirePermission(
 		ctx, hackathonID, m.Submission, m.Create,
 		m.WithTeam(t.ID.String()),
+	); err != nil {
+		return nil, err
+	}
+
+	if err := requireWindowOpen(
+		ctx, s.dbClient, t.Edges.Project.Edges.Hackathon.ID, windowSubmissions, time.Now(),
 	); err != nil {
 		return nil, err
 	}
