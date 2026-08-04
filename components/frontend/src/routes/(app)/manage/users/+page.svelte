@@ -1,5 +1,7 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
+    import { resolve } from '$app/paths';
+    import { profileDisplayName, profileInitials } from '$lib/utils/profile';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -12,27 +14,15 @@
         data.users.filter((u) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
-            return `${u.displayName} ${u.username} ${u.email}`.toLowerCase().includes(q);
+            return `${u.displayName} ${u.username} ${u.email} ${u.affiliation}`
+                .toLowerCase()
+                .includes(q);
         })
     );
 
     const countLabel = $derived(
         data.users.length === 1 ? '1 user' : `${data.users.length} users`
     );
-
-    // Keycloak may leave display_name empty, hence the username fallback; '?'
-    // covers both being blank, so the avatar is never an empty circle that
-    // reads as a rendering fault.
-    function initials(displayName: string, username: string): string {
-        const source = displayName.trim() || username.trim();
-        const letters = source
-            .split(/\s+/)
-            .map((w) => w[0] ?? '')
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-        return letters || '?';
-    }
 </script>
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -66,13 +56,14 @@
         <p class="m-0 py-6 text-center text-sm text-surface-500">No users match “{search}”.</p>
     {:else}
         <div class="w-full overflow-x-auto border border-surface-200-800">
-            <table class="w-full min-w-[720px] border-collapse text-left text-xs">
+            <table class="w-full min-w-[860px] border-collapse text-left text-xs">
                 <thead>
                     <tr class="border-b border-surface-200-800 bg-surface-100-900 text-surface-500">
                         <th class="px-3 py-2 font-semibold">
                             <span class="sr-only">Avatar</span>
                         </th>
                         <th class="px-3 py-2 font-semibold">Display Name</th>
+                        <th class="px-3 py-2 font-semibold">Affiliation</th>
                         <th class="px-3 py-2 font-semibold">Username</th>
                         <th class="px-3 py-2 font-semibold">Email</th>
                         <th class="px-3 py-2 font-semibold">Joined</th>
@@ -90,12 +81,21 @@
                                            text-surface-950-50"
                                     aria-hidden="true"
                                 >
-                                    {initials(user.displayName, user.username)}
+                                    {profileInitials(user.displayName, user.username)}
                                 </div>
                             </td>
                             <td class="px-3 py-2 font-semibold text-surface-950-50">
-                                {user.displayName || user.username}
+                                <!-- Only an admin reaches this table, and Get requires
+                                     the same user:read permission, so this link never
+                                     lands on a 403 from here. -->
+                                <a
+                                    href={resolve(`/people/${user.id}`)}
+                                    class="text-surface-950-50 no-underline hover:underline"
+                                >
+                                    {profileDisplayName(user.displayName, user.username)}
+                                </a>
                             </td>
+                            <td class="px-3 py-2 text-surface-500">{user.affiliation || '—'}</td>
                             <td class="px-3 py-2 text-surface-500">{user.username}</td>
                             <td class="px-3 py-2 text-surface-500">{user.email || '—'}</td>
                             <td class="px-3 py-2 text-surface-500">

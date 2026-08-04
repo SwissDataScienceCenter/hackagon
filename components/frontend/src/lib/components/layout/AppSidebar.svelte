@@ -38,12 +38,21 @@
         title: string;
     }
 
+    interface Viewer {
+        username: string;
+        displayName: string;
+        /** GlobalRole numbers from casbin. */
+        roles: number[];
+        subtitle?: string;
+    }
+
     let {
         myHackathons,
         hackathonPages,
         isGlobalAdmin,
         isHackathonOrganizer,
         session,
+        viewer,
     }: {
         myHackathons: HackathonEntry[];
         /**
@@ -54,6 +63,8 @@
         isGlobalAdmin: boolean;
         isHackathonOrganizer: boolean;
         session: Omit<Session, 'accessToken'> | null;
+        /** The signed-in user, for the footer panel. Absent if WhoAmI failed. */
+        viewer?: Viewer;
     } = $props();
 
     let collapsed = $state(false);
@@ -63,6 +74,11 @@
     // `collapsed` is a desktop-only preference (persisted below); on a narrow
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
+
+    // Compared against the URL to mark the footer panel active. Not routed
+    // through activeNavId: the panel is not a NavItem and must not compete with
+    // the nav sections for the highlight.
+    const profilePath = resolve('/(app)/profile');
 
     // With no hackathon in the URL the nav still shows one — the one you are
     // most likely to want — so the sidebar is not a dead end on the dashboard.
@@ -267,5 +283,13 @@
         />
     {/if}
 
-    <SidebarUserFooter {session} collapsed={effectiveCollapsed} />
+    <SidebarUserFooter
+        {session}
+        collapsed={effectiveCollapsed}
+        username={viewer?.username}
+        displayName={viewer?.displayName}
+        subtitle={viewer?.subtitle}
+        roles={viewer?.roles ?? []}
+        active={$page.url.pathname === profilePath}
+    />
 </aside>

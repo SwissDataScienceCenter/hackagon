@@ -17,6 +17,7 @@
         isGlobalAdmin={data.isGlobalAdmin}
         isHackathonOrganizer={data.isHackathonOrganizer}
         session={data.session ?? null}
+        viewer={data.viewer}
     />
     <main class="flex-1 overflow-y-auto">
         {@render children()}

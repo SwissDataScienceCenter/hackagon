@@ -15,6 +15,15 @@ describe("isProtectedRoute", () => {
     expect(isProtectedRoute("/hackathon/abc/")).toBe(false)
   })
 
+  // Both live under (app). /people in particular is one letter from nothing and
+  // sits next to the public /hackathon prefix, so it is worth pinning down.
+  it("should protect the profile and people routes", () => {
+    expect(isProtectedRoute("/profile")).toBe(true)
+    expect(isProtectedRoute("/profile/")).toBe(true)
+    expect(isProtectedRoute("/people/abc")).toBe(true)
+    expect(isProtectedRoute("/people/abc/")).toBe(true)
+  })
+
   it("should protect /welcome", () => {
     expect(isProtectedRoute("/welcome")).toBe(true)
     expect(isProtectedRoute("/welcome/")).toBe(true)

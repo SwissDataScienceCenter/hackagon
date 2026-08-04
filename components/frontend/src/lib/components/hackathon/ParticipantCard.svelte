@@ -12,16 +12,22 @@
     }: {
         name: string;
         /**
-         * TODO(backend: user-profile-fields): unset by the participants page —
-         * User carries only username, displayName, email and keycloakId, so
-         * there is no affiliation to pass. Same for `avatarUrl`, `skills` and
-         * `linkedinUrl`: the card simply omits those lines until the fields
-         * exist, at which point the page passes them straight through.
+         * TODO(backend: user-profile-fields): the participants page passes
+         * placeholder copy from $lib/mocks/userProfiles — User carries no
+         * affiliation. Same for `avatarUrl` and `linkedinUrl`, which stay unset:
+         * the card omits those lines until the fields exist, at which point the
+         * page passes them straight through.
          */
         affiliation?: string;
         avatarUrl?: string;
         /** Job title; if omitted, first skills are shown on the role line. */
         role?: string;
+        /**
+         * Never passed, and not expected to be: skills are not a field. They live
+         * in the free-text profile description instead (see ProfileAbout), which a
+         * list row has no room for. Kept only so the role line's fallback below
+         * still has something to read.
+         */
         skills?: string[];
         linkedinUrl?: string;
         profileDetailsHref?: string;
