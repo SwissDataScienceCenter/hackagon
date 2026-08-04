@@ -1,0 +1,7 @@
+# Build context for the dev image is this directory. The Dockerfile COPYs
+# nothing, but keep secrets and noise out of the context that is shipped to
+# the daemon regardless.
+.env
+*.env
+!.env.example
+README.md

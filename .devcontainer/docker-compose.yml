@@ -50,6 +50,116 @@ services:
       - "${HACKAGON_FRONTEND_PORT:-8081}:8081"
       - "${HACKAGON_KEYCLOAK_PORT:-8180}:8180"
       - "${HACKAGON_POSTGRES_PORT:-5432}:5432"
+    # "Healthy" means the app stack inside is actually serving, not merely that
+    # the container is up — that is the only signal caddy/tunnel can usefully
+    # wait on. So an idle dev container (no `just up` yet) reports unhealthy by
+    # design; nothing restarts it, the flag is purely a readiness gate.
+    # Vite binds loopback, and inside the container `localhost` may resolve to
+    # ::1 first, so try both families.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -o /dev/null --max-time 5 http://[::1]:8081/ || curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8081/",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      # Generous: a cold `just up` builds the devenv profile and boots four
+      # processes. Failures during this window do not count.
+      start_period: ${HACKAGON_DEV_START_PERIOD:-300s}
+    # Resource limits are deliberately NOT defaulted here. This container
+    # compiles Go, evaluates Nix, runs Postgres/Keycloak and drives Firefox;
+    # a wrong ceiling shows up as an OOM kill mid-build, which is far harder to
+    # diagnose than slowness. Set them per machine in .devcontainer/.env:
+    #   HACKAGON_DEV_CPUS=6
+    #   HACKAGON_DEV_MEMORY=12g
+    # and uncomment the block below.
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "${HACKAGON_DEV_CPUS:-}"
+    #       memory: "${HACKAGON_DEV_MEMORY:-}"
+
+  # ---------------------------------------------------------------------
+  # Optional: run Postgres and Keycloak as their own containers instead of
+  # as processes inside `dev` (where devenv/process-compose owns them).
+  #
+  #   docker compose -f .devcontainer/docker-compose.yml --profile services up -d
+  #
+  # Why opt-in: `just up` still starts devenv's own postgres+keycloak, and
+  # the Nix shell has a withPostgres flag but no withKeycloak one, so the two
+  # sets would fight over ports. Use these when you want the dev container to
+  # hold only the Go/Node toolchain — then run the stack with
+  # `.devcontainer/service-bridge.sh`, which points localhost:5432/8180 inside
+  # `dev` at these containers so every checked-in config keeps working.
+  #
+  # Ports are deliberately NOT published: `dev` reaches them over the compose
+  # network by name, and publishing would collide with the ports `dev` already
+  # maps. Set HACKAGON_PG_PUBLISH / HACKAGON_KC_PUBLISH if you want them on the
+  # host anyway.
+  postgres:
+    image: ${HACKAGON_POSTGRES_IMAGE:-postgres:18-alpine}
+    profiles: ["services"]
+    restart: unless-stopped
+    environment:
+      # Match components/backend/data/test/config/config.yaml.
+      POSTGRES_USER: ${HACKAGON_PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${HACKAGON_PG_PASSWORD:-postgres}
+      POSTGRES_DB: ${HACKAGON_PG_DB:-hackagon}
+    volumes:
+      # postgres:18+ wants ONE mount at /var/lib/postgresql (it puts the data
+      # dir in a subdirectory of it). Mounting /var/lib/postgresql/data — the
+      # convention for 17 and earlier — makes the entrypoint abort with an
+      # incompatible-data-directory error.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${HACKAGON_PG_USER:-postgres} -d ${HACKAGON_PG_DB:-hackagon}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: ${HACKAGON_PG_MEMORY:-1g}
+
+  keycloak:
+    image: ${HACKAGON_KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.5}
+    profiles: ["services"]
+    restart: unless-stopped
+    # start-dev keeps the in-container dev database and skips the production
+    # hostname/TLS requirements — same posture as the devenv service.
+    command: start-dev --import-realm --http-port=8180
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${HACKAGON_KC_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${HACKAGON_KC_ADMIN_PASSWORD:-admin}
+      # /health/ready on the management port, used by the healthcheck below.
+      KC_HEALTH_ENABLED: "true"
+      # Mirrors tools/nix/hackagon/lib/toolchain.nix: trust the tunnel's caddy
+      # and resolve the hostname from the request instead of pinning localhost.
+      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT: "false"
+    volumes:
+      # Same realm export the Nix service imports — one source of truth.
+      - ../tools/configs/keycloak/realm-hackagon.json:/opt/keycloak/data/import/realm-hackagon.json:ro
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      # The image ships no curl/wget, so talk to the management port over
+      # bash's /dev/tcp.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '\"status\": \"UP\"' <&3",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: ${HACKAGON_KC_MEMORY:-1500m}
 
   # Optional: public URL for the running stack via a Cloudflare quick
   # tunnel (random *.trycloudflare.com, no account needed). Start with:
@@ -69,16 +179,38 @@ services:
     restart: unless-stopped
     volumes:
       - ./Caddyfile.tunnel:/etc/caddy/Caddyfile:ro
+    # Wait until the app inside `dev` actually answers, not just until the
+    # container exists — otherwise caddy starts proxying to a closed port.
     depends_on:
-      - dev
+      dev:
+        condition: service_healthy
+    healthcheck:
+      # Caddy's own admin API: proves caddy is alive without depending on the
+      # upstream, so a dead app shows up as a dev/tunnel problem, not a caddy one.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: ${HACKAGON_CADDY_MEMORY:-128m}
 
   tunnel:
     image: ${HACKAGON_TUNNEL_IMAGE:-cloudflare/cloudflared:latest}
     profiles: ["tunnel"]
     restart: unless-stopped
     command: tunnel --no-autoupdate --url http://caddy:80
+    # cloudflared resolves its target once at startup: starting before caddy is
+    # listening leaves the tunnel pointing at nothing until it is recreated.
     depends_on:
-      - caddy
+      caddy:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: ${HACKAGON_TUNNEL_MEMORY:-128m}
 
 volumes:
   # Nix store — the whole toolchain; survives container rebuilds.
@@ -96,6 +228,9 @@ volumes:
   frontend-node-modules:
   frontend-svelte-kit:
   pnpm-store:
+  # Only used by the optional "services" profile; harmless otherwise.
+  postgres-data:
+  keycloak-data:
 
 networks:
   # Explicit name so sidecars and external tooling can attach predictably

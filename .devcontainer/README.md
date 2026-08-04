@@ -106,6 +106,37 @@ routed through the tunnel. Stop with
 `docker compose -f .devcontainer/docker-compose.yml --profile tunnel down tunnel caddy`
 (quick-tunnel URLs are ephemeral and change on every start).
 
+## Optional service containers (profile `services`)
+
+By default Postgres and Keycloak run *inside* `dev`, as devenv/process-compose
+processes. The compose file also defines them as real containers:
+
+```bash
+docker compose -f .devcontainer/docker-compose.yml --profile services up -d
+docker compose -f .devcontainer/docker-compose.yml exec -u vscode dev \
+    bash /workspaces/hackagon/.devcontainer/service-bridge.sh
+```
+
+Both carry healthchecks (`pg_isready`; Keycloak's `/health/ready` over bash's
+`/dev/tcp`, since that image ships no curl) and named volumes, and Keycloak
+imports the same checked-in realm export the Nix service uses. Their ports are
+**not** published — `dev` reaches them by name on the compose network, and
+publishing would collide with the ports `dev` already maps.
+
+`service-bridge.sh` socat-forwards `localhost:5432` and `localhost:8180`
+inside `dev` to those containers, so every checked-in config (backend
+`config.yaml`, the frontend `oidc.issuer`, `just rpc-as`, the e2e skill) keeps
+working unchanged. It is the mirror image of `host-bridge.sh`.
+
+**They are opt-in because `just up` still starts devenv's own Postgres and
+Keycloak, and the two sets would fight over ports.** The Nix shell has a
+`withPostgres` flag but no `withKeycloak` one, so making these the default
+needs a change in `tools/nix/hackagon/lib/toolchain.nix` first.
+
+Note for `postgres:18+`: the data volume mounts at `/var/lib/postgresql`, not
+`/var/lib/postgresql/data`. The older path makes the entrypoint abort with an
+incompatible-data-directory error.
+
 ## Volumes & network
 
 Named volumes keep expensive state out of the (slow, host-bound) workspace
