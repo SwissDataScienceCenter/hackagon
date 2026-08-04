@@ -10,7 +10,7 @@
     const html = $derived(DOMPurify.sanitize(content));
 </script>
 
-<section class="px-4 py-12 sm:px-10 md:px-20">
+<section class="px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <div class="markdown-content max-w-4xl">
         <!-- eslint-disable-next-line svelte/no-at-html-tags -- html is DOMPurify-sanitized above -->
         {@html html}

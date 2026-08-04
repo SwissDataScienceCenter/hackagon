@@ -7,9 +7,11 @@
 	const message = page.error?.message;
 </script>
 
-<div class="flex flex-col items-center justify-center min-h-screen">
+<!-- px-4 on the wrapper so the card keeps clear of the screen edges on a phone,
+     where max-w-lg no longer constrains anything. -->
+<div class="flex flex-col items-center justify-center min-h-screen px-4">
 	<div
-		class="w-full max-w-lg p-8 space-y-4 text-center rounded-lg shadow-xl card variant-ghost-surface"
+		class="w-full max-w-lg p-6 sm:p-8 space-y-4 text-center rounded-lg shadow-xl card variant-ghost-surface"
 	>
 		<header class="flex flex-col items-center space-y-4">
 			<AlertTriangle class="text-error-300" size={64} stroke-width={1.5} />

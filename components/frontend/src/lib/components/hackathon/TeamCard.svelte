@@ -68,7 +68,7 @@
                 <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
                     {num}. {title}
                 </h3>
-                <div class="block w-2/3 min-w-0">
+                <div class="block w-full min-w-0 sm:w-2/3">
                     <p class="m-0 text-xs leading-snug text-surface-600-400">
                         {projectDescription}
                     </p>

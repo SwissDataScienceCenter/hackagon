@@ -66,8 +66,11 @@
     </div>
 </div>
 
-<!-- Body: main + sidebar -->
-<div class="flex gap-6 px-4 py-8 sm:px-10 md:px-20">
+<!-- Body: main + sidebar.
+     Stacks below lg: the sidebar is a fixed 20rem and `shrink-0`, so as a row on a
+     phone it took most of the viewport and squeezed the hackathon list into a
+     column barely wider than its own padding. -->
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20 lg:flex-row">
 
     <!-- Main column -->
     <div class="flex flex-1 flex-col gap-6">
@@ -141,8 +144,8 @@
         </section>
     </div>
 
-    <!-- Sidebar -->
-    <div class="flex w-80 shrink-0 flex-col gap-6">
+    <!-- Sidebar: full width once stacked, fixed 20rem alongside the main column. -->
+    <div class="flex w-full shrink-0 flex-col gap-6 lg:w-80">
 
         <!-- Notifications -->
         <div class="card preset-outlined-surface-200-800 overflow-hidden">

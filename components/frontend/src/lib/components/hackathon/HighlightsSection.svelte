@@ -10,7 +10,7 @@
     } = $props();
 </script>
 
-<section class="px-4 py-12 sm:px-10 md:px-20">
+<section class="px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <div class="mb-6 flex items-center gap-2">
         <Target class="h-5 w-5 text-primary-700-300" />
         <h2 class="text-xl font-bold">{title}</h2>

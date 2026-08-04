@@ -16,7 +16,7 @@
     } = $props();
 </script>
 
-<section class="flex flex-col items-center gap-4 px-4 py-12 sm:px-10 md:px-20">
+<section class="flex flex-col items-center gap-4 px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <h2 class="text-2xl font-bold">{heading}</h2>
     <p class="text-sm text-surface-700-300">{subtitle}</p>
     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->

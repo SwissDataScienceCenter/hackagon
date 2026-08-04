@@ -98,6 +98,58 @@ Use Skeleton preset classes (`badge preset-tonal-success`,
 Match the surrounding files' class density and ordering rather than inventing a
 new style.
 
+## Mobile first — every screen, every time
+
+**Design for ~375px first, then add breakpoints upward.** Tailwind's unprefixed
+utility is the _mobile_ value; `sm:`/`md:`/`lg:` are the enhancements. A layout
+that only works at desktop width is not finished. Assume a phone until a
+breakpoint says otherwise.
+
+**Page padding.** The house standard, used by every route:
+
+```
+px-4 py-8 sm:px-10 md:px-20          <!-- app pages -->
+px-4 py-8 sm:px-10 sm:py-12 md:px-20 <!-- marketing sections, more vertical air -->
+```
+
+Never a bare `px-20`/`py-12` with no mobile step below it — 80px of side padding
+on a 375px screen leaves ~215px of content.
+
+**The four things that actually break on a phone**, all seen in this codebase:
+
+1. **A flex row that never stacks.** `flex` + a fixed-width `shrink-0` child is
+   a row at every width. Add the stack: `flex flex-col lg:flex-row`, and give
+   the fixed child `w-full lg:w-80`.
+2. **A grid with no responsive ladder.** `grid-cols-3` is three columns on a
+   phone. Always climb: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
+   (`HighlightsSection.svelte` is the reference).
+3. **A row of N items with a wide gap.** Six logos at `gap-12` need ~620px.
+   Either `flex-wrap` with a smaller mobile gap
+   (`flex-wrap gap-x-8 gap-y-6 sm:gap-x-12`) or `overflow-x-auto` for tab/filter
+   bars, where wrapping would stop it reading as tabs.
+4. **Fractional widths applied at all sizes.** `w-2/3` on a card's text column
+   wastes a third of a phone screen. Use `w-full sm:w-2/3`.
+
+**Also:** headings need a scale (`text-3xl sm:text-4xl md:text-5xl`, not a bare
+`text-5xl`); wide tables go in `overflow-x-auto` with `min-w-[…]` on the
+`<table>`, never on the wrapper; search inputs are `w-full sm:w-72`; and a
+carousel's slides-per-view belongs in CSS (`snap-x snap-mandatory` +
+`overflow-x-auto`, slide widths per breakpoint) rather than a hardcoded
+percentage transform — snap scrolling also gives touch swiping for free.
+
+Good existing references: `PhaseTimeline.svelte` (fixed-width segments that
+scroll on mobile, `flex-1` from `sm:`), `HeroSection.svelte` (scaled heading,
+`flex-col sm:flex-row` meta row), `AppSidebar.svelte` (off-canvas drawer with
+its own mobile header bar).
+
+**Verifying.** There is no browser or screenshot tool in this environment
+(`.claude/skills/run-hackagon/` is empty; no Playwright/Puppeteer/Chrome), so
+responsive changes cannot be visually confirmed here — say so rather than
+implying they were checked. Narrow a real browser to ~375px, or use devtools
+device mode. What you _can_ verify mechanically: `pnpm build` succeeds, and
+`grep` the built CSS in `.svelte-kit/output/` to confirm a custom class or
+breakpoint variant was generated.
+
 ## Commands (from `components/frontend/`)
 
 Run inside the Nix dev shell (`direnv allow` / `just dev` at repo root):

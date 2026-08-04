@@ -45,11 +45,44 @@
         { src: '/images/hackathon-ord-2024/winners/winners_1.jpg', caption: 'ORD Hackathon 2024 — Award ceremony' },
     ];
 
+    // Native horizontal scrolling with snap points rather than a translateX
+    // track. The old version hardcoded four slides per view (`w-[calc(25%-12px)]`
+    // plus a 25%-per-step transform), which gave ~80px slides on a phone and, on
+    // desktop where all four already fitted, scrolled into empty space. Snap
+    // scrolling makes the slide count per view a pure CSS concern and gives touch
+    // swiping for free.
+    let track: HTMLDivElement | undefined = $state();
+
+    /** Distance from one slide's left edge to the next, including the gap-4. */
+    function slideStep(el: HTMLDivElement): number {
+        const first = el.firstElementChild as HTMLElement | null;
+
+        return first ? first.offsetWidth + 16 : 0;
+    }
+
+    function goToSlide(i: number) {
+        if (!track) return;
+        const step = slideStep(track);
+        if (step === 0) return;
+        track.scrollTo({ left: i * step, behavior: 'smooth' });
+    }
+
+    // Clamped rather than wrapped: with snap scrolling the track physically stops
+    // at both ends, so wrapping would leave the dots disagreeing with what is on
+    // screen.
     function nextSlide() {
-        carouselIndex = (carouselIndex + 1) % carouselSlides.length;
+        goToSlide(Math.min(carouselIndex + 1, carouselSlides.length - 1));
     }
     function prevSlide() {
-        carouselIndex = (carouselIndex - 1 + carouselSlides.length) % carouselSlides.length;
+        goToSlide(Math.max(carouselIndex - 1, 0));
+    }
+
+    // Keeps the dots in step with a touch swipe, which no button press reports.
+    function syncCarouselIndex() {
+        if (!track) return;
+        const step = slideStep(track);
+        if (step === 0) return;
+        carouselIndex = Math.round(track.scrollLeft / step);
     }
 </script>
 
@@ -71,7 +104,7 @@
             <span>ORD Hackathon 2026 — Registration open</span>
         </span>
 
-        <h1 class="max-w-2xl text-5xl font-bold leading-tight">
+        <h1 class="max-w-2xl text-3xl font-bold leading-tight sm:text-4xl md:text-5xl">
             SDSC Hackathon Platform
         </h1>
 
@@ -80,7 +113,7 @@
             Hosted by SDSC for the Swiss scientific community.
         </p>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center justify-center gap-3">
             <a
                 href={resolve('/hackathon/ord-2026')}
                 class="btn preset-filled-primary-500 no-underline"
@@ -97,13 +130,15 @@
 
 <div class="mx-auto w-full max-w-7xl">
 <!-- Trending -->
-<section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
+<section id="trending" class="px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Trending this month</h2>
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">Browse all →</a>
     </div>
 
-    <div class="mt-6 flex gap-1 border-b border-surface-200-800">
+    <!-- Scrolls rather than wraps: a tab row that folds onto two lines stops
+         reading as tabs. Standard mobile pattern for a filter bar. -->
+    <div class="mt-6 flex gap-1 overflow-x-auto border-b border-surface-200-800">
         <button class="chip preset-tonal-primary border-b-2 border-primary-500">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
@@ -138,13 +173,15 @@
 </section>
 
 <!-- Winners -->
-<section class="px-4 py-12 sm:px-10 md:px-20">
+<section class="px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Award-winning projects</h2>
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">See all →</a>
     </div>
 
-    <div class="mt-6 grid grid-cols-3 gap-4">
+    <!-- One up on a phone, two on a tablet, three from lg — same ladder as
+         HighlightsSection, so cards read consistently across the site. -->
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {#each [
             { hackathon: 'ORD Hackathon 2025', project: 'AutoORD: Automated\nResearch Data Pipelines', team: 'by Team DataFlow', summary: 'Automated pipeline for converting raw research data into FAIR-compliant open datasets.' },
             { hackathon: 'GenAI Hackathon 2025', project: 'GenomeLens', team: 'by BioViz Crew', summary: 'Interactive visualization of genomic variants powered by generative models.' },
@@ -173,7 +210,7 @@
 </section>
 
 <!-- Event Showcase Carousel -->
-<section class="px-4 py-12 sm:px-10 md:px-20">
+<section class="px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Event showcase</h2>
         <div class="flex items-center gap-2">
@@ -186,13 +223,19 @@
         </div>
     </div>
 
-    <div class="relative mt-6 overflow-hidden">
+    <div class="relative mt-6">
         <div
-            class="flex gap-4 transition-transform duration-500 ease-in-out"
-            style="transform: translateX(-{carouselIndex * 25}%)"
+            bind:this={track}
+            onscroll={syncCarouselIndex}
+            class="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
         >
             {#each carouselSlides as slide, i (i)}
-                <div class="w-[calc(25%-12px)] shrink-0">
+                <!-- Slightly under full width on a phone so the next slide peeks in
+                     and the row reads as swipeable. -->
+                <div
+                    class="w-[85%] shrink-0 snap-start sm:w-[calc(50%-8px)]
+                           lg:w-[calc(25%-12px)]"
+                >
                     <div class="relative aspect-video overflow-hidden preset-outlined-surface-200-800">
                         <img
                             src={slide.src}
@@ -209,7 +252,7 @@
     <div class="mt-4 flex justify-center gap-1.5">
         {#each carouselSlides as slide, i (i)}
             <button
-                onclick={() => carouselIndex = i}
+                onclick={() => goToSlide(i)}
                 class="h-1.5 w-1.5 rounded-full transition-colors {i === carouselIndex
                     ? 'bg-primary-500'
                     : 'bg-surface-300-700'}"
@@ -220,7 +263,7 @@
 </section>
 
 <!-- Features -->
-<section class="bg-surface-100-900 px-4 py-12 sm:px-10 md:px-20">
+<section class="bg-surface-100-900 px-4 py-8 sm:px-10 sm:py-12 md:px-20">
     <div class="flex flex-col items-center gap-2 text-center">
         <h2 class="text-2xl font-bold">The hackathon platform for science</h2>
         <p class="text-base text-surface-500">
@@ -228,7 +271,7 @@
         </p>
     </div>
 
-    <div class="mt-6 grid grid-cols-2 gap-4">
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {#each [
             { icon: Lightbulb, title: 'Propose & discover projects', desc: 'Submit project ideas, browse proposals from other participants, and find the challenge that matches your skills.' },
             { icon: Upload, title: 'Submit & showcase work', desc: 'Submit your project with links, repos, slides and demos. Draft and iterate before the final deadline.' },
@@ -249,9 +292,11 @@
 </section>
 
 <!-- Orgs -->
-<section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-xl font-bold">Trusted by Swiss research institutions</h2>
-    <div class="flex items-center gap-12">
+<section class="flex flex-col items-center gap-8 px-4 py-8 sm:px-10 sm:py-12 md:px-20">
+    <h2 class="text-center text-xl font-bold">Trusted by Swiss research institutions</h2>
+    <!-- Wraps: six 3.5rem logos at gap-12 need ~620px, so on a phone this row
+         overflowed the viewport instead of folding onto a second line. -->
+    <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-6 sm:gap-x-12">
         {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
             <div class="flex flex-col items-center gap-2">
                 <div class="h-14 w-14 preset-outlined-surface-200-800 flex items-center justify-center"></div>
