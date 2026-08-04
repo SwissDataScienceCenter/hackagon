@@ -279,11 +279,26 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 	return e
 }
 
-func settingsEntryFromEnt(s *ent.HackathonSettings) *hackEnts.HackathonSettings {
-	return &hackEnts.HackathonSettings{
-		Id:                   s.ID.String(),
-		RegistrationsEnabled: s.RegistrationsEnabled,
-		VotingEnabled:        s.VotingEnabled,
-		ModifiedAt:           timestamppb.New(s.ModifiedAt),
+func stateEntryFromEnt(s *ent.HackathonState) *hackEnts.HackathonState {
+	var currentPhaseID string
+	if s.CurrentPhaseID != uuid.Nil {
+		currentPhaseID = s.CurrentPhaseID.String()
+	}
+
+	return &hackEnts.HackathonState{
+		Id:             s.ID.String(),
+		CreatedAt:      timestamppb.New(s.CreatedAt),
+		ModifiedAt:     timestamppb.New(s.ModifiedAt),
+		CurrentPhaseId: currentPhaseID,
+		Capabilities: []*hackEnts.CapabilityState{
+			{Capability: hackEnts.Capability_CAPABILITY_REGISTER, Enabled: s.RegistrationsEnabled},
+			{Capability: hackEnts.Capability_CAPABILITY_VOTE, Enabled: s.VotingEnabled},
+			{Capability: hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: s.ProposeProjectsEnabled},
+			{Capability: hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: s.SetTeamPreferencesEnabled},
+			{Capability: hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS, Enabled: s.CreateProjectSubmissionsEnabled},
+			{Capability: hackEnts.Capability_CAPABILITY_VIEW_RESULTS, Enabled: s.ViewResultsEnabled},
+		},
 	}
 }
+
+

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+enum Capability {
+  CAPABILITY_UNSPECIFIED = 0;
+  CAPABILITY_REGISTER = 1;
+  CAPABILITY_PROPOSE_PROJECTS = 2;
+  CAPABILITY_SET_TEAM_PREFERENCES = 3;
+  CAPABILITY_CREATE_PROJECT_SUBMISSIONS = 4;
+  CAPABILITY_VOTE = 5;
+  CAPABILITY_VIEW_RESULTS = 6;
+}

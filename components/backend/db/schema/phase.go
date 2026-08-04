@@ -41,6 +41,15 @@ func (Phase) Fields() []ent.Field {
 		field.Time("modified_at").
 			Default(time.Now).UpdateDefault(time.Now).
 			Comment("Timestamp of the last modification."),
+		field.JSON("capabilities", []string{}).
+			Optional().
+			Comment(
+				"Capability tags for this phase, drawn from the same enum as " +
+					"HackathonState. Purely informational — does not auto-enable " +
+					"or disable any capability. Each value must be one of: " +
+					"register, propose_projects, set_team_preferences, " +
+					"create_project_submissions, vote, view_results.",
+			),
 	}
 }
 
@@ -64,6 +73,11 @@ func (Phase) Edges() []ent.Edge {
 		edge.From("modifier", User.Type).
 			Ref("modified_phases").Unique().Required().
 			Comment("The user who last modified this phase."),
+		edge.To("current_state", HackathonState.Type).
+			Unique().
+			Comment(
+				"The hackathon that has this phase set as its current phase.",
+			),
 	}
 }
 

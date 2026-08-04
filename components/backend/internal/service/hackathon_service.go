@@ -8,8 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
+	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
@@ -84,16 +85,16 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
-	// Create default settings (both flags false).
-	_, err = s.dbClient.HackathonSettings.Create().
+	// Create default state (all capabilities disabled).
+	_, err = s.dbClient.HackathonState.Create().
 		SetHackathonID(h.ID).
 		SetModifier(creator).
 		Save(ctx)
 	if err != nil {
-		slog.Error("create hackathon settings", "err", err)
+		slog.Error("create hackathon state", "err", err)
 		// Best-effort cleanup.
 		_ = s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
-		return nil, status.Errorf(codes.Internal, "couldn't create hackathon settings")
+		return nil, status.Errorf(codes.Internal, "couldn't create hackathon state")
 	}
 
 	if _, err := s.enforcer.AddRole(uid, m.Owner, h.ID.String()); err != nil {
@@ -131,7 +132,7 @@ func (s *HackathonService) Get(
 		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
 		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
-		WithSettings().
+		WithState().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -171,8 +172,8 @@ func (s *HackathonService) Get(
 		entry.Phases = append(entry.Phases, phaseEntryFromEnt(p, id))
 	}
 
-	if h.Edges.Settings != nil {
-		entry.Settings = settingsEntryFromEnt(h.Edges.Settings)
+	if h.Edges.State != nil {
+		entry.State = stateEntryFromEnt(h.Edges.State)
 	}
 
 	entry.Members = make([]*ents.HackathonMember, 0, len(h.Edges.Participants))
@@ -233,17 +234,17 @@ func (s *HackathonService) Join(
 	}
 
 	// Check that registrations are enabled
-	settings, err := s.dbClient.HackathonSettings.Query().
-		Where(enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id))).
+	state, err := s.dbClient.HackathonState.Query().
+		Where(enthackathonstate.HasHackathonWith(enthackathon.IDEQ(id))).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon settings not found")
+			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
 		}
-		slog.Error("query hackathon settings", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query hackathon settings")
+		slog.Error("query hackathon state", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query hackathon state")
 	}
-	if !settings.RegistrationsEnabled {
+	if !state.RegistrationsEnabled {
 		return nil, status.Error(codes.FailedPrecondition, "registrations are closed")
 	}
 
@@ -566,10 +567,10 @@ func (s *HackathonService) Edit(
 	return &msgs.EditResponse{Hackathon: entry}, nil
 }
 
-func (s *HackathonService) EditSettings(
+func (s *HackathonService) SetCapabilities(
 	ctx context.Context,
-	req *msgs.EditSettingsRequest,
-) (*msgs.EditSettingsResponse, error) {
+	req *msgs.SetCapabilitiesRequest,
+) (*msgs.SetCapabilitiesResponse, error) {
 	uid, _, err := m.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
@@ -596,40 +597,129 @@ func (s *HackathonService) EditSettings(
 	}
 
 	// Build update query
-	update := s.dbClient.HackathonSettings.Update().
-		Where(enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id))).
+	update := s.dbClient.HackathonState.Update().
+		Where(enthackathonstate.HasHackathonWith(enthackathon.IDEQ(id))).
 		SetModifier(user)
 
-	if req.RegistrationsEnabled != nil {
-		update = update.SetRegistrationsEnabled(req.GetRegistrationsEnabled())
-	}
-	if req.VotingEnabled != nil {
-		update = update.SetVotingEnabled(req.GetVotingEnabled())
+	for _, cs := range req.GetCapabilities() {
+		switch cs.GetCapability() {
+		case ents.Capability_CAPABILITY_REGISTER:
+			update = update.SetRegistrationsEnabled(cs.GetEnabled())
+		case ents.Capability_CAPABILITY_VOTE:
+			update = update.SetVotingEnabled(cs.GetEnabled())
+		case ents.Capability_CAPABILITY_PROPOSE_PROJECTS:
+			update = update.SetProposeProjectsEnabled(cs.GetEnabled())
+		case ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES:
+			update = update.SetSetTeamPreferencesEnabled(cs.GetEnabled())
+		case ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS:
+			update = update.SetCreateProjectSubmissionsEnabled(cs.GetEnabled())
+		case ents.Capability_CAPABILITY_VIEW_RESULTS:
+			update = update.SetViewResultsEnabled(cs.GetEnabled())
+		case ents.Capability_CAPABILITY_UNSPECIFIED:
+			return nil, status.Errorf(codes.InvalidArgument, "capability must not be UNSPECIFIED")
+		}
 	}
 
 	_, err = update.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon settings not found")
+			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
 		}
-		slog.Error("update hackathon settings", "err", err)
-		return nil, status.Errorf(codes.Internal, "couldn't update hackathon settings")
+		slog.Error("update hackathon state", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't update hackathon state")
 	}
 
-	settings, err := s.dbClient.HackathonSettings.Query().
+	state, err := s.dbClient.HackathonState.Query().
 		Where(
-			enthackathonsettings.HasHackathonWith(enthackathon.IDEQ(id)),
+			enthackathonstate.HasHackathonWith(enthackathon.IDEQ(id)),
 		).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon settings not found")
+			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
 		}
-		slog.Error("query updated settings", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query updated settings")
+		slog.Error("query updated state", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query updated state")
 	}
 
-	return &msgs.EditSettingsResponse{
-		Settings: settingsEntryFromEnt(settings),
+	return &msgs.SetCapabilitiesResponse{
+		State: stateEntryFromEnt(state),
+	}, nil
+}
+
+func (s *HackathonService) SetCurrentPhase(
+	ctx context.Context,
+	req *msgs.SetCurrentPhaseRequest,
+) (*msgs.SetCurrentPhaseResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	phaseID, err := uuid.Parse(req.GetPhaseId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid phase_id: %v", err)
+	}
+
+	// Check Write permission on hackathon
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Verify phase exists and belongs to this hackathon
+	phase, err := s.dbClient.Phase.Query().
+		Where(entphase.IDEQ(phaseID), entphase.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "phase %s not found or does not belong to hackathon", req.GetPhaseId())
+		}
+		slog.Error("query phase", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query phase")
+	}
+
+	// Ensure user exists
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Update current phase
+	_, err = s.dbClient.HackathonState.Update().
+		Where(enthackathonstate.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		SetModifier(user).
+		SetCurrentPhase(phase).
+		Save(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
+		}
+		slog.Error("update hackathon state", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't update hackathon state")
+	}
+
+	state, err := s.dbClient.HackathonState.Query().
+		Where(
+			enthackathonstate.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+		).WithCurrentPhase().Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
+		}
+		slog.Error("query updated state", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query updated state")
+	}
+
+	return &msgs.SetCurrentPhaseResponse{
+		State: stateEntryFromEnt(state),
 	}, nil
 }
 

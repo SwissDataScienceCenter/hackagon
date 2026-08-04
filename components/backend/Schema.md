@@ -26,7 +26,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `participating_users` | User | M2M | yes | no | Users who are participating or waitlisted. |
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
-| `settings` | HackathonSettings | O2O | no | no | Configuration settings for this hackathon. |
+| `state` | HackathonState | O2O | no | no | Configuration state for this hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -38,9 +38,9 @@ A hackathon event containing tracks, projects, phases, and participants.
 - `ends_at`
 - `visibility`
 
-## HackathonSettings
+## HackathonState
 
-Configuration settings for a hackathon.
+Configuration state for a hackathon. One row per hackathon, pre-created on hackathon creation.
 
 ### Fields
 
@@ -48,15 +48,25 @@ Configuration settings for a hackathon.
 |--------|------|----------|--------|-----------|---------|-------------|
 | `registrations_enabled` | bool | yes | no | no | yes | Whether new participants can register for this hackathon. |
 | `voting_enabled` | bool | yes | no | no | yes | Whether voting is enabled for this hackathon. |
-| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the settings were created. |
+| `propose_projects_enabled` | bool | yes | no | no | yes | Whether project proposals are enabled for this hackathon. |
+| `set_team_preferences_enabled` | bool | yes | no | no | yes | Whether teams can set preferences for this hackathon. |
+| `create_project_submissions_enabled` | bool | yes | no | no | yes | Whether teams can create project submissions for this hackathon. |
+| `view_results_enabled` | bool | yes | no | no | yes | Whether results can be viewed for this hackathon. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the state was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `current_phase_id` | uuid.UUID | no | no | no | no | The phase an organizer has declared current. Nil means no current phase is set; purely for UI display. |
 
 ### Relationships
 
 | Edge | Target | Relation | Inverse | Required | Description |
 |------|--------|----------|---------|----------|-------------|
-| `hackathon` | Hackathon | O2O | yes | yes | The hackathon this settings entry belongs to. |
-| `modifier` | User | M2O | yes | yes | The user who last modified these settings. |
+| `hackathon` | Hackathon | O2O | yes | yes | The hackathon this state belongs to. |
+| `modifier` | User | M2O | yes | no | Who last modified the state. Optional so seeded rows need no attribution; set on every edit. |
+| `current_phase` | Phase | O2O | yes | no | The phase currently set as active for this hackathon. |
+
+### Indexes
+
+- `current_phase_id` *(unique)*
 
 ## Page
 
@@ -121,6 +131,7 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 | `description` | string | no | no | no | no | Description of the phase and its objectives. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the phase was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+| `capabilities` | []string | no | no | no | no | Capability tags for this phase, drawn from the same enum as HackathonState. Purely informational — does not auto-enable or disable any capability. Each value must be one of: register, propose_projects, set_team_preferences, create_project_submissions, vote, view_results. |
 
 ### Relationships
 
@@ -131,6 +142,7 @@ A temporal phase of a hackathon (e.g. ideation, hacking, judging).
 | `current_of` | Hackathon | O2M | no | no | The hackathon currently sitting in this phase, if an organizer has advanced to it. At most one in practice, since a phase belongs to exactly one hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this phase. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this phase. |
+| `current_state` | HackathonState | O2O | no | no | The hackathon that has this phase set as its current phase. |
 
 ### Indexes
 
@@ -301,7 +313,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
 | `created_tracks` | Track | O2M | no | no | Tracks this user created. |
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
-| `modified_settings` | HackathonSettings | O2M | no | no | Hackathon settings this user last modified. |
+| `modified_states` | HackathonState | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `participations` | Participant | O2M | yes | no |  |
 | `team_participations` | TeamParticipant | O2M | yes | no |  |

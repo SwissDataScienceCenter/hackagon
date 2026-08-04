@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+message SetCurrentPhaseRequest {
+  string hackathon_id = 1;
+  string phase_id = 2;
+}

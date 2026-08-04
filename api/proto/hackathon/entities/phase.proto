@@ -4,6 +4,7 @@ package hackathon.entities;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "hackathon/entities/capability.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
 
@@ -26,4 +27,5 @@ message Phase {
   optional string page_id = 9;
   string creator_id = 10;
   string modifier_id = 11;
+  repeated hackathon.entities.Capability capabilities = 12;
 }
