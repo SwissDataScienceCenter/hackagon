@@ -51,22 +51,17 @@
         return chips;
     })());
 
-    /** List pages: content only (no compact hero or phase bar). */
-    const listPageSegments = new Set([
-        'participants',
-        'teams',
-        'proposals',
-        'submissions',
-        'timeline',
-        'webinars',
-        'photos',
-    ]);
-    const hideHeroAndTimeline = $derived(
-        listPageSegments.has($page.url.pathname.split('/').filter(Boolean).pop() ?? '')
-    );
+    // The hero and phase bar belong to the overview and nowhere else: every other
+    // member page carries its own heading, and repeating the hackathon's identity
+    // above it just pushes the content down.
+    //
+    // Keyed on the route id rather than the last path segment, which cannot
+    // express a route whose final segment is a parameter — /pages/[pageId] ends in
+    // a uuid, so a segment blocklist silently let the hero back in there.
+    const showHero = $derived($page.route.id?.endsWith('/overview') ?? false);
 </script>
 
-{#if !hideHeroAndTimeline}
+{#if showHero}
     <!--
       TODO(backend: hackathon-venue-capacity): `venue` stays empty and
       `participantCapacity` unset — Hackathon carries neither field. The hero
