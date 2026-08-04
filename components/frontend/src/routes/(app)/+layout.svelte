@@ -13,6 +13,7 @@
 <div class="flex min-h-screen flex-col md:flex-row">
     <AppSidebar
         myHackathons={data.myHackathons}
+        hackathonPages={data.hackathonPages}
         isGlobalAdmin={data.isGlobalAdmin}
         isHackathonOrganizer={data.isHackathonOrganizer}
         session={data.session ?? null}

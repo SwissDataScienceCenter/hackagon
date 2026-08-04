@@ -10,8 +10,7 @@ import Lightbulb from "lucide-svelte/icons/lightbulb"
 import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
-import Presentation from "lucide-svelte/icons/presentation"
-import Image from "lucide-svelte/icons/image"
+import FileText from "lucide-svelte/icons/file-text"
 import House from "lucide-svelte/icons/house"
 import Plus from "lucide-svelte/icons/plus"
 
@@ -28,6 +27,18 @@ export interface NavItem {
   icon: ComponentType
   /** Omit for a "not available yet" stub entry. */
   href?: string
+}
+
+/**
+ * Shallow reference to one of a hackathon's content pages.
+ *
+ * Deliberately not the generated `Page` type: this module is imported by
+ * components, and `$lib/server/**` is server-only. Two fields are all the nav
+ * needs, so it takes two fields.
+ */
+export interface HackathonPageRef {
+  id: string
+  title: string
 }
 
 /**
@@ -70,13 +81,22 @@ export function homeNav(roles: {
 }
 
 /**
- * Participant-facing nav for one hackathon.
+ * Participant-facing nav for one hackathon, followed by its content pages.
  *
  * Order matches the horizontal sub-nav this replaces, so the move to a sidebar
  * does not also reshuffle where people expect to find things. Only routes that
  * exist are listed — there are no stub entries for pages still to be built.
+ *
+ * `pages` are the hackathon's own content pages, which an organizer defines and
+ * can rename or reorder at will. They come last because the list's length is
+ * theirs to change, and the fixed entries above must not move when it does. The
+ * caller passes them already filtered and ordered — `PageService.List` does both
+ * server-side — so this function never decides what a member may see.
  */
-export function memberNav(hackathonId: string): NavItem[] {
+export function memberNav(
+  hackathonId: string,
+  pages: HackathonPageRef[] = [],
+): NavItem[] {
   return [
     {
       id: "member:overview",
@@ -114,18 +134,14 @@ export function memberNav(hackathonId: string): NavItem[] {
       icon: CalendarClock,
       href: resolve(`/my/hackathon/${hackathonId}/timeline`),
     },
-    {
-      id: "member:webinars",
-      label: "Webinars",
-      icon: Presentation,
-      href: resolve(`/my/hackathon/${hackathonId}/webinars`),
-    },
-    {
-      id: "member:photos",
-      label: "Photos",
-      icon: Image,
-      href: resolve(`/my/hackathon/${hackathonId}/photos`),
-    },
+    // Keyed by page id, never by title: two pages named the same would collide
+    // on a title-derived key and take the sidebar down with them.
+    ...pages.map((p) => ({
+      id: `member:page:${p.id}`,
+      label: p.title,
+      icon: FileText,
+      href: resolve(`/my/hackathon/${hackathonId}/pages/${p.id}`),
+    })),
   ]
 }
 

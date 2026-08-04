@@ -33,13 +33,24 @@
         viewerMembership?: HackathonMember;
     }
 
+    interface HackathonPage {
+        id: string;
+        title: string;
+    }
+
     let {
         myHackathons,
+        hackathonPages,
         isGlobalAdmin,
         isHackathonOrganizer,
         session,
     }: {
         myHackathons: HackathonEntry[];
+        /**
+         * The active hackathon's content pages, already filtered to the visible
+         * ones and ordered by the backend. Empty outside a hackathon.
+         */
+        hackathonPages: HackathonPage[];
         isGlobalAdmin: boolean;
         isHackathonOrganizer: boolean;
         session: Omit<Session, 'accessToken'> | null;
@@ -59,7 +70,11 @@
     const navId = $derived(urlHackathonId ?? defaultHackathon(myHackathons)?.id);
     const navHackathon = $derived(myHackathons.find((h) => h.id === navId));
 
-    const hackathonItems = $derived(navId ? memberNav(navId) : []);
+    // Pages are only loaded for the hackathon the URL names, so when navId comes
+    // from the default-hackathon fallback there are none to append.
+    const hackathonItems = $derived(
+        navId ? memberNav(navId, navId === urlHackathonId ? hackathonPages : []) : [],
+    );
     const homeItems = $derived(homeNav({ isGlobalAdmin, isHackathonOrganizer }));
     const platformItems = $derived(platformNav({ isGlobalAdmin }));
     const activeId = $derived(
