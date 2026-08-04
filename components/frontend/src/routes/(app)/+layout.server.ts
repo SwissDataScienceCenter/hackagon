@@ -20,6 +20,11 @@ export const load: LayoutServerLoad = async (event) => {
   // The sidebar is app-shell chrome for every authenticated route, so a backend
   // hiccup must degrade it to an empty nav rather than fail this load and blank
   // the whole shell (logo and user footer along with it).
+  //
+  // TODO(backend: enroll creator as participant): this filter is membership, not
+  // ownership, so a hackathon the viewer created is absent until Create writes
+  // the Participant row. Its section heading then falls back to "Hackathon",
+  // having no name to read. Once the backend lands, this needs no change.
   let myHackathons: Awaited<ReturnType<typeof hackathon.list>>["hackathons"] =
     []
   if (participantId) {

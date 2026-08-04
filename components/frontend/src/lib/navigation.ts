@@ -13,6 +13,7 @@ import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import Presentation from "lucide-svelte/icons/presentation"
 import Image from "lucide-svelte/icons/image"
 import House from "lucide-svelte/icons/house"
+import Plus from "lucide-svelte/icons/plus"
 
 /**
  * A single sidebar entry.
@@ -30,15 +31,24 @@ export interface NavItem {
 }
 
 /**
- * The participant's home — the hackathons they are in, and the ones they could
- * join.
+ * The participant's home — the hackathons they are in, the ones they could join,
+ * and starting a new one.
  *
  * Always present, including inside a hackathon, so leaving one does not mean
  * hunting for the logo. Not scoped to a hackathon, hence its own section rather
  * than a `memberNav` entry.
+ *
+ * Creating a hackathon lives here rather than under Platform: it acts on the
+ * collection of hackathons this section is about, not on the platform's
+ * accounts and settings. The entry follows the backend's own permission —
+ * `hackathon:create`, held by organizers and, via the admin escape hatch, by
+ * admins — so it never offers a link that lands on a 403.
  */
-export function homeNav(): NavItem[] {
-  return [
+export function homeNav(roles: {
+  isGlobalAdmin: boolean
+  isHackathonOrganizer: boolean
+}): NavItem[] {
+  const items: NavItem[] = [
     {
       id: "home:dashboard",
       label: "My Hackathons",
@@ -46,6 +56,17 @@ export function homeNav(): NavItem[] {
       href: resolve("/(app)/dashboard"),
     },
   ]
+
+  if (roles.isGlobalAdmin || roles.isHackathonOrganizer) {
+    items.push({
+      id: "home:hackathon-create",
+      label: "Create Hackathon",
+      icon: Plus,
+      href: resolve("/(app)/hackathons/create"),
+    })
+  }
+
+  return items
 }
 
 /**
@@ -111,11 +132,10 @@ export function memberNav(hackathonId: string): NavItem[] {
 /**
  * Platform-wide administration — not scoped to any hackathon.
  *
- * Entries follow what the backend grants each global role, so the section never
- * offers a link that lands on a 403: `UserService.List` denies anyone but admin.
- * A hackathon organizer holds exactly one permission — `hackathon:create` —
- * which has no page on this branch yet, so they get the section heading and its
- * role badge but no entries. See `platformRoleBadge`.
+ * Admin-only, and therefore the whole section is: `UserService.List` denies
+ * anyone but admin. An organizer's one permission, `hackathon:create`, is a
+ * hackathon action and sits in `homeNav` instead, so an organizer sees no
+ * Platform section at all rather than an empty one.
  */
 export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
   if (!roles.isGlobalAdmin) return []
@@ -213,19 +233,28 @@ export function hackathonRoleBadge(
 }
 
 /**
+ * Role chip for the Hackathons section heading.
+ *
+ * Names the global role that puts Create Hackathon there. An admin gets no chip
+ * here — theirs is on the Platform section, and the two chips read as two roles
+ * rather than one role stated twice.
+ */
+export function hackathonsRoleBadge(roles: {
+  isHackathonOrganizer: boolean
+}): string | undefined {
+  return roles.isHackathonOrganizer ? "Organiser" : undefined
+}
+
+/**
  * Role chip for the Platform section heading.
  *
- * Admin outranks organizer: an admin holds every organizer permission, so
- * showing the lesser of the two roles would understate what they can do.
+ * The section only renders for an admin — `platformNav` is empty for everyone
+ * else — so this is the only role it can name.
  */
 export function platformRoleBadge(roles: {
   isGlobalAdmin: boolean
-  isHackathonOrganizer: boolean
 }): string | undefined {
-  if (roles.isGlobalAdmin) return "Admin"
-  if (roles.isHackathonOrganizer) return "Organiser"
-
-  return undefined
+  return roles.isGlobalAdmin ? "Admin" : undefined
 }
 
 /**
