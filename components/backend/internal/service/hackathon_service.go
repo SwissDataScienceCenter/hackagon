@@ -17,6 +17,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
+	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -143,6 +144,40 @@ func (s *HackathonService) Create(
 	return &msgs.CreateResponse{HackathonId: h.ID.String()}, nil
 }
 
+// viewerMayOpenMemberView reports whether the caller may read the full
+// hackathon tree: a non-waiting participant, a casbin Owner, or a global
+// admin. Participants must be eager-loaded with their users.
+func (s *HackathonService) viewerMayOpenMemberView(
+	_ context.Context,
+	uid string,
+	h *ent.Hackathon,
+) bool {
+	for _, p := range h.Edges.Participants {
+		if p.Edges.User != nil && p.Edges.User.KeycloakID == uid {
+			if !p.IsWaiting {
+				return true
+			}
+
+			break
+		}
+	}
+	role, err := s.enforcer.GetHackathonRole(uid, h.ID.String())
+	if err == nil && role == ents.HackathonRole_HACKATHON_ROLE_OWNER {
+		return true
+	}
+	globals, err := s.enforcer.GetGlobalRoles(uid)
+	if err != nil {
+		return false
+	}
+	for _, g := range globals {
+		if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *HackathonService) Get(
 	ctx context.Context,
 	req *msgs.GetRequest,
@@ -181,6 +216,17 @@ func (s *HackathonService) Get(
 		slog.Error("query hackathon", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// The member view is for the confirmed roster: a Member role alone (held
+	// from Join, including by waitlisted registrants) is not enough. Allow
+	// non-waiting participants, hackathon owners, and global admins.
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !s.viewerMayOpenMemberView(ctx, uid, h) {
+		return nil, status.Error(codes.PermissionDenied, "hackathon is only open to confirmed participants")
 	}
 
 	// One instant for the whole response, so the status badge and the capability
