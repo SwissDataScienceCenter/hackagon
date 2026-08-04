@@ -112,7 +112,7 @@ var _ = Describe("PhaseService", func() {
 			Expect(err).NotTo(BeNil())
 
 			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			Expect(st.Code()).To(Equal(codes.Unauthenticated))
 		})
 
 		It("denies non-admin users without roles", func() {

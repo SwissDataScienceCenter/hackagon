@@ -989,7 +989,7 @@ var _ = Describe("HackathonService", func() {
 			Expect(err).To(HaveOccurred())
 
 			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			Expect(st.Code()).To(Equal(codes.Unauthenticated))
 		})
 
 		It("allows editing timestamps", func() {
@@ -1187,7 +1187,7 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp).To(BeNil())
 
 				st := status.Convert(err)
-				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+				Expect(st.Code()).To(Equal(codes.Unauthenticated))
 			})
 		})
 
@@ -2108,7 +2108,7 @@ var _ = Describe("HackathonService", func() {
 				_, err := client.EditSettings(context.Background(), req)
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
-				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+				Expect(st.Code()).To(Equal(codes.Unauthenticated))
 			})
 
 			It("returns settings with modified_at timestamp", func() {

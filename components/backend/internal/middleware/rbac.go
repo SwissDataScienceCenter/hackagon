@@ -472,6 +472,16 @@ func (e *Enforcer) RequirePermission(
 		return status.Error(codes.Internal, "authorization error")
 	}
 	if !ok {
+		// gRPC convention: anonymous callers are told to authenticate
+		// (UNAUTHENTICATED), authenticated-but-unauthorized callers get
+		// PERMISSION_DENIED. Matches the hand-written AnonSubject checks in
+		// Join/ApproveParticipant so every endpoint speaks the same code.
+		if claims, found := GetClaims(ctx); found {
+			if sub, err := claims.GetSubject(); err == nil && sub == AnonSubject {
+				return status.Error(codes.Unauthenticated, "authentication required")
+			}
+		}
+
 		return status.Error(codes.PermissionDenied, "permission denied")
 	}
 
