@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// Per-hackathon visual identity, written by ConfigService.SetBranding and
+// stored on the hackathon's forms row. Every field is optional and the message
+// itself is absent when an organizer never set anything — a hackathon without
+// branding must render exactly like the default platform theme.
+//
+// The event logo is not here: it is a column on the hackathon row itself
+// (Hackathon.logo), because it predates branding and List already returns it.
+message HackathonBranding {
+  // Hex colour, #rgb or #rrggbb. SetBranding rejects anything else, but these
+  // values end up inside a CSS style attribute, so clients must validate them
+  // again before interpolating: a row written before that check existed, or by
+  // a future write path that forgets it, would otherwise be injected into CSS.
+  optional string primary_color = 1;
+  optional string accent_color = 2;
+  // Free text shown as a banner on the event page (e.g. "Registration closes
+  // Friday"). Rendered as text, never as markup.
+  optional string banner_text = 3;
+}

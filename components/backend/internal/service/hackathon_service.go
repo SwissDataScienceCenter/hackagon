@@ -208,6 +208,9 @@ func (s *HackathonService) Get(
 		}).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
 		WithSettings().
+		// Carries the branding map that hackathonEntryFromEnt turns into
+		// Hackathon.branding.
+		WithForms().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -1072,8 +1075,13 @@ func (s *HackathonService) List(
 	//
 	// Four extra queries regardless of how many hackathons come back, since ent
 	// batches each eager load.
+	//
+	// Forms come along for the branding map: the public event page is built
+	// from List, not Get, so without this an event's own colours would never
+	// reach the one page visitors actually see.
 	q = q.
 		WithPhases().
+		WithForms().
 		WithCapabilities(func(cq *ent.CapabilityQuery) {
 			cq.WithModifier().WithOpenInPhase().WithClosedInPhase()
 		})

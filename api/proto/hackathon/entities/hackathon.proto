@@ -5,6 +5,7 @@ package hackathon.entities;
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/capability.proto";
+import "hackathon/entities/hackathon_branding.proto";
 import "hackathon/entities/hackathon_member.proto";
 import "hackathon/entities/hackathon_settings.proto";
 import "hackathon/entities/hackathon_status.proto";
@@ -59,4 +60,9 @@ message Hackathon {
   // clients should derive it from phase dates instead — correct before an event,
   // wrong during one, where the schedule slips.
   optional string current_phase_id = 21;
+  // Set by ConfigService.SetBranding. Populated on Get and on List — the
+  // public event page is built from List, so leaving it Get-only would make an
+  // event's own colours invisible exactly where visitors see it. Absent when
+  // the organizer set no branding.
+  optional HackathonBranding branding = 22;
 }

@@ -64,6 +64,9 @@
     - [Capability](#hackathon-entities-Capability)
     - [CapabilityState](#hackathon-entities-CapabilityState)
   
+- [hackathon/entities/hackathon_branding.proto](#hackathon_entities_hackathon_branding-proto)
+    - [HackathonBranding](#hackathon-entities-HackathonBranding)
+  
 - [hackathon/entities/hackathon_role.proto](#hackathon_entities_hackathon_role-proto)
     - [HackathonRole](#hackathon-entities-HackathonRole)
   
@@ -1412,6 +1415,45 @@ therefore an enum value plus a row — no schema or message change.
 
 
 
+<a name="hackathon_entities_hackathon_branding-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_branding.proto
+
+
+
+<a name="hackathon-entities-HackathonBranding"></a>
+
+### HackathonBranding
+Per-hackathon visual identity, written by ConfigService.SetBranding and
+stored on the hackathon&#39;s forms row. Every field is optional and the message
+itself is absent when an organizer never set anything — a hackathon without
+branding must render exactly like the default platform theme.
+
+The event logo is not here: it is a column on the hackathon row itself
+(Hackathon.logo), because it predates branding and List already returns it.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| primary_color | [string](#string) | optional | Hex colour, #rgb or #rrggbb. SetBranding rejects anything else, but these values end up inside a CSS style attribute, so clients must validate them again before interpolating: a row written before that check existed, or by a future write path that forgets it, would otherwise be injected into CSS. |
+| accent_color | [string](#string) | optional |  |
+| banner_text | [string](#string) | optional | Free text shown as a banner on the event page (e.g. &#34;Registration closes Friday&#34;). Rendered as text, never as markup. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_hackathon_role-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1865,6 +1907,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 Will become caller-dependent, so clients must not cache it across users. |
 | current_phase_id | [string](#string) | optional | The phase an organizer declared current via AdvancePhase. Absent means clients should derive it from phase dates instead — correct before an event, wrong during one, where the schedule slips. |
+| branding | [HackathonBranding](#hackathon-entities-HackathonBranding) | optional | Set by ConfigService.SetBranding. Populated on Get and on List — the public event page is built from List, so leaving it Get-only would make an event&#39;s own colours invisible exactly where visitors see it. Absent when the organizer set no branding. |
 
 
 

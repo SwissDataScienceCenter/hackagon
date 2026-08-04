@@ -60,6 +60,38 @@ func computeHackathonStatus(startsAt, endsAt *time.Time, now time.Time) hackEnts
 	return hackEnts.HackathonStatus_HACKATHON_STATUS_ACTIVE
 }
 
+// brandingEntryFromEnt maps the free-form branding map stored on the forms row
+// (written by ConfigService.SetBranding) onto the wire entity.
+//
+// Returns nil when nothing usable is set, so "no branding" is an absent field
+// rather than a message full of empty strings — clients can then treat presence
+// as "this event has a look of its own" without inspecting every member.
+func brandingEntryFromEnt(b map[string]string) *hackEnts.HackathonBranding {
+	if len(b) == 0 {
+		return nil
+	}
+	e := &hackEnts.HackathonBranding{}
+	set := false
+	// Each `if` scopes its own copy, so taking the address is safe.
+	if v, ok := b["primaryColor"]; ok && v != "" {
+		e.PrimaryColor = &v
+		set = true
+	}
+	if v, ok := b["accentColor"]; ok && v != "" {
+		e.AccentColor = &v
+		set = true
+	}
+	if v, ok := b["bannerText"]; ok && v != "" {
+		e.BannerText = &v
+		set = true
+	}
+	if !set {
+		return nil
+	}
+
+	return e
+}
+
 func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon {
 	e := &hackEnts.Hackathon{
 		Id:         h.ID.String(),
@@ -88,6 +120,12 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 	if h.CurrentPhaseID != nil {
 		p := h.CurrentPhaseID.String()
 		e.CurrentPhaseId = &p
+	}
+	// Branding lives on the forms row, so it only arrives when the caller
+	// eager-loaded WithForms(). A missing edge is indistinguishable from no
+	// branding here on purpose: both mean "render the default theme".
+	if h.Edges.Forms != nil {
+		e.Branding = brandingEntryFromEnt(h.Edges.Forms.Branding)
 	}
 
 	return e
