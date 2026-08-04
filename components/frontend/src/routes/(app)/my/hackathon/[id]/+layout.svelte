@@ -19,6 +19,7 @@
         { id: 'teams', label: 'Teams' },
         { id: 'submissions', label: 'Submissions' },
         { id: 'timeline', label: 'Timeline' },
+        { id: 'voting', label: 'Voting' },
         { id: 'webinars', label: 'Webinars' },
         { id: 'photos', label: 'Photos' },
     ];
@@ -85,6 +86,7 @@
         'webinars',
         'photos',
         'manage',
+        'voting',
     ]);
     const hideHeroAndTimeline = $derived(
         listPageSegments.has($page.url.pathname.split('/').filter(Boolean).pop() ?? '')

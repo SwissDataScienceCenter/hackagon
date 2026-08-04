@@ -11,6 +11,8 @@ import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import { TrackServiceDefinition } from "./generated/hackathon/track_service"
 import { PrizeServiceDefinition } from "./generated/hackathon/prize_service"
 import { ConfigServiceDefinition } from "./generated/hackathon/config_service"
+import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
+import { VoteServiceDefinition } from "./generated/vote/vote_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
@@ -21,6 +23,8 @@ import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 import type { TrackServiceClient } from "./generated/hackathon/track_service"
 import type { PrizeServiceClient } from "./generated/hackathon/prize_service"
 import type { ConfigServiceClient } from "./generated/hackathon/config_service"
+import type { ProjectServiceClient } from "./generated/hackathon/project_service"
+import type { VoteServiceClient } from "./generated/vote/vote_service"
 
 let channel: Channel | undefined
 
@@ -71,6 +75,9 @@ export interface AuthorizedGrpc {
   track: TrackServiceClient
   prize: PrizeServiceClient
   config: ConfigServiceClient
+  // Participant-facing lifecycle: proposing projects, preferences, voting.
+  project: ProjectServiceClient
+  vote: VoteServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -95,6 +102,8 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     track: factory.create(TrackServiceDefinition, getChannel()),
     prize: factory.create(PrizeServiceDefinition, getChannel()),
     config: factory.create(ConfigServiceDefinition, getChannel()),
+    project: factory.create(ProjectServiceDefinition, getChannel()),
+    vote: factory.create(VoteServiceDefinition, getChannel()),
   }
 }
 

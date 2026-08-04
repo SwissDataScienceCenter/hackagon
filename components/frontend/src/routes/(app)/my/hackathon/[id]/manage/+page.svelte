@@ -30,6 +30,69 @@
     ]);
     let awardRows = $state([{ id: nextRowId++, rank: 1, special: '', submissionId: '' }]);
 
+    // `required` is a string because these rows post as parallel arrays: an
+    // unchecked checkbox submits nothing, which would shift every later row's
+    // answers onto the wrong field.
+    type FieldRow = {
+        id: number;
+        key: string;
+        label: string;
+        type: string;
+        required: string;
+        maxMb: string;
+    };
+    type ConsentRow = { id: number; key: string; label: string; required: string };
+
+    function blankField(): FieldRow {
+        return { id: nextRowId++, key: '', label: '', type: 'text', required: 'false', maxMb: '' };
+    }
+    function blankConsent(): ConsentRow {
+        return { id: nextRowId++, key: '', label: '', required: 'true' };
+    }
+
+    let registrationFields = $state<FieldRow[]>([blankField()]);
+    let registrationConsents = $state<ConsentRow[]>([blankConsent()]);
+    let submissionFields = $state<FieldRow[]>([blankField()]);
+
+    // The submitted array order is DOM order, so moving a row here is what
+    // reorders the questions participants will see.
+    function moved<T extends { id: number }>(rows: T[], id: number, delta: number): T[] {
+        const i = rows.findIndex((r) => r.id === id);
+        const j = i + delta;
+        if (i < 0 || j < 0 || j >= rows.length) return rows;
+        const next = [...rows];
+        const [row] = next.splice(i, 1);
+        if (!row) return rows;
+        next.splice(j, 0, row);
+        return next;
+    }
+
+    // Branding is the one config with a read path — it rides on the hackathon
+    // entity — so these start from what is stored rather than from blank.
+    let primaryColor = $state(data.hackathon.branding?.primaryColor ?? '');
+    let accentColor = $state(data.hackathon.branding?.accentColor ?? '');
+
+    // The hex rule SetBranding enforces, written without {n} repetition because
+    // braces open an expression in markup. Empty still passes: blank means
+    // "leave the stored colour alone".
+    const HEX_PATTERN = '#([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])?';
+
+    /** <input type="color"> only accepts #rrggbb, so #abc and blanks need one. */
+    function pickerValue(hex: string, fallback: string): string {
+        const v = hex.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
+        if (/^#[0-9a-fA-F]{3}$/.test(v))
+            return (
+                '#' +
+                v
+                    .slice(1)
+                    .split('')
+                    .map((c) => c + c)
+                    .join('')
+            );
+        return fallback;
+    }
+
     function inviteUrl(token: string): string {
         return `${origin}/invite/${token}`;
     }
@@ -234,7 +297,7 @@
                 </form>
             {/if}
 
-            {#each data.pages as p (p.id)}
+            {#each data.pages as p, i (p.id)}
                 <div class="card preset-outlined-surface-200-800 p-4">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <span class="flex items-center gap-2">
@@ -243,7 +306,15 @@
                                 {p.visible ? 'Visible' : 'Hidden'}
                             </span>
                         </span>
-                        <div class="flex shrink-0 gap-2">
+                        <div class="flex shrink-0 flex-wrap gap-2">
+                            <form method="POST" action="?/movePage" use:enhance class="flex gap-2">
+                                <input type="hidden" name="pageId" value={p.id} />
+                                <button name="direction" value="up" class="btn btn-sm preset-tonal"
+                                        disabled={i === 0} aria-label="Move {p.title} up">↑</button>
+                                <button name="direction" value="down" class="btn btn-sm preset-tonal"
+                                        disabled={i === data.pages.length - 1}
+                                        aria-label="Move {p.title} down">↓</button>
+                            </form>
                             <button class="btn btn-sm preset-tonal-primary"
                                     onclick={() => (editingPage = editingPage === p.id ? null : p.id)}>
                                 {editingPage === p.id ? 'Close' : 'Edit'}
@@ -283,6 +354,28 @@
             {:else}
                 <p class="text-sm text-surface-500">No pages yet.</p>
             {/each}
+
+            {#if data.pages.length > 1}
+                <form method="POST" action="?/setPageOrder" use:enhance
+                      class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                    <div>
+                        <h3 class="font-semibold">Reorder them all at once</h3>
+                        <p class="text-sm text-surface-500">
+                            Number the pages and save; the arrows above are for a single
+                            nudge. Ties keep their current order.
+                        </p>
+                    </div>
+                    {#each data.pages as p, i (p.id)}
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="hidden" name="orderPageId" value={p.id} />
+                            <input name="position" type="number" class="input w-20" min="1"
+                                   value={i + 1} aria-label="Position of {p.title}" />
+                            <span class="min-w-0 flex-1 text-sm">{p.title}</span>
+                        </div>
+                    {/each}
+                    <div><button class="btn btn-sm preset-filled-primary-500">Apply order</button></div>
+                </form>
+            {/if}
         </section>
 
         <!-- ── Schedule ─────────────────────────────────────────────── -->
@@ -472,6 +565,194 @@
             {/each}
         </section>
 
+        <!-- The backend stores `type` as a free string and only checks that a
+             field has one, so these are suggestions rather than a closed set. -->
+        <datalist id="form-field-types">
+            <option value="text"></option>
+            <option value="url"></option>
+            <option value="tags"></option>
+            <option value="file-or-url"></option>
+        </datalist>
+
+        {#snippet fieldEditor(rows: FieldRow[], setRows: (r: FieldRow[]) => void)}
+            {#each rows as row, i (row.id)}
+                <div class="flex flex-wrap items-end gap-2 border-t border-surface-200-800 pt-3
+                            first:border-t-0 first:pt-0">
+                    <label class="w-32">
+                        <span class="text-sm">Key</span>
+                        <input name="fieldKey" class="input" bind:value={row.key}
+                               placeholder="affiliation" />
+                    </label>
+                    <label class="min-w-40 flex-1">
+                        <span class="text-sm">Question</span>
+                        <input name="fieldLabel" class="input" bind:value={row.label}
+                               placeholder="Affiliation" />
+                    </label>
+                    <label class="w-36">
+                        <span class="text-sm">Type</span>
+                        <input name="fieldType" class="input" list="form-field-types"
+                               bind:value={row.type} />
+                    </label>
+                    <label class="w-32">
+                        <span class="text-sm">Answer</span>
+                        <select name="fieldRequired" class="select" bind:value={row.required}>
+                            <option value="false">Optional</option>
+                            <option value="true">Required</option>
+                        </select>
+                    </label>
+                    <label class="w-24">
+                        <span class="text-sm">Max MB</span>
+                        <input name="fieldMaxMb" type="number" class="input" min="1"
+                               value={row.maxMb}
+                               oninput={(e) => (row.maxMb = e.currentTarget.value)} />
+                    </label>
+                    <div class="flex gap-2">
+                        <button type="button" class="btn btn-sm preset-tonal" disabled={i === 0}
+                                onclick={() => setRows(moved(rows, row.id, -1))}
+                                aria-label="Move question up">↑</button>
+                        <button type="button" class="btn btn-sm preset-tonal"
+                                disabled={i === rows.length - 1}
+                                onclick={() => setRows(moved(rows, row.id, 1))}
+                                aria-label="Move question down">↓</button>
+                        <button type="button" class="btn btn-sm preset-tonal-error"
+                                onclick={() => setRows(rows.filter((r) => r.id !== row.id))}>
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            {/each}
+        {/snippet}
+
+        <!-- ── Registration form ────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+            <div>
+                <h2 class="text-xl font-bold">Registration form</h2>
+                <p class="text-sm text-surface-500">
+                    The questions people answer when they sign up. Answers are stored and
+                    checked against the key, so renaming a key after people have answered
+                    orphans what they wrote — change the question, not the key.
+                </p>
+            </div>
+
+            {#if form?.registrationForm}
+                <div class="card preset-outlined-success-500 p-4">
+                    <h3 class="mb-2 font-semibold">Saved registration form</h3>
+                    <ul class="text-sm">
+                        {#each form.registrationForm.fields as f, i (i)}
+                            <li>{f.label} ({f.key}, {f.type}){f.required ? ' — required' : ''}</li>
+                        {/each}
+                        {#each form.registrationForm.consents as c, i (i)}
+                            <li>Consent: {c.label} ({c.key}){c.required ? ' — required' : ''}</li>
+                        {/each}
+                    </ul>
+                </div>
+            {/if}
+
+            <form method="POST" action="?/setRegistrationForm" use:enhance={keepValues}
+                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                <h3 class="font-semibold">Questions</h3>
+                {@render fieldEditor(registrationFields, (r) => (registrationFields = r))}
+                <div>
+                    <button type="button" class="btn btn-sm preset-tonal"
+                            onclick={() => (registrationFields = [...registrationFields, blankField()])}>
+                        Add question
+                    </button>
+                </div>
+
+                <h3 class="mt-2 font-semibold">Consents</h3>
+                <p class="text-sm text-surface-500">
+                    Tick-boxes on the sign-up form. A required consent blocks registration
+                    until it is given.
+                </p>
+                {#each registrationConsents as row, i (row.id)}
+                    <div class="flex flex-wrap items-end gap-2">
+                        <label class="w-32">
+                            <span class="text-sm">Key</span>
+                            <input name="consentKey" class="input" bind:value={row.key}
+                                   placeholder="photo" />
+                        </label>
+                        <label class="min-w-40 flex-1">
+                            <span class="text-sm">What they agree to</span>
+                            <input name="consentLabel" class="input" bind:value={row.label}
+                                   placeholder="I agree to be photographed" />
+                        </label>
+                        <label class="w-32">
+                            <span class="text-sm">Answer</span>
+                            <select name="consentRequired" class="select" bind:value={row.required}>
+                                <option value="false">Optional</option>
+                                <option value="true">Required</option>
+                            </select>
+                        </label>
+                        <div class="flex gap-2">
+                            <button type="button" class="btn btn-sm preset-tonal" disabled={i === 0}
+                                    onclick={() => (registrationConsents = moved(registrationConsents, row.id, -1))}
+                                    aria-label="Move consent up">↑</button>
+                            <button type="button" class="btn btn-sm preset-tonal"
+                                    disabled={i === registrationConsents.length - 1}
+                                    onclick={() => (registrationConsents = moved(registrationConsents, row.id, 1))}
+                                    aria-label="Move consent down">↓</button>
+                            <button type="button" class="btn btn-sm preset-tonal-error"
+                                    onclick={() => (registrationConsents = registrationConsents.filter((r) => r.id !== row.id))}>
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                {/each}
+
+                <p class="text-xs text-surface-500">
+                    Saving writes this whole form, replacing what was there before. Rows
+                    without a key are dropped. There is no way to read the current form
+                    back, so what you see here is what you last saved in this window.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm preset-tonal"
+                            onclick={() => (registrationConsents = [...registrationConsents, blankConsent()])}>
+                        Add consent
+                    </button>
+                    <button class="btn btn-sm preset-filled-primary-500">Save registration form</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── Submission form ──────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+            <div>
+                <h2 class="text-xl font-bold">Submission form</h2>
+                <p class="text-sm text-surface-500">
+                    What a team fills in when they submit. The backend rejects a submission
+                    that misses a required key or invents one that is not here, so this is
+                    the contract, not a suggestion. With no form saved, anything is accepted.
+                </p>
+            </div>
+
+            {#if form?.submissionForm}
+                <div class="card preset-outlined-success-500 p-4">
+                    <h3 class="mb-2 font-semibold">Saved submission form</h3>
+                    <ul class="text-sm">
+                        {#each form.submissionForm.fields as f, i (i)}
+                            <li>{f.label} ({f.key}, {f.type}){f.required ? ' — required' : ''}</li>
+                        {/each}
+                    </ul>
+                </div>
+            {/if}
+
+            <form method="POST" action="?/setSubmissionForm" use:enhance={keepValues}
+                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                <h3 class="font-semibold">Questions</h3>
+                {@render fieldEditor(submissionFields, (r) => (submissionFields = r))}
+                <p class="text-xs text-surface-500">
+                    Saving writes this whole form, replacing what was there before.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm preset-tonal"
+                            onclick={() => (submissionFields = [...submissionFields, blankField()])}>
+                        Add question
+                    </button>
+                    <button class="btn btn-sm preset-filled-primary-500">Save submission form</button>
+                </div>
+            </form>
+        </section>
+
         <!-- ── Deadlines ────────────────────────────────────────────── -->
         <section class="flex flex-col gap-3">
             <div>
@@ -632,6 +913,77 @@
                 {/each}
             </section>
         {/if}
+
+        <!-- ── Voting policy ────────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+            <div>
+                <h2 class="text-xl font-bold">Voting policy</h2>
+                <p class="text-sm text-surface-500">
+                    The ruling on how votes are counted. The platform enforces one ballot per
+                    category today; the rest is recorded so the decision is on the record
+                    and the same answer is given to everyone who asks.
+                </p>
+            </div>
+
+            {#if form?.votingPolicy}
+                <div class="card preset-outlined-success-500 p-4">
+                    <h3 class="mb-2 font-semibold">Saved policy</h3>
+                    <ul class="text-sm">
+                        <li>Mechanism: {form.votingPolicy.mechanism || '—'}</li>
+                        {#if form.votingPolicy.scale}
+                            <li>Scale: {form.votingPolicy.scale.min}–{form.votingPolicy.scale.max}</li>
+                        {/if}
+                        <li>One ballot per: {form.votingPolicy.oneBallotPer || '—'}</li>
+                        <li>Own team: {form.votingPolicy.ownTeamVoting ? 'may vote' : 'may not vote'}</li>
+                        <li>Organizers: {form.votingPolicy.organizerVoting ? 'may vote' : 'may not vote'}</li>
+                        {#each form.votingPolicy.tieBreak as rule, i (i)}
+                            <li>Tie-break {i + 1}: {rule}</li>
+                        {/each}
+                    </ul>
+                </div>
+            {/if}
+
+            <form method="POST" action="?/setVotingPolicy" use:enhance={keepValues}
+                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label>
+                        <span class="text-sm">Mechanism</span>
+                        <input name="mechanism" class="input" placeholder="points" />
+                    </label>
+                    <label>
+                        <span class="text-sm">One ballot per</span>
+                        <input name="oneBallotPer" class="input"
+                               placeholder="member-category-submission" />
+                    </label>
+                    <label>
+                        <span class="text-sm">Lowest score</span>
+                        <input name="scaleMin" type="number" class="input" value="1" />
+                    </label>
+                    <label>
+                        <span class="text-sm">Highest score</span>
+                        <input name="scaleMax" type="number" class="input" value="5" />
+                    </label>
+                </div>
+                <label class="flex items-center gap-2">
+                    <input name="ownTeamVoting" type="checkbox" class="checkbox" />
+                    <span class="text-sm">People may vote for their own team</span>
+                </label>
+                <label class="flex items-center gap-2">
+                    <input name="organizerVoting" type="checkbox" class="checkbox" />
+                    <span class="text-sm">Organizers may vote</span>
+                </label>
+                <label>
+                    <span class="text-sm">Tie-breaks, most important first (one per line)</span>
+                    <textarea name="tieBreak" class="textarea" rows="3"
+                              placeholder="highest-impact-category&#10;earliest-final-submission"></textarea>
+                </label>
+                <p class="text-xs text-surface-500">
+                    Saving replaces the whole policy. There is no way to read it back, so
+                    what you see here is what you last saved in this window.
+                </p>
+                <div><button class="btn btn-sm preset-filled-primary-500">Save voting policy</button></div>
+            </form>
+        </section>
 
         <!-- ── Prizes ───────────────────────────────────────────────── -->
         <section class="flex flex-col gap-3">
@@ -819,6 +1171,112 @@
                     <span class="text-sm">Voting is running</span>
                 </label>
                 <div><button class="btn btn-sm preset-filled-primary-500">Save switches</button></div>
+            </form>
+        </section>
+
+        <!-- ── Branding ─────────────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+            <div>
+                <h2 class="text-xl font-bold">Branding</h2>
+                <p class="text-sm text-surface-500">
+                    Shown on this event's public page and nowhere else: the two colours draw
+                    the rule across the top, and the banner sits under it above the hero.
+                    Leaving everything blank renders the page in the platform theme.
+                </p>
+            </div>
+
+            {#if form?.brandingSaved}
+                <p class="text-sm text-success-500">Branding saved.</p>
+            {/if}
+
+            <form method="POST" action="?/setBranding" use:enhance={keepValues}
+                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label>
+                        <span class="text-sm">Primary colour</span>
+                        <span class="flex items-center gap-2">
+                            <input type="color" class="input h-10 w-14 p-1"
+                                   value={pickerValue(primaryColor, '#0a7acc')}
+                                   oninput={(e) => (primaryColor = e.currentTarget.value)}
+                                   aria-label="Pick a primary colour" />
+                            <input name="primaryColor" class="input" bind:value={primaryColor}
+                                   placeholder="#0A7ACC" pattern={HEX_PATTERN} />
+                        </span>
+                    </label>
+                    <label>
+                        <span class="text-sm">Accent colour</span>
+                        <span class="flex items-center gap-2">
+                            <input type="color" class="input h-10 w-14 p-1"
+                                   value={pickerValue(accentColor, '#f2b705')}
+                                   oninput={(e) => (accentColor = e.currentTarget.value)}
+                                   aria-label="Pick an accent colour" />
+                            <input name="accentColor" class="input" bind:value={accentColor}
+                                   placeholder="#F2B705" pattern={HEX_PATTERN} />
+                        </span>
+                    </label>
+                </div>
+                <label>
+                    <span class="text-sm">Banner text</span>
+                    <input name="bannerText" class="input"
+                           value={data.hackathon.branding?.bannerText ?? ''}
+                           placeholder="Registration closes Friday" />
+                </label>
+                <p class="text-xs text-surface-500">
+                    Colours must be hex — #0A7ACC or #07C — and the backend rejects anything
+                    else. Clearing a colour box leaves the stored colour alone; clearing the
+                    banner removes it.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button class="btn btn-sm preset-filled-primary-500">Save branding</button>
+                    <a href="/hackathon/{hackathonId}" class="btn btn-sm preset-tonal"
+                       target="_blank" rel="noopener">View public page</a>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── Email templates ──────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+            <div>
+                <h2 class="text-xl font-bold">Email templates</h2>
+                <p class="text-sm text-surface-500">
+                    Nothing sends these yet — there is no notification service. Writing them
+                    here means the copy is decided and stored, so it is ready the day
+                    sending lands rather than being reinvented then.
+                </p>
+            </div>
+
+            {#if form?.emailTemplates}
+                <p class="text-sm text-success-500">Templates saved.</p>
+            {/if}
+
+            <form method="POST" action="?/setEmailTemplates" use:enhance={keepValues}
+                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                <label>
+                    <span class="text-sm">When someone's registration is confirmed</span>
+                    <textarea name="registrationConfirmed" class="textarea" rows="4"
+                              >{form?.emailTemplates?.registrationConfirmed ?? ''}</textarea>
+                </label>
+                <label>
+                    <span class="text-sm">When someone is put on a team</span>
+                    <textarea name="teamAssigned" class="textarea" rows="4"
+                              >{form?.emailTemplates?.teamAssigned ?? ''}</textarea>
+                </label>
+                <label>
+                    <span class="text-sm">Reminder before a deadline</span>
+                    <textarea name="deadlineReminder" class="textarea" rows="4"
+                              >{form?.emailTemplates?.deadlineReminder ?? ''}</textarea>
+                </label>
+                <label>
+                    <span class="text-sm">When results are published</span>
+                    <textarea name="results" class="textarea" rows="4"
+                              >{form?.emailTemplates?.results ?? ''}</textarea>
+                </label>
+                <p class="text-xs text-surface-500">
+                    These four are the only moments the backend accepts. Saving writes all
+                    four together, so a box left empty clears that message. There is no way
+                    to read them back.
+                </p>
+                <div><button class="btn btn-sm preset-filled-primary-500">Save templates</button></div>
             </form>
         </section>
     {/if}

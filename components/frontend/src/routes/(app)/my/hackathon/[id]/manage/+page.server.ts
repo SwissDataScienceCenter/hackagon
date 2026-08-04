@@ -74,6 +74,85 @@ function optionalTime(form: FormData, key: string): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d
 }
 
+/**
+ * Reads the parallel arrays a repeating row editor posts. Every row always
+ * submits one value per column — booleans are selects, not checkboxes, because
+ * an unchecked checkbox submits nothing and would shift every later row's
+ * answers onto the wrong field.
+ */
+function formFieldRows(form: FormData): {
+  key: string
+  label: string
+  type: string
+  required: boolean
+  maxMb?: number
+}[] {
+  const keys = form.getAll("fieldKey")
+  const labels = form.getAll("fieldLabel")
+  const types = form.getAll("fieldType")
+  const required = form.getAll("fieldRequired")
+  const maxMb = form.getAll("fieldMaxMb")
+
+  const fields = []
+  for (let i = 0; i < keys.length; i++) {
+    const key = String(keys[i] ?? "").trim()
+    if (!key) continue
+    const mb = Number(maxMb[i] ?? 0)
+    fields.push({
+      key,
+      label: String(labels[i] ?? "").trim() || key,
+      type: String(types[i] ?? "").trim() || "text",
+      required: String(required[i] ?? "") === "true",
+      // 0 would read as "uploads capped at nothing", so an unset cap is absent.
+      maxMb: mb > 0 ? mb : undefined,
+    })
+  }
+
+  return fields
+}
+
+function consentRows(form: FormData): { key: string; label: string; required: boolean }[] {
+  const keys = form.getAll("consentKey")
+  const labels = form.getAll("consentLabel")
+  const required = form.getAll("consentRequired")
+
+  const consents = []
+  for (let i = 0; i < keys.length; i++) {
+    const key = String(keys[i] ?? "").trim()
+    if (!key) continue
+    consents.push({
+      key,
+      label: String(labels[i] ?? "").trim() || key,
+      required: String(required[i] ?? "") === "true",
+    })
+  }
+
+  return consents
+}
+
+/**
+ * Answers are stored and validated by key, so a repeated key silently shadows
+ * the row above it — the second question could never be answered.
+ */
+function duplicateKey(keys: string[]): string | null {
+  const seen = new Set<string>()
+  for (const k of keys) {
+    if (seen.has(k)) return k
+    seen.add(k)
+  }
+
+  return null
+}
+
+// SetEmailTemplates rejects any other key, and it replaces the whole map, so
+// the form always posts all four — omitting one would delete its copy.
+const EMAIL_TEMPLATE_KEYS = [
+  "registrationConfirmed",
+  "teamAssigned",
+  "deadlineReminder",
+  "results",
+] as const
+
 export const load: PageServerLoad = async (event) => {
   const { hackathon, team } = requireGrpc(event.locals.grpc)
   const hackathonId = event.params.id
@@ -155,10 +234,14 @@ export const load: PageServerLoad = async (event) => {
     return ta - tb
   })
 
+  // Get eager-loads pages without an ORDER BY, so the reorder controls would
+  // otherwise argue with what the list shows.
+  const pages = [...full.hackathon.pages].sort((a, b) => a.order - b.order)
+
   return {
     hackathon: full.hackathon,
     members: full.hackathon.members,
-    pages: full.hackathon.pages,
+    pages,
     phases,
     tracks: full.hackathon.tracks,
     settings: full.hackathon.settings,
@@ -291,6 +374,44 @@ export const actions: Actions = {
     }
 
     return { pageDeleted: pageId }
+  },
+
+  movePage: async (event) => {
+    const { page } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const pageId = String(form.get("pageId") ?? "")
+    if (!pageId) return fail(400, { message: "Missing page." })
+    try {
+      // The backend clamps at either end rather than erroring, so a nudge past
+      // the edge is simply a no-op.
+      if (String(form.get("direction") ?? "") === "up") await page.moveUp({ pageId })
+      else await page.moveDown({ pageId })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { pageMoved: pageId }
+  },
+
+  setPageOrder: async (event) => {
+    const { page } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const ids = form.getAll("orderPageId").map(String)
+    const positions = form.getAll("position").map((p) => Number(p) || 0)
+    if (ids.length === 0) return fail(400, { message: "No pages to order." })
+    // SetOrder rewrites every page's position and rejects a partial list, so
+    // the form posts one row per page and the typed numbers only sort them.
+    const pageIds = ids
+      .map((id, i) => ({ id, pos: positions[i] ?? 0 }))
+      .sort((a, b) => a.pos - b.pos)
+      .map((r) => r.id)
+    try {
+      await page.setOrder({ hackathonId: event.params.id, pageIds })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { pageOrderSet: pageIds.length }
   },
 
   createPhase: async (event) => {
@@ -583,5 +704,118 @@ export const actions: Actions = {
     }
 
     return { capabilityEdited: capability }
+  },
+
+  setRegistrationForm: async (event) => {
+    const { config } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const fields = formFieldRows(form)
+    if (fields.length === 0) return fail(400, { message: "Add at least one question." })
+    const consents = consentRows(form)
+    const dupe =
+      duplicateKey(fields.map((f) => f.key)) ?? duplicateKey(consents.map((c) => c.key))
+    if (dupe) return fail(400, { message: `Two rows share the key "${dupe}".` })
+
+    let result
+    try {
+      // Set replaces the whole schema, so the form always submits every row.
+      result = await config.setRegistrationForm({
+        hackathonId: event.params.id,
+        fields,
+        consents,
+      })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { registrationForm: result.form }
+  },
+
+  setSubmissionForm: async (event) => {
+    const { config } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const fields = formFieldRows(form)
+    if (fields.length === 0) return fail(400, { message: "Add at least one question." })
+    const dupe = duplicateKey(fields.map((f) => f.key))
+    if (dupe) return fail(400, { message: `Two rows share the key "${dupe}".` })
+
+    let result
+    try {
+      result = await config.setSubmissionForm({ hackathonId: event.params.id, fields })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { submissionForm: result.form }
+  },
+
+  setVotingPolicy: async (event) => {
+    const { config } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const min = Number(form.get("scaleMin") ?? "")
+    const max = Number(form.get("scaleMax") ?? "")
+    const hasScale = Number.isFinite(min) && Number.isFinite(max) && (min !== 0 || max !== 0)
+    if (hasScale && max <= min)
+      return fail(400, { message: "The highest score must be above the lowest." })
+    // Ordered by priority, one rule per line.
+    const tieBreak = String(form.get("tieBreak") ?? "")
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    const policy = {
+      mechanism: String(form.get("mechanism") ?? "").trim(),
+      oneBallotPer: String(form.get("oneBallotPer") ?? "").trim(),
+      ownTeamVoting: form.get("ownTeamVoting") === "on",
+      organizerVoting: form.get("organizerVoting") === "on",
+      tieBreak,
+    }
+    try {
+      await config.setVotingPolicy({
+        hackathonId: event.params.id,
+        ...policy,
+        scale: hasScale ? { min, max } : undefined,
+      })
+    } catch (e) {
+      return formError(e)
+    }
+
+    // SetVotingPolicy answers with an empty message, so the panel echoes what
+    // it just sent rather than inventing a read the API does not have.
+    return { votingPolicy: { ...policy, scale: hasScale ? { min, max } : null } }
+  },
+
+  setEmailTemplates: async (event) => {
+    const { config } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const templates: Record<string, string> = {}
+    for (const key of EMAIL_TEMPLATE_KEYS) templates[key] = String(form.get(key) ?? "")
+    try {
+      await config.setEmailTemplates({ hackathonId: event.params.id, templates })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { emailTemplates: templates }
+  },
+
+  setBranding: async (event) => {
+    const { config } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    try {
+      await config.setBranding({
+        hackathonId: event.params.id,
+        // A blank colour leaves the stored one alone — the backend treats an
+        // absent field as "don't touch" and rejects anything but a hex value.
+        primaryColor: optionalText(form, "primaryColor"),
+        accentColor: optionalText(form, "accentColor"),
+        // Unlike the colours, an emptied banner is a real edit.
+        bannerText: String(form.get("bannerText") ?? ""),
+      })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { brandingSaved: true }
   },
 }
