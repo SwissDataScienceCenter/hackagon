@@ -178,6 +178,16 @@ var _ = Describe("RBAC Enforcer", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.Internal))
 		})
+
+		It("allows HackathonOrganizer to create hackathons", func() {
+			organizerID := "uuid-organizer"
+			_, err := enf.AddGlobalRole(organizerID, HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			ctx := CtxWithClaims(organizerID)
+			err = enf.RequirePermission(ctx, "h1", Hackathon, Create)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Describe("Admin Keycloak ID Resolution", func() {
