@@ -179,11 +179,17 @@ services:
     restart: unless-stopped
     volumes:
       - ./Caddyfile.tunnel:/etc/caddy/Caddyfile:ro
-    # Wait until the app inside `dev` actually answers, not just until the
-    # container exists — otherwise caddy starts proxying to a closed port.
+    # Plain dependency ON PURPOSE — do NOT gate this on `dev` being healthy.
+    # `dev` is a long-lived container whose app stack is started by hand
+    # (`just up`), so its health depends on something compose does not manage.
+    # With `condition: service_healthy`, bringing up the tunnel while the stack
+    # happens to be down fails with "dependency failed to start", and any
+    # compose change to `dev` restarts it — killing the very process-compose
+    # stack the condition then waits for. Readiness is enforced by the
+    # cloudflare-tunnel skill's up.sh instead, which waits for the app before
+    # starting anything.
     depends_on:
-      dev:
-        condition: service_healthy
+      - dev
     healthcheck:
       # Caddy's own admin API: proves caddy is alive without depending on the
       # upstream, so a dead app shows up as a dev/tunnel problem, not a caddy one.
