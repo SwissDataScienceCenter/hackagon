@@ -287,6 +287,10 @@ func (e *Enforcer) AddGlobalRole(user string, role Role) (bool, error) {
 	return e.enforcer.AddNamedGroupingPolicy("g2", user, role.String())
 }
 
+func (e *Enforcer) RemoveGlobalRole(user string, role Role) (bool, error) {
+	return e.enforcer.RemoveNamedGroupingPolicy("g2", user, role.String())
+}
+
 func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
 	return e.enforcer.AddPolicy(
 		"*",
@@ -449,11 +453,33 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 	if err != nil {
 		return nil, err
 	}
+	return globalRolesFromPolicies(policies), nil
+}
+
+// GetAllGlobalRoles returns all g2 policies as a map of Keycloak ID → roles.
+// Single casbin call — use for batch lookups (e.g. List endpoints).
+func (e *Enforcer) GetAllGlobalRoles() (map[string][]userEnts.GlobalRole, error) {
+	policies, err := e.enforcer.GetFilteredNamedGroupingPolicy("g2", 0)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[string][]userEnts.GlobalRole)
+	for _, p := range policies {
+		if len(p) < minPolicyFields {
+			continue
+		}
+		keycloakID := p[0]
+		roles := globalRolesFromPolicies([][]string{p})
+		m[keycloakID] = append(m[keycloakID], roles...)
+	}
+	return m, nil
+}
+
+// globalRolesFromPolicies converts raw casbin policy rows to typed GlobalRole enums.
+func globalRolesFromPolicies(policies [][]string) []userEnts.GlobalRole {
 	roles := make([]userEnts.GlobalRole, 0, len(policies))
 	for _, p := range policies {
-		if len(
-			p,
-		) < minPolicyFields {
+		if len(p) < minPolicyFields {
 			continue
 		}
 		switch p[1] {
@@ -463,8 +489,7 @@ func (e *Enforcer) GetGlobalRoles(keycloakID string) ([]userEnts.GlobalRole, err
 			roles = append(roles, userEnts.GlobalRole_GLOBAL_ROLE_HACKATHON_ORGANIZER)
 		}
 	}
-
-	return roles, nil
+	return roles
 }
 
 // RequirePermission enforces a permission check and returns a gRPC-ready error if denied.
