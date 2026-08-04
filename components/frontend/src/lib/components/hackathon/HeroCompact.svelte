@@ -14,7 +14,12 @@
         venue: string;
         imageUrl?: string;
         participantCount: number;
-        participantCapacity: number;
+        /**
+         * TODO(backend: hackathon-venue-capacity): omitted by every caller —
+         * Hackathon has no capacity field, so there is nothing to pass. Until
+         * one exists the count renders on its own, without a "/ N" denominator.
+         */
+        participantCapacity?: number;
         organizers: { name: string; logoUrl: string; logoDarkUrl?: string }[];
         badges?: { label: string; preset: string }[];
     } = $props();
@@ -65,7 +70,9 @@
     >
         <div class="flex items-baseline gap-1.5 sm:flex-col sm:items-center sm:gap-0">
             <span class="text-2xl font-bold">{participantCount}</span>
-            <span class="text-xs">/ {participantCapacity}</span>
+            {#if participantCapacity !== undefined}
+                <span class="text-xs">/ {participantCapacity}</span>
+            {/if}
         </div>
         <span class="text-xs text-surface-500 sm:text-center">participants</span>
     </div>

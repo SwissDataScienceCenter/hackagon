@@ -5,6 +5,7 @@ import {
   hackathonRoleBadge,
   hackathonsRoleBadge,
   homeNav,
+  memberNav,
   platformNav,
   platformRoleBadge,
   type NavItem,
@@ -237,6 +238,63 @@ describe("homeNav", () => {
     expect(ids({ isGlobalAdmin: true, isHackathonOrganizer: false })).toContain(
       "home:hackathon-create",
     )
+  })
+})
+
+describe("memberNav", () => {
+  const ids = (pages: { id: string; title: string }[] = []) =>
+    memberNav("hack-1", pages).map((i) => i.id)
+
+  it("lists the fixed hackathon destinations", () => {
+    expect(ids()).toEqual([
+      "member:overview",
+      "member:participants",
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+      "member:timeline",
+    ])
+  })
+
+  it("appends one entry per content page, after the fixed ones", () => {
+    expect(ids([{ id: "p1", title: "Welcome" }])).toEqual([
+      "member:overview",
+      "member:participants",
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+      "member:timeline",
+      "member:page:p1",
+    ])
+  })
+
+  it("labels a page entry with its title and links to it by id", () => {
+    const item = memberNav("hack-1", [{ id: "p1", title: "Schedule" }]).at(-1)
+
+    expect(item?.label).toBe("Schedule")
+    expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
+  })
+
+  // Page titles are editable and need not be unique. Keying on them would give
+  // two same-named pages the same key, which takes the sidebar's {#each} down.
+  it("keys same-titled pages distinctly", () => {
+    const items = memberNav("hack-1", [
+      { id: "p1", title: "Notes" },
+      { id: "p2", title: "Notes" },
+    ])
+
+    expect(new Set(items.map((i) => i.id)).size).toBe(items.length)
+  })
+
+  it("preserves the order it is given, since the backend already sorted it", () => {
+    const titles = memberNav("hack-1", [
+      { id: "p2", title: "Schedule" },
+      { id: "p1", title: "Welcome" },
+    ])
+      .slice(-2)
+      .map((i) => i.label)
+
+    expect(titles).toEqual(["Schedule", "Welcome"])
   })
 })
 

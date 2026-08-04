@@ -11,7 +11,14 @@
         profileDetailsHref = '#',
     }: {
         name: string;
-        affiliation: string;
+        /**
+         * TODO(backend: user-profile-fields): unset by the participants page —
+         * User carries only username, displayName, email and keycloakId, so
+         * there is no affiliation to pass. Same for `avatarUrl`, `skills` and
+         * `linkedinUrl`: the card simply omits those lines until the fields
+         * exist, at which point the page passes them straight through.
+         */
+        affiliation?: string;
         avatarUrl?: string;
         /** Job title; if omitted, first skills are shown on the role line. */
         role?: string;
@@ -27,6 +34,7 @@
 
     const initials = name
         .split(' ')
+        .filter(Boolean)
         .map((w) => w[0])
         .join('')
         .toUpperCase()
@@ -71,7 +79,9 @@
                     {#if roleLine}
                         <p class="m-0 text-xs leading-snug text-surface-600-400">{roleLine}</p>
                     {/if}
-                    <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {#if affiliation}
+                        <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {/if}
                     {#if linkedinUrl}
                         <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
                         <a

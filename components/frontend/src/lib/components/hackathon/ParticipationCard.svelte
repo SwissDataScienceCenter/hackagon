@@ -11,6 +11,7 @@
         nextAction,
         nextActionHref,
         deadline,
+        membershipLabel,
     }: {
         teamName: string;
         teamRole: string;
@@ -18,16 +19,32 @@
         projectName: string;
         projectTrack: string;
         projectStatus: string;
-        nextAction: string;
-        nextActionHref: string;
-        deadline: string;
+        /**
+         * The one thing to do next. Both are unset by the overview page: no
+         * participant mutation exists yet, so every candidate action ("Set
+         * Preferences", "Propose a Project") could only link to an anchor that
+         * goes nowhere. The column is hidden until there is a real destination.
+         */
+        nextAction?: string;
+        nextActionHref?: string;
+        /**
+         * TODO(backend: proposal-deadlines): unset by the overview page. Nothing
+         * in the API says when proposals close — deadlines live in phases, and
+         * which phase gates which action is not expressed anywhere yet. The card
+         * omits the line rather than inventing "Closes in 12 days".
+         */
+        deadline?: string;
+        /** "Registered" or "Waitlisted", from the viewer's own membership row. */
+        membershipLabel: string;
     } = $props();
 </script>
 
 <div class="card preset-outlined-surface-200-800 p-5">
     <div class="mb-4 flex items-center justify-between">
         <h2 class="text-base font-bold">Your Participation</h2>
-        <span class="badge preset-filled-primary-500 text-xs font-bold">REGISTERED</span>
+        <span class="badge preset-filled-primary-500 text-xs font-bold uppercase">
+            {membershipLabel}
+        </span>
     </div>
 
     <div class="flex flex-col gap-6 md:flex-row md:gap-8">
@@ -49,18 +66,22 @@
             <span class="text-xs text-surface-500">Status: {projectStatus}</span>
         </div>
 
-        <div
-            class="flex flex-col gap-2 border-t border-surface-200-800 pt-4 md:min-w-[10rem] md:items-end
-                   md:border-0 md:pt-0"
-        >
-            <span class="text-xs font-bold tracking-widest text-surface-500">NEXT STEP</span>
-            <!-- eslint-disable svelte/no-navigation-without-resolve -- demo placeholder href -->
-            <a href={nextActionHref} class="btn btn-sm w-full preset-filled-primary-500 no-underline md:w-auto">
-                <ArrowRight class="h-3.5 w-3.5" />
-                {nextAction}
-            </a>
-            <!-- eslint-enable svelte/no-navigation-without-resolve -->
-            <span class="text-xs text-warning-500 md:text-end">{deadline}</span>
-        </div>
+        {#if nextAction && nextActionHref}
+            <div
+                class="flex flex-col gap-2 border-t border-surface-200-800 pt-4 md:min-w-[10rem] md:items-end
+                       md:border-0 md:pt-0"
+            >
+                <span class="text-xs font-bold tracking-widest text-surface-500">NEXT STEP</span>
+                <!-- eslint-disable svelte/no-navigation-without-resolve -- caller-supplied destination -->
+                <a href={nextActionHref} class="btn btn-sm w-full preset-filled-primary-500 no-underline md:w-auto">
+                    <ArrowRight class="h-3.5 w-3.5" />
+                    {nextAction}
+                </a>
+                <!-- eslint-enable svelte/no-navigation-without-resolve -->
+                {#if deadline}
+                    <span class="text-xs text-warning-500 md:text-end">{deadline}</span>
+                {/if}
+            </div>
+        {/if}
     </div>
 </div>

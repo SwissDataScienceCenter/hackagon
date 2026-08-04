@@ -14,7 +14,7 @@ export const load: LayoutServerLoad = async (event) => {
     redirect(303, `/?returnTo=${returnTo}`)
   }
 
-  const { hackathon } = requireGrpc(event.locals.grpc)
+  const { hackathon, page } = requireGrpc(event.locals.grpc)
   const participantId = event.locals.platformUser?.id
 
   // The sidebar is app-shell chrome for every authenticated route, so a backend
@@ -39,12 +39,41 @@ export const load: LayoutServerLoad = async (event) => {
     }
   }
 
+  // The sidebar lists the active hackathon's content pages, but this layout sits
+  // above my/hackathon/[id]'s own load and cannot reach its data. A shallow
+  // PageService.List is cheaper than repeating that layout's hackathon.get, and
+  // it is the authoritative source besides: hackathon.get returns pages with
+  // `visible: false` to plain members, while List filters them out server-side.
+  //
+  // Errors are swallowed for the same reason as myHackathons above — an
+  // unreadable hackathon shows an empty page list, and the nested layout is what
+  // reports the real 403/404 for the content area.
+  //
+  // Only fetched when the URL names a hackathon, so this costs nothing on the
+  // dashboard or the admin routes. The consequence: where the sidebar falls back
+  // to showing a default hackathon's nav, that hackathon's content pages are
+  // absent until you actually navigate into it. Worth it — the alternative is an
+  // extra RPC on every authenticated route to decorate chrome.
+  let hackathonPages: { id: string; title: string }[] = []
+  if (event.params.id) {
+    try {
+      const { pages } = await page.list({ hackathonId: event.params.id })
+      hackathonPages = pages.map((p) => ({ id: p.id, title: p.title }))
+    } catch (err) {
+      event.locals.logger.warn(
+        { err },
+        "LAYOUT: sidebar page list failed, rendering the nav without content pages",
+      )
+    }
+  }
+
   // Global roles come from casbin via WhoAmI, already on locals — no extra RPC.
   const roles = event.locals.platformUser?.roles ?? []
 
   return {
     session: event.locals.session,
     myHackathons,
+    hackathonPages,
     isGlobalAdmin: roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN),
     isHackathonOrganizer: roles.includes(
       GlobalRole.GLOBAL_ROLE_HACKATHON_ORGANIZER,

@@ -6,6 +6,7 @@
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
     import { statusLabel, statusBadgePreset, visibilityLabel, visibilityBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+    import { phaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -28,22 +29,15 @@
         return `${fmt(startsAt)} – ${fmt(endsAt)}`;
     }
 
-    function phaseStatus(
-        startsAt: Date | undefined,
-        endsAt: Date | undefined,
-    ): 'completed' | 'active' | 'upcoming' {
-        const now = new Date();
-        if (endsAt && endsAt < now) return 'completed';
-        if (startsAt && startsAt <= now) return 'active';
-        return 'upcoming';
-    }
-
     const hackathon = $derived(data.hackathon);
     const title = $derived(hackathon.name);
     const dates = $derived(formatDates(hackathon.startsAt, hackathon.endsAt));
     const participantCount = $derived(hackathon.members.length);
     const phases = $derived(
-        hackathon.phases.map((p) => ({ name: p.name, status: phaseStatus(p.startsAt, p.endsAt) })),
+        sortPhasesByStart(hackathon.phases).map((p) => ({
+            name: p.name,
+            status: phaseStatus(p.startsAt, p.endsAt),
+        })),
     );
 
     const heroBadges = $derived((() => {
@@ -57,29 +51,29 @@
         return chips;
     })());
 
-    /** List pages: content only (no compact hero or phase bar). */
-    const listPageSegments = new Set([
-        'participants',
-        'teams',
-        'proposals',
-        'submissions',
-        'timeline',
-        'webinars',
-        'photos',
-    ]);
-    const hideHeroAndTimeline = $derived(
-        listPageSegments.has($page.url.pathname.split('/').filter(Boolean).pop() ?? '')
-    );
+    // The hero and phase bar belong to the overview and nowhere else: every other
+    // member page carries its own heading, and repeating the hackathon's identity
+    // above it just pushes the content down.
+    //
+    // Keyed on the route id rather than the last path segment, which cannot
+    // express a route whose final segment is a parameter — /pages/[pageId] ends in
+    // a uuid, so a segment blocklist silently let the hero back in there.
+    const showHero = $derived($page.route.id?.endsWith('/overview') ?? false);
 </script>
 
-{#if !hideHeroAndTimeline}
+{#if showHero}
+    <!--
+      TODO(backend: hackathon-venue-capacity): `venue` stays empty and
+      `participantCapacity` unset — Hackathon carries neither field. The hero
+      then shows the member count with no denominator and no location line.
+      Nothing to change here once the fields land beyond passing them through.
+    -->
     <HeroCompact
         {title}
         {dates}
         venue=""
         imageUrl={hackathon.logo}
         {participantCount}
-        participantCapacity={participantCount}
         organizers={[]}
         badges={heroBadges}
     />

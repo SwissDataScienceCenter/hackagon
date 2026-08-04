@@ -5,12 +5,15 @@
         num,
         title,
         description,
+        creator,
         imageUrl,
         moreInfoHref = '#',
     }: {
         num: number;
         title: string;
         description: string;
+        /** Who proposed it. Omitted when the creator is no longer a member. */
+        creator?: string;
         imageUrl?: string;
         moreInfoHref?: string;
     } = $props();
@@ -47,6 +50,11 @@
                 {description}
             </p>
         </div>
+        {#if creator}
+            <p class="m-0 text-xs leading-snug text-surface-500">
+                Proposed by {creator}
+            </p>
+        {/if}
     </div>
 
     <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
