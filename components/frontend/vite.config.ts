@@ -23,6 +23,9 @@ export default defineConfig({
     // Cloudflare quick tunnels (see .devcontainer/README.md) proxy the dev
     // server under a random *.trycloudflare.com host.
     allowedHosts: [".trycloudflare.com"],
+    // Inotify does not cross the devcontainer bind mount on Windows hosts;
+    // without polling, edits made on the host never hot-reload.
+    watch: { usePolling: true, interval: 500 },
   },
   test: {
     // Enable Vitest's global APIs (describe, it, expect, etc.)
