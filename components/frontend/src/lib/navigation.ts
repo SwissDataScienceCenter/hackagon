@@ -7,6 +7,7 @@ import { resolve } from "$app/paths"
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
+import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
@@ -115,6 +116,15 @@ export function memberNav(
       label: "Projects",
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
+    },
+    // Directly after Projects, and nested under it in the URL, so
+    // `activeNavId`'s longest-prefix match keeps this entry lit for the whole
+    // propose-and-edit flow rather than handing the highlight back to Projects.
+    {
+      id: "member:my-projects",
+      label: "My Projects",
+      icon: ClipboardList,
+      href: resolve(`/my/hackathon/${hackathonId}/projects/mine`),
     },
     {
       id: "member:teams",

@@ -32,4 +32,12 @@ describe("createAuthorizedGrpc", () => {
     expect(typeof result.page.list).toBe("function")
     expect(typeof result.page.get).toBe("function")
   })
+
+  // Reads still come from `hackathon.get`; this client exists for the writes.
+  it("should return a project client with the write path on it", () => {
+    const result = createAuthorizedGrpc("test-token-123")
+
+    expect(typeof result.project.propose).toBe("function")
+    expect(typeof result.project.edit).toBe("function")
+  })
 })

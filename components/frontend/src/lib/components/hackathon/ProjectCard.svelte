@@ -8,6 +8,10 @@
         creator,
         imageUrl,
         moreInfoHref = '#',
+        moreInfoLabel = 'More Info',
+        badge,
+        badgePreset = 'preset-tonal-surface',
+        meta,
     }: {
         num: number;
         title: string;
@@ -16,6 +20,14 @@
         creator?: string;
         imageUrl?: string;
         moreInfoHref?: string;
+        /** CTA text. The card is a row first and a "More Info" link second. */
+        moreInfoLabel?: string;
+        /** Generic chip text — kept a plain string so the card is not tied to
+         *  any one vocabulary. My Projects passes a status, others may not. */
+        badge?: string;
+        badgePreset?: string;
+        /** Extra line under the description, e.g. the track. */
+        meta?: string;
     } = $props();
 </script>
 
@@ -42,9 +54,16 @@
     {/if}
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-        <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
-            {num}. {title}
-        </h3>
+        <div class="flex flex-wrap items-center gap-2">
+            <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
+                {num}. {title}
+            </h3>
+            {#if badge}
+                <span class="badge {badgePreset} shrink-0 rounded-none text-[0.625rem] font-semibold uppercase">
+                    {badge}
+                </span>
+            {/if}
+        </div>
         <div class="block w-2/3 min-w-0">
             <p class="m-0 text-xs leading-snug text-surface-600-400">
                 {description}
@@ -55,10 +74,13 @@
                 Proposed by {creator}
             </p>
         {/if}
+        {#if meta}
+            <p class="m-0 text-xs leading-snug text-surface-500">{meta}</p>
+        {/if}
     </div>
 
     <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
     <a href={resolve(moreInfoHref as any)} class="btn btn-sm preset-tonal-surface">
-        More Info
+        {moreInfoLabel}
     </a>
 </div>
