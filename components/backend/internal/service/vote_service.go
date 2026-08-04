@@ -371,14 +371,18 @@ func (s *VoteService) SubmitVote(
 	if err != nil {
 		return nil, err
 	}
+	if uid == m.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
 
 	sc := req.GetSingleChoice()
 	if sc == nil {
 		// The Vote schema stores one row per (category, voter); ranked and
 		// points ballots need multiple rows and cannot be persisted until the
-		// schema decision lands (see #78 review).
-		return nil, status.Error(codes.Unimplemented,
-			"only single_choice ballots are supported for now")
+		// schema decision lands (see #78 review). NOT Unimplemented — the
+		// capability probe reads that code as "RPC does not exist".
+		return nil, status.Error(codes.InvalidArgument,
+			"only single_choice ballots are accepted for now")
 	}
 	categoryID, err := uuid.Parse(sc.GetCategoryId())
 	if err != nil {
