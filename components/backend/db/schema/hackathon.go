@@ -70,6 +70,8 @@ func (Hackathon) Edges() []ent.Edge {
 			Comment("Users who are participating or waitlisted."),
 		edge.To("pages", Page.Type).
 			Comment("Content pages associated with this hackathon."),
+		edge.To("invites", HackathonInvite.Type).
+			Comment("Shareable invitation links granting visibility of this hackathon."),
 		edge.To("phases", Phase.Type).
 			Comment("Temporal phases (e.g. ideation, hacking, judging)."),
 		edge.To("capabilities", Capability.Type).

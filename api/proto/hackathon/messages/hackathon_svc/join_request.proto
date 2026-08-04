@@ -6,4 +6,8 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message JoinRequest {
   string hackathon_id = 1;
+  // Required to join a PRIVATE hackathon: the secret from the invitation link.
+  // Public hackathons ignore it. Without this a private event was joinable by
+  // anyone who knew its UUID.
+  optional string invite_token = 2;
 }

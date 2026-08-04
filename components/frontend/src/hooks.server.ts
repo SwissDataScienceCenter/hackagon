@@ -31,6 +31,9 @@ let configLoader: ConfigLoader
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/hackathon(\/|$)/,
+  // Invitation links must open for someone who is not signed in yet — the
+  // token in the URL is the credential, and they sign in from that page.
+  /^\/invite(\/|$)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// A revocable, shareable invitation link for a private hackathon.
+// Organizer-facing: `token` is the secret in the URL, so this message is only
+// ever returned to callers who may write the hackathon.
+message HackathonInvite {
+  string id = 1;
+  string token = 2;
+  string hackathon_id = 3;
+  string note = 4;
+  google.protobuf.Timestamp created_at = 5;
+  // Absent while the link still works.
+  optional google.protobuf.Timestamp revoked_at = 6;
+  string creator_id = 7;
+}

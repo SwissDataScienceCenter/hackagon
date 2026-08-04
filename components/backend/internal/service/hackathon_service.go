@@ -323,6 +323,19 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
+	// A private hackathon is joinable only with a live invitation link.
+	// Without this, privacy was discovery-only: anyone who learned the UUID
+	// could join outright.
+	//
+	// Checked BEFORE any state check below: answering "already finished" to a
+	// caller holding nothing but a guessed UUID would confirm both that the
+	// private event exists and what state it is in.
+	if h.Visibility != enthackathon.VisibilityPublic {
+		if err := s.requireLiveInvite(ctx, id, req.GetInviteToken()); err != nil {
+			return nil, err
+		}
+	}
+
 	// EndsAt is Optional().Nillable(): an undated hackathon has no end, so it
 	// never counts as finished — same rule computeHackathonStatus applies when
 	// it only reports FINISHED for a non-nil end date.

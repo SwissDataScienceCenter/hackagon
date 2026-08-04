@@ -90,6 +90,9 @@
 - [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
     - [Hackathon](#hackathon-entities-Hackathon)
   
+- [hackathon/entities/hackathon_invite.proto](#hackathon_entities_hackathon_invite-proto)
+    - [HackathonInvite](#hackathon-entities-HackathonInvite)
+  
 - [hackathon/entities/prize.proto](#hackathon_entities_prize-proto)
     - [Award](#hackathon-entities-Award)
     - [Prize](#hackathon-entities-Prize)
@@ -159,6 +162,30 @@
   
 - [hackathon/messages/hackathon_svc/get_response.proto](#hackathon_messages_hackathon_svc_get_response-proto)
     - [GetResponse](#hackathon-messages-hackathon_svc-GetResponse)
+  
+- [hackathon/messages/hackathon_svc/create_invite_request.proto](#hackathon_messages_hackathon_svc_create_invite_request-proto)
+    - [CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/create_invite_response.proto](#hackathon_messages_hackathon_svc_create_invite_response-proto)
+    - [CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse)
+  
+- [hackathon/messages/hackathon_svc/list_invites_request.proto](#hackathon_messages_hackathon_svc_list_invites_request-proto)
+    - [ListInvitesRequest](#hackathon-messages-hackathon_svc-ListInvitesRequest)
+  
+- [hackathon/messages/hackathon_svc/list_invites_response.proto](#hackathon_messages_hackathon_svc_list_invites_response-proto)
+    - [ListInvitesResponse](#hackathon-messages-hackathon_svc-ListInvitesResponse)
+  
+- [hackathon/messages/hackathon_svc/preview_invite_request.proto](#hackathon_messages_hackathon_svc_preview_invite_request-proto)
+    - [PreviewInviteRequest](#hackathon-messages-hackathon_svc-PreviewInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/preview_invite_response.proto](#hackathon_messages_hackathon_svc_preview_invite_response-proto)
+    - [PreviewInviteResponse](#hackathon-messages-hackathon_svc-PreviewInviteResponse)
+  
+- [hackathon/messages/hackathon_svc/revoke_invite_request.proto](#hackathon_messages_hackathon_svc_revoke_invite_request-proto)
+    - [RevokeInviteRequest](#hackathon-messages-hackathon_svc-RevokeInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/revoke_invite_response.proto](#hackathon_messages_hackathon_svc_revoke_invite_response-proto)
+    - [RevokeInviteResponse](#hackathon-messages-hackathon_svc-RevokeInviteResponse)
   
 - [hackathon/messages/hackathon_svc/join_request.proto](#hackathon_messages_hackathon_svc_join_request-proto)
     - [JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest)
@@ -1695,6 +1722,45 @@ Will become caller-dependent, so clients must not cache it across users. |
 
 
 
+<a name="hackathon_entities_hackathon_invite-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_invite.proto
+
+
+
+<a name="hackathon-entities-HackathonInvite"></a>
+
+### HackathonInvite
+A revocable, shareable invitation link for a private hackathon.
+Organizer-facing: `token` is the secret in the URL, so this message is only
+ever returned to callers who may write the hackathon.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| token | [string](#string) |  |  |
+| hackathon_id | [string](#string) |  |  |
+| note | [string](#string) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| revoked_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional | Absent while the link still works. |
+| creator_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_prize-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2462,6 +2528,254 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 
 
 
+<a name="hackathon_messages_hackathon_svc_create_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateInviteRequest"></a>
+
+### CreateInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| note | [string](#string) | optional | Optional organizer-facing reminder of who the link was sent to. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_create_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateInviteResponse"></a>
+
+### CreateInviteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invite | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_invites_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_invites_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListInvitesRequest"></a>
+
+### ListInvitesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| include_revoked | [bool](#bool) | optional | Revoked links are hidden unless asked for. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_invites_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_invites_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListInvitesResponse"></a>
+
+### ListInvitesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invites | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_preview_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/preview_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-PreviewInviteRequest"></a>
+
+### PreviewInviteRequest
+Redeeming side of an invite: exchanges the link secret for enough of the
+hackathon to render its page. Deliberately takes ONLY the token, so it never
+confirms whether a given hackathon id exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| token | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_preview_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/preview_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-PreviewInviteResponse"></a>
+
+### PreviewInviteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) |  | Shallow entity only — the invite grants visibility, not membership. |
+| already_participant | [bool](#bool) |  | True when the caller is already on this hackathon&#39;s roster. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_revoke_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/revoke_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RevokeInviteRequest"></a>
+
+### RevokeInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invite_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_revoke_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/revoke_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RevokeInviteResponse"></a>
+
+### RevokeInviteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_join_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2478,6 +2792,7 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+| invite_token | [string](#string) | optional | Required to join a PRIVATE hackathon: the secret from the invitation link. Public hackathons ignore it. Without this a private event was joinable by anyone who knew its UUID. |
 
 
 
@@ -2823,6 +3138,10 @@ for another registrant (walk-ins at the check-in desk).
 | SubmitRegistrationForm | [messages.hackathon_svc.SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest) | [messages.hackathon_svc.SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse) |  |
 | AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
 | RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
+| CreateInvite | [messages.hackathon_svc.CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest) | [messages.hackathon_svc.CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse) | --- Invitations: private-hackathon access, see HackathonInvite --- |
+| ListInvites | [messages.hackathon_svc.ListInvitesRequest](#hackathon-messages-hackathon_svc-ListInvitesRequest) | [messages.hackathon_svc.ListInvitesResponse](#hackathon-messages-hackathon_svc-ListInvitesResponse) |  |
+| RevokeInvite | [messages.hackathon_svc.RevokeInviteRequest](#hackathon-messages-hackathon_svc-RevokeInviteRequest) | [messages.hackathon_svc.RevokeInviteResponse](#hackathon-messages-hackathon_svc-RevokeInviteResponse) |  |
+| PreviewInvite | [messages.hackathon_svc.PreviewInviteRequest](#hackathon-messages-hackathon_svc-PreviewInviteRequest) | [messages.hackathon_svc.PreviewInviteResponse](#hackathon-messages-hackathon_svc-PreviewInviteResponse) | Redemption side: token in, shallow hackathon out. No hackathon id needed. |
 
  
 

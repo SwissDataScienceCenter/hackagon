@@ -77,6 +77,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `projects` | Project | O2M | no | no | Projects submitted to this hackathon. |
 | `participating_users` | User | M2M | yes | no | Users who are participating or waitlisted. |
 | `pages` | Page | O2M | no | no | Content pages associated with this hackathon. |
+| `invites` | HackathonInvite | O2M | no | no | Shareable invitation links granting visibility of this hackathon. |
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `capabilities` | Capability | O2M | no | no | Which member-facing actions are available on this hackathon. |
 | `current_phase` | Phase | M2O | yes | no | Set by AdvancePhase; SET NULL so deleting a phase does not orphan it. |
@@ -118,6 +119,30 @@ Organizer-defined form schemas and voting policy for a hackathon. Schemas are st
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | O2O | yes | yes | The hackathon these forms belong to. |
 | `modifier` | User | M2O | yes | yes | The user who last modified these forms. |
+
+## HackathonInvite
+
+A revocable, shareable invitation link granting visibility of a private hackathon.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `token` | uuid.UUID | yes | yes | yes | yes | The secret in the invite URL. Generated server-side; never derived from the hackathon id. |
+| `note` | string | no | no | no | no | Free-text reminder of who the link was sent to; organizer-facing only. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the invite was generated. |
+| `revoked_at` | time.Time | no | no | no | no | When set, the link stops working. Revoking is preferred over deletion so the audit trail survives. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this invite grants visibility of. |
+| `creator` | User | M2O | yes | yes | The organizer or admin who generated the link. |
+
+### Indexes
+
+- `token` *(unique)*
 
 ## HackathonPrizes
 
@@ -455,6 +480,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_teams` | Team | O2M | no | no | Teams this user last modified. |
 | `created_pages` | Page | O2M | no | no | Content pages this user created. |
 | `modified_pages` | Page | O2M | no | no | Content pages this user last modified. |
+| `created_invites` | HackathonInvite | O2M | no | no | Hackathon invitation links this user generated. |
 | `created_site_pages` | SitePage | O2M | no | no | Platform pages this user created. |
 | `modified_site_pages` | SitePage | O2M | no | no | Platform pages this user last modified. |
 | `created_phases` | Phase | O2M | no | no | Phases this user created. |

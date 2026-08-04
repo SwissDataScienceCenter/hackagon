@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+import "hackathon/entities/hackathon.proto";
+
+message PreviewInviteResponse {
+  // Shallow entity only — the invite grants visibility, not membership.
+  hackathon.entities.Hackathon hackathon = 1;
+  // True when the caller is already on this hackathon's roster.
+  bool already_participant = 2;
+}

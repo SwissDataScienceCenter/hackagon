@@ -20,6 +20,14 @@ import "hackathon/messages/hackathon_svc/edit_settings_request.proto";
 import "hackathon/messages/hackathon_svc/edit_settings_response.proto";
 import "hackathon/messages/hackathon_svc/get_request.proto";
 import "hackathon/messages/hackathon_svc/get_response.proto";
+import "hackathon/messages/hackathon_svc/create_invite_request.proto";
+import "hackathon/messages/hackathon_svc/create_invite_response.proto";
+import "hackathon/messages/hackathon_svc/list_invites_request.proto";
+import "hackathon/messages/hackathon_svc/list_invites_response.proto";
+import "hackathon/messages/hackathon_svc/preview_invite_request.proto";
+import "hackathon/messages/hackathon_svc/preview_invite_response.proto";
+import "hackathon/messages/hackathon_svc/revoke_invite_request.proto";
+import "hackathon/messages/hackathon_svc/revoke_invite_response.proto";
 import "hackathon/messages/hackathon_svc/join_request.proto";
 import "hackathon/messages/hackathon_svc/join_response.proto";
 import "hackathon/messages/hackathon_svc/list_request.proto";
@@ -48,4 +56,10 @@ service HackathonService {
   rpc SubmitRegistrationForm(hackathon.messages.hackathon_svc.SubmitRegistrationFormRequest) returns (hackathon.messages.hackathon_svc.SubmitRegistrationFormResponse);
   rpc AddOwner(hackathon.messages.hackathon_svc.AddOwnerRequest) returns (hackathon.messages.hackathon_svc.AddOwnerResponse);
   rpc RemoveOwner(hackathon.messages.hackathon_svc.RemoveOwnerRequest) returns (hackathon.messages.hackathon_svc.RemoveOwnerResponse);
+  // --- Invitations: private-hackathon access, see HackathonInvite ---
+  rpc CreateInvite(hackathon.messages.hackathon_svc.CreateInviteRequest) returns (hackathon.messages.hackathon_svc.CreateInviteResponse);
+  rpc ListInvites(hackathon.messages.hackathon_svc.ListInvitesRequest) returns (hackathon.messages.hackathon_svc.ListInvitesResponse);
+  rpc RevokeInvite(hackathon.messages.hackathon_svc.RevokeInviteRequest) returns (hackathon.messages.hackathon_svc.RevokeInviteResponse);
+  // Redemption side: token in, shallow hackathon out. No hackathon id needed.
+  rpc PreviewInvite(hackathon.messages.hackathon_svc.PreviewInviteRequest) returns (hackathon.messages.hackathon_svc.PreviewInviteResponse);
 }
