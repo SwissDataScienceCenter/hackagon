@@ -8,7 +8,7 @@
     let { data }: { data: PageData } = $props();
 
     const countLabel = $derived(
-        data.projects.length === 1 ? '1 project' : `${data.projects.length} projects`
+        data.projects.length === 1 ? '1 proposal' : `${data.projects.length} proposals`
     );
 </script>
 
@@ -18,8 +18,8 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">My Projects</h2>
-            <span class="text-xs text-surface-500">{countLabel}</span>
+            <h2 class="m-0 text-lg font-bold text-surface-950-50">Proposals</h2>
+            <span class="text-xs text-surface-500">{countLabel} awaiting review</span>
         </div>
         <a
             href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine/propose`)}
@@ -38,7 +38,16 @@
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.projects.length === 0}
             <p class="m-0 py-6 text-center text-sm text-surface-500">
-                You haven't proposed a project yet.
+                {#if data.approvedCount > 0}
+                    <!-- Approved proposals leave this page, so an author whose
+                         proposals all landed would otherwise be told they had
+                         never proposed anything. -->
+                    Nothing awaiting review — all {data.approvedCount === 1
+                        ? 'your proposal has'
+                        : `${data.approvedCount} of your proposals have`} been approved.
+                {:else}
+                    You haven't proposed a project yet.
+                {/if}
             </p>
         {:else}
             {#each data.projects as project (project.id)}

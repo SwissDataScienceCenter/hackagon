@@ -249,8 +249,8 @@ describe("memberNav", () => {
     expect(ids()).toEqual([
       "member:overview",
       "member:participants",
-      "member:projects",
       "member:my-projects",
+      "member:projects",
       "member:teams",
       "member:submissions",
       "member:timeline",
@@ -261,8 +261,8 @@ describe("memberNav", () => {
     expect(ids([{ id: "p1", title: "Welcome" }])).toEqual([
       "member:overview",
       "member:participants",
-      "member:projects",
       "member:my-projects",
+      "member:projects",
       "member:teams",
       "member:submissions",
       "member:timeline",
@@ -270,10 +270,10 @@ describe("memberNav", () => {
     ])
   })
 
-  // My Projects sits under /projects/mine so that `activeNavId`'s longest-prefix
+  // Proposals sits under /projects/mine so that `activeNavId`'s longest-prefix
   // match keeps it lit for its own sub-routes — propose and edit — instead of
   // handing the highlight to Projects. That only holds while the nesting does.
-  it("nests My Projects under Projects so the deeper entry wins the highlight", () => {
+  it("nests Proposals under All Projects so the deeper entry wins the highlight", () => {
     const items = memberNav("hack-1")
     const projects = items.find((i) => i.id === "member:projects")
     const mine = items.find((i) => i.id === "member:my-projects")

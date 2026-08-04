@@ -10,7 +10,7 @@ import { ClientError, Status } from "nice-grpc-common"
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // project at every status, plus the tracks and the members that name the
-  // proposer. Same source the list, My Projects and the review queue read.
+  // proposer. Same source All Projects and Proposals read.
   const { hackathon, myMembership } = await event.parent()
 
   const project = hackathon.projects.find(
@@ -34,8 +34,8 @@ export const load: PageServerLoad = async (event) => {
   const mayReview = isHackathonOwner || isAdmin
 
   // A proposal awaiting a decision is its author's business and the reviewer's,
-  // not something to browse. This mirrors the Projects list, which shows
-  // approved projects only.
+  // not something to browse. This mirrors All Projects, which lists proposals
+  // only for a reviewer, and Proposals, which lists only the viewer's own.
   //
   // Frontend-only, and deliberately so: `ProjectService.Get` grants
   // `project:read` to any member of the hackathon whatever the project's

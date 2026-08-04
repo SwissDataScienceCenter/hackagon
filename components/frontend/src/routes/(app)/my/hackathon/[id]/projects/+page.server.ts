@@ -25,7 +25,7 @@ export const load: PageServerLoad = async (event) => {
 
   // A reviewer sees proposals too — that is the whole point of deciding from
   // this page. Everyone else sees approved projects only: a proposal awaiting a
-  // decision is its author's business, and My Projects is where they follow it.
+  // decision is its author's business, and Proposals is where they follow it.
   //
   // Frontend-only. `hackathon.get` returns every project whatever the caller's
   // role, so this shapes the page rather than enforcing anything; a member

@@ -71,7 +71,7 @@ export const actions: Actions = {
       throw e
     }
 
-    // My Projects rather than Projects: the new project is `Proposed`, and the
+    // Proposals rather than All Projects: the new project is `Proposed`, and the
     // Projects page shows approved ones only — landing there would look like
     // the proposal vanished.
     redirect(303, resolve(`/my/hackathon/${event.params.id}/projects/mine`))

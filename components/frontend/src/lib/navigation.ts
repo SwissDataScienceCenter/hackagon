@@ -111,23 +111,28 @@ export function memberNav(
       icon: Users,
       href: resolve(`/my/hackathon/${hackathonId}/participants`),
     },
-    // "All Projects" against "My Projects" below: the pair reads as a scope
-    // choice, which is what it is. What "all" covers depends on the viewer —
-    // every project for a reviewer, the approved ones for everyone else.
+    // Proposals before All Projects: proposing is what a member does first, and
+    // the pair reads as a lifecycle — what you have put forward, then what the
+    // hackathon has taken on.
+    //
+    // Order is presentation only. `activeNavId` scans every item and keeps the
+    // longest matching href, so this entry stays lit across its own sub-routes
+    // (propose, edit) wherever it sits in the list; what matters is that
+    // `projects/mine` is nested under `projects` in the URL, not that the two
+    // are adjacent.
+    {
+      id: "member:my-projects",
+      label: "Proposals",
+      icon: ClipboardList,
+      href: resolve(`/my/hackathon/${hackathonId}/projects/mine`),
+    },
+    // What "all" covers depends on the viewer — every project for a reviewer,
+    // the approved ones for everyone else.
     {
       id: "member:projects",
       label: "All Projects",
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
-    },
-    // Directly after All Projects, and nested under it in the URL, so
-    // `activeNavId`'s longest-prefix match keeps this entry lit for the whole
-    // propose-and-edit flow rather than handing the highlight back to it.
-    {
-      id: "member:my-projects",
-      label: "My Projects",
-      icon: ClipboardList,
-      href: resolve(`/my/hackathon/${hackathonId}/projects/mine`),
     },
     {
       id: "member:teams",

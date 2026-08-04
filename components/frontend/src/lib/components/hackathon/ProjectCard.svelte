@@ -25,7 +25,7 @@
         /** CTA text. The card is a row first and a "More Info" link second. */
         moreInfoLabel?: string;
         /** Generic chip text — kept a plain string so the card is not tied to
-         *  any one vocabulary. My Projects passes a status, others may not. */
+         *  any one vocabulary. Proposals passes a status, others may not. */
         badge?: string;
         badgePreset?: string;
         /** Extra line under the description, e.g. the track. */

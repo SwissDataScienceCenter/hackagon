@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { Plus } from 'lucide-svelte';
-    import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import { projectStatusLabel, projectStatusBadgePreset } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
@@ -32,23 +30,14 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">All Projects</h2>
-            <span class="text-xs text-surface-500">
-                {countLabel}{#if data.mayReview && pendingCount > 0}
-                    &middot; {pendingCount} awaiting review{/if}
-            </span>
-        </div>
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine/propose`)}
-            class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                   rounded-none px-3 text-center text-xs font-semibold no-underline
-                   sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
-        >
-            <Plus class="h-3.5 w-3.5 shrink-0" />
-            Propose a Project
-        </a>
+    <!-- No propose CTA here: proposing belongs to Proposals, which is the page
+         that then tracks what you put forward. One entry point, not two. -->
+    <div class="flex min-w-0 flex-col gap-1">
+        <h2 class="m-0 text-lg font-bold text-surface-950-50">All Projects</h2>
+        <span class="text-xs text-surface-500">
+            {countLabel}{#if data.mayReview && pendingCount > 0}
+                &middot; {pendingCount} awaiting review{/if}
+        </span>
     </div>
 
     {#if form?.message}
