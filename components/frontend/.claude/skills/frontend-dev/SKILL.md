@@ -109,7 +109,7 @@ Run inside the Nix dev shell (`direnv allow` / `just dev` at repo root):
 - `just format` → Prettier.
 - `just build` → production build via `adapter-node`.
 
-Note: the `run-hackagon` stack already serves the frontend on :8081 via
+Note: `just start` (repo root) already serves the frontend on :8081 via
 process-compose, so `just serve` will clash on the port if the stack is up —
 either use the running instance or `just down` first.
 
@@ -137,9 +137,15 @@ Lint/build/test a single component the same way CI does, e.g.
 
 ## Verify UI changes
 
-Public routes: screenshot with the run skill —
-`.claude/skills/run-hackagon/shot.sh /` or `shot.sh /hackathon/<id> out.png` —
-then **look at the PNG**. Auth-gated `(app)` pages can't be screenshotted
-headlessly (Keycloak redirect); log in interactively as `alice`/`aliceandbob` at
-http://localhost:8081, or verify the underlying data with `just rpc::as`. See
-the `run-hackagon` skill for the full loop.
+Bring the stack up with `just start` from the repo root, then open
+http://localhost:8081.
+
+Auth-gated `(app)` pages can't be screenshotted headlessly — Keycloak redirects
+— so either log in interactively as `alice`/`aliceandbob`, or verify the
+underlying data directly with `just rpc::as alice aliceandbob <svc>/<method>`.
+Public routes (`/`, `/hackathon/[id]`) render without a session and can be
+captured with whatever headless tool you have; if you take a screenshot, **look
+at the PNG** rather than assuming it rendered.
+
+If a mutation comes back `PERMISSION_DENIED`, it is very likely capability
+configuration rather than your UI — see the frontend-backend-wiring skill.

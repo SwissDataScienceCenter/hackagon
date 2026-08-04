@@ -24,17 +24,21 @@ api/proto/
 │   └── messages/<svc>_svc/       # verbs (request/response payloads)
 │       └── *_request/response.proto   # one message per file
 components/backend/
-├── cmd/service/main.go           # starts the gRPC server, registers services
+├── cmd/service/main.go           # entrypoint: config, migrate, service.NewServer
 ├── cmd/seed/main.go              # populates DB with dev data (README inside)
 ├── db/schema/*.go                # DB schema (source of truth — hand-written)
 ├── ent/**                        # generated ORM code (do not edit)
+├── internal/service/server.go    # builds the gRPC server, REGISTERS all services
 ├── internal/service/*.go         # gRPC handlers (one file per service)
 ├── internal/middleware/rbac.go   # casbin enforcer
 ├── internal/logx/logx.go         # slog setup + Fatal helper
 └── Schema.md                     # human-readable DB reference (auto-generated)
 components/frontend/              # SvelteKit; generated gRPC clients under src/lib/server/grpc/generated/
+└── .claude/skills/               # frontend-dev, frontend-backend-wiring (read these first)
+mydocs/docs/backend-tickets/      # known gaps, one file per issue (README inside)
 tools/nix/                        # Nix flake + process-compose config (toolchain.nix)
-justfile                          # all common dev commands
+tools/just/*.just                 # just modules — see Dev commands
+justfile                          # root justfile, imports the modules above
 ```
 
 The `_svc` suffix in proto folder paths is a buf workaround for path-segment
@@ -43,15 +47,36 @@ name collisions (buf rejects `hackathon/messages/hackathon/`); `_svc` means
 
 ## Dev commands
 
+Recipes are **namespaced modules** (`tools/just/*.just`), addressed with `::`.
+`just --list` for the full set; each module has a `help` recipe.
+
 ```bash
-just up                 # start keycloak + postgres + backend via process-compose
+just start              # sync deps + start the whole stack, then attach
 just down               # stop everything
-just refresh            # wipe state + regen ent + regen proto + tidy + install deps
-just seed               # populate dev hackathons, users, projects (see cmd/seed/README.md)
-just generate-proto     # buf generate — wipes codegen dirs first (prevents stale shadowing)
-just generate-db-schema # ent codegen + Schema.md
-just rpc-as <user> <password> <method> [json]   # authed grpcurl
-just rpc-unauth <method> [json]                 # unauthed grpcurl (health)
+just api-change         # regen proto stubs, then start   (after *.proto edits)
+just schema-change      # regen ent + Schema.md, then start (after db/schema edits)
+just changes [ref]      # classify a diff and tell you which of the three to run
+
+just codegen::proto     # buf generate — wipes codegen dirs first (prevents stale shadowing)
+just codegen::db-schema # ent codegen + Schema.md
+just db::seed           # populate dev hackathons, users, projects (see cmd/seed/README.md)
+just db::psql / db::summary
+just clean::state       # wipe postgres + keycloak state
+
+just rpc::as <user> <password> <method> [json]  # authed grpcurl
+just rpc::unauth <method> [json]                # unauthed grpcurl (health)
+
+just check::lint -c backend     # also: build, test, format; -c frontend
+just ci::all                    # everything CI runs, locally
+```
+
+Formatting authority is `treefmt`, not any single component's formatter — CI
+runs it with `--fail-on-change` over the whole tree, markdown and this file
+included:
+
+```bash
+nix run ./tools/nix#treefmt -- <path>        # write
+nix run ./tools/nix#treefmt -- <path> --ci   # check (0 = clean)
 ```
 
 Dev users (Keycloak password for all is `aliceandbob`): `hackagon-admin` (global
@@ -59,20 +84,23 @@ admin), `alice` (organizer), `bob`, `charles`.
 
 ## Service implementation pattern
 
-Read path contracts and entities already exist (`Get`, `List` protos are shaped
-for every service). Handlers are what's missing. To add a service:
+All seven services are implemented (see Current state); this is the pattern to
+match when adding an RPC or a new service:
 
 1. Create `components/backend/internal/service/<name>_service.go` following
    `user_service.go`:
-   - `NewXService(db, enf)` constructor
-   - per-RPC `enforcer.Enforce(ctx, hackathonID, object, perm)` check (skip for
-     public reads; see RBAC below)
+   - `NewXService(dbClient *ent.Client, enf *mw.Enforcer) *XService` constructor
+   - per-RPC permission check — prefer
+     `s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Object, mw.Perm)`,
+     which returns the gRPC error directly; raw `Enforce` only when you need the
+     bool. Skip for public reads; see RBAC below.
    - ent query with `With*()` for eager-loading relations in `Get`
    - a private `entryFromEnt(*ent.X) *ents.X` mapper (shared across List/Get —
      server decides depth)
-2. Register in `cmd/service/main.go`:
-   `x.RegisterXServiceServer(server, xService)`.
-3. `just up` → `just rpc-as alice aliceandbob x.XService/List` to verify
+2. Register in `internal/service/server.go` (**not** `cmd/service/main.go` —
+   `main.go` just calls `service.NewServer`):
+   `hackathonSvc.RegisterXServiceServer(server, xService)`.
+3. `just start` → `just rpc::as alice aliceandbob x.XService/List` to verify
    end-to-end.
 
 Ent-to-proto mappers:
@@ -103,15 +131,18 @@ Ent-to-proto mappers:
   `HackathonStatus`) stay post-query. For optional enum filters, `UNSPECIFIED`
   means "no filter". See `hackathon_service.go:List` for the pattern.
 
-**Write path** — decide once when first write handler lands, then match across
-services:
+**Write path** — settled; the handlers have landed and these held:
 
 - `Edit*Request`: every field `optional` (no FieldMask).
-- `Create`/`Add`/`Propose`: return `{id}` only.
+- `Create`/`Propose`: return `{id}` only (`hackathon_id`, `team_id`, `phase_id`,
+  `track_id`, `page_id`, `project_id`).
 - `Edit`: return the updated entity.
 - `Delete`: return `{}`.
-- `Add*`/`Remove*` on a relation (e.g. `AssignUser`, `AddOwner`): return the
-  mutated parent. Precedent: `AddRole` returns the user.
+- `Add*`/`Remove*` on a relation (`AssignUser`, `RemoveUser`,
+  `ApproveParticipant`, `RemoveParticipant`, `AddOwner`, `RemoveOwner`,
+  `Approve`, `Disapprove`): return **`{}`**. The caller re-reads the parent.
+  `UserService.AddRole` returning the user is the lone exception, not the rule.
+- `SetCapabilities` / `SetCurrentPhase`: return the updated `HackathonState`.
 
 ## RBAC (casbin)
 
@@ -135,9 +166,13 @@ Role hierarchy:
 - Per-hackathon roles (`g`): `Owner`, `Member`, scoped to a hackathon UUID.
 - Global roles (`g2`): `Admin`, `HackathonOrganizer`.
 - Admin always passes via the `g2(r.sub, "admin")` escape hatch in the matcher.
-- Role-granting code doesn't exist yet — `enforcer.AddRole` is wired up but no
-  handler calls it. Until write-path handlers land, only the `hackagon-admin`
-  user has non-zero roles.
+- **There is no role inheritance.** `Owner` does not imply `Member`. A policy
+  granted to `Member` refuses an `Owner` who holds no `Member` row — this is a
+  live source of surprising `PermissionDenied`s, not a theoretical concern.
+- Roles are granted by: `HackathonService.Create` (`Owner`),
+  `HackathonService.Join` (`Member`), `ProjectService.Propose` (`Owner`, scoped
+  to the project), `TeamService.AssignUser` (`Member`, scoped to the team), and
+  `UserService.AddRole`/`RemoveRole` (global roles).
 
 **Auth middleware** (implemented in `middleware/auth.go`): a single interceptor
 runs for all endpoints.
@@ -161,37 +196,71 @@ health endpoint works because it never reads claims at all.
   filtered by casbin `Enforce` check (anonymous callers always fail, so they
   only see public ones).
 
-For read endpoints during bootstrap, it's fine to skip casbin entirely and rely
-on JWT alone — add a `// TODO: casbin check once role-granting RPCs exist`
-comment.
+## Phases and capabilities
 
-## Priority order (from coworker)
+Two mechanisms that share a vocabulary and are **not** wired to each other. Read
+this before touching either — the naming strongly implies a link that isn't
+there.
 
-Read path (Get/List) for every listed service, then mutations, then voting:
+`Capability` (`api/proto/hackathon/entities/capability.proto`) enumerates six
+participant-facing actions: `REGISTER`, `PROPOSE_PROJECTS`,
+`SET_TEAM_PREFERENCES`, `CREATE_PROJECT_SUBMISSIONS`, `VOTE`, `VIEW_RESULTS`.
 
-1. `UserService` — already implemented (`List`, `WhoAmI`, `Register`). Needs
-   `Get`.
-2. `HackathonService` — `List` and `Get` implemented. Next: `Create`, `Join`,
-   `ApproveParticipant`.
-3. `PageService` — full CRUD.
-4. `PhaseService` — full CRUD.
-5. `TrackService` — Get/List proto exists; Create/Edit/Delete protos don't yet.
-6. `ProjectService` — mutation protos exist (`Propose`, `Approve`, `Edit`,
-   `Delete`) but `status` is still a string — convert to `ProjectStatus` enum.
-   Also add `SetPreference`, `ExportPreferences`.
-7. `TeamService` — Create/AssignUser exist; add Edit, Delete, RemoveUser,
-   CreateSubmission, FinalizeSubmission.
-8. `VoteService` — only if DB has `Vote`/`VoteCategory` tables (currently
-   doesn't). Defer until coworker returns.
+- **`HackathonState` is authoritative.** One row per hackathon, six booleans.
+  `HackathonService.SetCapabilities` is the only writer, and it does two things
+  per capability: flips the boolean **and** adds/removes the corresponding
+  casbin `p` row. That second half is what actually grants permission — a
+  handler gated on a capability is really gated on the policy row
+  `SetCapabilities` wrote. Almost every grant targets the `Member` role (see the
+  no-inheritance note in RBAC).
+- **`Phase.capabilities` is decorative.** A JSON string array on the phase row.
+  The schema comment says so outright: "Purely informational — does not
+  auto-enable or disable any capability." `SetCurrentPhase` sets
+  `current_phase_id` and nothing else; it never reads the phase's capabilities
+  and never touches state or casbin. Advancing a phase changes what the UI
+  displays, not what anyone may do.
+- **`cmd/seed` creates no `HackathonState` row at all.** So seeded hackathons
+  report no capabilities, and every capability-gated handler refuses. If a
+  mutation mysteriously returns `PermissionDenied` in seeded data, check this
+  first.
 
-## Runtime status
+Known gaps here are written up in `mydocs/docs/backend-tickets/` — start with
+`project-preferences-capability.md`, which traces the whole chain for
+`SetPreference` and documents a partial-write bug in `SetCapabilities` when the
+state row is missing.
 
-- `main.go` registers `HealthService`, `UserService`, `HackathonService`
-  (`List` + `Get` implemented). Other `hackathon.*` services
-  (Page/Phase/Project/Team/Track) have proto contracts but are UNIMPLEMENTED at
-  runtime.
+## Current state
+
+All seven services are registered in `internal/service/server.go:74-81` and
+implemented — read _and_ write path. `ProjectStatus` is already an enum.
+
+| Service     | RPCs                                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `Health`    | health check (no claims read)                                                                                                 |
+| `User`      | List, Get, WhoAmI, Register, AddRole, RemoveRole                                                                              |
+| `Hackathon` | List, Get, Create, Edit, Join, ApproveParticipant, RemoveParticipant, SetCapabilities, SetCurrentPhase                        |
+| `Page`      | List, Get, Create, Edit, Delete, MoveUp, MoveDown, SetOrder                                                                   |
+| `Phase`     | List, Get, Create, Edit, Delete                                                                                               |
+| `Track`     | List, Get, Create, Edit, Delete                                                                                               |
+| `Project`   | List, Get, Propose, Approve, Disapprove, Edit, Delete, SetPreference, GetPreference, RemovePreference, ExportPreferences      |
+| `Team`      | List, Get, Create, Edit, Delete, AssignUser, RemoveUser, CreateSubmission, GetSubmission, ListSubmissions, FinalizeSubmission |
+
+What's actually outstanding:
+
+- `VoteService` — still nothing. The DB has no `Vote`/`VoteCategory` tables, so
+  the `VOTE` and `VIEW_RESULTS` capabilities toggle policies nothing enforces.
+  Deferred pending the coworker.
+- The open items in `mydocs/docs/backend-tickets/`. Check that directory before
+  concluding a broken flow is a new bug — and check the ticket against the code,
+  since some have been partly fixed without the ticket being updated.
 
 ## Frontend route → backend pattern
+
+> Working on `components/frontend/`? The skills in
+> `components/frontend/.claude/skills/` (**frontend-dev**,
+> **frontend-backend-wiring**) go deeper than this section — route groups,
+> Svelte 5 runes, the `hooks.server.ts` lifecycle, form actions. This is the
+> summary.
 
 **The backend is authoritative for all access decisions.** The frontend never
 duplicates permission logic — it only translates gRPC errors into HTTP
@@ -265,8 +334,10 @@ props so the row works for any badge text, not just status labels.
 - Don't edit generated code: `components/backend/internal/proto/**`,
   `components/backend/ent/**`,
   `components/frontend/src/lib/server/grpc/generated/**`, `api/proto/API.md`.
-  Regenerate via `just generate-proto` or `just generate-db-schema`.
-- Don't run `just generate-proto` outside the Nix shell — `buf` isn't in PATH.
+  Regenerate via `just codegen::proto` or `just codegen::db-schema`.
+- Don't run `just codegen::proto` outside the Nix shell — `buf` isn't in PATH.
   Either run it yourself, or stage proto changes and ask the user to regen.
-- Don't skip the casbin `Enforce` check on mutation handlers — follow the
+- Don't skip the casbin permission check on mutation handlers — follow the
   user_service.go pattern.
+- Don't assume a phase controls what participants may do — see Phases and
+  capabilities.
