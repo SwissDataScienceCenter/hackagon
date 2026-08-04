@@ -220,5 +220,10 @@ just rpc::as alice aliceandbob hackathon.HackathonService/Get '{"hackathonId":"�
 Dev users all share the password `aliceandbob`: `hackagon-admin` (global admin),
 `alice` (organizer), `bob`, `charles`. A `PERMISSION_DENIED` here is the backend
 speaking — reproduce it with `rpc::as` before changing any frontend code, and
-check the capability section above. For UI rendering see the `frontend-dev`
-skill.
+check the capability section above.
+
+For the full toolkit — enumerating services via reflection, reading request
+shapes, telling an unimplemented RPC apart from a refused one — use the
+**backend-api-explore** skill (repo root `.claude/skills/`). Don't assume an RPC
+exists or works from a written list; ask the running server. For UI rendering
+see the `frontend-dev` skill.
