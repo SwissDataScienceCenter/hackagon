@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package hackathon.messages.config_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/config_svc";
+
+// Pins the voting mechanism decisions. Stored as configuration; the vote
+// handlers enforce the parts the platform implements (single ballot per
+// category today) and the rest documents the organizer's ruling.
+message SetVotingPolicyRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  string mechanism = 2;
+  ScaleRange scale = 3;
+  string one_ballot_per = 4;
+  bool own_team_voting = 5;
+  bool organizer_voting = 6;
+  repeated string tie_break = 7;
+}
+
+message ScaleRange {
+  int32 min = 1;
+  int32 max = 2;
+}

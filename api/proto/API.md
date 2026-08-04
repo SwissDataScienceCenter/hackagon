@@ -12,6 +12,30 @@
 - [hackathon/messages/config_svc/override_window_response.proto](#hackathon_messages_config_svc_override_window_response-proto)
     - [OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse)
   
+- [hackathon/entities/form_schema.proto](#hackathon_entities_form_schema-proto)
+    - [ConsentField](#hackathon-entities-ConsentField)
+    - [FormField](#hackathon-entities-FormField)
+    - [FormSchema](#hackathon-entities-FormSchema)
+  
+- [hackathon/messages/config_svc/set_registration_form_request.proto](#hackathon_messages_config_svc_set_registration_form_request-proto)
+    - [SetRegistrationFormRequest](#hackathon-messages-config_svc-SetRegistrationFormRequest)
+  
+- [hackathon/messages/config_svc/set_registration_form_response.proto](#hackathon_messages_config_svc_set_registration_form_response-proto)
+    - [SetRegistrationFormResponse](#hackathon-messages-config_svc-SetRegistrationFormResponse)
+  
+- [hackathon/messages/config_svc/set_submission_form_request.proto](#hackathon_messages_config_svc_set_submission_form_request-proto)
+    - [SetSubmissionFormRequest](#hackathon-messages-config_svc-SetSubmissionFormRequest)
+  
+- [hackathon/messages/config_svc/set_submission_form_response.proto](#hackathon_messages_config_svc_set_submission_form_response-proto)
+    - [SetSubmissionFormResponse](#hackathon-messages-config_svc-SetSubmissionFormResponse)
+  
+- [hackathon/messages/config_svc/set_voting_policy_request.proto](#hackathon_messages_config_svc_set_voting_policy_request-proto)
+    - [ScaleRange](#hackathon-messages-config_svc-ScaleRange)
+    - [SetVotingPolicyRequest](#hackathon-messages-config_svc-SetVotingPolicyRequest)
+  
+- [hackathon/messages/config_svc/set_voting_policy_response.proto](#hackathon_messages_config_svc_set_voting_policy_response-proto)
+    - [SetVotingPolicyResponse](#hackathon-messages-config_svc-SetVotingPolicyResponse)
+  
 - [hackathon/messages/config_svc/set_windows_request.proto](#hackathon_messages_config_svc_set_windows_request-proto)
     - [SetWindowsRequest](#hackathon-messages-config_svc-SetWindowsRequest)
   
@@ -146,6 +170,13 @@
   
 - [hackathon/messages/hackathon_svc/remove_participant_request.proto](#hackathon_messages_hackathon_svc_remove_participant_request-proto)
     - [RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest)
+  
+- [hackathon/messages/hackathon_svc/submit_registration_form_request.proto](#hackathon_messages_hackathon_svc_submit_registration_form_request-proto)
+    - [SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest)
+    - [SubmitRegistrationFormRequest.ConsentsEntry](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry)
+  
+- [hackathon/messages/hackathon_svc/submit_registration_form_response.proto](#hackathon_messages_hackathon_svc_submit_registration_form_response-proto)
+    - [SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse)
   
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
@@ -670,6 +701,284 @@ anchored at the moment the organizer granted them.
 
 
 
+<a name="hackathon_entities_form_schema-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/form_schema.proto
+
+
+
+<a name="hackathon-entities-ConsentField"></a>
+
+### ConsentField
+ConsentField is a checkbox the registrant must (or may) tick.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| label | [string](#string) |  |  |
+| required | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="hackathon-entities-FormField"></a>
+
+### FormField
+FormField is one input in an organizer-defined form. `type` is a free
+string (&#34;text&#34;, &#34;tags&#34;, &#34;url&#34;, &#34;file-or-url&#34;, ...) — the backend validates
+presence and key membership, not deep typing, until a form engine exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| label | [string](#string) |  |  |
+| type | [string](#string) |  |  |
+| required | [bool](#bool) |  |  |
+| max_mb | [int32](#int32) | optional | Upload size cap for file-typed fields, in megabytes. |
+
+
+
+
+
+
+<a name="hackathon-entities-FormSchema"></a>
+
+### FormSchema
+FormSchema is an organizer-defined form: fields plus consents.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| fields | [FormField](#hackathon-entities-FormField) | repeated |  |
+| consents | [ConsentField](#hackathon-entities-ConsentField) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_registration_form_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_registration_form_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetRegistrationFormRequest"></a>
+
+### SetRegistrationFormRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| fields | [hackathon.entities.FormField](#hackathon-entities-FormField) | repeated |  |
+| consents | [hackathon.entities.ConsentField](#hackathon-entities-ConsentField) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_registration_form_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_registration_form_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetRegistrationFormResponse"></a>
+
+### SetRegistrationFormResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| form | [hackathon.entities.FormSchema](#hackathon-entities-FormSchema) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_submission_form_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_submission_form_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetSubmissionFormRequest"></a>
+
+### SetSubmissionFormRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| fields | [hackathon.entities.FormField](#hackathon-entities-FormField) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_submission_form_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_submission_form_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetSubmissionFormResponse"></a>
+
+### SetSubmissionFormResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| form | [hackathon.entities.FormSchema](#hackathon-entities-FormSchema) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_voting_policy_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_voting_policy_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-ScaleRange"></a>
+
+### ScaleRange
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| min | [int32](#int32) |  |  |
+| max | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="hackathon-messages-config_svc-SetVotingPolicyRequest"></a>
+
+### SetVotingPolicyRequest
+Pins the voting mechanism decisions. Stored as configuration; the vote
+handlers enforce the parts the platform implements (single ballot per
+category today) and the rest documents the organizer&#39;s ruling.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| mechanism | [string](#string) |  |  |
+| scale | [ScaleRange](#hackathon-messages-config_svc-ScaleRange) |  |  |
+| one_ballot_per | [string](#string) |  |  |
+| own_team_voting | [bool](#bool) |  |  |
+| organizer_voting | [bool](#bool) |  |  |
+| tie_break | [string](#string) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_voting_policy_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_voting_policy_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetVotingPolicyResponse"></a>
+
+### SetVotingPolicyResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_config_svc_set_windows_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -763,6 +1072,9 @@ slices of the same configuration engine.
 | ----------- | ------------ | ------------- | ------------|
 | SetWindows | [messages.config_svc.SetWindowsRequest](#hackathon-messages-config_svc-SetWindowsRequest) | [messages.config_svc.SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse) |  |
 | OverrideWindow | [messages.config_svc.OverrideWindowRequest](#hackathon-messages-config_svc-OverrideWindowRequest) | [messages.config_svc.OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse) |  |
+| SetRegistrationForm | [messages.config_svc.SetRegistrationFormRequest](#hackathon-messages-config_svc-SetRegistrationFormRequest) | [messages.config_svc.SetRegistrationFormResponse](#hackathon-messages-config_svc-SetRegistrationFormResponse) |  |
+| SetSubmissionForm | [messages.config_svc.SetSubmissionFormRequest](#hackathon-messages-config_svc-SetSubmissionFormRequest) | [messages.config_svc.SetSubmissionFormResponse](#hackathon-messages-config_svc-SetSubmissionFormResponse) |  |
+| SetVotingPolicy | [messages.config_svc.SetVotingPolicyRequest](#hackathon-messages-config_svc-SetVotingPolicyRequest) | [messages.config_svc.SetVotingPolicyResponse](#hackathon-messages-config_svc-SetVotingPolicyResponse) |  |
 
  
 
@@ -2185,6 +2497,90 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 
 
 
+<a name="hackathon_messages_hackathon_svc_submit_registration_form_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/submit_registration_form_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest"></a>
+
+### SubmitRegistrationFormRequest
+Responses are validated against the organizer-defined registration form:
+unknown keys, missing required fields, and unticked required consents are
+InvalidArgument. `on_behalf_of` lets an organizer digitize a paper form
+for another registrant (walk-ins at the check-in desk).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| responses | [google.protobuf.Struct](#google-protobuf-Struct) |  |  |
+| consents | [SubmitRegistrationFormRequest.ConsentsEntry](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry) | repeated |  |
+| on_behalf_of | [string](#string) | optional |  |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry"></a>
+
+### SubmitRegistrationFormRequest.ConsentsEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_submit_registration_form_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/submit_registration_form_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse"></a>
+
+### SubmitRegistrationFormResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_remove_participant_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2241,6 +2637,7 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
+| SubmitRegistrationForm | [messages.hackathon_svc.SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest) | [messages.hackathon_svc.SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse) |  |
 | AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
 | RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
 

@@ -4,6 +4,12 @@ package hackathon;
 
 import "hackathon/messages/config_svc/override_window_request.proto";
 import "hackathon/messages/config_svc/override_window_response.proto";
+import "hackathon/messages/config_svc/set_registration_form_request.proto";
+import "hackathon/messages/config_svc/set_registration_form_response.proto";
+import "hackathon/messages/config_svc/set_submission_form_request.proto";
+import "hackathon/messages/config_svc/set_submission_form_response.proto";
+import "hackathon/messages/config_svc/set_voting_policy_request.proto";
+import "hackathon/messages/config_svc/set_voting_policy_response.proto";
 import "hackathon/messages/config_svc/set_windows_request.proto";
 import "hackathon/messages/config_svc/set_windows_response.proto";
 
@@ -15,4 +21,7 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 service ConfigService {
   rpc SetWindows(hackathon.messages.config_svc.SetWindowsRequest) returns (hackathon.messages.config_svc.SetWindowsResponse);
   rpc OverrideWindow(hackathon.messages.config_svc.OverrideWindowRequest) returns (hackathon.messages.config_svc.OverrideWindowResponse);
+  rpc SetRegistrationForm(hackathon.messages.config_svc.SetRegistrationFormRequest) returns (hackathon.messages.config_svc.SetRegistrationFormResponse);
+  rpc SetSubmissionForm(hackathon.messages.config_svc.SetSubmissionFormRequest) returns (hackathon.messages.config_svc.SetSubmissionFormResponse);
+  rpc SetVotingPolicy(hackathon.messages.config_svc.SetVotingPolicyRequest) returns (hackathon.messages.config_svc.SetVotingPolicyResponse);
 }

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// FormField is one input in an organizer-defined form. `type` is a free
+// string ("text", "tags", "url", "file-or-url", ...) — the backend validates
+// presence and key membership, not deep typing, until a form engine exists.
+message FormField {
+  string key = 1;
+  string label = 2;
+  string type = 3;
+  bool required = 4;
+  // Upload size cap for file-typed fields, in megabytes.
+  optional int32 max_mb = 5;
+}
+
+// ConsentField is a checkbox the registrant must (or may) tick.
+message ConsentField {
+  string key = 1;
+  string label = 2;
+  bool required = 3;
+}
+
+// FormSchema is an organizer-defined form: fields plus consents.
+message FormSchema {
+  repeated FormField fields = 1;
+  repeated ConsentField consents = 2;
+}

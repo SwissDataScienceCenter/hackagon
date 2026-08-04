@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// Responses are validated against the organizer-defined registration form:
+// unknown keys, missing required fields, and unticked required consents are
+// InvalidArgument. `on_behalf_of` lets an organizer digitize a paper form
+// for another registrant (walk-ins at the check-in desk).
+message SubmitRegistrationFormRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  google.protobuf.Struct responses = 2;
+  map<string, bool> consents = 3;
+  optional string on_behalf_of = 4 [(buf.validate.field).string.uuid = true];
+}

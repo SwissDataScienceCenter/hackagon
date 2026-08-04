@@ -26,6 +26,31 @@ Whether one member-facing action is currently open in a hackathon. One row per c
 
 - `capability, hackathon_capabilities` *(unique)*
 
+## FormResponse
+
+One registrant's answers to a hackathon's registration form, validated against the organizer's schema at submission time.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `responses` | map[string]interface {} | yes | no | no | no | Field answers keyed by the form field key. |
+| `consents` | map[string]bool | yes | no | no | no | Consent checkboxes keyed by the consent key. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the response was submitted. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon the response belongs to. |
+| `user` | User | M2O | yes | yes | The registrant the response is about. |
+| `submitted_by` | User | M2O | yes | yes | Who actually entered it — the registrant, or an organizer digitizing a paper form. |
+
+### Indexes
+
+- `hackathon_form_responses, user_form_responses` *(unique)*
+
 ## Hackathon
 
 A hackathon event containing tracks, projects, phases, and participants.
@@ -58,6 +83,8 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `vote_categories` | VoteCategory | O2M | no | no | Voting categories scoped to this hackathon. |
 | `settings` | HackathonSettings | O2O | no | no | Configuration settings for this hackathon. |
 | `windows` | HackathonWindows | O2O | no | no | Enforced time windows for this hackathon. |
+| `forms` | HackathonForms | O2O | no | no | Organizer-defined form schemas and voting policy. |
+| `form_responses` | FormResponse | O2M | no | no | Registration form responses submitted for this hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -68,6 +95,28 @@ A hackathon event containing tracks, projects, phases, and participants.
 - `starts_at`
 - `ends_at`
 - `visibility`
+
+## HackathonForms
+
+Organizer-defined form schemas and voting policy for a hackathon. Schemas are stored as JSON; SubmitRegistrationForm validates responses against them.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `registration_fields` | []map[string]interface {} | no | no | no | no | Registration form fields ({key,label,type,required,maxMb}). |
+| `registration_consents` | []map[string]interface {} | no | no | no | no | Registration consents ({key,label,required}). |
+| `submission_fields` | []map[string]interface {} | no | no | no | no | Submission form fields ({key,label,type,required,maxMb}). |
+| `voting_policy` | map[string]interface {} | no | no | no | no | Pinned voting mechanism decisions (mechanism, scale, tie-breaks). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the forms row was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | O2O | yes | yes | The hackathon these forms belong to. |
+| `modifier` | User | M2O | yes | yes | The user who last modified these forms. |
 
 ## HackathonSettings
 
@@ -365,6 +414,9 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_capabilities` | Capability | O2M | no | no | Hackathon capabilities this user last opened or closed. |
 | `modified_settings` | HackathonSettings | O2M | no | no | Hackathon settings this user last modified. |
 | `modified_windows` | HackathonWindows | O2M | no | no | Hackathon windows this user last modified. |
+| `modified_forms` | HackathonForms | O2M | no | no | Hackathon forms this user last modified. |
+| `form_responses` | FormResponse | O2M | no | no | Registration form responses about this user. |
+| `submitted_form_responses` | FormResponse | O2M | no | no | Registration form responses this user entered. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |
 | `jury_categories` | VoteCategory | M2M | no | no | Vote categories where this user is a jury member. |

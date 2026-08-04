@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package hackathon.messages.config_svc;
+
+import "hackathon/entities/form_schema.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/config_svc";
+
+message SetRegistrationFormResponse {
+  hackathon.entities.FormSchema form = 1;
+}

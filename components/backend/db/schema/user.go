@@ -100,6 +100,15 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_windows", HackathonWindows.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Hackathon windows this user last modified."),
+		edge.To("modified_forms", HackathonForms.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Hackathon forms this user last modified."),
+		edge.To("form_responses", FormResponse.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Registration form responses about this user."),
+		edge.To("submitted_form_responses", FormResponse.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Registration form responses this user entered."),
 		edge.To("preferred_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Projects this user has marked as preferred."),
