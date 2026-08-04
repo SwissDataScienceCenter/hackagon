@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package site.messages.site_page_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site/messages/site_page_svc";
+
+message ListRequest {
+  // When true, drafts are included too (admins only; ignored for others).
+  optional bool include_hidden = 1;
+}

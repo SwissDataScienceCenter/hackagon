@@ -300,6 +300,34 @@ A project proposal within a hackathon track.
 - `title`
 - `status`
 
+## SitePage
+
+A platform-level content page (about, privacy, terms), addressed by slug.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `slug` | string | yes | yes | no | no | URL segment identifying the page (e.g. "about"); lowercase kebab-case. |
+| `title` | string | yes | no | no | no | Title of the page. |
+| `content` | string | yes | no | no | no | Markdown content of the page. Rendered through the frontend's sanitizing pipeline. |
+| `visible` | bool | yes | no | no | yes | Whether the page is published. Drafts are readable by admins only. |
+| `order` | int | yes | no | no | yes | Sort order for navigation listings; lower values appear first. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the page was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `creator` | User | M2O | yes | yes | The user who created this page. |
+| `modifier` | User | M2O | yes | yes | The user who last modified this page. |
+
+### Indexes
+
+- `order`
+- `visible`
+
 ## Submission
 
 A versioned submission from a team for a project.
@@ -427,6 +455,8 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_teams` | Team | O2M | no | no | Teams this user last modified. |
 | `created_pages` | Page | O2M | no | no | Content pages this user created. |
 | `modified_pages` | Page | O2M | no | no | Content pages this user last modified. |
+| `created_site_pages` | SitePage | O2M | no | no | Platform pages this user created. |
+| `modified_site_pages` | SitePage | O2M | no | no | Platform pages this user last modified. |
 | `created_phases` | Phase | O2M | no | no | Phases this user created. |
 | `modified_phases` | Phase | O2M | no | no | Phases this user last modified. |
 | `created_submissions` | Submission | O2M | no | no | Submissions this user created. |

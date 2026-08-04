@@ -73,6 +73,12 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_pages", Page.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Content pages this user last modified."),
+		edge.To("created_site_pages", SitePage.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Platform pages this user created."),
+		edge.To("modified_site_pages", SitePage.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Platform pages this user last modified."),
 		edge.To("created_phases", Phase.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Phases this user created."),

@@ -473,6 +473,42 @@
 - [health/health_service.proto](#health_health_service-proto)
     - [HealthService](#health-HealthService)
   
+- [site/entities/site_page.proto](#site_entities_site_page-proto)
+    - [SitePage](#site-entities-SitePage)
+  
+- [site/messages/site_page_svc/create_request.proto](#site_messages_site_page_svc_create_request-proto)
+    - [CreateRequest](#site-messages-site_page_svc-CreateRequest)
+  
+- [site/messages/site_page_svc/create_response.proto](#site_messages_site_page_svc_create_response-proto)
+    - [CreateResponse](#site-messages-site_page_svc-CreateResponse)
+  
+- [site/messages/site_page_svc/delete_request.proto](#site_messages_site_page_svc_delete_request-proto)
+    - [DeleteRequest](#site-messages-site_page_svc-DeleteRequest)
+  
+- [site/messages/site_page_svc/delete_response.proto](#site_messages_site_page_svc_delete_response-proto)
+    - [DeleteResponse](#site-messages-site_page_svc-DeleteResponse)
+  
+- [site/messages/site_page_svc/edit_request.proto](#site_messages_site_page_svc_edit_request-proto)
+    - [EditRequest](#site-messages-site_page_svc-EditRequest)
+  
+- [site/messages/site_page_svc/edit_response.proto](#site_messages_site_page_svc_edit_response-proto)
+    - [EditResponse](#site-messages-site_page_svc-EditResponse)
+  
+- [site/messages/site_page_svc/get_request.proto](#site_messages_site_page_svc_get_request-proto)
+    - [GetRequest](#site-messages-site_page_svc-GetRequest)
+  
+- [site/messages/site_page_svc/get_response.proto](#site_messages_site_page_svc_get_response-proto)
+    - [GetResponse](#site-messages-site_page_svc-GetResponse)
+  
+- [site/messages/site_page_svc/list_request.proto](#site_messages_site_page_svc_list_request-proto)
+    - [ListRequest](#site-messages-site_page_svc-ListRequest)
+  
+- [site/messages/site_page_svc/list_response.proto](#site_messages_site_page_svc_list_response-proto)
+    - [ListResponse](#site-messages-site_page_svc-ListResponse)
+  
+- [site/site_page_service.proto](#site_site_page_service-proto)
+    - [SitePageService](#site-SitePageService)
+  
 - [user/messages/user_svc/add_role_request.proto](#user_messages_user_svc_add_role_request-proto)
     - [AddRoleRequest](#user-messages-user_svc-AddRoleRequest)
   
@@ -5669,6 +5705,396 @@ the admin finalizes, and the table stays admin-editable afterwards.
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | Check | [messages.health_svc.CheckRequest](#health-messages-health_svc-CheckRequest) | [messages.health_svc.CheckResponse](#health-messages-health_svc-CheckResponse) |  |
+
+ 
+
+
+
+<a name="site_entities_site_page-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/entities/site_page.proto
+
+
+
+<a name="site-entities-SitePage"></a>
+
+### SitePage
+A platform-level content page (about, privacy, terms), addressed by slug.
+Unlike hackathon.entities.Page it belongs to the site itself, so it carries
+no hackathon id and is authorized in the fixed &#34;site&#34; casbin domain.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| slug | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| content | [string](#string) |  | Markdown. Rendered through the frontend&#39;s sanitizing pipeline — never inject it into the DOM raw. |
+| visible | [bool](#bool) |  |  |
+| order | [int32](#int32) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| creator_id | [string](#string) |  |  |
+| modifier_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_create_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/create_request.proto
+
+
+
+<a name="site-messages-site_page_svc-CreateRequest"></a>
+
+### CreateRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| slug | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| content | [string](#string) |  |  |
+| visible | [bool](#bool) | optional |  |
+| order | [int32](#int32) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_create_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/create_response.proto
+
+
+
+<a name="site-messages-site_page_svc-CreateResponse"></a>
+
+### CreateResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/delete_request.proto
+
+
+
+<a name="site-messages-site_page_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| slug | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/delete_response.proto
+
+
+
+<a name="site-messages-site_page_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/edit_request.proto
+
+
+
+<a name="site-messages-site_page_svc-EditRequest"></a>
+
+### EditRequest
+Every field optional: absent means &#34;leave unchanged&#34; (see the write-path
+convention in CLAUDE.md). The page is identified by its current slug.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| slug | [string](#string) |  |  |
+| new_slug | [string](#string) | optional |  |
+| title | [string](#string) | optional |  |
+| content | [string](#string) | optional |  |
+| visible | [bool](#bool) | optional |  |
+| order | [int32](#int32) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/edit_response.proto
+
+
+
+<a name="site-messages-site_page_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| site_page | [site.entities.SitePage](#site-entities-SitePage) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/get_request.proto
+
+
+
+<a name="site-messages-site_page_svc-GetRequest"></a>
+
+### GetRequest
+Pages are fetched by their stable slug — that is what the router has.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| slug | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/get_response.proto
+
+
+
+<a name="site-messages-site_page_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| site_page | [site.entities.SitePage](#site-entities-SitePage) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/list_request.proto
+
+
+
+<a name="site-messages-site_page_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| include_hidden | [bool](#bool) | optional | When true, drafts are included too (admins only; ignored for others). |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_messages_site_page_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/messages/site_page_svc/list_response.proto
+
+
+
+<a name="site-messages-site_page_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| site_pages | [site.entities.SitePage](#site-entities-SitePage) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="site_site_page_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## site/site_page_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="site-SitePageService"></a>
+
+### SitePageService
+Platform-level content pages (about, privacy, terms). Reads are open to
+anonymous callers for published pages — these are the pages a visitor
+reaches from the footer before ever logging in. Writes require the global
+Admin role: there is no per-hackathon owner for site-wide content.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| List | [messages.site_page_svc.ListRequest](#site-messages-site_page_svc-ListRequest) | [messages.site_page_svc.ListResponse](#site-messages-site_page_svc-ListResponse) |  |
+| Get | [messages.site_page_svc.GetRequest](#site-messages-site_page_svc-GetRequest) | [messages.site_page_svc.GetResponse](#site-messages-site_page_svc-GetResponse) |  |
+| Create | [messages.site_page_svc.CreateRequest](#site-messages-site_page_svc-CreateRequest) | [messages.site_page_svc.CreateResponse](#site-messages-site_page_svc-CreateResponse) |  |
+| Edit | [messages.site_page_svc.EditRequest](#site-messages-site_page_svc-EditRequest) | [messages.site_page_svc.EditResponse](#site-messages-site_page_svc-EditResponse) |  |
+| Delete | [messages.site_page_svc.DeleteRequest](#site-messages-site_page_svc-DeleteRequest) | [messages.site_page_svc.DeleteResponse](#site-messages-site_page_svc-DeleteResponse) |  |
 
  
 

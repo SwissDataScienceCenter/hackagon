@@ -386,6 +386,47 @@ func (e *Enforcer) GetHackathonRole(
 	}
 }
 
+// IsGlobalAdmin reports whether the Keycloak ID holds the global Admin role
+// (casbin g2). Site-wide resources have no hackathon to scope a domain to, so
+// they authorize on this directly instead of through Enforce.
+func (e *Enforcer) IsGlobalAdmin(keycloakID string) (bool, error) {
+	globals, err := e.GetGlobalRoles(keycloakID)
+	if err != nil {
+		return false, err
+	}
+	for _, g := range globals {
+		if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// RequireGlobalAdmin is the site-domain counterpart to RequirePermission:
+// anonymous callers are told to authenticate, everyone else who is not a
+// global admin is denied.
+func (e *Enforcer) RequireGlobalAdmin(ctx context.Context) error {
+	uid, _, err := RequireSubject(ctx)
+	if err != nil {
+		return err
+	}
+	if uid == AnonSubject {
+		return status.Error(codes.Unauthenticated, "authentication required")
+	}
+	ok, err := e.IsGlobalAdmin(uid)
+	if err != nil {
+		slog.Error("check global admin", "err", err)
+
+		return status.Error(codes.Internal, "authorization error")
+	}
+	if !ok {
+		return status.Error(codes.PermissionDenied, "permission denied")
+	}
+
+	return nil
+}
+
 //exhaustruct:optional
 type enforceOptions struct {
 	teamID    string

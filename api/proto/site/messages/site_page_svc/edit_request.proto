@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package site.messages.site_page_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site/messages/site_page_svc";
+
+import "buf/validate/validate.proto";
+
+// Every field optional: absent means "leave unchanged" (see the write-path
+// convention in CLAUDE.md). The page is identified by its current slug.
+message EditRequest {
+  string slug = 1 [(buf.validate.field).string.min_len = 1];
+  optional string new_slug = 2;
+  optional string title = 3;
+  optional string content = 4;
+  optional bool visible = 5;
+  optional int32 order = 6;
+}

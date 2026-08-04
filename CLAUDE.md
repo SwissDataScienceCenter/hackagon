@@ -18,7 +18,7 @@ Before making changes:
 
 ```
 api/proto/
-├── <domain>/                     # hackathon, user, health
+├── <domain>/                     # hackathon, user, health, vote, site
 │   ├── <name>_service.proto      # service definition (RPCs)
 │   ├── entities/                 # nouns (domain types, enums)
 │   └── messages/<svc>_svc/       # verbs (request/response payloads)
@@ -112,6 +112,28 @@ services:
 - `Delete`: return `{}`.
 - `Add*`/`Remove*` on a relation (e.g. `AssignUser`, `AddOwner`): return the
   mutated parent. Precedent: `AddRole` returns the user.
+
+## Platform pages vs hackathon pages
+
+Two different things, easily confused:
+
+- `hackathon.PageService` / `Page` — content **inside one event** (news,
+  webinars, photos, the wrap-up blog). The hackathon edge is `Required()`, and
+  casbin authorizes it in that hackathon's domain.
+- `site.SitePageService` / `SitePage` — the **platform's own** pages (about,
+  privacy, terms), addressed by a unique slug. They belong to no event, so
+  there is no hackathon domain to scope them to: published pages are readable
+  by everyone (the footer links reach them before login) and every mutation
+  requires the global Admin role via `enforcer.RequireGlobalAdmin`. Drafts
+  (`visible=false`) return `NotFound` to non-admins rather than
+  `PermissionDenied`, so their existence stays private.
+
+Frontend: `(public)/[slug=sitepage]` renders them — the `sitepage` param
+matcher (`src/params/sitepage.ts`) lists which slugs resolve, and
+`PUBLIC_ROUTE_PATTERNS` in `hooks.server.ts` must allow the same set or the
+auth guard redirects visitors to login. Admin CRUD lives at `/manage/pages`.
+Content is markdown and is parsed + sanitized before rendering — never feed it
+to `{@html}` directly.
 
 ## RBAC (casbin)
 

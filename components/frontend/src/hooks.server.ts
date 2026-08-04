@@ -30,6 +30,11 @@ let configLoader: ConfigLoader
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/hackathon(\/|$)/,
+  // Platform pages (SitePage records served by [slug=sitepage]). They are
+  // reached from the footer by visitors who have never logged in, so they must
+  // stay public. Keep in sync with src/params/sitepage.ts — that matcher is
+  // what decides which slugs resolve at all.
+  /^\/(about|privacy|terms)$/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,

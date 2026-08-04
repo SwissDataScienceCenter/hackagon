@@ -9,10 +9,10 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
-	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime" // registers schema hooks and default values
 	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime" // registers schema hooks and default values
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
@@ -170,6 +170,110 @@ func seedInTx(
 	}
 	if err := seedH3(ctx, db, now, admin, alice, enf); err != nil {
 		return fmt.Errorf("h3: %w", err)
+	}
+	// Platform-level pages — the footer links (about/privacy/terms) reach
+	// these, so a dev instance should have them from the first boot.
+	if err := seedSitePages(ctx, db, admin); err != nil {
+		return fmt.Errorf("site pages: %w", err)
+	}
+
+	return nil
+}
+
+// seedSitePages creates the platform's own content pages. Unlike hackathon
+// pages these belong to no event; the admin owns them.
+func seedSitePages(ctx context.Context, db *ent.Client, admin *ent.User) error {
+	pages := []struct {
+		slug, title, content string
+		order                int
+	}{
+		{
+			slug:  "about",
+			title: "About Hackagon",
+			order: 1,
+			content: `## What this is
+
+Hackagon is the hackathon platform built by the **Swiss Data Science Center**
+(SDSC), a joint venture of ETH Zurich and EPFL.
+
+It runs the whole life of an event: publication, registration and waitlists,
+project proposals, team formation, submissions, voting and prizes.
+
+## Who runs it
+
+The SDSC team, together with the organizers of each event. Every hackathon has
+its own owners, who control its pages, phases and participants.
+
+## Get in touch
+
+Questions about a specific event go to its organizers. Anything about the
+platform itself: [hackagon@sdsc.dev](mailto:hackagon@sdsc.dev).`,
+		},
+		{
+			slug:  "privacy",
+			title: "Privacy",
+			order: 2,
+			content: `## What we store
+
+Your account details come from the login provider: name, username and email.
+Beyond that we keep what you do on the platform — the events you join, the
+projects you propose, the teams you belong to, the answers you give on
+registration forms, and the submissions your team makes.
+
+## Who can see it
+
+Event organizers see the participants of their own event and the answers given
+on its forms. Other participants see your name and the teams and projects you
+are part of. Votes are counted in aggregate; individual ballots are not shown
+to other participants.
+
+## Your rights
+
+You can ask for a copy of your data or for your account to be deleted. Until
+the self-service tooling lands, write to
+[privacy@sdsc.dev](mailto:privacy@sdsc.dev).
+
+*This is dev-instance placeholder text — replace it before running a real
+event.*`,
+		},
+		{
+			slug:  "terms",
+			title: "Terms of use",
+			order: 3,
+			content: `## Taking part
+
+Register for an event and you agree to follow its rules and its code of
+conduct. Organizers decide who is admitted, and may remove anyone who breaks
+those rules.
+
+## Your work
+
+What you build stays yours. By submitting it you allow the organizers to show
+and judge it as part of the event, and to name you among the participants.
+
+## The platform
+
+Hackagon is provided as is, without warranty. Organizers are responsible for
+the content of their own events.
+
+*This is dev-instance placeholder text — replace it before running a real
+event.*`,
+		},
+	}
+
+	builders := make([]*ent.SitePageCreate, 0, len(pages))
+	for _, p := range pages {
+		builders = append(builders, db.SitePage.Create().
+			SetSlug(p.slug).
+			SetTitle(p.title).
+			SetContent(p.content).
+			SetOrder(p.order).
+			SetVisible(true).
+			SetCreator(admin).
+			SetModifier(admin))
+	}
+	if err := db.SitePage.CreateBulk(builders...).Exec(ctx); err != nil {
+		return fmt.Errorf("create site pages: %w", err)
 	}
 
 	return nil

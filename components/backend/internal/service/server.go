@@ -15,6 +15,7 @@ import (
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
+	siteSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site"
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	voteSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote"
 )
@@ -73,6 +74,7 @@ func NewServer(
 	voteService := NewVoteService(dbClient, enf)
 	configService := NewConfigService(dbClient, enf)
 	prizeService := NewPrizeService(dbClient, enf)
+	sitePageService := NewSitePageService(dbClient, enf)
 
 	// Register services
 	health.RegisterHealthServiceServer(server, healthService)
@@ -86,6 +88,7 @@ func NewServer(
 	voteSvc.RegisterVoteServiceServer(server, voteService)
 	hackathonSvc.RegisterConfigServiceServer(server, configService)
 	hackathonSvc.RegisterPrizeServiceServer(server, prizeService)
+	siteSvc.RegisterSitePageServiceServer(server, sitePageService)
 	reflection.Register(server)
 
 	// Cleanup: shutdown the gRPC server

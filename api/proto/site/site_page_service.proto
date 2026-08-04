@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package site;
+
+import "site/messages/site_page_svc/create_request.proto";
+import "site/messages/site_page_svc/create_response.proto";
+import "site/messages/site_page_svc/delete_request.proto";
+import "site/messages/site_page_svc/delete_response.proto";
+import "site/messages/site_page_svc/edit_request.proto";
+import "site/messages/site_page_svc/edit_response.proto";
+import "site/messages/site_page_svc/get_request.proto";
+import "site/messages/site_page_svc/get_response.proto";
+import "site/messages/site_page_svc/list_request.proto";
+import "site/messages/site_page_svc/list_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site";
+
+// Platform-level content pages (about, privacy, terms). Reads are open to
+// anonymous callers for published pages — these are the pages a visitor
+// reaches from the footer before ever logging in. Writes require the global
+// Admin role: there is no per-hackathon owner for site-wide content.
+service SitePageService {
+  rpc List(site.messages.site_page_svc.ListRequest) returns (site.messages.site_page_svc.ListResponse);
+  rpc Get(site.messages.site_page_svc.GetRequest) returns (site.messages.site_page_svc.GetResponse);
+  rpc Create(site.messages.site_page_svc.CreateRequest) returns (site.messages.site_page_svc.CreateResponse);
+  rpc Edit(site.messages.site_page_svc.EditRequest) returns (site.messages.site_page_svc.EditResponse);
+  rpc Delete(site.messages.site_page_svc.DeleteRequest) returns (site.messages.site_page_svc.DeleteResponse);
+}

@@ -6,11 +6,13 @@ import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
 import { PageServiceDefinition } from "./generated/hackathon/page_service"
+import { SitePageServiceDefinition } from "./generated/site/site_page_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { TeamServiceClient } from "./generated/hackathon/team_service"
 import type { PageServiceClient } from "./generated/hackathon/page_service"
+import type { SitePageServiceClient } from "./generated/site/site_page_service"
 
 let channel: Channel | undefined
 
@@ -42,12 +44,19 @@ export function publicPageClient(): PageServiceClient {
   return createClientFactory().create(PageServiceDefinition, getChannel())
 }
 
+// Unauthenticated site-page client: About/Privacy/Terms are reachable from the
+// footer before anyone logs in, so published pages are served to everyone.
+export function publicSitePageClient(): SitePageServiceClient {
+  return createClientFactory().create(SitePageServiceDefinition, getChannel())
+}
+
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
   user: UserServiceClient
   health: HealthServiceClient
   hackathon: HackathonServiceClient
   team: TeamServiceClient
+  sitePage: SitePageServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -66,6 +75,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     health: factory.create(HealthServiceDefinition, getChannel()),
     hackathon: factory.create(HackathonServiceDefinition, getChannel()),
     team: factory.create(TeamServiceDefinition, getChannel()),
+    sitePage: factory.create(SitePageServiceDefinition, getChannel()),
   }
 }
 

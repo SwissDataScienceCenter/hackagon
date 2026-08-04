@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package site.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site/entities";
+
+// A platform-level content page (about, privacy, terms), addressed by slug.
+// Unlike hackathon.entities.Page it belongs to the site itself, so it carries
+// no hackathon id and is authorized in the fixed "site" casbin domain.
+message SitePage {
+  string id = 1;
+  string slug = 2;
+  string title = 3;
+  // Markdown. Rendered through the frontend's sanitizing pipeline — never
+  // inject it into the DOM raw.
+  string content = 4;
+  bool visible = 5;
+  int32 order = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp modified_at = 8;
+  string creator_id = 9;
+  string modifier_id = 10;
+}

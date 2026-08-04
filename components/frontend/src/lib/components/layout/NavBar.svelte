@@ -48,14 +48,10 @@
                 Hackathons
             </a>
         {/if}
+        <!-- "Challenges" had no backing entity and pointed at "/" — dropped
+             rather than kept as a link to nowhere. About is a real SitePage. -->
         <a
-            href={resolve('/')}
-            class="text-sm text-surface-400 no-underline hover:text-primary-500"
-        >
-            Challenges
-        </a>
-        <a
-            href={resolve('/')}
+            href="/about"
             class="text-sm text-surface-400 no-underline hover:text-primary-500"
         >
             About
