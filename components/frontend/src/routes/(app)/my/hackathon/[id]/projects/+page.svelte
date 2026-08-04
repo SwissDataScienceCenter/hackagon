@@ -1,14 +1,18 @@
 <script lang="ts">
-    import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
-    import type { PageData } from './$types';
+    import { projectStatusLabel, projectStatusBadgePreset } from '$lib/utils/projectStatus';
+    import type { ActionData, PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const countLabel = $derived(
         data.projects.length === 1 ? '1 project' : `${data.projects.length} projects`
     );
+
+    // Only meaningful to a reviewer, who is the only viewer that sees proposals
+    // at all — for everyone else the whole list is approved.
+    const pendingCount = $derived(data.projects.filter((p) => p.isPending).length);
 
     const pageSize = 8;
     let page = $state(1);
@@ -27,26 +31,28 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">Projects</h2>
-            <span class="text-xs text-surface-500">{countLabel}</span>
-        </div>
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine/propose`)}
-            class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                   rounded-none px-3 text-center text-xs font-semibold no-underline
-                   sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
-        >
-            <Plus class="h-3.5 w-3.5 shrink-0" />
-            Propose a Project
-        </a>
+    <!-- No propose CTA here: proposing belongs to Proposals, which is the page
+         that then tracks what you put forward. One entry point, not two. -->
+    <div class="flex min-w-0 flex-col gap-1">
+        <h2 class="m-0 text-lg font-bold text-surface-950-50">All Projects</h2>
+        <span class="text-xs text-surface-500">
+            {countLabel}{#if data.mayReview && pendingCount > 0}
+                &middot; {pendingCount} awaiting review{/if}
+        </span>
     </div>
+
+    {#if form?.message}
+        <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+    {/if}
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.projects.length === 0}
             <p class="m-0 py-6 text-center text-sm text-surface-500">
-                No projects have been approved yet.
+                {#if data.mayReview}
+                    No projects have been proposed yet.
+                {:else}
+                    No projects have been approved yet.
+                {/if}
             </p>
         {:else}
             {#each pagedProjects as project (project.id)}
@@ -55,9 +61,71 @@
                     title={project.title}
                     description={project.description}
                     creator={project.creator}
+                    track={project.track}
                     imageUrl={project.imageUrl}
-                    moreInfoHref="#project-{project.id}"
-                />
+                    badge={projectStatusLabel(project.status)}
+                    badgePreset={projectStatusBadgePreset(project.status) ??
+                        'preset-tonal-surface'}
+                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
+                >
+                    {#snippet actions()}
+                        {#if project.mayEdit}
+                            <!-- The project-side edit route, same as the project
+                                 page's Edit: saving returns to the project. The
+                                 proposals route is for rows on Proposals, which
+                                 returns there instead. Offered per row: who may
+                                 edit depends on who proposed it. -->
+                            <a
+                                href={resolve(
+                                    `/my/hackathon/${data.hackathonId}/projects/${project.id}/edit`
+                                )}
+                                class="btn btn-sm preset-tonal-surface no-underline"
+                            >
+                                Edit
+                            </a>
+                        {/if}
+                        {#if data.mayReview}
+                            {#if project.isPending}
+                                <form method="POST" action="?/approve">
+                                    <input type="hidden" name="projectId" value={project.id} />
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm preset-filled-primary-500"
+                                    >
+                                        Approve
+                                    </button>
+                                </form>
+                            {:else}
+                                <!-- Not "Reject": Disapprove returns a project to
+                                     the queue rather than turning it down. See the
+                                     TODO in +page.server.ts. -->
+                                <form method="POST" action="?/disapprove">
+                                    <input type="hidden" name="projectId" value={project.id} />
+                                    <button type="submit" class="btn btn-sm preset-tonal-warning">
+                                        Revoke approval
+                                    </button>
+                                </form>
+                            {/if}
+                        {/if}
+                        {#if data.mayPrefer && !project.isPending}
+                            <!-- One-way: see the TODO in +page.server.ts. The
+                                 confirmation lasts until the next load, because
+                                 no read path exists to render it from. -->
+                            {#if form?.preferredId === project.id}
+                                <span class="text-xs font-semibold text-success-700-300">
+                                    Preferred
+                                </span>
+                            {:else}
+                                <form method="POST" action="?/prefer">
+                                    <input type="hidden" name="projectId" value={project.id} />
+                                    <button type="submit" class="btn btn-sm preset-tonal-primary">
+                                        Prefer
+                                    </button>
+                                </form>
+                            {/if}
+                        {/if}
+                    {/snippet}
+                </ProjectCard>
             {/each}
         {/if}
     </div>

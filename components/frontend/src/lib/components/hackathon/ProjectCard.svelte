@@ -1,34 +1,53 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import { Tag, User } from 'lucide-svelte';
+    import type { Snippet } from 'svelte';
 
     let {
         num,
         title,
         description,
         creator,
+        track,
         imageUrl,
         moreInfoHref = '#',
         moreInfoLabel = 'More Info',
         badge,
         badgePreset = 'preset-tonal-surface',
-        meta,
+        actions,
     }: {
         num: number;
         title: string;
         description: string;
         /** Who proposed it. Omitted when the creator is no longer a member. */
         creator?: string;
+        /** Track name. Omitted when the project has no track, or its track was
+         *  deleted — the row then simply carries no track. */
+        track?: string;
         imageUrl?: string;
         moreInfoHref?: string;
         /** CTA text. The card is a row first and a "More Info" link second. */
         moreInfoLabel?: string;
         /** Generic chip text — kept a plain string so the card is not tied to
-         *  any one vocabulary. My Projects passes a status, others may not. */
+         *  any one vocabulary. Both project lists pass a status; others may not. */
         badge?: string;
         badgePreset?: string;
-        /** Extra line under the description, e.g. the track. */
-        meta?: string;
+        /** Extra controls beside the CTA, e.g. a prefer form. A snippet rather
+         *  than props so the card stays ignorant of what the action does. */
+        actions?: Snippet;
     } = $props();
+
+    // The project's own initials stand in for the image it lacks — same
+    // treatment as ParticipantCard, on the title rather than a person.
+    const initials = $derived(
+        title
+            .split(' ')
+            .filter(Boolean)
+            .map((w) => w[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+    );
 </script>
 
 <!-- Matches TeamCard: py-4 px-5, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
@@ -49,8 +68,11 @@
         </div>
     {:else}
         <div
-            class="size-16 shrink-0 rounded-full border-2 border-surface-200-800 bg-surface-100-900"
-        ></div>
+            class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
+                   border-surface-200-800 bg-surface-200-800 text-xs font-bold text-surface-950-50"
+        >
+            {initials}
+        </div>
     {/if}
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -69,18 +91,34 @@
                 {description}
             </p>
         </div>
-        {#if creator}
-            <p class="m-0 text-xs leading-snug text-surface-500">
-                Proposed by {creator}
-            </p>
-        {/if}
-        {#if meta}
-            <p class="m-0 text-xs leading-snug text-surface-500">{meta}</p>
+        <!-- Author and track on one line, each behind its own icon, so the two
+             facts read as attributes of the row rather than sentences. The
+             icons carry no information a sighted reader needs spelling out and
+             no screen reader needs repeating — the text beside them says it —
+             so they are aria-hidden. -->
+        {#if creator || track}
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500">
+                {#if creator}
+                    <span class="inline-flex items-center gap-1.5">
+                        <User class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {creator}
+                    </span>
+                {/if}
+                {#if track}
+                    <span class="inline-flex items-center gap-1.5">
+                        <Tag class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {track}
+                    </span>
+                {/if}
+            </div>
         {/if}
     </div>
 
-    <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-    <a href={resolve(moreInfoHref as any)} class="btn btn-sm preset-tonal-surface">
-        {moreInfoLabel}
-    </a>
+    <div class="flex shrink-0 items-center gap-2">
+        {@render actions?.()}
+        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
+        <a href={resolve(moreInfoHref as any)} class="btn btn-sm preset-tonal-surface">
+            {moreInfoLabel}
+        </a>
+    </div>
 </div>
