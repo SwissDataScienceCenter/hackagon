@@ -67,7 +67,7 @@
 </div>
 
 <!-- Body: main + sidebar -->
-<div class="flex gap-6 px-4 py-8 sm:px-10 md:px-20">
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20 lg:flex-row">
 
     <!-- Main column -->
     <div class="flex flex-1 flex-col gap-6">
@@ -142,7 +142,7 @@
     </div>
 
     <!-- Sidebar -->
-    <div class="flex w-80 shrink-0 flex-col gap-6">
+    <div class="flex w-full shrink-0 flex-col gap-6 lg:w-80">
 
         <!-- Notifications -->
         <div class="card preset-outlined-surface-200-800 overflow-hidden">

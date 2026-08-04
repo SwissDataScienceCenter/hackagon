@@ -7,6 +7,9 @@
     {#if data.users.length === 0}
         <p class="text-gray-500">No users found.</p>
     {:else}
+        <!-- Keycloak IDs are wide monospace: the table scrolls in its own
+             container instead of stretching the page on phones. -->
+        <div class="overflow-x-auto">
         <table class="w-full border-collapse">
             <thead>
                 <tr class="border-b text-left">
@@ -25,5 +28,6 @@
                 {/each}
             </tbody>
         </table>
+        </div>
     {/if}
 </div>
