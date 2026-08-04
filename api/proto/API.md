@@ -1908,6 +1908,8 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 Will become caller-dependent, so clients must not cache it across users. |
 | current_phase_id | [string](#string) | optional | The phase an organizer declared current via AdvancePhase. Absent means clients should derive it from phase dates instead — correct before an event, wrong during one, where the schedule slips. |
 | branding | [HackathonBranding](#hackathon-entities-HackathonBranding) | optional | Set by ConfigService.SetBranding. Populated on Get and on List — the public event page is built from List, so leaving it Get-only would make an event&#39;s own colours invisible exactly where visitors see it. Absent when the organizer set no branding. |
+| registration_form | [FormSchema](#hackathon-entities-FormSchema) | optional | Organizer-defined form schemas (ConfigService.SetRegistrationForm / SetSubmissionForm). Populated on Get only — a client needs them to RENDER the form it is about to submit, and without a read path the only way to fill one in was to guess the field keys. Absent when no form is defined, which means &#34;accept anything&#34; on the write side. |
+| submission_form | [FormSchema](#hackathon-entities-FormSchema) | optional |  |
 
 
 
@@ -8092,7 +8094,15 @@ VoteResult is a placement entry within a vote category.
 <a name="vote-messages-vote_svc-ListVotesRequest"></a>
 
 ### ListVotesRequest
+The handler treats an empty voter_id / submission_id as &#34;no filter&#34;, but a
+plain string.uuid rule rejects the empty string before the handler ever runs
+— which made every partially-filtered call impossible, including the obvious
+&#34;all votes in this category&#34;. The CEL rules below allow empty OR a valid
+UUID, the same escape hatch page_id uses in
+hackathon/messages/phase_svc/edit_request.proto.
 
+category_id keeps the strict rule: listing votes without one is not a query
+this service supports.
 
 
 | Field | Type | Label | Description |

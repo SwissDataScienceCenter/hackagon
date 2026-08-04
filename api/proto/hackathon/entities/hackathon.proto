@@ -5,6 +5,7 @@ package hackathon.entities;
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "hackathon/entities/capability.proto";
+import "hackathon/entities/form_schema.proto";
 import "hackathon/entities/hackathon_branding.proto";
 import "hackathon/entities/hackathon_member.proto";
 import "hackathon/entities/hackathon_settings.proto";
@@ -65,4 +66,11 @@ message Hackathon {
   // event's own colours invisible exactly where visitors see it. Absent when
   // the organizer set no branding.
   optional HackathonBranding branding = 22;
+  // Organizer-defined form schemas (ConfigService.SetRegistrationForm /
+  // SetSubmissionForm). Populated on Get only — a client needs them to RENDER
+  // the form it is about to submit, and without a read path the only way to
+  // fill one in was to guess the field keys. Absent when no form is defined,
+  // which means "accept anything" on the write side.
+  optional FormSchema registration_form = 23;
+  optional FormSchema submission_form = 24;
 }

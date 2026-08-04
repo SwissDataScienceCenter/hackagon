@@ -126,6 +126,19 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 	// branding here on purpose: both mean "render the default theme".
 	if h.Edges.Forms != nil {
 		e.Branding = brandingEntryFromEnt(h.Edges.Forms.Branding)
+		// The schemas a client needs to RENDER the registration/submission
+		// forms it is about to fill in. Without them the only way to complete
+		// one was to guess the organizer's field keys. Nil when unset, which
+		// the write path reads as "accept anything".
+		if len(h.Edges.Forms.RegistrationFields) > 0 ||
+			len(h.Edges.Forms.RegistrationConsents) > 0 {
+			e.RegistrationForm = formSchemaFromJSON(
+				h.Edges.Forms.RegistrationFields, h.Edges.Forms.RegistrationConsents,
+			)
+		}
+		if len(h.Edges.Forms.SubmissionFields) > 0 {
+			e.SubmissionForm = formSchemaFromJSON(h.Edges.Forms.SubmissionFields, nil)
+		}
 	}
 
 	return e

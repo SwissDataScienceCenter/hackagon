@@ -6,8 +6,28 @@ import "buf/validate/validate.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
 
+// The handler treats an empty voter_id / submission_id as "no filter", but a
+// plain string.uuid rule rejects the empty string before the handler ever runs
+// — which made every partially-filtered call impossible, including the obvious
+// "all votes in this category". The CEL rules below allow empty OR a valid
+// UUID, the same escape hatch page_id uses in
+// hackathon/messages/phase_svc/edit_request.proto.
+//
+// category_id keeps the strict rule: listing votes without one is not a query
+// this service supports.
 message ListVotesRequest {
   string category_id = 1 [(buf.validate.field).string.uuid = true];
-  string voter_id = 2 [(buf.validate.field).string.uuid = true];
-  string submission_id = 3 [(buf.validate.field).string.uuid = true];
+  string voter_id = 2;
+  string submission_id = 3;
+
+  option (buf.validate.message).cel = {
+    id: "voter_id_uuid_or_empty"
+    message: "voter_id must be a valid UUID if provided and non-empty"
+    expression: "this.voter_id == '' || this.voter_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
+  option (buf.validate.message).cel = {
+    id: "submission_id_uuid_or_empty"
+    message: "submission_id must be a valid UUID if provided and non-empty"
+    expression: "this.submission_id == '' || this.submission_id.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  };
 }
