@@ -10,10 +10,11 @@ import {
 import { parseArgs } from "$lib/server/args"
 import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
-import { ConfigLoader } from "$lib/server/settings"
+import { ConfigLoader, sharedConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
 import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
 import { ClientError, Status } from "nice-grpc-common"
+import { safeReturnTo } from "$lib/utils/returnTo"
 import type { CustomSession } from "./auth.d"
 
 // Global config state for the application.
@@ -52,7 +53,9 @@ function hasLoggedInUserContext(
 }
 
 function setupConfigAndLogger(): ConfigLoader {
-  const loader = new ConfigLoader()
+  // Shared instance: server-only modules outside the request scope (the gRPC
+  // channel) read the backend address from the very same config.
+  const loader = sharedConfigLoader
 
   try {
     const opts = parseArgs()
@@ -130,6 +133,13 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
     event.locals.session = clientSession
   }
 
+  // Can this session still authenticate a backend call? redirectHandle consumes
+  // it: sending a user whose token is broken back to the page they came from
+  // would ping-pong against the guard below.
+  event.locals.sessionUsable = Boolean(
+    session?.user?.id && session.accessToken && !session.error,
+  )
+
   if (isProtectedRoute(event.url.pathname)) {
     if (!hasLoggedInUserContext(session)) {
       redirectToLogin(event.url, event.locals.logger, "No user found")
@@ -181,19 +191,24 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// If a logged-in user visits the root page (without returnTo), send them to the dashboard.
+// A logged-in user has no business on the login page: send them to the deep
+// link the guards parked in `returnTo` (where they were headed before being
+// bounced), or to the dashboard. Sessions that can no longer authenticate are
+// left on the landing page so they can log in again instead of being bounced
+// back and forth by the guard in sessionSetupHandle.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
-  const hasReturnTo = event.url.searchParams.has("returnTo")
 
-  if (isRootPath && !hasReturnTo) {
-    if (event.locals.session?.user?.id) {
-      event.locals.logger.debug(
-        { userId: event.locals.session.user.id },
-        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
-      )
-      throw redirect(303, resolvePath("/(app)/dashboard"))
-    }
+  if (isRootPath && event.locals.sessionUsable) {
+    const target =
+      safeReturnTo(event.url.searchParams.get("returnTo")) ??
+      resolvePath("/(app)/dashboard")
+
+    event.locals.logger.debug(
+      { userId: event.locals.session?.user?.id, target },
+      "HOOKS: Logged-in user on login page -> Redirecting.",
+    )
+    throw redirect(303, target)
   }
 
   return resolve(event)
@@ -205,7 +220,7 @@ export const handle = sequence(
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
   sessionSetupHandle, // Sanitize session + guard protected routes + setup gRPC clients
-  redirectHandle, // Logged-in users on / -> /dashboard (unless returnTo is present)
+  redirectHandle, // Logged-in users on / -> returnTo deep link, else /dashboard
 )
 
 // ----------------------------------------------------------
@@ -218,7 +233,7 @@ export const init = async () => {
   logger.info({ env: import.meta.env }, "Node environment.")
 
   try {
-    const health = await healthClient.check({})
+    const health = await healthClient().check({})
     logger.info({ health }, "Backend health check passed.")
   } catch (err) {
     logger.error({ err }, "Backend health check failed on startup.")

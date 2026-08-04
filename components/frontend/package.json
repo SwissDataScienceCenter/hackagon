@@ -14,8 +14,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "vitest run",
     "format": "prettier --write .",
-    "lint": "eslint . && tsc --noEmit",
-    "proto:generate": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/lib/server/grpc/generated --ts_proto_opt=outputServices=nice-grpc,outputServices=generic-definitions,esModuleInterop=true,env=node,useExactTypes=false --proto_path=../../api/proto health/health_service.proto user/user_service.proto hackathon/hackathon_service.proto"
+    "lint": "eslint . && tsc --noEmit"
   },
   "devDependencies": {
     "@bufbuild/protobuf": "^2.11.0",

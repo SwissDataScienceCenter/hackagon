@@ -12,6 +12,8 @@ declare global {
     export interface Locals {
       config: AppConfig
       session?: Omit<Session, "accessToken">
+      // Session present AND still able to authenticate a backend call.
+      sessionUsable?: boolean
       logger: Logger
       grpc?: AuthorizedGrpc
       platformUser?: User

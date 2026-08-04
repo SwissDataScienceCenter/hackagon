@@ -1,4 +1,6 @@
 import { createChannel, createClientFactory, Metadata } from "nice-grpc"
+import type { Channel } from "nice-grpc"
+import { sharedConfigLoader } from "$lib/server/settings"
 import { HealthServiceDefinition } from "./generated/health/health_service"
 import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
@@ -8,20 +10,37 @@ import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { TeamServiceClient } from "./generated/hackathon/team_service"
+import type { PageServiceClient } from "./generated/hackathon/page_service"
 
-const channel = createChannel("localhost:3000")
+let channel: Channel | undefined
+
+// The backend address comes from the validated config, which hooks.server.ts
+// only loads after this module has been imported — hence the lazy channel.
+// Every client below is built through it, so none of them can capture an
+// address before the config has been read and validated.
+function getChannel(): Channel {
+  if (!channel) {
+    const { hostname, port } = sharedConfigLoader.get().backend
+    channel = createChannel(`${hostname}:${port}`)
+  }
+  return channel
+}
 
 // Unauthenticated health client for the startup check in hooks.server.ts
-export const healthClient = createClientFactory().create(
-  HealthServiceDefinition,
-  channel,
-)
+export function healthClient(): HealthServiceClient {
+  return createClientFactory().create(HealthServiceDefinition, getChannel())
+}
 
 // Unauthenticated hackathon client for public pages (List endpoint is skipAuth)
-export const publicHackathonClient = createClientFactory().create(
-  HackathonServiceDefinition,
-  channel,
-)
+export function publicHackathonClient(): HackathonServiceClient {
+  return createClientFactory().create(HackathonServiceDefinition, getChannel())
+}
+
+// Unauthenticated page client for public hackathon pages (winners, wrap-up
+// posts). The backend serves pages of PUBLIC hackathons to everyone.
+export function publicPageClient(): PageServiceClient {
+  return createClientFactory().create(PageServiceDefinition, getChannel())
+}
 
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
@@ -43,10 +62,10 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
   )
 
   return {
-    user: factory.create(UserServiceDefinition, channel),
-    health: factory.create(HealthServiceDefinition, channel),
-    hackathon: factory.create(HackathonServiceDefinition, channel),
-    team: factory.create(TeamServiceDefinition, channel),
+    user: factory.create(UserServiceDefinition, getChannel()),
+    health: factory.create(HealthServiceDefinition, getChannel()),
+    hackathon: factory.create(HackathonServiceDefinition, getChannel()),
+    team: factory.create(TeamServiceDefinition, getChannel()),
   }
 }
 
@@ -58,10 +77,3 @@ export function requireGrpc(grpc: AuthorizedGrpc | undefined): AuthorizedGrpc {
   }
   return grpc
 }
-
-// Unauthenticated page client for public hackathon pages (winners, wrap-up
-// posts). The backend serves pages of PUBLIC hackathons to everyone.
-export const publicPageClient = createClientFactory().create(
-  PageServiceDefinition,
-  channel,
-)

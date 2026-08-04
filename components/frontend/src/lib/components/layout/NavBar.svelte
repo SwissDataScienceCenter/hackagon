@@ -4,8 +4,14 @@
     import { resolve } from '$app/paths';
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
+    import { safeReturnTo } from '$lib/utils/returnTo';
 
     let { session }: { session: Omit<Session, 'accessToken'> | null } = $props();
+
+    /** Deep link the guards parked in `returnTo`, else back to the current page. */
+    const loginCallbackUrl = $derived(
+        safeReturnTo($page.url.searchParams.get('returnTo')) ?? $page.url.pathname,
+    );
 </script>
 
 <header
@@ -69,7 +75,7 @@
             </button>
         {:else}
             <button
-                onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
+                onclick={() => signIn('keycloak', { callbackUrl: loginCallbackUrl })}
                 class="btn btn-sm preset-filled-primary-500"
             >
                 Log in

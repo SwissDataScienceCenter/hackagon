@@ -14,7 +14,9 @@ export const load: PageServerLoad = async (event) => {
   // Private hackathons yield an empty list here — the backend refuses.
   let pages: { id: string; title: string; content: string }[] = []
   try {
-    const result = await publicPageClient.list({ hackathonId: event.params.id })
+    const result = await publicPageClient().list({
+      hackathonId: event.params.id,
+    })
     pages = result.pages.map((p) => ({
       id: p.id,
       title: p.title,

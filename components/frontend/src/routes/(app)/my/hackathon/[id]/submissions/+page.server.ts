@@ -24,9 +24,16 @@ export const load: PageServerLoad = async (event) => {
   const teamNames = new Map(teams.map((t) => [t.id, t.name]))
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
 
-  const perTeam = await Promise.all(
-    teams.map((t) => team.listSubmissions({ teamId: t.id })),
-  )
+  let perTeam
+  try {
+    perTeam = await Promise.all(
+      teams.map((t) => team.listSubmissions({ teamId: t.id })),
+    )
+  } catch (e) {
+    if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
+      error(403, "Access denied")
+    throw e
+  }
 
   return {
     submissions: perTeam

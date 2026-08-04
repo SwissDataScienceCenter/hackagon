@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { enhance } from '$app/forms';
     import {
         Bell,
         UserPlus,
@@ -28,9 +29,11 @@
         session: SessionProp | null | undefined;
         myHackathons: HackathonEntry[];
         otherHackathons: HackathonEntry[];
+        /** Result of the ?/join form action (error message on failure). */
+        form?: { message?: string } | null;
     }
 
-    const { session, myHackathons, otherHackathons }: Props = $props();
+    const { session, myHackathons, otherHackathons, form = null }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
     const GRADIENTS = [
@@ -51,9 +54,6 @@
         return '';
     }
 
-    function joinStub() {
-        alert('Join: not yet implemented');
-    }
 </script>
 
 <!-- Welcome Banner -->
@@ -110,6 +110,10 @@
         <section class="flex flex-col gap-4">
             <h2 class="text-base font-bold">Other hackathons</h2>
 
+            {#if form?.message}
+                <p class="text-sm text-error-500">{form.message}</p>
+            {/if}
+
             {#if otherHackathons.length === 0}
                 <p class="text-sm text-surface-500">No other hackathons available.</p>
             {:else}
@@ -128,12 +132,14 @@
                                     gradTo={gradient(i).to}
                                 />
                             </div>
-                            <button
-                                onclick={joinStub}
-                                class="mr-4 btn btn-sm preset-tonal-primary shrink-0"
-                            >
-                                Join
-                            </button>
+                            <!-- The backend decides (window/role checks); the
+                                 action translates its verdict into form.message. -->
+                            <form method="POST" action="?/join" use:enhance class="mr-4 shrink-0">
+                                <input type="hidden" name="hackathonId" value={h.id} />
+                                <button type="submit" class="btn btn-sm preset-tonal-primary">
+                                    Join
+                                </button>
+                            </form>
                         </div>
                     {/each}
                 </div>
