@@ -30,6 +30,19 @@ services:
       # Keep devenv/direnv state off the (slow) host bind mount.
       - devenv-state:/workspaces/hackagon/.devenv
       - direnv-state:/workspaces/hackagon/.direnv
+      # node_modules MUST NOT live on the bind mount. It is ~275 MB across
+      # tens of thousands of small files, and on Windows/macOS every stat()
+      # crosses the host filesystem boundary. Measured there: a single
+      # `require("isomorphic-dompurify")` (jsdom) took 52s, which blew past
+      # vite's 60s SSR module-transport timeout and 500'd every route. In a
+      # named volume it is native container-local IO.
+      # NOTE: the volume masks the host directory, so it starts empty —
+      # post-create.sh/bootstrap.sh repopulate it with `pnpm install`.
+      - frontend-node-modules:/workspaces/hackagon/components/frontend/node_modules
+      # Same reasoning for the build/codegen caches that are written on every
+      # dev-server start and are cheap to regenerate.
+      - frontend-svelte-kit:/workspaces/hackagon/components/frontend/.svelte-kit
+      - pnpm-store:/workspaces/hackagon/.pnpm-store
     # Only reachable from the host for services binding 0.0.0.0 (keycloak);
     # VS Code / devcontainer CLI port forwarding covers the 127.0.0.1 ones.
     ports:
@@ -76,6 +89,13 @@ volumes:
   # (.devenv/state/postgres), so the database also survives rebuilds.
   devenv-state:
   direnv-state:
+  # Node dependencies and build caches — kept off the host bind mount because
+  # small-file IO across it is orders of magnitude slower (see the dev service
+  # comment). All three are reproducible from lockfiles; losing them costs one
+  # `pnpm install`.
+  frontend-node-modules:
+  frontend-svelte-kit:
+  pnpm-store:
 
 networks:
   # Explicit name so sidecars and external tooling can attach predictably

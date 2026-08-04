@@ -12,8 +12,16 @@ export USER="${USER:-$(whoami)}"
 # The bind-mounted repo is owned by the host user.
 git config --global --add safe.directory "${workspace}"
 
-# Named-volume mountpoints (.devenv/.direnv) are created root-owned.
-sudo chown "$(id -u):$(id -g)" "${workspace}/.devenv" "${workspace}/.direnv"
+# Named-volume mountpoints are created root-owned; everything below runs as
+# vscode, so hand them over. node_modules/.svelte-kit/.pnpm-store are volumes
+# because small-file IO on the host bind mount is pathologically slow on
+# Windows and macOS (see docker-compose.yml).
+sudo chown "$(id -u):$(id -g)" \
+    "${workspace}/.devenv" \
+    "${workspace}/.direnv" \
+    "${workspace}/.pnpm-store" \
+    "${workspace}/components/frontend/node_modules" \
+    "${workspace}/components/frontend/.svelte-kit"
 
 # Make a manually installed (single-user) Nix visible to every shell. With the
 # devcontainer Nix feature this file does not exist and these are no-ops.

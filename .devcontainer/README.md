@@ -117,6 +117,25 @@ bind mount and survive container rebuilds:
 - `devenv-state` (`.devenv`) — devenv state, **including the Postgres data
   directory** (`.devenv/state/postgres`).
 - `direnv-state` (`.direnv`) — direnv cache.
+- `frontend-node-modules` (`components/frontend/node_modules`),
+  `frontend-svelte-kit` (`components/frontend/.svelte-kit`) and `pnpm-store`
+  (`.pnpm-store`) — Node dependencies and build caches.
+
+**Why node_modules must be a volume.** The workspace bind mount is a `9p`
+filesystem on Windows (and osxfs/virtiofs on macOS); the volumes are native
+`ext4`. `node_modules` is ~275 MB of small files, and every `stat()` across
+that boundary is expensive. Measured on the bind mount, a single
+`require("isomorphic-dompurify")` (which pulls in jsdom) took **52 seconds** —
+past vite's 60 s SSR module-transport timeout, so every route returned 500.
+The same require is fast from the volume. Confirm which side you are on with
+`findmnt -no TARGET,FSTYPE | grep node_modules` — it must say `ext4`, not
+`9p`.
+
+The trade-off: the volume **masks** the host directory, so `node_modules` is
+invisible from Windows (editors relying on it for IntelliSense should run
+inside the container, which is the intended workflow) and starts **empty** on
+first creation — `post-create.sh` chowns the mountpoints (they appear
+root-owned) and `bootstrap.sh` repopulates them with `pnpm install`.
 
 Volume names are prefixed with the compose project name, so parallel
 checkouts don't collide as long as `COMPOSE_PROJECT_NAME` differs. The
