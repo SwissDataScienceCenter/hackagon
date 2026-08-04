@@ -10,10 +10,6 @@ import "hackathon/messages/hackathon_svc/create_request.proto";
 import "hackathon/messages/hackathon_svc/create_response.proto";
 import "hackathon/messages/hackathon_svc/edit_request.proto";
 import "hackathon/messages/hackathon_svc/edit_response.proto";
-import "hackathon/messages/hackathon_svc/set_capabilities_request.proto";
-import "hackathon/messages/hackathon_svc/set_capabilities_response.proto";
-import "hackathon/messages/hackathon_svc/set_current_phase_request.proto";
-import "hackathon/messages/hackathon_svc/set_current_phase_response.proto";
 import "hackathon/messages/hackathon_svc/get_request.proto";
 import "hackathon/messages/hackathon_svc/get_response.proto";
 import "hackathon/messages/hackathon_svc/join_request.proto";
@@ -24,6 +20,10 @@ import "hackathon/messages/hackathon_svc/remove_owner_request.proto";
 import "hackathon/messages/hackathon_svc/remove_owner_response.proto";
 import "hackathon/messages/hackathon_svc/remove_participant_request.proto";
 import "hackathon/messages/hackathon_svc/remove_participant_response.proto";
+import "hackathon/messages/hackathon_svc/set_capabilities_request.proto";
+import "hackathon/messages/hackathon_svc/set_capabilities_response.proto";
+import "hackathon/messages/hackathon_svc/set_current_phase_request.proto";
+import "hackathon/messages/hackathon_svc/set_current_phase_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 

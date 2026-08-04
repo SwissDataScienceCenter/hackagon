@@ -4,6 +4,7 @@ package hackathon.messages.phase_svc;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "hackathon/entities/capability.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/phase_svc";
 
@@ -17,6 +18,11 @@ message CreateRequest {
   optional google.protobuf.Timestamp starts_at = 4;
   optional google.protobuf.Timestamp ends_at = 5;
   optional string page_id = 6;
+  repeated hackathon.entities.Capability capabilities = 7 [
+    (buf.validate.field).repeated.min_items = 0,
+    (buf.validate.field).repeated.unique = true,
+    (buf.validate.field).repeated.items.enum.defined_only = true
+  ];
 
   option (buf.validate.message).cel = {
     id: "starts_at_requires_ends_at"

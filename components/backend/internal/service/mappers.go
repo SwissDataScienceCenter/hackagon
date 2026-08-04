@@ -275,8 +275,34 @@ func phaseEntryFromEnt(p *ent.Phase, hackathonID uuid.UUID) *hackEnts.Phase {
 		e.PageId = &pid
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
+	if len(p.Capabilities) > 0 {
+		e.Capabilities = make([]hackEnts.Capability, len(p.Capabilities))
+		for i, c := range p.Capabilities {
+			e.Capabilities[i] = dbCapabilityToProto(c)
+		}
+	}
 
 	return e
+}
+
+// dbCapabilityToProto converts a DB string capability to proto enum.
+func dbCapabilityToProto(s string) hackEnts.Capability {
+	switch s {
+	case "register":
+		return hackEnts.Capability_CAPABILITY_REGISTER
+	case "propose_projects":
+		return hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS
+	case "set_team_preferences":
+		return hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES
+	case "create_project_submissions":
+		return hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS
+	case "vote":
+		return hackEnts.Capability_CAPABILITY_VOTE
+	case "view_results":
+		return hackEnts.Capability_CAPABILITY_VIEW_RESULTS
+	default:
+		return hackEnts.Capability_CAPABILITY_UNSPECIFIED
+	}
 }
 
 func stateEntryFromEnt(s *ent.HackathonState) *hackEnts.HackathonState {
@@ -293,12 +319,22 @@ func stateEntryFromEnt(s *ent.HackathonState) *hackEnts.HackathonState {
 		Capabilities: []*hackEnts.CapabilityState{
 			{Capability: hackEnts.Capability_CAPABILITY_REGISTER, Enabled: s.RegistrationsEnabled},
 			{Capability: hackEnts.Capability_CAPABILITY_VOTE, Enabled: s.VotingEnabled},
-			{Capability: hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: s.ProposeProjectsEnabled},
-			{Capability: hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: s.SetTeamPreferencesEnabled},
-			{Capability: hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS, Enabled: s.CreateProjectSubmissionsEnabled},
-			{Capability: hackEnts.Capability_CAPABILITY_VIEW_RESULTS, Enabled: s.ViewResultsEnabled},
+			{
+				Capability: hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS,
+				Enabled:    s.ProposeProjectsEnabled,
+			},
+			{
+				Capability: hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES,
+				Enabled:    s.SetTeamPreferencesEnabled,
+			},
+			{
+				Capability: hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+				Enabled:    s.CreateProjectSubmissionsEnabled,
+			},
+			{
+				Capability: hackEnts.Capability_CAPABILITY_VIEW_RESULTS,
+				Enabled:    s.ViewResultsEnabled,
+			},
 		},
 	}
 }
-
-

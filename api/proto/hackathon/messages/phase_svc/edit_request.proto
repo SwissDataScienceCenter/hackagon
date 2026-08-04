@@ -4,6 +4,7 @@ package hackathon.messages.phase_svc;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "hackathon/entities/capability.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/phase_svc";
 
@@ -18,6 +19,15 @@ message EditRequest {
   optional google.protobuf.Timestamp ends_at = 5;
   // Empty string = unlink (unset), non-empty string = link to this phase, not set = no change
   optional string page_id = 6;
+  optional PhaseCapabilities capabilities = 7;
+
+  message PhaseCapabilities {
+    repeated hackathon.entities.Capability items = 1 [
+      (buf.validate.field).repeated.min_items = 0,
+      (buf.validate.field).repeated.unique = true,
+      (buf.validate.field).repeated.items.enum.defined_only = true
+    ];
+  }
 
   option (buf.validate.message).cel = {
     id: "starts_at_requires_ends_at"

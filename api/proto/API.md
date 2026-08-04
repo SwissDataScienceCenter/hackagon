@@ -82,19 +82,6 @@
 - [hackathon/messages/hackathon_svc/edit_response.proto](#hackathon_messages_hackathon_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-hackathon_svc-EditResponse)
   
-- [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
-    - [CapabilityState](#hackathon-messages-hackathon_svc-CapabilityState)
-    - [SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest)
-  
-- [hackathon/messages/hackathon_svc/set_capabilities_response.proto](#hackathon_messages_hackathon_svc_set_capabilities_response-proto)
-    - [SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse)
-  
-- [hackathon/messages/hackathon_svc/set_current_phase_request.proto](#hackathon_messages_hackathon_svc_set_current_phase_request-proto)
-    - [SetCurrentPhaseRequest](#hackathon-messages-hackathon_svc-SetCurrentPhaseRequest)
-  
-- [hackathon/messages/hackathon_svc/set_current_phase_response.proto](#hackathon_messages_hackathon_svc_set_current_phase_response-proto)
-    - [SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse)
-  
 - [hackathon/messages/hackathon_svc/get_request.proto](#hackathon_messages_hackathon_svc_get_request-proto)
     - [GetRequest](#hackathon-messages-hackathon_svc-GetRequest)
   
@@ -124,6 +111,19 @@
   
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
+  
+- [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
+    - [CapabilityState](#hackathon-messages-hackathon_svc-CapabilityState)
+    - [SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest)
+  
+- [hackathon/messages/hackathon_svc/set_capabilities_response.proto](#hackathon_messages_hackathon_svc_set_capabilities_response-proto)
+    - [SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse)
+  
+- [hackathon/messages/hackathon_svc/set_current_phase_request.proto](#hackathon_messages_hackathon_svc_set_current_phase_request-proto)
+    - [SetCurrentPhaseRequest](#hackathon-messages-hackathon_svc-SetCurrentPhaseRequest)
+  
+- [hackathon/messages/hackathon_svc/set_current_phase_response.proto](#hackathon_messages_hackathon_svc_set_current_phase_response-proto)
+    - [SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse)
   
 - [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
     - [HackathonService](#hackathon-HackathonService)
@@ -190,6 +190,7 @@
   
 - [hackathon/messages/phase_svc/edit_request.proto](#hackathon_messages_phase_svc_edit_request-proto)
     - [EditRequest](#hackathon-messages-phase_svc-EditRequest)
+    - [EditRequest.PhaseCapabilities](#hackathon-messages-phase_svc-EditRequest-PhaseCapabilities)
   
 - [hackathon/messages/phase_svc/edit_response.proto](#hackathon_messages_phase_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-phase_svc-EditResponse)
@@ -1338,148 +1339,6 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
-<a name="hackathon_messages_hackathon_svc_set_capabilities_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/set_capabilities_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-CapabilityState"></a>
-
-### CapabilityState
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| capability | [hackathon.entities.Capability](#hackathon-entities-Capability) |  |  |
-| enabled | [bool](#bool) |  |  |
-
-
-
-
-
-
-<a name="hackathon-messages-hackathon_svc-SetCapabilitiesRequest"></a>
-
-### SetCapabilitiesRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| capabilities | [CapabilityState](#hackathon-messages-hackathon_svc-CapabilityState) | repeated |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_set_capabilities_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/set_capabilities_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-SetCapabilitiesResponse"></a>
-
-### SetCapabilitiesResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_set_current_phase_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/set_current_phase_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-SetCurrentPhaseRequest"></a>
-
-### SetCurrentPhaseRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| phase_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_set_current_phase_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/set_current_phase_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-SetCurrentPhaseResponse"></a>
-
-### SetCurrentPhaseResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
 <a name="hackathon_messages_hackathon_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1770,6 +1629,148 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 ### RemoveParticipantResponse
 
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_capabilities_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_capabilities_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CapabilityState"></a>
+
+### CapabilityState
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| capability | [hackathon.entities.Capability](#hackathon-entities-Capability) |  |  |
+| enabled | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCapabilitiesRequest"></a>
+
+### SetCapabilitiesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| capabilities | [CapabilityState](#hackathon-messages-hackathon_svc-CapabilityState) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_capabilities_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_capabilities_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCapabilitiesResponse"></a>
+
+### SetCapabilitiesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_current_phase_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_current_phase_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCurrentPhaseRequest"></a>
+
+### SetCurrentPhaseRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| phase_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_current_phase_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_current_phase_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCurrentPhaseResponse"></a>
+
+### SetCurrentPhaseResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  |  |
 
 
 
@@ -2344,6 +2345,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | page_id | [string](#string) | optional |  |
+| capabilities | [hackathon.entities.Capability](#hackathon-entities-Capability) | repeated |  |
 
 
 
@@ -2468,6 +2470,22 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | page_id | [string](#string) | optional | Empty string = unlink (unset), non-empty string = link to this phase, not set = no change |
+| capabilities | [EditRequest.PhaseCapabilities](#hackathon-messages-phase_svc-EditRequest-PhaseCapabilities) | optional |  |
+
+
+
+
+
+
+<a name="hackathon-messages-phase_svc-EditRequest-PhaseCapabilities"></a>
+
+### EditRequest.PhaseCapabilities
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| items | [hackathon.entities.Capability](#hackathon-entities-Capability) | repeated |  |
 
 
 

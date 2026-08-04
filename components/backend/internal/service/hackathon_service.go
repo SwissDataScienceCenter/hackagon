@@ -12,7 +12,7 @@ import (
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
-	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
+	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -24,10 +24,10 @@ import (
 type HackathonService struct {
 	hackathon.UnimplementedHackathonServiceServer
 	dbClient *ent.Client
-	enforcer *m.Enforcer
+	enforcer *mw.Enforcer
 }
 
-func NewHackathonService(dbClient *ent.Client, enf *m.Enforcer) *HackathonService {
+func NewHackathonService(dbClient *ent.Client, enf *mw.Enforcer) *HackathonService {
 	return &HackathonService{
 		UnimplementedHackathonServiceServer: hackathon.UnimplementedHackathonServiceServer{},
 		dbClient:                            dbClient,
@@ -39,11 +39,11 @@ func (s *HackathonService) Create(
 	ctx context.Context,
 	req *msgs.CreateRequest,
 ) (*msgs.CreateResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.enforcer.RequirePermission(ctx, "*", m.Hackathon, m.Create); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, "*", mw.Hackathon, mw.Create); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +97,7 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon state")
 	}
 
-	if _, err := s.enforcer.AddRole(uid, m.Owner, h.ID.String()); err != nil {
+	if _, err := s.enforcer.AddRole(uid, mw.Owner, h.ID.String()); err != nil {
 		slog.Error("add hackathon owner", "err", err)
 		err := s.dbClient.Hackathon.DeleteOne(h).Exec(ctx)
 		if err != nil {
@@ -119,7 +119,7 @@ func (s *HackathonService) Get(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Read); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
 		return nil, err
 	}
 
@@ -199,19 +199,22 @@ func (s *HackathonService) Join(
 	ctx context.Context,
 	req *msgs.JoinRequest,
 ) (*msgs.JoinResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Reject anonymous users - write operations require real authentication
-	if uid == m.AnonSubject {
+	if uid == mw.AnonSubject {
 		return nil, status.Error(codes.Unauthenticated, "anonymous users cannot join hackathons")
 	}
 
 	id, err := uuid.Parse(req.GetHackathonId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Join); err != nil {
+		return nil, err
 	}
 
 	// Check if hackathon exists and get it
@@ -231,21 +234,6 @@ func (s *HackathonService) Join(
 
 	if h.EndsAt.Before(time.Now()) {
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
-	}
-
-	// Check that registrations are enabled
-	state, err := s.dbClient.HackathonState.Query().
-		Where(enthackathonstate.HasHackathonWith(enthackathon.IDEQ(id))).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
-		}
-		slog.Error("query hackathon state", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query hackathon state")
-	}
-	if !state.RegistrationsEnabled {
-		return nil, status.Error(codes.FailedPrecondition, "registrations are closed")
 	}
 
 	// First ensure user exists and get their entity ID
@@ -293,13 +281,13 @@ func (s *HackathonService) ApproveParticipant(
 	ctx context.Context,
 	req *msgs.ApproveParticipantRequest,
 ) (*msgs.ApproveParticipantResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Reject anonymous users
-	if uid == m.AnonSubject {
+	if uid == mw.AnonSubject {
 		return nil, status.Error(
 			codes.Unauthenticated,
 			"anonymous users cannot remove participants",
@@ -312,7 +300,7 @@ func (s *HackathonService) ApproveParticipant(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
 		return nil, err
 	}
 
@@ -366,7 +354,7 @@ func (s *HackathonService) ApproveParticipant(
 
 		return nil, status.Errorf(codes.Internal, "couldn't approve participant")
 	}
-	if _, err := s.enforcer.AddRole(user.KeycloakID, m.Member, h.ID.String()); err != nil {
+	if _, err := s.enforcer.AddRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
 		slog.Error("add hackathon member", "err", err)
 
 		return nil, status.Errorf(codes.Internal, "couldn't set hackathon member permission")
@@ -379,13 +367,13 @@ func (s *HackathonService) RemoveParticipant(
 	ctx context.Context,
 	req *msgs.RemoveParticipantRequest,
 ) (*msgs.RemoveParticipantResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Reject anonymous users
-	if uid == m.AnonSubject {
+	if uid == mw.AnonSubject {
 		return nil, status.Error(
 			codes.Unauthenticated,
 			"anonymous users cannot remove participants",
@@ -398,7 +386,7 @@ func (s *HackathonService) RemoveParticipant(
 	}
 
 	// Check Write permission on hackathon (owners/organizers only)
-	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
 		return nil, err
 	}
 
@@ -452,7 +440,7 @@ func (s *HackathonService) RemoveParticipant(
 
 		return nil, status.Errorf(codes.Internal, "couldn't remove participant")
 	}
-	if _, err := s.enforcer.RemoveRole(user.KeycloakID, m.Member, h.ID.String()); err != nil {
+	if _, err := s.enforcer.RemoveRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
 		slog.Error("remove hackathon member", "err", err)
 
 		return nil, status.Errorf(codes.Internal, "couldn't remove hackathon member permission")
@@ -465,7 +453,7 @@ func (s *HackathonService) Edit(
 	ctx context.Context,
 	req *msgs.EditRequest,
 ) (*msgs.EditResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +483,7 @@ func (s *HackathonService) Edit(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, h.ID.String(), m.Hackathon, m.Write); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, h.ID.String(), mw.Hackathon, mw.Write); err != nil {
 		return nil, err
 	}
 
@@ -571,7 +559,7 @@ func (s *HackathonService) SetCapabilities(
 	ctx context.Context,
 	req *msgs.SetCapabilitiesRequest,
 ) (*msgs.SetCapabilitiesResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +570,7 @@ func (s *HackathonService) SetCapabilities(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
 		return nil, err
 	}
 
@@ -596,27 +584,88 @@ func (s *HackathonService) SetCapabilities(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Build update query
+	if len(req.GetCapabilities()) == 0 {
+		// don't update if request is empty
+		state, err := s.dbClient.HackathonState.Query().
+			Where(
+				enthackathonstate.HasHackathonWith(enthackathon.IDEQ(id)),
+			).Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil, status.Errorf(codes.NotFound, "hackathon state not found")
+			}
+			slog.Error("query updated state", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't query updated state")
+		}
+
+		return &msgs.SetCapabilitiesResponse{
+			State: stateEntryFromEnt(state),
+		}, nil
+	}
 	update := s.dbClient.HackathonState.Update().
 		Where(enthackathonstate.HasHackathonWith(enthackathon.IDEQ(id))).
 		SetModifier(user)
 
+	var member = mw.Member
 	for _, cs := range req.GetCapabilities() {
+		enabled := cs.GetEnabled()
+		var role *mw.Role
+		var obj mw.ObjectType
+		var perm mw.Permission
+		var opts []mw.EnforceOption
 		switch cs.GetCapability() {
 		case ents.Capability_CAPABILITY_REGISTER:
-			update = update.SetRegistrationsEnabled(cs.GetEnabled())
+			update = update.SetRegistrationsEnabled(enabled)
+			role = nil
+			obj = mw.Hackathon
+			perm = mw.Join
 		case ents.Capability_CAPABILITY_VOTE:
-			update = update.SetVotingEnabled(cs.GetEnabled())
+			update = update.SetVotingEnabled(enabled)
+			role = &member
+			obj = mw.Vote
+			perm = mw.Create
 		case ents.Capability_CAPABILITY_PROPOSE_PROJECTS:
-			update = update.SetProposeProjectsEnabled(cs.GetEnabled())
+			update = update.SetProposeProjectsEnabled(enabled)
+			role = &member
+			obj = mw.Project
+			perm = mw.Propose
 		case ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES:
-			update = update.SetSetTeamPreferencesEnabled(cs.GetEnabled())
+			update = update.SetSetTeamPreferencesEnabled(enabled)
+			role = &member
+			obj = mw.Project
+			perm = mw.Join
 		case ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS:
-			update = update.SetCreateProjectSubmissionsEnabled(cs.GetEnabled())
+			update = update.SetCreateProjectSubmissionsEnabled(enabled)
+			role = &member
+			obj = mw.Submission
+			perm = mw.Create
+			opts = append(opts, mw.WithTeam("*"))
 		case ents.Capability_CAPABILITY_VIEW_RESULTS:
-			update = update.SetViewResultsEnabled(cs.GetEnabled())
+			update = update.SetViewResultsEnabled(enabled)
+			role = &member
+			obj = mw.VoteResult
+			perm = mw.Read
 		case ents.Capability_CAPABILITY_UNSPECIFIED:
-			return nil, status.Errorf(codes.InvalidArgument, "capability must not be UNSPECIFIED")
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"capability must not be UNSPECIFIED",
+			)
+		}
+		if enabled {
+			err = s.enforcer.AddPolicy(role, id.String(), obj, perm, opts...)
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"couldn't add policy for %s %s",
+					obj,
+					perm,
+				)
+			}
+		} else {
+			err = s.enforcer.RemovePolicy(role, id.String(), obj, perm, opts...)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "couldn't remove policy for %s %s", obj, perm)
+			}
 		}
 	}
 
@@ -650,7 +699,7 @@ func (s *HackathonService) SetCurrentPhase(
 	ctx context.Context,
 	req *msgs.SetCurrentPhaseRequest,
 ) (*msgs.SetCurrentPhaseResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -660,26 +709,9 @@ func (s *HackathonService) SetCurrentPhase(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	phaseID, err := uuid.Parse(req.GetPhaseId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid phase_id: %v", err)
-	}
-
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Hackathon, mw.Write); err != nil {
 		return nil, err
-	}
-
-	// Verify phase exists and belongs to this hackathon
-	phase, err := s.dbClient.Phase.Query().
-		Where(entphase.IDEQ(phaseID), entphase.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "phase %s not found or does not belong to hackathon", req.GetPhaseId())
-		}
-		slog.Error("query phase", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query phase")
 	}
 
 	// Ensure user exists
@@ -693,10 +725,34 @@ func (s *HackathonService) SetCurrentPhase(
 	}
 
 	// Update current phase
-	_, err = s.dbClient.HackathonState.Update().
+	update := s.dbClient.HackathonState.Update().
 		Where(enthackathonstate.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
-		SetModifier(user).
-		SetCurrentPhase(phase).
+		SetModifier(user)
+	if req.GetPhaseId() == "" { //nolint:nestif // this is not actually complex...
+		update = update.ClearCurrentPhase()
+	} else {
+		// Verify phase exists and belongs to this hackathon
+		phaseID, err := uuid.Parse(req.GetPhaseId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid phase_id: %v", err)
+		}
+		phase, err := s.dbClient.Phase.Query().
+			Where(entphase.IDEQ(phaseID), entphase.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil, status.Errorf(
+					codes.NotFound,
+					"phase %s not found or does not belong to hackathon",
+					req.GetPhaseId(),
+				)
+			}
+			slog.Error("query phase", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't query phase")
+		}
+		update = update.SetCurrentPhase(phase)
+	}
+	_, err = update.
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -709,7 +765,7 @@ func (s *HackathonService) SetCurrentPhase(
 	state, err := s.dbClient.HackathonState.Query().
 		Where(
 			enthackathonstate.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
-		).WithCurrentPhase().Only(ctx)
+		).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(codes.NotFound, "hackathon state not found")
@@ -775,7 +831,7 @@ func (s *HackathonService) List(
 	entries := make([]*ents.Hackathon, 0, len(hs))
 	for _, h := range hs {
 		if h.Visibility == enthackathon.VisibilityPrivate {
-			ok, err := s.enforcer.Enforce(ctx, h.ID.String(), m.Hackathon, m.Read)
+			ok, err := s.enforcer.Enforce(ctx, h.ID.String(), mw.Hackathon, mw.Read)
 			if err != nil {
 				slog.Error("enforce list hackathon", "err", err)
 

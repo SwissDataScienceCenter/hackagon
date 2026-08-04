@@ -4,6 +4,7 @@ package service_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
 
@@ -18,6 +20,7 @@ import (
 	enpage "github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
+	entities "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	hackathonMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
 	pageMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/page_svc"
 	phaseMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/phase_svc"
@@ -27,10 +30,11 @@ import (
 var _ = Describe("PhaseService", func() {
 
 	var (
-		dbClient  *ent.Client
-		conn      *grpc.ClientConn
-		client    hackathonSvc.PhaseServiceClient
-		testAdmin string
+		dbClient        *ent.Client
+		conn            *grpc.ClientConn
+		client          hackathonSvc.PhaseServiceClient
+		hackathonClient hackathonSvc.HackathonServiceClient
+		testAdmin       string
 	)
 
 	BeforeEach(func() {
@@ -38,6 +42,7 @@ var _ = Describe("PhaseService", func() {
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewPhaseServiceClient(conn)
+		hackathonClient = hackathonSvc.NewHackathonServiceClient(conn)
 	})
 
 	Describe("Create", func() {
@@ -985,6 +990,142 @@ var _ = Describe("PhaseService", func() {
 				Only(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(page.Edges.Phase).To(BeNil())
+		})
+	})
+
+	Describe("Capabilities", func() {
+		var createdPhaseID string
+		var hackathonID string
+		var ctx context.Context
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx = metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			hackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+				Name:        "Capabilities Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hackResp.GetHackathonId()
+
+			phaseResp, err := client.Create(ctx, &phaseMsgs.CreateRequest{
+				HackathonId: hackathonID,
+				Name:        "Test Phase",
+				Description: "A phase with capabilities",
+				Capabilities: []entities.Capability{
+					entities.Capability_CAPABILITY_REGISTER,
+					entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			createdPhaseID = phaseResp.GetPhaseId()
+		})
+
+		It("creates phase with capabilities", func() {
+			phase, err := dbClient.Phase.Query().
+				Where(entphase.IDEQ(uuid.MustParse(createdPhaseID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(phase.Capabilities).To(ConsistOf("register", "propose_projects"))
+		})
+
+		It("lists phases with capabilities", func() {
+			resp, err := client.List(ctx, &phaseMsgs.ListRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Phases).To(HaveLen(1))
+			Expect(resp.Phases[0].Capabilities).To(ConsistOf(
+				entities.Capability_CAPABILITY_REGISTER,
+				entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+			))
+		})
+
+		It("gets phase with capabilities", func() {
+			resp, err := client.Get(ctx, &phaseMsgs.GetRequest{
+				PhaseId: createdPhaseID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Phase.Capabilities).To(ConsistOf(
+				entities.Capability_CAPABILITY_REGISTER,
+				entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+			))
+		})
+
+		It("updates capabilities via edit", func() {
+			// Add a new capability
+			_, err := client.Edit(ctx, &phaseMsgs.EditRequest{
+				PhaseId: createdPhaseID,
+				Capabilities: &phaseMsgs.EditRequest_PhaseCapabilities{
+					Items: []entities.Capability{
+						entities.Capability_CAPABILITY_REGISTER,
+						entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+						entities.Capability_CAPABILITY_VOTE,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			phase, err := dbClient.Phase.Query().
+				Where(entphase.IDEQ(uuid.MustParse(createdPhaseID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(phase.Capabilities).To(ConsistOf(
+				"register",
+				"propose_projects",
+				"vote",
+			))
+
+			// Verify via gRPC
+			resp, err := client.Get(ctx, &phaseMsgs.GetRequest{
+				PhaseId: createdPhaseID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Phase.Capabilities).To(ConsistOf(
+				entities.Capability_CAPABILITY_REGISTER,
+				entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+				entities.Capability_CAPABILITY_VOTE,
+			))
+		})
+
+		It("clears capabilities when set to empty", func() {
+			_, err := client.Edit(ctx, &phaseMsgs.EditRequest{
+				PhaseId: createdPhaseID,
+				Capabilities: &phaseMsgs.EditRequest_PhaseCapabilities{
+					Items: []entities.Capability{},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			phase, err := dbClient.Phase.Query().
+				Where(entphase.IDEQ(uuid.MustParse(createdPhaseID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(phase.Capabilities).To(BeEmpty())
+		})
+
+		It("returns phase with empty capabilities when none set", func() {
+			// Create a phase without capabilities
+			phaseResp, err := client.Create(ctx, &phaseMsgs.CreateRequest{
+				HackathonId: hackathonID,
+				Name:        "Phase Without Capabilities",
+				Description: "A phase with no capabilities",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			resp, err := client.Get(ctx, &phaseMsgs.GetRequest{
+				PhaseId: phaseResp.GetPhaseId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Phase.Capabilities).To(BeEmpty())
 		})
 	})
 

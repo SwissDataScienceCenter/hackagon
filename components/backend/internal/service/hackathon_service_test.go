@@ -18,21 +18,33 @@ import (
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
+	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
+	phaseMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/phase_svc"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/testutils"
 )
+
+// getCapabilityEnabled finds a capability's enabled state from a slice of CapabilityState.
+func getCapabilityEnabled(caps []*entities.CapabilityState, cap entities.Capability) bool {
+	for _, c := range caps {
+		if c.GetCapability() == cap {
+			return c.GetEnabled()
+		}
+	}
+	return false
+}
 
 var _ = Describe("HackathonService", func() {
 
 	var (
-		dbClient  *ent.Client
-		conn      *grpc.ClientConn
-		client    hackathonSvc.HackathonServiceClient
-		testAdmin string
+		dbClient    *ent.Client
+		conn        *grpc.ClientConn
+		client      hackathonSvc.HackathonServiceClient
+		phaseClient hackathonSvc.PhaseServiceClient
+		testAdmin   string
 	)
 
 	BeforeEach(func() {
@@ -40,6 +52,7 @@ var _ = Describe("HackathonService", func() {
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewHackathonServiceClient(conn)
+		phaseClient = hackathonSvc.NewPhaseServiceClient(conn)
 	})
 
 	Describe("Create", func() {
@@ -269,10 +282,12 @@ var _ = Describe("HackathonService", func() {
 			Expect(createResp.GetHackathonId()).NotTo(BeEmpty())
 			createdHackathonID = createResp.GetHackathonId()
 
-			// Enable registrations (disabled by default)
-			_, err = client.EditSettings(ctx, &msgs.EditSettingsRequest{
-				HackathonId:          createdHackathonID,
-				RegistrationsEnabled: testutils.BoolPtr(true),
+			// Enable registrations via SetCapabilities
+			_, err = client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: createdHackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -336,7 +351,7 @@ var _ = Describe("HackathonService", func() {
 			// Verify participant exists
 			participant, err := dbClient.Participant.Query().Where(
 				entparticipant.HackathonIDEQ(uuid.MustParse(createdHackathonID)),
-				entparticipant.UserIDEQ(user.ID),
+				entparticipant.UserID(user.ID),
 			).Only(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(participant.IsWaiting).To(BeTrue())
@@ -381,9 +396,11 @@ var _ = Describe("HackathonService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+adminToken),
 			)
-			_, err := client.EditSettings(adminCtx, &msgs.EditSettingsRequest{
-				HackathonId:          createdHackathonID,
-				RegistrationsEnabled: testutils.BoolPtr(false),
+			_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: createdHackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: false},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -406,7 +423,7 @@ var _ = Describe("HackathonService", func() {
 			Expect(err).To(HaveOccurred())
 
 			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
 
 		It("requires authentication to join", func() {
@@ -1111,7 +1128,7 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
-	Describe("HackathonSettings", func() {
+	Describe("HackathonState", func() {
 		var createdHackathonID string
 
 		BeforeEach(func() {
@@ -1131,21 +1148,25 @@ var _ = Describe("HackathonService", func() {
 			createdHackathonID = createResp.GetHackathonId()
 		})
 
-		Describe("Create creates default settings", func() {
-			It("creates settings with both flags disabled by default", func() {
-				// Verify settings exist in database with defaults
-				settings, err := dbClient.HackathonSettings.Query().
-					Where(enthackathonsettings.HasHackathonWith(
+		Describe("Create creates default state", func() {
+			It("creates state with all capabilities disabled by default", func() {
+				// Verify state exists in database with defaults
+				state, err := dbClient.HackathonState.Query().
+					Where(enthackathonstate.HasHackathonWith(
 						enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
 					)).Only(context.Background())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(settings.RegistrationsEnabled).To(BeFalse())
-				Expect(settings.VotingEnabled).To(BeFalse())
+				Expect(state.RegistrationsEnabled).To(BeFalse())
+				Expect(state.VotingEnabled).To(BeFalse())
+				Expect(state.ProposeProjectsEnabled).To(BeFalse())
+				Expect(state.SetTeamPreferencesEnabled).To(BeFalse())
+				Expect(state.CreateProjectSubmissionsEnabled).To(BeFalse())
+				Expect(state.ViewResultsEnabled).To(BeFalse())
 			})
 		})
 
-		Describe("Get returns settings", func() {
-			It("includes settings in Get response", func() {
+		Describe("Get returns state", func() {
+			It("includes state in Get response", func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
 				ctx := metadata.NewOutgoingContext(
 					context.Background(),
@@ -1157,16 +1178,52 @@ var _ = Describe("HackathonService", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				h := getResp.GetHackathon()
-				Expect(h.GetSettings()).NotTo(BeNil())
-				settings := h.GetSettings()
-				Expect(settings.GetRegistrationsEnabled()).To(BeFalse())
-				Expect(settings.GetVotingEnabled()).To(BeFalse())
-				Expect(settings.GetId()).NotTo(BeEmpty())
-				Expect(settings.GetModifiedAt()).NotTo(BeNil())
+				Expect(h.GetState()).NotTo(BeNil())
+				state := h.GetState()
+				Expect(state.GetId()).NotTo(BeEmpty())
+				Expect(state.GetModifiedAt()).NotTo(BeNil())
+
+				// All capabilities should be disabled
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_REGISTER,
+					),
+				).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_VOTE,
+					),
+				).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					),
+				).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_SET_TEAM_PREFERENCES,
+					),
+				).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+					),
+				).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_VIEW_RESULTS,
+					),
+				).To(BeFalse())
 			})
 		})
 
-		Describe("EditSettings", func() {
+		Describe("SetCapabilities", func() {
 			It("enables registrations", func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
 				ctx := metadata.NewOutgoingContext(
@@ -1174,88 +1231,104 @@ var _ = Describe("HackathonService", func() {
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
 
-				enabled := true
-				req := &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: &enabled,
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
 				}
 
-				resp, err := client.EditSettings(ctx, req)
+				resp, err := client.SetCapabilities(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeTrue())
-				Expect(resp.GetSettings().GetVotingEnabled()).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_REGISTER,
+					),
+				).To(BeTrue())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_VOTE,
+					),
+				).To(BeFalse())
 
 				// Verify in database
-				settings, err := dbClient.HackathonSettings.Query().
-					Where(enthackathonsettings.HasHackathonWith(
+				state, err := dbClient.HackathonState.Query().
+					Where(enthackathonstate.HasHackathonWith(
 						enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
 					)).Only(context.Background())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(settings.RegistrationsEnabled).To(BeTrue())
-				Expect(settings.VotingEnabled).To(BeFalse())
+				Expect(state.RegistrationsEnabled).To(BeTrue())
+				Expect(state.VotingEnabled).To(BeFalse())
 			})
 
-			It("enables voting", func() {
+			It("enables multiple capabilities at once", func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
 				ctx := metadata.NewOutgoingContext(
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
 
-				enabled := true
-				req := &msgs.EditSettingsRequest{
-					HackathonId:   createdHackathonID,
-					VotingEnabled: &enabled,
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+						{Capability: entities.Capability_CAPABILITY_VOTE, Enabled: true},
+					},
 				}
 
-				resp, err := client.EditSettings(ctx, req)
+				resp, err := client.SetCapabilities(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.GetSettings().GetVotingEnabled()).To(BeTrue())
-				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_REGISTER,
+					),
+				).To(BeTrue())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_VOTE,
+					),
+				).To(BeTrue())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+					),
+				).To(BeFalse())
 			})
 
-			It("enables both flags together", func() {
-				token := testutils.CreateTestJWTToken(testAdmin)
-				ctx := metadata.NewOutgoingContext(
-					context.Background(),
-					metadata.Pairs("authorization", "Bearer "+token),
-				)
-
-				enabled := true
-				req := &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: &enabled,
-					VotingEnabled:        &enabled,
-				}
-
-				resp, err := client.EditSettings(ctx, req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeTrue())
-				Expect(resp.GetSettings().GetVotingEnabled()).To(BeTrue())
-			})
-
-			It("disables previously enabled flags", func() {
+			It("disables previously enabled capabilities", func() {
 				// First enable registrations
 				token := testutils.CreateTestJWTToken(testAdmin)
 				ctx := metadata.NewOutgoingContext(
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
-				enabled := true
-				_, err := client.EditSettings(ctx, &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: &enabled,
+				_, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
 				// Now disable it
-				disabled := false
-				resp, err := client.EditSettings(ctx, &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: &disabled,
+				resp, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: false},
+					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.GetSettings().GetRegistrationsEnabled()).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_REGISTER,
+					),
+				).To(BeFalse())
 			})
 
 			It("returns NOT_FOUND for invalid hackathon ID", func() {
@@ -1265,14 +1338,37 @@ var _ = Describe("HackathonService", func() {
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
 
-				req := &msgs.EditSettingsRequest{
+				req := &msgs.SetCapabilitiesRequest{
 					HackathonId: uuid.NewString(),
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
 				}
 
-				_, err := client.EditSettings(ctx, req)
+				_, err := client.SetCapabilities(ctx, req)
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
 				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns error for UNSPECIFIED capability", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_UNSPECIFIED, Enabled: true},
+					},
+				}
+
+				_, err := client.SetCapabilities(ctx, req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.InvalidArgument))
 			})
 
 			It("requires Write permission", func() {
@@ -1289,45 +1385,406 @@ var _ = Describe("HackathonService", func() {
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
 
-				enabled := true
-				req := &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: &enabled,
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
 				}
 
-				_, err = client.EditSettings(ctx, req)
+				_, err = client.SetCapabilities(ctx, req)
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
 				Expect(st.Code()).To(Equal(codes.PermissionDenied))
 			})
 
 			It("denies anonymous users", func() {
-				req := &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: testutils.BoolPtr(true),
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
 				}
 
-				_, err := client.EditSettings(context.Background(), req)
+				_, err := client.SetCapabilities(context.Background(), req)
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
 				Expect(st.Code()).To(Equal(codes.PermissionDenied))
 			})
 
-			It("returns settings with modified_at timestamp", func() {
+			It("returns state with modified_at timestamp", func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
 				ctx := metadata.NewOutgoingContext(
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
 
-				req := &msgs.EditSettingsRequest{
-					HackathonId:          createdHackathonID,
-					RegistrationsEnabled: testutils.BoolPtr(true),
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
 				}
 
-				resp, err := client.EditSettings(ctx, req)
+				resp, err := client.SetCapabilities(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.GetSettings().GetModifiedAt()).NotTo(BeNil())
+				Expect(resp.GetState().GetModifiedAt()).NotTo(BeNil())
+			})
+		})
+	})
+
+	Describe("SetCurrentPhase", func() {
+		var createdHackathonID string
+		var createdPhaseID string
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createReq := &msgs.CreateRequest{
+				Name:       "Phase Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+
+			// Create a user for phase creator/modifier
+			phaseUser, err := dbClient.User.Create().
+				SetKeycloakID("phase-test-user").
+				SetUsername("phase-test-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a phase
+			phase, err := dbClient.Phase.Create().
+				SetHackathonID(uuid.MustParse(createdHackathonID)).
+				SetName("Registration Phase").
+				SetCreatorID(phaseUser.ID).
+				SetModifierID(phaseUser.ID).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			createdPhaseID = phase.ID.String()
+		})
+
+		It("sets current phase successfully", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     createdPhaseID,
+			}
+
+			resp, err := client.SetCurrentPhase(ctx, req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetState().GetCurrentPhaseId()).To(Equal(createdPhaseID))
+
+			// Verify in database
+			state, err := dbClient.HackathonState.Query().
+				Where(enthackathonstate.HasHackathonWith(
+					enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+				)).Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(state.CurrentPhaseID.String()).To(Equal(createdPhaseID))
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: uuid.NewString(),
+				PhaseId:     createdPhaseID,
+			}
+
+			_, err := client.SetCurrentPhase(ctx, req)
+			Expect(err).To(HaveOccurred())
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for phase not belonging to hackathon", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Create a user for hackathon/phase creator
+			otherUser, err := dbClient.User.Create().
+				SetKeycloakID("other-phase-user").
+				SetUsername("other-phase-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a phase in a different hackathon
+			otherHackathon, err := dbClient.Hackathon.Create().
+				SetName("Other Hackathon").
+				SetVisibility(enthackathon.VisibilityPublic).
+				SetCreatorID(otherUser.ID).
+				SetModifierID(otherUser.ID).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			otherPhase, err := dbClient.Phase.Create().
+				SetHackathonID(otherHackathon.ID).
+				SetName("Other Phase").
+				SetCreatorID(otherUser.ID).
+				SetModifierID(otherUser.ID).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     otherPhase.ID.String(),
+			}
+
+			_, err = client.SetCurrentPhase(ctx, req)
+			Expect(err).To(HaveOccurred())
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Write permission", func() {
+			nonOwnerKeycloakID := "non-owner-phase"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-phase-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     createdPhaseID,
+			}
+
+			_, err = client.SetCurrentPhase(ctx, req)
+			Expect(err).To(HaveOccurred())
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies anonymous users", func() {
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     createdPhaseID,
+			}
+
+			_, err := client.SetCurrentPhase(context.Background(), req)
+			Expect(err).To(HaveOccurred())
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("returns state with modified_at timestamp", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     createdPhaseID,
+			}
+
+			resp, err := client.SetCurrentPhase(ctx, req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetState().GetModifiedAt()).NotTo(BeNil())
+		})
+
+		It("clears current phase when phase_id is empty", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// First set a current phase
+			_, err := client.SetCurrentPhase(ctx, &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     createdPhaseID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify it was set
+			state, err := dbClient.HackathonState.Query().
+				Where(enthackathonstate.HasHackathonWith(
+					enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+				)).Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(state.CurrentPhaseID.String()).To(Equal(createdPhaseID))
+
+			// Clear the current phase
+			resp, err := client.SetCurrentPhase(ctx, &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     "",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetState().GetCurrentPhaseId()).To(BeEmpty())
+
+			// Verify it was cleared
+			state, err = dbClient.HackathonState.Query().
+				Where(enthackathonstate.HasHackathonWith(
+					enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+				)).Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(state.CurrentPhaseID).To(Equal(uuid.Nil))
+		})
+
+		It("returns NOT_FOUND for phase from different hackathon (created via gRPC)", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Create a phase in a different hackathon via gRPC
+			otherHackathonResp, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "Other Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			otherPhaseResp, err := phaseClient.Create(ctx, &phaseMsgs.CreateRequest{
+				HackathonId: otherHackathonResp.GetHackathonId(),
+				Name:        "Other Phase",
+				Description: "A phase in another hackathon",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to set it as current phase on the original hackathon
+			req := &msgs.SetCurrentPhaseRequest{
+				HackathonId: createdHackathonID,
+				PhaseId:     otherPhaseResp.GetPhaseId(),
+			}
+
+			_, err = client.SetCurrentPhase(ctx, req)
+			Expect(err).To(HaveOccurred())
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+	})
+
+	Describe("Capability-based permission gating", func() {
+		var createdHackathonID string
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createReq := &msgs.CreateRequest{
+				Name:       "Permission Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(time.Now().Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(time.Now().Add(48 * time.Hour)),
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+		})
+
+		Describe("Join requires register capability", func() {
+			It("allows join when register capability is enabled", func() {
+				// Enable register capability
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+				_, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create user and join
+				nonAdminKeycloakID := "join-cap-test"
+				_, err = dbClient.User.Create().
+					SetKeycloakID(nonAdminKeycloakID).
+					SetUsername("join-cap-user").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token = testutils.CreateTestJWTToken(nonAdminKeycloakID)
+				ctx = metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+				_, err = client.Join(ctx, joinReq)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("denies join when register capability is disabled", func() {
+				// Register is disabled by default
+				nonAdminKeycloakID := "join-cap-disabled"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonAdminKeycloakID).
+					SetUsername("join-cap-disabled-user").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				joinReq := &msgs.JoinRequest{HackathonId: createdHackathonID}
+				_, err = client.Join(ctx, joinReq)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		Describe("Empty capabilities map is no-op", func() {
+			It("returns current state when capabilities map is empty", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId:  createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{},
+				}
+
+				resp, err := client.SetCapabilities(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_REGISTER,
+					),
+				).To(BeFalse())
 			})
 		})
 	})

@@ -277,9 +277,19 @@ var _ = Describe("ProjectService", func() {
 			hackathonID := hackathonResp.GetHackathonId()
 
 			// Enable registrations (disabled by default)
-			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
-				HackathonId:          hackathonID,
-				RegistrationsEnabled: testutils.BoolPtr(true),
+			_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -358,9 +368,11 @@ var _ = Describe("ProjectService", func() {
 			hackathonID := hackathonResp.GetHackathonId()
 
 			// Enable registrations (disabled by default)
-			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
-				HackathonId:          hackathonID,
-				RegistrationsEnabled: testutils.BoolPtr(true),
+			_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -745,6 +757,22 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = createResp.GetHackathonId()
 
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			// Create a project
 			projectResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hackathonID,
@@ -755,22 +783,36 @@ var _ = Describe("ProjectService", func() {
 			createdProjectID = projectResp.GetProjectId()
 
 			// Create a test user who will be added as participant
-			testUser, err := dbClient.User.Create().
-				SetKeycloakID("test-preference-user").
+			testUserID := "test-preference-user"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(testUserID).
 				SetUsername("test-preference-username").
 				SetDisplayName("Test User").
 				SetEmail("test@preference.dev").
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
+			userToken := testutils.CreateTestJWTToken(testUserID)
+			userCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+userToken),
+			)
+
 			// Add test user as participant (not waitlisted)
-			now = time.Now()
-			_, err = dbClient.Participant.Create().
-				SetHackathonID(uuid.MustParse(hackathonID)).
-				SetUserID(testUser.ID).
-				SetIsWaiting(false).
-				SetCreatedAt(now).
-				Save(context.Background())
+			_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Approve the participant as admin
+			creatorUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(testUserID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      creatorUser.ID.String(),
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -901,6 +943,22 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = createResp.GetHackathonId()
 
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			// Create two projects
 			project1Resp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hackathonID,
@@ -918,8 +976,9 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create a test user
-			testUser, err := dbClient.User.Create().
-				SetKeycloakID("test-export-user").
+			testUserID := "test-export-user"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(testUserID).
 				SetUsername("test-export-username").
 				SetDisplayName("Test User").
 				SetEmail("test@export.dev").
@@ -927,13 +986,25 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Add test user as participant
-			now = time.Now()
-			_, err = dbClient.Participant.Create().
-				SetHackathonID(uuid.MustParse(hackathonID)).
-				SetUserID(testUser.ID).
-				SetIsWaiting(false).
-				SetCreatedAt(now).
-				Save(context.Background())
+			token = testutils.CreateTestJWTToken(testUserID)
+			userCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Approve the participant as admin
+			creatorUser, err := dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(testUserID)).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      creatorUser.ID.String(),
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Set preference for project 1
@@ -1044,6 +1115,22 @@ var _ = Describe("ProjectService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = createResp.GetHackathonId()
 
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			// Create a project
 			title := "Original Project Title"
 			description := "Original description"
@@ -1101,9 +1188,11 @@ var _ = Describe("ProjectService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+adminToken),
 			)
-			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
-				HackathonId:          hackathonID,
-				RegistrationsEnabled: testutils.BoolPtr(true),
+			_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1437,9 +1526,18 @@ var _ = Describe("ProjectService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+adminToken),
 			)
-			_, err = hackathonClient.EditSettings(adminCtx, &msgs.EditSettingsRequest{
-				HackathonId:          hackathonID,
-				RegistrationsEnabled: testutils.BoolPtr(true),
+			_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hackathonClient.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
