@@ -19,6 +19,8 @@ import (
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	entvoteresult "github.com/swissdatasciencecenter/hackagon/components/backend/ent/voteresult"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
+	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
+	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	vote "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote"
 	voteEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities"
 	voteMsgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc"
@@ -435,6 +437,20 @@ func (s *VoteService) SubmitVote(
 			return nil, status.Error(codes.PermissionDenied, "only jury members may vote in this category")
 		}
 	} else {
+		// Organizers are neutral: whoever runs the event does not also vote
+		// in it (pinned by the voting policy's organizerVoting: false).
+		if role, err := s.enforcer.GetHackathonRole(uid, hackathonID.String()); err == nil &&
+			role == hackEnts.HackathonRole_HACKATHON_ROLE_OWNER {
+			return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
+		}
+		if globals, err := s.enforcer.GetGlobalRoles(uid); err == nil {
+			for _, g := range globals {
+				if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
+					return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
+				}
+			}
+		}
+
 		confirmed, err := s.dbClient.Participant.Query().
 			Where(
 				entparticipant.HasUserWith(entuser.IDEQ(voter.ID)),
