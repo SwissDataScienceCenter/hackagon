@@ -3,10 +3,12 @@ import { HealthServiceDefinition } from "./generated/health/health_service"
 import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
+import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { TeamServiceClient } from "./generated/hackathon/team_service"
+import type { PageServiceClient } from "./generated/hackathon/page_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -28,9 +30,14 @@ export interface AuthorizedGrpc {
   health: HealthServiceClient
   hackathon: HackathonServiceClient
   // Teams are the one participant-facing collection `hackathon.get` does not
-  // return, so they need their own client. Tracks, projects, pages and phases
-  // arrive nested in the Get response — no client of their own on purpose.
+  // return, so they need their own client. Tracks and projects arrive nested in
+  // the Get response — no client of their own on purpose.
   team: TeamServiceClient
+  // Pages have their own client despite `hackathon.get` nesting them, because
+  // that response includes pages with `visible: false`, while PageService.List
+  // and Get filter and deny them. Page content therefore always comes from
+  // PageService, so the backend stays the one deciding what a member may read.
+  page: PageServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -49,6 +56,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     health: factory.create(HealthServiceDefinition, channel),
     hackathon: factory.create(HackathonServiceDefinition, channel),
     team: factory.create(TeamServiceDefinition, channel),
+    page: factory.create(PageServiceDefinition, channel),
   }
 }
 
