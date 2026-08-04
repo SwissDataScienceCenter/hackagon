@@ -58,8 +58,11 @@ func (s *TeamService) List(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
+	// RequirePermission already speaks gRPC: PermissionDenied for an authenticated
+	// caller, Unauthenticated for the anonymous subject, Internal when the
+	// enforcer itself fails. Wrapping it would mask the last two as a denial.
 	if err = s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
-		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
+		return nil, err
 	}
 
 	teams, err := s.dbClient.Team.Query().
@@ -119,7 +122,7 @@ func (s *TeamService) Get(
 		m.Hackathon,
 		m.Read,
 	); err != nil {
-		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
+		return nil, err
 	}
 
 	return &msgs.GetResponse{Team: teamEntryFromEnt(t)}, nil
@@ -215,15 +218,22 @@ func (s *TeamService) Edit(
 	update := s.dbClient.Team.UpdateOne(t).
 		SetModifierID(u.ID)
 
-	if req.GetName() != "" {
+	// The proto fields are optional, so the pointer — not the value — carries
+	// intent: nil means "leave alone", a non-nil pointer applies even when it
+	// points at "" (which is how a description gets cleared).
+	if req.Name != nil {
 		update.SetName(req.GetName())
 	}
-	if req.GetDescription() != "" {
+	if req.Description != nil {
 		update.SetDescription(req.GetDescription())
 	}
 
 	updatedT, err := update.Save(ctx)
 	if err != nil {
+		// name is NotEmpty in the schema, so clearing it is a caller error.
+		if ent.IsValidationError(err) {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid team: %v", err)
+		}
 		slog.Error("edit team", "err", err)
 		return nil, status.Errorf(codes.Internal, "couldn't edit team: %v", err)
 	}
@@ -332,19 +342,33 @@ func (s *TeamService) AssignUser(
 		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 	}
 
-	// Add to DB members.
-	_, err = s.dbClient.Team.UpdateOne(t).
+	// Membership is written twice — the join row and the team-scoped casbin
+	// grant — and one without the other is drift: a seat nobody can act from,
+	// or a permission nobody can see. The two stores cannot share a
+	// transaction (casbin writes through its own connection; an ent tx held
+	// open across that write deadlocks the SQLite test harness), so write the
+	// inert half first and compensate: the join row alone grants nothing
+	// until the casbin role lands.
+	if _, err := s.dbClient.Team.UpdateOne(t).
 		AddMembers(u).
-		Save(ctx)
-	if err != nil {
+		Save(ctx); err != nil {
 		slog.Error("assign user to team", "err", err)
+
 		return nil, status.Errorf(codes.Internal, "couldn't assign user to team: %v", err)
 	}
 
-	// Add to casbin team role.
-	_, err = s.enforcer.AddRole(u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()))
-	if err != nil {
+	if _, err := s.enforcer.AddRole(
+		u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()),
+	); err != nil {
 		slog.Error("add team role for user", "err", err)
+		// Take the seat back out so the two stores still agree.
+		if _, cerr := s.dbClient.Team.UpdateOne(t).
+			RemoveMembers(u).
+			Save(ctx); cerr != nil {
+			slog.Error("compensate: remove member after failed role grant", "err", cerr)
+		}
+
+		return nil, status.Error(codes.Internal, "couldn't grant team role")
 	}
 
 	return &msgs.AssignUserResponse{}, nil
@@ -388,19 +412,30 @@ func (s *TeamService) RemoveUser(
 		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
 	}
 
-	// Remove from DB members.
-	_, err = s.dbClient.Team.UpdateOne(t).
-		RemoveMembers(u).
-		Save(ctx)
-	if err != nil {
-		slog.Error("remove user from team", "err", err)
-		return nil, status.Errorf(codes.Internal, "couldn't remove user from team: %v", err)
+	// Same two-store problem as AssignUser, in reverse — and the same
+	// no-shared-transaction constraint. Revoke the casbin role first: if the
+	// row removal then fails, the leftover member is inert (visible but
+	// powerless) rather than powerful and invisible.
+	if _, err := s.enforcer.RemoveRole(
+		u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()),
+	); err != nil {
+		slog.Error("remove team role for user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't revoke team role")
 	}
 
-	// Remove from casbin team role.
-	_, err = s.enforcer.RemoveRole(u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()))
-	if err != nil {
-		slog.Error("remove team role for user", "err", err)
+	if _, err := s.dbClient.Team.UpdateOne(t).
+		RemoveMembers(u).
+		Save(ctx); err != nil {
+		slog.Error("remove user from team", "err", err)
+		// Put the role back so the two stores still agree.
+		if _, cerr := s.enforcer.AddRole(
+			u.KeycloakID, m.Member, hackathonID, m.WithTeam(t.ID.String()),
+		); cerr != nil {
+			slog.Error("compensate: restore team role after failed removal", "err", cerr)
+		}
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove user from team: %v", err)
 	}
 
 	// Re-query with edges — Save() doesn't return edges.
@@ -476,25 +511,48 @@ func (s *TeamService) CreateSubmission(
 		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
 	}
 
-	// Determine version.
-	version, err := s.dbClient.Submission.Query().
-		Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID)), entsubmission.HasProjectWith(entproject.IDEQ(projectID))).
-		Count(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "couldn't determine submission version: %v", err)
-	}
+	// The version is derived from a count, so two concurrent creates can pick the
+	// same number; the unique (version, project, team) index rejects the loser
+	// rather than letting it duplicate. Recount and try again once — that clears
+	// an ordinary two-way race — and only ask the caller to retry if it collides
+	// a second time.
+	const versionAttempts = 2
 
-	subm, err := s.dbClient.Submission.Create().
-		SetTeamID(teamID).
-		SetProjectID(projectID).
-		SetResult(req.GetResult()).
-		SetStatus(entsubmission.StatusDraft).
-		SetVersion(version + 1).
-		SetCreatorID(u.ID).
-		Save(ctx)
-	if err != nil {
-		slog.Error("create submission", "err", err)
-		return nil, status.Errorf(codes.Internal, "couldn't create submission: %v", err)
+	var subm *ent.Submission
+	for attempt := 1; attempt <= versionAttempts; attempt++ {
+		// Determine version.
+		var version int
+		version, err = s.dbClient.Submission.Query().
+			Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID)), entsubmission.HasProjectWith(entproject.IDEQ(projectID))).
+			Count(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "couldn't determine submission version: %v", err)
+		}
+
+		subm, err = s.dbClient.Submission.Create().
+			SetTeamID(teamID).
+			SetProjectID(projectID).
+			SetResult(req.GetResult()).
+			SetStatus(entsubmission.StatusDraft).
+			SetVersion(version + 1).
+			SetCreatorID(u.ID).
+			Save(ctx)
+		if err == nil {
+			break
+		}
+		if !ent.IsConstraintError(err) {
+			slog.Error("create submission", "err", err)
+
+			return nil, status.Errorf(codes.Internal, "couldn't create submission: %v", err)
+		}
+		if attempt == versionAttempts {
+			slog.Warn("submission version conflict", "team", teamID, "project", projectID, "err", err)
+
+			return nil, status.Error(
+				codes.Aborted,
+				"another submission was created at the same time, please retry",
+			)
+		}
 	}
 
 	return &msgs.CreateSubmissionResponse{Id: subm.ID.String()}, nil

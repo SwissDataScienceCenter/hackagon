@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
-	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entformresponse "github.com/swissdatasciencecenter/hackagon/components/backend/ent/formresponse"
+	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
 	enthackathonprizes "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonprizes"
 	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
@@ -323,7 +323,10 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	if h.EndsAt.Before(time.Now()) {
+	// EndsAt is Optional().Nillable(): an undated hackathon has no end, so it
+	// never counts as finished — same rule computeHackathonStatus applies when
+	// it only reports FINISHED for a non-nil end date.
+	if h.EndsAt != nil && h.EndsAt.Before(time.Now()) {
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
 	}
 

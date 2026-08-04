@@ -42,19 +42,10 @@ func (s *PageService) List(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
-		// Pages of a PUBLIC hackathon are public content — winners
-		// announcements and wrap-up posts are meant for everyone.
-		h, herr := s.dbClient.Hackathon.Query().
-			Where(enthackathon.IDEQ(hackathonID)).
-			Only(ctx)
-		if herr != nil || h.Visibility != enthackathon.VisibilityPublic {
-			return nil, err
-		}
-	}
-
-	// Verify hackathon exists
-	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
+	// Verify hackathon exists before enforcing — otherwise a nonexistent id
+	// would surface as the permission error from the fallback below instead of
+	// NotFound.
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackathonID)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, status.Errorf(
@@ -66,6 +57,15 @@ func (s *PageService) List(
 		slog.Error("query hackathon", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
+		// Pages of a PUBLIC hackathon are public content — winners
+		// announcements and wrap-up posts are meant for everyone. Private ones
+		// still deny outsiders.
+		if h.Visibility != enthackathon.VisibilityPublic {
+			return nil, err
+		}
 	}
 
 	// Query pages ordered by order field with creator and modifier
@@ -621,7 +621,7 @@ func (s *PageService) SetOrder(
 		if !slices.Contains(pageIDs, page.ID.String()) {
 			return nil, status.Error(
 				codes.InvalidArgument,
-				"SetOrder requires all pages to be passed for reordering2",
+				"SetOrder requires all pages to be passed for reordering",
 			)
 		}
 	}

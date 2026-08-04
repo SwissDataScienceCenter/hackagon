@@ -19,6 +19,7 @@ import (
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -32,13 +33,14 @@ var _ = Describe("ProjectService", func() {
 	var (
 		dbClient        *ent.Client
 		conn            *grpc.ClientConn
+		enf             *middleware.Enforcer
 		projectClient   hackathonSvc.ProjectServiceClient
 		hackathonClient hackathonSvc.HackathonServiceClient
 		testAdmin       string
 	)
 
 	BeforeEach(func() {
-		dbClient, conn, _ = testutils.CreateTestServer()
+		dbClient, conn, enf = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		projectClient = hackathonSvc.NewProjectServiceClient(conn)
@@ -772,6 +774,11 @@ var _ = Describe("ProjectService", func() {
 				SetCreatedAt(now).
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
+
+			// Join grants the Member role alongside the participant row; this
+			// fixture writes the row directly, so grant the role too.
+			_, err = enf.AddRole("test-preference-user", middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("sets preference for participating user", func() {
@@ -861,6 +868,11 @@ var _ = Describe("ProjectService", func() {
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
+			// Waitlisted registrants hold Member too — is_waiting is what marks
+			// them, not a missing role (see HackathonService.Join).
+			_, err = enf.AddRole("waitlisted-user", middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
 			token := testutils.CreateTestJWTToken("waitlisted-user")
 			ctx := metadata.NewOutgoingContext(
 				context.Background(),
@@ -933,6 +945,11 @@ var _ = Describe("ProjectService", func() {
 				SetIsWaiting(false).
 				SetCreatedAt(now).
 				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Join grants the Member role alongside the participant row; this
+			// fixture writes the row directly, so grant the role too.
+			_, err = enf.AddRole("test-export-user", middleware.Member, hackathonID)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Set preference for project 1

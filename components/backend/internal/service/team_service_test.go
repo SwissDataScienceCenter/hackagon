@@ -1310,7 +1310,11 @@ var _ = Describe("TeamService", func() {
 			Expect(resp.GetSubmission().GetVersion()).To(Equal(int32(2)))
 		})
 
-		It("denies get for hackathon member not in team", func() {
+		// Pinned policy (e2e recipe act 7): hackathon members read ALL
+		// submissions hackathon-wide — voting requires reviewing other
+		// teams' work. See {Member, /hackathon/*, Submission, Read} in
+		// rbac.go defaultPolicies.
+		It("allows a hackathon member outside the team to get the submission", func() {
 			hackathonMemberID := "hackathon-member-not-in-team-getsub"
 			_, err := dbClient.User.Create().
 				SetKeycloakID(hackathonMemberID).
@@ -1327,11 +1331,11 @@ var _ = Describe("TeamService", func() {
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
 
-			_, err = teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
+			resp, err := teamClient.GetSubmission(ctx, &teamMsgs.GetSubmissionRequest{
 				TeamId: teamID,
 			})
-			Expect(err).To(HaveOccurred())
-			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmission()).NotTo(BeNil())
 		})
 	})
 
@@ -1532,7 +1536,9 @@ var _ = Describe("TeamService", func() {
 			Expect(resp.GetSubmissions()).To(HaveLen(3))
 		})
 
-		It("denies list for hackathon member not in team", func() {
+		// Pinned policy (e2e recipe act 7): hackathon members read ALL
+		// submissions hackathon-wide — see the GetSubmission twin above.
+		It("allows a hackathon member outside the team to list submissions", func() {
 			hackathonMemberID := "hackathon-member-not-in-team-listsub"
 			_, err := dbClient.User.Create().
 				SetKeycloakID(hackathonMemberID).
@@ -1549,11 +1555,11 @@ var _ = Describe("TeamService", func() {
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
 
-			_, err = teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
+			resp, err := teamClient.ListSubmissions(ctx, &teamMsgs.ListSubmissionsRequest{
 				TeamId: teamID,
 			})
-			Expect(err).To(HaveOccurred())
-			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetSubmissions()).To(HaveLen(3))
 		})
 	})
 })

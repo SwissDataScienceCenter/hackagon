@@ -263,7 +263,7 @@ func (s *ProjectService) setApproval(
 	projectId string,
 	projectStatus entproject.Status,
 ) error {
-	_, _, err := mw.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return err
 	}
@@ -294,10 +294,22 @@ func (s *ProjectService) setApproval(
 		return err
 	}
 
+	// Ensure user exists and get their entity ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+
 	// Update the project status to "proposed"
 	_, err = s.dbClient.Project.Update().
 		Where(entproject.IDEQ(projectID)).
 		SetStatus(projectStatus).
+		SetModifier(user).
 		Save(ctx)
 	if err != nil {
 		slog.Error("update project status", "err", err)
@@ -337,6 +349,16 @@ func (s *ProjectService) SetPreference(
 	}
 
 	hackathonID := project.Edges.Hackathon.ID
+
+	// Check Project.Read permission. Read — not Write — is the action the
+	// existing policy supports for the people allowed to act here: every roster
+	// member holds project/read (granted with the Member role at Join, waitlist
+	// included), while project/write is organizer-only. It rejects anonymous
+	// callers with Unauthenticated before any data is touched; who may act is
+	// still decided by the participant row below.
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Read); err != nil {
+		return nil, err
+	}
 
 	if err := requireCapability(
 		ctx, s.dbClient, s.enforcer, hackathonID, capability.SetTeamPreferences,
@@ -452,7 +474,7 @@ func (s *ProjectService) Edit(
 	ctx context.Context,
 	req *msgs.EditRequest,
 ) (*msgs.EditResponse, error) {
-	_, _, err := mw.RequireSubject(ctx)
+	uid, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -493,9 +515,21 @@ func (s *ProjectService) Edit(
 		}
 	}
 
+	// Ensure user exists and get their entity ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
 	// Build the update query with only provided fields
 	update := s.dbClient.Project.Update().
-		Where(entproject.IDEQ(projectID))
+		Where(entproject.IDEQ(projectID)).
+		SetModifier(user)
 
 	if req.Title != nil {
 		update = update.SetTitle(req.GetTitle())
@@ -503,33 +537,43 @@ func (s *ProjectService) Edit(
 	if req.Description != nil {
 		update = update.SetDescription(req.GetDescription())
 	}
-	if req.GetTrackId() != "" { //nolint:nestif // this is not actually complex...
-		trackID, err := uuid.Parse(req.GetTrackId())
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid track_id: %v", err)
-		}
-		track, err := s.dbClient.Track.Query().
-			Where(enttrack.IDEQ(trackID)).
-			WithHackathon().
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return nil, status.Errorf(codes.NotFound, "track %s not found", req.GetTrackId())
+	// track_id is optional: a nil pointer means "unchanged", a non-nil empty
+	// string means "clear the track", anything else re-points the edge.
+	if req.TrackId != nil { //nolint:nestif // this is not actually complex...
+		if req.GetTrackId() == "" {
+			update = update.ClearTrack()
+		} else {
+			trackID, err := uuid.Parse(req.GetTrackId())
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "invalid track_id: %v", err)
 			}
-			slog.Error("query track", "err", err)
+			track, err := s.dbClient.Track.Query().
+				Where(enttrack.IDEQ(trackID)).
+				WithHackathon().
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					return nil, status.Errorf(
+						codes.NotFound,
+						"track %s not found",
+						req.GetTrackId(),
+					)
+				}
+				slog.Error("query track", "err", err)
 
-			return nil, status.Error(codes.Internal, "couldn't query database")
+				return nil, status.Error(codes.Internal, "couldn't query database")
+			}
+			// Verify track belongs to the same hackathon
+			if track.Edges.Hackathon.ID != hackathonID {
+				return nil, status.Errorf(
+					codes.InvalidArgument,
+					"track %s does not belong to hackathon %s",
+					req.GetTrackId(),
+					hackathonID,
+				)
+			}
+			update = update.SetTrack(track)
 		}
-		// Verify track belongs to the same hackathon
-		if track.Edges.Hackathon.ID != hackathonID {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"track %s does not belong to hackathon %s",
-				req.GetTrackId(),
-				hackathonID,
-			)
-		}
-		update = update.SetTrack(track)
 	}
 	if req.Image != nil {
 		update = update.SetImage(req.GetImage())
