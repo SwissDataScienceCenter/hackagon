@@ -4,7 +4,8 @@
 across past / ongoing / upcoming hackathons, public and private visibility,
 approved and proposed projects, draft and final submissions, and a waitlisted
 participant. All timestamps are relative to `time.Now()` at seed time, so
-re-seeding keeps the ongoing hackathon ongoing.
+re-seeding keeps the ongoing hackathon ongoing. Each hackathon also gets the
+capabilities its phase calls for — see [Capabilities](#capabilities).
 
 Running again when the sentinel hackathon (`AI Innovation Challenge 2026`)
 already exists is a no-op.
@@ -51,6 +52,41 @@ gantt
 ```
 
 Phase-level timing is listed in each hackathon's section below.
+
+## Capabilities
+
+Each hackathon gets a `HackathonState` row plus the casbin policy rows that go
+with it, so capability-gated mutations actually work in seeded data. Both writes
+are needed: the boolean on the row is what the UI reads, but the enforcer only
+ever reads the casbin policy — see `seedCapabilities` in [main.go](main.go).
+
+|                     | H1 upcoming | H2 ongoing | H3 past |
+| ------------------- | ----------- | ---------- | ------- |
+| Register            | ✅          | —          | —       |
+| Propose projects    | ✅          | ✅         | —       |
+| Team preferences    | ✅          | ✅         | —       |
+| Project submissions | ✅          | ✅         | —       |
+| Vote                | —           | —          | —       |
+| View results        | —           | —          | ✅      |
+
+Chosen to match each hackathon's phase: H1 is taking sign-ups and proposals, H2
+is running, H3 is over. Registration is off for H2 because it started two days
+ago — **H1 is where joining is testable**. Voting is off everywhere, since there
+are no `Vote` tables yet.
+
+**Preferences: test in H1 or H2.** H2 is the clearest case — `hackagon-admin`
+owns it, `alice` and `bob` are both confirmed members.
+
+One deliberate divergence from the API: `SetCapabilities` grants team
+preferences to `Member` only, and the casbin model has no role inheritance, so a
+hackathon **owner** cannot express a preference on a project they would like to
+work on. The seed grants the owner row too, so the fixture shows the intended
+behaviour. Tracked in
+`mydocs/docs/backend-tickets/project-preferences-capability.md`; the row is one
+line in `seedCapabilities` if you would rather mirror the handler exactly.
+
+`current_phase_id` is left nil — no hackathon has a phase declared current. The
+schema allows it and it is display-only.
 
 ## User involvement
 

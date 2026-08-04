@@ -27,6 +27,98 @@ const (
 // sentinelHackathon is checked to make this script idempotent.
 const sentinelHackathon = "AI Innovation Challenge 2026"
 
+// capabilities mirrors the six booleans on HackathonState, which are the six
+// values of entities.Capability. Every capability-gated handler refuses unless
+// the matching casbin policy row exists, and SetCapabilities is what normally
+// writes both. The seed builds rows directly, so it has to do both by hand —
+// see seedCapabilities.
+type capabilities struct {
+	register           bool
+	proposeProjects    bool
+	teamPreferences    bool
+	projectSubmissions bool
+	vote               bool
+	viewResults        bool
+}
+
+// seedCapabilities creates a hackathon's HackathonState row and the casbin
+// policy rows that go with it.
+//
+// Without this, a seeded hackathon has no state row at all: `Get` reports no
+// capabilities, and every capability-gated mutation refuses — SetPreference,
+// RemovePreference, Propose, submissions. Creating the row alone is not enough,
+// because the permission does not come from the row: HackathonService
+// .SetCapabilities flips the boolean *and* writes a casbin policy, and the
+// enforcer only ever reads the latter. Both writes, or the hackathon stays
+// unusable.
+//
+// The role each capability grants to is copied from SetCapabilities
+// (hackathon_service.go:616-653) so seeded hackathons behave like ones created
+// through the API. Registration grants to `*` rather than a role, since the
+// whole point is that a non-member can join.
+func seedCapabilities(
+	ctx context.Context,
+	db *ent.Client,
+	enf *middleware.Enforcer,
+	h *ent.Hackathon,
+	modifier *ent.User,
+	caps capabilities,
+) error {
+	if _, err := db.HackathonState.Create().
+		SetHackathonID(h.ID).
+		SetModifier(modifier).
+		SetRegistrationsEnabled(caps.register).
+		SetProposeProjectsEnabled(caps.proposeProjects).
+		SetSetTeamPreferencesEnabled(caps.teamPreferences).
+		SetCreateProjectSubmissionsEnabled(caps.projectSubmissions).
+		SetVotingEnabled(caps.vote).
+		SetViewResultsEnabled(caps.viewResults).
+		Save(ctx); err != nil {
+		return fmt.Errorf("hackathon state for %q: %w", h.Name, err)
+	}
+
+	member := middleware.Member
+	owner := middleware.Owner
+	id := h.ID.String()
+
+	type policy struct {
+		on   bool
+		what string
+		role *middleware.Role
+		obj  middleware.ObjectType
+		perm middleware.Permission
+		opts []middleware.EnforceOption
+	}
+
+	for _, p := range []policy{
+		// Anyone, member or not — a caller who cannot yet join is exactly who
+		// this is for.
+		{caps.register, "register", nil, middleware.Hackathon, middleware.Join, nil},
+		{caps.proposeProjects, "propose projects", &member, middleware.Project, middleware.Propose, nil},
+		{caps.teamPreferences, "team preferences", &member, middleware.Project, middleware.Join, nil},
+		// Ahead of SetCapabilities, which grants team preferences to Member
+		// only. The casbin model has no role inheritance, so a hackathon owner
+		// who wants to work on a project cannot express a preference — decided
+		// to be wrong, and tracked in
+		// mydocs/docs/backend-tickets/project-preferences-capability.md. Granted
+		// here so the dev fixture shows the intended behaviour; drop this row if
+		// you would rather the seed mirror the handler exactly.
+		{caps.teamPreferences, "team preferences (owner)", &owner, middleware.Project, middleware.Join, nil},
+		{caps.projectSubmissions, "project submissions", &member, middleware.Submission, middleware.Create, []middleware.EnforceOption{middleware.WithTeam("*")}},
+		{caps.vote, "vote", &member, middleware.Vote, middleware.Create, nil},
+		{caps.viewResults, "view results", &member, middleware.VoteResult, middleware.Read, nil},
+	} {
+		if !p.on {
+			continue
+		}
+		if err := enf.AddPolicy(p.role, id, p.obj, p.perm, p.opts...); err != nil {
+			return fmt.Errorf("%s policy for %q: %w", p.what, h.Name, err)
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	logx.Setup("")
 
@@ -445,6 +537,23 @@ func seedH1(
 		}
 	}
 
+	// Upcoming: sign-ups are open, ideas are being proposed, and participants say
+	// which project they would like to work on — all of which happen before the
+	// doors open. Submissions stay shut until there is something to submit;
+	// voting and results until it is over.
+	//
+	// Submissions are enabled anyway because the fixture already contains team
+	// Alpha's two submissions, and a capability that contradicts the data on
+	// screen is more confusing than one that is early.
+	if err := seedCapabilities(ctx, db, enf, h, alice, capabilities{
+		register:           true,
+		proposeProjects:    true,
+		teamPreferences:    true,
+		projectSubmissions: true,
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -644,6 +753,20 @@ func seedH2(
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h2: %w", ra.role, ra.id, err)
 		}
+	}
+
+	// Ongoing: everything a running hackathon needs open. Registration is shut,
+	// since this one started two days ago — H1 is where joining is testable.
+	// Voting and results wait for the judging phase.
+	//
+	// This is the hackathon to test preferences in: admin owns it, and alice and
+	// bob are both confirmed members.
+	if err := seedCapabilities(ctx, db, enf, h, admin, capabilities{
+		proposeProjects:    true,
+		teamPreferences:    true,
+		projectSubmissions: true,
+	}); err != nil {
+		return err
 	}
 
 	return nil
@@ -854,6 +977,15 @@ func seedH3(
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h3: %w", ra.role, ra.id, err)
 		}
+	}
+
+	// Over a month past: nothing left to do but look at what happened. Results
+	// only — this is the fixture for a hackathon where every write is refused
+	// because the event has ended, not because anything is misconfigured.
+	if err := seedCapabilities(ctx, db, enf, h, admin, capabilities{
+		viewResults: true,
+	}); err != nil {
+		return err
 	}
 
 	return nil
