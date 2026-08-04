@@ -225,6 +225,13 @@ let
                   # resolution from the request instead.
                   settings.hostname = lib.mkForce "";
                   settings.hostname-strict = false;
+                  # Repo-shipped themes (login branding). Path is relative to
+                  # the process working dir (the repo root), same as realm-file
+                  # above. Caching off so CSS edits show on refresh in dev.
+                  settings."spi-theme--folder--dir" = "./tools/configs/keycloak/themes";
+                  settings."spi-theme--cache-themes" = false;
+                  settings."spi-theme--cache-templates" = false;
+                  settings."spi-theme--static-max-age" = -1;
                   database.type = "dev-file";
                   realms = {
                     hackagon = {

@@ -1,0 +1,220 @@
+/*
+ * Hackagon branding on top of keycloak.v2 (PatternFly v5).
+ * Palette + font mirror components/frontend/src/themes/hackathonsdsc.css so
+ * the login page reads as part of the app, not a foreign IdP.
+ */
+
+:root {
+  --hk-green-500: oklch(77.26% 0.18 129.66deg);
+  --hk-green-600: oklch(67.3% 0.15 129.98deg);
+  --hk-green-700: oklch(57.01% 0.13 130.07deg);
+  --hk-surface-900: oklch(29.61% 0 196.7deg);
+  --hk-surface-950: oklch(22.54% 0 196.78deg);
+  --hk-font:
+    ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
+    "DejaVu Sans Mono", monospace;
+
+  /* PatternFly global tokens: primary actions, links, fonts. */
+  --pf-v5-global--primary-color--100: var(--hk-green-600);
+  --pf-v5-global--primary-color--200: var(--hk-green-700);
+  --pf-v5-global--active-color--100: var(--hk-green-600);
+  --pf-v5-global--link--Color: var(--hk-green-600);
+  --pf-v5-global--link--Color--hover: var(--hk-green-700);
+  --pf-v5-global--FontFamily--sans-serif: var(--hk-font);
+  --pf-v5-global--FontFamily--text: var(--hk-font);
+  --pf-v5-global--FontFamily--heading: var(--hk-font);
+}
+
+.pf-v5-theme-dark {
+  /* Lighter green carries better on dark surfaces. */
+  --pf-v5-global--primary-color--100: var(--hk-green-500);
+  --pf-v5-global--primary-color--200: var(--hk-green-600);
+  --pf-v5-global--active-color--100: var(--hk-green-500);
+  --pf-v5-global--link--Color: var(--hk-green-500);
+  --pf-v5-global--link--Color--hover: var(--hk-green-600);
+}
+
+/* Layout: true vertical centering with mobile-safe viewport height (svh
+ * ignores the phone browser chrome that makes 100vh overscroll), natural
+ * vertical scroll only when a form is genuinely taller than the screen. */
+html,
+body#keycloak-bg {
+  margin: 0;
+  min-height: 100%;
+}
+
+body#keycloak-bg {
+  overflow-x: hidden;
+}
+
+.pf-v5-c-login {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.pf-v5-c-login__container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+
+/* Page background: the app's surface tones (surface-50 in light,
+ * surface-950 in dark — hackathonsdsc.css) with a faint green glow. The
+ * scheme follows prefers-color-scheme, the same signal the app's dark:
+ * styles react to. */
+body#keycloak-bg {
+  background:
+    radial-gradient(
+      60rem 40rem at 85% -10%,
+      color-mix(in oklab, var(--hk-green-500) 14%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 35rem at -10% 110%,
+      color-mix(in oklab, var(--hk-green-600) 8%, transparent),
+      transparent 60%
+    ),
+    oklch(100% 0 none);
+}
+
+.pf-v5-theme-dark body#keycloak-bg {
+  background:
+    radial-gradient(
+      60rem 40rem at 85% -10%,
+      color-mix(in oklab, var(--hk-green-500) 10%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 35rem at -10% 110%,
+      color-mix(in oklab, var(--hk-green-600) 7%, transparent),
+      transparent 60%
+    ),
+    var(--hk-surface-950);
+}
+
+/* Brand slot: SDSC logo above a spaced-out mono wordmark (the realm
+ * displayName renders as the div's text). The vendor sets
+ * `#kc-header-wrapper { color: ... !important; font-size: 29px; }` for PF's
+ * dark hero background — beat it on specificity AND importance. */
+#kc-header-wrapper.pf-v5-c-brand {
+  color: var(--hk-surface-950) !important;
+  font-size: 1rem;
+  letter-spacing: 0.45em;
+}
+
+.pf-v5-theme-dark #kc-header-wrapper.pf-v5-c-brand {
+  color: oklch(100% 0 none) !important;
+}
+
+.pf-v5-c-login__header .pf-v5-c-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--hk-font);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.45em;
+  text-indent: 0.45em; /* recenter: tracking adds a trailing gap */
+  text-transform: uppercase;
+  color: var(--hk-surface-950);
+}
+
+.pf-v5-c-login__header .pf-v5-c-brand::before {
+  content: "";
+  display: block;
+  height: 42px;
+  width: min(240px, 70vw);
+  background: url(../img/sdsc.svg) no-repeat center / contain;
+}
+
+.pf-v5-theme-dark .pf-v5-c-login__header .pf-v5-c-brand {
+  color: oklch(100% 0 none);
+}
+
+.pf-v5-theme-dark .pf-v5-c-login__header .pf-v5-c-brand::before {
+  background-image: url(../img/sdsc_white.svg);
+}
+
+/* The card: rounded, floating, with a faint green ring. */
+.pf-v5-c-login__main {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow:
+    0 24px 60px -16px rgb(0 0 0 / 30%),
+    0 0 0 1px color-mix(in oklab, var(--hk-green-600) 30%, transparent);
+}
+
+.pf-v5-theme-dark .pf-v5-c-login__main {
+  background-color: var(--hk-surface-900);
+  box-shadow:
+    0 24px 60px -16px rgb(0 0 0 / 60%),
+    0 0 0 1px color-mix(in oklab, var(--hk-green-500) 35%, transparent);
+}
+
+/* The card's accent strip: keycloak.v2 paints `border-top: 4px solid
+ * var(--keycloak-card-top-color)` on __main-header — recolor the var. */
+:root {
+  --keycloak-card-top-color: var(--hk-green-600);
+}
+
+.pf-v5-theme-dark {
+  --keycloak-card-top-color: var(--hk-green-500);
+}
+
+/* Primary action reads like the app's CTA buttons. Component-level vars:
+ * PF's dark stylesheet sets these directly, so global-token overrides
+ * alone lose — pin them in both modes. */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--hk-green-600);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--hk-green-700);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--hk-green-700);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--hk-green-700);
+  --pf-v5-c-button--m-primary--Color: oklch(100% 0 none);
+  font-family: var(--hk-font);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 0.5rem;
+}
+
+.pf-v5-theme-dark .pf-v5-c-button.pf-m-primary {
+  /* Light green + dark text carries better on dark surfaces. */
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--hk-green-500);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--hk-green-600);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--hk-green-600);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--hk-green-600);
+  --pf-v5-c-button--m-primary--Color: var(--hk-surface-950);
+}
+
+/* Inputs: subtle rounding, green focus (border, underline and outline —
+ * PF styles each through a different knob). */
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--focus--BorderBottomColor: var(--hk-green-600);
+  --pf-v5-c-form-control--m-focus--after--BorderBottomColor: var(--hk-green-600);
+  --pf-v5-global--active-color--100: var(--hk-green-600);
+  border-radius: 0.5rem;
+}
+
+.pf-v5-c-form-control:focus-within {
+  border-color: var(--hk-green-600);
+}
+
+/* Firefox paints its UA blue focus ring here — replace it wholesale. */
+.pf-v5-c-form-control > input:focus {
+  outline: 2px solid var(--hk-green-600);
+  outline-offset: -1px;
+}
+
+/* ...and PF's focus underline is an ::after pseudo — recolor it too. */
+.pf-v5-c-form-control:focus-within::after {
+  border-bottom-color: var(--hk-green-600) !important;
+  border-block-end-color: var(--hk-green-600) !important;
+}
