@@ -2,6 +2,7 @@
     import HeroSection from '$lib/components/hackathon/HeroSection.svelte';
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
+    import EventBranding from '$lib/components/hackathon/EventBranding.svelte';
     import { statusLabel } from '$lib/utils/hackathonStatus';
 
     const { data } = $props();
@@ -65,6 +66,15 @@
     </section>
 {:else}
 
+<!-- Branding is scoped to this wrapper, never to :root: one event's colours
+     must not repaint the rest of the platform. With no branding set the
+     wrapper renders nothing of its own. -->
+<EventBranding
+    primaryColor={h.branding?.primaryColor}
+    accentColor={h.branding?.accentColor}
+    bannerText={h.branding?.bannerText}
+>
+
 <!-- Everything here comes from the backend. Venue and capacity are NOT in the
      schema, so the hero simply omits them rather than showing invented values. -->
 <HeroSection
@@ -113,4 +123,5 @@
         note=""
     />
 </div>
+</EventBranding>
 {/if}

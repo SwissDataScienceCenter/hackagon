@@ -74,6 +74,15 @@ export const load: PageServerLoad = async (event) => {
       status: hackathon.status,
       startsAt: hackathon.startsAt,
       endsAt: hackathon.endsAt,
+      // Organizer-set colours and banner copy. Passed through as-is: the
+      // component validates the colours again before they reach a style
+      // attribute, since the backend is not the only thing that could ever
+      // have written this row.
+      branding: {
+        primaryColor: hackathon.branding?.primaryColor ?? "",
+        accentColor: hackathon.branding?.accentColor ?? "",
+        bannerText: hackathon.branding?.bannerText ?? "",
+      },
     },
     pages,
   }

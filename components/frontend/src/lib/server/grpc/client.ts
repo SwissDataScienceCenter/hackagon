@@ -7,12 +7,20 @@ import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_serv
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
 import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import { SitePageServiceDefinition } from "./generated/site/site_page_service"
+import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
+import { TrackServiceDefinition } from "./generated/hackathon/track_service"
+import { PrizeServiceDefinition } from "./generated/hackathon/prize_service"
+import { ConfigServiceDefinition } from "./generated/hackathon/config_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { TeamServiceClient } from "./generated/hackathon/team_service"
 import type { PageServiceClient } from "./generated/hackathon/page_service"
 import type { SitePageServiceClient } from "./generated/site/site_page_service"
+import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
+import type { TrackServiceClient } from "./generated/hackathon/track_service"
+import type { PrizeServiceClient } from "./generated/hackathon/prize_service"
+import type { ConfigServiceClient } from "./generated/hackathon/config_service"
 
 let channel: Channel | undefined
 
@@ -58,6 +66,11 @@ export interface AuthorizedGrpc {
   team: TeamServiceClient
   sitePage: SitePageServiceClient
   page: PageServiceClient
+  // Organizer-side services, used by the management cockpit.
+  phase: PhaseServiceClient
+  track: TrackServiceClient
+  prize: PrizeServiceClient
+  config: ConfigServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -78,6 +91,10 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     team: factory.create(TeamServiceDefinition, getChannel()),
     sitePage: factory.create(SitePageServiceDefinition, getChannel()),
     page: factory.create(PageServiceDefinition, getChannel()),
+    phase: factory.create(PhaseServiceDefinition, getChannel()),
+    track: factory.create(TrackServiceDefinition, getChannel()),
+    prize: factory.create(PrizeServiceDefinition, getChannel()),
+    config: factory.create(ConfigServiceDefinition, getChannel()),
   }
 }
 
