@@ -14,7 +14,7 @@
         data.users.filter((u) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
-            return `${u.displayName} ${u.username} ${u.email} ${u.affiliation}`
+            return `${u.displayName} ${u.username} ${u.email}`
                 .toLowerCase()
                 .includes(q);
         })
@@ -56,14 +56,13 @@
         <p class="m-0 py-6 text-center text-sm text-surface-500">No users match “{search}”.</p>
     {:else}
         <div class="w-full overflow-x-auto border border-surface-200-800">
-            <table class="w-full min-w-[860px] border-collapse text-left text-xs">
+            <table class="w-full min-w-[720px] border-collapse text-left text-xs">
                 <thead>
                     <tr class="border-b border-surface-200-800 bg-surface-100-900 text-surface-500">
                         <th class="px-3 py-2 font-semibold">
                             <span class="sr-only">Avatar</span>
                         </th>
                         <th class="px-3 py-2 font-semibold">Display Name</th>
-                        <th class="px-3 py-2 font-semibold">Affiliation</th>
                         <th class="px-3 py-2 font-semibold">Username</th>
                         <th class="px-3 py-2 font-semibold">Email</th>
                         <th class="px-3 py-2 font-semibold">Joined</th>
@@ -95,7 +94,6 @@
                                     {profileDisplayName(user.displayName, user.username)}
                                 </a>
                             </td>
-                            <td class="px-3 py-2 text-surface-500">{user.affiliation || '—'}</td>
                             <td class="px-3 py-2 text-surface-500">{user.username}</td>
                             <td class="px-3 py-2 text-surface-500">{user.email || '—'}</td>
                             <td class="px-3 py-2 text-surface-500">

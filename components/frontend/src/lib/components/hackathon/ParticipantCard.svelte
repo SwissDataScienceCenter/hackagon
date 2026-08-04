@@ -1,42 +1,23 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
 
+    // Deliberately only what a participant row can be given. `affiliation`,
+    // `avatarUrl`, `skills` and `linkedinUrl` used to be props here, but `User`
+    // has no such fields and `UserService` has no way to write them, so nothing
+    // could ever pass them — they were dead parameters that read as pending
+    // features. Re-add them alongside the backend columns, not before.
     let {
         name,
-        affiliation,
-        avatarUrl,
         role: roleProp,
-        skills = [],
-        linkedinUrl,
         profileDetailsHref = '#',
     }: {
         name: string;
-        /**
-         * TODO(backend: user-profile-fields): the participants page passes
-         * placeholder copy from $lib/mocks/userProfiles — User carries no
-         * affiliation. Same for `avatarUrl` and `linkedinUrl`, which stay unset:
-         * the card omits those lines until the fields exist, at which point the
-         * page passes them straight through.
-         */
-        affiliation?: string;
-        avatarUrl?: string;
-        /** Job title; if omitted, first skills are shown on the role line. */
+        /** Membership label — "Owner", "Member", "Waitlisted". */
         role?: string;
-        /**
-         * Never passed, and not expected to be: skills are not a field. They live
-         * in the free-text profile description instead (see ProfileAbout), which a
-         * list row has no room for. Kept only so the role line's fallback below
-         * still has something to read.
-         */
-        skills?: string[];
-        linkedinUrl?: string;
         profileDetailsHref?: string;
     } = $props();
 
-    const roleLine = $derived(
-        roleProp?.trim() ||
-            (skills.length > 0 ? skills.slice(0, 4).join(', ') : '')
-    );
+    const roleLine = $derived(roleProp?.trim() ?? '');
 
     const initials = name
         .split(' ')
@@ -57,52 +38,20 @@
            py-4 px-5"
 >
     <div class="flex w-full items-start gap-4">
-        {#if avatarUrl}
-            <div
-                class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                       border-surface-200-800 bg-surface-100-900"
-            >
-                <img
-                    src={avatarUrl}
-                    alt=""
-                    class="absolute inset-0 block h-full w-full object-cover object-center"
-                />
-            </div>
-        {:else}
-            <div
-                class="flex size-16 shrink-0 items-center justify-center rounded-full
-                       border-2 border-surface-200-800 bg-surface-200-800 text-xs font-bold
-                       text-surface-950-50"
-            >
-                {initials}
-            </div>
-        {/if}
+        <div
+            class="flex size-16 shrink-0 items-center justify-center rounded-full
+                   border-2 border-surface-200-800 bg-surface-200-800 text-xs font-bold
+                   text-surface-950-50"
+            aria-hidden="true"
+        >
+            {initials}
+        </div>
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">{name}</h3>
-            <div class="block w-2/3 min-w-0">
-                <div class="flex flex-col gap-1.5">
-                    {#if roleLine}
-                        <p class="m-0 text-xs leading-snug text-surface-600-400">{roleLine}</p>
-                    {/if}
-                    {#if affiliation}
-                        <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
-                    {/if}
-                    {#if linkedinUrl}
-                        <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
-                        <a
-                            href={linkedinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="w-fit text-xs leading-snug text-primary-600-400
-                                   hover:underline"
-                        >
-                            LinkedIn Profile
-                        </a>
-                        <!-- eslint-enable svelte/no-navigation-without-resolve -->
-                    {/if}
-                </div>
-            </div>
+            {#if roleLine}
+                <p class="m-0 text-xs leading-snug text-surface-600-400">{roleLine}</p>
+            {/if}
         </div>
 
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->

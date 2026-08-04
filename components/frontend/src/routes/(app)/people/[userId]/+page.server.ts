@@ -2,11 +2,10 @@ import type { PageServerLoad } from "./$types"
 import { error, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 import { requireGrpc } from "$lib/server/grpc/client"
-import { mockUserProfile } from "$lib/mocks/userProfiles"
 
 export const load: PageServerLoad = async (event) => {
-  // Your own profile is editable, so it has its own route; landing here for
-  // yourself (from a participants list, say) should not show the read-only view.
+  // Your own profile has its own route; landing here for yourself (from a
+  // participants list, say) should not show a second, near-identical page.
   if (event.params.userId === event.locals.platformUser?.id) {
     redirect(307, "/profile")
   }
@@ -35,10 +34,8 @@ export const load: PageServerLoad = async (event) => {
 
   if (!target) error(404, "User not found")
 
-  // TODO(backend: user-profile-fields): placeholder copy keyed by username — see
-  // $lib/mocks/userProfiles. Replace with the real fields on `target`.
-  const mock = mockUserProfile(target.username)
-
+  // Only real fields on `user.entities.User`. Get is the one read that populates
+  // casbin roles, so unlike the admin users table this page can show them.
   return {
     profile: {
       id: target.id,
@@ -47,10 +44,6 @@ export const load: PageServerLoad = async (event) => {
       email: target.email,
       roles: target.roles,
       createdAt: target.createdAt,
-      affiliation: mock?.affiliation,
-      title: mock?.title,
-      description: mock?.description,
-      linkedinUrl: mock?.linkedinUrl,
     },
   }
 }

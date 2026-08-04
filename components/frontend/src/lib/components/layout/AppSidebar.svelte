@@ -43,7 +43,6 @@
         displayName: string;
         /** GlobalRole numbers from casbin. */
         roles: number[];
-        subtitle?: string;
     }
 
     let {
@@ -288,7 +287,6 @@
         collapsed={effectiveCollapsed}
         username={viewer?.username}
         displayName={viewer?.displayName}
-        subtitle={viewer?.subtitle}
         roles={viewer?.roles ?? []}
         active={$page.url.pathname === profilePath}
     />

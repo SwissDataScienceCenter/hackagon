@@ -5,31 +5,16 @@
         name,
         username,
         email,
-        title,
-        affiliation,
-        linkedinUrl,
         joinedAt,
-        roles = [],
-        actions,
+        roles = []
     }: {
         name: string;
         username: string;
         /** Keycloak-owned, so shown but never editable. Omitted when blank. */
         email?: string;
-        /**
-         * TODO(backend: user-profile-fields): `title`, `affiliation` and
-         * `linkedinUrl` come from $lib/mocks/userProfiles — User carries none of
-         * them. Each line is omitted when absent, which is also how the real
-         * fields will behave while still blank.
-         */
-        title?: string;
-        affiliation?: string;
-        linkedinUrl?: string;
         joinedAt?: Date;
         /** GlobalRole numbers from casbin; unnamed values are dropped. */
         roles?: number[];
-        /** Trailing controls — Edit on your own profile, nothing on someone else's. */
-        actions?: import('svelte').Snippet;
     } = $props();
 
     const initials = $derived(profileInitials(name, username));
@@ -37,10 +22,16 @@
 </script>
 
 <!--
+  Every field here is backed by the API: name, username and email come from the
+  User entity, roles from casbin via WhoAmI/Get, and joinedAt from created_at.
+  Affiliation, job title, skills and a bio were all asked for, but `User` has no
+  such columns and `UserService` has no write RPC — so they are absent rather
+  than shown empty or filled with placeholder copy.
+
   Metrics follow ParticipantCard so a profile reads as the expanded form of the
-  card you clicked to reach it: py-4 px-5 body, gap-4 row, text-sm font-bold
-  title, text-xs body. The avatar is size-20 rather than size-16 — this is the
-  page's subject, not one row in a list.
+  row you clicked to reach it: px-5 py-4 body, gap-4 row, text-xs body. The
+  avatar is size-20 rather than size-16 — this is the page's subject, not one row
+  in a list.
 -->
 <header
     class="box-border w-full border border-surface-200-800 bg-surface-100-900 px-5 py-4"
@@ -67,13 +58,6 @@
 
             <p class="m-0 text-xs leading-snug text-surface-500">@{username}</p>
 
-            {#if title}
-                <p class="m-0 text-xs leading-snug text-surface-600-400">{title}</p>
-            {/if}
-            {#if affiliation}
-                <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
-            {/if}
-
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {#if email}
                     <a
@@ -83,18 +67,6 @@
                         {email}
                     </a>
                 {/if}
-                {#if linkedinUrl}
-                    <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
-                    <a
-                        href={linkedinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-xs leading-snug text-primary-600-400 hover:underline"
-                    >
-                        LinkedIn Profile
-                    </a>
-                    <!-- eslint-enable svelte/no-navigation-without-resolve -->
-                {/if}
                 {#if joinedAt}
                     <span class="text-xs leading-snug text-surface-500">
                         Joined {joinedAt.toLocaleDateString()}
@@ -102,9 +74,5 @@
                 {/if}
             </div>
         </div>
-
-        {#if actions}
-            <div class="flex shrink-0 items-center gap-2">{@render actions()}</div>
-        {/if}
     </div>
 </header>

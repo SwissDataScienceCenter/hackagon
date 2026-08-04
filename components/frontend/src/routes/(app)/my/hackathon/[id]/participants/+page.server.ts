@@ -1,6 +1,5 @@
 import type { PageServerLoad } from "./$types"
 import { membershipBadgeLabel } from "$lib/utils/hackathonStatus"
-import { mockUserProfile } from "$lib/mocks/userProfiles"
 
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
@@ -16,9 +15,6 @@ export const load: PageServerLoad = async (event) => {
       id: m.user!.id,
       name: m.user!.displayName || m.user!.username,
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
-      // TODO(backend: user-profile-fields): placeholder copy keyed by username —
-      // see $lib/mocks/userProfiles. Replace with the real field on `m.user`.
-      affiliation: mockUserProfile(m.user!.username)?.affiliation,
     }))
 
   // /people/[userId] calls UserService.Get, which requires `user:read` — a

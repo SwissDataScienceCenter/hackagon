@@ -1,7 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ArrowLeft from 'lucide-svelte/icons/arrow-left';
-    import ProfileAbout from '$lib/components/profile/ProfileAbout.svelte';
     import ProfileHeader from '$lib/components/profile/ProfileHeader.svelte';
     import { profileDisplayName } from '$lib/utils/profile';
     import type { PageData } from './$types';
@@ -33,15 +32,7 @@
         {name}
         username={data.profile.username}
         email={data.profile.email}
-        title={data.profile.title}
-        affiliation={data.profile.affiliation}
-        linkedinUrl={data.profile.linkedinUrl}
         joinedAt={data.profile.createdAt}
         roles={data.profile.roles}
-    />
-
-    <ProfileAbout
-        description={data.profile.description}
-        emptyText="This user hasn't written anything about themselves yet."
     />
 </div>

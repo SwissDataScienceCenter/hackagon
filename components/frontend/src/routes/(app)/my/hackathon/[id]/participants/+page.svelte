@@ -7,17 +7,14 @@
 
     let search = $state('');
 
-    // TODO(backend: user-profile-fields): affiliation is matched against
-    // placeholder copy from $lib/mocks/userProfiles, so it only finds the seeded
-    // users. Skills are not a field — they live in the profile description, which
-    // this list does not carry — so the placeholder still does not promise them.
+    // Name and role only — the two fields a participant row actually carries.
+    // Affiliation and skills were the other two axes originally asked for, and
+    // `User` has neither, so the placeholder does not promise them.
     const filtered = $derived(
         data.participants.filter((p) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
-            return `${p.name} ${p.roleLabel} ${p.affiliation ?? ''}`
-                .toLowerCase()
-                .includes(q);
+            return `${p.name} ${p.roleLabel}`.toLowerCase().includes(q);
         })
     );
 
@@ -68,7 +65,6 @@
                 <ParticipantCard
                     name={participant.name}
                     role={participant.roleLabel}
-                    affiliation={participant.affiliation}
                     profileDetailsHref={data.canViewProfiles
                         ? `/people/${participant.id}`
                         : `#participant-${participant.id}`}

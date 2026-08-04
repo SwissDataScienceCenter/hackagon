@@ -2,7 +2,6 @@ import { redirect } from "@sveltejs/kit"
 import type { LayoutServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
-import { mockUserProfile } from "$lib/mocks/userProfiles"
 
 // Every authenticated route lives under (app), so this load is the single choke
 // point for "you must be signed in". hooks.server.ts already guards by path
@@ -74,19 +73,12 @@ export const load: LayoutServerLoad = async (event) => {
   // The sidebar's user panel. Undefined when WhoAmI failed, in which case the
   // panel falls back to the session name and stops linking to /profile — that
   // page needs the platform user and would only 503.
-  //
-  // TODO(backend: user-profile-fields): `subtitle` is placeholder copy from
-  // $lib/mocks/userProfiles. Title is preferred over affiliation because the
-  // panel has one narrow line, and "Research Engineer" identifies someone more
-  // usefully than their institution does.
   const me = event.locals.platformUser
-  const mock = mockUserProfile(me?.username)
   const viewer = me
     ? {
         username: me.username,
         displayName: me.displayName,
         roles: me.roles,
-        subtitle: mock?.title ?? mock?.affiliation,
       }
     : undefined
 
