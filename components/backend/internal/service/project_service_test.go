@@ -842,8 +842,9 @@ var _ = Describe("ProjectService", func() {
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
 
-		It("returns PERMISSION_DENIED for waitlisted users", func() {
-			// Create waitlisted user
+		It("allows waitlisted users to mark preferences", func() {
+			// Waitlisted participants express preferences before the roster
+			// cut — same policy family as waitlisted-may-propose (recipe act 4).
 			waitlistedUser, err := dbClient.User.Create().
 				SetKeycloakID("waitlisted-user").
 				SetUsername("waitlisted-username").
@@ -870,11 +871,9 @@ var _ = Describe("ProjectService", func() {
 				ProjectId: createdProjectID,
 			}
 
-			_, err = projectClient.SetPreference(ctx, setReq)
-			Expect(err).To(HaveOccurred())
-
-			st := status.Convert(err)
-			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			resp, err := projectClient.SetPreference(ctx, setReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetProjectId()).To(Equal(createdProjectID))
 		})
 	})
 
