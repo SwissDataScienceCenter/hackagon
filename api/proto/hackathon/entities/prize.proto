@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// Prize is one row of the organizer-defined prize table. rank 0 marks a
+// discretionary/special prize (e.g. Community Choice).
+message Prize {
+  int32 rank = 1;
+  string title = 2;
+}
+
+// Award attaches a submission to a prize once the admin finalizes: by rank
+// for the ranked prizes, by name for special ones. Votes are advisory until
+// this happens — the admin has the final voice.
+message Award {
+  optional int32 rank = 1;
+  optional string special = 2;
+  string submission_id = 3;
+}

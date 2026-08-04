@@ -72,6 +72,7 @@ func NewServer(
 	teamService := NewTeamService(dbClient, enf)
 	voteService := NewVoteService(dbClient, enf)
 	configService := NewConfigService(dbClient, enf)
+	prizeService := NewPrizeService(dbClient, enf)
 
 	// Register services
 	health.RegisterHealthServiceServer(server, healthService)
@@ -84,6 +85,7 @@ func NewServer(
 	hackathonSvc.RegisterTeamServiceServer(server, teamService)
 	voteSvc.RegisterVoteServiceServer(server, voteService)
 	hackathonSvc.RegisterConfigServiceServer(server, configService)
+	hackathonSvc.RegisterPrizeServiceServer(server, prizeService)
 	reflection.Register(server)
 
 	// Cleanup: shutdown the gRPC server

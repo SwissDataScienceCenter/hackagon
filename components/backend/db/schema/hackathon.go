@@ -94,6 +94,9 @@ func (Hackathon) Edges() []ent.Edge {
 			Comment("Organizer-defined form schemas and voting policy."),
 		edge.To("form_responses", FormResponse.Type).
 			Comment("Registration form responses submitted for this hackathon."),
+		edge.To("prize_table", HackathonPrizes.Type).
+			Unique().
+			Comment("The prize table and awards for this hackathon."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),

@@ -85,6 +85,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `windows` | HackathonWindows | O2O | no | no | Enforced time windows for this hackathon. |
 | `forms` | HackathonForms | O2O | no | no | Organizer-defined form schemas and voting policy. |
 | `form_responses` | FormResponse | O2M | no | no | Registration form responses submitted for this hackathon. |
+| `prize_table` | HackathonPrizes | O2O | no | no | The prize table and awards for this hackathon. |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -117,6 +118,27 @@ Organizer-defined form schemas and voting policy for a hackathon. Schemas are st
 |------|--------|----------|---------|----------|-------------|
 | `hackathon` | Hackathon | O2O | yes | yes | The hackathon these forms belong to. |
 | `modifier` | User | M2O | yes | yes | The user who last modified these forms. |
+
+## HackathonPrizes
+
+The organizer-defined prize table and, after Finalize, the awards. Votes are advisory: nothing is won until the admin finalizes, and the table stays admin-editable afterwards.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `prizes` | []map[string]interface {} | no | no | no | no | Prize table ({rank,title}); rank 0 is a special prize. |
+| `awards` | []map[string]interface {} | no | no | no | no | Awarded submissions ({rank\|special, submissionId}) set at Finalize. |
+| `finalized` | bool | yes | no | no | yes | Whether the admin has spoken; results are advisory before this. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the prize table was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | O2O | yes | yes | The hackathon this prize table belongs to. |
+| `modifier` | User | M2O | yes | yes | The user who last modified the prize table. |
 
 ## HackathonSettings
 
@@ -417,6 +439,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_forms` | HackathonForms | O2M | no | no | Hackathon forms this user last modified. |
 | `form_responses` | FormResponse | O2M | no | no | Registration form responses about this user. |
 | `submitted_form_responses` | FormResponse | O2M | no | no | Registration form responses this user entered. |
+| `modified_prizes` | HackathonPrizes | O2M | no | no | Prize tables this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |
 | `jury_categories` | VoteCategory | M2M | no | no | Vote categories where this user is a jury member. |

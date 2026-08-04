@@ -90,6 +90,10 @@
 - [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
     - [Hackathon](#hackathon-entities-Hackathon)
   
+- [hackathon/entities/prize.proto](#hackathon_entities_prize-proto)
+    - [Award](#hackathon-entities-Award)
+    - [Prize](#hackathon-entities-Prize)
+  
 - [hackathon/entities/project_preference.proto](#hackathon_entities_project_preference-proto)
     - [ProjectWithPreferences](#hackathon-entities-ProjectWithPreferences)
   
@@ -262,6 +266,24 @@
 - [hackathon/messages/phase_svc/list_response.proto](#hackathon_messages_phase_svc_list_response-proto)
     - [ListResponse](#hackathon-messages-phase_svc-ListResponse)
   
+- [hackathon/messages/prize_svc/edit_request.proto](#hackathon_messages_prize_svc_edit_request-proto)
+    - [EditRequest](#hackathon-messages-prize_svc-EditRequest)
+  
+- [hackathon/messages/prize_svc/edit_response.proto](#hackathon_messages_prize_svc_edit_response-proto)
+    - [EditResponse](#hackathon-messages-prize_svc-EditResponse)
+  
+- [hackathon/messages/prize_svc/finalize_request.proto](#hackathon_messages_prize_svc_finalize_request-proto)
+    - [FinalizeRequest](#hackathon-messages-prize_svc-FinalizeRequest)
+  
+- [hackathon/messages/prize_svc/finalize_response.proto](#hackathon_messages_prize_svc_finalize_response-proto)
+    - [FinalizeResponse](#hackathon-messages-prize_svc-FinalizeResponse)
+  
+- [hackathon/messages/prize_svc/set_request.proto](#hackathon_messages_prize_svc_set_request-proto)
+    - [SetRequest](#hackathon-messages-prize_svc-SetRequest)
+  
+- [hackathon/messages/prize_svc/set_response.proto](#hackathon_messages_prize_svc_set_response-proto)
+    - [SetResponse](#hackathon-messages-prize_svc-SetResponse)
+  
 - [hackathon/messages/project_svc/approve_request.proto](#hackathon_messages_project_svc_approve_request-proto)
     - [ApproveRequest](#hackathon-messages-project_svc-ApproveRequest)
   
@@ -417,6 +439,9 @@
   
 - [hackathon/phase_service.proto](#hackathon_phase_service-proto)
     - [PhaseService](#hackathon-PhaseService)
+  
+- [hackathon/prize_service.proto](#hackathon_prize_service-proto)
+    - [PrizeService](#hackathon-PrizeService)
   
 - [hackathon/project_service.proto](#hackathon_project_service-proto)
     - [ProjectService](#hackathon-ProjectService)
@@ -1607,6 +1632,58 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 Will become caller-dependent, so clients must not cache it across users. |
 | current_phase_id | [string](#string) | optional | The phase an organizer declared current via AdvancePhase. Absent means clients should derive it from phase dates instead — correct before an event, wrong during one, where the schedule slips. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_prize-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/prize.proto
+
+
+
+<a name="hackathon-entities-Award"></a>
+
+### Award
+Award attaches a submission to a prize once the admin finalizes: by rank
+for the ranked prizes, by name for special ones. Votes are advisory until
+this happens — the admin has the final voice.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| rank | [int32](#int32) | optional |  |
+| special | [string](#string) | optional |  |
+| submission_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="hackathon-entities-Prize"></a>
+
+### Prize
+Prize is one row of the organizer-defined prize table. rank 0 marks a
+discretionary/special prize (e.g. Community Choice).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| rank | [int32](#int32) |  |  |
+| title | [string](#string) |  |  |
 
 
 
@@ -3462,6 +3539,191 @@ for another registrant (walk-ins at the check-in desk).
 
 
 
+<a name="hackathon_messages_prize_svc_edit_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/edit_request.proto
+
+
+
+<a name="hackathon-messages-prize_svc-EditRequest"></a>
+
+### EditRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| rank | [int32](#int32) |  |  |
+| title | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_prize_svc_edit_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/edit_response.proto
+
+
+
+<a name="hackathon-messages-prize_svc-EditResponse"></a>
+
+### EditResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| prize | [hackathon.entities.Prize](#hackathon-entities-Prize) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_prize_svc_finalize_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/finalize_request.proto
+
+
+
+<a name="hackathon-messages-prize_svc-FinalizeRequest"></a>
+
+### FinalizeRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| awards | [hackathon.entities.Award](#hackathon-entities-Award) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_prize_svc_finalize_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/finalize_response.proto
+
+
+
+<a name="hackathon-messages-prize_svc-FinalizeResponse"></a>
+
+### FinalizeResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_prize_svc_set_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/set_request.proto
+
+
+
+<a name="hackathon-messages-prize_svc-SetRequest"></a>
+
+### SetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| prizes | [hackathon.entities.Prize](#hackathon-entities-Prize) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_prize_svc_set_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/set_response.proto
+
+
+
+<a name="hackathon-messages-prize_svc-SetResponse"></a>
+
+### SetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| prizes | [hackathon.entities.Prize](#hackathon-entities-Prize) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_project_svc_approve_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -5061,6 +5323,35 @@ for another registrant (walk-ins at the check-in desk).
 | Create | [messages.phase_svc.CreateRequest](#hackathon-messages-phase_svc-CreateRequest) | [messages.phase_svc.CreateResponse](#hackathon-messages-phase_svc-CreateResponse) |  |
 | Edit | [messages.phase_svc.EditRequest](#hackathon-messages-phase_svc-EditRequest) | [messages.phase_svc.EditResponse](#hackathon-messages-phase_svc-EditResponse) |  |
 | Delete | [messages.phase_svc.DeleteRequest](#hackathon-messages-phase_svc-DeleteRequest) | [messages.phase_svc.DeleteResponse](#hackathon-messages-phase_svc-DeleteResponse) |  |
+
+ 
+
+
+
+<a name="hackathon_prize_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/prize_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-PrizeService"></a>
+
+### PrizeService
+The prize table and the awards. Votes are advisory: nothing is won until
+the admin finalizes, and the table stays admin-editable afterwards.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| Set | [messages.prize_svc.SetRequest](#hackathon-messages-prize_svc-SetRequest) | [messages.prize_svc.SetResponse](#hackathon-messages-prize_svc-SetResponse) |  |
+| Finalize | [messages.prize_svc.FinalizeRequest](#hackathon-messages-prize_svc-FinalizeRequest) | [messages.prize_svc.FinalizeResponse](#hackathon-messages-prize_svc-FinalizeResponse) |  |
+| Edit | [messages.prize_svc.EditRequest](#hackathon-messages-prize_svc-EditRequest) | [messages.prize_svc.EditResponse](#hackathon-messages-prize_svc-EditResponse) |  |
 
  
 
