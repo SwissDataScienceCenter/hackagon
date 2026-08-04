@@ -111,15 +111,18 @@ export function memberNav(
       icon: Users,
       href: resolve(`/my/hackathon/${hackathonId}/participants`),
     },
+    // "All Projects" against "My Projects" below: the pair reads as a scope
+    // choice, which is what it is. What "all" covers depends on the viewer —
+    // every project for a reviewer, the approved ones for everyone else.
     {
       id: "member:projects",
-      label: "Projects",
+      label: "All Projects",
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
-    // Directly after Projects, and nested under it in the URL, so
+    // Directly after All Projects, and nested under it in the URL, so
     // `activeNavId`'s longest-prefix match keeps this entry lit for the whole
-    // propose-and-edit flow rather than handing the highlight back to Projects.
+    // propose-and-edit flow rather than handing the highlight back to it.
     {
       id: "member:my-projects",
       label: "My Projects",
