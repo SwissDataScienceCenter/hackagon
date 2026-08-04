@@ -374,6 +374,12 @@
 - [hackathon/messages/team_svc/edit_response.proto](#hackathon_messages_team_svc_edit_response-proto)
     - [EditResponse](#hackathon-messages-team_svc-EditResponse)
   
+- [hackathon/messages/team_svc/edit_submission_request.proto](#hackathon_messages_team_svc_edit_submission_request-proto)
+    - [EditSubmissionRequest](#hackathon-messages-team_svc-EditSubmissionRequest)
+  
+- [hackathon/messages/team_svc/edit_submission_response.proto](#hackathon_messages_team_svc_edit_submission_response-proto)
+    - [EditSubmissionResponse](#hackathon-messages-team_svc-EditSubmissionResponse)
+  
 - [hackathon/messages/team_svc/finalize_submission_request.proto](#hackathon_messages_team_svc_finalize_submission_request-proto)
     - [FinalizeSubmissionRequest](#hackathon-messages-team_svc-FinalizeSubmissionRequest)
   
@@ -4646,6 +4652,69 @@ for another registrant (walk-ins at the check-in desk).
 
 
 
+<a name="hackathon_messages_team_svc_edit_submission_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/edit_submission_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-EditSubmissionRequest"></a>
+
+### EditSubmissionRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+| result | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_edit_submission_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/edit_submission_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-EditSubmissionResponse"></a>
+
+### EditSubmissionResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission | [hackathon.entities.Submission](#hackathon-entities-Submission) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_team_svc_finalize_submission_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -5485,6 +5554,7 @@ the admin finalizes, and the table stays admin-editable afterwards.
 | CreateSubmission | [messages.team_svc.CreateSubmissionRequest](#hackathon-messages-team_svc-CreateSubmissionRequest) | [messages.team_svc.CreateSubmissionResponse](#hackathon-messages-team_svc-CreateSubmissionResponse) |  |
 | GetSubmission | [messages.team_svc.GetSubmissionRequest](#hackathon-messages-team_svc-GetSubmissionRequest) | [messages.team_svc.GetSubmissionResponse](#hackathon-messages-team_svc-GetSubmissionResponse) |  |
 | ListSubmissions | [messages.team_svc.ListSubmissionsRequest](#hackathon-messages-team_svc-ListSubmissionsRequest) | [messages.team_svc.ListSubmissionsResponse](#hackathon-messages-team_svc-ListSubmissionsResponse) |  |
+| EditSubmission | [messages.team_svc.EditSubmissionRequest](#hackathon-messages-team_svc-EditSubmissionRequest) | [messages.team_svc.EditSubmissionResponse](#hackathon-messages-team_svc-EditSubmissionResponse) |  |
 | FinalizeSubmission | [messages.team_svc.FinalizeSubmissionRequest](#hackathon-messages-team_svc-FinalizeSubmissionRequest) | [messages.team_svc.FinalizeSubmissionResponse](#hackathon-messages-team_svc-FinalizeSubmissionResponse) |  |
 
  

@@ -12,6 +12,8 @@ import "hackathon/messages/team_svc/delete_request.proto";
 import "hackathon/messages/team_svc/delete_response.proto";
 import "hackathon/messages/team_svc/edit_request.proto";
 import "hackathon/messages/team_svc/edit_response.proto";
+import "hackathon/messages/team_svc/edit_submission_request.proto";
+import "hackathon/messages/team_svc/edit_submission_response.proto";
 import "hackathon/messages/team_svc/finalize_submission_request.proto";
 import "hackathon/messages/team_svc/finalize_submission_response.proto";
 import "hackathon/messages/team_svc/get_request.proto";
@@ -38,5 +40,6 @@ service TeamService {
   rpc CreateSubmission(hackathon.messages.team_svc.CreateSubmissionRequest) returns (hackathon.messages.team_svc.CreateSubmissionResponse);
   rpc GetSubmission(hackathon.messages.team_svc.GetSubmissionRequest) returns (hackathon.messages.team_svc.GetSubmissionResponse);
   rpc ListSubmissions(hackathon.messages.team_svc.ListSubmissionsRequest) returns (hackathon.messages.team_svc.ListSubmissionsResponse);
+  rpc EditSubmission(hackathon.messages.team_svc.EditSubmissionRequest) returns (hackathon.messages.team_svc.EditSubmissionResponse);
   rpc FinalizeSubmission(hackathon.messages.team_svc.FinalizeSubmissionRequest) returns (hackathon.messages.team_svc.FinalizeSubmissionResponse);
 }

@@ -712,3 +712,86 @@ func getTeamById(ctx context.Context, s *TeamService, teamID uuid.UUID) (*ent.Te
 	}
 	return t, nil
 }
+
+// EditSubmission updates a draft submission's content. Finalized submissions
+// are frozen — edits after FinalizeSubmission are refused, and the edit is
+// window-gated like CreateSubmission so post-deadline drafts cannot mutate.
+func (s *TeamService) EditSubmission(
+	ctx context.Context,
+	req *msgs.EditSubmissionRequest,
+) (*msgs.EditSubmissionResponse, error) {
+	sub, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	submID, err := uuid.Parse(req.GetSubmissionId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid submission_id: %v", err)
+	}
+
+	subm, err := s.dbClient.Submission.Query().
+		Where(entsubmission.IDEQ(submID)).
+		WithTeam(func(tq *ent.TeamQuery) {
+			tq.WithProject(func(pq *ent.ProjectQuery) {
+				pq.WithHackathon()
+			})
+		}).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "submission %s not found", req.GetSubmissionId())
+		}
+
+		return nil, status.Errorf(codes.Internal, "query submission: %v", err)
+	}
+	if subm.Edges.Team == nil || subm.Edges.Team.Edges.Project == nil ||
+		subm.Edges.Team.Edges.Project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "submission team or hackathon not found")
+	}
+
+	hackathonID := subm.Edges.Team.Edges.Project.Edges.Hackathon.ID
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID.String(), m.Submission, m.Write,
+		m.WithTeam(subm.Edges.Team.ID.String()),
+	); err != nil {
+		return nil, err
+	}
+
+	if subm.Status == entsubmission.StatusFinal {
+		return nil, status.Error(codes.FailedPrecondition, "submission is finalized and frozen")
+	}
+	if err := requireWindowOpen(ctx, s.dbClient, hackathonID, windowSubmissions, time.Now()); err != nil {
+		return nil, err
+	}
+
+	u, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(sub)).Only(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
+	}
+
+	update := s.dbClient.Submission.UpdateOne(subm).SetModifierID(u.ID)
+	if req.Result != nil {
+		update.SetResult(req.GetResult())
+	}
+	if _, err := update.Save(ctx); err != nil {
+		slog.Error("edit submission", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't edit submission: %v", err)
+	}
+
+	updated, err := s.dbClient.Submission.Query().
+		Where(entsubmission.IDEQ(submID)).
+		WithTeam().
+		WithProject().
+		WithCreator().
+		WithModifier().
+		Only(ctx)
+	if err != nil {
+		slog.Error("re-query submission", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't re-query submission: %v", err)
+	}
+
+	return &msgs.EditSubmissionResponse{Submission: submissionEntryFromEnt(updated)}, nil
+}

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package hackathon.messages.team_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svc";
+
+message EditSubmissionRequest {
+  string submission_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string result = 2 [(buf.validate.field).string.max_len = 50000];
+}
