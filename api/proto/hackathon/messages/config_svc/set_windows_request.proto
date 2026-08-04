@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package hackathon.messages.config_svc;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/config_svc";
+
+// Partial update: only the fields present are written; windows never set are
+// not enforced.
+message SetWindowsRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  optional google.protobuf.Timestamp registration_opens = 2;
+  optional google.protobuf.Timestamp registration_closes = 3;
+  optional google.protobuf.Timestamp proposals_close = 4;
+  optional google.protobuf.Timestamp preferences_close = 5;
+  optional google.protobuf.Timestamp submissions_close = 6;
+  optional string late_policy = 7 [(buf.validate.field).string.max_len = 1000];
+}

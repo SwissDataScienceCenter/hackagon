@@ -97,6 +97,9 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_settings", HackathonSettings.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Hackathon settings this user last modified."),
+		edge.To("modified_windows", HackathonWindows.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Hackathon windows this user last modified."),
 		edge.To("preferred_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Projects this user has marked as preferred."),

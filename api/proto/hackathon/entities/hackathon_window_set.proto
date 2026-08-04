@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// HackathonWindows holds the per-hackathon time windows the backend enforces
+// on the acting RPCs (Join, Propose, SetPreference, CreateSubmission).
+// Unset fields are not enforced. Overrides are absolute one-shot extensions
+// anchored at the moment the organizer granted them.
+message HackathonWindows {
+  string hackathon_id = 1;
+  optional google.protobuf.Timestamp registration_opens = 2;
+  optional google.protobuf.Timestamp registration_closes = 3;
+  optional google.protobuf.Timestamp proposals_close = 4;
+  optional google.protobuf.Timestamp preferences_close = 5;
+  optional google.protobuf.Timestamp submissions_close = 6;
+  optional google.protobuf.Timestamp registration_override_until = 7;
+  optional google.protobuf.Timestamp submissions_override_until = 8;
+  // Human-readable note on how late submissions are handled.
+  optional string late_policy = 9;
+  google.protobuf.Timestamp modified_at = 10;
+}

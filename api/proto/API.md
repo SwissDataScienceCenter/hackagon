@@ -3,6 +3,24 @@
 
 ## Table of Contents
 
+- [hackathon/messages/config_svc/override_window_request.proto](#hackathon_messages_config_svc_override_window_request-proto)
+    - [OverrideWindowRequest](#hackathon-messages-config_svc-OverrideWindowRequest)
+  
+- [hackathon/entities/hackathon_window_set.proto](#hackathon_entities_hackathon_window_set-proto)
+    - [HackathonWindows](#hackathon-entities-HackathonWindows)
+  
+- [hackathon/messages/config_svc/override_window_response.proto](#hackathon_messages_config_svc_override_window_response-proto)
+    - [OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse)
+  
+- [hackathon/messages/config_svc/set_windows_request.proto](#hackathon_messages_config_svc_set_windows_request-proto)
+    - [SetWindowsRequest](#hackathon-messages-config_svc-SetWindowsRequest)
+  
+- [hackathon/messages/config_svc/set_windows_response.proto](#hackathon_messages_config_svc_set_windows_response-proto)
+    - [SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse)
+  
+- [hackathon/config_service.proto](#hackathon_config_service-proto)
+    - [ConfigService](#hackathon-ConfigService)
+  
 - [hackathon/entities/capability.proto](#hackathon_entities_capability-proto)
     - [CapabilityStatus](#hackathon-entities-CapabilityStatus)
   
@@ -539,6 +557,214 @@
     - [VoteService](#vote-VoteService)
   
 - [Scalar Value Types](#scalar-value-types)
+
+
+
+<a name="hackathon_messages_config_svc_override_window_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/override_window_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-OverrideWindowRequest"></a>
+
+### OverrideWindowRequest
+One-shot manual extension: the window stays open until now &#43; extend_minutes
+regardless of its configured close (walk-ins at the door, AV issues during
+demos). The organizer has the final word over the clock.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| window | [string](#string) |  | Which window to extend: &#34;registration&#34; or &#34;submissions&#34;. |
+| extend_minutes | [int32](#int32) |  |  |
+| reason | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_hackathon_window_set-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_window_set.proto
+
+
+
+<a name="hackathon-entities-HackathonWindows"></a>
+
+### HackathonWindows
+HackathonWindows holds the per-hackathon time windows the backend enforces
+on the acting RPCs (Join, Propose, SetPreference, CreateSubmission).
+Unset fields are not enforced. Overrides are absolute one-shot extensions
+anchored at the moment the organizer granted them.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| registration_opens | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| registration_closes | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| proposals_close | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| preferences_close | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| submissions_close | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| registration_override_until | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| submissions_override_until | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| late_policy | [string](#string) | optional | Human-readable note on how late submissions are handled. |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_override_window_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/override_window_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-OverrideWindowResponse"></a>
+
+### OverrideWindowResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| windows | [hackathon.entities.HackathonWindows](#hackathon-entities-HackathonWindows) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_windows_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_windows_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetWindowsRequest"></a>
+
+### SetWindowsRequest
+Partial update: only the fields present are written; windows never set are
+not enforced.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| registration_opens | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| registration_closes | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| proposals_close | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| preferences_close | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| submissions_close | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| late_policy | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_windows_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_windows_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetWindowsResponse"></a>
+
+### SetWindowsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| windows | [hackathon.entities.HackathonWindows](#hackathon-entities-HackathonWindows) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_config_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/config_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-ConfigService"></a>
+
+### ConfigService
+Per-hackathon configuration. First slice: enforceable time windows.
+Forms, voting policy, email templates and branding land here as further
+slices of the same configuration engine.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| SetWindows | [messages.config_svc.SetWindowsRequest](#hackathon-messages-config_svc-SetWindowsRequest) | [messages.config_svc.SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse) |  |
+| OverrideWindow | [messages.config_svc.OverrideWindowRequest](#hackathon-messages-config_svc-OverrideWindowRequest) | [messages.config_svc.OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse) |  |
+
+ 
 
 
 

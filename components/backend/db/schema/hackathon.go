@@ -86,6 +86,9 @@ func (Hackathon) Edges() []ent.Edge {
 		edge.To("settings", HackathonSettings.Type).
 			Unique().
 			Comment("Configuration settings for this hackathon."),
+		edge.To("windows", HackathonWindows.Type).
+			Unique().
+			Comment("Enforced time windows for this hackathon."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),

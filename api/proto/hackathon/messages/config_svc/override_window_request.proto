@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.messages.config_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/config_svc";
+
+// One-shot manual extension: the window stays open until now + extend_minutes
+// regardless of its configured close (walk-ins at the door, AV issues during
+// demos). The organizer has the final word over the clock.
+message OverrideWindowRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  // Which window to extend: "registration" or "submissions".
+  string window = 2 [(buf.validate.field).string = {in: ["registration", "submissions"]}];
+  int32 extend_minutes = 3 [
+    (buf.validate.field).int32.gt = 0,
+    (buf.validate.field).int32.lte = 1440
+  ];
+  string reason = 4 [(buf.validate.field).string.max_len = 500];
+}
