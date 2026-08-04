@@ -20,6 +20,9 @@ export default defineConfig({
   server: {
     port: 8081, // Port fixed also in keycloak realm allowed redirects.
     strictPort: true,
+    // Cloudflare quick tunnels (see .devcontainer/README.md) proxy the dev
+    // server under a random *.trycloudflare.com host.
+    allowedHosts: [".trycloudflare.com"],
   },
   test: {
     // Enable Vitest's global APIs (describe, it, expect, etc.)

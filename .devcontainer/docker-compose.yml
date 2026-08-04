@@ -38,6 +38,20 @@ services:
       - "${HACKAGON_KEYCLOAK_PORT:-8180}:8180"
       - "${HACKAGON_POSTGRES_PORT:-5432}:5432"
 
+  # Optional: public URL for the running frontend via a Cloudflare quick
+  # tunnel (random *.trycloudflare.com, no account needed). Start with:
+  #   docker compose -f .devcontainer/docker-compose.yml --profile tunnel up -d tunnel
+  # The URL appears in `docker compose logs tunnel`. Requires the frontend to
+  # be reachable on the dev container's network interface — run
+  # .devcontainer/host-bridge.sh inside the container first.
+  tunnel:
+    image: ${HACKAGON_TUNNEL_IMAGE:-cloudflare/cloudflared:latest}
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://dev:8081
+    depends_on:
+      - dev
+
 volumes:
   # Nix store — the whole toolchain; survives container rebuilds.
   nix-store:

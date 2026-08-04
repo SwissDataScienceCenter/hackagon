@@ -80,6 +80,28 @@ docker compose -f .devcontainer/docker-compose.yml exec -u vscode dev \
   bash /workspaces/hackagon/.devcontainer/host-bridge.sh
 ```
 
+## Public URL (Cloudflare quick tunnel, optional)
+
+An opt-in `tunnel` service (compose profile `tunnel`) exposes the running
+frontend on a random `*.trycloudflare.com` URL — no Cloudflare account
+needed. The bridge script must be running so the tunnel container can reach
+Vite:
+
+```bash
+docker compose -f .devcontainer/docker-compose.yml exec -u vscode dev \
+  bash /workspaces/hackagon/.devcontainer/host-bridge.sh
+docker compose -f .devcontainer/docker-compose.yml --profile tunnel up -d tunnel
+docker compose -f .devcontainer/docker-compose.yml logs tunnel | grep -o 'https://.*trycloudflare.com'
+```
+
+Anonymous browsing (public listing, event pages, News & Pages) works fully.
+**Logging in through the tunnel does not**: the OIDC flow redirects to
+Keycloak at `localhost:8180`, which only resolves on your machine. Exposing
+auth would need a second tunnel plus per-URL issuer/redirect configuration —
+out of scope for a quick share link. Stop with
+`docker compose -f .devcontainer/docker-compose.yml --profile tunnel down tunnel`
+(quick-tunnel URLs are ephemeral and change on every start).
+
 ## Volumes & network
 
 Named volumes keep expensive state out of the (slow, host-bound) workspace
