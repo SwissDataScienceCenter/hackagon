@@ -130,6 +130,12 @@
 - [hackathon/messages/hackathon_svc/create_response.proto](#hackathon_messages_hackathon_svc_create_response-proto)
     - [CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse)
   
+- [hackathon/messages/hackathon_svc/delete_request.proto](#hackathon_messages_hackathon_svc_delete_request-proto)
+    - [DeleteRequest](#hackathon-messages-hackathon_svc-DeleteRequest)
+  
+- [hackathon/messages/hackathon_svc/delete_response.proto](#hackathon_messages_hackathon_svc_delete_response-proto)
+    - [DeleteResponse](#hackathon-messages-hackathon_svc-DeleteResponse)
+  
 - [hackathon/messages/hackathon_svc/edit_capability_request.proto](#hackathon_messages_hackathon_svc_edit_capability_request-proto)
     - [EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest)
   
@@ -2095,6 +2101,63 @@ discretionary/special prize (e.g. Community Choice).
 
 
 
+<a name="hackathon_messages_hackathon_svc_delete_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/delete_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-DeleteRequest"></a>
+
+### DeleteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_delete_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/delete_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-DeleteResponse"></a>
+
+### DeleteResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_edit_capability_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2708,6 +2771,7 @@ for another registrant (walk-ins at the check-in desk).
 | Get | [messages.hackathon_svc.GetRequest](#hackathon-messages-hackathon_svc-GetRequest) | [messages.hackathon_svc.GetResponse](#hackathon-messages-hackathon_svc-GetResponse) |  |
 | Create | [messages.hackathon_svc.CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest) | [messages.hackathon_svc.CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse) |  |
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
+| Delete | [messages.hackathon_svc.DeleteRequest](#hackathon-messages-hackathon_svc-DeleteRequest) | [messages.hackathon_svc.DeleteResponse](#hackathon-messages-hackathon_svc-DeleteResponse) |  |
 | EditCapability | [messages.hackathon_svc.EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest) | [messages.hackathon_svc.EditCapabilityResponse](#hackathon-messages-hackathon_svc-EditCapabilityResponse) |  |
 | AdvancePhase | [messages.hackathon_svc.AdvancePhaseRequest](#hackathon-messages-hackathon_svc-AdvancePhaseRequest) | [messages.hackathon_svc.AdvancePhaseResponse](#hackathon-messages-hackathon_svc-AdvancePhaseResponse) |  |
 | EditSettings | [messages.hackathon_svc.EditSettingsRequest](#hackathon-messages-hackathon_svc-EditSettingsRequest) | [messages.hackathon_svc.EditSettingsResponse](#hackathon-messages-hackathon_svc-EditSettingsResponse) |  |

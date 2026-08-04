@@ -9,7 +9,11 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	entformresponse "github.com/swissdatasciencecenter/hackagon/components/backend/ent/formresponse"
+	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
+	enthackathonprizes "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonprizes"
 	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
+	enthackathonwindows "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonwindows"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
@@ -1230,4 +1234,84 @@ func (s *HackathonService) SubmitRegistrationForm(
 	}
 
 	return &msgs.SubmitRegistrationFormResponse{Id: row.ID.String()}, nil
+}
+
+// Delete removes a hackathon and its owned configuration rows. Content-heavy
+// hackathons (projects, teams, votes) are out of scope for now — this serves
+// the cleanup of drafts that never went live; richer cascades belong to a
+// dedicated archival flow.
+func (s *HackathonService) Delete(
+	ctx context.Context,
+	req *msgs.DeleteRequest,
+) (*msgs.DeleteResponse, error) {
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	exists, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Exist(ctx)
+	if err != nil {
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "hackathon %s not found", id)
+	}
+
+	// Owned configuration and roster rows first, then the hackathon itself.
+	pred := enthackathon.IDEQ(id)
+	if _, err := s.dbClient.Capability.Delete().
+		Where(entcapability.HasHackathonWith(pred)).Exec(ctx); err != nil {
+		slog.Error("delete capabilities", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't delete hackathon")
+	}
+	for name, del := range map[string]func() (int, error){
+		"settings": func() (int, error) {
+			return s.dbClient.HackathonSettings.Delete().
+				Where(enthackathonsettings.HasHackathonWith(pred)).Exec(ctx)
+		},
+		"windows": func() (int, error) {
+			return s.dbClient.HackathonWindows.Delete().
+				Where(enthackathonwindows.HasHackathonWith(pred)).Exec(ctx)
+		},
+		"forms": func() (int, error) {
+			return s.dbClient.HackathonForms.Delete().
+				Where(enthackathonforms.HasHackathonWith(pred)).Exec(ctx)
+		},
+		"form responses": func() (int, error) {
+			return s.dbClient.FormResponse.Delete().
+				Where(entformresponse.HasHackathonWith(pred)).Exec(ctx)
+		},
+		"prizes": func() (int, error) {
+			return s.dbClient.HackathonPrizes.Delete().
+				Where(enthackathonprizes.HasHackathonWith(pred)).Exec(ctx)
+		},
+		"participants": func() (int, error) {
+			return s.dbClient.Participant.Delete().
+				Where(entparticipant.HackathonIDEQ(id)).Exec(ctx)
+		},
+	} {
+		if _, err := del(); err != nil {
+			slog.Error("delete hackathon dependents", "kind", name, "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't delete hackathon")
+		}
+	}
+
+	if err := s.dbClient.Hackathon.DeleteOneID(id).Exec(ctx); err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, status.Error(codes.FailedPrecondition,
+				"hackathon still has content (projects, pages, or teams); archive it instead")
+		}
+		slog.Error("delete hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't delete hackathon")
+	}
+
+	return &msgs.DeleteResponse{}, nil
 }
