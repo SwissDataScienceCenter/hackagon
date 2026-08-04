@@ -22,4 +22,12 @@ describe("createAuthorizedGrpc", () => {
     expect(typeof result.user.list).toBe("function")
     expect(typeof result.health.check).toBe("function")
   })
+
+  it("should return hackathon and team clients", () => {
+    const result = createAuthorizedGrpc("test-token-123")
+
+    expect(typeof result.hackathon.get).toBe("function")
+    expect(typeof result.team.list).toBe("function")
+    expect(typeof result.team.listSubmissions).toBe("function")
+  })
 })
