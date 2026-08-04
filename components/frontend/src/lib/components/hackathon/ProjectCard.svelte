@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import type { Snippet } from 'svelte';
 
     let {
         num,
@@ -12,6 +13,7 @@
         badge,
         badgePreset = 'preset-tonal-surface',
         meta,
+        actions,
     }: {
         num: number;
         title: string;
@@ -28,7 +30,22 @@
         badgePreset?: string;
         /** Extra line under the description, e.g. the track. */
         meta?: string;
+        /** Extra controls beside the CTA, e.g. a prefer form. A snippet rather
+         *  than props so the card stays ignorant of what the action does. */
+        actions?: Snippet;
     } = $props();
+
+    // The project's own initials stand in for the image it lacks — same
+    // treatment as ParticipantCard, on the title rather than a person.
+    const initials = $derived(
+        title
+            .split(' ')
+            .filter(Boolean)
+            .map((w) => w[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+    );
 </script>
 
 <!-- Matches TeamCard: py-4 px-5, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
@@ -49,8 +66,11 @@
         </div>
     {:else}
         <div
-            class="size-16 shrink-0 rounded-full border-2 border-surface-200-800 bg-surface-100-900"
-        ></div>
+            class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
+                   border-surface-200-800 bg-surface-200-800 text-xs font-bold text-surface-950-50"
+        >
+            {initials}
+        </div>
     {/if}
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -79,8 +99,11 @@
         {/if}
     </div>
 
-    <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-    <a href={resolve(moreInfoHref as any)} class="btn btn-sm preset-tonal-surface">
-        {moreInfoLabel}
-    </a>
+    <div class="flex shrink-0 items-center gap-2">
+        {@render actions?.()}
+        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
+        <a href={resolve(moreInfoHref as any)} class="btn btn-sm preset-tonal-surface">
+            {moreInfoLabel}
+        </a>
+    </div>
 </div>
