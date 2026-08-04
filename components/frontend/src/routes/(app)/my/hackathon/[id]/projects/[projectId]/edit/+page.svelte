@@ -11,22 +11,25 @@
         projectStatusBadgePreset(data.project.status) ?? 'preset-tonal-surface'
     );
 
-    // Unresolved: `ProjectEditForm` calls `resolve()` at its own anchor, and the
-    // back link below resolves a literal inline — extracting a resolved string
-    // would widen it past the route-literal type `resolve()` expects.
-    const backHref = $derived(`/my/hackathon/${data.hackathonId}/projects/proposals`);
+    // The project itself, which is also where saving returns to. Unresolved:
+    // `ProjectEditForm` calls `resolve()` at its own anchor, and the back link
+    // below resolves a literal inline — extracting a resolved string would widen
+    // it past the route-literal type `resolve()` expects.
+    const backHref = $derived(
+        `/my/hackathon/${data.hackathonId}/projects/${data.project.id}`
+    );
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals`)}
+            href={resolve(`/my/hackathon/${data.hackathonId}/projects/${data.project.id}`)}
             class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
         >
-            &larr; Back to proposals
+            &larr; Back to {data.project.title}
         </a>
         <div class="flex flex-wrap items-center gap-2">
-            <h1 class="m-0 text-lg font-bold text-surface-950-50">Edit Proposal</h1>
+            <h1 class="m-0 text-lg font-bold text-surface-950-50">Edit Project</h1>
             {#if statusText}
                 <span
                     class="badge {statusPreset} rounded-none text-[0.625rem] font-semibold uppercase"

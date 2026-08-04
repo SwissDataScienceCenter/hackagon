@@ -172,7 +172,7 @@
             {#if data.mayEdit}
                 <a
                     href={resolve(
-                        `/my/hackathon/${data.hackathonId}/projects/proposals/${data.project.id}/edit`
+                        `/my/hackathon/${data.hackathonId}/projects/${data.project.id}/edit`
                     )}
                     class="btn btn-sm preset-tonal-surface no-underline"
                 >

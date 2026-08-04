@@ -8,8 +8,8 @@ import {
 import { redirect } from "@sveltejs/kit"
 
 export const load: PageServerLoad = async (event) => {
-  // Same source as the list: the layout's `hackathon.get` already carries this
-  // project, so editing it needs no read of its own.
+  // Same source as the list and the project page: the layout's `hackathon.get`
+  // already carries this project, so editing it needs no read of its own.
   const { hackathon, myMembership } = await event.parent()
 
   return projectEditData(
@@ -31,11 +31,15 @@ export const actions: Actions = {
     )
     if (failure) return failure
 
-    // Back to Proposals, which is where this route is entered from. A proposal
-    // that was edited is still awaiting review, so it is still on that list.
+    // Back to the project, not to Proposals — this route is entered from the
+    // project's own page and from the All Projects rows, and an approved project
+    // is not on the Proposals list at all, so landing there would strand the
+    // editor somewhere their project isn't.
     redirect(
       303,
-      resolve(`/my/hackathon/${event.params.id}/projects/proposals`),
+      resolve(
+        `/my/hackathon/${event.params.id}/projects/${event.params.projectId}`,
+      ),
     )
   },
 }

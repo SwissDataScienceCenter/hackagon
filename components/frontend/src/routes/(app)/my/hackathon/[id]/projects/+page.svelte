@@ -70,12 +70,14 @@
                 >
                     {#snippet actions()}
                         {#if project.mayEdit}
-                            <!-- Same destination as the detail page's Edit, so
-                                 the two routes into the form agree. Offered per
-                                 row: who may edit depends on who proposed it. -->
+                            <!-- The project-side edit route, same as the project
+                                 page's Edit: saving returns to the project. The
+                                 proposals route is for rows on Proposals, which
+                                 returns there instead. Offered per row: who may
+                                 edit depends on who proposed it. -->
                             <a
                                 href={resolve(
-                                    `/my/hackathon/${data.hackathonId}/projects/proposals/${project.id}/edit`
+                                    `/my/hackathon/${data.hackathonId}/projects/${project.id}/edit`
                                 )}
                                 class="btn btn-sm preset-tonal-surface no-underline"
                             >
