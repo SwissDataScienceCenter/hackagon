@@ -550,6 +550,8 @@ func seedH1(
 		proposeProjects:    true,
 		teamPreferences:    true,
 		projectSubmissions: true,
+		vote:               false,
+		viewResults:        false,
 	}); err != nil {
 		return err
 	}
@@ -762,9 +764,12 @@ func seedH2(
 	// This is the hackathon to test preferences in: admin owns it, and alice and
 	// bob are both confirmed members.
 	if err := seedCapabilities(ctx, db, enf, h, admin, capabilities{
+		register:           false,
 		proposeProjects:    true,
 		teamPreferences:    true,
 		projectSubmissions: true,
+		vote:               false,
+		viewResults:        false,
 	}); err != nil {
 		return err
 	}
@@ -983,7 +988,12 @@ func seedH3(
 	// only — this is the fixture for a hackathon where every write is refused
 	// because the event has ended, not because anything is misconfigured.
 	if err := seedCapabilities(ctx, db, enf, h, admin, capabilities{
-		viewResults: true,
+		register:           false,
+		proposeProjects:    false,
+		teamPreferences:    false,
+		projectSubmissions: false,
+		vote:               false,
+		viewResults:        true,
 	}); err != nil {
 		return err
 	}
