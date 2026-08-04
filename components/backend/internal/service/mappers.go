@@ -8,6 +8,8 @@ import (
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -292,4 +294,46 @@ func settingsEntryFromEnt(s *ent.HackathonSettings) *hackEnts.HackathonSettings 
 		VotingEnabled:        s.VotingEnabled,
 		ModifiedAt:           timestamppb.New(s.ModifiedAt),
 	}
+}
+
+// validateAgainstFormSchema checks answers against an organizer-defined form
+// schema (the []map{key,label,type,required} shape stored on HackathonForms).
+// Same rules the registration form uses: unknown keys are rejected so a typo
+// is never silently accepted, and every required field must be present and
+// non-empty.
+//
+// A nil/empty schema means the organizer defined no form, so anything goes —
+// validation is opt-in by configuring one.
+func validateAgainstFormSchema(
+	schema []map[string]any,
+	answers map[string]string,
+	what string,
+) error {
+	if len(schema) == 0 {
+		return nil
+	}
+
+	fieldByKey := make(map[string]map[string]any, len(schema))
+	for _, f := range schema {
+		if k, ok := f["key"].(string); ok {
+			fieldByKey[k] = f
+		}
+	}
+
+	for k := range answers {
+		if _, ok := fieldByKey[k]; !ok {
+			return status.Errorf(codes.InvalidArgument, "unknown %s field %q", what, k)
+		}
+	}
+	for k, f := range fieldByKey {
+		if required, _ := f["required"].(bool); required {
+			if v, ok := answers[k]; !ok || v == "" {
+				return status.Errorf(
+					codes.InvalidArgument, "missing required %s field %q", what, k,
+				)
+			}
+		}
+	}
+
+	return nil
 }

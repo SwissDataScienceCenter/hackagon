@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
@@ -177,4 +178,75 @@ func (s *UserService) Register(
 	}
 
 	return &msgs.RegisterResponse{User: userEntryFromEnt(u)}, nil
+}
+
+// DeleteAccount removes the CALLER's own platform profile (GDPR self-service).
+//
+// Semantics pinned here, since the recipe asked for them:
+//   - the platform profile row and every casbin role (g and g2) go;
+//   - participation rows go with it, so the person disappears from rosters —
+//     ent's Restrict edges would otherwise block the delete anyway;
+//   - the KEYCLOAK identity is untouched. This service does not own it, and
+//     leaving it means the person can sign in again and start fresh rather
+//     than being locked out of an account they cannot recreate.
+//
+// Content they authored (pages, projects, submissions) is NOT deleted: those
+// edges are Restrict, and silently removing an event's content because an
+// author left would damage other people's records. A profile holding such
+// content therefore fails with FailedPrecondition rather than cascading.
+func (s *UserService) DeleteAccount(
+	ctx context.Context,
+	_ *msgs.DeleteAccountRequest,
+) (*msgs.DeleteAccountResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if uid == m.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	u, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Already gone: deleting twice is not an error, the caller's
+			// intent already holds.
+			return &msgs.DeleteAccountResponse{}, nil
+		}
+		slog.Error("query user for deletion", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Participation rows first: they are the expected reason a delete would
+	// be blocked, and removing them is exactly what leaving means.
+	if _, err := s.dbClient.Participant.Delete().
+		Where(entparticipant.HasUserWith(entuser.IDEQ(u.ID))).
+		Exec(ctx); err != nil {
+		slog.Error("delete participations", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't remove participations")
+	}
+
+	if err := s.dbClient.User.DeleteOne(u).Exec(ctx); err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, status.Error(
+				codes.FailedPrecondition,
+				"this profile still owns content (pages, projects or submissions); an organizer must reassign or remove it first",
+			)
+		}
+		slog.Error("delete user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't delete profile")
+	}
+
+	// Roles last: if this failed after the row is gone, a stale grouping row
+	// would silently re-grant access to whoever next registers this subject.
+	if err := s.enforcer.PurgeUserRoles(uid); err != nil {
+		slog.Error("purge casbin roles after account deletion", "err", err, "sub", uid)
+
+		return nil, status.Error(codes.Internal, "couldn't purge roles")
+	}
+
+	return &msgs.DeleteAccountResponse{}, nil
 }

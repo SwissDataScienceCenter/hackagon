@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
 	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -502,6 +503,25 @@ func (s *TeamService) CreateSubmission(
 		t.Edges.Project.Edges.Hackathon.ID, capability.CreateProjectSubmissions,
 	); err != nil {
 		return nil, err
+	}
+
+	// Structured answers are validated against the organizer's submission form
+	// (ConfigService.SetSubmissionForm). Without a form defined, anything is
+	// accepted — validation is opt-in by configuring one.
+	if forms, err := s.dbClient.HackathonForms.Query().
+		Where(enthackathonforms.HasHackathonWith(
+			enthackathon.IDEQ(t.Edges.Project.Edges.Hackathon.ID),
+		)).
+		Only(ctx); err == nil {
+		if err := validateAgainstFormSchema(
+			forms.SubmissionFields, req.GetForm(), "submission",
+		); err != nil {
+			return nil, err
+		}
+	} else if !ent.IsNotFound(err) {
+		slog.Error("query submission form", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
 	u, err := s.dbClient.User.Query().

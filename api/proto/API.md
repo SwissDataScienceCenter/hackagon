@@ -12,6 +12,19 @@
 - [hackathon/messages/config_svc/override_window_response.proto](#hackathon_messages_config_svc_override_window_response-proto)
     - [OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse)
   
+- [hackathon/messages/config_svc/set_branding_request.proto](#hackathon_messages_config_svc_set_branding_request-proto)
+    - [SetBrandingRequest](#hackathon-messages-config_svc-SetBrandingRequest)
+  
+- [hackathon/messages/config_svc/set_branding_response.proto](#hackathon_messages_config_svc_set_branding_response-proto)
+    - [SetBrandingResponse](#hackathon-messages-config_svc-SetBrandingResponse)
+  
+- [hackathon/messages/config_svc/set_email_templates_request.proto](#hackathon_messages_config_svc_set_email_templates_request-proto)
+    - [SetEmailTemplatesRequest](#hackathon-messages-config_svc-SetEmailTemplatesRequest)
+    - [SetEmailTemplatesRequest.TemplatesEntry](#hackathon-messages-config_svc-SetEmailTemplatesRequest-TemplatesEntry)
+  
+- [hackathon/messages/config_svc/set_email_templates_response.proto](#hackathon_messages_config_svc_set_email_templates_response-proto)
+    - [SetEmailTemplatesResponse](#hackathon-messages-config_svc-SetEmailTemplatesResponse)
+  
 - [hackathon/entities/form_schema.proto](#hackathon_entities_form_schema-proto)
     - [ConsentField](#hackathon-entities-ConsentField)
     - [FormField](#hackathon-entities-FormField)
@@ -385,6 +398,7 @@
   
 - [hackathon/messages/team_svc/create_submission_request.proto](#hackathon_messages_team_svc_create_submission_request-proto)
     - [CreateSubmissionRequest](#hackathon-messages-team_svc-CreateSubmissionRequest)
+    - [CreateSubmissionRequest.FormEntry](#hackathon-messages-team_svc-CreateSubmissionRequest-FormEntry)
   
 - [hackathon/messages/team_svc/create_submission_response.proto](#hackathon_messages_team_svc_create_submission_response-proto)
     - [CreateSubmissionResponse](#hackathon-messages-team_svc-CreateSubmissionResponse)
@@ -541,6 +555,12 @@
   
 - [user/messages/user_svc/add_role_response.proto](#user_messages_user_svc_add_role_response-proto)
     - [AddRoleResponse](#user-messages-user_svc-AddRoleResponse)
+  
+- [user/messages/user_svc/delete_account_request.proto](#user_messages_user_svc_delete_account_request-proto)
+    - [DeleteAccountRequest](#user-messages-user_svc-DeleteAccountRequest)
+  
+- [user/messages/user_svc/delete_account_response.proto](#user_messages_user_svc_delete_account_response-proto)
+    - [DeleteAccountResponse](#user-messages-user_svc-DeleteAccountResponse)
   
 - [user/messages/user_svc/get_request.proto](#user_messages_user_svc_get_request-proto)
     - [GetRequest](#user-messages-user_svc-GetRequest)
@@ -786,6 +806,142 @@ anchored at the moment the organizer granted them.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | windows | [hackathon.entities.HackathonWindows](#hackathon-entities-HackathonWindows) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_branding_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_branding_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetBrandingRequest"></a>
+
+### SetBrandingRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| primary_color | [string](#string) | optional | CSS hex colours (#rgb or #rrggbb); validated server-side. |
+| accent_color | [string](#string) | optional |  |
+| banner_text | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_branding_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_branding_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetBrandingResponse"></a>
+
+### SetBrandingResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_email_templates_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_email_templates_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetEmailTemplatesRequest"></a>
+
+### SetEmailTemplatesRequest
+Notification COPY, stored per hackathon. Sending is a separate concern (no
+notification service exists yet) — this pins the text organizers author so
+it survives that gap.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| templates | [SetEmailTemplatesRequest.TemplatesEntry](#hackathon-messages-config_svc-SetEmailTemplatesRequest-TemplatesEntry) | repeated | Keyed by moment: registrationConfirmed, teamAssigned, deadlineReminder, results. Unknown keys are rejected so a typo is not silently stored. |
+
+
+
+
+
+
+<a name="hackathon-messages-config_svc-SetEmailTemplatesRequest-TemplatesEntry"></a>
+
+### SetEmailTemplatesRequest.TemplatesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_set_email_templates_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/set_email_templates_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-SetEmailTemplatesResponse"></a>
+
+### SetEmailTemplatesResponse
+
 
 
 
@@ -1175,6 +1331,8 @@ slices of the same configuration engine.
 | SetRegistrationForm | [messages.config_svc.SetRegistrationFormRequest](#hackathon-messages-config_svc-SetRegistrationFormRequest) | [messages.config_svc.SetRegistrationFormResponse](#hackathon-messages-config_svc-SetRegistrationFormResponse) |  |
 | SetSubmissionForm | [messages.config_svc.SetSubmissionFormRequest](#hackathon-messages-config_svc-SetSubmissionFormRequest) | [messages.config_svc.SetSubmissionFormResponse](#hackathon-messages-config_svc-SetSubmissionFormResponse) |  |
 | SetVotingPolicy | [messages.config_svc.SetVotingPolicyRequest](#hackathon-messages-config_svc-SetVotingPolicyRequest) | [messages.config_svc.SetVotingPolicyResponse](#hackathon-messages-config_svc-SetVotingPolicyResponse) |  |
+| SetEmailTemplates | [messages.config_svc.SetEmailTemplatesRequest](#hackathon-messages-config_svc-SetEmailTemplatesRequest) | [messages.config_svc.SetEmailTemplatesResponse](#hackathon-messages-config_svc-SetEmailTemplatesResponse) | Organizer-authored notification copy and event branding. Stored config; delivery/rendering are separate concerns. |
+| SetBranding | [messages.config_svc.SetBrandingRequest](#hackathon-messages-config_svc-SetBrandingRequest) | [messages.config_svc.SetBrandingResponse](#hackathon-messages-config_svc-SetBrandingResponse) |  |
 
  
 
@@ -4840,6 +4998,23 @@ for another registrant (walk-ins at the check-in desk).
 | team_id | [string](#string) |  |  |
 | project_id | [string](#string) |  |  |
 | result | [string](#string) | optional |  |
+| form | [CreateSubmissionRequest.FormEntry](#hackathon-messages-team_svc-CreateSubmissionRequest-FormEntry) | repeated | Structured answers keyed by the submission form&#39;s field keys (see ConfigService.SetSubmissionForm). Validated against that schema: required fields must be present and unknown keys are rejected, so a submission cannot silently miss what the organizer asked for. |
+
+
+
+
+
+
+<a name="hackathon-messages-team_svc-CreateSubmissionRequest-FormEntry"></a>
+
+### CreateSubmissionRequest.FormEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
 
 
 
@@ -6482,6 +6657,59 @@ Admin role: there is no per-hackathon owner for site-wide content.
 
 
 
+<a name="user_messages_user_svc_delete_account_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/delete_account_request.proto
+
+
+
+<a name="user-messages-user_svc-DeleteAccountRequest"></a>
+
+### DeleteAccountRequest
+Deletes the CALLER&#39;s own platform profile. Deliberately takes no user id:
+this is a self-service GDPR action, not an admin tool for removing people.
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="user_messages_user_svc_delete_account_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/delete_account_response.proto
+
+
+
+<a name="user-messages-user_svc-DeleteAccountResponse"></a>
+
+### DeleteAccountResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="user_messages_user_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -6804,6 +7032,7 @@ Admin role: there is no per-hackathon owner for site-wide content.
 | Register | [messages.user_svc.RegisterRequest](#user-messages-user_svc-RegisterRequest) | [messages.user_svc.RegisterResponse](#user-messages-user_svc-RegisterResponse) |  |
 | AddRole | [messages.user_svc.AddRoleRequest](#user-messages-user_svc-AddRoleRequest) | [messages.user_svc.AddRoleResponse](#user-messages-user_svc-AddRoleResponse) |  |
 | RemoveRole | [messages.user_svc.RemoveRoleRequest](#user-messages-user_svc-RemoveRoleRequest) | [messages.user_svc.RemoveRoleResponse](#user-messages-user_svc-RemoveRoleResponse) |  |
+| DeleteAccount | [messages.user_svc.DeleteAccountRequest](#user-messages-user_svc-DeleteAccountRequest) | [messages.user_svc.DeleteAccountResponse](#user-messages-user_svc-DeleteAccountResponse) | Self-service account deletion (GDPR). Removes the platform profile and every casbin role; the Keycloak identity is NOT touched, so the person can sign in again and start fresh. |
 
  
 

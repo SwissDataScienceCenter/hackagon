@@ -4,6 +4,8 @@ package user;
 
 import "user/messages/user_svc/add_role_request.proto";
 import "user/messages/user_svc/add_role_response.proto";
+import "user/messages/user_svc/delete_account_request.proto";
+import "user/messages/user_svc/delete_account_response.proto";
 import "user/messages/user_svc/get_request.proto";
 import "user/messages/user_svc/get_response.proto";
 import "user/messages/user_svc/list_request.proto";
@@ -24,4 +26,8 @@ service UserService {
   rpc Register(user.messages.user_svc.RegisterRequest) returns (user.messages.user_svc.RegisterResponse);
   rpc AddRole(user.messages.user_svc.AddRoleRequest) returns (user.messages.user_svc.AddRoleResponse);
   rpc RemoveRole(user.messages.user_svc.RemoveRoleRequest) returns (user.messages.user_svc.RemoveRoleResponse);
+  // Self-service account deletion (GDPR). Removes the platform profile and
+  // every casbin role; the Keycloak identity is NOT touched, so the person can
+  // sign in again and start fresh.
+  rpc DeleteAccount(user.messages.user_svc.DeleteAccountRequest) returns (user.messages.user_svc.DeleteAccountResponse);
 }

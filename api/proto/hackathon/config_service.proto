@@ -4,6 +4,10 @@ package hackathon;
 
 import "hackathon/messages/config_svc/override_window_request.proto";
 import "hackathon/messages/config_svc/override_window_response.proto";
+import "hackathon/messages/config_svc/set_branding_request.proto";
+import "hackathon/messages/config_svc/set_branding_response.proto";
+import "hackathon/messages/config_svc/set_email_templates_request.proto";
+import "hackathon/messages/config_svc/set_email_templates_response.proto";
 import "hackathon/messages/config_svc/set_registration_form_request.proto";
 import "hackathon/messages/config_svc/set_registration_form_response.proto";
 import "hackathon/messages/config_svc/set_submission_form_request.proto";
@@ -24,4 +28,8 @@ service ConfigService {
   rpc SetRegistrationForm(hackathon.messages.config_svc.SetRegistrationFormRequest) returns (hackathon.messages.config_svc.SetRegistrationFormResponse);
   rpc SetSubmissionForm(hackathon.messages.config_svc.SetSubmissionFormRequest) returns (hackathon.messages.config_svc.SetSubmissionFormResponse);
   rpc SetVotingPolicy(hackathon.messages.config_svc.SetVotingPolicyRequest) returns (hackathon.messages.config_svc.SetVotingPolicyResponse);
+  // Organizer-authored notification copy and event branding. Stored config;
+  // delivery/rendering are separate concerns.
+  rpc SetEmailTemplates(hackathon.messages.config_svc.SetEmailTemplatesRequest) returns (hackathon.messages.config_svc.SetEmailTemplatesResponse);
+  rpc SetBranding(hackathon.messages.config_svc.SetBrandingRequest) returns (hackathon.messages.config_svc.SetBrandingResponse);
 }

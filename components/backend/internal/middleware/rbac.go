@@ -386,6 +386,22 @@ func (e *Enforcer) GetHackathonRole(
 	}
 }
 
+// PurgeUserRoles removes every role a user holds — per-hackathon (g) and
+// global (g2) alike. Used by account deletion: leaving grouping rows behind
+// would silently re-grant everything if the same Keycloak subject ever
+// registered again.
+func (e *Enforcer) PurgeUserRoles(keycloakID string) error {
+	// Field 0 of both grouping tables is the subject.
+	if _, err := e.enforcer.RemoveFilteredGroupingPolicy(0, keycloakID); err != nil {
+		return err
+	}
+	if _, err := e.enforcer.RemoveFilteredNamedGroupingPolicy("g2", 0, keycloakID); err != nil {
+		return err
+	}
+
+	return e.enforcer.SavePolicy()
+}
+
 // IsGlobalAdmin reports whether the Keycloak ID holds the global Admin role
 // (casbin g2). Site-wide resources have no hackathon to scope a domain to, so
 // they authorize on this directly instead of through Enforce.

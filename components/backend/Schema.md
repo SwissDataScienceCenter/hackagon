@@ -110,6 +110,8 @@ Organizer-defined form schemas and voting policy for a hackathon. Schemas are st
 | `registration_consents` | []map[string]interface {} | no | no | no | no | Registration consents ({key,label,required}). |
 | `submission_fields` | []map[string]interface {} | no | no | no | no | Submission form fields ({key,label,type,required,maxMb}). |
 | `voting_policy` | map[string]interface {} | no | no | no | no | Pinned voting mechanism decisions (mechanism, scale, tie-breaks). |
+| `email_templates` | map[string]string | no | no | no | no | Organizer-authored notification copy, keyed by moment (registrationConfirmed, teamAssigned, deadlineReminder, results). Stored only — no notification service sends them yet. |
+| `branding` | map[string]string | no | no | no | no | Event branding (primaryColor, accentColor, bannerText). The logo lives on the hackathon row itself. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the forms row was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 

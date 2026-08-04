@@ -39,6 +39,12 @@ func (HackathonForms) Fields() []ent.Field {
 		field.JSON("voting_policy", map[string]any{}).
 			Optional().
 			Comment("Pinned voting mechanism decisions (mechanism, scale, tie-breaks)."),
+		field.JSON("email_templates", map[string]string{}).
+			Optional().
+			Comment("Organizer-authored notification copy, keyed by moment (registrationConfirmed, teamAssigned, deadlineReminder, results). Stored only — no notification service sends them yet."),
+		field.JSON("branding", map[string]string{}).
+			Optional().
+			Comment("Event branding (primaryColor, accentColor, bannerText). The logo lives on the hackathon row itself."),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).

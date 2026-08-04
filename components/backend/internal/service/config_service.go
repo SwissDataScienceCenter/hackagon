@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -433,6 +434,117 @@ func (s *ConfigService) SetSubmissionForm(
 	return &cfgMsgs.SetSubmissionFormResponse{
 		Form: formSchemaFromJSON(row.SubmissionFields, nil),
 	}, nil
+}
+
+// emailTemplateKeys are the moments a hackathon can have copy for. Closed set
+// on purpose: a typo'd key would otherwise be stored silently and the intended
+// message would never be written.
+var emailTemplateKeys = map[string]bool{
+	"registrationConfirmed": true,
+	"teamAssigned":          true,
+	"deadlineReminder":      true,
+	"results":               true,
+}
+
+func (s *ConfigService) SetEmailTemplates(
+	ctx context.Context,
+	req *cfgMsgs.SetEmailTemplatesRequest,
+) (*cfgMsgs.SetEmailTemplatesResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+	modifier, err := s.callerUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	templates := req.GetTemplates()
+	for k := range templates {
+		if !emailTemplateKeys[k] {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"unknown email template %q: expected one of registrationConfirmed, teamAssigned, deadlineReminder, results",
+				k,
+			)
+		}
+	}
+	// Copy: the request map must not be retained in the DB layer.
+	stored := make(map[string]string, len(templates))
+	for k, v := range templates {
+		stored[k] = v
+	}
+
+	if _, err := s.upsertForms(ctx, hackathonID, modifier,
+		func(c *ent.HackathonFormsCreate) { c.SetEmailTemplates(stored) },
+		func(u *ent.HackathonFormsUpdateOne) { u.SetEmailTemplates(stored) },
+	); err != nil {
+		return nil, err
+	}
+
+	return &cfgMsgs.SetEmailTemplatesResponse{}, nil
+}
+
+// hexColor matches #rgb and #rrggbb — these values are interpolated into CSS.
+var hexColor = regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
+
+func (s *ConfigService) SetBranding(
+	ctx context.Context,
+	req *cfgMsgs.SetBrandingRequest,
+) (*cfgMsgs.SetBrandingResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+	modifier, err := s.callerUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Partial update: only the fields the caller sent are touched.
+	existing := map[string]string{}
+	if row, err := s.dbClient.HackathonForms.Query().
+		Where(enthackathonforms.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx); err == nil && row.Branding != nil {
+		for k, v := range row.Branding {
+			existing[k] = v
+		}
+	}
+
+	for key, val := range map[string]*string{
+		"primaryColor": req.PrimaryColor,
+		"accentColor":  req.AccentColor,
+	} {
+		if val == nil {
+			continue
+		}
+		// These end up in CSS, so reject anything that is not a plain hex
+		// colour rather than trusting the frontend to escape it.
+		if !hexColor.MatchString(*val) {
+			return nil, status.Errorf(
+				codes.InvalidArgument, "%s must be a hex colour like #0A7ACC", key,
+			)
+		}
+		existing[key] = *val
+	}
+	if req.BannerText != nil {
+		existing["bannerText"] = req.GetBannerText()
+	}
+
+	if _, err := s.upsertForms(ctx, hackathonID, modifier,
+		func(c *ent.HackathonFormsCreate) { c.SetBranding(existing) },
+		func(u *ent.HackathonFormsUpdateOne) { u.SetBranding(existing) },
+	); err != nil {
+		return nil, err
+	}
+
+	return &cfgMsgs.SetBrandingResponse{}, nil
 }
 
 func (s *ConfigService) SetVotingPolicy(

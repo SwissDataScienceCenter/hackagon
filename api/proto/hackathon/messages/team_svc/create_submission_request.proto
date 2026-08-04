@@ -8,4 +8,9 @@ message CreateSubmissionRequest {
   string team_id = 1;
   string project_id = 2;
   optional string result = 3;
+  // Structured answers keyed by the submission form's field keys (see
+  // ConfigService.SetSubmissionForm). Validated against that schema:
+  // required fields must be present and unknown keys are rejected, so a
+  // submission cannot silently miss what the organizer asked for.
+  map<string, string> form = 4;
 }
