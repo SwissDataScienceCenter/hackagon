@@ -11,7 +11,9 @@ export const load: PageServerLoad = async (event) => {
   // project, so editing it needs no read of its own.
   const { hackathon, myMembership } = await event.parent()
 
-  const project = hackathon.projects.find((p) => p.id === event.params.projectId)
+  const project = hackathon.projects.find(
+    (p) => p.id === event.params.projectId,
+  )
   if (!project) {
     error(404, "Project not found")
   }
