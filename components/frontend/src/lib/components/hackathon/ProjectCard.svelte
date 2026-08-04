@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import { Tag, User } from 'lucide-svelte';
     import type { Snippet } from 'svelte';
 
     let {
@@ -7,12 +8,12 @@
         title,
         description,
         creator,
+        track,
         imageUrl,
         moreInfoHref = '#',
         moreInfoLabel = 'More Info',
         badge,
         badgePreset = 'preset-tonal-surface',
-        meta,
         actions,
     }: {
         num: number;
@@ -20,16 +21,17 @@
         description: string;
         /** Who proposed it. Omitted when the creator is no longer a member. */
         creator?: string;
+        /** Track name. Omitted when the project has no track, or its track was
+         *  deleted — the row then simply carries no track. */
+        track?: string;
         imageUrl?: string;
         moreInfoHref?: string;
         /** CTA text. The card is a row first and a "More Info" link second. */
         moreInfoLabel?: string;
         /** Generic chip text — kept a plain string so the card is not tied to
-         *  any one vocabulary. Proposals passes a status, others may not. */
+         *  any one vocabulary. Both project lists pass a status; others may not. */
         badge?: string;
         badgePreset?: string;
-        /** Extra line under the description, e.g. the track. */
-        meta?: string;
         /** Extra controls beside the CTA, e.g. a prefer form. A snippet rather
          *  than props so the card stays ignorant of what the action does. */
         actions?: Snippet;
@@ -89,13 +91,26 @@
                 {description}
             </p>
         </div>
-        {#if creator}
-            <p class="m-0 text-xs leading-snug text-surface-500">
-                Proposed by {creator}
-            </p>
-        {/if}
-        {#if meta}
-            <p class="m-0 text-xs leading-snug text-surface-500">{meta}</p>
+        <!-- Author and track on one line, each behind its own icon, so the two
+             facts read as attributes of the row rather than sentences. The
+             icons carry no information a sighted reader needs spelling out and
+             no screen reader needs repeating — the text beside them says it —
+             so they are aria-hidden. -->
+        {#if creator || track}
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500">
+                {#if creator}
+                    <span class="inline-flex items-center gap-1.5">
+                        <User class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {creator}
+                    </span>
+                {/if}
+                {#if track}
+                    <span class="inline-flex items-center gap-1.5">
+                        <Tag class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {track}
+                    </span>
+                {/if}
+            </div>
         {/if}
     </div>
 

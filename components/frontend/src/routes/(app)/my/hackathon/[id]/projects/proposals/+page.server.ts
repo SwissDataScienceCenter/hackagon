@@ -25,8 +25,17 @@ export const load: PageServerLoad = async (event) => {
   )
 
   // Tracks arrive nested in the same response. A project whose track was
-  // deleted resolves to nothing and the card omits the line.
+  // deleted resolves to nothing and the card omits it.
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
+
+  // Every row here is the viewer's own, so the author is always the same person.
+  // Carried anyway, because the shared card shows author and track together and
+  // a row that omitted one would read as missing rather than redundant.
+  const memberNames = new Map(
+    hackathon.members
+      .filter((m) => m.user !== undefined)
+      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
+  )
 
   // TODO(backend: display-ordinals): `num` is a position in this list, not an
   // identifier. Project has no display number, so the number a project shows
@@ -38,6 +47,7 @@ export const load: PageServerLoad = async (event) => {
     title: p.title,
     description: p.description,
     status: p.status,
+    creator: memberNames.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
   }))

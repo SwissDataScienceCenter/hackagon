@@ -270,7 +270,7 @@ describe("memberNav", () => {
     ])
   })
 
-  // Proposals sits under /projects/mine so that `activeNavId`'s longest-prefix
+  // Proposals sits under /projects/proposals so that `activeNavId`'s longest-prefix
   // match keeps it lit for its own sub-routes — propose and edit — instead of
   // handing the highlight to Projects. That only holds while the nesting does.
   it("nests Proposals under All Projects so the deeper entry wins the highlight", () => {
@@ -279,15 +279,15 @@ describe("memberNav", () => {
     const mine = items.find((i) => i.id === "member:my-projects")
 
     expect(projects?.href).toBe("/my/hackathon/hack-1/projects")
-    expect(mine?.href).toBe("/my/hackathon/hack-1/projects/mine")
+    expect(mine?.href).toBe("/my/hackathon/hack-1/projects/proposals")
 
     expect(activeNavId("/my/hackathon/hack-1/projects", items)).toBe(
       "member:projects",
     )
     for (const path of [
-      "/my/hackathon/hack-1/projects/mine",
-      "/my/hackathon/hack-1/projects/mine/propose",
-      "/my/hackathon/hack-1/projects/mine/p1/edit",
+      "/my/hackathon/hack-1/projects/proposals",
+      "/my/hackathon/hack-1/projects/proposals/propose",
+      "/my/hackathon/hack-1/projects/proposals/p1/edit",
     ]) {
       expect(activeNavId(path, items)).toBe("member:my-projects")
     }

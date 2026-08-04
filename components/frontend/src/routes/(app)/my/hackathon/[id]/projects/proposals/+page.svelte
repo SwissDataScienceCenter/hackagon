@@ -22,7 +22,7 @@
             <span class="text-xs text-surface-500">{countLabel} awaiting review</span>
         </div>
         <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine/propose`)}
+            href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals/propose`)}
             class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
                    rounded-none px-3 text-center text-xs font-semibold no-underline
                    sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
@@ -58,8 +58,9 @@
                     imageUrl={project.imageUrl}
                     badge={projectStatusLabel(project.status)}
                     badgePreset={projectStatusBadgePreset(project.status) ?? 'preset-tonal-surface'}
-                    meta={project.track ? `Track: ${project.track}` : undefined}
-                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/mine/{project.id}/edit"
+                    creator={project.creator}
+                    track={project.track}
+                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/proposals/{project.id}/edit"
                     moreInfoLabel="Edit"
                 />
             {/each}

@@ -118,13 +118,13 @@ export function memberNav(
     // Order is presentation only. `activeNavId` scans every item and keeps the
     // longest matching href, so this entry stays lit across its own sub-routes
     // (propose, edit) wherever it sits in the list; what matters is that
-    // `projects/mine` is nested under `projects` in the URL, not that the two
+    // `projects/proposals` is nested under `projects` in the URL, not that the two
     // are adjacent.
     {
       id: "member:my-projects",
       label: "Proposals",
       icon: ClipboardList,
-      href: resolve(`/my/hackathon/${hackathonId}/projects/mine`),
+      href: resolve(`/my/hackathon/${hackathonId}/projects/proposals`),
     },
     // What "all" covers depends on the viewer — every project for a reviewer,
     // the approved ones for everyone else.

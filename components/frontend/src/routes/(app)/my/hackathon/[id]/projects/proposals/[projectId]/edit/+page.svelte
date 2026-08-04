@@ -25,7 +25,7 @@
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine`)}
+            href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals`)}
             class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
         >
             &larr; Back to my projects
@@ -116,7 +116,7 @@
             <button type="submit" class="btn btn-sm preset-filled-primary-500">
                 Save changes
             </button>
-            <a href={resolve(`/my/hackathon/${data.hackathonId}/projects/mine`)} class="btn btn-sm preset-tonal-surface no-underline">
+            <a href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals`)} class="btn btn-sm preset-tonal-surface no-underline">
                 Cancel
             </a>
         </div>

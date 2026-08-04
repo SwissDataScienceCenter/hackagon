@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import { projectStatusLabel, projectStatusBadgePreset } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
@@ -60,6 +61,7 @@
                     title={project.title}
                     description={project.description}
                     creator={project.creator}
+                    track={project.track}
                     imageUrl={project.imageUrl}
                     badge={projectStatusLabel(project.status)}
                     badgePreset={projectStatusBadgePreset(project.status) ??
@@ -67,6 +69,19 @@
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}
+                        {#if project.mayEdit}
+                            <!-- Same destination as the detail page's Edit, so
+                                 the two routes into the form agree. Offered per
+                                 row: who may edit depends on who proposed it. -->
+                            <a
+                                href={resolve(
+                                    `/my/hackathon/${data.hackathonId}/projects/proposals/${project.id}/edit`
+                                )}
+                                class="btn btn-sm preset-tonal-surface no-underline"
+                            >
+                                Edit
+                            </a>
+                        {/if}
                         {#if data.mayReview}
                             {#if project.isPending}
                                 <form method="POST" action="?/approve">

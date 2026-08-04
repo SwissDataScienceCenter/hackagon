@@ -12,6 +12,7 @@ export const load: PageServerLoad = async (event) => {
   // project at every status.
   const { hackathon, myMembership } = await event.parent()
 
+  const myId = event.locals.platformUser?.id
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
   )
@@ -57,6 +58,10 @@ export const load: PageServerLoad = async (event) => {
       .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
   )
 
+  // Tracks arrive nested in the same response. A project whose track was
+  // deleted resolves to nothing and the card omits it.
+  const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
+
   // TODO(backend: display-ordinals): `num` is a position in this list, not an
   // identifier. Project has no display number, so two viewers sorting the same
   // set agree, but the number a project shows changes as approvals land. Swap
@@ -67,11 +72,22 @@ export const load: PageServerLoad = async (event) => {
     title: p.title,
     description: p.description,
     creator: memberNames.get(p.creatorId),
+    track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
     // Derived here rather than in the component, so no page has to import the
     // generated enum across the server-only boundary to compare a status.
     isPending: isPending(p.status),
+    // The three subjects `ProjectService.Edit` accepts, and the same test the
+    // edit route gates on: the proposer, the hackathon owner, an admin. Per
+    // project, because the proposer differs row to row.
+    //
+    // Note the second and third let an owner or admin edit someone else's
+    // proposal. That is what the backend allows — `Edit` falls back to a
+    // hackathon-wide project:write check (`project_service.go:479-484`) — so
+    // offering it here matches the existing edit route rather than quietly
+    // narrowing it. Whether it *should* be allowed is a separate question.
+    mayEdit: (myId !== undefined && p.creatorId === myId) || mayReview,
   }))
 
   // `hackathonId` so the page can build the link to the propose form —

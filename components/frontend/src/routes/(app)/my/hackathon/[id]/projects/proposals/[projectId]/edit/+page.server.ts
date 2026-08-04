@@ -112,6 +112,6 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects/mine`))
+    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects/proposals`))
   },
 }
