@@ -26,9 +26,14 @@
         primaryActionHref: string;
         secondaryAction: string;
         secondaryActionHref: string;
-        deadline: string;
-        teamName: string;
-        teamMemberCount: number;
+        /**
+         * TODO(backend: proposal-deadlines): unset by the overview page — see the
+         * same note on ParticipationCard. Omitted rather than faked.
+         */
+        deadline?: string;
+        /** Absent when the viewer is on no team; the block is then hidden. */
+        teamName?: string;
+        teamMemberCount?: number;
         isAdmin?: boolean;
     } = $props();
 
@@ -59,21 +64,25 @@
                 <FilePlus class="h-3.5 w-3.5" />
                 {secondaryAction}
             </a>
-            <span class="text-center text-xs text-warning-500">{deadline}</span>
+            {#if deadline}
+                <span class="text-center text-xs text-warning-500">{deadline}</span>
+            {/if}
         </div>
 
-        <div class="border-t border-surface-200-800 p-4">
-            <span class="text-xs font-bold tracking-widest text-surface-500">YOUR TEAM</span>
-            <p class="mt-1.5 text-sm font-semibold">{teamName}</p>
-            <div class="mt-2 flex -space-x-1.5">
-                {#each Array.from({ length: teamMemberCount }, (_, i) => i) as i (i)}
-                    <div class="h-6 w-6 rounded-full bg-surface-200-800 ring-2 ring-surface-50-950"></div>
-                {/each}
+        {#if teamName}
+            <div class="border-t border-surface-200-800 p-4">
+                <span class="text-xs font-bold tracking-widest text-surface-500">YOUR TEAM</span>
+                <p class="mt-1.5 text-sm font-semibold">{teamName}</p>
+                <div class="mt-2 flex -space-x-1.5">
+                    {#each Array.from({ length: teamMemberCount ?? 0 }, (_, i) => i) as i (i)}
+                        <div class="h-6 w-6 rounded-full bg-surface-200-800 ring-2 ring-surface-50-950"></div>
+                    {/each}
+                </div>
+                <a href="#team" class="mt-2 block text-xs text-primary-700-300 no-underline hover:underline">
+                    View Team Page →
+                </a>
             </div>
-            <a href="#team" class="mt-2 block text-xs text-primary-700-300 no-underline hover:underline">
-                View Team Page →
-            </a>
-        </div>
+        {/if}
     </div>
 
     <div class="card preset-outlined-surface-200-800 overflow-hidden p-4">
