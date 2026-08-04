@@ -1117,3 +1117,117 @@ func (s *HackathonService) List(
 
 	return &msgs.ListResponse{Hackathons: entries}, nil
 }
+
+// SubmitRegistrationForm records a registrant's answers to the organizer-
+// defined registration form. Unknown keys, missing required fields, unknown
+// consents and unticked required consents are InvalidArgument. Organizers
+// may submit on_behalf_of another registrant (paper forms at check-in).
+func (s *HackathonService) SubmitRegistrationForm(
+	ctx context.Context,
+	req *msgs.SubmitRegistrationFormRequest,
+) (*msgs.SubmitRegistrationFormResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	caller, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	target := caller
+	if req.OnBehalfOf != nil {
+		if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+			return nil, err
+		}
+		targetID, err := uuid.Parse(req.GetOnBehalfOf())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid on_behalf_of: %v", err)
+		}
+		target, err = s.dbClient.User.Query().Where(entuser.IDEQ(targetID)).Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil, status.Errorf(codes.NotFound, "user %s not found", targetID)
+			}
+			slog.Error("query on_behalf_of user", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't query database")
+		}
+	}
+
+	forms, err := formsRowFor(ctx, s.dbClient, id)
+	if err != nil {
+		slog.Error("query hackathon forms", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if forms == nil || len(forms.RegistrationFields) == 0 {
+		return nil, status.Error(codes.FailedPrecondition, "no registration form defined")
+	}
+
+	fieldByKey := make(map[string]map[string]any, len(forms.RegistrationFields))
+	for _, f := range forms.RegistrationFields {
+		if k, ok := f["key"].(string); ok {
+			fieldByKey[k] = f
+		}
+	}
+	consentByKey := make(map[string]map[string]any, len(forms.RegistrationConsents))
+	for _, c := range forms.RegistrationConsents {
+		if k, ok := c["key"].(string); ok {
+			consentByKey[k] = c
+		}
+	}
+
+	responses := req.GetResponses().AsMap()
+	for k := range responses {
+		if _, ok := fieldByKey[k]; !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown field %q", k)
+		}
+	}
+	for k, f := range fieldByKey {
+		if required, _ := f["required"].(bool); required {
+			if _, ok := responses[k]; !ok {
+				return nil, status.Errorf(codes.InvalidArgument, "missing required field %q", k)
+			}
+		}
+	}
+	consents := req.GetConsents()
+	for k := range consents {
+		if _, ok := consentByKey[k]; !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown consent %q", k)
+		}
+	}
+	for k, c := range consentByKey {
+		if required, _ := c["required"].(bool); required && !consents[k] {
+			return nil, status.Errorf(codes.InvalidArgument, "required consent %q not given", k)
+		}
+	}
+
+	row, err := s.dbClient.FormResponse.Create().
+		SetHackathonID(id).
+		SetUserID(target.ID).
+		SetSubmittedByID(caller.ID).
+		SetResponses(responses).
+		SetConsents(consents).
+		Save(ctx)
+	if err != nil {
+		if ent.IsConstraintError(err) {
+			return nil, status.Error(codes.AlreadyExists, "registration form already submitted")
+		}
+		slog.Error("create form response", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't store form response")
+	}
+
+	return &msgs.SubmitRegistrationFormResponse{Id: row.ID.String()}, nil
+}

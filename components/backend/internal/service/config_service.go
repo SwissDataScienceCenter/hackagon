@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
 	enthackathonwindows "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonwindows"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -235,6 +236,242 @@ func (s *ConfigService) OverrideWindow(
 	return &cfgMsgs.OverrideWindowResponse{
 		Windows: windowsEntryFromEnt(updated, hackathonID),
 	}, nil
+}
+
+// ─── Forms & voting policy ───────────────────────────────────────────
+
+// formsRowFor returns the hackathon's forms row, or nil when none exists.
+func formsRowFor(
+	ctx context.Context,
+	db *ent.Client,
+	hackathonID uuid.UUID,
+) (*ent.HackathonForms, error) {
+	f, err := db.HackathonForms.Query().
+		Where(enthackathonforms.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return f, nil
+}
+
+func fieldsToJSON(fields []*ents.FormField) []map[string]any {
+	out := make([]map[string]any, 0, len(fields))
+	for _, f := range fields {
+		m := map[string]any{
+			"key":      f.GetKey(),
+			"label":    f.GetLabel(),
+			"type":     f.GetType(),
+			"required": f.GetRequired(),
+		}
+		if f.MaxMb != nil {
+			m["maxMb"] = f.GetMaxMb()
+		}
+		out = append(out, m)
+	}
+
+	return out
+}
+
+func consentsToJSON(consents []*ents.ConsentField) []map[string]any {
+	out := make([]map[string]any, 0, len(consents))
+	for _, c := range consents {
+		out = append(out, map[string]any{
+			"key":      c.GetKey(),
+			"label":    c.GetLabel(),
+			"required": c.GetRequired(),
+		})
+	}
+
+	return out
+}
+
+func formSchemaFromJSON(fields, consents []map[string]any) *ents.FormSchema {
+	str := func(m map[string]any, k string) string {
+		if v, ok := m[k].(string); ok {
+			return v
+		}
+
+		return ""
+	}
+	boolean := func(m map[string]any, k string) bool {
+		if v, ok := m[k].(bool); ok {
+			return v
+		}
+
+		return false
+	}
+	schema := &ents.FormSchema{}
+	for _, f := range fields {
+		schema.Fields = append(schema.Fields, &ents.FormField{
+			Key:      str(f, "key"),
+			Label:    str(f, "label"),
+			Type:     str(f, "type"),
+			Required: boolean(f, "required"),
+		})
+	}
+	for _, c := range consents {
+		schema.Consents = append(schema.Consents, &ents.ConsentField{
+			Key:      str(c, "key"),
+			Label:    str(c, "label"),
+			Required: boolean(c, "required"),
+		})
+	}
+
+	return schema
+}
+
+// upsertForms applies mutate to the hackathon's forms row, creating it first
+// when missing.
+func (s *ConfigService) upsertForms(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	modifier *ent.User,
+	mutateCreate func(*ent.HackathonFormsCreate),
+	mutateUpdate func(*ent.HackathonFormsUpdateOne),
+) (*ent.HackathonForms, error) {
+	existing, err := formsRowFor(ctx, s.dbClient, hackathonID)
+	if err != nil {
+		slog.Error("query hackathon forms", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if existing == nil {
+		create := s.dbClient.HackathonForms.Create().
+			SetHackathonID(hackathonID).
+			SetModifierID(modifier.ID)
+		mutateCreate(create)
+		row, err := create.Save(ctx)
+		if err != nil {
+			if ent.IsConstraintError(err) {
+				return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
+			}
+			slog.Error("create hackathon forms", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't create hackathon forms")
+		}
+
+		return row, nil
+	}
+	update := existing.Update().SetModifierID(modifier.ID)
+	mutateUpdate(update)
+	row, err := update.Save(ctx)
+	if err != nil {
+		slog.Error("update hackathon forms", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update hackathon forms")
+	}
+
+	return row, nil
+}
+
+func (s *ConfigService) SetRegistrationForm(
+	ctx context.Context,
+	req *cfgMsgs.SetRegistrationFormRequest,
+) (*cfgMsgs.SetRegistrationFormResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+	modifier, err := s.callerUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := fieldsToJSON(req.GetFields())
+	consents := consentsToJSON(req.GetConsents())
+	row, err := s.upsertForms(ctx, hackathonID, modifier,
+		func(c *ent.HackathonFormsCreate) {
+			c.SetRegistrationFields(fields).SetRegistrationConsents(consents)
+		},
+		func(u *ent.HackathonFormsUpdateOne) {
+			u.SetRegistrationFields(fields).SetRegistrationConsents(consents)
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfgMsgs.SetRegistrationFormResponse{
+		Form: formSchemaFromJSON(row.RegistrationFields, row.RegistrationConsents),
+	}, nil
+}
+
+func (s *ConfigService) SetSubmissionForm(
+	ctx context.Context,
+	req *cfgMsgs.SetSubmissionFormRequest,
+) (*cfgMsgs.SetSubmissionFormResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+	modifier, err := s.callerUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := fieldsToJSON(req.GetFields())
+	row, err := s.upsertForms(ctx, hackathonID, modifier,
+		func(c *ent.HackathonFormsCreate) { c.SetSubmissionFields(fields) },
+		func(u *ent.HackathonFormsUpdateOne) { u.SetSubmissionFields(fields) },
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfgMsgs.SetSubmissionFormResponse{
+		Form: formSchemaFromJSON(row.SubmissionFields, nil),
+	}, nil
+}
+
+func (s *ConfigService) SetVotingPolicy(
+	ctx context.Context,
+	req *cfgMsgs.SetVotingPolicyRequest,
+) (*cfgMsgs.SetVotingPolicyResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+	modifier, err := s.callerUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	policy := map[string]any{
+		"mechanism":       req.GetMechanism(),
+		"oneBallotPer":    req.GetOneBallotPer(),
+		"ownTeamVoting":   req.GetOwnTeamVoting(),
+		"organizerVoting": req.GetOrganizerVoting(),
+		"tieBreak":        req.GetTieBreak(),
+	}
+	if req.GetScale() != nil {
+		policy["scale"] = map[string]any{
+			"min": req.GetScale().GetMin(),
+			"max": req.GetScale().GetMax(),
+		}
+	}
+	if _, err := s.upsertForms(ctx, hackathonID, modifier,
+		func(c *ent.HackathonFormsCreate) { c.SetVotingPolicy(policy) },
+		func(u *ent.HackathonFormsUpdateOne) { u.SetVotingPolicy(policy) },
+	); err != nil {
+		return nil, err
+	}
+
+	return &cfgMsgs.SetVotingPolicyResponse{}, nil
 }
 
 // ─── Enforcement (consulted by the acting RPCs) ─────────────────────
