@@ -214,6 +214,17 @@ let
                   enable = true;
                   settings.http-port = 8180;
                   settings.http-host = "0.0.0.0";
+                  # Trust X-Forwarded-* from a fronting proxy (the tunnel's
+                  # caddy) so OIDC endpoint URLs and the token issuer follow
+                  # the public hostname. Direct localhost use is unaffected:
+                  # with no forwarded headers Keycloak falls back to Host.
+                  settings.proxy-headers = "xforwarded";
+                  # devenv pins hostname=localhost, which freezes the frontend
+                  # host and defeats the forwarded headers. Blank it (SmallRye
+                  # reads an empty option as unset) and allow dynamic hostname
+                  # resolution from the request instead.
+                  settings.hostname = lib.mkForce "";
+                  settings.hostname-strict = false;
                   database.type = "dev-file";
                   realms = {
                     hackagon = {

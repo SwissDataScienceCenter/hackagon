@@ -1,0 +1,27 @@
+# Path-multiplexer for the Cloudflare quick tunnel: one public hostname
+# serves both the frontend and Keycloak, which is what lets the OIDC browser
+# redirect work from outside (the phone can reach "Keycloak" on the same
+# *.trycloudflare.com host the app lives on).
+#
+#   /realms/*     -> Keycloak (OIDC endpoints, login pages, account console)
+#   /resources/*  -> Keycloak (login-page static assets)
+#   everything    -> SvelteKit dev server
+#
+# The admin console (/admin) is deliberately NOT routed — it stays
+# localhost-only.
+:80 {
+	@keycloak path /realms/* /resources/*
+	handle @keycloak {
+		reverse_proxy dev:8180 {
+			# TLS terminates at Cloudflare's edge; the hop into caddy is plain
+			# http. Force the forwarded proto so Keycloak advertises https
+			# endpoints and stamps the https issuer into tokens (requires
+			# proxy-headers=xforwarded on the Keycloak side — see
+			# tools/nix/hackagon/lib/toolchain.nix).
+			header_up X-Forwarded-Proto https
+		}
+	}
+	handle {
+		reverse_proxy dev:8081
+	}
+}

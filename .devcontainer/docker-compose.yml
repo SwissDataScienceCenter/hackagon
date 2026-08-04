@@ -38,19 +38,34 @@ services:
       - "${HACKAGON_KEYCLOAK_PORT:-8180}:8180"
       - "${HACKAGON_POSTGRES_PORT:-5432}:5432"
 
-  # Optional: public URL for the running frontend via a Cloudflare quick
+  # Optional: public URL for the running stack via a Cloudflare quick
   # tunnel (random *.trycloudflare.com, no account needed). Start with:
   #   docker compose -f .devcontainer/docker-compose.yml --profile tunnel up -d tunnel
   # The URL appears in `docker compose logs tunnel`. Requires the frontend to
   # be reachable on the dev container's network interface — run
   # .devcontainer/host-bridge.sh inside the container first.
+  #
+  # The tunnel targets caddy, which path-splits the single public hostname
+  # between the frontend and Keycloak (see Caddyfile.tunnel) — that is what
+  # makes OIDC login possible through the tunnel. Anonymous viewing needs
+  # nothing else; full login additionally needs the issuer rewiring done by
+  # .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth.
+  caddy:
+    image: ${HACKAGON_TUNNEL_PROXY_IMAGE:-caddy:2-alpine}
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile.tunnel:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - dev
+
   tunnel:
     image: ${HACKAGON_TUNNEL_IMAGE:-cloudflare/cloudflared:latest}
     profiles: ["tunnel"]
     restart: unless-stopped
-    command: tunnel --no-autoupdate --url http://dev:8081
+    command: tunnel --no-autoupdate --url http://caddy:80
     depends_on:
-      - dev
+      - caddy
 
 volumes:
   # Nix store — the whole toolchain; survives container rebuilds.

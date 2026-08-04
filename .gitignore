@@ -40,3 +40,7 @@ components/frontend/src/lib/server/grpc/generated
 
 # pnpm store created inside containers (bind-mount filesystem boundary)
 .pnpm-store/
+
+# Transient OIDC-config backups made while a login-capable tunnel is wired
+# (cloudflare-tunnel skill, auth-wire.sh)
+*.pretunnel

@@ -94,12 +94,16 @@ docker compose -f .devcontainer/docker-compose.yml --profile tunnel up -d tunnel
 docker compose -f .devcontainer/docker-compose.yml logs tunnel | grep -o 'https://.*trycloudflare.com'
 ```
 
-Anonymous browsing (public listing, event pages, News & Pages) works fully.
-**Logging in through the tunnel does not**: the OIDC flow redirects to
-Keycloak at `localhost:8180`, which only resolves on your machine. Exposing
-auth would need a second tunnel plus per-URL issuer/redirect configuration —
-out of scope for a quick share link. Stop with
-`docker compose -f .devcontainer/docker-compose.yml --profile tunnel down tunnel`
+The tunnel targets `caddy`, which path-splits the one public hostname:
+`/realms/*` + `/resources/*` reach Keycloak, everything else the frontend
+(`Caddyfile.tunnel`). Anonymous browsing works out of the box; **login
+through the tunnel** additionally needs the OIDC issuers rewired to the
+(ephemeral) public URL — scripted as
+`bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth`, undone by
+the matching `down.sh`. Keycloak trusts forwarded headers for this
+(`proxy-headers=xforwarded` in toolchain.nix); the admin console is not
+routed through the tunnel. Stop with
+`docker compose -f .devcontainer/docker-compose.yml --profile tunnel down tunnel caddy`
 (quick-tunnel URLs are ephemeral and change on every start).
 
 ## Volumes & network
