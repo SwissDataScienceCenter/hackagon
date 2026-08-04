@@ -41,5 +41,7 @@ export const load: PageServerLoad = async (event) => {
     imageUrl: p.image,
   }))
 
-  return { projects }
+  // `hackathonId` so the page can build the link to the propose form —
+  // unresolved, since `resolve()` belongs at the anchor itself.
+  return { projects, hackathonId: hackathon.id }
 }
