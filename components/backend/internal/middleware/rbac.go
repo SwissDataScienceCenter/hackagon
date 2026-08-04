@@ -59,6 +59,9 @@ const (
 	Project
 	Team
 	Submission
+	Vote
+	VoteCategory
+	VoteResult
 	// Note: this is a dummy entry, there are no rules for users, since we only use admin checks with users.
 	// This is just here so we have something we can query on when checking admin permissions for the user table.
 	User
@@ -80,6 +83,12 @@ func (ot ObjectType) String() string {
 		return "team"
 	case Submission:
 		return "submission"
+	case Vote:
+		return "vote"
+	case VoteCategory:
+		return "vote_category"
+	case VoteResult:
+		return "vote_result"
 	case User:
 		return "user"
 	default:
@@ -94,6 +103,7 @@ const (
 	Write
 	Create
 	Propose
+	Join
 )
 
 func (p Permission) String() string {
@@ -106,6 +116,8 @@ func (p Permission) String() string {
 		return "create"
 	case Propose:
 		return "propose"
+	case Join:
+		return "join"
 	default:
 		return ""
 	}
@@ -180,10 +192,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "/hackathon/*/project/*", Project.String(), Write.String()},
 		// Owner can read owned hackathon projects
 		{Owner.String(), "/hackathon/*", Project.String(), Read.String()},
-		// Owner can propose new projects
+		// Owner can propose owned hackathon projects
 		{Owner.String(), "/hackathon/*", Project.String(), Propose.String()},
-		// Member can propose new projects
-		{Member.String(), "/hackathon/*", Project.String(), Propose.String()},
 		// Member can read joined hackathon
 		{Member.String(), "/hackathon/*", Hackathon.String(), Read.String()},
 		// Member can read hackathon pages
@@ -200,8 +210,6 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "/hackathon/*", Team.String(), Write.String()},
 		// Team member can edit team
 		{Member.String(), "/hackathon/*/team/*", Team.String(), Write.String()},
-		// Team member can create a submission
-		{Member.String(), "/hackathon/*/team/*", Submission.String(), Create.String()},
 		// Team member can edit a submission
 		{Member.String(), "/hackathon/*/team/*", Submission.String(), Write.String()},
 		// Team member can read a submission
@@ -295,6 +303,42 @@ func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error)
 		Hackathon.String(),
 		Read.String(),
 	)
+}
+
+func (e *Enforcer) AddPolicy(
+	role *Role,
+	hackathonId string,
+	obj ObjectType,
+	perm Permission,
+	opts ...EnforceOption,
+) error {
+	var actualRole string
+	if role == nil {
+		actualRole = "*"
+	} else {
+		actualRole = role.String()
+	}
+	domain := enforceOptsToPath(hackathonId, opts...)
+	_, err := e.enforcer.AddPolicy(actualRole, domain, obj.String(), perm.String())
+	return err
+}
+
+func (e *Enforcer) RemovePolicy(
+	role *Role,
+	hackathonId string,
+	obj ObjectType,
+	perm Permission,
+	opts ...EnforceOption,
+) error {
+	var actualRole string
+	if role == nil {
+		actualRole = "*"
+	} else {
+		actualRole = role.String()
+	}
+	domain := enforceOptsToPath(hackathonId, opts...)
+	_, err := e.enforcer.RemovePolicy(actualRole, domain, obj.String(), perm.String())
+	return err
 }
 
 // CheckPermission checks if the given subject has permission for the given hackathon, object, and action.

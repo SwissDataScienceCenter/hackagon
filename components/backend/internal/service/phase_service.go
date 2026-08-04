@@ -174,10 +174,15 @@ func (s *PhaseService) Create(
 	}
 
 	// Create the phase
+	capabilities, err := phaseCapabilitiesToDB(req.GetCapabilities())
+	if err != nil {
+		return nil, err
+	}
 	p, err := txn.Phase.Create().
 		SetHackathonID(hackathonID).
 		SetName(req.GetName()).
 		SetDescription(req.GetDescription()).
+		SetCapabilities(capabilities).
 		SetCreator(user).
 		SetModifier(user).
 		Save(ctx)
@@ -285,6 +290,13 @@ func (s *PhaseService) Edit(
 	if req.GetEndsAt() != nil {
 		t := req.GetEndsAt().AsTime()
 		update = update.SetEndsAt(t)
+	}
+	if req.GetCapabilities() != nil {
+		capabilities, err := phaseCapabilitiesToDB(req.GetCapabilities().GetItems())
+		if err != nil {
+			return nil, err
+		}
+		update = update.SetCapabilities(capabilities)
 	}
 
 	_, err = update.Save(ctx)
@@ -423,6 +435,41 @@ func (s *PhaseService) Delete(
 
 // handlePhasePageLinkage handles page-to-phase linkage based on pageIDStr.
 // Returns nil if no change needed.
+// phaseCapabilitiesToDB converts proto capabilities to DB-compatible string slice.
+func phaseCapabilitiesToDB(caps []ents.Capability) ([]string, error) {
+	result := make([]string, len(caps))
+	for i, c := range caps {
+		s, err := capabilityToString(c)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = s
+	}
+	return result, nil
+}
+
+// capabilityToString converts a Capability enum to its string representation.
+func capabilityToString(c ents.Capability) (string, error) {
+	switch c {
+	case ents.Capability_CAPABILITY_REGISTER:
+		return "register", nil
+	case ents.Capability_CAPABILITY_PROPOSE_PROJECTS:
+		return "propose_projects", nil
+	case ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES:
+		return "set_team_preferences", nil
+	case ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS:
+		return "create_project_submissions", nil
+	case ents.Capability_CAPABILITY_VOTE:
+		return "vote", nil
+	case ents.Capability_CAPABILITY_VIEW_RESULTS:
+		return "view_results", nil
+	case ents.Capability_CAPABILITY_UNSPECIFIED:
+		return "", status.Errorf(codes.InvalidArgument, "capability must not be UNSPECIFIED")
+	default:
+		return "", status.Errorf(codes.InvalidArgument, "unknown capability: %d", c)
+	}
+}
+
 func (s *PhaseService) handlePhasePageLinkage(
 	ctx context.Context,
 	txn *ent.Tx,

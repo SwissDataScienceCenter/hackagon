@@ -326,6 +326,11 @@ func (s *ProjectService) SetPreference(
 
 	hackathonID := project.Edges.Hackathon.ID
 
+	// Check set_team_preferences capability (Join on Project)
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Join); err != nil {
+		return nil, err
+	}
+
 	// Verify user is a participant in the hackathon
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {

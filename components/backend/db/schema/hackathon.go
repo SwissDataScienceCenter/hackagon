@@ -4,12 +4,10 @@ import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
-	"github.com/google/uuid"
 )
 
 // Hackathon holds the schema definition for the Hackathon entity.
@@ -48,12 +46,6 @@ func (Hackathon) Fields() []ent.Field {
 		field.String("logo").
 			Optional().
 			Comment("URL or path to the hackathon logo image."),
-		field.UUID("current_phase_id", uuid.UUID{}).Optional().Nillable().
-			Comment(
-				"The phase an organizer has declared current. Nil means fall back to " +
-					"deriving it from phase dates, which is right before the event but " +
-					"wrong during one, where the schedule always slips.",
-			),
 	}
 }
 
@@ -72,15 +64,9 @@ func (Hackathon) Edges() []ent.Edge {
 			Comment("Content pages associated with this hackathon."),
 		edge.To("phases", Phase.Type).
 			Comment("Temporal phases (e.g. ideation, hacking, judging)."),
-		edge.To("capabilities", Capability.Type).
-			Comment("Which member-facing actions are available on this hackathon."),
-		// Inverse side so the foreign key lands on `hackathons`, letting
-		// current_phase_id be read without joining the phases table.
-		edge.From("current_phase", Phase.Type).
-			Ref("current_of").Unique().
-			Field("current_phase_id").
-			Annotations(entsql.OnDelete(entsql.SetNull)).
-			Comment("Set by AdvancePhase; SET NULL so deleting a phase does not orphan it."),
+		edge.To("state", HackathonState.Type).
+			Unique().
+			Comment("Configuration state for this hackathon."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),

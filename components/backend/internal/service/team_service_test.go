@@ -79,6 +79,27 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			// Enable propose_projects capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonResp.GetHackathonId(),
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Enable create_project_submissions capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonResp.GetHackathonId(),
+				Capabilities: []*msgs.CapabilityState{
+					{
+						Capability: ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+						Enabled:    true,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			projectResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hackathonResp.GetHackathonId(),
 				Title:       "Test Project",
@@ -886,6 +907,18 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			// Enable create_project_submissions capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Capabilities: []*msgs.CapabilityState{
+					{
+						Capability: ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+						Enabled:    true,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Submission Project",
@@ -1025,6 +1058,18 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			// Enable create_project_submissions capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Capabilities: []*msgs.CapabilityState{
+					{
+						Capability: ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+						Enabled:    true,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Finalize Project",
@@ -1149,6 +1194,18 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = hResp.GetHackathonId()
+
+			// Enable create_project_submissions capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Capabilities: []*msgs.CapabilityState{
+					{
+						Capability: ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+						Enabled:    true,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
@@ -1367,6 +1424,18 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = hResp.GetHackathonId()
+
+			// Enable create_project_submissions capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{
+						Capability: ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+						Enabled:    true,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hResp.GetHackathonId(),
