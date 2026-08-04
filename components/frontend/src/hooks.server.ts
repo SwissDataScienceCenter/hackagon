@@ -8,6 +8,7 @@ import {
   type RequestEvent,
 } from "@sveltejs/kit"
 import { parseArgs } from "$lib/server/args"
+import { isSitePageSlug, singleSegment } from "$lib/utils/sitePageSlug"
 import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader, sharedConfigLoader } from "$lib/server/settings"
@@ -30,11 +31,6 @@ let configLoader: ConfigLoader
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/hackathon(\/|$)/,
-  // Platform pages (SitePage records served by [slug=sitepage]). They are
-  // reached from the footer by visitors who have never logged in, so they must
-  // stay public. Keep in sync with src/params/sitepage.ts — that matcher is
-  // what decides which slugs resolve at all.
-  /^\/(about|privacy|terms)$/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
@@ -42,7 +38,18 @@ const PUBLIC_ROUTE_PATTERNS = [
 ]
 
 export function isProtectedRoute(pathname: string): boolean {
-  return !PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))
+  if (PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))) return false
+
+  // Platform pages (SitePage records served by [slug=sitepage]) are reached
+  // from the footer by visitors who have never logged in, so any slug an admin
+  // publishes must be public — enumerating them here would mean a code change
+  // per page. `isSitePageSlug` is the same rule the param matcher uses, and it
+  // excludes every segment a real route owns, so this cannot expose an app
+  // route. Unknown slugs still reach the loader and 404 there.
+  const segment = singleSegment(pathname)
+  if (segment && isSitePageSlug(segment)) return false
+
+  return true
 }
 
 function redirectToLogin(url: URL, logger: Logger, reason: string) {

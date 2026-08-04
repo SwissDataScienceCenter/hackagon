@@ -1,11 +1,9 @@
 import type { ParamMatcher } from "@sveltejs/kit"
+import { isSitePageSlug } from "$lib/utils/sitePageSlug"
 
-// Only these top-level slugs resolve to platform pages. Without a matcher a
-// bare [slug] route would swallow every unmatched URL — including typos of
-// real routes, which should still 404 rather than hit the backend.
-//
-// Add a slug here when an admin publishes a new platform page that needs a
-// top-level URL.
-const SITE_PAGE_SLUGS = new Set(["about", "privacy", "terms"])
-
-export const match: ParamMatcher = (param) => SITE_PAGE_SLUGS.has(param)
+// Any lowercase-kebab segment that is not a reserved route can address a
+// SitePage, so pages created in /manage/pages resolve without a deploy. The
+// matcher still exists so multi-segment and malformed URLs never reach the
+// loader. Unknown slugs 404 from the loader itself (the backend reports
+// NotFound), which is what a visitor should see for a typo.
+export const match: ParamMatcher = (param) => isSitePageSlug(param)

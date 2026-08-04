@@ -13,12 +13,16 @@
         breadcrumbs,
     }: {
         title: string;
-        dates: string;
-        venue: string;
+        /** Omitted when the event has no dates set. */
+        dates?: string;
+        /** Venue and capacity are not modelled in the schema; the page passes
+         *  them only if it genuinely knows them. Never invent them here — an
+         *  absent block is honest, a placeholder is not. */
+        venue?: string;
         imageUrl?: string;
         status: string;
-        registered: number;
-        capacity: number;
+        registered?: number;
+        capacity?: number;
         breadcrumbs: { label: string; href: string }[];
     } = $props();
 </script>
@@ -61,18 +65,24 @@
             class="flex flex-col gap-3 text-sm text-surface-700-300 sm:flex-row sm:flex-wrap
                    sm:items-center sm:gap-6"
         >
-            <span class="flex min-w-0 items-center gap-2">
-                <Calendar class="h-4 w-4 shrink-0 text-primary-700-300" />
-                {dates}
-            </span>
-            <span class="flex min-w-0 items-center gap-2">
-                <MapPin class="h-4 w-4 shrink-0 text-primary-700-300" />
-                {venue}
-            </span>
-            <span class="flex min-w-0 items-center gap-2">
-                <Users class="h-4 w-4 shrink-0 text-primary-700-300" />
-                {registered} / {capacity} registered
-            </span>
+            {#if dates}
+                <span class="flex min-w-0 items-center gap-2">
+                    <Calendar class="h-4 w-4 shrink-0 text-primary-700-300" />
+                    {dates}
+                </span>
+            {/if}
+            {#if venue}
+                <span class="flex min-w-0 items-center gap-2">
+                    <MapPin class="h-4 w-4 shrink-0 text-primary-700-300" />
+                    {venue}
+                </span>
+            {/if}
+            {#if registered !== undefined && capacity !== undefined}
+                <span class="flex min-w-0 items-center gap-2">
+                    <Users class="h-4 w-4 shrink-0 text-primary-700-300" />
+                    {registered} / {capacity} registered
+                </span>
+            {/if}
         </div>
     </div>
 </section>
