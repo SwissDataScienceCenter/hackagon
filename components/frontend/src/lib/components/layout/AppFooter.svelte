@@ -1,6 +1,7 @@
 <footer
-    class="flex h-14 items-center justify-between border-t border-surface-200-800
-           bg-surface-100-900 px-4 sm:px-10 md:px-20"
+    class="flex min-h-14 flex-wrap items-center justify-center gap-x-8 gap-y-2 border-t
+           border-surface-200-800 bg-surface-100-900 px-4 py-3 sm:justify-between
+           sm:px-10 md:px-20"
 >
     <div class="flex items-center gap-5">
         <img src="/images/logos/sdsc-logo-footer.svg" alt="SDSC" class="h-3" />

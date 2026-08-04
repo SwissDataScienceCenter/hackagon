@@ -80,7 +80,7 @@
             Hosted by SDSC for the Swiss scientific community.
         </p>
 
-        <div class="flex items-center gap-3">
+        <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
             <a
                 href={resolve('/hackathon/ord-2026')}
                 class="btn preset-filled-primary-500 no-underline"
@@ -103,7 +103,7 @@
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">Browse all →</a>
     </div>
 
-    <div class="mt-6 flex gap-1 border-b border-surface-200-800">
+    <div class="mt-6 flex flex-wrap gap-1 border-b border-surface-200-800">
         <button class="chip preset-tonal-primary border-b-2 border-primary-500">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
@@ -144,7 +144,7 @@
         <a href={resolve('/')} class="text-sm text-primary-500 no-underline">See all →</a>
     </div>
 
-    <div class="mt-6 grid grid-cols-3 gap-4">
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {#each [
             { hackathon: 'ORD Hackathon 2025', project: 'AutoORD: Automated\nResearch Data Pipelines', team: 'by Team DataFlow', summary: 'Automated pipeline for converting raw research data into FAIR-compliant open datasets.' },
             { hackathon: 'GenAI Hackathon 2025', project: 'GenomeLens', team: 'by BioViz Crew', summary: 'Interactive visualization of genomic variants powered by generative models.' },
@@ -228,7 +228,7 @@
         </p>
     </div>
 
-    <div class="mt-6 grid grid-cols-2 gap-4">
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {#each [
             { icon: Lightbulb, title: 'Propose & discover projects', desc: 'Submit project ideas, browse proposals from other participants, and find the challenge that matches your skills.' },
             { icon: Upload, title: 'Submit & showcase work', desc: 'Submit your project with links, repos, slides and demos. Draft and iterate before the final deadline.' },
@@ -264,10 +264,12 @@
         ] as org (org.name)}
             <div class="flex flex-col items-center gap-2">
                 {#if org.logo}
+                    <!-- ETH/EPFL svgs are white-native (footer convention):
+                         invert for light mode, none for dark. -->
                     <img
                         src={org.logo}
                         alt="{org.name} logo"
-                        class="h-10 w-auto {org.logoDark ? 'dark:hidden' : 'dark:invert'}"
+                        class="h-10 w-auto {org.logoDark ? 'dark:hidden' : 'invert dark:invert-0'}"
                     />
                     {#if org.logoDark}
                         <img
