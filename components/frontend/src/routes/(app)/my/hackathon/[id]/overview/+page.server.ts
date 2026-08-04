@@ -3,7 +3,7 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { projectStatusLabel } from "$lib/utils/projectStatus"
 
-/** How many proposals the overview previews before linking to the full list. */
+/** How many projects the overview previews before linking to the full list. */
 const PREVIEW_COUNT = 2
 
 export const load: PageServerLoad = async (event) => {
@@ -11,7 +11,7 @@ export const load: PageServerLoad = async (event) => {
   const { team } = requireGrpc(event.locals.grpc)
   const platformUserId = event.locals.platformUser?.id
 
-  // Approved only, so this page's counts agree with what the proposals page
+  // Approved only, so this page's counts agree with what the projects page
   // actually lists. Counting pending proposals here would make the two disagree.
   const approved = hackathon.projects.filter(
     (p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
@@ -27,16 +27,24 @@ export const load: PageServerLoad = async (event) => {
     (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
   )
 
-  // Numbered the same way the proposals page numbers them, so a proposal shown
-  // in both places carries the same number.
-  const previewProposals = newestFirst
-    .slice(0, PREVIEW_COUNT)
-    .map((p, i) => ({
-      id: p.id,
-      num: newestFirst.length - i,
-      title: p.title,
-      description: p.description,
-    }))
+  // `Project` carries only `creatorId`; the name comes from the membership list
+  // in the same response, and a creator who has left resolves to nothing. Same
+  // mapping the projects page does.
+  const memberNames = new Map(
+    hackathon.members
+      .filter((m) => m.user !== undefined)
+      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
+  )
+
+  // Numbered the same way the projects page numbers them, so a project shown in
+  // both places carries the same number.
+  const previewProjects = newestFirst.slice(0, PREVIEW_COUNT).map((p, i) => ({
+    id: p.id,
+    num: newestFirst.length - i,
+    title: p.title,
+    description: p.description,
+    creator: memberNames.get(p.creatorId),
+  }))
 
   const { teams } = await team.list({ hackathonId: event.params.id })
 
@@ -75,6 +83,6 @@ export const load: PageServerLoad = async (event) => {
       : null,
     approvedCount: approved.length,
     trackCounts,
-    previewProposals,
+    previewProjects,
   }
 }
