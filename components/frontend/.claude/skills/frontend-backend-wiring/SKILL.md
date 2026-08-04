@@ -1,0 +1,189 @@
+---
+name: frontend-backend-wiring
+description:
+  How the SvelteKit frontend talks to the Go/gRPC backend — registering gRPC
+  clients, the hooks.server.ts request lifecycle, loading data in
+  +page.server.ts/+layout.server.ts, translating gRPC errors to HTTP, and
+  write-path form actions. Use when wiring a route to a backend service, adding
+  a gRPC client, calling an RPC from a load/action, handling
+  PERMISSION_DENIED/NOT_FOUND, or debugging auth/locals.grpc.
+---
+
+# Frontend ↔ Backend wiring
+
+**The backend is authoritative for every access decision. The frontend never
+duplicates permission logic — it calls the RPC and translates the gRPC error
+into an HTTP response.** All gRPC calls happen **server-side only**
+(`+page.server.ts`, `+layout.server.ts`, `hooks.server.ts`); a Svelte component
+must never import from `$lib/server/`.
+
+## Backend address (don't hardcode — it isn't localhost in deployment)
+
+The backend address is **environment config**, not a constant. It lives in the
+settings YAML under `backend: { hostname, port }` (schema:
+`src/lib/schemas/config-schema.ts`; dev values `localhost:3000` in
+`data/test/config/config.yaml`) and is loaded per environment via `--config-dir`
+into `event.locals.config.backend`. A deployed frontend points at the backend's
+service host, not `localhost`.
+
+⚠️ **Known gap to close before deploying:** `src/lib/server/grpc/client.ts:13`
+currently hardcodes `createChannel("localhost:3000")` and ignores
+`config.backend`. The channel (and the module-scope `healthClient` /
+`publicHackathonClient` built from it) is created at import time, before config
+is guaranteed loaded — that's why it's a literal today. To deploy, build the
+channel from `config.backend.hostname:port` (e.g. lazily on first use, or
+initialize it in `hooks.server.ts`'s `init`/`setupHandle` once config is loaded)
+so the address follows the environment. Keep the dev config pointing at
+`localhost:3000` so local flows are unchanged.
+
+The channel is **plaintext** gRPC today. A cross-network deployment will likely
+need TLS (`createChannel` with credentials / an `https`-style target) rather
+than `-plaintext` — treat that as part of the same wiring change.
+
+## Request lifecycle (`src/hooks.server.ts`)
+
+`handle` is a `sequence()` of handlers run on every request
+(`hooks.server.ts:203`):
+
+1. `setupHandle` — config + `event.locals.config`.
+2. `loggerHandle` — request-scoped `event.locals.logger`.
+3. `authHandle` — Auth.js/Keycloak session (`./auth`).
+4. `sessionSetupHandle` — the important one:
+   - Routes are **protected by default**; only `PUBLIC_ROUTE_PATTERNS`
+     (`hooks.server.ts:29`) are anonymous (`/`, `/hackathon/...`, `/signin`, …).
+   - For protected routes it builds
+     `event.locals.grpc = createAuthorizedGrpc(accessToken)`, then calls
+     `user.whoAmI({})` → `event.locals.platformUser`. On `Status.NOT_FOUND` it
+     auto-registers via `user.register({})`; on `Status.UNAVAILABLE` it proceeds
+     without a platform user (`hooks.server.ts:158`).
+5. `redirectHandle` — logged-in user on `/` → `/dashboard`.
+
+`event.locals` shape is declared in `src/app.d.ts`: `config`, `session`
+(accessToken stripped), `logger`, `grpc?`, `platformUser?`.
+
+## Add a gRPC client (`src/lib/server/grpc/client.ts`)
+
+1. Import the `XServiceDefinition` and `type XServiceClient` from
+   `./generated/<domain>/<name>_service`.
+2. Add `x: XServiceClient` to the `AuthorizedGrpc` interface.
+3. Create it inside `createAuthorizedGrpc`:
+   `x: factory.create(XServiceDefinition, channel)`. The `factory` middleware
+   injects `Authorization: Bearer <token>` on every call (`client.ts:44`).
+4. For endpoints that also serve **anonymous** callers, add a separate
+   unauthenticated client at module scope (pattern: `publicHackathonClient`,
+   `client.ts:22`) built with a bare `createClientFactory()`.
+
+Not every service needs a client. `hackathon.get` returns tracks/projects
+**nested**, so they have no client; `team` and `page` get their own because
+`get` doesn't return teams and returns _unfiltered_ pages (`client.ts:32-40`).
+Read those comments before adding a client "just in case."
+
+## Load data (`+page.server.ts` / `+layout.server.ts`)
+
+Two sources — prefer the parent when the data already arrived:
+
+```ts
+// A) Data the parent layout already fetched — no extra RPC.
+export const load: PageServerLoad = async (event) => {
+  const { hackathon } = await event.parent() // from the [id] layout's hackathon.get
+  const approved = hackathon.projects.filter(/* ... */)
+  return { projects: approved }
+}
+```
+
+(real: `(app)/my/hackathon/[id]/projects/+page.server.ts`)
+
+```ts
+// B) Its own RPC — use requireGrpc + platformUser from locals.
+import { requireGrpc } from "$lib/server/grpc/client"
+export const load = async (event) => {
+  const { hackathon } = requireGrpc(event.locals.grpc)
+  const participantId = event.locals.platformUser?.id
+  const { hackathons } = await hackathon.list({ participantId })
+  return { hackathons }
+}
+```
+
+`requireGrpc` throws if `locals.grpc` is undefined (i.e. you're on a route the
+hooks left public) — a loud signal you mislabeled the route.
+
+## Translate gRPC errors (do it in the load/action)
+
+```ts
+import { ClientError, Status } from "nice-grpc-common"
+import { error } from "@sveltejs/kit"
+
+try {
+  result = await hackathon.get({ hackathonId: event.params.id })
+} catch (e) {
+  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
+    error(403, "You are not a confirmed member of this hackathon")
+  if (e instanceof ClientError && e.code === Status.NOT_FOUND)
+    error(404, "Hackathon not found")
+  throw e // let unexpected errors hit handleError
+}
+```
+
+Real reference: `(app)/my/hackathon/[id]/+layout.server.ts:11`. For **chrome**
+(sidebar nav, lists that decorate the shell), swallow the error and render an
+empty fallback instead of failing the whole load — see the `try/catch` around
+`hackathon.list`/`page.list` in `(app)/+layout.server.ts:31-68`.
+
+## Two lines of defence for auth
+
+- `hooks.server.ts` guards by **path pattern** (`PUBLIC_ROUTE_PATTERNS`).
+- `(app)/+layout.server.ts` guards by **route group** — a redirect if
+  `!event.locals.grpc`, so a new `(app)` route can't leak through a gap in the
+  pattern list.
+
+## Write path — form actions
+
+Backend stays authoritative; the frontend does cheap up-front checks + input
+validation, then calls the mutation. Pattern from
+`(app)/hackathons/create/+page.server.ts`:
+
+```ts
+import { error, fail, redirect } from "@sveltejs/kit"
+import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+
+export const actions: Actions = {
+  create: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    // validate → fail(400, { message }) on bad input (no throw)
+    if (typeof name !== "string" || name.trim().length < 3)
+      return fail(400, { message: "Name must be at least 3 characters" })
+    // map form → RPC, using generated enums; optional fields as undefined
+    const { id } = await hackathon.create({
+      name: name.trim(),
+      visibility:
+        v === "public"
+          ? Visibility.VISIBILITY_PUBLIC
+          : Visibility.VISIBILITY_PRIVATE,
+      description: desc?.trim() || undefined,
+    })
+    redirect(303, `/my/hackathon/${id}/overview`)
+  },
+}
+```
+
+Courtesy pre-checks (e.g. `mayCreate(roles)` reading `platformUser.roles` from
+casbin/WhoAmI) only decide whether to _offer_ a page — they never replace the
+backend's `Enforce`. Roles live on `platformUser.roles` (sourced from casbin,
+not the DB).
+
+## Regenerating clients (don't hand-edit `generated/`)
+
+`src/lib/server/grpc/generated/**` is codegen. After changing `*.proto`,
+regenerate from the repo root (needs the Nix shell + `buf`):
+`just codegen::proto` (or `just api-change` to regen + restart). The
+`pnpm run proto:generate` script exists but only covers health/user/hackathon —
+prefer the root `just` target for the full set.
+
+## Verify a wiring end-to-end
+
+The backend is the source of truth, so test it directly (see the `run-hackagon`
+skill): `just rpc::unauth <svc>/<method>` for public reads,
+`just rpc::as alice aliceandbob <svc>/<method>` for authed reads, and
+`.claude/skills/run-hackagon/smoke.sh` for the whole stack. For UI rendering see
+the `frontend-dev` skill.
