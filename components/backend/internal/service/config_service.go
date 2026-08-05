@@ -106,6 +106,43 @@ func (s *ConfigService) callerUser(ctx context.Context) (*ent.User, error) {
 
 	return u, nil
 }
+// GetWindows reads the deadlines back.
+//
+// SetWindows replaces every field, so an organiser editing one deadline on a
+// form that could not prefill would blank the rest without seeing them. Read
+// access is the same as reading the hackathon: deadlines are announced to
+// participants, not organiser-only.
+func (s *ConfigService) GetWindows(
+	ctx context.Context,
+	req *cfgMsgs.GetWindowsRequest,
+) (*cfgMsgs.GetWindowsResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
+		return nil, err
+	}
+
+	row, err := s.dbClient.HackathonWindows.Query().
+		Where(enthackathonwindows.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// No row yet: nothing has been scheduled, which is a valid state and
+			// not an error the UI should have to translate.
+			return &cfgMsgs.GetWindowsResponse{}, nil
+		}
+		slog.Error("query hackathon windows", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return &cfgMsgs.GetWindowsResponse{
+		Windows: windowsEntryFromEnt(row, hackathonID),
+	}, nil
+}
+
 
 func (s *ConfigService) SetWindows(
 	ctx context.Context,

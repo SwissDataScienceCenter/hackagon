@@ -16,6 +16,8 @@ import "hackathon/messages/config_svc/set_voting_policy_request.proto";
 import "hackathon/messages/config_svc/set_voting_policy_response.proto";
 import "hackathon/messages/config_svc/set_windows_request.proto";
 import "hackathon/messages/config_svc/set_windows_response.proto";
+import "hackathon/messages/config_svc/get_windows_request.proto";
+import "hackathon/messages/config_svc/get_windows_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 
@@ -23,6 +25,10 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 // Forms, voting policy, email templates and branding land here as further
 // slices of the same configuration engine.
 service ConfigService {
+  // Reads the deadlines back. SetWindows REPLACES every field, so without this
+  // an organiser editing one deadline would blank the others they cannot see —
+  // the form had no way to prefill, which made saving it destructive.
+  rpc GetWindows(hackathon.messages.config_svc.GetWindowsRequest) returns (hackathon.messages.config_svc.GetWindowsResponse);
   rpc SetWindows(hackathon.messages.config_svc.SetWindowsRequest) returns (hackathon.messages.config_svc.SetWindowsResponse);
   rpc OverrideWindow(hackathon.messages.config_svc.OverrideWindowRequest) returns (hackathon.messages.config_svc.OverrideWindowResponse);
   rpc SetRegistrationForm(hackathon.messages.config_svc.SetRegistrationFormRequest) returns (hackathon.messages.config_svc.SetRegistrationFormResponse);

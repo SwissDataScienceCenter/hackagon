@@ -55,6 +55,12 @@
 - [hackathon/messages/config_svc/set_windows_response.proto](#hackathon_messages_config_svc_set_windows_response-proto)
     - [SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse)
   
+- [hackathon/messages/config_svc/get_windows_request.proto](#hackathon_messages_config_svc_get_windows_request-proto)
+    - [GetWindowsRequest](#hackathon-messages-config_svc-GetWindowsRequest)
+  
+- [hackathon/messages/config_svc/get_windows_response.proto](#hackathon_messages_config_svc_get_windows_response-proto)
+    - [GetWindowsResponse](#hackathon-messages-config_svc-GetWindowsResponse)
+  
 - [hackathon/config_service.proto](#hackathon_config_service-proto)
     - [ConfigService](#hackathon-ConfigService)
   
@@ -1341,6 +1347,69 @@ not enforced.
 
 
 
+<a name="hackathon_messages_config_svc_get_windows_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_windows_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetWindowsRequest"></a>
+
+### GetWindowsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_get_windows_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_windows_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetWindowsResponse"></a>
+
+### GetWindowsResponse
+`windows` is absent when the event has no row yet, which reads as &#34;no
+deadlines set&#34; — distinct from a row whose fields happen to be empty.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| windows | [hackathon.entities.HackathonWindows](#hackathon-entities-HackathonWindows) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_config_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1363,6 +1432,7 @@ slices of the same configuration engine.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| GetWindows | [messages.config_svc.GetWindowsRequest](#hackathon-messages-config_svc-GetWindowsRequest) | [messages.config_svc.GetWindowsResponse](#hackathon-messages-config_svc-GetWindowsResponse) | Reads the deadlines back. SetWindows REPLACES every field, so without this an organiser editing one deadline would blank the others they cannot see — the form had no way to prefill, which made saving it destructive. |
 | SetWindows | [messages.config_svc.SetWindowsRequest](#hackathon-messages-config_svc-SetWindowsRequest) | [messages.config_svc.SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse) |  |
 | OverrideWindow | [messages.config_svc.OverrideWindowRequest](#hackathon-messages-config_svc-OverrideWindowRequest) | [messages.config_svc.OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse) |  |
 | SetRegistrationForm | [messages.config_svc.SetRegistrationFormRequest](#hackathon-messages-config_svc-SetRegistrationFormRequest) | [messages.config_svc.SetRegistrationFormResponse](#hackathon-messages-config_svc-SetRegistrationFormResponse) |  |

@@ -20,6 +20,7 @@ import Plus from "lucide-svelte/icons/plus"
 import Tag from "lucide-svelte/icons/tag"
 import Link2 from "lucide-svelte/icons/link-2"
 import ClipboardType from "lucide-svelte/icons/clipboard-type"
+import Timer from "lucide-svelte/icons/timer"
 
 /**
  * A single sidebar entry.
@@ -386,6 +387,15 @@ export function manageNav(
       label: "Manage Pages",
       icon: Pencil,
       href: resolve(`/my/hackathon/${hackathonId}/pages`),
+    },
+    // The deadlines the backend enforces. Next to the schedule entries above,
+    // because a phase and a window are two halves of the same question: what is
+    // open right now.
+    {
+      id: "manage:windows",
+      label: "Deadlines",
+      icon: Timer,
+      href: resolve(`/my/hackathon/${hackathonId}/windows`),
     },
     // What the event asks people, registration and submission. Sits under
     // Manage rather than beside the participant-facing pages: a participant

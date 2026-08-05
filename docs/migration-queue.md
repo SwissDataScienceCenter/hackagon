@@ -54,7 +54,10 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
 `routes/(app)/my/hackathon/[id]/manage/**` was one page because there was
 nowhere else to put these. Main has somewhere else, so each section moves:
 
-- [ ] Windows, capabilities, settings → their existing `…/edit`
+- [x] Windows → `…/windows` (a route of its own, not folded into `edit`: six
+      datetimes plus the override would have swamped a four-field form). This
+      needed a NEW backend RPC — see below. Capabilities already live on their
+      timeline page. Settings still to move.
 - [x] Registration + submission form builders → `…/forms`, with a
       `manage:forms` nav entry. The builder posts parallel arrays rather than
       JSON, so it works without JavaScript and a half-filled row is recoverable;
@@ -84,6 +87,16 @@ nowhere else to put these. Main has somewhere else, so each section moves:
 - `routes/(app)/my/hackathon/[id]/proposals/**` (theirs is
   `projects/proposals`) — except the export endpoint above
 - `lib/components/hackathon/ProposalCard.svelte` (theirs is `ProjectCard`)
+
+## Backend gaps the port exposed
+
+- **`ConfigService.GetWindows` — added.** There was no read RPC for deadlines:
+  the old cockpit only ever displayed what a write returned. `SetWindows`
+  replaces every field, so a form that cannot prefill makes saving destructive —
+  edit one deadline and the others you never saw are blanked. Read permission is
+  hackathon `Read`, not `Write`: deadlines are announced to participants.
+- **`GetPrizes` is still missing**, and the prizes screen will hit exactly the
+  same trap when it lands.
 
 ## Known adaptation, not yet done
 

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package hackathon.messages.config_svc;
+
+import "hackathon/entities/hackathon_window_set.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/config_svc";
+
+// `windows` is absent when the event has no row yet, which reads as "no
+// deadlines set" — distinct from a row whose fields happen to be empty.
+message GetWindowsResponse {
+  optional hackathon.entities.HackathonWindows windows = 1;
+}
