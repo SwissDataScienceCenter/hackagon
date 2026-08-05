@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Plus, Search } from 'lucide-svelte';
+    import { resolve } from '$app/paths';
     import TeamCard from '$lib/components/hackathon/TeamCard.svelte';
     import type { PageData } from './$types';
 
@@ -52,6 +53,16 @@
             class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
                    sm:justify-end sm:gap-2"
         >
+            {#if data.mayManageTeams}
+                <a
+                    href={resolve(`/my/hackathon/${data.hackathonId}/teams/manage`)}
+                    class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
+                           rounded-none px-3 text-center text-xs font-semibold no-underline
+                           sm:w-auto sm:min-w-[9rem] preset-tonal-surface"
+                >
+                    Manage Teams
+                </a>
+            {/if}
             <a
                 href="#create-team"
                 class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
