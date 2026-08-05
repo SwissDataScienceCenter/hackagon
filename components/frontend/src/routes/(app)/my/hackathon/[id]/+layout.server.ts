@@ -34,9 +34,9 @@ export const load: LayoutServerLoad = async (event) => {
   //
   // `visible` is carried through rather than assumed: List only filters
   // `visible: false` out for callers *without* `page:write`
-  // (`page_service.go:31`), so an organiser's list mixes drafts in with published
-  // pages and the sidebar has to be able to tell them apart. For a participant
-  // every entry here is visible by construction.
+  // (`page_service.go:31`), so an organiser's list mixes hidden pages in with
+  // published ones and the sidebar has to be able to tell them apart. For a
+  // participant every entry here is visible by construction.
   //
   // A failure here degrades the nav to its fixed entries rather than failing this
   // load and blanking the hackathon — the content area is the part that has to

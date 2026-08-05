@@ -16,7 +16,7 @@
     interface HackathonPage {
         id: string;
         title: string;
-        /** False for a draft only its organisers can see — badged, not hidden. */
+        /** False for a page only its organisers can see — badged, not omitted. */
         visible: boolean;
     }
 

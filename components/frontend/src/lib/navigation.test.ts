@@ -246,8 +246,8 @@ describe("homeNav", () => {
 })
 
 describe("memberNav", () => {
-  // Published unless a test says otherwise — the draft cases below are the ones
-  // that care, and spelling `visible: true` out everywhere else buries them.
+  // Published unless a test says otherwise — the hidden-page cases below are the
+  // ones that care, and spelling `visible: true` out everywhere else buries them.
   const pg = (id: string, title: string, visible = true) => ({
     id,
     title,
@@ -313,13 +313,15 @@ describe("memberNav", () => {
   })
 
   // PageService.List only filters hidden pages out for callers without
-  // `page:write`, so an organiser's list arrives with drafts mixed in. Rendering
-  // one identically to a published page leaves them no way to tell what is live.
+  // `page:write`, so an organiser's list arrives with them mixed in. Rendering one
+  // identically to a published page leaves them no way to tell what is live.
   it("badges a page participants cannot see", () => {
     const item = memberNav("hack-1", [pg("p1", "Judging notes", false)]).at(-1)
 
-    expect(item?.badge).toBe("Draft")
-    // A lifecycle state, so a status hue and never the accent, which means role.
+    // "Hidden", not "Draft": the flag is about who may see the page, not how
+    // finished it is.
+    expect(item?.badge).toBe("Hidden")
+    // A state, so a status hue and never the accent, which means role.
     expect(item?.badgeVariant).toBe("badge-warning")
   })
 
@@ -331,16 +333,16 @@ describe("memberNav", () => {
 
   // The badge is dropped on the collapsed icon rail, so the icon has to carry the
   // distinction on its own.
-  it("gives a draft a different icon from a published page", () => {
-    const draft = memberNav("hack-1", [pg("p1", "Draft", false)]).at(-1)
+  it("gives a hidden page a different icon from a published one", () => {
+    const hidden = memberNav("hack-1", [pg("p1", "Notes", false)]).at(-1)
     const live = memberNav("hack-1", [pg("p2", "Live")]).at(-1)
 
-    expect(draft?.icon).not.toBe(live?.icon)
+    expect(hidden?.icon).not.toBe(live?.icon)
   })
 
-  // A draft is still linked: its organiser is exactly who needs to open it.
-  it("still links a draft page", () => {
-    const item = memberNav("hack-1", [pg("p1", "Draft", false)]).at(-1)
+  // Still linked: its organiser is exactly who needs to open it.
+  it("still links a hidden page", () => {
+    const item = memberNav("hack-1", [pg("p1", "Notes", false)]).at(-1)
 
     expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
   })

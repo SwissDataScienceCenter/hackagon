@@ -30,7 +30,7 @@ export interface NavItem {
   /** Omit for a "not available yet" stub entry. */
   href?: string
   /**
-   * State chip on the entry itself, e.g. "Draft" on a page only its organisers
+   * State chip on the entry itself, e.g. "Hidden" on a page only its organisers
    * can see. Kept a plain string with a caller-supplied variant, so the nav
    * never grows a per-status vocabulary of its own.
    */
@@ -54,8 +54,8 @@ export interface HackathonPageRef {
    *
    * Required rather than optional on purpose: `PageService.List` only filters
    * `visible: false` out for callers *without* `page:write`
-   * (`page_service.go:31`), so an organiser's list mixes drafts in with
-   * published pages. Defaulting a missing flag to "visible" would silently
+   * (`page_service.go:31`), so an organiser's list mixes hidden pages in with
+   * published ones. Defaulting a missing flag to "visible" would silently
    * restore exactly the ambiguity the badge exists to remove, so the compiler
    * makes every caller state it.
    */
@@ -169,11 +169,14 @@ export function memberNav(
     // Keyed by page id, never by title: two pages named the same would collide
     // on a title-derived key and take the sidebar down with them.
     //
-    // A page the viewer can see but participants cannot is marked, not hidden:
-    // this list is the only place an organiser sees their pages, so rendering a
-    // draft identically to a published one leaves them no way to tell what is
-    // actually live. `EyeOff` carries it on the icon rail, where the badge is
-    // not rendered.
+    // A page participants cannot see is marked, not omitted: this list is the
+    // only place an organiser sees their pages, so rendering one identically to a
+    // published page leaves them no way to tell what is actually live. `EyeOff`
+    // carries it on the icon rail, where the badge is not rendered.
+    //
+    // "Hidden" rather than "Draft": `visible` says who may see the page, not how
+    // finished it is. A complete page can be deliberately withheld, and calling
+    // that a draft would misdescribe it.
     ...pages.map((p) => ({
       id: `member:page:${p.id}`,
       label: p.title,
@@ -181,7 +184,7 @@ export function memberNav(
       href: resolve(`/my/hackathon/${hackathonId}/pages/${p.id}`),
       ...(p.visible
         ? {}
-        : { badge: "Draft", badgeVariant: "badge-warning" as const }),
+        : { badge: "Hidden", badgeVariant: "badge-warning" as const }),
     })),
   ]
 }
