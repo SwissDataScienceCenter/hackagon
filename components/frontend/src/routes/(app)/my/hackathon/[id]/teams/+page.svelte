@@ -90,6 +90,8 @@
                     projectDescription={team.projectDescription}
                     imageUrl={team.imageUrl}
                     members={team.members}
+                    isOwn={team.isOwn}
+                    entry={team.entry}
                 />
             {/each}
         {/if}
