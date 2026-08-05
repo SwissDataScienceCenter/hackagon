@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Seo from '$lib/components/layout/Seo.svelte';
     import HeroSection from '$lib/components/hackathon/HeroSection.svelte';
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
@@ -32,13 +33,13 @@
     });
 </script>
 
-<!-- One head block: svelte:head may not sit inside a block. -->
-<svelte:head>
-    <title>{data.locked ? 'Private event' : h.name} · Hackagon</title>
-    {#if !data.locked && h.description}
-        <meta name="description" content={h.description.slice(0, 200)} />
-    {/if}
-</svelte:head>
+<!-- A locked event must not leak its name or description into a link
+     preview: "not found" and "private" have to look identical from outside. -->
+{#if data.locked}
+    <Seo title="Private event" noindex />
+{:else}
+    <Seo title={h.name} description={h.description || undefined} type="article" />
+{/if}
 
 {#if data.locked}
     <section class="mx-auto w-full max-w-2xl px-4 py-16 text-center sm:px-10">

@@ -15,6 +15,7 @@
         ChevronRight,
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import Seo from '$lib/components/layout/Seo.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
     import { statusLabel, statusBadgePreset } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
@@ -157,6 +158,9 @@
         syncCarousel();
     });
 </script>
+
+<Seo />
+
 
 <svelte:window onresize={syncCarousel} />
 
@@ -429,16 +433,27 @@
             { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
             { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
             { name: 'EPFL', logo: '/images/logos/epfl.svg' },
-            { name: 'Durham University' }
+            // Full-colour logo with black type. Inverting it would turn the
+            // purple shield green, and a mono white silhouette would lose the
+            // lions inside it — so on dark backgrounds it sits on a white
+            // plate instead, which keeps the institution's own colours.
+            { name: 'Durham University', logo: '/images/logos/durham.png', plateOnDark: true }
         ] as org (org.name)}
             <div class="flex flex-col items-center gap-2">
                 {#if org.logo}
                     <!-- ETH/EPFL svgs are white-native (footer convention):
-                         invert for light mode, none for dark. -->
+                         invert for light mode, none for dark.
+                         onerror: a partner whose asset has not been added yet
+                         degrades to its name rather than a broken-image icon. -->
                     <img
                         src={org.logo}
                         alt="{org.name} logo"
-                        class="h-10 w-auto {org.logoDark ? 'dark:hidden' : 'invert dark:invert-0'}"
+                        onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+                        class="h-10 w-auto {org.plateOnDark
+                            ? 'dark:rounded dark:bg-white dark:px-2 dark:py-1'
+                            : org.logoDark
+                              ? 'dark:hidden'
+                              : 'invert dark:invert-0'}"
                     />
                     {#if org.logoDark}
                         <img

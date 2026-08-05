@@ -8,6 +8,12 @@
     const { children, data } = $props();
 </script>
 
+<!-- Nothing behind the sign-in belongs in a search index. Pages here still set
+     their own <title>; this is the one thing they all share. -->
+<svelte:head>
+    <meta name="robots" content="noindex, nofollow" />
+</svelte:head>
+
 <div class="flex min-h-screen flex-col">
     <NavBar
         session={data.session ?? null}

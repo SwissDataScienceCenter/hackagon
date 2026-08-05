@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Seo from '$lib/components/layout/Seo.svelte';
     import { enhance } from '$app/forms';
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
     import { statusLabel } from '$lib/utils/hackathonStatus';
@@ -25,11 +26,10 @@
     });
 </script>
 
-<svelte:head>
-    <title>You're invited · {h.name}</title>
-    <!-- An invitation URL is a secret; keep it out of search indexes. -->
-    <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
+<!-- An invitation URL is a secret: noindex, and no description either --
+     an unfurled preview in a group chat would show the event to everyone in
+     the room, which is exactly what a private invitation is not. -->
+<Seo title="You're invited" noindex />
 
 <section class="mx-auto w-full max-w-3xl px-4 py-12 sm:px-10">
     <p class="badge preset-tonal-primary mb-4">You've been invited</p>
