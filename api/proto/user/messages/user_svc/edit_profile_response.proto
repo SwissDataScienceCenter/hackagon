@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package user.messages.user_svc;
+
+import "user/entities/user.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc";
+
+// Edit returns the updated entity (write-path convention).
+message EditProfileResponse {
+  user.entities.User user = 1;
+}

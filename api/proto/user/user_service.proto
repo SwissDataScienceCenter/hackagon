@@ -6,6 +6,8 @@ import "user/messages/user_svc/add_role_request.proto";
 import "user/messages/user_svc/add_role_response.proto";
 import "user/messages/user_svc/delete_account_request.proto";
 import "user/messages/user_svc/delete_account_response.proto";
+import "user/messages/user_svc/edit_profile_request.proto";
+import "user/messages/user_svc/edit_profile_response.proto";
 import "user/messages/user_svc/get_request.proto";
 import "user/messages/user_svc/get_response.proto";
 import "user/messages/user_svc/list_request.proto";
@@ -24,6 +26,8 @@ service UserService {
   rpc Get(user.messages.user_svc.GetRequest) returns (user.messages.user_svc.GetResponse);
   rpc WhoAmI(user.messages.user_svc.WhoAmIRequest) returns (user.messages.user_svc.WhoAmIResponse);
   rpc Register(user.messages.user_svc.RegisterRequest) returns (user.messages.user_svc.RegisterResponse);
+  // Self-service: edits the caller's own profile, no user id in the request.
+  rpc EditProfile(user.messages.user_svc.EditProfileRequest) returns (user.messages.user_svc.EditProfileResponse);
   rpc AddRole(user.messages.user_svc.AddRoleRequest) returns (user.messages.user_svc.AddRoleResponse);
   rpc RemoveRole(user.messages.user_svc.RemoveRoleRequest) returns (user.messages.user_svc.RemoveRoleResponse);
   // Self-service account deletion (GDPR). Removes the platform profile and

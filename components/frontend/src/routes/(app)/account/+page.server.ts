@@ -3,16 +3,52 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
-// The account page: what the platform knows about you, and how to leave.
+// The account page: what the platform knows about you, what you can change,
+// and how to leave.
 //
-// DeleteAccount is self-service by design — it takes no user id, so this page
-// can only ever delete the caller's own profile.
+// DeleteAccount and EditProfile are both self-service by design — neither
+// takes a user id, so this page can only ever touch the caller's own profile.
 
 export const load: PageServerLoad = async (event) => {
-  return { user: event.locals.platformUser ?? null }
+  return {
+    user: event.locals.platformUser ?? null,
+    // Keycloak owns the credentials, so "change my email/password" has to
+    // happen in its own account console. Deriving the link from the configured
+    // issuer keeps it correct through the tunnel, where the issuer moves.
+    identityConsoleUrl: `${event.locals.config.oidc.issuer}/account`,
+  }
 }
 
 export const actions: Actions = {
+  profile: async (event) => {
+    const { user } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+
+    const displayName = String(form.get("displayName") ?? "").trim()
+    if (!displayName) {
+      // Echo the typed value back so a rejected save does not also wipe the
+      // field the person was editing.
+      return fail(400, {
+        displayName,
+        profileMessage: "Your display name cannot be empty.",
+      })
+    }
+
+    try {
+      await user.editProfile({ displayName })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+        return fail(400, {
+          displayName,
+          profileMessage: e.details || "That name is not valid.",
+        })
+      }
+      throw e
+    }
+
+    return { profileSaved: true }
+  },
+
   delete: async (event) => {
     const { user } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()

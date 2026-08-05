@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package user.messages.user_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc";
+
+// Edits the caller's OWN profile — there is no user id, so this RPC can never
+// touch anyone else's.
+//
+// Only the fields the platform owns are here. `username` and `email` come from
+// Keycloak on every token and are re-synced by WhoAmI, so accepting them would
+// be a lie: the next page load would overwrite whatever was stored. Those are
+// changed in Keycloak's own account console.
+//
+// Every field is optional; absent means "leave unchanged".
+message EditProfileRequest {
+  optional string display_name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+}

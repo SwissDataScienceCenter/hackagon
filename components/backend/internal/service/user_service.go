@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
@@ -30,6 +31,98 @@ func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
 		dbClient:                       dbClient,
 		enforcer:                       enf,
 	}
+}
+
+// syncFromKeycloak refreshes the fields the identity provider owns.
+//
+// Deliberately NOT display_name. Keycloak owns the credentials — username and
+// email are re-read from the token on every request, so the platform must not
+// let anyone edit them here: the next page load would silently revert it.
+// The display name is the platform's own, seeded from Keycloak when the
+// profile is first created (Register) and editable afterwards via EditProfile.
+// Re-syncing it on every WhoAmI is what made the account page read-only in
+// practice, whatever the UI offered.
+//
+// Empty display names are still backfilled: a profile created before this rule
+// (or by a Keycloak account with no name set) would otherwise stay blank
+// forever, and a nameless user is worse than a stale one.
+func syncFromKeycloak(
+	ctx context.Context,
+	u *ent.User,
+	claims map[string]interface{},
+	sub string,
+) (*ent.User, error) {
+	wantUsername := m.UsernameFromClaims(claims, sub)
+	wantEmail := m.EmailFromClaims(claims)
+	backfillName := u.DisplayName == "" && m.DisplayNameFromClaims(claims) != ""
+
+	if u.Username == wantUsername && u.Email == wantEmail && !backfillName {
+		return u, nil
+	}
+
+	upd := u.Update().SetUsername(wantUsername).SetEmail(wantEmail)
+	if backfillName {
+		upd = upd.SetDisplayName(m.DisplayNameFromClaims(claims))
+	}
+
+	updated, err := upd.Save(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
+	}
+
+	return updated, nil
+}
+
+// EditProfile updates the caller's own profile. There is no user id in the
+// request, so this cannot reach another account — no casbin check is needed
+// beyond having a subject at all.
+func (s *UserService) EditProfile(
+	ctx context.Context,
+	req *msgs.EditProfileRequest,
+) (*msgs.EditProfileResponse, error) {
+	sub, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(sub)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Error(codes.NotFound, "user not registered on platform")
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	upd := u.Update()
+	if req.DisplayName != nil {
+		// Trimmed because a name of spaces renders as a blank byline
+		// everywhere the platform shows an author.
+		name := strings.TrimSpace(req.GetDisplayName())
+		if name == "" {
+			return nil, status.Error(codes.InvalidArgument, "display_name cannot be blank")
+		}
+		upd = upd.SetDisplayName(name)
+	}
+
+	u, err = upd.Save(ctx)
+	if err != nil {
+		slog.Error("update user profile", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update profile")
+	}
+
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+
+	return &msgs.EditProfileResponse{User: entry}, nil
 }
 
 func (s *UserService) List(
@@ -105,19 +198,9 @@ func (s *UserService) WhoAmI(
 		return nil, status.Errorf(codes.Internal, "query user: %v", err)
 	}
 
-	// Sync profile fields from Keycloak if they changed.
-	wantUsername := m.UsernameFromClaims(claims, sub)
-	wantDisplayName := m.DisplayNameFromClaims(claims)
-	wantEmail := m.EmailFromClaims(claims)
-	if u.Username != wantUsername || u.DisplayName != wantDisplayName || u.Email != wantEmail {
-		u, err = u.Update().
-			SetUsername(wantUsername).
-			SetDisplayName(wantDisplayName).
-			SetEmail(wantEmail).
-			Save(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
-		}
+	u, err = syncFromKeycloak(ctx, u, claims, sub)
+	if err != nil {
+		return nil, err
 	}
 
 	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
@@ -146,21 +229,14 @@ func (s *UserService) Register(
 	email := m.EmailFromClaims(claims)
 
 	// Idempotent: return existing user if already registered,
-	// syncing profile fields from Keycloak if they changed.
+	// syncing the Keycloak-owned fields if they changed.
 	existing, err := s.dbClient.User.Query().
 		Where(entuser.KeycloakIDEQ(sub)).
 		Only(ctx)
 	if err == nil {
-		if existing.Username != username || existing.DisplayName != displayName ||
-			existing.Email != email {
-			existing, err = existing.Update().
-				SetUsername(username).
-				SetDisplayName(displayName).
-				SetEmail(email).
-				Save(ctx)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "sync user profile: %v", err)
-			}
+		existing, err = syncFromKeycloak(ctx, existing, claims, sub)
+		if err != nil {
+			return nil, err
 		}
 
 		return &msgs.RegisterResponse{User: userEntryFromEnt(existing)}, nil
