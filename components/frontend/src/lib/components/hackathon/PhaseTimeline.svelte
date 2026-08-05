@@ -4,7 +4,11 @@
     let {
         phases,
     }: {
-        phases: { name: string; status: 'completed' | 'active' | 'upcoming' }[];
+        // 'current' is an organizer's declaration, 'active' is derived from dates.
+        // The bar draws them identically — it answers "where are we" in one glance
+        // and the distinction between how that was decided belongs on the timeline
+        // page, not in a 9px-tall strip.
+        phases: { name: string; status: 'completed' | 'active' | 'upcoming' | 'current' }[];
     } = $props();
 </script>
 
@@ -22,7 +26,7 @@
                     <Check class="h-3 w-3 shrink-0 text-white/80" />
                     <span class="truncate text-[0.65rem] font-semibold text-white/80 sm:text-xs">{phase.name}</span>
                 </div>
-            {:else if phase.status === 'active'}
+            {:else if phase.status === 'active' || phase.status === 'current'}
                 <div
                     class="flex w-[5.5rem] shrink-0 items-center justify-center gap-1 bg-primary-500 px-0.5
                            sm:w-auto sm:min-w-0 sm:flex-1"

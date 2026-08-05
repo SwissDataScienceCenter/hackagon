@@ -2,12 +2,30 @@ import {
   Capability,
   capabilityFromJSON,
 } from "$lib/server/grpc/generated/hackathon/entities/capability"
+import type { HackathonState } from "$lib/server/grpc/generated/hackathon/entities/hackathon_state"
 
 /**
  * Server-only: reads the generated `Capability` enum, so it must never be
  * imported by a component. The form's client-safe half — labels and
  * `datetime-local` formatting — is in `$lib/utils/phase`.
  */
+
+/**
+ * The capabilities a hackathon actually has switched on, as raw enum numbers.
+ *
+ * `HackathonState.capabilities` always carries all six with an `enabled` flag
+ * rather than listing only the live ones (`stateEntryFromEnt`,
+ * `mappers.go:319`), so this filters. A hackathon with no state row has no
+ * `state` at all, which reads as nothing enabled — correct, since without the
+ * row there are no casbin grants either.
+ */
+export function enabledCapabilities(
+  state: HackathonState | undefined,
+): number[] {
+  return (state?.capabilities ?? [])
+    .filter((c) => c.enabled)
+    .map((c) => c.capability as number)
+}
 
 /** A parsed, validated phase form, in the shape the RPCs want. */
 export interface PhaseFormValues {

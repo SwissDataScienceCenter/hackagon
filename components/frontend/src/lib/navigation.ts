@@ -14,6 +14,7 @@ import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import FileText from "lucide-svelte/icons/file-text"
 import House from "lucide-svelte/icons/house"
 import Plus from "lucide-svelte/icons/plus"
+import Settings from "lucide-svelte/icons/settings"
 
 /**
  * A single sidebar entry.
@@ -97,6 +98,13 @@ export function homeNav(roles: {
 export function memberNav(
   hackathonId: string,
   pages: HackathonPageRef[] = [],
+  /**
+   * Whether the viewer may manage the hackathon — an owner or a global admin.
+   * Adds the organizer-only Settings entry. Courtesy only: the route itself
+   * refuses anyone else, so a wrong answer here hides a link rather than leaking
+   * a page.
+   */
+  opts: { mayManage?: boolean } = {},
 ): NavItem[] {
   return [
     {
@@ -160,6 +168,19 @@ export function memberNav(
       icon: FileText,
       href: resolve(`/my/hackathon/${hackathonId}/pages/${p.id}`),
     })),
+    // Last, and after the content pages: organizer configuration is the least
+    // travelled entry, and pushing it below the pages keeps the participant-facing
+    // run of the nav unbroken.
+    ...(opts.mayManage
+      ? [
+          {
+            id: "member:settings",
+            label: "Settings",
+            icon: Settings,
+            href: resolve(`/my/hackathon/${hackathonId}/settings`),
+          },
+        ]
+      : []),
   ]
 }
 
@@ -247,12 +268,12 @@ const MEMBER = 2
 /**
  * Role chip for the hackathon section heading.
  *
- * Owners get no extra nav entries — the organizer pages do not exist yet — so
- * the badge is the only thing distinguishing them, and it must not imply
- * capabilities that are not there. `isWaiting` wins over `role` because a
- * waitlisted user is not yet a member in any useful sense. Global admins can
- * manage any hackathon without joining it, so they get a badge even with no
- * membership row.
+ * `isWaiting` wins over `role` because a waitlisted user is not yet a member in
+ * any useful sense. Global admins can manage any hackathon without joining it, so
+ * they get a badge even with no membership row.
+ *
+ * Owners also get a Settings entry from `memberNav`, so the badge is no longer
+ * the only thing distinguishing them.
  */
 export function hackathonRoleBadge(
   membership: ViewerMembership | undefined,

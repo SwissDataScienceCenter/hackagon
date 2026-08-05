@@ -1,5 +1,118 @@
 import { describe, it, expect } from "vitest"
-import { PHASE_CAPABILITIES, capabilityLabel, toDateTimeLocal } from "./phase"
+import {
+  PHASE_CAPABILITIES,
+  capabilityLabel,
+  resolvePhaseStatus,
+  toDateTimeLocal,
+  unmetPhaseCapabilities,
+} from "./phase"
+
+// Capability numeric values.
+const PROPOSE = 2
+const SUBMISSIONS = 4
+const VOTE = 5
+const VIEW_RESULTS = 6
+
+const past = new Date(Date.now() - 86_400_000)
+const older = new Date(Date.now() - 172_800_000)
+const future = new Date(Date.now() + 86_400_000)
+const later = new Date(Date.now() + 172_800_000)
+
+describe("resolvePhaseStatus", () => {
+  describe("with no declared current phase", () => {
+    it("derives from dates, as before current phases existed", () => {
+      expect(
+        resolvePhaseStatus(
+          { id: "a", startsAt: older, endsAt: past },
+          undefined,
+        ),
+      ).toBe("completed")
+      expect(
+        resolvePhaseStatus(
+          { id: "a", startsAt: past, endsAt: future },
+          undefined,
+        ),
+      ).toBe("active")
+      expect(
+        resolvePhaseStatus(
+          { id: "a", startsAt: future, endsAt: later },
+          undefined,
+        ),
+      ).toBe("upcoming")
+    })
+
+    it("treats an empty declaration the same as none", () => {
+      expect(
+        resolvePhaseStatus({ id: "a", startsAt: past, endsAt: future }, ""),
+      ).toBe("active")
+    })
+  })
+
+  describe("with a declared current phase", () => {
+    it("marks the declared phase current", () => {
+      expect(
+        resolvePhaseStatus({ id: "a", startsAt: future, endsAt: later }, "a"),
+      ).toBe("current")
+    })
+
+    // The Internal Product Sprint fixture: every phase is past, yet Demo is
+    // declared current. The organizer's answer wins over the dates.
+    it("marks it current even when its dates have passed", () => {
+      expect(
+        resolvePhaseStatus({ id: "a", startsAt: older, endsAt: past }, "a"),
+      ).toBe("current")
+    })
+
+    it("still calls an ended phase completed", () => {
+      expect(
+        resolvePhaseStatus({ id: "b", startsAt: older, endsAt: past }, "a"),
+      ).toBe("completed")
+    })
+
+    // The surprising branch, and the reason the rule is written down: a phase
+    // whose dates are running reads as upcoming when the organizer has declared a
+    // different one current. One timeline, one answer to "where are we".
+    it("never lets another phase claim nowness", () => {
+      expect(
+        resolvePhaseStatus({ id: "b", startsAt: past, endsAt: future }, "a"),
+      ).toBe("upcoming")
+    })
+
+    it("calls an undated phase upcoming", () => {
+      expect(resolvePhaseStatus({ id: "b" }, "a")).toBe("upcoming")
+    })
+  })
+})
+
+describe("unmetPhaseCapabilities", () => {
+  it("reports tags that are not switched on", () => {
+    expect(unmetPhaseCapabilities([VOTE, VIEW_RESULTS], [VOTE])).toEqual([
+      VIEW_RESULTS,
+    ])
+  })
+
+  it("is empty when everything the phase expects is on", () => {
+    expect(
+      unmetPhaseCapabilities([SUBMISSIONS], [SUBMISSIONS, PROPOSE]),
+    ).toEqual([])
+  })
+
+  it("is empty for an untagged phase", () => {
+    expect(unmetPhaseCapabilities([], [PROPOSE])).toEqual([])
+  })
+
+  it("keeps the phase's own tag order", () => {
+    expect(unmetPhaseCapabilities([VIEW_RESULTS, PROPOSE], [])).toEqual([
+      VIEW_RESULTS,
+      PROPOSE,
+    ])
+  })
+
+  // An unknown tag cannot be switched on, so calling it missing would be noise.
+  it("drops unknown tag values", () => {
+    expect(unmetPhaseCapabilities([99, VOTE], [])).toEqual([VOTE])
+  })
+})
 
 describe("capabilityLabel", () => {
   it("labels each of the six capabilities", () => {
