@@ -139,7 +139,7 @@
                 <button
                     type="button"
                     onclick={() => (page = p)}
-                    class="btn btn-sm flex h-8 w-8 items-center justify-center rounded-none p-0
+                    class="btn btn-sm flex h-8 w-8 items-center justify-center p-0
                            text-xs font-semibold transition-colors
                            {page === p ? 'btn-solid' : 'btn-ghost'}"
                     aria-label="Page {p}"

@@ -27,7 +27,9 @@
     } = $props();
 
     const thumbSize = size === 'compact' ? 'h-9 w-9' : 'h-12 w-12';
-    const rowHeight = size === 'compact' ? 'h-14' : 'h-[72px]';
+    // A floor rather than a fixed height: with `org` set the row carries three
+    // stacked lines, which a fixed height would clip.
+    const rowHeight = size === 'compact' ? 'min-h-14' : 'min-h-[72px]';
 </script>
 
 <a
@@ -35,28 +37,29 @@
     class="flex {rowHeight} items-center gap-4 px-4 no-underline transition-colors hover:bg-raised"
 >
     <div
-        class="{thumbSize} shrink-0"
+        class="{thumbSize} shrink-0 rounded-field"
         style="background: linear-gradient(135deg, {gradFrom}, {gradTo})"
     ></div>
-    <div class="flex flex-1 flex-col gap-0.5">
-        <div class="flex items-center gap-2">
-            {#if org}
-                <span class="text-sm text-ink-3">{org}</span>
-                <span class="text-sm text-ink-3">/</span>
-            {/if}
-            <span class="text-sm font-semibold">{name}</span>
-        </div>
-        <span class="text-xs text-ink-3">{meta}</span>
+    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <!-- The organisation is an eyebrow above the name rather than sharing a
+             line behind a slash, so the hackathon's own name gets the line to
+             itself and every row's title starts on the same left edge. -->
+        {#if org}
+            <span class="meta truncate">{org}</span>
+        {/if}
+        <span class="truncate text-sm font-semibold text-ink">{name}</span>
+        <span class="tnum text-xs text-ink-3">{meta}</span>
     </div>
     {#if badge}
-        <span class="badge {badgeVariant}">
+        <span class="badge {badgeVariant} shrink-0">
             {badge}
         </span>
     {/if}
     {#if count}
-        <div class="flex items-center gap-1 text-ink-3">
-            <Users class="h-3 w-3" />
-            <span class="text-xs">{count}</span>
+        <!-- Tabular so the counts line up down the column rather than wandering. -->
+        <div class="flex shrink-0 items-center gap-1 text-ink-3">
+            <Users class="h-3 w-3" aria-hidden="true" />
+            <span class="tnum text-xs">{count}</span>
         </div>
     {/if}
 </a>

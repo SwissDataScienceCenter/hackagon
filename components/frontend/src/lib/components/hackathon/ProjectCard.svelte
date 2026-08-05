@@ -53,8 +53,14 @@
 <!-- Matches TeamCard: py-4 px-5, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
 <div
     class="box-border flex w-full items-start gap-4 border border-line
-           bg-raised py-4 px-5"
+           bg-surface py-4 px-5"
 >
+    <!-- The ordinal leaves the title and becomes a gutter figure, so titles all
+         start on one left edge and the numbers align down the list. -->
+    <span class="tnum shrink-0 pt-0.5 text-meta text-ink-3">
+        {String(num).padStart(2, '0')}
+    </span>
+
     {#if imageUrl}
         <div
             class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
@@ -77,20 +83,21 @@
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <div class="flex flex-wrap items-center gap-2">
-            <h3 class="m-0 text-sm font-bold leading-snug text-ink">
-                {num}. {title}
+            <h3 class="m-0 text-sm font-semibold leading-snug text-ink">
+                {title}
             </h3>
             {#if badge}
-                <span class="badge {badgeVariant} shrink-0 rounded-none text-[0.625rem] font-semibold uppercase">
+                <span class="badge {badgeVariant} shrink-0">
                     {badge}
                 </span>
             {/if}
         </div>
-        <div class="block w-2/3 min-w-0">
-            <p class="m-0 text-xs leading-snug text-ink-2">
-                {description}
-            </p>
-        </div>
+        <!-- The description is the one genuinely prose-shaped thing on the card,
+             so it takes the sans face. `max-width` in `ch` rather than `w-2/3`
+             keeps the measure readable at any container width. -->
+        <p class="prose m-0 max-w-[52ch] text-xs leading-snug text-ink-2">
+            {description}
+        </p>
         <!-- Author and track on one line, each behind its own icon, so the two
              facts read as attributes of the row rather than sentences. The
              icons carry no information a sighted reader needs spelling out and

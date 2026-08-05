@@ -26,6 +26,12 @@
 
     const userName = $derived(session?.user?.name ?? 'User');
     const initial = $derived(userName.charAt(0).toUpperCase());
+
+    // The accent marks where you are rather than decorating the monogram, so the
+    // header spends no accent and leaves the page's one primary action to own it.
+    const onHackathons = $derived(
+        $page.url.pathname === '/' || $page.url.pathname.startsWith('/dashboard')
+    );
 </script>
 
 <header
@@ -53,14 +59,22 @@
         {#if session?.user}
             <a
                 href={resolve('/(app)/dashboard')}
-                class="text-sm font-medium no-underline hover:text-accent-ink"
+                aria-current={onHackathons ? 'page' : undefined}
+                class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                       {onHackathons
+                    ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                    : 'text-ink-2'}"
             >
                 Hackathons
             </a>
         {:else}
             <a
                 href={resolve('/')}
-                class="text-sm font-medium no-underline hover:text-accent-ink"
+                aria-current={onHackathons ? 'page' : undefined}
+                class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                       {onHackathons
+                    ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                    : 'text-ink-2'}"
             >
                 Hackathons
             </a>
@@ -93,10 +107,13 @@
         <LightSwitch />
 
         {#if session?.user}
+            <!-- A quiet outlined tile, not an accent-filled disc: a monogram is
+                 identity, not an action to be drawn toward. The header's accent
+                 is spent on the active-nav underline instead. -->
             <div class="flex min-w-0 items-center gap-2">
                 <span
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                           bg-accent text-on-accent text-sm font-bold"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-field
+                           border border-line-strong bg-raised text-sm font-semibold text-ink-2"
                     title={userName}
                 >
                     {initial}
@@ -107,7 +124,7 @@
             </div>
             <button
                 onclick={() => signOut({ callbackUrl: '/' })}
-                class="btn btn-sm btn-ghost"
+                class="btn btn-sm btn-quiet"
             >
                 Log out
             </button>

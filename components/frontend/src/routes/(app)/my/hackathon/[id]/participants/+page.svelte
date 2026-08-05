@@ -44,9 +44,7 @@
                     type="search"
                     bind:value={search}
                     placeholder="Search participants by name, role…"
-                    class="h-9 w-full rounded-none border border-line bg-surface
-                           pl-9 pr-3 text-xs text-ink placeholder:text-ink-2
-                           focus:border-accent focus:outline-none"
+                    class="field pl-9 pr-3"
                 />
             </div>
         </div>

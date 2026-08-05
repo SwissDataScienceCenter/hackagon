@@ -6,9 +6,7 @@
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const FIELD_CLASS =
-        'h-9 w-full rounded-none border border-line bg-surface px-3 text-xs ' +
-        'text-ink placeholder:text-ink-2 focus:border-accent ' +
-        'focus:outline-none';
+        'field';
     const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
 </script>
 

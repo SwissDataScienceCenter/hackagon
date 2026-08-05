@@ -13,6 +13,11 @@
 </div>
 
 <style>
+    /* Author-written prose, so it takes the sans face. Headings inside keep the
+       mono display voice via the base layer. */
+    .markdown-content {
+        font-family: var(--font-sans);
+    }
     .markdown-content :global(h1),
     .markdown-content :global(h2),
     .markdown-content :global(h3) {

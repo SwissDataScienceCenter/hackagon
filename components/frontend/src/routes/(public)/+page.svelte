@@ -108,7 +108,7 @@
     </div>
 
     <div class="mt-6 flex gap-1 border-b border-line">
-        <button class="chip chip-active border-b-2 border-accent">
+        <button class="chip chip-active">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
         </button>

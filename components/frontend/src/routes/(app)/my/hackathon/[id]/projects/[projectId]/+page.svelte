@@ -78,7 +78,7 @@
                 </h1>
                 {#if statusText}
                     <span
-                        class="badge {statusVariant} shrink-0 rounded-none text-[0.625rem]
+                        class="badge {statusVariant} shrink-0 text-[0.625rem]
                                font-semibold uppercase"
                     >
                         {statusText}

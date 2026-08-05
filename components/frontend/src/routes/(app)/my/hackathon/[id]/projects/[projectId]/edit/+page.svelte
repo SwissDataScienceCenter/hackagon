@@ -32,7 +32,7 @@
             <h1 class="m-0 text-lg font-bold text-ink">Edit Project</h1>
             {#if statusText}
                 <span
-                    class="badge {statusVariant} rounded-none text-[0.625rem] font-semibold uppercase"
+                    class="badge {statusVariant} text-[0.625rem] font-semibold uppercase"
                 >
                     {statusText}
                 </span>

@@ -66,7 +66,7 @@
             <a
                 href="#create-team"
                 class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                       rounded-none px-3 text-center text-xs font-semibold no-underline
+                       px-3 text-center text-xs font-semibold no-underline
                        sm:w-auto sm:min-w-[7.5rem] bg-accent text-on-accent"
             >
                 <Plus class="h-3.5 w-3.5 shrink-0" />
@@ -82,9 +82,7 @@
                     type="search"
                     bind:value={search}
                     placeholder="Search teams by name, project…"
-                    class="h-9 w-full rounded-none border border-line bg-surface
-                           pl-9 pr-3 text-xs text-ink placeholder:text-ink-2
-                           focus:border-accent focus:outline-none"
+                    class="field pl-9 pr-3"
                 />
             </div>
         </div>
@@ -120,7 +118,7 @@
                 <button
                     type="button"
                     onclick={() => (page = p)}
-                    class="btn btn-sm flex h-8 w-8 items-center justify-center rounded-none p-0
+                    class="btn btn-sm flex h-8 w-8 items-center justify-center p-0
                            text-xs font-semibold transition-colors
                            {page === p ? 'btn-solid' : 'btn-ghost'}"
                     aria-label="Page {p}"
