@@ -69,6 +69,8 @@ func (Hackathon) Edges() []ent.Edge {
 			Comment("Configuration state for this hackathon."),
 		edge.To("vote_categories", VoteCategory.Type).
 			Comment("Voting categories scoped to this hackathon."),
+		edge.To("owners", User.Type).
+			Comment("Users who are owners of this hackathon (in addition to the creator)."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathons").Unique().Required().Immutable().
 			Comment("The user who created this hackathon."),
