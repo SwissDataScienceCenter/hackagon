@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { Pencil, Plus } from 'lucide-svelte';
+    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
-    import type { PageData } from './$types';
+    import { ChevronDown, ChevronUp, Eye, EyeOff, Pencil, Plus } from 'lucide-svelte';
+    import type { ActionData, PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches the other member pages). -->
@@ -24,28 +25,79 @@
         </a>
     </div>
 
+    <!-- A page picks up a phase badge once a phase links to it, but that link is
+         set from the phase's own edit form, not here — this just points there. -->
+    <p class="m-0 text-xs text-surface-500">
+        Want a page tied to a phase? Link it from
+        <a
+            href={resolve(`/my/hackathon/${data.hackathonId}/timeline`)}
+            class="font-semibold text-primary-700-300 no-underline hover:underline"
+        >
+            that phase's edit form
+        </a>
+        on the Timeline.
+    </p>
+
+    {#if form?.message}
+        <p class="m-0 text-sm text-error-700-300" role="alert">{form.message}</p>
+    {/if}
+
     {#if data.pages.length === 0}
         <p class="m-0 py-6 text-center text-sm text-surface-500">
             No pages yet. Add one to give participants something to read.
         </p>
     {:else}
         <ol class="m-0 flex list-none flex-col gap-2 p-0">
-            {#each data.pages as page (page.id)}
+            {#each data.pages as page, index (page.id)}
                 <li
                     class="box-border w-full border border-surface-200-800 bg-surface-100-900
                            px-5 py-4"
                 >
                     <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex shrink-0 flex-col">
+                            <form method="POST" action="?/moveUp" use:enhance>
+                                <input type="hidden" name="pageId" value={page.id} />
+                                <button
+                                    type="submit"
+                                    disabled={index === 0}
+                                    aria-label="Move {page.title} up"
+                                    class="btn-icon btn-sm disabled:opacity-30"
+                                >
+                                    <ChevronUp class="h-3 w-3" aria-hidden="true" />
+                                </button>
+                            </form>
+                            <form method="POST" action="?/moveDown" use:enhance>
+                                <input type="hidden" name="pageId" value={page.id} />
+                                <button
+                                    type="submit"
+                                    disabled={index === data.pages.length - 1}
+                                    aria-label="Move {page.title} down"
+                                    class="btn-icon btn-sm disabled:opacity-30"
+                                >
+                                    <ChevronDown class="h-3 w-3" aria-hidden="true" />
+                                </button>
+                            </form>
+                        </div>
                         <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
                             {page.title}
                         </h3>
-                        <span
-                            class="badge text-xs {page.visible
-                                ? 'preset-tonal-success'
-                                : 'preset-tonal-surface'}"
-                        >
-                            {page.visible ? 'Visible' : 'Hidden'}
-                        </span>
+                        <form method="POST" action="?/toggleVisible" use:enhance>
+                            <input type="hidden" name="pageId" value={page.id} />
+                            <input type="hidden" name="visible" value={!page.visible} />
+                            <button
+                                type="submit"
+                                aria-label={page.visible
+                                    ? `Hide ${page.title}`
+                                    : `Show ${page.title}`}
+                                class="btn-icon btn-sm shrink-0"
+                            >
+                                {#if page.visible}
+                                    <Eye class="h-4 w-4 text-success-700-300" aria-hidden="true" />
+                                {:else}
+                                    <EyeOff class="h-4 w-4 text-surface-500" aria-hidden="true" />
+                                {/if}
+                            </button>
+                        </form>
                         {#if page.phaseName}
                             <span class="badge preset-tonal-primary text-xs">
                                 {page.phaseName}
