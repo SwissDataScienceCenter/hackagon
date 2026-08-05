@@ -5,9 +5,9 @@ const LABEL: Partial<Record<number, string>> = {
   1: "Admin",
   2: "Hackathon Organizer",
 }
-const BADGE_PRESET: Partial<Record<number, string>> = {
-  1: "preset-tonal-primary",
-  2: "preset-tonal-surface",
+const BADGE_VARIANT: Partial<Record<number, string>> = {
+  1: "badge-accent",
+  2: "badge-neutral",
 }
 
 // Every assignable role, in display order — drives both the badge list and
@@ -18,6 +18,6 @@ export function globalRoleLabel(r: number): string | undefined {
   return LABEL[r]
 }
 
-export function globalRoleBadgePreset(r: number): string | undefined {
-  return BADGE_PRESET[r]
+export function globalRoleBadgeVariant(r: number): string | undefined {
+  return BADGE_VARIANT[r]
 }

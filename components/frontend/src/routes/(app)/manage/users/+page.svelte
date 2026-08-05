@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
-    import { ASSIGNABLE_GLOBAL_ROLES, globalRoleBadgePreset, globalRoleLabel } from '$lib/utils/globalRole';
+    import { ASSIGNABLE_GLOBAL_ROLES, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -70,7 +70,7 @@
     </div>
 
     {#if form?.message}
-        <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
     {/if}
 
     {#if data.users.length === 0}
@@ -110,19 +110,17 @@
                             <td class="px-3 py-2 font-semibold text-ink">
                                 {user.displayName || user.username}
                             </td>
-                            <td class="px-3 py-2 text-surface-500">{user.username}</td>
-                            <td class="px-3 py-2 text-surface-500">{user.email || '—'}</td>
+                            <td class="px-3 py-2 text-ink-3">{user.username}</td>
+                            <td class="px-3 py-2 text-ink-3">{user.email || '—'}</td>
                             <td class="px-3 py-2">
                                 {#if user.roles.length === 0}
-                                    <span class="text-surface-500">—</span>
+                                    <span class="text-ink-3">—</span>
                                 {:else}
                                     <div class="flex flex-wrap gap-1">
                                         {#each user.roles as role (role)}
                                             <span
-                                                class="badge {globalRoleBadgePreset(role) ??
-                                                    'preset-tonal-surface'} flex items-center
-                                                       gap-1 rounded-none text-[0.625rem]
-                                                       font-semibold uppercase"
+                                                class="badge {globalRoleBadgeVariant(role) ??
+                                                    'badge-neutral'}"
                                             >
                                                 {globalRoleLabel(role) ?? 'Unknown'}
                                                 {#if !(user.id === data.currentUserId && role === 1)}
@@ -148,8 +146,8 @@
                                                         />
                                                         <button
                                                             type="submit"
-                                                            class="text-surface-950-50/70
-                                                                   hover:text-error-500"
+                                                            class="text-ink/70
+                                                                   hover:text-danger-ink"
                                                             title="Revoke {globalRoleLabel(
                                                                 role
                                                             )}"
@@ -163,14 +161,14 @@
                                     </div>
                                 {/if}
                             </td>
-                            <td class="px-3 py-2 text-surface-500">
+                            <td class="px-3 py-2 text-ink-3">
                                 {user.createdAt
                                     ? new Date(user.createdAt).toLocaleDateString()
                                     : '—'}
                             </td>
                             <td class="px-3 py-2">
                                 {#if missingRoles(user.roles).length === 0}
-                                    <span class="text-surface-500">—</span>
+                                    <span class="text-ink-3">—</span>
                                 {:else}
                                     <form
                                         method="POST"
@@ -186,7 +184,7 @@
                                             />
                                             <button
                                                 type="submit"
-                                                class="btn btn-sm preset-tonal-surface"
+                                                class="btn btn-sm btn-ghost"
                                             >
                                                 Grant {globalRoleLabel(
                                                     missingRoles(user.roles)[0]
@@ -195,11 +193,7 @@
                                         {:else}
                                             <select
                                                 name="role"
-                                                class="h-8 rounded-none border
-                                                       border-surface-200-800 bg-surface-50-950
-                                                       px-2 text-xs text-surface-950-50
-                                                       focus:border-primary-500
-                                                       focus:outline-none"
+                                                class="field h-8 w-auto px-2"
                                             >
                                                 {#each missingRoles(user.roles) as role (role)}
                                                     <!-- Hackathon Organizer (2) is the
@@ -214,7 +208,7 @@
                                             </select>
                                             <button
                                                 type="submit"
-                                                class="btn btn-sm preset-tonal-surface"
+                                                class="btn btn-sm btn-ghost"
                                             >
                                                 Grant
                                             </button>

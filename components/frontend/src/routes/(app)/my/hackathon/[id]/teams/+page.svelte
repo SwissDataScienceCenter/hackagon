@@ -56,18 +56,14 @@
             {#if data.mayManageTeams}
                 <a
                     href={resolve(`/my/hackathon/${data.hackathonId}/teams/manage`)}
-                    class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                           rounded-none px-3 text-center text-xs font-semibold no-underline
-                           sm:w-auto sm:min-w-[9rem] preset-tonal-surface"
+                    class="btn btn-ghost w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
                 >
                     Manage Teams
                 </a>
             {/if}
             <a
                 href="#create-team"
-                class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                       px-3 text-center text-xs font-semibold no-underline
-                       sm:w-auto sm:min-w-[7.5rem] bg-accent text-on-accent"
+                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[7.5rem]"
             >
                 <Plus class="h-3.5 w-3.5 shrink-0" />
                 Create Team

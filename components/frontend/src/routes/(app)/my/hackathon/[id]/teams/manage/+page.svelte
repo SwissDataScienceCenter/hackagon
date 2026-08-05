@@ -132,8 +132,7 @@
         draggable="true"
         ondragstart={(e) => startDrag(e, person.id, from)}
         ondragend={endDrag}
-        class="flex cursor-grab items-start gap-1.5 border border-surface-200-800
-               bg-surface-50-950 px-2 py-1 text-xs text-surface-950-50
+        class="card flex cursor-grab items-start gap-1.5 px-2 py-1 text-xs text-ink
                active:cursor-grabbing"
         class:opacity-40={draggedId === person.id}
         title={from === POOL
@@ -142,11 +141,11 @@
               ? `Prefers: ${person.preferredTitles.join(', ')}`
               : undefined}
     >
-        <GripVertical class="mt-0.5 size-3 shrink-0 text-surface-400" />
+        <GripVertical class="mt-0.5 size-3 shrink-0 text-ink-3" />
         <div class="flex min-w-0 flex-col">
             <span class="min-w-0 truncate">{person.name}</span>
             {#if from === POOL && person.preferredTitles.length > 0}
-                <span class="min-w-0 truncate text-[0.65rem] text-surface-500">
+                <span class="min-w-0 truncate text-[0.65rem] text-ink-3">
                     Prefers: {person.preferredTitles.join(', ')}
                 </span>
             {/if}
@@ -154,7 +153,7 @@
         {#if from !== POOL}
             <button
                 type="button"
-                class="ml-0.5 shrink-0 text-surface-400 hover:text-error-500"
+                class="ml-0.5 shrink-0 text-ink-3 hover:text-danger-ink"
                 aria-label={`Unassign ${person.name}`}
                 title="Unassign"
                 disabled={pending}
@@ -169,43 +168,46 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
     <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">Manage Teams</h2>
-            <p class="m-0 text-xs text-surface-500">
+            <h2 class="m-0 text-title text-ink">Manage Teams</h2>
+            <p class="m-0 text-xs text-ink-3">
                 Drag a participant onto a team to assign them. Everyone belongs to at most one team.
             </p>
         </div>
         <a
             href={resolve(`/my/hackathon/${hackathonId}/teams`)}
-            class="btn btn-sm preset-tonal-surface no-underline"
+            class="btn btn-sm btn-ghost no-underline"
         >
             Back to Teams
         </a>
     </div>
 
     {#if form?.message}
-        <p class="m-0 border border-error-500 px-3 py-2 text-xs text-error-500" role="alert">
+        <p
+            class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2 text-xs
+                   text-danger-ink"
+            role="alert"
+        >
             {form.message}
         </p>
     {/if}
 
-    <section class="flex flex-col gap-4 border border-surface-200-800 bg-surface-100-900 p-3">
-        <h3 class="m-0 text-xs font-semibold uppercase tracking-wide text-surface-500">
+    <section class="card card-raised flex flex-col gap-4 p-3">
+        <h3 class="m-0 meta">
             Projects
         </h3>
         {#if projectRows.length === 0}
-            <p class="m-0 text-xs text-surface-400">No projects have been approved yet.</p>
+            <p class="m-0 text-xs text-ink-3">No projects have been approved yet.</p>
         {:else}
-            <div class="flex flex-col divide-y divide-surface-200-800">
+            <div class="flex flex-col divide-y divide-line">
                 {#each projectRows as p (p.id)}
                     <div class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
                         <div class="flex items-center gap-2">
-                            <span class="truncate text-sm font-semibold text-surface-950-50">
+                            <span class="truncate text-sm font-semibold text-ink">
                                 {p.title}
                             </span>
                             {#if !p.isApproved}
                                 <span
-                                    class="shrink-0 text-[0.65rem] uppercase tracking-wide
-                                           text-surface-400"
+                                    class="meta shrink-0"
                                 >
                                     (Proposed)
                                 </span>
@@ -219,12 +221,11 @@
                                     ondragover={(e) => dragOver(e, t.id)}
                                     ondragleave={() => dragLeave(t.id)}
                                     ondrop={(e) => drop(e, t.id)}
-                                    class="flex w-56 flex-col border border-surface-200-800
-                                           bg-surface-50-950"
-                                    class:border-primary-500={dropTarget === t.id}
+                                    class="card flex w-56 flex-col"
+                                    class:border-accent={dropTarget === t.id}
                                 >
                                     <header
-                                        class="flex items-center gap-1 border-b border-surface-200-800
+                                        class="flex items-center gap-1 border-b border-line
                                                px-2 py-1"
                                     >
                                         {#if editingTeamId === t.id}
@@ -253,14 +254,11 @@
                                                     onkeydown={(e) => {
                                                         if (e.key === 'Escape') cancelEdit();
                                                     }}
-                                                    class="h-6 min-w-0 flex-1 border
-                                                           border-surface-200-800 bg-surface-50-950 px-1
-                                                           text-xs text-surface-950-50
-                                                           focus:border-primary-500 focus:outline-none"
+                                                    class="field h-6 min-w-0 flex-1 px-1"
                                                 />
                                                 <button
                                                     type="submit"
-                                                    class="shrink-0 text-surface-400 hover:text-success-500"
+                                                    class="shrink-0 text-ink-3 hover:text-success-500"
                                                     aria-label="Save name"
                                                     title="Save"
                                                 >
@@ -268,7 +266,7 @@
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    class="shrink-0 text-surface-400 hover:text-error-500"
+                                                    class="shrink-0 text-ink-3 hover:text-danger-ink"
                                                     aria-label="Cancel rename"
                                                     title="Cancel"
                                                     onclick={cancelEdit}
@@ -279,13 +277,13 @@
                                         {:else}
                                             <span
                                                 class="min-w-0 flex-1 truncate text-xs font-bold
-                                                       text-surface-950-50"
+                                                       text-ink"
                                             >
                                                 {t.name}
                                             </span>
                                             <button
                                                 type="button"
-                                                class="shrink-0 text-surface-400 hover:text-primary-500"
+                                                class="shrink-0 text-ink-3 hover:text-accent-ink"
                                                 aria-label={`Rename ${t.name}`}
                                                 title="Rename"
                                                 onclick={() => startEdit(t.id, t.name)}
@@ -294,7 +292,7 @@
                                             </button>
                                             <button
                                                 type="button"
-                                                class="shrink-0 text-surface-400 hover:text-error-500"
+                                                class="shrink-0 text-ink-3 hover:text-danger-ink"
                                                 aria-label={`Delete ${t.name}`}
                                                 title="Delete"
                                                 onclick={() => confirmDelete(t.id, t.name)}
@@ -307,7 +305,7 @@
                                         class="flex min-h-16 flex-1 flex-wrap content-start gap-2 p-2"
                                     >
                                         {#if t.members.length === 0}
-                                            <p class="m-0 text-xs text-surface-400">
+                                            <p class="m-0 text-xs text-ink-3">
                                                 Drop a participant here.
                                             </p>
                                         {:else}
@@ -323,7 +321,7 @@
                                 <input type="hidden" name="projectId" value={p.id} />
                                 <button
                                     type="submit"
-                                    class="btn btn-sm preset-tonal-surface h-full"
+                                    class="btn btn-sm btn-ghost h-full"
                                     title={p.teams.length === 0
                                         ? 'Create the default team for this project'
                                         : 'Create another team for this project'}
@@ -343,14 +341,14 @@
         ondragover={(e) => dragOver(e, POOL)}
         ondragleave={() => dragLeave(POOL)}
         ondrop={(e) => drop(e, POOL)}
-        class="flex flex-col gap-3 border border-surface-200-800 bg-surface-100-900 p-3"
-        class:border-primary-500={dropTarget === POOL}
+        class="card card-raised flex flex-col gap-3 p-3"
+        class:border-accent={dropTarget === POOL}
     >
-        <h3 class="m-0 text-xs font-semibold uppercase tracking-wide text-surface-500">
+        <h3 class="m-0 meta">
             Unassigned ({unassigned.length})
         </h3>
         {#if unassigned.length === 0}
-            <p class="m-0 text-xs text-surface-400">
+            <p class="m-0 text-xs text-ink-3">
                 Every confirmed participant is on a team.
             </p>
         {:else}
