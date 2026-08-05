@@ -12,7 +12,6 @@ import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import FileText from "lucide-svelte/icons/file-text"
-import House from "lucide-svelte/icons/house"
 import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 
