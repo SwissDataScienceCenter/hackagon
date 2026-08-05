@@ -43,9 +43,15 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
 - [x] **List ergonomics** — `lib/components/data/**` + `dataView.ts`
       recovered and reclassed; the pages CMS uses them. Still to do: apply to
       main's participants and users pages, which have a bare search box.
-- [ ] **Markdown sanitiser tests** — `lib/utils/markdown*.ts`. Main sanitises
-      with the same libraries but ships no tests for it. Port the 23 cases even
-      though their `MarkdownContent` supersedes our renderer.
+- [x] **Markdown sanitiser tests** — restored, and the renderer with them.
+      Their `MarkdownContent` did NOT supersede ours: it kept DOMPurify's
+      DEFAULT allowlist (forms, svg, math survive it), where
+      `lib/utils/markdown.ts` is the audited allowlist plus the iframe host
+      list and `rel=noopener`. Both components render through it now.
+      `MarkdownSection` had also been changed to take raw HTML — correct for
+      its one caller, the public event page's mock — while photos, webinars and
+      the invite page passed it markdown, which rendered as literal `#` and
+      `*`.
 - [x] **returnTo safety** — restored, and `hooks.server.ts` validates the
       parked path again instead of trusting the query string.
 
@@ -66,18 +72,28 @@ nowhere else to put these. Main has somewhere else, so each section moves:
 - [x] Invitation links → `…/invites`, with a `manage:invites` entry in
       `navigation.ts`. Copy-link, revoke, and the full URL shown rather than a
       truncated hint — it is a credential someone has to paste somewhere.
-- [ ] Email templates + `EmailComposer.svelte` → new `…/email`
-- [ ] `EventBranding.svelte` → fold into `…/edit`
+- [x] Email templates + `EmailComposer.svelte` → `…/email`, with a
+      `manage:email` entry. Needed `ConfigService.GetEmailTemplates` — third
+      time for the same reason (see below). Audiences derive from the roster,
+      and confirmed participants is the default for all four moments:
+      "Registration confirmed" to the waitlist tells the wrong people they are
+      in.
+- [x] `EventBranding.svelte` → folded into `…/edit` as its own form (its own
+      RPC, so one submit that half-succeeds is not a thing), with the real
+      component as the live preview. That page was still painting Skeleton
+      colours — it survived the swap unreclassed.
 - [x] Prizes → `…/prizes`, with a `manage:prizes` nav entry. Needed
       `PrizeService.Get` for the same reason as windows.
 
 ## Keep as routes, add nav entries
 
-- [ ] `voting/**` + `lib/components/vote/**` (BallotCard, ResultsList,
-      ExportPanel)
-- [ ] `photos/**`, `webinars/**`
-- [ ] `proposals/export/+server.ts` — the CSV export; main's `projects/proposals`
-      has no equivalent
+- [x] `voting/**` + `lib/components/vote/**` — restored and reclassed, with a
+      `member:voting` entry after Submissions, the order it happens in.
+- [x] `photos/**`, `webinars/**` — restored, and their nav entries appear only
+      when a page reads like a gallery or a session line-up. The title hints
+      moved to `lib/pageCollections.ts` so the nav and the loaders cannot
+      disagree about whether there is anything to collect.
+- [x] `proposals/export/+server.ts` — restored.
 
 ## Superseded — do not restore
 
@@ -100,6 +116,13 @@ nowhere else to put these. Main has somewhere else, so each section moves:
   replaces the whole table, so the prizes screen would have blanked rows the
   organiser could not see. Also gated on hackathon `Read`: the prize list is
   what an event advertises, and the awards are the published result.
+- **`ConfigService.GetEmailTemplates` — added**, same shape a third time. Gated
+  on `Write`, not `Read`: deadlines are announced to participants, but unsent
+  notification copy is the organisers' own drafting.
+
+Three write-only RPCs in a row is a pattern, not a coincidence: every `Set*`
+that replaces a whole record needs a `Get*`, or the form that drives it is
+destructive by construction.
 
 ## Known adaptation, not yet done
 
@@ -129,16 +152,26 @@ Smoke failures by file, and what each actually needs:
 
 | Spec | Cause | Fix |
 | --- | --- | --- |
-| `07-account-menu` | The account menu **does not exist** in this design — identity is a monogram, sign-out is a top-bar button, account lives in `SidebarUserFooter` | Rewrite against the new IA, not repair |
-| `02-login` | Nav labels and hrefs differ; sign-out is a button, not a menu item | Re-specify |
-| `03-dashboard` | Structure survived — their dashboard has the same sections and membership badges — only the selectors moved | Selector repair |
-| `04-access-control`, `01-anonymous`, `06-cms-pages`, `05-new-user-funnel` | Smaller, mixed | Case by case |
+| `07-account-menu` | The account menu **does not exist** in this design — identity is a monogram, sign-out is a top-bar button | ✅ rewritten against the new IA (13/13) |
+| `02-login` | Nav labels and hrefs differ; sign-out is a button, not a menu item | ✅ re-specified (16/16) |
+| `03-dashboard` | Structure survived; the membership badge moved OUTSIDE the row link, so rows are reached as the link's grandparent now | ✅ repaired (16/16) |
+| `04-access-control`, `01-anonymous`, `06-cms-pages`, `05-new-user-funnel` | Nothing structural — both "failures" were 20s timeouts under a dev server recompiling mid-run | ✅ pass at `--timeout=60000` |
+
+Whole smoke suite green. Frontend units 154/154, including the 23 restored
+markdown cases and four new ones for the conditional media entries.
 
 Run them in slices with `--timeout=15000`: against moved selectors a full run
 spends 60s per failing test and takes over half an hour to tell you what a
 two-minute slice would.
 
-The recipe's own URL remap is still ahead of this. The recipe addresses screens by URL and references routes that
-moved or vanished — `/manage/pages` ×15, `/account` ×8, `/register/` ×3,
-`/hackathon/create` ×3 (now plural), plus `/voting`, `/webinars`, `/photos`,
-`/proposals`. Re-specify, never delete.
+**The recipe remap turned out to be small.** 213 of its 268 actions drive gRPC
+methods directly and do not care what the UI looks like; only 27 carry UI
+`steps`. Of those, three addressed the account menu and are re-specified
+(`act6.flow.day1end`, `act8.menu.alice`, `act8.menu.admin`) — sign-out and the
+account link are top-bar controls now, and `/manage/pages` is reached from the
+dashboard. The rest address routes that still exist.
+
+Two of those actions were pinning real gaps rather than describing the UI, and
+the fix was in the app: `act2.join.charles` expects Join to land on
+`/register/`, and `act8.form.ui.edit` expects the overview to link to your
+answers. Both links had been lost in the swap.

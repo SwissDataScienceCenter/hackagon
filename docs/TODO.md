@@ -51,8 +51,16 @@ found; the checklist is the live status.
 ### Correctness first
 - [x] B1 — nil-check `EndsAt` in `Join` (crash on undated hackathons) — matches
       `computeHackathonStatus`: no end date ⇒ never FINISHED ⇒ still joinable
-- [ ] B2 + F1 — decide the public-visibility matrix (see `backend/rbac.md`),
-      wire `Get`/section reads for non-members, kill the 403 dead end
+- [x] F1 — the 403 dead end is gone. `/hackathon/[id]` no longer redirects
+      signed-in visitors into the member view (that assumed signed in ⇒ member);
+      it renders the event and offers the right ask: open your view, you're
+      waitlisted, join, or log in and come back. Joining from the event's own
+      page works at all now, which it never did.
+- [ ] B2 — still open, and now scoped: the page reads the entity from `List`,
+      whose shallow entry carries name/description/dates/logo/status. That is
+      enough for a public event page, so `Get` stays the member view. Decide the
+      public-visibility matrix (see `backend/rbac.md`) only if a non-member
+      needs the deep tree — tracks, pages, the project list.
 - [x] F2 — real Join button: `?/join` form action on the dashboard calling
       `HackathonService.Join`, backend verdicts translated to messages
 - [ ] B3 — pick ONE registration gate (capability vs setting) and delete the loser (#78/#87)
