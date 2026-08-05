@@ -7,6 +7,10 @@ import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
 import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import { TrackServiceDefinition } from "./generated/hackathon/track_service"
+import { ConfigServiceDefinition } from "./generated/hackathon/config_service"
+import { PrizeServiceDefinition } from "./generated/hackathon/prize_service"
+import { VoteServiceDefinition } from "./generated/vote/vote_service"
+import { SitePageServiceDefinition } from "./generated/site/site_page_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
@@ -15,6 +19,10 @@ import type { PageServiceClient } from "./generated/hackathon/page_service"
 import type { ProjectServiceClient } from "./generated/hackathon/project_service"
 import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 import type { TrackServiceClient } from "./generated/hackathon/track_service"
+import type { ConfigServiceClient } from "./generated/hackathon/config_service"
+import type { PrizeServiceClient } from "./generated/hackathon/prize_service"
+import type { VoteServiceClient } from "./generated/vote/vote_service"
+import type { SitePageServiceClient } from "./generated/site/site_page_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -27,6 +35,14 @@ export const healthClient = createClientFactory().create(
 // Unauthenticated hackathon client for public pages (List endpoint is skipAuth)
 export const publicHackathonClient = createClientFactory().create(
   HackathonServiceDefinition,
+  channel,
+)
+
+// Unauthenticated site-page client: published platform pages are readable by
+// everyone, and the footer links to them from pages a visitor sees before they
+// have an account.
+export const publicSitePageClient = createClientFactory().create(
+  SitePageServiceDefinition,
   channel,
 )
 
@@ -58,6 +74,19 @@ export interface AuthorizedGrpc {
   // `phase`: the edit form re-reads the single track rather than trusting the
   // layout's cached tree.
   track: TrackServiceClient
+  // Everything an organiser configures about one event that is not the event
+  // itself: windows, registration and submission forms, email templates,
+  // branding, voting policy.
+  config: ConfigServiceClient
+  // Prizes are recorded after the vote; the tally is advisory and an organiser
+  // has the final say, so this is a write path of its own.
+  prize: PrizeServiceClient
+  // Ballots and results.
+  vote: VoteServiceClient
+  // The PLATFORM's own pages — about, privacy, terms — as opposed to
+  // PageService, which serves the pages belonging to one event. Different
+  // scope, different authority: these are global and admin-only to write.
+  sitePage: SitePageServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -80,6 +109,10 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     project: factory.create(ProjectServiceDefinition, channel),
     phase: factory.create(PhaseServiceDefinition, channel),
     track: factory.create(TrackServiceDefinition, channel),
+    config: factory.create(ConfigServiceDefinition, channel),
+    prize: factory.create(PrizeServiceDefinition, channel),
+    vote: factory.create(VoteServiceDefinition, channel),
+    sitePage: factory.create(SitePageServiceDefinition, channel),
   }
 }
 

@@ -8,6 +8,8 @@ import {
   type RequestEvent,
 } from "@sveltejs/kit"
 import { parseArgs } from "$lib/server/args"
+import { isSitePageSlug, singleSegment } from "$lib/utils/sitePageSlug"
+import { safeReturnTo } from "$lib/utils/returnTo"
 import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
@@ -28,7 +30,16 @@ let configLoader: ConfigLoader
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
-  /^\/hackathon(\/|$)/,
+  // Public EVENT pages, but not /hackathons/create — that route lives in the
+  // (app) group and needs locals.grpc. Matching it here would make it public,
+  // the group's own guard would find no client and redirect to login, and the
+  // signed-in user would be sent straight back: an infinite redirect on the one
+  // page that creates a hackathon.
+  /^\/hackathon$/,
+  /^\/hackathon\/(?!create(\/|$))/,
+  // Invitation links must open for someone who is not signed in yet — the token
+  // in the URL is the credential, and they sign in from that page.
+  /^\/invite(\/|$)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
@@ -36,7 +47,18 @@ const PUBLIC_ROUTE_PATTERNS = [
 ]
 
 export function isProtectedRoute(pathname: string): boolean {
-  return !PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))
+  if (PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))) return false
+
+  // Platform pages (SitePage records served by [slug=sitepage]) are reached
+  // from the footer by visitors who have never logged in, so any slug an admin
+  // publishes must be public — enumerating them here would mean a code change
+  // per page. `isSitePageSlug` is the same rule the param matcher uses, and it
+  // derives its reserved set from the route tree, so it cannot shadow a real
+  // route. Unknown slugs still reach the loader and 404 there.
+  const segment = singleSegment(pathname)
+  if (segment && isSitePageSlug(segment)) return false
+
+  return true
 }
 
 function redirectToLogin(url: URL, logger: Logger, reason: string) {
@@ -184,16 +206,16 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
 // If a logged-in user visits the root page (without returnTo), send them to the dashboard.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
-  const hasReturnTo = event.url.searchParams.has("returnTo")
+  // Validated, not taken at face value: `returnTo` comes from the URL, so an
+  // unchecked value is an open redirect off the site.
+  const parked = safeReturnTo(event.url.searchParams.get("returnTo"))
 
-  if (isRootPath && !hasReturnTo) {
-    if (event.locals.session?.user?.id) {
-      event.locals.logger.debug(
-        { userId: event.locals.session.user.id },
-        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
-      )
-      throw redirect(303, resolvePath("/(app)/dashboard"))
-    }
+  if (isRootPath && event.locals.session?.user?.id && parked) {
+    event.locals.logger.debug(
+      { userId: event.locals.session.user.id, target: parked },
+      "HOOKS: Logged-in user with a parked returnTo -> Redirecting.",
+    )
+    throw redirect(303, parked)
   }
 
   return resolve(event)

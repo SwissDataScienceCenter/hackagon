@@ -22,16 +22,14 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
 - [x] **Account page** — `routes/(app)/account/**`. Backs `EditProfile` and
       `DeleteAccount`, which no other screen calls. Reclassed to the tokens and
       linked from `SidebarUserFooter`, next to sign-out.
-- [ ] **Registration form** — `routes/(app)/register/[id]/**`. The dashboard
-      join action redirects here; without it, joining an event that asks
-      questions leads nowhere.
-- [ ] **Platform CMS** — `routes/(app)/manage/pages/**`,
-      `routes/(public)/[slug=sitepage]/**`, `lib/utils/sitePageSlug.ts`,
-      `params/sitepage.ts`. Also restore the reserved-slug logic in
-      `hooks.server.ts`: main's version has neither, so `/about` 404s and a
-      published page is unreachable.
-- [ ] **Invitations** — `routes/(public)/invite/[token]/**`. The only way into
-      a private event.
+- [x] **Registration form** — `routes/(app)/register/[id]/**`. Reclassed.
+- [x] **Platform CMS** — pages CMS, the `[slug=sitepage]` route, the slug
+      rules and the reserved-slug logic in `hooks.server.ts`. `/about` and
+      `/privacy` serve 200 anonymously again. The public page renders through
+      main's `MarkdownContent` (marked + DOMPurify) rather than our deleted
+      `MarkdownSection`.
+- [x] **Invitations** — `routes/(public)/invite/[token]/**`. Malformed and
+      unknown tokens both 404, indistinguishably, as before.
 
 ## High value
 
@@ -39,17 +37,16 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
       `lib/components/hackathon/HackathonCard.svelte`. Main's public surface is
       the landing page and one event page; the nav's Hackathons entry needs
       this.
-- [ ] **SEO** — `lib/components/layout/Seo.svelte` and the `publicOrigin`
-      derivation in `routes/+layout.server.ts`. No visual surface; it only
-      needs its call sites back on the public pages.
-- [ ] **List ergonomics** — `lib/components/data/**` + `lib/utils/dataView.ts`.
-      Search, filters, cards/table toggle. Main's participants and users pages
-      have a bare search box; these replace it.
+- [x] **SEO** — `Seo.svelte` and the `publicOrigin` derivation are back.
+      Still to do: re-add its call sites on the landing and event pages.
+- [x] **List ergonomics** — `lib/components/data/**` + `dataView.ts`
+      recovered and reclassed; the pages CMS uses them. Still to do: apply to
+      main's participants and users pages, which have a bare search box.
 - [ ] **Markdown sanitiser tests** — `lib/utils/markdown*.ts`. Main sanitises
       with the same libraries but ships no tests for it. Port the 23 cases even
       though their `MarkdownContent` supersedes our renderer.
-- [ ] **returnTo safety** — `lib/utils/returnTo.ts`. Main's login redirect does
-      not validate the parked path.
+- [x] **returnTo safety** — restored, and `hooks.server.ts` validates the
+      parked path again instead of trusting the query string.
 
 ## Organiser cockpit — redistribute, do not restore
 
