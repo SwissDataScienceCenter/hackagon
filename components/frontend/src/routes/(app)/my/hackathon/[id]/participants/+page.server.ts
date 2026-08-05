@@ -1,43 +1,88 @@
-import type { PageServerLoad } from "./$types"
+import type { Actions, PageServerLoad } from "./$types"
+import { membershipBadgeLabel } from "$lib/utils/hackathonStatus"
+import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
+import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
+import { requireGrpc } from "$lib/server/grpc/client"
+import { fail } from "@sveltejs/kit"
+import { ClientError, Status } from "nice-grpc-common"
 
-// The roster is already in the layout payload: `+layout.server.ts` calls
-// hackathon.get(), which embeds every member (user + casbin role +
-// is_waiting + joined_at). A second identical RPC here would buy nothing, so
-// this load only reshapes what the parent resolved — same approach as
-// ../timeline. Access was decided by the backend on that Get: a non-member
-// never reaches this page, so there is no ClientError left to translate.
 export const load: PageServerLoad = async (event) => {
-  const { hackathon, myMembership } = await event.parent()
+  // No RPC of its own: the layout's `hackathon.get` already returns every
+  // participant with their casbin role and waitlist flag.
+  const { hackathon, myMembership, isGlobalAdmin } = await event.parent()
 
-  const meId = myMembership?.user?.id
-
-  // `user` is optional on the wire; a member row without one carries no name
-  // to show, so it is dropped rather than rendered as a blank person.
-  const rows = hackathon.members.flatMap((m) =>
-    m.user
-      ? [
-          {
-            id: m.user.id,
-            name: m.user.displayName || m.user.username,
-            username: m.user.username,
-            role: m.role,
-            isWaiting: m.isWaiting,
-            joinedAt: m.joinedAt ?? null,
-            isMe: m.user.id === meId,
-          },
-        ]
-      : [],
-  )
-
-  // HackathonRole: UNSPECIFIED=0, OWNER=1, MEMBER=2. Organizers first, then
-  // alphabetical, so the order is stable between loads.
-  rows.sort((a, b) => {
-    if ((a.role === 1) !== (b.role === 1)) return a.role === 1 ? -1 : 1
-    return a.name.localeCompare(b.name)
-  })
+  // Waitlisted members are listed too, carrying a "Waitlisted" label. They are
+  // real rows in the hackathon's membership, and the label says which is which
+  // — hiding them would make the page disagree with the count in the header.
+  const participants = hackathon.members
+    .filter((m) => m.user !== undefined)
+    .map((m) => ({
+      id: m.user!.id,
+      name: m.user!.displayName || m.user!.username,
+      roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
+      isWaiting: m.isWaiting,
+      isOwner: m.role === HackathonRole.HACKATHON_ROLE_OWNER,
+    }))
 
   return {
-    confirmed: rows.filter((r) => !r.isWaiting),
-    waitlisted: rows.filter((r) => r.isWaiting),
+    participants,
+    mayManage: mayManageParticipants(myMembership ?? undefined, isGlobalAdmin),
   }
+}
+
+/** The gRPC errors both write paths can return, as SvelteKit failures. */
+function failFor(e: unknown, denied: string) {
+  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+    return fail(403, { message: denied })
+  }
+  if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+    return fail(404, { message: "That participant no longer exists" })
+  }
+  throw e
+}
+
+function userIdFrom(form: FormData): string | undefined {
+  const id = form.get("userId")
+  return typeof id === "string" && id !== "" ? id : undefined
+}
+
+export const actions: Actions = {
+  approve: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const userId = userIdFrom(await event.request.formData())
+    if (!userId) return fail(400, { message: "No participant was given" })
+
+    try {
+      await hackathon.approveParticipant({
+        hackathonId: event.params.id,
+        userId,
+      })
+    } catch (e) {
+      return failFor(
+        e,
+        "You don't have permission to approve participants here",
+      )
+    }
+
+    return {}
+  },
+
+  remove: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const userId = userIdFrom(await event.request.formData())
+    if (!userId) return fail(400, { message: "No participant was given" })
+
+    try {
+      await hackathon.removeParticipant({
+        hackathonId: event.params.id,
+        userId,
+      })
+    } catch (e) {
+      return failFor(e, "You don't have permission to remove participants here")
+    }
+
+    return {}
+  },
 }

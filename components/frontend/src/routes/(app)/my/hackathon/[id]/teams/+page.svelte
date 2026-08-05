@@ -1,164 +1,116 @@
 <script lang="ts">
-    import { enhance } from '$app/forms';
-    import type { SubmitFunction } from '@sveltejs/kit';
+    import { Search } from 'lucide-svelte';
+    import TeamCard from '$lib/components/hackathon/TeamCard.svelte';
+    import type { PageData } from './$types';
 
-    const { data, form } = $props();
+    let { data }: { data: PageData } = $props();
 
-    let creatingTeam = $state(false);
-    let editingTeam = $state<string | null>(null);
+    let search = $state('');
 
-    // The add-member select is driven by local state, which a reset would not
-    // restore.
-    const keepValues: SubmitFunction = () => async ({ update }) => update({ reset: false });
+    const filtered = $derived(
+        data.teams.filter(
+            (t) =>
+                search.trim() === '' ||
+                `${t.num} ${t.title} ${t.projectDescription}`
+                    .toLowerCase()
+                    .includes(search.trim().toLowerCase())
+        )
+    );
+
+    const countLabel = $derived(
+        filtered.length === 1 ? '1 team' : `${filtered.length} teams`
+    );
+
+    const pageSize = 8;
+    let page = $state(1);
+
+    const pageCount = $derived(Math.max(1, Math.ceil(filtered.length / pageSize)));
+    const pagedTeams = $derived(
+        filtered.slice((page - 1) * pageSize, page * pageSize)
+    );
+
+    $effect(() => {
+        void search;
+        page = 1;
+    });
+
+    $effect(() => {
+        if (page > pageCount) page = pageCount;
+    });
 </script>
 
-<div class="flex flex-col gap-6 p-4 sm:p-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h1 class="text-2xl font-bold">Teams</h1>
-            {#if data.isOrganizer}
-                <p class="text-sm text-surface-500">
-                    A team hangs off an approved project. Adding someone here is what gives
-                    them a seat — and the permissions that come with it.
-                </p>
-            {/if}
+<!--
+  Aligned with participants/projects: same shell; title + count left; search right.
+
+  No Manage Teams control here: it is an organiser action and lives in the
+  sidebar's Manage section (see $lib/navigation's manageNav), which is the one
+  place an owner's extra capabilities are collected. Nor a Create Team one —
+  teams are formed on the manage page, by assigning people to a project.
+-->
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 flex-col gap-1">
+            <h2 class="m-0 text-title text-ink">Teams</h2>
+            <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
-        {#if data.isOrganizer}
-            <button class="btn btn-sm preset-filled-primary-500"
-                    onclick={() => (creatingTeam = !creatingTeam)}>
-                {creatingTeam ? 'Cancel' : 'New team'}
-            </button>
+        <div
+            class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
+                   sm:justify-end"
+        >
+            <div class="relative w-full sm:w-72">
+                <Search
+                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
+                           -translate-y-1/2 text-ink-3"
+                    aria-hidden="true"
+                />
+                <input
+                    type="search"
+                    bind:value={search}
+                    placeholder="Search teams by name, project…"
+                    class="field pl-9 pr-3"
+                />
+            </div>
+        </div>
+    </div>
+
+    <div class="flex w-full flex-col items-stretch gap-3 self-start">
+        {#if data.teams.length === 0}
+            <p class="m-0 py-6 text-center text-sm text-ink-3">
+                No teams have been formed yet.
+            </p>
+        {:else if filtered.length === 0}
+            <p class="m-0 py-6 text-center text-sm text-ink-3">
+                No teams match your search.
+            </p>
+        {:else}
+            {#each pagedTeams as team (team.id)}
+                <TeamCard
+                    num={team.num}
+                    title={team.title}
+                    projectDescription={team.projectDescription}
+                    imageUrl={team.imageUrl}
+                    members={team.members}
+                    isOwn={team.isOwn}
+                    moreInfoHref="#team-{team.id}"
+                />
+            {/each}
         {/if}
     </div>
 
-    {#if form?.message}
-        <p class="text-sm text-error-500">{form.message}</p>
-    {/if}
-
-    {#if creatingTeam}
-        {#if data.projects.length === 0}
-            <p class="card preset-outlined-warning-500 p-4 text-sm">
-                No project has been approved yet, so there is nothing to build a team on.
-            </p>
-        {:else}
-            <form method="POST" action="?/createTeam"
-                  use:enhance={() => async ({ update }) => { await update(); creatingTeam = false; }}
-                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
-                <label>
-                    <span class="text-sm">Project</span>
-                    <select name="projectId" class="select" required>
-                        {#each data.projects as p (p.id)}
-                            <option value={p.id}>{p.title}</option>
-                        {/each}
-                    </select>
-                </label>
-                <label>
-                    <span class="text-sm">Name</span>
-                    <input name="name" class="input" required />
-                </label>
-                <label>
-                    <span class="text-sm">Description</span>
-                    <textarea name="description" class="textarea" rows="3"></textarea>
-                </label>
-                <div><button class="btn btn-sm preset-filled-primary-500">Create team</button></div>
-            </form>
-        {/if}
-    {/if}
-
-    {#if data.teams.length === 0}
-        <p class="text-surface-500">No teams yet.</p>
-    {:else}
-        <div class="flex flex-col gap-4">
-            {#each data.teams as team (team.id)}
-                <!-- Adding someone twice writes a duplicate join row, so they
-                     are not offered again for this team. -->
-                {@const seated = new Set(team.members.map((m) => m.id))}
-                {@const addable = data.participants.filter((p) => !seated.has(p.id))}
-                <div class="card preset-outlined-surface-200-800 p-4">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <h2 class="text-lg font-semibold">{team.name}</h2>
-                            {#if team.projectTitle}
-                                <p class="text-sm text-surface-500">Project: {team.projectTitle}</p>
-                            {/if}
-                        </div>
-                        {#if data.isOrganizer}
-                            <div class="flex shrink-0 flex-wrap gap-2">
-                                <button class="btn btn-sm preset-tonal-primary"
-                                        onclick={() => (editingTeam = editingTeam === team.id ? null : team.id)}>
-                                    {editingTeam === team.id ? 'Close' : 'Edit'}
-                                </button>
-                                <form method="POST" action="?/deleteTeam" use:enhance>
-                                    <input type="hidden" name="teamId" value={team.id} />
-                                    <button class="btn btn-sm preset-tonal-error">Delete</button>
-                                </form>
-                            </div>
-                        {/if}
-                    </div>
-
-                    {#if team.description}
-                        <p class="mt-2 text-sm">{team.description}</p>
-                    {/if}
-
-                    <ul class="mt-3 flex flex-wrap gap-2">
-                        {#each team.members as member (member.id)}
-                            <li class="badge preset-tonal flex items-center gap-2 text-sm">
-                                <!-- The name is its own element so it stays
-                                     exactly-matchable: the organizer's remove
-                                     button lives in this badge too, and would
-                                     otherwise be part of the same text node. -->
-                                <span>{member.name}</span>
-                                {#if data.isOrganizer}
-                                    <form method="POST" action="?/removeUser" use:enhance>
-                                        <input type="hidden" name="teamId" value={team.id} />
-                                        <input type="hidden" name="userId" value={member.id} />
-                                        <button class="text-error-500" aria-label="Remove {member.name}">
-                                            ×
-                                        </button>
-                                    </form>
-                                {/if}
-                            </li>
-                        {:else}
-                            <li class="text-sm text-surface-500">Nobody on this team yet.</li>
-                        {/each}
-                    </ul>
-
-                    {#if data.isOrganizer && addable.length > 0}
-                        <form method="POST" action="?/assignUser" use:enhance={keepValues}
-                              class="mt-4 flex flex-wrap items-end gap-2 border-t border-surface-200-800 pt-4">
-                            <input type="hidden" name="teamId" value={team.id} />
-                            <label class="min-w-40 flex-1">
-                                <span class="text-sm">Add a participant</span>
-                                <select name="userId" class="select" required>
-                                    <option value="">Pick someone</option>
-                                    {#each addable as p (p.id)}
-                                        <option value={p.id}>{p.name}</option>
-                                    {/each}
-                                </select>
-                            </label>
-                            <button class="btn btn-sm preset-tonal-primary">Add to team</button>
-                        </form>
-                    {/if}
-
-                    {#if editingTeam === team.id}
-                        <form method="POST" action="?/editTeam"
-                              use:enhance={() => async ({ update }) => { await update(); editingTeam = null; }}
-                              class="mt-4 flex flex-col gap-3 border-t border-surface-200-800 pt-4">
-                            <input type="hidden" name="teamId" value={team.id} />
-                            <label>
-                                <span class="text-sm">Name</span>
-                                <input name="name" class="input" value={team.name} required />
-                            </label>
-                            <label>
-                                <span class="text-sm">Description</span>
-                                <textarea name="description" class="textarea" rows="3"
-                                          >{team.description}</textarea>
-                            </label>
-                            <div><button class="btn btn-sm preset-filled-primary-500">Save team</button></div>
-                        </form>
-                    {/if}
-                </div>
+    {#if pageCount > 1}
+        <nav class="flex w-full justify-center gap-1" aria-label="Pagination">
+            {#each Array.from({ length: pageCount }, (_, i) => i + 1) as p (p)}
+                <button
+                    type="button"
+                    onclick={() => (page = p)}
+                    class="btn btn-sm tnum h-8 w-8 p-0
+                           {page === p ? 'btn-accent' : 'btn-quiet'}"
+                    aria-label="Page {p}"
+                    aria-current={page === p ? 'page' : undefined}
+                >
+                    {p}
+                </button>
             {/each}
-        </div>
+        </nav>
     {/if}
 </div>

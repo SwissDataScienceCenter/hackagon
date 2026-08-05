@@ -138,10 +138,3 @@ export class ConfigLoader {
     return validation.data
   }
 }
-
-/**
- * Process-wide loader. hooks.server.ts loads it (on `init` and defensively on
- * every request); server-only modules that need config outside of a request
- * scope — e.g. the gRPC channel address — read it lazily from here.
- */
-export const sharedConfigLoader = new ConfigLoader()

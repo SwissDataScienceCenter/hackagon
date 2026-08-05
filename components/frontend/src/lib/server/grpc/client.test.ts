@@ -1,13 +1,6 @@
-import { describe, it, expect, beforeAll } from "vitest"
+import { describe, it, expect } from "vitest"
 import { createAuthorizedGrpc, requireGrpc } from "./client"
 import type { AuthorizedGrpc } from "./client"
-import { sharedConfigLoader } from "$lib/server/settings"
-
-// The channel address is read from config (backend.hostname/port), so the
-// clients cannot be built before it is loaded — same as on the server.
-beforeAll(() => {
-  sharedConfigLoader.load(process.env.TEST_CONFIG_DIR)
-})
 
 describe("requireGrpc", () => {
   it("should return the object when defined", () => {
@@ -28,5 +21,23 @@ describe("createAuthorizedGrpc", () => {
     expect(result).toHaveProperty("health")
     expect(typeof result.user.list).toBe("function")
     expect(typeof result.health.check).toBe("function")
+  })
+
+  it("should return hackathon, team and page clients", () => {
+    const result = createAuthorizedGrpc("test-token-123")
+
+    expect(typeof result.hackathon.get).toBe("function")
+    expect(typeof result.team.list).toBe("function")
+    expect(typeof result.team.listSubmissions).toBe("function")
+    expect(typeof result.page.list).toBe("function")
+    expect(typeof result.page.get).toBe("function")
+  })
+
+  // Reads still come from `hackathon.get`; this client exists for the writes.
+  it("should return a project client with the write path on it", () => {
+    const result = createAuthorizedGrpc("test-token-123")
+
+    expect(typeof result.project.propose).toBe("function")
+    expect(typeof result.project.edit).toBe("function")
   })
 })

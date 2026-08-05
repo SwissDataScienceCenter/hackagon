@@ -1,103 +1,118 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
-    import HackathonSidebar from '$lib/components/hackathon/HackathonSidebar.svelte';
+    import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
+
+    const projectCountLabel = $derived(
+        data.approvedCount === 1 ? '1 project' : `${data.approvedCount} projects`
+    );
+
+    // Two tones alternating, which is what the track boxes have always looked
+    // like — except the count of tracks is now whatever the hackathon defines
+    // rather than the two the placeholder hardcoded.
+    function trackTone(i: number): { box: string; text: string } {
+        return i % 2 === 0
+            ? { box: 'bg-accent/10', text: 'text-accent-ink' }
+            : { box: 'bg-info/10', text: 'text-info-ink' };
+    }
 </script>
 
-<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20 lg:flex-row lg:items-start">
-    <div class="flex flex-1 flex-col gap-6">
+<!--
+  One centred column, capped narrower than the full-width list pages: this page is
+  cards and prose rather than a table of rows, and an About paragraph spanning the
+  whole of a wide viewport is unreadable.
+-->
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8 sm:px-10">
+    {#if data.myTeam}
         <ParticipationCard
-            teamName="Bishorn"
-            teamRole="Member"
-            teamMemberCount={3}
-            projectName="SoDeDo: Replicated Dataset for ML"
-            projectTrack="Data Science"
-            projectStatus="Proposal submitted"
-            nextAction="Set Preferences"
-            nextActionHref="#preferences"
-            deadline="Closes in 12 days"
+            membershipLabel={data.membershipLabel}
+            membershipIsWaiting={data.membershipIsWaiting}
+            teamName={data.myTeam.name}
+            teamRole={data.myTeam.role}
+            teamMemberCount={data.myTeam.memberCount}
+            projectName={data.myTeam.projectName}
+            projectTrack={data.myTeam.projectTrack}
+            projectStatus={data.myTeam.projectStatus}
         />
+    {:else}
+        <div class="card p-5">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-section">Your Participation</h2>
+                <span class="badge {membershipBadgeVariant(data.membershipIsWaiting)}">
+                    {data.membershipLabel}
+                </span>
+            </div>
+            <p class="text-sm text-ink-2">
+                You are not on a team yet.
+            </p>
+        </div>
+    {/if}
 
-        <!-- The registration form had no link anywhere in the UI: you could
-             only reach it by knowing the URL, so answers were effectively
-             write-once even after the backend allowed editing them. -->
-        {#if data.hackathon.registrationForm}
-            <div class="card preset-outlined-surface-200-800 flex flex-wrap items-center justify-between gap-3 p-5">
-                <div>
-                    <h2 class="text-base font-bold">Your registration answers</h2>
-                    <p class="mt-1 text-sm text-surface-500">
-                        Affiliation, skills, dietary needs and consents. You can change these
-                        while the event runs.
-                    </p>
-                </div>
-                <a
-                    href="/register/{data.hackathon.id}"
-                    class="btn btn-sm preset-tonal-surface no-underline"
-                >
-                    View or edit
-                </a>
+    <div class="card p-5">
+        <h2 class="mb-3 text-section">About</h2>
+        {#if data.hackathon.description}
+            <p class="text-sm leading-relaxed text-ink-2">{data.hackathon.description}</p>
+        {:else}
+            <p class="text-sm text-ink-3">No description provided.</p>
+        {/if}
+    </div>
+
+    <div class="card p-5">
+        <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-section">Projects</h2>
+            <span class="text-xs text-ink-3">{projectCountLabel}</span>
+        </div>
+
+        {#if data.trackCounts.length > 0}
+            <div class="mb-4 flex flex-wrap gap-3">
+                {#each data.trackCounts as track, i (track.id)}
+                    {@const tone = trackTone(i)}
+                    <div
+                        class="flex min-w-[8rem] flex-1 flex-col gap-1 rounded-card p-3 {tone.box}"
+                    >
+                        <span class="meta {tone.text}">{track.name}</span>
+                        <span class="tnum text-xs text-ink-3">
+                            {track.count === 1 ? '1 project' : `${track.count} projects`}
+                        </span>
+                    </div>
+                {/each}
             </div>
         {/if}
 
-        <div class="card preset-outlined-surface-200-800 p-5">
-            <h2 class="mb-3 text-base font-bold">About</h2>
-            {#if data.hackathon.description}
-                <p class="text-sm leading-relaxed text-surface-700-300">{data.hackathon.description}</p>
-            {:else}
-                <p class="text-sm text-surface-500">No description provided.</p>
-            {/if}
-        </div>
-
-        <div class="card preset-outlined-surface-200-800 p-5">
-            <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-base font-bold">Project Proposals</h2>
-                <span class="text-xs text-surface-500">16 proposals</span>
-            </div>
-
-            <div class="mb-4 flex gap-3">
-                <div class="flex flex-1 flex-col gap-1 bg-primary-500/5 p-3 dark:bg-primary-950">
-                    <span class="text-xs font-bold text-primary-700-300">DATA SCIENCE</span>
-                    <span class="text-xs text-surface-500">9 proposals</span>
-                </div>
-                <div class="flex flex-1 flex-col gap-1 bg-secondary-500/5 p-3 dark:bg-secondary-950">
-                    <span class="text-xs font-bold text-secondary-700-300">RESEARCH DATA INFRA</span>
-                    <span class="text-xs text-surface-500">7 proposals</span>
-                </div>
-            </div>
-
-            {#each [
-                { num: 16, title: 'Embedding of Pharmacokinetic Equations', desc: 'In pharma and biotech, ODEs often follow repetitive patterns...' },
-                { num: 15, title: 'Automatic extraction of data from literature', desc: 'Have you ever been frustrated by having to copy data...' },
-            ] as proposal (proposal.num)}
-                <div class="flex items-center gap-3 border-t border-surface-200-800 py-3">
-                    <div class="h-12 w-12 shrink-0 bg-surface-100-900"></div>
-                    <div class="flex flex-1 flex-col gap-0.5">
-                        <span class="text-xs font-semibold">{proposal.num}. {proposal.title}</span>
-                        <span class="text-xs text-surface-500">{proposal.desc}</span>
+        {#if data.previewProjects.length === 0}
+            <p class="m-0 py-3 text-sm text-ink-3">
+                No projects have been approved yet.
+            </p>
+        {:else}
+            <!--
+              No per-row "More Info" button: there is no project detail route to
+              send anyone to, and a row that only looks clickable is worse than a
+              row that plainly is not. The link below reaches the real list.
+            -->
+            {#each data.previewProjects as project (project.id)}
+                <div class="flex items-start gap-3 border-t border-line py-3">
+                    <div class="h-12 w-12 shrink-0 bg-raised"></div>
+                    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span class="text-xs font-semibold">{project.num}. {project.title}</span>
+                        <span class="truncate text-xs text-ink-3">{project.description}</span>
+                        {#if project.creator}
+                            <span class="text-xs text-ink-3">Proposed by {project.creator}</span>
+                        {/if}
                     </div>
-                    <a href="#" class="btn btn-sm preset-tonal-surface no-underline">More Info</a>
                 </div>
             {/each}
 
+            <!-- resolve() called inline: svelte/no-navigation-without-resolve
+                 only recognizes it at the href, not via a $derived. -->
             <a
-                href="#proposals"
-                class="mt-2 block text-center text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+                href={resolve(`/my/hackathon/${data.hackathon.id}/projects`)}
+                class="mt-2 block text-center text-xs font-semibold text-accent-ink no-underline hover:underline"
             >
-                View all 16 proposals →
+                View all {projectCountLabel} →
             </a>
-        </div>
+        {/if}
     </div>
-
-    <HackathonSidebar
-        primaryAction="Set Preferences"
-        primaryActionHref="#preferences"
-        secondaryAction="Propose a Project"
-        secondaryActionHref="#propose"
-        deadline="Proposals close in 12 days"
-        teamName="Bishorn"
-        teamMemberCount={3}
-        isAdmin={false}
-    />
 </div>

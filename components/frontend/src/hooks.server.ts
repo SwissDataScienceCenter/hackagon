@@ -1,3 +1,4 @@
+import { resolve as resolvePath } from "$app/paths"
 import { sequence } from "@sveltejs/kit/hooks"
 import {
   error,
@@ -7,14 +8,12 @@ import {
   type RequestEvent,
 } from "@sveltejs/kit"
 import { parseArgs } from "$lib/server/args"
-import { isSitePageSlug, singleSegment } from "$lib/utils/sitePageSlug"
 import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
-import { ConfigLoader, sharedConfigLoader } from "$lib/server/settings"
+import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
 import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
 import { ClientError, Status } from "nice-grpc-common"
-import { safeReturnTo } from "$lib/utils/returnTo"
 import type { CustomSession } from "./auth.d"
 
 // Global config state for the application.
@@ -29,16 +28,7 @@ let configLoader: ConfigLoader
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
-  // Public EVENT pages, but not /hackathon/create — that route lives in the
-  // (app) group and needs locals.grpc. Matching it here made it public, so the
-  // group's own guard found no grpc and redirected to login, which sent the
-  // signed-in user straight back: an infinite redirect loop on the one page
-  // that creates a hackathon.
-  /^\/hackathon$/,
-  /^\/hackathon\/(?!create(\/|$))/,
-  // Invitation links must open for someone who is not signed in yet — the
-  // token in the URL is the credential, and they sign in from that page.
-  /^\/invite(\/|$)/,
+  /^\/hackathon(\/|$)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
@@ -46,18 +36,7 @@ const PUBLIC_ROUTE_PATTERNS = [
 ]
 
 export function isProtectedRoute(pathname: string): boolean {
-  if (PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))) return false
-
-  // Platform pages (SitePage records served by [slug=sitepage]) are reached
-  // from the footer by visitors who have never logged in, so any slug an admin
-  // publishes must be public — enumerating them here would mean a code change
-  // per page. `isSitePageSlug` is the same rule the param matcher uses, and it
-  // excludes every segment a real route owns, so this cannot expose an app
-  // route. Unknown slugs still reach the loader and 404 there.
-  const segment = singleSegment(pathname)
-  if (segment && isSitePageSlug(segment)) return false
-
-  return true
+  return !PUBLIC_ROUTE_PATTERNS.some((p) => p.test(pathname))
 }
 
 function redirectToLogin(url: URL, logger: Logger, reason: string) {
@@ -73,9 +52,7 @@ function hasLoggedInUserContext(
 }
 
 function setupConfigAndLogger(): ConfigLoader {
-  // Shared instance: server-only modules outside the request scope (the gRPC
-  // channel) read the backend address from the very same config.
-  const loader = sharedConfigLoader
+  const loader = new ConfigLoader()
 
   try {
     const opts = parseArgs()
@@ -153,13 +130,6 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
     event.locals.session = clientSession
   }
 
-  // Can this session still authenticate a backend call? redirectHandle consumes
-  // it: sending a user whose token is broken back to the page they came from
-  // would ping-pong against the guard below.
-  event.locals.sessionUsable = Boolean(
-    session?.user?.id && session.accessToken && !session.error,
-  )
-
   if (isProtectedRoute(event.url.pathname)) {
     if (!hasLoggedInUserContext(session)) {
       redirectToLogin(event.url, event.locals.logger, "No user found")
@@ -211,28 +181,19 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// "/" is two things: the landing page, and the place a guard parks someone who
-// needs to log in first. This forwards the SECOND case only — a session that
-// arrives with a `returnTo` is finishing an interrupted journey and belongs at
-// the deep link, not on the marketing page.
-//
-// A signed-in visitor who simply navigates to "/" is left there. They used to
-// be bounced to the dashboard, which made the landing page unreachable once
-// you had an account: clicking the logo, or typing the bare domain, snapped
-// straight back and there was no way to see the public site at all.
-//
-// Sessions that can no longer authenticate are left here too, so they can log
-// in again instead of ping-ponging against the guard in sessionSetupHandle.
+// If a logged-in user visits the root page (without returnTo), send them to the dashboard.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
-  const parked = safeReturnTo(event.url.searchParams.get("returnTo"))
+  const hasReturnTo = event.url.searchParams.has("returnTo")
 
-  if (isRootPath && event.locals.sessionUsable && parked) {
-    event.locals.logger.debug(
-      { userId: event.locals.session?.user?.id, target: parked },
-      "HOOKS: Logged-in user with a parked returnTo -> Redirecting.",
-    )
-    throw redirect(303, parked)
+  if (isRootPath && !hasReturnTo) {
+    if (event.locals.session?.user?.id) {
+      event.locals.logger.debug(
+        { userId: event.locals.session.user.id },
+        "HOOKS: Logged-in user on login page -> Redirecting to dashboard.",
+      )
+      throw redirect(303, resolvePath("/(app)/dashboard"))
+    }
   }
 
   return resolve(event)
@@ -244,7 +205,7 @@ export const handle = sequence(
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
   sessionSetupHandle, // Sanitize session + guard protected routes + setup gRPC clients
-  redirectHandle, // Logged-in users on / -> returnTo deep link, else /dashboard
+  redirectHandle, // Logged-in users on / -> /dashboard (unless returnTo is present)
 )
 
 // ----------------------------------------------------------
@@ -257,7 +218,7 @@ export const init = async () => {
   logger.info({ env: import.meta.env }, "Node environment.")
 
   try {
-    const health = await healthClient().check({})
+    const health = await healthClient.check({})
     logger.info({ health }, "Backend health check passed.")
   } catch (err) {
     logger.error({ err }, "Backend health check failed on startup.")

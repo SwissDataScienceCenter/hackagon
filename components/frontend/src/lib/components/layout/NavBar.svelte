@@ -1,224 +1,233 @@
 <script lang="ts">
     import { signIn, signOut } from '@auth/sveltekit/client';
     import { page } from '$app/stores';
+    import { afterNavigate } from '$app/navigation';
+    import { resolve } from '$app/paths';
+    import Menu from 'lucide-svelte/icons/menu';
+    import X from 'lucide-svelte/icons/x';
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
-    import { safeReturnTo } from '$lib/utils/returnTo';
 
+    // The header carries identity, theme and sign-out — no administration entry.
+    // That moved to the dashboard's Manage platform section, which is the single
+    // place the platform pages are offered from. The trade is deliberate: from
+    // inside a hackathon an admin now returns to the dashboard first, via the
+    // wordmark, rather than jumping straight there from the header — on a phone
+    // as much as on a desktop, since the mobile panel drops the entry too.
     let {
         session,
-        isAdmin = false,
-        canCreateHackathon = false,
+        showPublicLinks = true,
     }: {
         session: Omit<Session, 'accessToken'> | null;
-        /** Backend-derived (casbin g2 via WhoAmI); every page still enforces. */
-        isAdmin?: boolean;
-        canCreateHackathon?: boolean;
+        /**
+         * Marketing links (Challenges, About). Off inside the app shell, where the
+         * header is chrome for a signed-in workspace rather than a landing page.
+         */
+        showPublicLinks?: boolean;
     } = $props();
 
-    let menuEl: HTMLDetailsElement | undefined = $state();
-    let menuOpen = $state(false);
-    let lastPath = $page.url.pathname;
+    let mobileOpen = $state(false);
 
-    // menuOpen MIRRORS the <details>, it never drives it. The menu is native,
-    // so it can already be open by the time this component hydrates; a
-    // two-way `bind:open` would then slam it shut, because Svelte would apply
-    // its own (false) idea of the state to the DOM. Symptom: you click the
-    // avatar on a fresh page load, the menu appears, and vanishes again.
-    const syncOpen = () => (menuOpen = menuEl?.open ?? false);
+    const userName = $derived(session?.user?.name ?? 'User');
+    const initial = $derived(userName.charAt(0).toUpperCase());
 
-    function closeMenu() {
-        if (menuEl) menuEl.open = false;
-        menuOpen = false;
-    }
-
-    // Adopt whatever the browser did before hydration.
-    $effect(() => {
-        syncOpen();
-    });
-
-    // Close on route change: the menu is not part of the page it navigated to.
-    // Guarded on an ACTUAL change — this effect also runs once on hydration,
-    // and closing there would kill a menu the user had just opened.
-    $effect(() => {
-        const path = $page.url.pathname;
-        if (path === lastPath) return;
-        lastPath = path;
-        closeMenu();
-    });
-
-    /** Is this entry the page we are already on? */
-    const isCurrent = (href: string) => $page.url.pathname === href;
-
-    /**
-     * Deep link the guards parked in `returnTo`, else back to the current page.
-     *
-     * Signing in FROM the landing page goes to the dashboard instead of back to
-     * "/": the landing page is what you were reading before you had an account,
-     * not where you want to be once you do.
-     */
-    const loginCallbackUrl = $derived(
-        safeReturnTo($page.url.searchParams.get('returnTo')) ??
-            ($page.url.pathname === '/' ? '/dashboard' : $page.url.pathname),
+    // The accent marks where you are rather than decorating the monogram, so the
+    // header spends no accent and leaves the page's one primary action to own it.
+    const onHackathons = $derived(
+        $page.url.pathname === '/' || $page.url.pathname.startsWith('/dashboard')
     );
+
+    // The row vocabulary is SidebarNavSection's, so the two navigations read as
+    // one system rather than drifting into separate dialects of the same idea.
+    const ROW =
+        'flex h-10 items-center rounded-control px-2 text-sm no-underline transition-colors';
+    const ROW_ACTIVE = 'bg-raised font-medium text-accent-ink';
+    const ROW_IDLE = 'text-ink-3 hover:text-ink-2';
+
+    // Any navigation closes the panel. It sits in the header's own flow rather
+    // than over the page, so leaving it open would push the destination down
+    // instead of merely covering it.
+    afterNavigate(() => {
+        mobileOpen = false;
+    });
 </script>
 
-<header
-    class="sticky top-0 z-50 flex h-14 items-center justify-between border-b
-           border-surface-200-800 bg-surface-50-950 px-4 sm:px-10 md:px-20"
->
-    <!-- The logo goes to the public site for everyone, signed in or not — the
-         convention every site follows, and previously the one thing a member
-         could not do: it pointed at the dashboard, so there was no way back to
-         the landing page. The dashboard has its own link, next to it. -->
-    <a href="/" class="flex items-center gap-3 no-underline">
-        <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
-        <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-        <span class="text-base font-bold">Hackathons</span>
-    </a>
-
-    <!-- The platform's top-level destinations. The logo is the instance
-         itself; these are its pages. Challenges and Showcase join them later,
-         which is why this is a list rather than three hand-written anchors. -->
-    <nav class="hidden items-center gap-6 md:flex">
-        {#each [
-            { href: '/', label: 'Home' },
-            { href: '/hackathon', label: 'Hackathons' },
-            { href: '/about', label: 'About' }
-        ] as item (item.href)}
-            <a
-                href={item.href}
-                aria-current={$page.url.pathname === item.href ? 'page' : undefined}
-                class="text-sm no-underline hover:text-primary-500
-                       aria-[current]:font-semibold aria-[current]:text-primary-500
-                       {$page.url.pathname === item.href ? '' : 'text-surface-400'}"
-            >
-                {item.label}
-            </a>
-        {/each}
-    </nav>
-
-    <div class="flex items-center gap-3">
-        
-
-        <LightSwitch />
-
+<header class="sticky top-0 z-50 flex flex-col border-b border-line bg-surface">
+    <!-- Chrome hugs the viewport instead of matching the page shell's
+         sm:px-10 md:px-20 inset. At md that inset is 5.6rem, which left the
+         wordmark adrift mid-bar rather than anchored to the edge it belongs to. -->
+    <div class="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+        <!-- The two branches differ only in destination, but each has to spell out its
+             own resolve() call: svelte/no-navigation-without-resolve only recognizes a
+             literal one in the attribute, not a derived value. -->
         {#if session?.user}
-            <!-- <details> rather than a button + {#if}: a native disclosure
-                 opens on the very first click, before any JavaScript has
-                 loaded. The hand-rolled version silently swallowed that click
-                 during hydration — on a fresh page load you clicked the avatar
-                 and nothing happened, which is exactly what people reported. -->
-            <details class="relative" bind:this={menuEl} ontoggle={syncOpen}>
-                <!-- No aria-label: it would REPLACE the visible initial as the
-                     accessible name, and the initial is how a signed-in user
-                     (and the e2e suite) identifies whose session this is.
-                     aria-haspopup carries the menu semantics; <details> itself
-                     maintains aria-expanded. -->
-                <!-- svelte-ignore a11y_no_redundant_roles -->
-                <!-- The linter calls role="button" redundant on <summary>, but
-                     the mapping is not universal: dropping it made every
-                     getByRole('button', {name: initial}) stop matching and
-                     took all four auth setups down with it. Stated explicitly
-                     so the control's role does not depend on the engine. -->
-                <summary
-                    role="button"
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                    title="Account menu"
-                    class="btn-icon btn-sm preset-filled-primary-500 grid list-none cursor-pointer
-                           place-items-center rounded-full text-sm font-bold
-                           [&::-webkit-details-marker]:hidden [&::marker]:content-none"
-                >
-                    {session.user.name?.charAt(0).toUpperCase() ?? 'U'}
-                </summary>
-
-                <!-- Click-away layer: a plain button so Escape and focus
-                     behaviour stay native, and screen readers do not see a
-                     phantom control. Progressive enhancement — without JS the
-                     menu still closes by clicking the summary again. -->
-                <button
-                    class="fixed inset-0 z-40 cursor-default"
-                    aria-label="Close account menu"
-                    onclick={closeMenu}
-                ></button>
-
-                <div
-                    role="menu"
-                    class="card preset-outlined-surface-200-800 bg-surface-50-950 absolute right-0
-                           z-50 mt-2 flex w-56 flex-col py-1 shadow-xl"
-                >
-                    <div class="border-b border-surface-200-800 px-4 py-2">
-                        <p class="truncate text-sm font-semibold">{session.user.name}</p>
-                        {#if session.user.email}
-                            <p class="truncate text-xs text-surface-500">{session.user.email}</p>
-                        {/if}
-                    </div>
-
-                    <!-- aria-current + the dot mark the page you are already
-                         on. Without it, clicking "My hackathons" from the
-                         dashboard looks like a dead link: it navigates
-                         correctly, to exactly where you already are. -->
-                    {#each [
-                        { href: '/dashboard', label: 'My hackathons', show: true },
-                        { href: '/account', label: 'Your account', show: true },
-                        { href: '/hackathon/create', label: 'Create a hackathon', show: canCreateHackathon }
-                    ] as entry (entry.href)}
-                        {#if entry.show}
-                            <a
-                                href={entry.href}
-                                role="menuitem"
-                                aria-current={isCurrent(entry.href) ? 'page' : undefined}
-                                class="flex items-center justify-between gap-2 px-4 py-2 text-sm no-underline
-                                       hover:bg-surface-100-900 aria-[current]:font-semibold"
-                            >
-                                {entry.label}
-                                {#if isCurrent(entry.href)}
-                                    <span class="size-1.5 rounded-full bg-primary-500" aria-hidden="true"></span>
-                                {/if}
-                            </a>
-                        {/if}
-                    {/each}
-
-                    {#if isAdmin}
-                        <div class="mt-1 border-t border-surface-200-800 px-4 pt-2 pb-1">
-                            <span class="text-xs font-bold tracking-widest text-surface-500">PLATFORM</span>
-                        </div>
-                        {#each [
-                            { href: '/manage/pages', label: 'Pages (About, Privacy…)' },
-                            { href: '/manage/users', label: 'Users' }
-                        ] as entry (entry.href)}
-                            <a
-                                href={entry.href}
-                                role="menuitem"
-                                aria-current={isCurrent(entry.href) ? 'page' : undefined}
-                                class="flex items-center justify-between gap-2 px-4 py-2 text-sm no-underline
-                                       hover:bg-surface-100-900 aria-[current]:font-semibold"
-                            >
-                                {entry.label}
-                                {#if isCurrent(entry.href)}
-                                    <span class="size-1.5 rounded-full bg-primary-500" aria-hidden="true"></span>
-                                {/if}
-                            </a>
-                        {/each}
-                    {/if}
-
-                    <button
-                        role="menuitem"
-                        onclick={() => signOut({ callbackUrl: '/' })}
-                        class="mt-1 border-t border-surface-200-800 px-4 py-2 text-left text-sm hover:bg-surface-100-900"
-                    >
-                        Sign out
-                    </button>
-                </div>
-            </details>
-        {:else}
-            <button
-                onclick={() => signIn('keycloak', { callbackUrl: loginCallbackUrl })}
-                class="btn btn-sm preset-filled-primary-500"
+            <a
+                href={resolve('/(app)/dashboard')}
+                class="flex min-w-0 items-center gap-2 no-underline sm:gap-3"
             >
-                Log in
-            </button>
+                <img
+                    src="/logos/sdsc_white.svg"
+                    alt="SDSC"
+                    class="hidden h-6 shrink-0 dark:block sm:h-7"
+                />
+                <img
+                    src="/logos/sdsc.svg"
+                    alt="SDSC"
+                    class="block h-6 shrink-0 dark:hidden sm:h-7"
+                />
+                <span class="truncate text-section">Hackathons</span>
+            </a>
+        {:else}
+            <a href={resolve('/')} class="flex min-w-0 items-center gap-2 no-underline sm:gap-3">
+                <img
+                    src="/logos/sdsc_white.svg"
+                    alt="SDSC"
+                    class="hidden h-6 shrink-0 dark:block sm:h-7"
+                />
+                <img
+                    src="/logos/sdsc.svg"
+                    alt="SDSC"
+                    class="block h-6 shrink-0 dark:hidden sm:h-7"
+                />
+                <span class="truncate text-section">Hackathons</span>
+            </a>
         {/if}
+
+        <nav class="hidden items-center gap-6 md:flex">
+            {#if session?.user}
+                <a
+                    href={resolve('/(app)/dashboard')}
+                    aria-current={onHackathons ? 'page' : undefined}
+                    class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                       {onHackathons
+                        ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                        : 'text-ink-2'}"
+                >
+                    Hackathons
+                </a>
+            {:else}
+                <a
+                    href={resolve('/')}
+                    aria-current={onHackathons ? 'page' : undefined}
+                    class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                       {onHackathons
+                        ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                        : 'text-ink-2'}"
+                >
+                    Hackathons
+                </a>
+            {/if}
+            {#if showPublicLinks}
+                <a
+                    href={resolve('/')}
+                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
+                >
+                    Challenges
+                </a>
+                <a
+                    href={resolve('/')}
+                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
+                >
+                    About
+                </a>
+            {/if}
+        </nav>
+
+        <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+            <LightSwitch />
+
+            {#if session?.user}
+                <!-- A quiet outlined tile, not an accent-filled disc: a monogram is
+                     identity, not an action to be drawn toward. The header's accent
+                     is spent on the active-nav underline instead. -->
+                <div class="flex min-w-0 items-center gap-2">
+                    <span
+                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-field
+                           border border-line-strong bg-raised text-sm font-semibold text-ink-2"
+                        title={userName}
+                    >
+                        {initial}
+                    </span>
+                    <span class="hidden max-w-40 truncate text-sm font-medium sm:inline">
+                        {userName}
+                    </span>
+                </div>
+                <!-- Desktop only. Below md it moves into the panel, and the width
+                     that frees is what keeps the bar from overflowing at 320px. -->
+                <button
+                    onclick={() => signOut({ callbackUrl: '/' })}
+                    class="btn btn-sm btn-quiet hidden md:inline-flex"
+                >
+                    Log out
+                </button>
+            {:else}
+                <!-- Outline, not solid: the bar sits over public pages that carry
+                     their own CTA, and shell chrome does not outrank the thing the
+                     page is for. Kept in the bar at every width — signing in is why
+                     a signed-out visitor is here, so it should not need a tap to
+                     find. -->
+                <button
+                    onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
+                    class="btn btn-sm btn-outline-accent"
+                >
+                    Log in
+                </button>
+            {/if}
+
+            <button
+                onclick={() => (mobileOpen = !mobileOpen)}
+                aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+                aria-expanded={mobileOpen}
+                aria-controls="navbar-mobile-nav"
+                class="btn btn-icon btn-sm btn-quiet md:hidden"
+            >
+                {#if mobileOpen}
+                    <X class="h-5 w-5" />
+                {:else}
+                    <Menu class="h-5 w-5" />
+                {/if}
+            </button>
+        </div>
     </div>
+
+    <!-- In the header's own flow rather than an off-canvas drawer: on mobile
+         HackathonSidebar already owns the left edge at z-40, and a second drawer
+         there would slide out on top of it. Staying inside the sticky header also
+         keeps the panel out of any stacking argument with the page. -->
+    {#if mobileOpen}
+        <nav
+            id="navbar-mobile-nav"
+            class="flex flex-col gap-0.5 border-t border-line px-4 py-2 md:hidden"
+        >
+            {#if session?.user}
+                <a
+                    href={resolve('/(app)/dashboard')}
+                    aria-current={onHackathons ? 'page' : undefined}
+                    class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
+                >
+                    Hackathons
+                </a>
+            {:else}
+                <a
+                    href={resolve('/')}
+                    aria-current={onHackathons ? 'page' : undefined}
+                    class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
+                >
+                    Hackathons
+                </a>
+            {/if}
+            {#if showPublicLinks}
+                <a href={resolve('/')} class="{ROW} {ROW_IDLE}">Challenges</a>
+                <a href={resolve('/')} class="{ROW} {ROW_IDLE}">About</a>
+            {/if}
+            {#if session?.user}
+                <button
+                    onclick={() => signOut({ callbackUrl: '/' })}
+                    class="btn btn-sm btn-quiet mt-1 self-start"
+                >
+                    Log out
+                </button>
+            {/if}
+        </nav>
+    {/if}
 </header>

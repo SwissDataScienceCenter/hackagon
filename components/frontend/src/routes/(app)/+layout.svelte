@@ -1,27 +1,19 @@
 <script lang="ts">
-    // The app shell is intentionally identical to (public) for now. It exists as
-    // its own layout so authenticated chrome (sidebar, hackathon switcher) can
-    // land here later without touching the public marketing pages.
+    // The app shell is a top bar and nothing else: identity, theme and sign-out.
+    // Per-hackathon navigation is not shell chrome — it belongs to one hackathon,
+    // so HackathonSidebar renders inside my/hackathon/[id] instead of here, where
+    // it followed you onto the dashboard and the admin routes it had nothing to
+    // say about.
     import NavBar from '$lib/components/layout/NavBar.svelte';
-    import AppFooter from '$lib/components/layout/AppFooter.svelte';
+    import type { Snippet } from 'svelte';
+    import type { LayoutData } from './$types';
 
-    const { children, data } = $props();
+    let { children, data }: { children: Snippet; data: LayoutData } = $props();
 </script>
 
-<!-- Nothing behind the sign-in belongs in a search index. Pages here still set
-     their own <title>; this is the one thing they all share. -->
-<svelte:head>
-    <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
-
 <div class="flex min-h-screen flex-col">
-    <NavBar
-        session={data.session ?? null}
-        isAdmin={data.isAdmin}
-        canCreateHackathon={data.canCreateHackathon}
-    />
+    <NavBar session={data.session ?? null} showPublicLinks={false} />
     <main class="flex-1">
         {@render children()}
     </main>
-    <AppFooter />
 </div>

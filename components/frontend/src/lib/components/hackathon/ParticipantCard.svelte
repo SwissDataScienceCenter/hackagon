@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import type { Snippet } from 'svelte';
 
     let {
         name,
@@ -9,15 +10,29 @@
         skills = [],
         linkedinUrl,
         profileDetailsHref = '#',
+        actions,
     }: {
         name: string;
-        affiliation: string;
+        /**
+         * TODO(backend: user-profile-fields): unset by the participants page —
+         * User carries only username, displayName, email and keycloakId, so
+         * there is no affiliation to pass. Same for `avatarUrl`, `skills` and
+         * `linkedinUrl`: the card simply omits those lines until the fields
+         * exist, at which point the page passes them straight through.
+         */
+        affiliation?: string;
         avatarUrl?: string;
         /** Job title; if omitted, first skills are shown on the role line. */
         role?: string;
         skills?: string[];
         linkedinUrl?: string;
         profileDetailsHref?: string;
+        /**
+         * Extra controls rendered beside "View" — e.g. an owner's Approve/Remove
+         * buttons. Left to the caller so this card stays ignorant of hackathon
+         * roles and permissions.
+         */
+        actions?: Snippet;
     } = $props();
 
     const roleLine = $derived(
@@ -27,6 +42,7 @@
 
     const initials = name
         .split(' ')
+        .filter(Boolean)
         .map((w) => w[0])
         .join('')
         .toUpperCase()
@@ -35,18 +51,17 @@
 </script>
 
 <!--
-  Matches TeamCard: one row, py-4 px-5, gap-4, size-16 avatar, text column gap-1.5,
-  title text-sm font-bold, body text-xs, CTA: btn btn-sm preset-tonal-surface.
+  Matches TeamCard: one row, px-5 py-4, gap-4, size-16 avatar, text column gap-1.5,
+  title text-sm, body text-xs, CTA: btn btn-sm btn-ghost.
 -->
 <div
-    class="box-border w-full border border-surface-200-800 bg-surface-100-900
-           py-4 px-5"
+    class="card card-raised box-border w-full px-5 py-4"
 >
     <div class="flex w-full items-start gap-4">
         {#if avatarUrl}
             <div
                 class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                       border-surface-200-800 bg-surface-100-900"
+                       border-line bg-raised"
             >
                 <img
                     src={avatarUrl}
@@ -57,28 +72,30 @@
         {:else}
             <div
                 class="flex size-16 shrink-0 items-center justify-center rounded-full
-                       border-2 border-surface-200-800 bg-surface-200-800 text-xs font-bold
-                       text-surface-950-50"
+                       border-2 border-line bg-overlay text-xs font-bold
+                       text-ink"
             >
                 {initials}
             </div>
         {/if}
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-            <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">{name}</h3>
+            <h3 class="m-0 text-sm leading-snug text-ink">{name}</h3>
             <div class="block w-2/3 min-w-0">
                 <div class="flex flex-col gap-1.5">
                     {#if roleLine}
-                        <p class="m-0 text-xs leading-snug text-surface-600-400">{roleLine}</p>
+                        <p class="m-0 text-xs leading-snug text-ink-2">{roleLine}</p>
                     {/if}
-                    <p class="m-0 text-xs leading-snug text-surface-500">{affiliation}</p>
+                    {#if affiliation}
+                        <p class="m-0 text-xs leading-snug text-ink-3">{affiliation}</p>
+                    {/if}
                     {#if linkedinUrl}
                         <!-- eslint-disable svelte/no-navigation-without-resolve -- external LinkedIn URL -->
                         <a
                             href={linkedinUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="w-fit text-xs leading-snug text-primary-600-400
+                            class="w-fit text-xs leading-snug text-accent-ink
                                    hover:underline"
                         >
                             LinkedIn Profile
@@ -89,7 +106,12 @@
             </div>
         </div>
 
-        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a class="btn btn-sm preset-tonal-surface" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+        <div class="flex shrink-0 items-center gap-2">
+            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
+            <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+            {#if actions}
+                {@render actions()}
+            {/if}
+        </div>
     </div>
 </div>

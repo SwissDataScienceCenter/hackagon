@@ -18,16 +18,17 @@
             : videoUrl;
 </script>
 
-<section class="bg-surface-100-900 px-4 py-12 sm:px-10 md:px-20">
+<section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="mb-6 flex items-center justify-center gap-2">
-        <PlayCircle class="h-5 w-5 text-primary-700-300" />
-        <h2 class="text-xl font-bold">{title}</h2>
+        <PlayCircle class="h-5 w-5 text-accent-ink" />
+        <h2 class="text-title">{title}</h2>
     </div>
 
     <div class="mx-auto max-w-4xl">
+        <!-- Letterbox behind the iframe: stays black in both modes rather than
+             tracking the canvas, so a 16:9 video never sits on white. -->
         <div
-            class="relative aspect-video w-full overflow-hidden border border-surface-200-800
-                   bg-surface-950"
+            class="relative aspect-video w-full overflow-hidden rounded-card border border-line bg-black"
         >
             <iframe
                 src={embedUrl}
@@ -38,6 +39,6 @@
                 allowfullscreen
             ></iframe>
         </div>
-        <p class="mt-3 text-center text-xs text-surface-700-300">{caption}</p>
+        <p class="mt-3 text-center text-xs text-ink-2">{caption}</p>
     </div>
 </section>

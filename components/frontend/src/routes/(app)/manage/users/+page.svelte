@@ -1,152 +1,225 @@
 <script lang="ts">
-    import DataToolbar from '$lib/components/data/DataToolbar.svelte';
-    import DataTable from '$lib/components/data/DataTable.svelte';
-    import { matchesQuery, type Column, type FilterDef, type ViewMode } from '$lib/utils/dataView';
+    import { Search } from 'lucide-svelte';
+    import { ASSIGNABLE_GLOBAL_ROLES, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
+    import type { ActionData, PageData } from './$types';
 
-    const { data } = $props();
-
-    type User = (typeof data.users)[number];
-
-    // GlobalRole: UNSPECIFIED=0, ADMIN=1, HACKATHON_ORGANIZER=2. Raw numbers on
-    // purpose — the generated enum lives under $lib/server.
-    const ROLE_LABEL: Partial<Record<number, string>> = {
-        1: 'Admin',
-        2: 'Organizer',
-    };
-
-    function roleNames(u: User): string {
-        return (u.roles ?? [])
-            .map((r) => ROLE_LABEL[r])
-            .filter(Boolean)
-            .join(', ');
-    }
-
-    function created(u: User): string {
-        return u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-CH') : '—';
-    }
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 
     let search = $state('');
-    // Users are a long flat list; the table is the useful default here, unlike
-    // the pages CMS where each card carries an editor.
-    let view = $state<ViewMode>('table');
-    let filterValues = $state<Record<string, string>>({ role: '' });
 
-    const visible = $derived(
+    // Matches every column the table actually shows, so a row the user can read
+    // on screen is never filtered out by a term visible in it.
+    const filtered = $derived(
         data.users.filter((u) => {
-            const wanted = filterValues.role;
-            const roles = u.roles ?? [];
-            const roleOk =
-                wanted === ''
-                    ? true
-                    : wanted === 'none'
-                      ? roles.filter((r) => r !== 0).length === 0
-                      : roles.includes(Number(wanted));
-
-            return (
-                roleOk &&
-                matchesQuery(search, u.displayName, u.username, u.email, u.keycloakId)
-            );
-        }),
+            const q = search.trim().toLowerCase();
+            if (q === '') return true;
+            const roleNames = u.roles.map((r) => globalRoleLabel(r) ?? '').join(' ');
+            return `${u.displayName} ${u.username} ${u.email} ${roleNames}`
+                .toLowerCase()
+                .includes(q);
+        })
     );
 
-    const FILTERS: FilterDef[] = [
-        {
-            id: 'role',
-            label: 'Role',
-            options: [
-                { value: '1', label: 'Admin' },
-                { value: '2', label: 'Organizer' },
-                { value: 'none', label: 'No global role' },
-            ],
-        },
-    ];
+    const countLabel = $derived(
+        data.users.length === 1 ? '1 user' : `${data.users.length} users`
+    );
 
-    const COLUMNS: Column<User>[] = [
-        { key: 'name', label: 'Name', sort: (u) => u.displayName || u.username },
-        { key: 'username', label: 'Username', sort: (u) => u.username },
-        { key: 'email', label: 'Email', sort: (u) => u.email ?? '', class: 'hidden md:table-cell' },
-        { key: 'roles', label: 'Global role', sort: (u) => roleNames(u) },
-        {
-            key: 'keycloak',
-            label: 'Keycloak ID',
-            class: 'hidden xl:table-cell',
-        },
-        {
-            key: 'created',
-            label: 'First seen',
-            sort: (u) => (u.createdAt ? new Date(u.createdAt).getTime() : 0),
-            align: 'right',
-        },
-    ];
+    // Keycloak may leave display_name empty, hence the username fallback; '?'
+    // covers both being blank, so the avatar is never an empty circle that
+    // reads as a rendering fault.
+    function initials(displayName: string, username: string): string {
+        const source = displayName.trim() || username.trim();
+        const letters = source
+            .split(/\s+/)
+            .map((w) => w[0] ?? '')
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+        return letters || '?';
+    }
+
+    // Every assignable role the user doesn't already hold — what the picker in
+    // Actions offers, since granting a role a user already has is a no-op the
+    // UI shouldn't invite.
+    function missingRoles(roles: number[]): number[] {
+        return ASSIGNABLE_GLOBAL_ROLES.filter((r) => !roles.includes(r));
+    }
 </script>
 
-<svelte:head><title>Users · Hackagon</title></svelte:head>
-
-<div class="mx-auto w-full max-w-6xl p-4 sm:p-6">
-    <div class="mb-4">
-        <h1 class="text-2xl font-bold">Users</h1>
-        <p class="text-sm text-surface-500">
-            Everyone who has signed in at least once — profiles are created on first login.
-        </p>
-    </div>
-
-    {#if data.users.length === 0}
-        <p class="text-surface-500">No users found.</p>
-    {:else}
-        <div class="mb-4">
-            <DataToolbar
-                bind:search
-                bind:view
-                bind:filterValues
-                viewKey="manage-users"
-                filters={FILTERS}
-                placeholder="Search name, username, email or ID…"
-                summary="{data.users.length} user{data.users.length === 1 ? '' : 's'}"
-                shown={visible.length}
-                total={data.users.length}
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 flex-col gap-1">
+            <h1 class="m-0 text-title text-ink">Users</h1>
+            <p class="m-0 text-xs text-ink-3">{countLabel} registered on the platform</p>
+        </div>
+        <div class="relative w-full sm:w-72">
+            <Search
+                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
+                       text-ink-3"
+                aria-hidden="true"
+            />
+            <label class="sr-only" for="user-search">Search users</label>
+            <input
+                id="user-search"
+                type="search"
+                bind:value={search}
+                placeholder="Name, username or email…"
+                class="field pl-9 pr-3"
             />
         </div>
+    </div>
 
-        <!-- There is deliberately no per-row action menu: granting and revoking
-             global roles are proto-only stubs today (AddRole/RemoveRole return
-             Unimplemented), and a button that cannot work is worse than none. -->
-        {#if view === 'table'}
-            <DataTable columns={COLUMNS} rows={visible} rowKey={(u) => u.keycloakId} caption="Platform users" empty="No users match your search.">
-                {#snippet row(u)}
-                    <td class="px-3 py-2 font-medium">{u.displayName || u.username}</td>
-                    <td class="px-3 py-2 text-surface-500">@{u.username}</td>
-                    <td class="hidden px-3 py-2 break-all md:table-cell">{u.email || '—'}</td>
-                    <td class="px-3 py-2">
-                        {#if roleNames(u)}
-                            <span class="badge preset-tonal-primary">{roleNames(u)}</span>
-                        {:else}
-                            <span class="text-surface-500">—</span>
-                        {/if}
-                    </td>
-                    <td class="hidden px-3 py-2 font-mono text-xs xl:table-cell">{u.keycloakId}</td>
-                    <td class="px-3 py-2 text-right whitespace-nowrap">{created(u)}</td>
-                {/snippet}
-            </DataTable>
-        {:else if visible.length === 0}
-            <p class="py-6 text-center text-sm text-surface-500">No users match your search.</p>
-        {:else}
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {#each visible as u (u.keycloakId)}
-                    <div class="card preset-outlined-surface-200-800 flex flex-col gap-1 p-4">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="truncate font-semibold">{u.displayName || u.username}</span>
-                            {#if roleNames(u)}
-                                <span class="badge preset-tonal-primary shrink-0">{roleNames(u)}</span>
-                            {/if}
-                        </div>
-                        <span class="truncate text-sm text-surface-500">@{u.username}</span>
-                        {#if u.email}
-                            <span class="truncate text-sm break-all text-surface-500">{u.email}</span>
-                        {/if}
-                        <span class="mt-1 text-xs text-surface-500">First seen {created(u)}</span>
-                    </div>
-                {/each}
-            </div>
-        {/if}
+    {#if form?.message}
+        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
+    {/if}
+
+    {#if data.users.length === 0}
+        <p class="m-0 py-6 text-center text-sm text-ink-3">No users found.</p>
+    {:else if filtered.length === 0}
+        <p class="m-0 py-6 text-center text-sm text-ink-3">No users match “{search}”.</p>
+    {:else}
+        <div class="w-full overflow-x-auto rounded-card border border-line">
+            <table class="w-full min-w-[720px] border-collapse text-left text-xs">
+                <thead>
+                    <tr class="border-b border-line bg-raised text-ink-3">
+                        <th class="px-3 py-2 font-semibold">
+                            <span class="sr-only">Avatar</span>
+                        </th>
+                        <th class="px-3 py-2 font-semibold">Display Name</th>
+                        <th class="px-3 py-2 font-semibold">Username</th>
+                        <th class="px-3 py-2 font-semibold">Email</th>
+                        <th class="px-3 py-2 font-semibold">Roles</th>
+                        <th class="px-3 py-2 font-semibold">Joined</th>
+                        <th class="px-3 py-2 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each filtered as user (user.id)}
+                        <tr class="border-b border-line last:border-0">
+                            <td class="px-3 py-2">
+                                <div
+                                    class="flex size-8 shrink-0 items-center justify-center
+                                           rounded-full border-2 border-line
+                                           bg-overlay text-[10px] font-bold
+                                           text-ink"
+                                    aria-hidden="true"
+                                >
+                                    {initials(user.displayName, user.username)}
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 font-semibold text-ink">
+                                {user.displayName || user.username}
+                            </td>
+                            <td class="px-3 py-2 text-ink-3">{user.username}</td>
+                            <td class="px-3 py-2 text-ink-3">{user.email || '—'}</td>
+                            <td class="px-3 py-2">
+                                {#if user.roles.length === 0}
+                                    <span class="text-ink-3">—</span>
+                                {:else}
+                                    <div class="flex flex-wrap gap-1">
+                                        {#each user.roles as role (role)}
+                                            <span
+                                                class="badge {globalRoleBadgeVariant(role) ??
+                                                    'badge-neutral'}"
+                                            >
+                                                {globalRoleLabel(role) ?? 'Unknown'}
+                                                {#if !(user.id === data.currentUserId && role === 1)}
+                                                    <!-- Own-Admin revoke is hidden, not just
+                                                         disabled: the backend blocks it
+                                                         unconditionally (self-demotion guard
+                                                         in UserService.RemoveRole), so
+                                                         offering it would only ever error. -->
+                                                    <form
+                                                        method="POST"
+                                                        action="?/removeRole"
+                                                        class="contents"
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="userId"
+                                                            value={user.id}
+                                                        />
+                                                        <input
+                                                            type="hidden"
+                                                            name="role"
+                                                            value={role}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            class="text-ink/70
+                                                                   hover:text-danger-ink"
+                                                            title="Revoke {globalRoleLabel(
+                                                                role
+                                                            )}"
+                                                        >
+                                                            &times;
+                                                        </button>
+                                                    </form>
+                                                {/if}
+                                            </span>
+                                        {/each}
+                                    </div>
+                                {/if}
+                            </td>
+                            <td class="px-3 py-2 text-ink-3">
+                                {user.createdAt
+                                    ? new Date(user.createdAt).toLocaleDateString()
+                                    : '—'}
+                            </td>
+                            <td class="px-3 py-2">
+                                {#if missingRoles(user.roles).length === 0}
+                                    <span class="text-ink-3">—</span>
+                                {:else}
+                                    <form
+                                        method="POST"
+                                        action="?/addRole"
+                                        class="flex items-center gap-1"
+                                    >
+                                        <input type="hidden" name="userId" value={user.id} />
+                                        {#if missingRoles(user.roles).length === 1}
+                                            <input
+                                                type="hidden"
+                                                name="role"
+                                                value={missingRoles(user.roles)[0]}
+                                            />
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-ghost"
+                                            >
+                                                Grant {globalRoleLabel(
+                                                    missingRoles(user.roles)[0]
+                                                )}
+                                            </button>
+                                        {:else}
+                                            <select
+                                                name="role"
+                                                class="field h-8 w-auto px-2"
+                                            >
+                                                {#each missingRoles(user.roles) as role (role)}
+                                                    <!-- Hackathon Organizer (2) is the
+                                                         pre-selected default, not Admin (1):
+                                                         a dropdown that silently grants the
+                                                         most powerful role unless someone
+                                                         changes it is the wrong default. -->
+                                                    <option value={role} selected={role === 2}
+                                                        >{globalRoleLabel(role)}</option
+                                                    >
+                                                {/each}
+                                            </select>
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-ghost"
+                                            >
+                                                Grant
+                                            </button>
+                                        {/if}
+                                    </form>
+                                {/if}
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
     {/if}
 </div>

@@ -8,12 +8,7 @@
         org,
         meta,
         badge,
-        badgePreset = 'preset-tonal-primary',
-        // A second badge (e.g. the viewer's membership). Kept here rather than
-        // rendered by the caller alongside the row, so both badges share one
-        // group and move below the title together on phones.
-        extraBadge,
-        extraBadgePreset = 'preset-tonal',
+        badgeVariant = 'badge-accent',
         count,
         gradFrom,
         gradTo,
@@ -24,9 +19,7 @@
         org?: string;
         meta: string;
         badge?: string;
-        badgePreset?: string;
-        extraBadge?: string;
-        extraBadgePreset?: string;
+        badgeVariant?: string;
         count?: string;
         gradFrom: string;
         gradTo: string;
@@ -34,54 +27,39 @@
     } = $props();
 
     const thumbSize = size === 'compact' ? 'h-9 w-9' : 'h-12 w-12';
-    // A MINIMUM, never a fixed height: a long event name wraps to three lines
-    // on a phone, and a fixed box clipped the title and collided with whatever
-    // sat above the row.
+    // A floor rather than a fixed height: with `org` set the row carries three
+    // stacked lines, which a fixed height would clip.
     const rowHeight = size === 'compact' ? 'min-h-14' : 'min-h-[72px]';
-    // Indent the badges under the text on phones, where they sit below the
-    // title rather than beside it (thumbnail width + gap).
-    const badgeIndent = size === 'compact' ? 'pl-13' : 'pl-16';
 </script>
 
 <a
     href={resolve(href)}
-    class="flex {rowHeight} flex-col gap-2 px-4 py-3 no-underline transition-colors
-           hover:bg-surface-100-900 sm:flex-row sm:items-center sm:gap-4 sm:py-0"
+    class="flex {rowHeight} items-center gap-4 px-4 no-underline transition-colors hover:bg-raised"
 >
-    <div class="flex min-w-0 flex-1 items-center gap-4">
-        <div
-            class="{thumbSize} shrink-0"
-            style="background: linear-gradient(135deg, {gradFrom}, {gradTo})"
-        ></div>
-        <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div class="flex flex-wrap items-baseline gap-x-2">
-                {#if org}
-                    <span class="text-sm text-surface-500">{org}</span>
-                    <span class="text-sm text-surface-400">/</span>
-                {/if}
-                <!-- Event names are long and unbroken; without this a single
-                     word can push the row wider than the viewport. -->
-                <span class="text-sm font-semibold break-words">{name}</span>
-            </div>
-            <span class="text-xs text-surface-500">{meta}</span>
-        </div>
+    <div
+        class="{thumbSize} shrink-0 rounded-field"
+        style="background: linear-gradient(135deg, {gradFrom}, {gradTo})"
+    ></div>
+    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <!-- The organisation is an eyebrow above the name rather than sharing a
+             line behind a slash, so the hackathon's own name gets the line to
+             itself and every row's title starts on the same left edge. -->
+        {#if org}
+            <span class="meta truncate">{org}</span>
+        {/if}
+        <span class="truncate text-sm font-semibold text-ink">{name}</span>
+        <span class="tnum text-xs text-ink-3">{meta}</span>
     </div>
-
-    {#if badge || extraBadge || count}
-        <!-- Below the title on phones, beside it from sm up. -->
-        <div class="flex shrink-0 flex-wrap items-center gap-2 {badgeIndent} sm:pl-0">
-            {#if badge}
-                <span class="badge {badgePreset}">{badge}</span>
-            {/if}
-            {#if extraBadge}
-                <span class="badge {extraBadgePreset}">{extraBadge}</span>
-            {/if}
-            {#if count}
-                <div class="flex items-center gap-1 text-surface-500">
-                    <Users class="h-3 w-3" />
-                    <span class="text-xs">{count}</span>
-                </div>
-            {/if}
+    {#if badge}
+        <span class="badge {badgeVariant} shrink-0">
+            {badge}
+        </span>
+    {/if}
+    {#if count}
+        <!-- Tabular so the counts line up down the column rather than wandering. -->
+        <div class="flex shrink-0 items-center gap-1 text-ink-3">
+            <Users class="h-3 w-3" aria-hidden="true" />
+            <span class="tnum text-xs">{count}</span>
         </div>
     {/if}
 </a>

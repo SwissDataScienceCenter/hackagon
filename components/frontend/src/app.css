@@ -1,6 +1,8 @@
 @import "tailwindcss";
-@import "@skeletonlabs/skeleton";
-@import "@skeletonlabs/skeleton/optional/presets";
-@import "./themes/hackathonsdsc.css";
-@source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
+@import "./themes/hackagon.css";
+
+/* Colour mode is an attribute on <html>, not a media query: LightSwitch.svelte
+ * owns it and persists the choice. The theme's own tokens key off the same
+ * attribute, so this variant is only needed for the handful of places where a
+ * non-colour property differs by mode — e.g. swapping the light/dark logo. */
 @custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
