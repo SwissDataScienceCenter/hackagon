@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -609,6 +610,19 @@ func (s *VoteService) submitSingleVote(
 		return nil, status.Error(codes.Internal, "couldn't check existing vote")
 	}
 
+	// For single choice voting, delete any previous vote from this user in this category
+	if voteType == entvote.VoteTypeSingleChoice {
+		_, err := s.dbClient.Vote.Delete().
+			Where(
+				entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID)),
+				entvote.HasVoterWith(entuser.IDEQ(voterID)),
+			).Exec(ctx)
+		if err != nil {
+			slog.Error("delete previous single choice vote", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't delete previous vote")
+		}
+	}
+
 	// Create the vote
 	vote, err := s.dbClient.Vote.Create().
 		SetCategoryID(categoryID).
@@ -1164,6 +1178,202 @@ func (s *VoteService) DeleteVoteResult(
 	}
 
 	return &voteMsgs.DeleteVoteResultResponse{}, nil
+}
+
+func (s *VoteService) SuggestResults(
+	ctx context.Context,
+	req *voteMsgs.SuggestResultsRequest,
+) (*voteMsgs.SuggestResultsResponse, error) {
+	_, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	categoryID, err := uuid.Parse(req.GetCategoryId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
+	}
+
+	// Get category to find hackathon ID for permission check
+	category, err := s.dbClient.VoteCategory.Query().
+		Where(entvotecategory.IDEQ(categoryID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"vote category %s not found", req.GetCategoryId(),
+			)
+		}
+		slog.Error("query vote category", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query vote category")
+	}
+
+	if err := s.enforcer.RequirePermission(
+		ctx, category.Edges.Hackathon.ID.String(), m.VoteResult, m.Create,
+	); err != nil {
+		return nil, err
+	}
+
+	// Check if results already exist
+	existingCount, err := s.dbClient.VoteResult.Query().
+		Where(entvoteresult.HasVoteCategoryWith(entvotecategory.IDEQ(categoryID))).
+		Count(ctx)
+	if err != nil {
+		slog.Error("query existing results", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query existing results")
+	}
+	if existingCount > 0 && !req.GetForce() {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"%d result(s) already exist for this category; set force=true to overwrite",
+			existingCount,
+		)
+	}
+	if existingCount > 0 && req.GetForce() {
+		// Delete existing results before recomputing
+		if _, err := s.dbClient.VoteResult.Delete().
+			Where(entvoteresult.HasVoteCategoryWith(entvotecategory.IDEQ(categoryID))).
+			Exec(ctx); err != nil {
+			slog.Error("delete existing results", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't delete existing results")
+		}
+	}
+
+	// Get all votes for this category
+	votes, err := s.dbClient.Vote.Query().
+		Where(entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID))).
+		WithSubmission().
+		All(ctx)
+	if err != nil {
+		slog.Error("query votes", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query votes")
+	}
+
+	// Compute results based on voting method
+	results, err := s.computeResults(category, votes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create VoteResults
+	created := make([]*voteEntities.VoteResult, 0, len(results))
+	for _, r := range results {
+		create := s.dbClient.VoteResult.Create().
+			SetVoteCategoryID(categoryID).
+			SetSubmissionID(r.submissionID).
+			SetPosition(r.position)
+		result, err := create.Save(ctx)
+		if err != nil {
+			slog.Error("create vote result", "err", err)
+			return nil, status.Errorf(codes.Internal, "couldn't create vote result: %v", err)
+		}
+		// Re-fetch with edges for response
+		result, err = s.dbClient.VoteResult.Query().
+			Where(entvoteresult.IDEQ(result.ID)).
+			WithSubmission().
+			Only(ctx)
+		if err != nil {
+			slog.Error("re-query vote result", "err", err)
+			return nil, status.Errorf(codes.Internal, "couldn't re-query vote result: %v", err)
+		}
+		created = append(created, voteResultEntryFromEnt(result))
+	}
+
+	return &voteMsgs.SuggestResultsResponse{Results: created}, nil
+}
+
+// submissionScore holds the computed score and position for a submission.
+type submissionScore struct {
+	submissionID uuid.UUID
+	score        float64
+	position     int
+}
+
+// computeResults computes VoteResults from votes using the appropriate algorithm.
+func (s *VoteService) computeResults(
+	category *ent.VoteCategory,
+	votes []*ent.Vote,
+) ([]*submissionScore, error) {
+	// Collect all unique submissions that received votes
+	submissionMap := make(map[uuid.UUID]*ent.Submission)
+	for _, v := range votes {
+		if v.Edges.Submission != nil {
+			submissionMap[v.Edges.Submission.ID] = v.Edges.Submission
+		}
+	}
+
+	// Compute scores per submission
+	scores := make(map[uuid.UUID]float64)
+	for subID := range submissionMap {
+		scores[subID] = 0
+	}
+
+	switch category.VotingMethod {
+	case entvotecategory.VotingMethodSingleChoice:
+		for _, v := range votes {
+			if v.Edges.Submission != nil {
+				scores[v.Edges.Submission.ID]++
+			}
+		}
+	case entvotecategory.VotingMethodRanked:
+		// Borda count: N = number of unique submissions
+		n := len(submissionMap)
+		if n == 0 {
+			return nil, status.Error(codes.InvalidArgument, "no submissions received votes")
+		}
+		for _, v := range votes {
+			if v.Edges.Submission != nil {
+				// Rank 1 = N-1 points, Rank 2 = N-2, etc.
+				score := float64(n - v.Value)
+				scores[v.Edges.Submission.ID] += score
+			}
+		}
+	case entvotecategory.VotingMethodPoints:
+		for _, v := range votes {
+			if v.Edges.Submission != nil {
+				scores[v.Edges.Submission.ID] += float64(v.Value)
+			}
+		}
+	default:
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unknown voting method: %v",
+			category.VotingMethod,
+		)
+	}
+
+	// Build sorted list of scores
+	scoreList := make([]*submissionScore, 0, len(scores))
+	for subID, score := range scores {
+		scoreList = append(scoreList, &submissionScore{
+			submissionID: subID,
+			score:        score,
+			position:     0,
+		})
+	}
+
+	// Sort by score descending
+	sort.Slice(scoreList, func(i, j int) bool {
+		return scoreList[i].score > scoreList[j].score
+	})
+
+	// Assign positions with ties sharing the same position
+	results := make([]*submissionScore, 0, len(scoreList))
+	for i, s := range scoreList {
+		position := i + 1
+		if i > 0 && s.score == scoreList[i-1].score {
+			position = results[len(results)-1].position
+		}
+		results = append(results, &submissionScore{
+			submissionID: s.submissionID,
+			score:        s.score,
+			position:     position,
+		})
+	}
+
+	return results, nil
 }
 
 func (s *VoteService) ExportResults(
