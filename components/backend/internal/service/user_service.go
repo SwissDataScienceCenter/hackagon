@@ -138,9 +138,22 @@ func (s *UserService) List(
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
+	// Roles come from casbin, like Get and WhoAmI do. Without them the user
+	// admin cannot answer the one question it exists for — who has global
+	// rights — and the caller has no other RPC to ask, since Get is per-user.
+	// The lookup is in-memory (the policy is already loaded), so it costs a map
+	// read per row rather than a query.
 	entries := make([]*ents.User, 0, len(users))
 	for _, u := range users {
-		entries = append(entries, userEntryFromEnt(u))
+		entry := userEntryFromEnt(u)
+		globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+		if err != nil {
+			slog.Error("get global roles", "err", err, "user", u.KeycloakID)
+
+			return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+		}
+		entry.Roles = append(entry.Roles, globalRoles...)
+		entries = append(entries, entry)
 	}
 
 	return &msgs.ListResponse{Users: entries}, nil
