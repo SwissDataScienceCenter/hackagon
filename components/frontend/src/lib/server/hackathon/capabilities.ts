@@ -85,3 +85,24 @@ export function mayManagePages(
 
   return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
 }
+
+/**
+ * Whether to offer participant management — approve a waitlisted participant,
+ * remove one.
+ *
+ * Mirrors the backend exactly, same as `mayManagePhases`/`mayManagePages`:
+ * `HackathonService.ApproveParticipant`/`RemoveParticipant` both enforce
+ * hackathon-scoped `hackathon:write` (`hackathon_service.go:303`, `:389`), which
+ * casbin grants to `Owner` outright and to an admin through the global escape
+ * hatch (`rbac.go:176`). `Member` holds only `hackathon:read` (`rbac.go:198`), so
+ * participants see the list and none of the controls. No capability gates
+ * either RPC, so there is no shown-then-refused state to guard against.
+ */
+export function mayManageParticipants(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}

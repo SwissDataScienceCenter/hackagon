@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import type { Snippet } from 'svelte';
 
     let {
         name,
@@ -9,6 +10,7 @@
         skills = [],
         linkedinUrl,
         profileDetailsHref = '#',
+        actions,
     }: {
         name: string;
         /**
@@ -25,6 +27,12 @@
         skills?: string[];
         linkedinUrl?: string;
         profileDetailsHref?: string;
+        /**
+         * Extra controls rendered beside "View" — e.g. an owner's Approve/Remove
+         * buttons. Left to the caller so this card stays ignorant of hackathon
+         * roles and permissions.
+         */
+        actions?: Snippet;
     } = $props();
 
     const roleLine = $derived(
@@ -98,7 +106,12 @@
             </div>
         </div>
 
-        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+        <div class="flex shrink-0 items-center gap-2">
+            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
+            <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+            {#if actions}
+                {@render actions()}
+            {/if}
+        </div>
     </div>
 </div>
