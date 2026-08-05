@@ -19,9 +19,17 @@ export const load: PageServerLoad = async (event) => {
   try {
     preview = await publicHackathonClient().previewInvite({ token: event.params.token })
   } catch (e) {
-    // Unknown, malformed and revoked tokens are all NOT_FOUND — the backend
-    // deliberately does not distinguish them.
-    if (e instanceof ClientError && e.code === Status.NOT_FOUND)
+    // Unknown, malformed and revoked tokens must all look identical, so that a
+    // link nobody should have cannot be told apart from one that expired.
+    //
+    // INVALID_ARGUMENT belongs here too: the token is a uuid in the proto, so
+    // protovalidate rejects a malformed one before the handler can turn it
+    // into NOT_FOUND. Without this, /invite/nonsense was a 500 — an error page
+    // that says "something broke on our side" about a perfectly ordinary typo.
+    if (
+      e instanceof ClientError &&
+      (e.code === Status.NOT_FOUND || e.code === Status.INVALID_ARGUMENT)
+    )
       error(404, "This invitation link is not valid or has been revoked")
     throw e
   }
