@@ -418,17 +418,18 @@
 
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-center text-xl font-bold">Trusted by Swiss research institutions</h2>
-    <!-- flex-wrap: six entries must never force horizontal page overflow on
-         phone widths. Logos render only where the asset actually exists. -->
+    <!-- Not "Swiss institutions": Durham is in the UK, so the claim has to be
+         wider than the original copy. -->
+    <h2 class="text-center text-xl font-bold">Trusted by research institutions</h2>
+    <!-- flex-wrap: entries must never force horizontal page overflow on phone
+         widths. Logos render only where the asset actually exists; the rest
+         show their name alone. -->
     <div class="flex flex-wrap items-end justify-center gap-8">
         {#each [
             { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
             { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
             { name: 'EPFL', logo: '/images/logos/epfl.svg' },
-            { name: 'Univ. of Bern' },
-            { name: 'Univ. of Zurich' },
-            { name: 'SOAD' }
+            { name: 'Durham University' }
         ] as org (org.name)}
             <div class="flex flex-col items-center gap-2">
                 {#if org.logo}
