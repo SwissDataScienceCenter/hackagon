@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
-import { error, fail } from "@sveltejs/kit"
+import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
@@ -40,6 +40,21 @@ export const actions: Actions = {
     const hackathonId = String(formData.get("hackathonId") ?? "")
     if (!hackathonId) return fail(400, { message: "Missing hackathon id." })
 
+    // Does this event ask its registrants anything? Read it BEFORE joining:
+    // afterwards the answer is the same, and asking first means a failed join
+    // costs one call rather than two.
+    // The same listing the page itself loaded from, so this sees exactly what
+    // the caller is allowed to see. A failure here must not block joining —
+    // worst case they reach the form from the event overview instead.
+    const asksQuestions = await hackathon
+      .list({ visibilityFilter: Visibility.VISIBILITY_PUBLIC })
+      .then((r) => {
+        const form = r.hackathons.find((h) => h.id === hackathonId)?.registrationForm
+
+        return Boolean(form && (form.fields.length > 0 || form.consents.length > 0))
+      })
+      .catch(() => false)
+
     try {
       await hackathon.join({ hackathonId })
     } catch (e) {
@@ -53,6 +68,18 @@ export const actions: Actions = {
         return fail(404, { message: "This hackathon no longer exists." })
       throw e
     }
+
+    // Straight into the organizer's registration form. Joining is only half of
+    // signing up when an event asks for an affiliation, dietary needs or a
+    // code-of-conduct consent: without this the questions existed, the page
+    // existed, and nothing ever sent anyone to it.
+    //
+    // Waitlisted registrants are redirected too — the form is independent of
+    // approval, and their answers are exactly what an organizer reviews.
+    if (asksQuestions) {
+      redirect(303, `/register/${hackathonId}`)
+    }
+
     return { joined: hackathonId }
   },
 }
