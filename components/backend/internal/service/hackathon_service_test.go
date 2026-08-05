@@ -20,6 +20,7 @@ import (
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
@@ -44,11 +45,12 @@ var _ = Describe("HackathonService", func() {
 		conn        *grpc.ClientConn
 		client      hackathonSvc.HackathonServiceClient
 		phaseClient hackathonSvc.PhaseServiceClient
+		enf         *middleware.Enforcer
 		testAdmin   string
 	)
 
 	BeforeEach(func() {
-		dbClient, conn, _ = testutils.CreateTestServer()
+		dbClient, conn, enf = testutils.CreateTestServer()
 		testAdmin = testutils.TestAdminKeycloakID
 
 		client = hackathonSvc.NewHackathonServiceClient(conn)
@@ -1786,6 +1788,521 @@ var _ = Describe("HackathonService", func() {
 					),
 				).To(BeFalse())
 			})
+		})
+	})
+
+	Describe("AddOwner", func() {
+		var createdHackathonID string
+		var newUser *ent.User
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createReq := &msgs.CreateRequest{
+				Name:       "AddOwner Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+
+			// Create a user to be added as owner
+			newUser, err = dbClient.User.Create().
+				SetKeycloakID("add-owner-test-user").
+				SetUsername("add-owner-test-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("allows owner to add another owner", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      newUser.ID.String(),
+			}
+
+			_, err := client.AddOwner(ctx, addReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify user is now in the owners edge
+			h, err := dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				WithOwners().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Edges.Owners).To(HaveLen(2)) // creator + new owner
+
+			// Verify casbin role was granted (owner can read hackathon)
+			ok, err := enf.CheckPermission(
+				newUser.KeycloakID,
+				createdHackathonID,
+				middleware.Hackathon,
+				middleware.Read,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: uuid.NewString(),
+				UserId:      newUser.ID.String(),
+			}
+
+			_, err := client.AddOwner(ctx, addReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for non-existent user", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      uuid.NewString(),
+			}
+
+			_, err := client.AddOwner(ctx, addReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns invalid argument for malformed user ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      "not-a-uuid",
+			}
+
+			_, err := client.AddOwner(ctx, addReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns invalid argument for malformed hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: "not-a-uuid",
+				UserId:      newUser.ID.String(),
+			}
+
+			_, err := client.AddOwner(ctx, addReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("requires Write permission to add owner", func() {
+			// Use a user who is not an owner/organizer
+			nonOwnerKeycloakID := "non-owner-add"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-add-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      newUser.ID.String(),
+			}
+
+			_, err = client.AddOwner(ctx, addReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies anonymous users", func() {
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      newUser.ID.String(),
+			}
+
+			_, err := client.AddOwner(context.Background(), addReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.Unauthenticated))
+		})
+
+		It("returns owner in Get response after adding", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      newUser.ID.String(),
+			}
+
+			_, err := client.AddOwner(ctx, addReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Get hackathon and verify owners are listed
+			getReq := &msgs.GetRequest{HackathonId: createdHackathonID}
+			getResp, err := client.Get(ctx, getReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			h := getResp.GetHackathon()
+			Expect(h.GetOwners()).To(HaveLen(2))
+
+			// Verify both the creator and the new owner are present
+			ownerKeycloakIDs := make(map[string]bool)
+			for _, o := range h.GetOwners() {
+				ownerKeycloakIDs[o.GetKeycloakId()] = true
+			}
+			Expect(ownerKeycloakIDs).To(HaveKey(testAdmin))
+			Expect(ownerKeycloakIDs).To(HaveKey(newUser.KeycloakID))
+		})
+	})
+
+	Describe("RemoveOwner", func() {
+		var createdHackathonID string
+		var ownerToRemove *ent.User
+
+		BeforeEach(func() {
+			// Create hackathon using admin
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createReq := &msgs.CreateRequest{
+				Name:       "RemoveOwner Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			}
+
+			createResp, err := client.Create(ctx, createReq)
+			Expect(err).NotTo(HaveOccurred())
+			createdHackathonID = createResp.GetHackathonId()
+
+			// Create a user and add them as owner
+			ownerToRemove, err = dbClient.User.Create().
+				SetKeycloakID("remove-owner-test-user").
+				SetUsername("remove-owner-test-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			addReq := &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err = client.AddOwner(ctx, addReq)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("allows owner to remove another owner", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err := client.RemoveOwner(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify user is no longer in the owners edge
+			h, err := dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				WithOwners().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Edges.Owners).To(HaveLen(1)) // only creator remains
+
+			// Verify casbin role was revoked (owner can no longer read hackathon)
+			ok, err := enf.CheckPermission(
+				ownerToRemove.KeycloakID,
+				createdHackathonID,
+				middleware.Hackathon,
+				middleware.Read,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeFalse())
+		})
+
+		It("returns NOT_FOUND for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: uuid.NewString(),
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err := client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND for non-existent user to remove", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      uuid.NewString(),
+			}
+
+			_, err := client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns NOT_FOUND when user is not an owner", func() {
+			// Create a user who is not an owner
+			nonOwner, err := dbClient.User.Create().
+				SetKeycloakID("not-an-owner").
+				SetUsername("not-an-owner-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      nonOwner.ID.String(),
+			}
+
+			_, err = client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("returns FAILED_PRECONDITION when removing the last owner", func() {
+			// The hackathon only has the creator as owner.
+			// Try to remove the creator (who is also an owner via the Owners edge).
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			// remove other owner
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err := client.RemoveOwner(ctx, removeReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify creator is in the Owners edge
+			h, err := dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				WithOwners().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Edges.Owners).To(HaveLen(1))
+
+			// Try to remove the creator
+			removeReq = &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      h.Edges.Owners[0].ID.String(),
+			}
+
+			_, err = client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+		})
+
+		It("returns invalid argument for malformed user ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      "not-a-uuid",
+			}
+
+			_, err := client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("returns invalid argument for malformed hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: "not-a-uuid",
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err := client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.InvalidArgument))
+		})
+
+		It("requires Write permission to remove owner", func() {
+			// Create a user who is a participant but not an owner
+			participantKeycloakID := "participant-remover"
+			participantUser, err := dbClient.User.Create().
+				SetKeycloakID(participantKeycloakID).
+				SetUsername("participant-remover-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(createdHackathonID)).
+				SetUserID(participantUser.ID).
+				SetIsWaiting(false).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(participantKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err = client.RemoveOwner(ctx, removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies anonymous users", func() {
+			removeReq := &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      ownerToRemove.ID.String(),
+			}
+
+			_, err := client.RemoveOwner(context.Background(), removeReq)
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.Unauthenticated))
+		})
+
+		It("allows removing all non-creator owners, leaving only the creator", func() {
+			// Add a second owner
+			secondOwner, err := dbClient.User.Create().
+				SetKeycloakID("second-owner").
+				SetUsername("second-owner-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = client.AddOwner(ctx, &msgs.AddOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      secondOwner.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify two owners exist
+			h, err := dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				WithOwners().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Edges.Owners).To(HaveLen(3))
+
+			// Remove the first added owner
+			_, err = client.RemoveOwner(ctx, &msgs.RemoveOwnerRequest{
+				HackathonId: createdHackathonID,
+				UserId:      ownerToRemove.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify one owner remains
+			h, err = dbClient.Hackathon.Query().
+				Where(enthackathon.IDEQ(uuid.MustParse(createdHackathonID))).
+				WithOwners().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Edges.Owners).To(HaveLen(2))
 		})
 	})
 })

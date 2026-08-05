@@ -48,4 +48,6 @@ message Hackathon {
   optional HackathonMember viewer_membership = 18;
   // Populated in Get responses only.
   HackathonState state = 19;
+  // Populated in Get responses only.
+  repeated user.entities.User owners = 20;
 }

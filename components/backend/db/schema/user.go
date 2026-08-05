@@ -102,6 +102,9 @@ func (User) Edges() []ent.Edge {
 			Comment("Votes cast by this user."),
 		edge.To("jury_categories", VoteCategory.Type).
 			Comment("Vote categories where this user is a jury member."),
+		edge.From("owns", Hackathon.Type).
+			Ref("owners").
+			Comment("Hackathons this user is an owner of."),
 	}
 }
 

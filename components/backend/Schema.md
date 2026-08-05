@@ -28,6 +28,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `state` | HackathonState | O2O | no | no | Configuration state for this hackathon. |
 | `vote_categories` | VoteCategory | O2M | no | no | Voting categories scoped to this hackathon. |
+| `owners` | User | M2M | no | no | Users who are owners of this hackathon (in addition to the creator). |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
 | `participants` | Participant | O2M | yes | no |  |
@@ -320,6 +321,7 @@ An authenticated user, synced from Keycloak on first login.
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |
 | `jury_categories` | VoteCategory | M2M | no | no | Vote categories where this user is a jury member. |
+| `owns` | Hackathon | M2M | yes | no | Hackathons this user is an owner of. |
 | `participations` | Participant | O2M | yes | no |  |
 | `team_participations` | TeamParticipant | O2M | yes | no |  |
 

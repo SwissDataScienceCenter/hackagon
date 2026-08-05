@@ -16,6 +16,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
+	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -107,6 +108,16 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't set hackathon owner")
 	}
 
+	// Add creator to the Owners edge so ownership is explicit in the DB.
+	_, err = s.dbClient.Hackathon.UpdateOne(h).
+		AddOwners(creator).
+		Save(ctx)
+	if err != nil {
+		slog.Error("add creator to owners edge", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't add creator to owners")
+	}
+
 	return &msgs.CreateResponse{HackathonId: h.ID.String()}, nil
 }
 
@@ -132,6 +143,7 @@ func (s *HackathonService) Get(
 		WithPages(func(q *ent.PageQuery) { q.WithCreator().WithModifier().WithPhase() }).
 		WithPhases(func(q *ent.PhaseQuery) { q.WithCreator().WithModifier().WithPage() }).
 		WithParticipants(func(q *ent.ParticipantQuery) { q.WithUser() }).
+		WithOwners().
 		WithState().
 		Only(ctx)
 	if err != nil {
@@ -151,6 +163,11 @@ func (s *HackathonService) Get(
 
 	entry.Creator = userEntryFromEnt(h.Edges.Creator)
 	entry.Modifier = userEntryFromEnt(h.Edges.Modifier)
+
+	entry.Owners = make([]*userEnts.User, 0, len(h.Edges.Owners))
+	for _, o := range h.Edges.Owners {
+		entry.Owners = append(entry.Owners, userEntryFromEnt(o))
+	}
 
 	entry.Tracks = make([]*ents.Track, 0, len(h.Edges.Tracks))
 	for _, t := range h.Edges.Tracks {
@@ -841,6 +858,191 @@ func (s *HackathonService) SetCurrentPhase(
 	}, nil
 }
 
+func (s *HackathonService) AddOwner(
+	ctx context.Context,
+	req *msgs.AddOwnerRequest,
+) (*msgs.AddOwnerResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reject anonymous users
+	if uid == mw.AnonSubject {
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"anonymous users cannot add owners",
+		)
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Write permission on hackathon
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Hackathon, mw.Write); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	userId, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	h, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.IDEQ(hackathonID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Find the user to add as owner
+	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user to add as owner", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Add user to owners edge
+	_, err = s.dbClient.Hackathon.UpdateOne(h).
+		AddOwners(user).
+		Save(ctx)
+	if err != nil {
+		slog.Error("add owner to hackathon", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't add owner to hackathon")
+	}
+
+	// Grant Owner casbin role
+	if _, err := s.enforcer.AddRole(user.KeycloakID, mw.Owner, h.ID.String()); err != nil {
+		slog.Error("add hackathon owner role", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't set hackathon owner permission")
+	}
+
+	return &msgs.AddOwnerResponse{}, nil
+}
+
+func (s *HackathonService) RemoveOwner(
+	ctx context.Context,
+	req *msgs.RemoveOwnerRequest,
+) (*msgs.RemoveOwnerResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reject anonymous users
+	if uid == mw.AnonSubject {
+		return nil, status.Error(
+			codes.Unauthenticated,
+			"anonymous users cannot remove owners",
+		)
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check Write permission on hackathon
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Hackathon, mw.Write); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	userId, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	h, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.IDEQ(hackathonID)).
+		WithOwners().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Verify the user is an owner
+	var targetOwner *ent.User
+	for _, o := range h.Edges.Owners {
+		if o.ID == userId {
+			targetOwner = o
+			break
+		}
+	}
+	if targetOwner == nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			"user %s is not an owner of this hackathon",
+			req.GetUserId(),
+		)
+	}
+
+	// Prevent removing the last owner
+	if len(h.Edges.Owners) == 1 {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot remove the last owner of a hackathon",
+		)
+	}
+
+	// Find the user to remove
+	user, err := s.dbClient.User.Query().Where(entuser.IDEQ(userId)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUserId())
+		}
+		slog.Error("query user to remove", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Remove user from owners edge
+	_, err = s.dbClient.Hackathon.UpdateOne(h).
+		RemoveOwners(user).
+		Save(ctx)
+	if err != nil {
+		slog.Error("remove owner from hackathon", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove owner from hackathon")
+	}
+
+	// Revoke Owner casbin role
+	if _, err := s.enforcer.RemoveRole(user.KeycloakID, mw.Owner, h.ID.String()); err != nil {
+		slog.Error("remove hackathon owner role", "err", err)
+
+		return nil, status.Errorf(codes.Internal, "couldn't remove hackathon owner permission")
+	}
+
+	return &msgs.RemoveOwnerResponse{}, nil
+}
+
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
@@ -858,7 +1060,7 @@ func (s *HackathonService) List(
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid owner_id: %v", ownerID)
 		}
-		q = q.Where(enthackathon.HasCreatorWith(entuser.IDEQ(uid)))
+		q = q.Where(enthackathon.HasOwnersWith(entuser.IDEQ(uid)))
 	}
 
 	var participantUID *uuid.UUID

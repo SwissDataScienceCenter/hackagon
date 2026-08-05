@@ -1054,6 +1054,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | phases | [Phase](#hackathon-entities-Phase) | repeated |  |
 | viewer_membership | [HackathonMember](#hackathon-entities-HackathonMember) | optional | Populated in List responses only when participant_id filter is set. Contains the requesting user&#39;s membership in this hackathon (role &#43; is_waiting). |
 | state | [HackathonState](#hackathon-entities-HackathonState) |  | Populated in Get responses only. |
+| owners | [user.entities.User](#user-entities-User) | repeated | Populated in Get responses only. |
 
 
 
