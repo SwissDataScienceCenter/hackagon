@@ -11,6 +11,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
