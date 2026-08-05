@@ -107,6 +107,35 @@
         return 'Wrapped up';
     }
 
+    /* --------------------------------------------------------------- partners */
+
+    interface Partner {
+        name: string;
+        logo?: string;
+        /** Separate file for dark backgrounds (SDSC ships one). */
+        logoDark?: string;
+        /**
+         * Full-colour logo with dark type: show it on a white plate in dark
+         * mode. Inverting such a logo shifts its brand colours (Durham's purple
+         * shield turns green) and a mono white silhouette loses interior
+         * detail.
+         */
+        plateOnDark?: boolean;
+    }
+
+    // A partner without a `logo` renders as its name alone. Deliberate for
+    // Durham until the asset is added: pointing at a file that is not there
+    // costs every visitor a 404, which the mobile suite's broken-image check
+    // flags — the onerror fallback only hides the symptom. To add it, drop the
+    // file at static/images/logos/durham.png and set
+    // `logo: '/images/logos/durham.png', plateOnDark: true`.
+    const PARTNERS: Partner[] = [
+        { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
+        { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
+        { name: 'EPFL', logo: '/images/logos/epfl.svg' },
+        { name: 'Durham University' },
+    ];
+
     /* --------------------------------------------------------------- showcase */
 
     const carouselSlides = [
@@ -429,16 +458,7 @@
          widths. Logos render only where the asset actually exists; the rest
          show their name alone. -->
     <div class="flex flex-wrap items-end justify-center gap-8">
-        {#each [
-            { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
-            { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
-            { name: 'EPFL', logo: '/images/logos/epfl.svg' },
-            // Full-colour logo with black type. Inverting it would turn the
-            // purple shield green, and a mono white silhouette would lose the
-            // lions inside it — so on dark backgrounds it sits on a white
-            // plate instead, which keeps the institution's own colours.
-            { name: 'Durham University', logo: '/images/logos/durham.png', plateOnDark: true }
-        ] as org (org.name)}
+        {#each PARTNERS as org (org.name)}
             <div class="flex flex-col items-center gap-2">
                 {#if org.logo}
                     <!-- ETH/EPFL svgs are white-native (footer convention):
