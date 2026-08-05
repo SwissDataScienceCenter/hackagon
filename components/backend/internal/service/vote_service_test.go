@@ -1464,6 +1464,356 @@ var _ = Describe("VoteService", func() {
 		})
 	})
 
+	Describe("SuggestResults", func() {
+		var (
+			hid, submissionID1, submissionID2, submissionID3 string
+			catID                                            string
+			userKC                                           string
+		)
+
+		createMultipleSubmissions := func() {
+			pid := createProject(hid)
+			tid := createTeam(pid)
+			submissionID1 = createSubmission(tid, pid)
+			submissionID2 = createSubmission(tid, pid)
+			submissionID3 = createSubmission(tid, pid)
+		}
+
+		BeforeEach(func() {
+			hid = createHackathon("Suggest Results")
+			createMultipleSubmissions()
+			_, userKC = createAndJoin(hid, "sr")
+			grantRole(userKC, hid, middleware.Owner)
+			catID = createVoteCategory(
+				hid,
+				"Single Choice",
+				voteEntities.VotingMethod_VOTING_METHOD_SINGLE_CHOICE,
+				voteEntities.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
+				nil,
+			)
+			setCapabilities(hid, hackathonEntities.Capability_CAPABILITY_VOTE)
+		})
+
+		It("suggests results for single choice voting", func() {
+			// Each user votes once: sub1 gets 2 votes, sub2 gets 1 vote
+			_, kc1 := createAndJoin(hid, "voter1")
+			_, kc2 := createAndJoin(hid, "voter2")
+			_, kc3 := createAndJoin(hid, "voter3")
+			grantRole(kc1, hid, middleware.Member)
+			grantRole(kc2, hid, middleware.Member)
+			grantRole(kc3, hid, middleware.Member)
+
+			token1 := testutils.CreateTestJWTToken(kc1)
+			ctx1 := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token1),
+			)
+			_, err := voteClient.SubmitVote(ctx1, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_SingleChoice{
+					SingleChoice: &voteMsgs.SingleChoiceVote{SubmissionId: submissionID1},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			token2 := testutils.CreateTestJWTToken(kc2)
+			ctx2 := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token2),
+			)
+			_, err = voteClient.SubmitVote(ctx2, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_SingleChoice{
+					SingleChoice: &voteMsgs.SingleChoiceVote{SubmissionId: submissionID1},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			token3 := testutils.CreateTestJWTToken(kc3)
+			ctx3 := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token3),
+			)
+			_, err = voteClient.SubmitVote(ctx3, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_SingleChoice{
+					SingleChoice: &voteMsgs.SingleChoiceVote{SubmissionId: submissionID2},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Suggest results
+			resp, err := voteClient.SuggestResults(
+				adminCtx(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetResults()).To(HaveLen(2))
+
+			// sub1 should be position 1 (2 votes), sub2 should be position 2 (1 vote)
+			Expect(resp.GetResults()[0].GetSubmissionId()).To(Equal(submissionID1))
+			Expect(resp.GetResults()[0].GetPosition()).To(Equal(int32(1)))
+			Expect(resp.GetResults()[1].GetSubmissionId()).To(Equal(submissionID2))
+			Expect(resp.GetResults()[1].GetPosition()).To(Equal(int32(2)))
+		})
+
+		It("deletes previous single choice vote when user changes vote", func() {
+			userDBID, kc := createAndJoin(hid, "voter")
+			grantRole(kc, hid, middleware.Member)
+			token := testutils.CreateTestJWTToken(kc)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// First vote: sub1
+			_, err := voteClient.SubmitVote(ctx, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_SingleChoice{
+					SingleChoice: &voteMsgs.SingleChoiceVote{SubmissionId: submissionID1},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Second vote: sub2 (should replace sub1 vote)
+			_, err = voteClient.SubmitVote(ctx, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_SingleChoice{
+					SingleChoice: &voteMsgs.SingleChoiceVote{SubmissionId: submissionID2},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify only 1 vote exists for this user in this category
+			count, err := dbClient.Vote.Query().
+				Where(
+					entvote.HasCategoryWith(entvotecategory.IDEQ(uuid.MustParse(catID))),
+					entvote.HasVoterWith(entuser.IDEQ(uuid.MustParse(userDBID))),
+				).Count(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(count).To(Equal(1))
+
+			// The remaining vote should be for sub2
+			vote, err := dbClient.Vote.Query().
+				Where(
+					entvote.HasCategoryWith(entvotecategory.IDEQ(uuid.MustParse(catID))),
+					entvote.HasVoterWith(entuser.IDEQ(uuid.MustParse(userDBID))),
+				).WithSubmission().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(vote.Edges.Submission.ID.String()).To(Equal(submissionID2))
+		})
+
+		It("suggests results for ranked voting using Borda count", func() {
+			catID = createVoteCategory(
+				hid,
+				"Ranked",
+				voteEntities.VotingMethod_VOTING_METHOD_RANKED,
+				voteEntities.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
+				nil,
+			)
+
+			// Create two voters with different rankings
+			_, kc1 := createAndJoin(hid, "ranker1")
+			_, kc2 := createAndJoin(hid, "ranker2")
+			grantRole(kc1, hid, middleware.Member)
+			grantRole(kc2, hid, middleware.Member)
+
+			token1 := testutils.CreateTestJWTToken(kc1)
+			ctx1 := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token1),
+			)
+			// Voter 1: sub1=1st (rank 1), sub2=2nd (rank 2), sub3=3rd (rank 3)
+			_, err := voteClient.SubmitVote(ctx1, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_Ranked{
+					Ranked: &voteMsgs.RankedVote{
+						Submissions: []*voteMsgs.RankedSubmission{
+							{SubmissionId: submissionID1, Rank: 1},
+							{SubmissionId: submissionID2, Rank: 2},
+							{SubmissionId: submissionID3, Rank: 3},
+						},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			token2 := testutils.CreateTestJWTToken(kc2)
+			ctx2 := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token2),
+			)
+			// Voter 2: sub2=1st (rank 1), sub1=2nd (rank 2), sub3=3rd (rank 3)
+			_, err = voteClient.SubmitVote(ctx2, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_Ranked{
+					Ranked: &voteMsgs.RankedVote{
+						Submissions: []*voteMsgs.RankedSubmission{
+							{SubmissionId: submissionID2, Rank: 1},
+							{SubmissionId: submissionID1, Rank: 2},
+							{SubmissionId: submissionID3, Rank: 3},
+						},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Borda count with 3 submissions: 1st=2pts, 2nd=1pt, 3rd=0pts
+			// sub1: 2+1 = 3pts, sub2: 1+2 = 3pts, sub3: 0+0 = 0pts
+			resp, err := voteClient.SuggestResults(
+				adminCtx(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetResults()).To(HaveLen(3))
+
+			// sub1 and sub2 tied for 1st, sub3 is 3rd
+			Expect(resp.GetResults()[0].GetPosition()).To(Equal(int32(1)))
+			Expect(resp.GetResults()[1].GetPosition()).To(Equal(int32(1)))
+			Expect(resp.GetResults()[2].GetPosition()).To(Equal(int32(3)))
+		})
+
+		It("suggests results for points voting", func() {
+			mp := int32(100)
+			catID = createVoteCategory(
+				hid,
+				"Points",
+				voteEntities.VotingMethod_VOTING_METHOD_POINTS,
+				voteEntities.VoterType_VOTER_TYPE_ALL_PARTICIPANTS,
+				&mp,
+			)
+
+			_, kc1 := createAndJoin(hid, "pointer1")
+			grantRole(kc1, hid, middleware.Member)
+			token1 := testutils.CreateTestJWTToken(kc1)
+			ctx1 := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token1),
+			)
+
+			_, err := voteClient.SubmitVote(ctx1, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_Points{
+					Points: &voteMsgs.PointsVote{
+						Submissions: []*voteMsgs.PointsSubmission{
+							{SubmissionId: submissionID1, Points: 40},
+							{SubmissionId: submissionID2, Points: 60},
+						},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			resp, err := voteClient.SuggestResults(
+				adminCtx(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetResults()).To(HaveLen(2))
+			Expect(resp.GetResults()[0].GetSubmissionId()).To(Equal(submissionID2))
+			Expect(resp.GetResults()[0].GetPosition()).To(Equal(int32(1)))
+			Expect(resp.GetResults()[1].GetSubmissionId()).To(Equal(submissionID1))
+			Expect(resp.GetResults()[1].GetPosition()).To(Equal(int32(2)))
+		})
+
+		It("errors when results already exist without force", func() {
+			// Create a manual result first
+			_, err := voteClient.CreateVoteResult(
+				adminCtx(),
+				&voteMsgs.CreateVoteResultRequest{
+					CategoryId:   catID,
+					SubmissionId: submissionID1,
+					Position:     1,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to suggest without force
+			_, err = voteClient.SuggestResults(
+				adminCtx(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.FailedPrecondition))
+			Expect(status.Convert(err).Message()).To(ContainSubstring("1 result(s) already exist"))
+		})
+
+		It("overwrites existing results when force=true", func() {
+			// Submit a vote first
+			_, kc := createAndJoin(hid, "forcer")
+			grantRole(kc, hid, middleware.Member)
+			token := testutils.CreateTestJWTToken(kc)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			_, err := voteClient.SubmitVote(ctx, &voteMsgs.SubmitVoteRequest{
+				CategoryId: catID,
+				Vote: &voteMsgs.SubmitVoteRequest_SingleChoice{
+					SingleChoice: &voteMsgs.SingleChoiceVote{SubmissionId: submissionID1},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a manual result
+			_, err = voteClient.CreateVoteResult(
+				adminCtx(),
+				&voteMsgs.CreateVoteResultRequest{
+					CategoryId:   catID,
+					SubmissionId: submissionID1,
+					Position:     1,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Suggest with force
+			resp, err := voteClient.SuggestResults(
+				adminCtx(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID, Force: true},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetResults()).To(HaveLen(1))
+			Expect(resp.GetResults()[0].GetSubmissionId()).To(Equal(submissionID1))
+			Expect(resp.GetResults()[0].GetPosition()).To(Equal(int32(1)))
+		})
+
+		It("returns NOT_FOUND for invalid category", func() {
+			_, err := voteClient.SuggestResults(
+				adminCtx(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: uuid.NewString()},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires authentication", func() {
+			_, err := voteClient.SuggestResults(
+				context.Background(),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies non-owner", func() {
+			// Create a non-owner user (Member role only)
+			_, nonOwnerKC := createAndJoin(hid, "nonowner")
+			_, err := voteClient.SuggestResults(
+				metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken(nonOwnerKC),
+					),
+				),
+				&voteMsgs.SuggestResultsRequest{CategoryId: catID},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
 	Describe("ExportVotes", func() {
 		var userKC, categoryID, submissionID string
 		BeforeEach(func() {

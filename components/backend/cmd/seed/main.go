@@ -13,7 +13,10 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
 	middleware "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -1053,6 +1056,103 @@ func seedH3(
 		return fmt.Errorf("submission Delta v2: %w", err)
 	}
 
+	// Team Epsilon for projPipelineViz (a second submission for voting demo)
+	teamEpsilon, err := db.Team.Create().
+		SetName("Team Epsilon").
+		SetDescription("Building the Data Pipeline Visualizer").
+		SetProject(projPipelineViz).
+		SetCreator(admin).
+		SetModifier(admin).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("team Epsilon: %w", err)
+	}
+	for _, u := range []*ent.User{admin, alice} {
+		if _, err := db.TeamParticipant.Create().SetTeam(teamEpsilon).SetUser(u).Save(ctx); err != nil {
+			return fmt.Errorf("team Epsilon member %s: %w", u.Username, err)
+		}
+		if _, err := enf.AddRole(u.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamEpsilon.ID.String())); err != nil {
+			return fmt.Errorf("assign Epsilon member %s: %w", u.Username, err)
+		}
+	}
+	pipelineResult := "https://github.com/internal/data-pipeline-viz"
+	if _, err := db.Submission.Create().
+		SetVersion(1).
+		SetStatus(submission.StatusFinal).
+		SetResult(pipelineResult).
+		SetTeam(teamEpsilon).
+		SetProject(projPipelineViz).
+		SetCreator(admin).
+		SetModifier(admin).
+		Save(ctx); err != nil {
+		return fmt.Errorf("submission Epsilon v1: %w", err)
+	}
+
+	// Vote category and results — "Best Project" single-choice vote
+	voteCat, err := db.VoteCategory.Create().
+		SetName("Best Project").
+		SetDescription("Vote for the project you found most interesting or useful.").
+		SetVotingMethod(votecategory.VotingMethodSingleChoice).
+		SetVoterType(votecategory.VoterTypeAllParticipants).
+		SetHackathon(h).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("vote category Best Project: %w", err)
+	}
+
+	// admin votes for CLI Code Generator, alice votes for Data Pipeline Visualizer
+	subDelta, err := db.Submission.Query().
+		Where(submission.HasTeamWith(team.IDEQ(teamDelta.ID))).
+		Order(ent.Desc(submission.FieldVersion)).
+		First(ctx)
+	if err != nil {
+		return fmt.Errorf("query Delta submission: %w", err)
+	}
+	subEpsilon, err := db.Submission.Query().
+		Where(submission.HasTeamWith(team.IDEQ(teamEpsilon.ID))).
+		Order(ent.Desc(submission.FieldVersion)).
+		First(ctx)
+	if err != nil {
+		return fmt.Errorf("query Epsilon submission: %w", err)
+	}
+
+	// admin → CLI Code Generator
+	if _, err := db.Vote.Create().
+		SetCategory(voteCat).
+		SetVoter(admin).
+		SetSubmission(subDelta).
+		SetVoteType(entvote.VoteTypeSingleChoice).
+		Save(ctx); err != nil {
+		return fmt.Errorf("vote admin: %w", err)
+	}
+	// alice → Data Pipeline Visualizer
+	if _, err := db.Vote.Create().
+		SetCategory(voteCat).
+		SetVoter(alice).
+		SetSubmission(subEpsilon).
+		SetVoteType(entvote.VoteTypeSingleChoice).
+		Save(ctx); err != nil {
+		return fmt.Errorf("vote alice: %w", err)
+	}
+
+	// Vote results: CLI Code Generator tied for 1st (1 vote from admin), Data Pipeline tied for 1st (1 vote from alice)
+	_, err = db.VoteResult.Create().
+		SetVoteCategoryID(voteCat.ID).
+		SetSubmission(subDelta).
+		SetPosition(1).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("vote result CLI: %w", err)
+	}
+	_, err = db.VoteResult.Create().
+		SetVoteCategoryID(voteCat.ID).
+		SetSubmission(subEpsilon).
+		SetPosition(1).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("vote result PipelineViz: %w", err)
+	}
+
 	for _, ra := range []struct {
 		id   string
 		role middleware.Role
@@ -1077,7 +1177,7 @@ func seedH3(
 		proposeProjects:    false,
 		teamPreferences:    false,
 		projectSubmissions: false,
-		vote:               false,
+		vote:               true,
 		viewResults:        true,
 	}, phases["Demo"]); err != nil {
 		return err

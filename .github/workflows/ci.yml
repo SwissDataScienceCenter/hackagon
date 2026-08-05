@@ -70,3 +70,7 @@ jobs:
         run: |
           just ci::run just check::test -c backend
           just ci::run just check::test -c frontend
+      - name: Seed
+        run: |
+          just ci::run just deploy::up
+          just ci::run just db::seed
