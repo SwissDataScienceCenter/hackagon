@@ -2,11 +2,14 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
-import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { mayPreferProjects } from "$lib/server/hackathon/capabilities"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
+// No owner/admin check here: reviewing proposals is an organiser action and
+// lives on Manage Projects, which gates itself (see $lib/navigation's manageNav)
+// and owns the Approve/Revoke actions. This page is the participant view and
+// reads the same for everyone.
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // project at every status.
@@ -16,13 +19,6 @@ export const load: PageServerLoad = async (event) => {
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
   )
-  const isHackathonOwner =
-    myMembership?.role === HackathonRole.HACKATHON_ROLE_OWNER
-
-  // The subjects `Approve`/`Disapprove` accept — hackathon-level `project:write`
-  // (`project_service.go:281`), held by the casbin Owner and by an admin through
-  // the escape hatch. Courtesy only: both handlers enforce it for real.
-  const mayReview = isHackathonOwner || isAdmin
 
   // Which of these projects the caller already prefers. Read-only and
   // decorative — swallow the error and show nothing preferred rather than
@@ -42,29 +38,24 @@ export const load: PageServerLoad = async (event) => {
     }
   }
 
-  // A reviewer sees proposals too — that is the whole point of deciding from
-  // this page. Everyone else sees approved projects only: a proposal awaiting a
-  // decision is its author's business, and Proposals is where they follow it.
+  // Approved projects, and only those, whoever is looking. A proposal awaiting a
+  // decision is its author's business — they follow it on Proposals — and the
+  // reviewer's, who sees every status on Manage Projects. This page therefore
+  // reads identically for a member and an owner, which is the point of the
+  // split: what an owner gains is a page of their own, not a different version
+  // of this one.
   //
   // Frontend-only. `hackathon.get` returns every project whatever the caller's
-  // role, so this shapes the page rather than enforcing anything; a member
-  // calling the API directly still sees pending proposals.
-  const visible = hackathon.projects.filter(
-    (p) =>
-      p.status === ProjectStatus.PROJECT_STATUS_APPROVED ||
-      (mayReview && p.status === ProjectStatus.PROJECT_STATUS_PROPOSED),
+  // role, so this shapes the page rather than enforcing anything.
+  const approved = hackathon.projects.filter(
+    (p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
   )
 
-  const isPending = (s: number) => s === ProjectStatus.PROJECT_STATUS_PROPOSED
-
-  // Awaiting review first for a reviewer — those are the ones asking for an
-  // action. Newest first within each group, matching how the page has read.
-  const ordered = [...visible].sort((a, b) => {
-    if (isPending(a.status) !== isPending(b.status)) {
-      return isPending(a.status) ? -1 : 1
-    }
-    return (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
-  })
+  // Newest first, as the page has always read. No pending group to hoist above
+  // them any more.
+  const ordered = [...approved].sort(
+    (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+  )
 
   // `Project` carries only `creatorId`, so the name comes from the membership
   // list that arrived in the same response. A creator who has since left the
@@ -93,39 +84,30 @@ export const load: PageServerLoad = async (event) => {
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
-    // Derived here rather than in the component, so no page has to import the
-    // generated enum across the server-only boundary to compare a status.
-    isPending: isPending(p.status),
-    // The three subjects `ProjectService.Edit` accepts, and the same test the
-    // edit route gates on: the proposer, the hackathon owner, an admin. Per
-    // project, because the proposer differs row to row.
-    //
-    // Note the second and third let an owner or admin edit someone else's
-    // proposal. That is what the backend allows — `Edit` falls back to a
-    // hackathon-wide project:write check (`project_service.go:479-484`) — so
-    // offering it here matches the existing edit route rather than quietly
-    // narrowing it. Whether it *should* be allowed is a separate question.
-    mayEdit: (myId !== undefined && p.creatorId === myId) || mayReview,
+    // The proposer only. `ProjectService.Edit` also accepts the hackathon owner
+    // and an admin (`project_service.go:479-484`), and they get the same control
+    // on Manage Projects — offering it to them here as well would put the same
+    // organiser action on two pages, which is what this split undoes.
+    mayEdit: myId !== undefined && p.creatorId === myId,
     isPreferred: preferredIds.has(p.id),
   }))
 
-  // `hackathonId` so the page can build the link to the propose form —
+  // `hackathonId` so the page can build the link to a project —
   // unresolved, since `resolve()` belongs at the anchor itself.
   return {
     projects,
     hackathonId: hackathon.id,
-    mayReview,
     mayPrefer,
   }
 }
 
-/** Shared by every action here: they all act on one project id from the form. */
+/** Shared by both actions here: they act on one project id from the form. */
 function projectIdFrom(form: FormData): string | undefined {
   const id = form.get("projectId")
   return typeof id === "string" && id !== "" ? id : undefined
 }
 
-/** The gRPC errors all three write paths can return, as SvelteKit failures. */
+/** The gRPC errors both write paths can return, as SvelteKit failures. */
 function failFor(e: unknown, denied: string) {
   if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
     return fail(403, { message: denied })
@@ -140,47 +122,6 @@ function failFor(e: unknown, denied: string) {
 }
 
 export const actions: Actions = {
-  approve: async (event) => {
-    const { project } = requireGrpc(event.locals.grpc)
-
-    const projectId = projectIdFrom(await event.request.formData())
-    if (!projectId) return fail(400, { message: "No project was given" })
-
-    try {
-      await project.approve({ projectId })
-    } catch (e) {
-      return failFor(e, "You don't have permission to approve projects here")
-    }
-
-    // No redirect: SvelteKit re-runs `load` after an action, so the badge turns
-    // Approved and the card moves out of the awaiting-review group on its own.
-    return { approvedId: projectId }
-  },
-
-  // Revoking an approval, not rejecting. `ProjectService.Disapprove` sets the
-  // status back to PROPOSED (`project_service.go:242`) — the state a project was
-  // in before anyone looked at it — so this returns a project to the queue.
-  //
-  // TODO(backend: project-rejected-status): there is no reject, so this page
-  // offers none. `ProjectStatus` has only PROPOSED and APPROVED, and a rejected
-  // proposal would be indistinguishable from an unreviewed one. Once a REJECTED
-  // status (ideally with a reason) exists, add that as a separate action and
-  // leave this one meaning what its name says.
-  disapprove: async (event) => {
-    const { project } = requireGrpc(event.locals.grpc)
-
-    const projectId = projectIdFrom(await event.request.formData())
-    if (!projectId) return fail(400, { message: "No project was given" })
-
-    try {
-      await project.disapprove({ projectId })
-    } catch (e) {
-      return failFor(e, "You don't have permission to review projects here")
-    }
-
-    return { disapprovedId: projectId }
-  },
-
   prefer: async (event) => {
     const { project } = requireGrpc(event.locals.grpc)
 

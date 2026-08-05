@@ -7,6 +7,7 @@ import { resolve } from "$app/paths"
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
+import ClipboardCheck from "lucide-svelte/icons/clipboard-check"
 import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UsersRound from "lucide-svelte/icons/users-round"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
@@ -354,11 +355,21 @@ export function manageNav(
       icon: UserRoundCheck,
       href: resolve(`/my/hackathon/${hackathonId}/participants/manage`),
     },
-    // Then, because it extends "All Projects" — the participant entry right
-    // before "Teams" — and tracks exist to categorise projects, so the control
-    // to define them reads as acting on that list. Shown even when the
-    // hackathon has no tracks yet: that is exactly how an owner gets the first
-    // one. The participant-facing surfaces (propose, project edit, overview)
+    // Then Projects, extending "All Projects" directly: that page lists the
+    // approved ones and offers a preference, this one is the review queue —
+    // every status, proposals first, with Approve and Revoke on the rows. Both
+    // link to a detail route that renders the same `ProjectDetail`; deciding
+    // happens on the list, so the pair is read-here, act-there.
+    {
+      id: "manage:projects",
+      label: "Manage Projects",
+      icon: ClipboardCheck,
+      href: resolve(`/my/hackathon/${hackathonId}/projects/manage`),
+    },
+    // Then tracks, which categorise the projects above, so the control to define
+    // them reads as acting on those two lists. Shown even when the hackathon has
+    // no tracks yet: that is exactly how an owner gets the first one. The
+    // participant-facing surfaces (propose, project edit, overview)
     // already hide themselves when there are none, so nothing further is
     // needed there.
     {

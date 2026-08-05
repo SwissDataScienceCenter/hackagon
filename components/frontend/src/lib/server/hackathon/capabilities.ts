@@ -128,6 +128,29 @@ export function mayManageParticipants(
 }
 
 /**
+ * Whether to offer project review — approve a proposal, revoke an approval.
+ *
+ * Mirrors the backend exactly, same as `mayManagePhases`/`mayManagePages`:
+ * `ProjectService.Approve`/`Disapprove` both enforce hackathon-scoped
+ * `project:write` (`project_service.go:281`), which casbin grants to `Owner`
+ * outright and to an admin through the global escape hatch. A proposer's
+ * project-scoped Owner role sits in a different casbin domain, so it does not
+ * satisfy this and nobody can approve their own proposal. No capability gates
+ * either RPC, so there is no shown-then-refused control.
+ *
+ * Shared by the manage list and the manage detail route so the two can never
+ * disagree about who is let in.
+ */
+export function mayReviewProjects(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}
+
+/**
  * Whether to offer "new submission" for a team.
  *
  * Unlike `mayPreferProjects`, this mirrors the backend exactly: seeded
