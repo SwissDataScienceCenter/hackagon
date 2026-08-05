@@ -24,6 +24,24 @@ export const load: PageServerLoad = async (event) => {
   // the escape hatch. Courtesy only: both handlers enforce it for real.
   const mayReview = isHackathonOwner || isAdmin
 
+  // Which of these projects the caller already prefers. Read-only and
+  // decorative — swallow the error and show nothing preferred rather than
+  // fail the whole load, same as the `hackathon.list`/`page.list` chrome calls
+  // in `(app)/+layout.server.ts`.
+  let preferredIds = new Set<string>()
+  const mayPrefer = mayPreferProjects(myMembership ?? undefined, isAdmin)
+  if (mayPrefer) {
+    try {
+      const { project } = requireGrpc(event.locals.grpc)
+      const { projectIds } = await project.getPreference({
+        hackathonId: hackathon.id,
+      })
+      preferredIds = new Set(projectIds)
+    } catch {
+      // No preferences to show — the "Prefer" button still works either way.
+    }
+  }
+
   // A reviewer sees proposals too — that is the whole point of deciding from
   // this page. Everyone else sees approved projects only: a proposal awaiting a
   // decision is its author's business, and Proposals is where they follow it.
@@ -88,6 +106,7 @@ export const load: PageServerLoad = async (event) => {
     // offering it here matches the existing edit route rather than quietly
     // narrowing it. Whether it *should* be allowed is a separate question.
     mayEdit: (myId !== undefined && p.creatorId === myId) || mayReview,
+    isPreferred: preferredIds.has(p.id),
   }))
 
   // `hackathonId` so the page can build the link to the propose form —
@@ -96,7 +115,7 @@ export const load: PageServerLoad = async (event) => {
     projects,
     hackathonId: hackathon.id,
     mayReview,
-    mayPrefer: mayPreferProjects(myMembership ?? undefined, isAdmin),
+    mayPrefer,
   }
 }
 
@@ -162,12 +181,6 @@ export const actions: Actions = {
     return { disapprovedId: projectId }
   },
 
-  // TODO(backend: project-preferences-readback): one-way on purpose. There is
-  // no way to read a member's own preferences back — `hackathon.get`'s Project
-  // carries none, and `ExportPreferences` is gated on project:write, so only an
-  // owner may read them — and no RPC to undo one. So this marks a preference
-  // and says so, but on the next load the button looks untouched again. Once a
-  // read path and an unset exist, make it a real toggle.
   prefer: async (event) => {
     const { project } = requireGrpc(event.locals.grpc)
 
@@ -184,5 +197,23 @@ export const actions: Actions = {
     }
 
     return { preferredId: projectId }
+  },
+
+  unprefer: async (event) => {
+    const { project } = requireGrpc(event.locals.grpc)
+
+    const projectId = projectIdFrom(await event.request.formData())
+    if (!projectId) return fail(400, { message: "No project was given" })
+
+    try {
+      await project.removePreference({ projectId })
+    } catch (e) {
+      return failFor(
+        e,
+        "You can't change project preferences in this hackathon",
+      )
+    }
+
+    return { unpreferredId: projectId }
   },
 }
