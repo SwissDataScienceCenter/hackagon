@@ -8,7 +8,8 @@
     <!-- The two role flags come from (app)/+layout.server.ts, which reads them off
          the casbin roles WhoAmI already put on locals — no extra RPC here. Same
          pair `homeNav` gates Create Hackathon on, since it is the same backend
-         permission. -->
+         permission. `isGlobalAdmin` goes through on its own as well: the platform
+         settings tiles need admin specifically, not either of the two. -->
     <DashboardView
         session={data.session}
         myHackathons={data.myHackathons}

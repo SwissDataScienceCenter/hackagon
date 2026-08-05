@@ -2,8 +2,9 @@
     import { resolve } from '$app/paths';
     import Plus from 'lucide-svelte/icons/plus';
     import Pencil from 'lucide-svelte/icons/pencil';
+    import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
-    import { canEditHackathon } from '$lib/navigation';
+    import { canEditHackathon, platformNav, type NavItem } from '$lib/navigation';
     import { statusLabel, statusBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
 
     interface HackathonMember {
@@ -35,7 +36,15 @@
          * still the backend's to refuse; this only decides whether to offer it.
          */
         canCreate?: boolean;
-        /** Whether the viewer can edit any hackathon regardless of ownership. */
+        /**
+         * Whether the viewer holds the global admin role.
+         *
+         * Gates two things on this page: editing any hackathon regardless of
+         * ownership, and the platform administration section as a whole — the
+         * settings pages behind it need exactly this role, `UserService.List`
+         * denying everyone else. Whole section rather than per tile, since
+         * every entry in it needs the same role.
+         */
         isGlobalAdmin?: boolean;
     }
 
@@ -47,6 +56,12 @@
         isGlobalAdmin = false,
     }: Props = $props();
     const userName = session?.user?.name ?? 'there';
+
+    // The same list the sidebar's Platform section renders, so an admin page
+    // added to `platformNav` appears in both without being named twice. It is
+    // also the gate: empty without the global admin role, which is what makes
+    // the section vanish entirely for everyone else.
+    const adminItems = $derived(platformNav({ isGlobalAdmin }));
 
     // Decorative thumbnails for hackathons with no image of their own. Each
     // stop is derived from a theme token and darkened rather than naming a
@@ -182,5 +197,90 @@
                 </div>
             {/if}
         </section>
+
+        <!-- Platform administration. Last because scope widens downwards, the
+             order the sidebar already reads in: the hackathons you are in, then
+             all of them, then the platform itself.
+
+             Admin-only, and absent rather than disabled for everyone else:
+             `adminItems` is empty without the global role, so a non-admin gets
+             no tiles, no heading and no empty container — nothing here hints
+             the pages exist. The backend refuses them regardless; this only
+             decides whether to offer them.
+
+             Deliberately unheaded — the tiles name themselves, and a heading
+             over a single tile was more furniture than signal. The aria-label
+             is the invisible replacement, so the landmark still has a name for
+             a screen reader.
+
+             Tiles rather than rows: unlike the two lists above, these are fixed
+             destinations that want a line of explanation each, and the grid has
+             room to grow as more settings pages land. Tonal `info` throughout,
+             never accent — Create Hackathon above is the view's one solid
+             accent, and a role is not a status. -->
+        {#if adminItems.length > 0}
+            <section aria-label="Platform administration">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {#each adminItems as item (item.id)}
+                        {#if item.href}
+                            <!-- eslint-disable svelte/no-navigation-without-resolve -- these
+                                 hrefs are built with resolve() in $lib/navigation; the rule
+                                 only recognizes a literal resolve() call in the attribute. -->
+                            <a
+                                href={item.href}
+                                class="card group flex flex-col gap-3 p-4 no-underline
+                                       transition-colors hover:border-line-strong"
+                            >
+                                {@render tile(item, true)}
+                            </a>
+                            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+                        {:else}
+                            <!-- Same treatment the sidebar gives an hrefless entry: shown,
+                                 muted, and plainly not clickable. -->
+                            <div
+                                title="Not available yet"
+                                class="card flex cursor-not-allowed flex-col gap-3 p-4
+                                       opacity-50"
+                            >
+                                {@render tile(item, false)}
+                            </div>
+                        {/if}
+                    {/each}
+                </div>
+            </section>
+        {/if}
     </div>
 </div>
+
+<!-- Shared by the link and the stub above so the two cannot drift apart. The
+     arrow is the only difference: on a tile that goes nowhere it would promise
+     a destination there isn't one of. -->
+{#snippet tile(item: NavItem, linked: boolean)}
+    {@const Icon = item.icon}
+    <div class="flex items-center gap-3">
+        <span
+            class="flex size-9 shrink-0 items-center justify-center rounded-field
+                   bg-info/10 text-info-ink"
+            aria-hidden="true"
+        >
+            <Icon class="h-4 w-4" />
+        </span>
+        <!-- A heading rather than a span, following ProjectCard: the base layer
+             gives h1–h6 the mono face, which is where a scanned label belongs,
+             and a span would quietly come out in sans. h3 because the section
+             deliberately has no h2 of its own. -->
+        <h3 class="m-0 flex-1 text-sm leading-snug text-ink">{item.label}</h3>
+        {#if linked}
+            <ArrowRight
+                class="h-4 w-4 shrink-0 text-ink-3 transition-transform
+                       group-hover:translate-x-0.5"
+                aria-hidden="true"
+            />
+        {/if}
+    </div>
+    {#if item.description}
+        <!-- The one genuinely prose-shaped thing on the tile, so it takes the
+             sans face and `ink-2`, as ProjectCard's description does. -->
+        <p class="prose m-0 text-xs leading-snug text-ink-2">{item.description}</p>
+    {/if}
+{/snippet}
