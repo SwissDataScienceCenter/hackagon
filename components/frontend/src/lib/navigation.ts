@@ -13,7 +13,7 @@ import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
-import CalendarPlus from "lucide-svelte/icons/calendar-plus"
+import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
 import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
@@ -343,8 +343,8 @@ export function manageNav(
   return [
     // First, because Participants is the first participant entry these extend.
     // Nested under it, so `activeNavId`'s longest match lights this entry and not
-    // that one while the page is open — the same mechanism Manage Teams and New
-    // Phase rely on below.
+    // that one while the page is open — the same mechanism Manage Teams and
+    // Manage Timeline rely on below.
     //
     // The participant page lists the same people and offers nothing to act on;
     // Approve and Remove exist only here.
@@ -369,7 +369,7 @@ export function manageNav(
     },
     // Nested under the participant Teams route, so `activeNavId`'s longest match
     // lights this entry and not that one while the page is open — the same
-    // mechanism New Phase relies on below.
+    // mechanism Manage Timeline relies on below.
     //
     // Labelled for the page it opens rather than trimmed to "Teams": the
     // heading already says Manage, but an entry whose label repeats a
@@ -381,15 +381,17 @@ export function manageNav(
       icon: UserRoundCog,
       href: resolve(`/my/hackathon/${hackathonId}/teams/manage`),
     },
-    // A create route rather than a landing page, following `homeNav`'s Create
-    // Hackathon: the timeline itself is already in the participant nav, so a
-    // second entry pointing at the same URL would be the one thing this split is
-    // meant to avoid.
+    // Nested under the participant Timeline route, same as Manage Teams above.
+    // This replaced a "New Phase" entry pointing straight at the create form:
+    // creating a phase is one of several things an organiser does to the timeline
+    // — edit, delete, declare a phase current, set the hackathon's capabilities —
+    // and singling it out in the nav left the rest reachable only from a page that
+    // no longer carries them. "Add phase" is a button on this page instead.
     {
-      id: "manage:phase-create",
-      label: "New Phase",
-      icon: CalendarPlus,
-      href: resolve(`/my/hackathon/${hackathonId}/timeline/new`),
+      id: "manage:timeline",
+      label: "Manage Timeline",
+      icon: CalendarCog,
+      href: resolve(`/my/hackathon/${hackathonId}/timeline/manage`),
     },
     // Last, because the page list it acts on is last in `memberNav` for the same
     // reason: an organiser can add and remove pages at will, so anything below it

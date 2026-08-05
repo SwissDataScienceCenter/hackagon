@@ -30,12 +30,12 @@
     <p class="m-0 text-xs text-surface-500">
         Want a page tied to a phase? Link it from
         <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/timeline`)}
+            href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage`)}
             class="font-semibold text-primary-700-300 no-underline hover:underline"
         >
             that phase's edit form
         </a>
-        on the Timeline.
+        on Manage Timeline.
     </p>
 
     {#if form?.message}
