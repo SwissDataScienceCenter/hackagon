@@ -41,7 +41,7 @@
      the colour mode, with `line-strong` so the difference still reads in light
      mode, where the two backgrounds are close together. -->
 <section
-    class="flex flex-col gap-4 border border-line-strong bg-surface px-5 py-4"
+    class="card flex flex-col gap-4 border-line-strong px-5 py-4"
     aria-labelledby="capabilities-heading"
 >
     {#if hasState}
@@ -86,7 +86,9 @@
                  checkboxes from server state. Considered and accepted — the two
                  areas are visually distinct, and guarding it would need client
                  state for a small win. -->
-            <button type="submit" class="btn btn-sm w-fit btn-solid">
+            <!-- Outline, not solid: this panel shares the timeline page with
+                 "Add phase", which is the one action that page is for. -->
+            <button type="submit" class="btn btn-sm w-fit btn-outline-accent">
                 Save changes
             </button>
         </form>
@@ -123,7 +125,7 @@
             </div>
         {/if}
     {:else}
-        <h3 id="capabilities-heading" class="m-0 text-sm font-bold text-ink">
+        <h3 id="capabilities-heading" class="m-0 text-section text-ink">
             What participants can do
         </h3>
         <p class="m-0 text-xs text-ink-2">

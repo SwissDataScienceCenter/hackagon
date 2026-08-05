@@ -40,11 +40,11 @@
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <span class="text-xs font-semibold text-accent-ink">{dates}</span>
-        <h1 class="text-lg font-bold sm:text-xl">{title}</h1>
+        <h1 class="text-title">{title}</h1>
         {#if badges.length > 0}
             <div class="flex flex-wrap gap-1.5">
                 {#each badges as b (b.label)}
-                    <span class="badge {b.variant} text-xs">{b.label}</span>
+                    <span class="badge {b.variant}">{b.label}</span>
                 {/each}
             </div>
         {/if}
@@ -69,7 +69,7 @@
                text-ink-2"
     >
         <div class="flex items-baseline gap-1.5 sm:flex-col sm:items-center sm:gap-0">
-            <span class="text-2xl font-bold">{participantCount}</span>
+            <span class="text-display">{participantCount}</span>
             {#if participantCapacity !== undefined}
                 <span class="text-xs">/ {participantCapacity}</span>
             {/if}

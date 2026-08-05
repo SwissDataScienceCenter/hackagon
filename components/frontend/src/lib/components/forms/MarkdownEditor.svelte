@@ -27,18 +27,22 @@
 </script>
 
 <div class="flex flex-col gap-2">
+    <!-- Chips, not buttons: this picks which pane is showing, and a solid accent
+         would both read as an action and compete with the form's real submit. -->
     <div class="flex gap-1">
         <button
             type="button"
             onclick={() => (mode = 'write')}
-            class="btn btn-sm {mode === 'write' ? 'btn-solid' : 'btn-ghost'}"
+            aria-pressed={mode === 'write'}
+            class="chip {mode === 'write' ? 'chip-active' : ''}"
         >
             Write
         </button>
         <button
             type="button"
             onclick={() => (mode = 'preview')}
-            class="btn btn-sm {mode === 'preview' ? 'btn-solid' : 'btn-ghost'}"
+            aria-pressed={mode === 'preview'}
+            class="chip {mode === 'preview' ? 'chip-active' : ''}"
         >
             Preview
         </button>
@@ -57,14 +61,15 @@
         {placeholder}
         {required}
         {maxlength}
-        class="border border-line bg-surface px-3 py-2 font-mono text-sm
-               text-ink focus:border-accent focus:outline-none
-               {mode === 'write' ? '' : 'hidden'}"
+        class="field field-area {mode === 'write' ? '' : 'hidden'}"
     ></textarea>
 
+    <!-- The preview takes the same box as the textarea it replaces — `card
+         card-raised` lands on the identical background, hairline and radius —
+         so switching panes does not move the frame. -->
     <div
-        class="border border-line bg-surface px-3 py-2
-               text-sm text-ink {mode === 'preview' ? '' : 'hidden'}"
+        class="card card-raised px-3 py-2 text-sm text-ink
+               {mode === 'preview' ? '' : 'hidden'}"
         style="min-height: {rows * 1.5}rem"
     >
         {#if text.trim()}
@@ -74,5 +79,5 @@
         {/if}
     </div>
 
-    <p class="m-0 text-[10px] text-ink-3">Markdown supported.</p>
+    <p class="m-0 text-xs text-ink-3">Markdown supported.</p>
 </div>

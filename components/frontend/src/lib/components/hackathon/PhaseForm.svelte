@@ -36,10 +36,6 @@
         datesEditable?: boolean;
     } = $props();
 
-    const FIELD_CLASS =
-        'field';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
-
     // See the TODO in the calling +page.server.ts: `Edit` sets dates but never
     // clears them, so a phase that already has them cannot be returned to
     // undated. Saying so beats a field that silently ignores being emptied.
@@ -57,7 +53,7 @@
     {/if}
 
     <div class="grid gap-4 sm:grid-cols-2">
-        <label class="{LABEL_CLASS} sm:col-span-2">
+        <label class="field-label sm:col-span-2">
             Name
             <input
                 type="text"
@@ -67,28 +63,28 @@
                 maxlength="255"
                 value={phase.name}
                 placeholder="Ideation"
-                class={FIELD_CLASS}
+                class="field"
             />
         </label>
 
         {#if datesEditable}
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Starts
                 <input
                     type="datetime-local"
                     name="startsAt"
                     value={toDateTimeLocal(phase.startsAt)}
-                    class={FIELD_CLASS}
+                    class="field"
                 />
             </label>
 
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Ends
                 <input
                     type="datetime-local"
                     name="endsAt"
                     value={toDateTimeLocal(phase.endsAt)}
-                    class={FIELD_CLASS}
+                    class="field"
                 />
             </label>
 
@@ -107,9 +103,9 @@
         {/if}
 
         {#if pages.length > 0}
-            <label class="{LABEL_CLASS} sm:col-span-2">
+            <label class="field-label sm:col-span-2">
                 Linked page (optional)
-                <select name="pageId" class={FIELD_CLASS}>
+                <select name="pageId" class="field">
                     <option value="">No page</option>
                     {#each pages as p (p.id)}
                         <option value={p.id} selected={p.id === phase.pageId}>
@@ -153,7 +149,7 @@
 
     <!-- Last and full width: the only field with no natural size, and the one
          where the room is worth having for the source and its preview both. -->
-    <div class="{LABEL_CLASS} w-full">
+    <div class="field-label w-full">
         <label for="phase-description">Description</label>
         <MarkdownEditor
             id="phase-description"

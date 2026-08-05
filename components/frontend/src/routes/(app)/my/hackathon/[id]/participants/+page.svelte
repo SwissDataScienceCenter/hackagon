@@ -27,7 +27,7 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-ink">All Participants</h2>
+            <h2 class="m-0 text-title text-ink">All Participants</h2>
             <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
         <div

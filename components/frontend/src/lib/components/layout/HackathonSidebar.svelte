@@ -112,7 +112,7 @@
 {#if mobileOpen}
     <button
         aria-label="Close hackathon navigation"
-        class="fixed inset-0 z-30 bg-black/50 md:hidden"
+        class="fixed inset-0 z-30 bg-scrim md:hidden"
         onclick={() => (mobileOpen = false)}
     ></button>
 {/if}
@@ -151,7 +151,7 @@
             <div class="flex min-w-0 items-baseline gap-2">
                 <span class="min-w-0 truncate text-sm font-bold">{hackathonName}</span>
                 {#if badge}
-                    <span class="badge shrink-0 badge-accent text-[0.625rem]">
+                    <span class="badge shrink-0 badge-accent">
                         {badge}
                     </span>
                 {/if}

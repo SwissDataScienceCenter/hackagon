@@ -29,10 +29,10 @@
             &larr; Back to {data.project.title}
         </a>
         <div class="flex flex-wrap items-center gap-2">
-            <h1 class="m-0 text-lg font-bold text-ink">Edit Project</h1>
+            <h1 class="m-0 text-title text-ink">Edit Project</h1>
             {#if statusText}
                 <span
-                    class="badge {statusVariant} text-[0.625rem] font-semibold uppercase"
+                    class="badge {statusVariant}"
                 >
                     {statusText}
                 </span>

@@ -47,13 +47,13 @@
         {#if label && !collapsed}
             <div class="flex items-baseline gap-2 px-2 pb-1">
                 <span
-                    class="min-w-0 truncate text-xs font-bold tracking-widest {LABEL_CLASS[accent]}"
+                    class="meta min-w-0 truncate {LABEL_CLASS[accent]}"
                 >
                     {label}
                 </span>
                 {#if badge}
                     <span
-                        class="badge shrink-0 text-[0.625rem] {BADGE_CLASS[accent]}"
+                        class="badge shrink-0 {BADGE_CLASS[accent]}"
                     >
                         {badge}
                     </span>
@@ -71,7 +71,7 @@
                     href={item.href}
                     aria-current={isActive ? 'page' : undefined}
                     title={collapsed ? item.label : undefined}
-                    class="flex h-10 items-center gap-2 rounded-lg px-2 text-sm no-underline
+                    class="flex h-10 items-center gap-2 rounded-control px-2 text-sm no-underline
                            transition-colors
                            {isActive
                         ? ACTIVE_CLASS[accent]
@@ -87,7 +87,7 @@
             {:else}
                 <span
                     title="Not available yet"
-                    class="flex h-10 cursor-not-allowed items-center gap-2 rounded-lg px-2 text-sm
+                    class="flex h-10 cursor-not-allowed items-center gap-2 rounded-control px-2 text-sm
                            text-ink-3 opacity-50 {collapsed ? 'justify-center' : ''}"
                 >
                     <Icon class="h-4 w-4 shrink-0" />

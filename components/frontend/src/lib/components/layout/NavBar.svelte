@@ -45,13 +45,13 @@
         <a href={resolve('/(app)/dashboard')} class="flex items-center gap-3 no-underline">
             <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
             <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-            <span class="text-base font-bold">Hackathons</span>
+            <span class="text-section">Hackathons</span>
         </a>
     {:else}
         <a href={resolve('/')} class="flex items-center gap-3 no-underline">
             <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
             <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-            <span class="text-base font-bold">Hackathons</span>
+            <span class="text-section">Hackathons</span>
         </a>
     {/if}
 
@@ -129,9 +129,12 @@
                 Log out
             </button>
         {:else}
+            <!-- Outline, not solid: the bar sits over public pages that carry
+                 their own CTA, and shell chrome does not outrank the thing the
+                 page is for. -->
             <button
                 onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
-                class="btn btn-sm btn-solid"
+                class="btn btn-sm btn-outline-accent"
             >
                 Log in
             </button>

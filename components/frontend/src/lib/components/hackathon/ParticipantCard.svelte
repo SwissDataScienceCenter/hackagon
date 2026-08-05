@@ -47,8 +47,7 @@
   title text-sm font-bold, body text-xs, CTA: btn btn-sm btn-ghost.
 -->
 <div
-    class="box-border w-full border border-line bg-raised
-           py-4 px-5"
+    class="card card-raised box-border w-full py-4 px-5"
 >
     <div class="flex w-full items-start gap-4">
         {#if avatarUrl}
@@ -73,7 +72,7 @@
         {/if}
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-            <h3 class="m-0 text-sm font-bold leading-snug text-ink">{name}</h3>
+            <h3 class="m-0 text-sm leading-snug text-ink">{name}</h3>
             <div class="block w-2/3 min-w-0">
                 <div class="flex flex-col gap-1.5">
                     {#if roleLine}

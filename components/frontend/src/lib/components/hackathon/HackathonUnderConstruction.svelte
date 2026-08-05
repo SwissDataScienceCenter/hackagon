@@ -16,7 +16,7 @@
     >
         <Construction class="h-10 w-10 text-warning-ink" aria-hidden="true" />
         <div class="flex flex-col gap-1.5">
-            <h1 class="m-0 text-lg font-bold text-ink">{title}</h1>
+            <h1 class="m-0 text-title text-ink">{title}</h1>
             <p class="m-0 text-sm text-ink-2">
                 This page is under construction. Check back later.
             </p>

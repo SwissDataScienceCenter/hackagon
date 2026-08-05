@@ -49,7 +49,7 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
-            <h1 class="m-0 text-lg font-bold text-ink">Users</h1>
+            <h1 class="m-0 text-title text-ink">Users</h1>
             <p class="m-0 text-xs text-ink-3">{countLabel} registered on the platform</p>
         </div>
         <div class="relative w-full sm:w-72">
@@ -78,7 +78,7 @@
     {:else if filtered.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">No users match “{search}”.</p>
     {:else}
-        <div class="w-full overflow-x-auto border border-line">
+        <div class="w-full overflow-x-auto rounded-card border border-line">
             <table class="w-full min-w-[720px] border-collapse text-left text-xs">
                 <thead>
                     <tr class="border-b border-line bg-raised text-ink-3">

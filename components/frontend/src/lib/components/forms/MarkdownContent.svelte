@@ -21,7 +21,6 @@
     .markdown-content :global(h1),
     .markdown-content :global(h2),
     .markdown-content :global(h3) {
-        font-weight: 700;
         margin: 0.6em 0 0.3em;
     }
     .markdown-content :global(p) {
@@ -34,11 +33,13 @@
     }
     .markdown-content :global(code) {
         background: var(--color-raised);
+        border-radius: var(--radius-field);
         padding: 0.1em 0.3em;
         font-size: 0.9em;
     }
     .markdown-content :global(pre) {
         background: var(--color-raised);
+        border-radius: var(--radius-card);
         padding: 0.6em;
         overflow-x: auto;
     }

@@ -10,7 +10,7 @@
 
 <section class="flex flex-col gap-6 bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="flex flex-col gap-3">
-        <span class="text-xs font-bold tracking-widest text-ink-2">ORGANIZED BY</span>
+        <span class="meta text-ink-2">Organized by</span>
         <p class="max-w-3xl text-sm leading-relaxed text-ink-2">{description}</p>
     </div>
     <div class="flex items-center gap-8">

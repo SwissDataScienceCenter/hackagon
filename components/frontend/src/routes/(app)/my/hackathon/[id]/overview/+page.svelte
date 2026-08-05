@@ -9,6 +9,12 @@
         data.approvedCount === 1 ? '1 project' : `${data.approvedCount} projects`
     );
 
+    // Matches ParticipationCard: membership is a state, so it takes a status
+    // hue rather than the accent.
+    const membershipVariant = $derived(
+        data.membershipLabel.toLowerCase() === 'waitlisted' ? 'badge-warning' : 'badge-success'
+    );
+
     // Two tones alternating, which is what the track boxes have always looked
     // like — except the count of tracks is now whatever the hackathon defines
     // rather than the two the placeholder hardcoded.
@@ -38,8 +44,8 @@
     {:else}
         <div class="card p-5">
             <div class="mb-3 flex items-center justify-between">
-                <h2 class="text-base font-bold">Your Participation</h2>
-                <span class="badge badge-solid text-xs font-bold uppercase">
+                <h2 class="text-section">Your Participation</h2>
+                <span class="badge {membershipVariant}">
                     {data.membershipLabel}
                 </span>
             </div>
@@ -50,7 +56,7 @@
     {/if}
 
     <div class="card p-5">
-        <h2 class="mb-3 text-base font-bold">About</h2>
+        <h2 class="mb-3 text-section">About</h2>
         {#if data.hackathon.description}
             <p class="text-sm leading-relaxed text-ink-2">{data.hackathon.description}</p>
         {:else}
@@ -60,7 +66,7 @@
 
     <div class="card p-5">
         <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-base font-bold">Projects</h2>
+            <h2 class="text-section">Projects</h2>
             <span class="text-xs text-ink-3">{projectCountLabel}</span>
         </div>
 
@@ -68,9 +74,11 @@
             <div class="mb-4 flex flex-wrap gap-3">
                 {#each data.trackCounts as track, i (track.id)}
                     {@const tone = trackTone(i)}
-                    <div class="flex min-w-[8rem] flex-1 flex-col gap-1 p-3 {tone.box}">
-                        <span class="text-xs font-bold uppercase {tone.text}">{track.name}</span>
-                        <span class="text-xs text-ink-3">
+                    <div
+                        class="flex min-w-[8rem] flex-1 flex-col gap-1 rounded-card p-3 {tone.box}"
+                    >
+                        <span class="meta {tone.text}">{track.name}</span>
+                        <span class="tnum text-xs text-ink-3">
                             {track.count === 1 ? '1 project' : `${track.count} projects`}
                         </span>
                     </div>

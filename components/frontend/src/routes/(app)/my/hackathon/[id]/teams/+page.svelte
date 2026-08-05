@@ -46,7 +46,7 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-ink">Teams</h2>
+            <h2 class="m-0 text-title text-ink">Teams</h2>
             <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
         <div
@@ -118,9 +118,8 @@
                 <button
                     type="button"
                     onclick={() => (page = p)}
-                    class="btn btn-sm flex h-8 w-8 items-center justify-center p-0
-                           text-xs font-semibold transition-colors
-                           {page === p ? 'btn-solid' : 'btn-ghost'}"
+                    class="btn btn-sm tnum h-8 w-8 p-0
+                           {page === p ? 'btn-accent' : 'btn-quiet'}"
                     aria-label="Page {p}"
                     aria-current={page === p ? 'page' : undefined}
                 >

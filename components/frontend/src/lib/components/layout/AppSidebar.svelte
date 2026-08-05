@@ -153,7 +153,7 @@
 {#if mobileOpen}
     <button
         aria-label="Close navigation"
-        class="fixed inset-0 z-30 bg-black/50 md:hidden"
+        class="fixed inset-0 z-30 bg-scrim md:hidden"
         onclick={() => (mobileOpen = false)}
     ></button>
 {/if}

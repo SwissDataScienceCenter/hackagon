@@ -73,7 +73,7 @@
      than acting on the lists below. -->
 <div class="flex flex-wrap items-start justify-between gap-4 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
-        <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
+        <h1 class="text-display">Welcome back, {userName}</h1>
         <p class="text-sm text-ink-3">
             You are connected to {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
         </p>
@@ -96,7 +96,7 @@
 
         <!-- Your hackathons -->
         <section class="flex flex-col gap-4">
-            <h2 class="text-base font-bold">Your hackathons</h2>
+            <h2 class="text-section">Your hackathons</h2>
 
             {#if myHackathons.length === 0}
                 <p class="text-sm text-ink-3">You are not connected to any hackathons yet.</p>
@@ -130,7 +130,7 @@
 
         <!-- Other hackathons -->
         <section class="flex flex-col gap-4">
-            <h2 class="text-base font-bold">Other hackathons</h2>
+            <h2 class="text-section">Other hackathons</h2>
 
             {#if otherHackathons.length === 0}
                 <p class="text-sm text-ink-3">No other hackathons available.</p>

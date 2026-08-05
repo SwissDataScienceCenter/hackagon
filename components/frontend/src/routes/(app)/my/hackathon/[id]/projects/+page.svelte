@@ -34,7 +34,7 @@
     <!-- No propose CTA here: proposing belongs to Proposals, which is the page
          that then tracks what you put forward. One entry point, not two. -->
     <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-lg font-bold text-ink">All Projects</h2>
+        <h2 class="m-0 text-title text-ink">All Projects</h2>
         <span class="text-xs text-ink-3">
             {countLabel}{#if data.mayReview && pendingCount > 0}
                 &middot; {pendingCount} awaiting review{/if}
@@ -139,9 +139,8 @@
                 <button
                     type="button"
                     onclick={() => (page = p)}
-                    class="btn btn-sm flex h-8 w-8 items-center justify-center p-0
-                           text-xs font-semibold transition-colors
-                           {page === p ? 'btn-solid' : 'btn-ghost'}"
+                    class="btn btn-sm tnum h-8 w-8 p-0
+                           {page === p ? 'btn-accent' : 'btn-quiet'}"
                     aria-label="Page {p}"
                     aria-current={page === p ? 'page' : undefined}
                 >

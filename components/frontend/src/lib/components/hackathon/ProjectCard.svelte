@@ -52,8 +52,7 @@
 
 <!-- Matches TeamCard: py-4 px-5, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
 <div
-    class="box-border flex w-full items-start gap-4 border border-line
-           bg-surface py-4 px-5"
+    class="card card-raised box-border flex w-full items-start gap-4 py-4 px-5"
 >
     <!-- The ordinal leaves the title and becomes a gutter figure, so titles all
          start on one left edge and the numbers align down the list. -->
@@ -83,7 +82,7 @@
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <div class="flex flex-wrap items-center gap-2">
-            <h3 class="m-0 text-sm font-semibold leading-snug text-ink">
+            <h3 class="m-0 text-sm leading-snug text-ink">
                 {title}
             </h3>
             {#if badge}

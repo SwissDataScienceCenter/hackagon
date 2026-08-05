@@ -103,7 +103,7 @@
 <!-- Trending -->
 <section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold">Trending this month</h2>
+        <h2 class="text-title">Trending this month</h2>
         <a href={resolve('/')} class="text-sm text-accent-ink no-underline">Browse all →</a>
     </div>
 
@@ -144,7 +144,7 @@
 <!-- Winners -->
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold">Award-winning projects</h2>
+        <h2 class="text-title">Award-winning projects</h2>
         <a href={resolve('/')} class="text-sm text-accent-ink no-underline">See all →</a>
     </div>
 
@@ -177,7 +177,7 @@
 <!-- Event Showcase Carousel -->
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold">Event showcase</h2>
+        <h2 class="text-title">Event showcase</h2>
         <div class="flex items-center gap-2">
             <button onclick={prevSlide} class="btn btn-icon btn-sm btn-outline">
                 <ChevronLeft class="h-4 w-4" />
@@ -195,7 +195,7 @@
         >
             {#each carouselSlides as slide, i (i)}
                 <div class="w-[calc(25%-12px)] shrink-0">
-                    <div class="relative aspect-video overflow-hidden border border-line">
+                    <div class="relative aspect-video overflow-hidden rounded-card border border-line">
                         <img
                             src={slide.src}
                             alt={slide.caption}
@@ -224,7 +224,7 @@
 <!-- Features -->
 <section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="flex flex-col items-center gap-2 text-center">
-        <h2 class="text-2xl font-bold">The hackathon platform for science</h2>
+        <h2 class="text-display">The hackathon platform for science</h2>
         <p class="text-base text-ink-3">
             Everything you need to run or participate in a hackathon.
         </p>
@@ -242,7 +242,7 @@
                 class="card flex flex-col gap-3 p-5"
             >
                 <Icon class="h-6 w-6 text-accent-ink" />
-                <h3 class="text-base font-semibold">{feat.title}</h3>
+                <h3 class="text-section">{feat.title}</h3>
                 <p class="text-sm leading-relaxed text-ink-3">{feat.desc}</p>
             </div>
         {/each}
@@ -251,11 +251,11 @@
 
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-xl font-bold">Trusted by Swiss research institutions</h2>
+    <h2 class="text-title">Trusted by Swiss research institutions</h2>
     <div class="flex items-center gap-12">
         {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
             <div class="flex flex-col items-center gap-2">
-                <div class="h-14 w-14 border border-line flex items-center justify-center"></div>
+                <div class="flex h-14 w-14 items-center justify-center rounded-card border border-line"></div>
                 <span class="text-xs font-medium text-ink-3">{name}</span>
             </div>
         {/each}

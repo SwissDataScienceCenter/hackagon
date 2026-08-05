@@ -21,14 +21,14 @@
 <section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="mb-6 flex items-center justify-center gap-2">
         <PlayCircle class="h-5 w-5 text-accent-ink" />
-        <h2 class="text-xl font-bold">{title}</h2>
+        <h2 class="text-title">{title}</h2>
     </div>
 
     <div class="mx-auto max-w-4xl">
         <!-- Letterbox behind the iframe: stays black in both modes rather than
              tracking the canvas, so a 16:9 video never sits on white. -->
         <div
-            class="relative aspect-video w-full overflow-hidden border border-line bg-black"
+            class="relative aspect-video w-full overflow-hidden rounded-card border border-line bg-black"
         >
             <iframe
                 src={embedUrl}

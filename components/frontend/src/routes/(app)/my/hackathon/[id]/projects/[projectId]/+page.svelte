@@ -73,13 +73,12 @@
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <div class="flex flex-wrap items-center gap-2">
-                <h1 class="m-0 text-lg font-bold leading-snug text-ink">
+                <h1 class="m-0 text-title leading-snug text-ink">
                     {data.project.title}
                 </h1>
                 {#if statusText}
                     <span
-                        class="badge {statusVariant} shrink-0 text-[0.625rem]
-                               font-semibold uppercase"
+                        class="badge {statusVariant} shrink-0"
                     >
                         {statusText}
                     </span>
@@ -116,7 +115,7 @@
     </dl>
 
     <div class="flex flex-col gap-1">
-        <h2 class="m-0 text-xs font-semibold uppercase text-ink-3">Description</h2>
+        <h2 class="m-0 meta">Description</h2>
         {#if data.project.description}
             <!-- Rendered, not truncated: the proposal is written in the markdown
                  editor on the edit form, and this is the one place it is read in

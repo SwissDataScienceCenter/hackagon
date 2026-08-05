@@ -20,7 +20,7 @@
 <section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="mb-6 flex items-center gap-2">
         <Video class="h-5 w-5 text-accent-ink" />
-        <h2 class="text-xl font-bold">Pre-event Webinars</h2>
+        <h2 class="text-title">Pre-event Webinars</h2>
     </div>
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">

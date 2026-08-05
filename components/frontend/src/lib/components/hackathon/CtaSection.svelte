@@ -17,7 +17,7 @@
 </script>
 
 <section class="flex flex-col items-center gap-4 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-2xl font-bold">{heading}</h2>
+    <h2 class="text-display">{heading}</h2>
     <p class="text-sm text-ink-2">{subtitle}</p>
     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
     <a href={buttonHref} class="btn btn-solid no-underline">

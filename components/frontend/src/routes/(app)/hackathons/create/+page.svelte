@@ -5,9 +5,6 @@
 
     let { form }: { form: ActionData } = $props();
 
-    const FIELD_CLASS =
-        'field';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -18,7 +15,7 @@
         >
             &larr; Back to my hackathons
         </a>
-        <h1 class="m-0 text-lg font-bold text-ink">Create Hackathon</h1>
+        <h1 class="m-0 text-title text-ink">Create Hackathon</h1>
         <p class="m-0 text-xs text-ink-3">
             You become its owner and can edit everything else afterwards.
         </p>
@@ -36,7 +33,7 @@
              rather than stretching across the page. All collapse to one column
              below sm. -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="{LABEL_CLASS} sm:col-span-2">
+            <label class="field-label sm:col-span-2">
                 Name
                 <input
                     type="text"
@@ -45,7 +42,7 @@
                     minlength="3"
                     maxlength="255"
                     placeholder="Spring Data Hackathon"
-                    class={FIELD_CLASS}
+                    class="field"
                 />
             </label>
 
@@ -61,25 +58,25 @@
                 </label>
             </fieldset>
 
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Starts at (optional)
-                <input type="date" name="startsAt" class={FIELD_CLASS} />
+                <input type="date" name="startsAt" class="field" />
             </label>
 
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Ends at (optional)
-                <input type="date" name="endsAt" class={FIELD_CLASS} />
+                <input type="date" name="endsAt" class="field" />
             </label>
 
-            <label class="{LABEL_CLASS} sm:col-span-2">
+            <label class="field-label sm:col-span-2">
                 Logo URL (optional)
-                <input type="url" name="logo" placeholder="https://…" class={FIELD_CLASS} />
+                <input type="url" name="logo" placeholder="https://…" class="field" />
             </label>
         </div>
 
         <!-- Last and full width: the only field with no natural size, and the one
              where the room is worth having for the source and its preview both. -->
-        <div class="{LABEL_CLASS} w-full">
+        <div class="field-label w-full">
             <label for="hackathon-description">Description (optional)</label>
             <MarkdownEditor
                 id="hackathon-description"

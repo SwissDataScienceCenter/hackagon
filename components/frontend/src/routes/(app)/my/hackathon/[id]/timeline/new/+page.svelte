@@ -28,7 +28,7 @@
         >
             &larr; Back to timeline
         </a>
-        <h1 class="m-0 text-lg font-bold text-ink">Add Phase</h1>
+        <h1 class="m-0 text-title text-ink">Add Phase</h1>
         <p class="m-0 text-xs text-ink-3">
             Participants see the phase as soon as it is saved. Undated phases sort to the
             top of the timeline until they are scheduled.

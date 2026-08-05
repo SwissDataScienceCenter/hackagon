@@ -22,10 +22,6 @@
         message?: string;
     } = $props();
 
-    const FIELD_CLASS =
-        'field';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
-
     // See the TODO in the calling +page.server.ts: `Edit` cannot unset a track,
     // so the "No track" option is offered only while there is nothing to lose
     // by it.
@@ -43,7 +39,7 @@
     {/if}
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label class="{LABEL_CLASS} sm:col-span-2">
+        <label class="field-label sm:col-span-2">
             Title
             <input
                 type="text"
@@ -52,14 +48,14 @@
                 minlength="3"
                 maxlength="255"
                 value={project.title}
-                class={FIELD_CLASS}
+                class="field"
             />
         </label>
 
         {#if tracks.length > 0}
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Track {hasTrack ? '' : '(optional)'}
-                <select name="trackId" class={FIELD_CLASS}>
+                <select name="trackId" class="field">
                     {#if !hasTrack}
                         <option value="">No track</option>
                     {/if}
@@ -77,21 +73,21 @@
             </label>
         {/if}
 
-        <label class="{LABEL_CLASS} {tracks.length > 0 ? '' : 'sm:col-span-2'}">
+        <label class="field-label {tracks.length > 0 ? '' : 'sm:col-span-2'}">
             Image URL (optional)
             <input
                 type="url"
                 name="image"
                 placeholder="https://…"
                 value={project.image ?? ''}
-                class={FIELD_CLASS}
+                class="field"
             />
         </label>
     </div>
 
     <!-- Last and full width: the only field with no natural size, and the one
          where the room is worth having for the source and its preview both. -->
-    <div class="{LABEL_CLASS} w-full">
+    <div class="field-label w-full">
         <label for="project-description">Description</label>
         <MarkdownEditor
             id="project-description"

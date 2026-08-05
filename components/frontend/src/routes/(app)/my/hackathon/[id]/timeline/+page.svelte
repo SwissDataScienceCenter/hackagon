@@ -26,17 +26,20 @@
         current: 'Current phase',
     } as const;
 
+    // Info rather than the accent: these are lifecycle states, and the accent
+    // belongs to the one primary action on the page ("Add phase"). Completed and
+    // upcoming stay neutral — the tick is what separates them.
     const STATUS_VARIANT = {
         completed: 'badge-neutral',
-        active: 'badge-solid',
+        active: 'badge-info',
         upcoming: 'badge-neutral',
-        current: 'badge-solid',
+        current: 'badge-info',
     } as const;
 </script>
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <h2 class="m-0 text-lg font-bold text-ink">Timeline</h2>
+    <h2 class="m-0 text-title text-ink">Timeline</h2>
 
     <!-- Organizer-only, and above the phases: what participants may do is
          hackathon-wide, so it is not one of the phases and does not sit among
@@ -58,7 +61,7 @@
          else sits above it. -->
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-0.5">
-            <h3 class="m-0 text-sm font-bold text-ink">Phases</h3>
+            <h3 class="m-0 text-section text-ink">Phases</h3>
             <span class="text-xs text-ink-3">
                 {data.phases.length === 1 ? '1 phase' : `${data.phases.length} phases`}
             </span>
@@ -86,15 +89,14 @@
         <ol class="m-0 flex list-none flex-col gap-2 p-0">
             {#each data.phases as phase (phase.id)}
                 <li
-                    class="box-border w-full border border-line bg-raised
-                           px-5 py-4"
+                    class="card card-raised box-border w-full px-5 py-4"
                 >
                     <div class="flex flex-col gap-1.5">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="m-0 text-sm font-bold leading-snug text-ink">
+                            <h3 class="m-0 text-sm leading-snug text-ink">
                                 {phase.name}
                             </h3>
-                            <span class="badge {STATUS_VARIANT[phase.status]} text-xs">
+                            <span class="badge {STATUS_VARIANT[phase.status]}">
                                 {#if phase.status === 'completed'}
                                     <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
                                 {/if}
@@ -137,7 +139,7 @@
                                 class="flex flex-wrap items-baseline gap-1 pt-0.5
                                        {phase.status === 'current' ? '' : 'opacity-60'}"
                             >
-                                <span class="text-[0.625rem] text-ink-3">
+                                <span class="meta">
                                     Planned for this phase:
                                 </span>
                                 {#each phase.capabilities as capability (capability)}
@@ -150,7 +152,7 @@
                                     <!-- Icon as well as colour: colour alone is not a
                                          signal for anyone who cannot distinguish it. -->
                                     <span
-                                        class="badge text-[0.625rem] {live
+                                        class="badge {live
                                             ? 'badge-success'
                                             : pending
                                               ? 'badge-warning'
@@ -177,11 +179,11 @@
                              planned for no phase yet legitimately spans several. -->
                         {#if phase.status === 'current' && data.alsoEnabled.length > 0}
                             <div class="flex flex-wrap items-baseline gap-1">
-                                <span class="text-[0.625rem] text-ink-3">
+                                <span class="meta">
                                     Also enabled:
                                 </span>
                                 {#each data.alsoEnabled as capability (capability)}
-                                    <span class="badge badge-success text-[0.625rem]">
+                                    <span class="badge badge-success">
                                         <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
                                         {capabilityLabel(capability) ?? 'Unknown'}
                                     </span>

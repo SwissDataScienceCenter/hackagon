@@ -5,9 +5,6 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    const FIELD_CLASS =
-        'field';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -18,7 +15,7 @@
         >
             &larr; Back to my projects
         </a>
-        <h1 class="m-0 text-lg font-bold text-ink">Propose a Project</h1>
+        <h1 class="m-0 text-title text-ink">Propose a Project</h1>
         <p class="m-0 text-xs text-ink-3">
             An organizer reviews it before it appears on the Projects page. You can keep editing
             it in the meantime.
@@ -33,7 +30,7 @@
         {/if}
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="{LABEL_CLASS} sm:col-span-2">
+            <label class="field-label sm:col-span-2">
                 Title
                 <input
                     type="text"
@@ -42,16 +39,16 @@
                     minlength="3"
                     maxlength="255"
                     placeholder="Realtime dashboard for sensor data"
-                    class={FIELD_CLASS}
+                    class="field"
                 />
             </label>
 
             <!-- Omitted entirely when the hackathon defines no tracks: an empty
                  picker asks a question with no answers. -->
             {#if data.tracks.length > 0}
-                <label class={LABEL_CLASS}>
+                <label class="field-label">
                     Track (optional)
-                    <select name="trackId" class={FIELD_CLASS}>
+                    <select name="trackId" class="field">
                         <option value="">No track</option>
                         {#each data.tracks as track (track.id)}
                             <option value={track.id}>{track.name}</option>
@@ -60,15 +57,15 @@
                 </label>
             {/if}
 
-            <label class="{LABEL_CLASS} {data.tracks.length > 0 ? '' : 'sm:col-span-2'}">
+            <label class="field-label {data.tracks.length > 0 ? '' : 'sm:col-span-2'}">
                 Image URL (optional)
-                <input type="url" name="image" placeholder="https://…" class={FIELD_CLASS} />
+                <input type="url" name="image" placeholder="https://…" class="field" />
             </label>
         </div>
 
         <!-- Last and full width: the only field with no natural size, and the one
              where the room is worth having for the source and its preview both. -->
-        <div class="{LABEL_CLASS} w-full">
+        <div class="field-label w-full">
             <label for="project-description">Description</label>
             <MarkdownEditor
                 id="project-description"

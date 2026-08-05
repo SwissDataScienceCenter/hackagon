@@ -20,7 +20,7 @@
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-lg font-bold text-ink">Submissions</h2>
+        <h2 class="m-0 text-title text-ink">Submissions</h2>
         <span class="text-xs text-ink-3">Your team's submitted work</span>
     </div>
 
@@ -31,11 +31,10 @@
     {:else}
         {#each data.groups as group (group.teamId)}
             <div
-                class="box-border w-full border border-line bg-raised
-                       px-5 py-4"
+                class="card card-raised box-border w-full px-5 py-4"
             >
                 <div class="flex flex-col gap-1.5">
-                    <h3 class="m-0 text-sm font-bold leading-snug text-ink">
+                    <h3 class="m-0 text-sm leading-snug text-ink">
                         {group.teamName}
                     </h3>
                     <span class="text-xs text-ink-3">{group.projectTitle}</span>
@@ -53,7 +52,7 @@
                             </span>
                             <span
                                 class="badge {submissionStatusBadgeVariant(group.latest.status) ??
-                                    'badge-neutral'} text-xs"
+                                    'badge-neutral'}"
                             >
                                 {submissionStatusLabel(group.latest.status) ?? 'Unknown'}
                             </span>
@@ -84,7 +83,7 @@
                                         <span
                                             class="badge {submissionStatusBadgeVariant(
                                                 submission.status
-                                            ) ?? 'badge-neutral'} text-xs"
+                                            ) ?? 'badge-neutral'}"
                                         >
                                             {submissionStatusLabel(submission.status) ?? 'Unknown'}
                                         </span>

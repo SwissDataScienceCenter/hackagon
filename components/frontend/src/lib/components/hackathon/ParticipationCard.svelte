@@ -37,19 +37,26 @@
         /** "Registered" or "Waitlisted", from the viewer's own membership row. */
         membershipLabel: string;
     } = $props();
+
+    // Membership is a state, not a role, so it takes a status hue rather than
+    // the accent — and the distinction is worth colouring: waitlisted means the
+    // viewer is not in yet.
+    const membershipVariant = $derived(
+        membershipLabel.toLowerCase() === 'waitlisted' ? 'badge-warning' : 'badge-success'
+    );
 </script>
 
 <div class="card p-5">
     <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-base font-bold">Your Participation</h2>
-        <span class="badge badge-solid text-xs font-bold uppercase">
+        <h2 class="text-section">Your Participation</h2>
+        <span class="badge {membershipVariant}">
             {membershipLabel}
         </span>
     </div>
 
     <div class="flex flex-col gap-6 md:flex-row md:gap-8">
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span class="text-xs font-bold tracking-widest text-ink-3">TEAM</span>
+            <span class="meta">Team</span>
             <span class="text-sm font-semibold">{teamName}</span>
             <div class="flex -space-x-1.5">
                 {#each Array.from({ length: teamMemberCount }, (_, i) => i) as i (i)}
@@ -60,7 +67,7 @@
         </div>
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span class="text-xs font-bold tracking-widest text-ink-3">PROJECT</span>
+            <span class="meta">Project</span>
             <span class="text-sm font-semibold">{projectName}</span>
             <span class="text-xs text-accent-ink">Track: {projectTrack}</span>
             <span class="text-xs text-ink-3">Status: {projectStatus}</span>
@@ -71,7 +78,7 @@
                 class="flex flex-col gap-2 border-t border-line pt-4 md:min-w-[10rem] md:items-end
                        md:border-0 md:pt-0"
             >
-                <span class="text-xs font-bold tracking-widest text-ink-3">NEXT STEP</span>
+                <span class="meta">Next step</span>
                 <!-- eslint-disable svelte/no-navigation-without-resolve -- caller-supplied destination -->
                 <a href={nextActionHref} class="btn btn-sm w-full btn-solid no-underline md:w-auto">
                     <ArrowRight class="h-3.5 w-3.5" />

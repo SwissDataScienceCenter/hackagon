@@ -24,7 +24,7 @@
         >
             &larr; Back to timeline
         </a>
-        <h1 class="m-0 text-lg font-bold text-ink">Edit Phase</h1>
+        <h1 class="m-0 text-title text-ink">Edit Phase</h1>
         <p class="m-0 text-xs text-ink-3">
             Changes are visible to participants immediately.
         </p>
@@ -39,7 +39,7 @@
     />
 
     <div class="flex flex-col gap-2 border-t border-line pt-6">
-        <h2 class="m-0 text-xs font-semibold text-ink-3">Delete this phase</h2>
+        <h2 class="m-0 meta">Delete this phase</h2>
         {#if confirming}
             <p class="m-0 text-xs text-ink-2">
                 Deleting <strong class="text-ink">{data.phase.name}</strong> cannot
