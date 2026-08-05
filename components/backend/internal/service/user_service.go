@@ -6,8 +6,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entformresponse "github.com/swissdatasciencecenter/hackagon/components/backend/ent/formresponse"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
@@ -218,14 +220,50 @@ func (s *UserService) DeleteAccount(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Participation rows first: they are the expected reason a delete would
-	// be blocked, and removing them is exactly what leaving means.
+	// The person's OWN data goes with them. The line drawn here: anything that
+	// is a record *about this user* is theirs to erase (roster rows, the
+	// registration answers they gave about themselves, their ballots, their
+	// project preferences, their seats and jury assignments). Content they
+	// AUTHORED for other people — pages, projects, submissions, tracks — is
+	// Restrict-guarded below and blocks instead, because deleting an event's
+	// content when a contributor leaves would damage other people's records.
 	if _, err := s.dbClient.Participant.Delete().
 		Where(entparticipant.HasUserWith(entuser.IDEQ(u.ID))).
 		Exec(ctx); err != nil {
 		slog.Error("delete participations", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't remove participations")
+	}
+	// Registration answers are personal data by definition — affiliation,
+	// dietary needs, consents. Keeping them after erasing the profile is
+	// exactly what a deletion request forbids.
+	if _, err := s.dbClient.FormResponse.Delete().
+		Where(entformresponse.HasUserWith(entuser.IDEQ(u.ID))).
+		Exec(ctx); err != nil {
+		slog.Error("delete form responses", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't remove form responses")
+	}
+	// Ballots identify their voter, so they cannot outlive the voter. This
+	// does change tallies — the alternative is retaining an identified vote
+	// for someone who asked to be erased.
+	if _, err := s.dbClient.Vote.Delete().
+		Where(entvote.HasVoterWith(entuser.IDEQ(u.ID))).
+		Exec(ctx); err != nil {
+		slog.Error("delete votes", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't remove votes")
+	}
+	// Pure link tables: clearing the edges leaves the projects, teams and
+	// categories themselves untouched.
+	if err := u.Update().
+		ClearPreferredProjects().
+		ClearParticipatesInTeams().
+		ClearJuryCategories().
+		Exec(ctx); err != nil {
+		slog.Error("clear user memberships", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't clear memberships")
 	}
 
 	if err := s.dbClient.User.DeleteOne(u).Exec(ctx); err != nil {

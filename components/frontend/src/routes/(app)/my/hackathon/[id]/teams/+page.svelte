@@ -103,7 +103,11 @@
                     <ul class="mt-3 flex flex-wrap gap-2">
                         {#each team.members as member (member.id)}
                             <li class="badge preset-tonal flex items-center gap-2 text-sm">
-                                {member.name}
+                                <!-- The name is its own element so it stays
+                                     exactly-matchable: the organizer's remove
+                                     button lives in this badge too, and would
+                                     otherwise be part of the same text node. -->
+                                <span>{member.name}</span>
                                 {#if data.isOrganizer}
                                     <form method="POST" action="?/removeUser" use:enhance>
                                         <input type="hidden" name="teamId" value={team.id} />
