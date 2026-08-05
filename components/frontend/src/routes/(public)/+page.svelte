@@ -154,9 +154,7 @@
             { hackathon: 'GenAI Hackathon 2025', project: 'GenomeLens', team: 'by BioViz Crew', summary: 'Interactive visualization of genomic variants powered by generative models.' },
             { hackathon: 'Climate Data 2025', project: 'ClimateQA', team: 'by Green Bytes', summary: 'RAG-based Q&A trained on Swiss climate data, making decades of measurements queryable.' },
         ] as card, i (i)}
-            <div
-                class="card overflow-hidden border border-line"
-            >
+            <div class="card overflow-hidden">
                 <div
                     class="flex h-10 items-center justify-between border-b border-line px-4"
                 >
@@ -241,8 +239,7 @@
         ] as feat, i (i)}
             {@const Icon = feat.icon}
             <div
-                class="card flex flex-col gap-3 border
-                       border-line p-5"
+                class="card flex flex-col gap-3 p-5"
             >
                 <Icon class="h-6 w-6 text-accent-ink" />
                 <h3 class="text-base font-semibold">{feat.title}</h3>

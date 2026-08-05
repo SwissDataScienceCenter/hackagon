@@ -34,13 +34,12 @@
     );
 </script>
 
-<!-- Deliberately a different surface from the phase cards, which are
-     bg-raised with a surface-200-800 border: this is hackathon-wide
-     configuration rather than one of the phases, and the contrast is what stops
-     the two being read as the same kind of thing.
-     surface-50-950 rather than plain white so it survives dark mode — it is the
-     pair the form fields already use — with a slightly stronger border so the
-     difference still reads in light mode, where 50 and 100 are close. -->
+<!-- Deliberately a different surface from the phase cards, which sit on
+     `raised` with a `line` border: this is hackathon-wide configuration rather
+     than one of the phases, and the contrast is what stops the two being read as
+     the same kind of thing. `surface` rather than a literal white so it follows
+     the colour mode, with `line-strong` so the difference still reads in light
+     mode, where the two backgrounds are close together. -->
 <section
     class="flex flex-col gap-4 border border-line-strong bg-surface px-5 py-4"
     aria-labelledby="capabilities-heading"

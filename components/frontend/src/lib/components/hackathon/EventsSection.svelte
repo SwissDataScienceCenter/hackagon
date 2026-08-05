@@ -27,8 +27,7 @@
         {#each events as event, i (i)}
             {@const EventIcon = iconFor(event.icon)}
             <div
-                class="card flex items-start gap-4 border
-                       border-line p-5"
+                class="card flex items-start gap-4 p-5"
             >
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center bg-accent/20 text-accent-ink">
                     <EventIcon class="h-5 w-5" />
