@@ -1,108 +1,102 @@
 <script lang="ts">
+    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
+    import { signIn } from '@auth/sveltekit/client';
     import { page } from '$app/state';
     import HeroSection from '$lib/components/hackathon/HeroSection.svelte';
-    import OrganizersSection from '$lib/components/hackathon/OrganizersSection.svelte';
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
-    import EventsSection from '$lib/components/hackathon/EventsSection.svelte';
-    import HighlightsSection from '$lib/components/hackathon/HighlightsSection.svelte';
-    import VideoSection from '$lib/components/hackathon/VideoSection.svelte';
-    import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
+    import Seo from '$lib/components/layout/Seo.svelte';
+    import { statusLabel } from '$lib/utils/hackathonStatus';
+    import type { ActionData, PageData } from './$types';
 
-    const organizers = [
-        { name: 'SDSC', logoUrl: '/logos/sdsc.svg', logoDarkUrl: '/logos/sdsc_white.svg' },
-        { name: 'ETH Zurich', logoUrl: '/images/logos/eth-zurich.svg' },
-    ];
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    const hackathonTitle = "Open Research Data\nHackathon 2026";
+    const h = $derived(data.hackathon);
+    const membership = $derived(h.viewerMembership);
+
+    const dates = $derived.by(() => {
+        const fmt = (d: Date) =>
+            new Date(d).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        if (h.startsAt && h.endsAt) return `${fmt(h.startsAt)} – ${fmt(h.endsAt)}`;
+        if (h.startsAt) return `Starts ${fmt(h.startsAt)}`;
+        return '';
+    });
+
+    // Three states, three different asks. The page used to offer "Register Now"
+    // to everyone and point it at the member view — which is not a registration,
+    // and answers 403 to anyone who has not joined.
+    const cta = $derived.by(() => {
+        if (membership && !membership.isWaiting) return 'member';
+        if (membership?.isWaiting) return 'waiting';
+        if (data.session?.user) return 'join';
+        return 'anonymous';
+    });
 </script>
 
+<Seo
+    title={h.name}
+    description={h.description ?? `${h.name} — on the SDSC hackathon platform.`}
+/>
+
 <HeroSection
-    title={hackathonTitle}
-    dates="24 – 25 October 2026"
-    venue="ETH Zurich, Zurich"
-    imageUrl="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
-    status="Registration Open"
-    registered={42}
-    capacity={100}
+    title={h.name}
+    {dates}
+    status={statusLabel(h.status) ?? 'Hackathon'}
+    imageUrl={h.logo}
     breadcrumbs={[
-        { label: 'Hackathons', href: '/' },
-        { label: 'ORD Hackathon 2026', href: `/hackathon/${page.params.id}` },
+        { label: 'Hackathons', href: '/hackathon' },
+        { label: h.name, href: `/hackathon/${h.id}` }
     ]}
 />
 
 <div class="mx-auto w-full max-w-7xl">
-<OrganizersSection
-    description="Co-organized by the Swiss Data Science Center (SDSC) and ETH Zurich Library, this hackathon brings together researchers, developers, and data stewards to build tools that make research data more accessible and reusable."
-    {organizers}
-/>
+    {#if h.description}
+        <MarkdownSection content={h.description} />
+    {/if}
 
-<MarkdownSection content={`
-    <h2>About the Hackathon</h2>
-    <p>
-        The Open Research Data Hackathon is a two-day event focused on building practical tools
-        and workflows that advance FAIR (Findable, Accessible, Interoperable, Reusable) data
-        practices in Swiss research.
-    </p>
+    <section class="flex flex-col items-center gap-4 px-4 py-12 sm:px-10 md:px-20">
+        {#if form?.message}
+            <p class="m-0 text-sm text-danger-ink" role="alert">{form.message}</p>
+        {/if}
 
-    <h3>What to expect</h3>
-    <ul>
-        <li>Day 1: Keynote talks, team formation, project kickoff, and evening apero</li>
-        <li>Day 2: Intensive hacking sessions, project presentations, voting, and awards</li>
-    </ul>
-
-    <h3>Who should participate</h3>
-    <ul>
-        <li>Researchers working with open data</li>
-        <li>Software developers interested in research infrastructure</li>
-        <li>Data stewards and librarians</li>
-        <li>Students in data science, CS, or related fields</li>
-    </ul>
-`} />
-
-<EventsSection events={[
-    {
-        title: 'Introduction to FAIR Data Principles',
-        speaker: 'Dr. Sarah Mueller, SDSC',
-        date: '10 Oct 2026, 14:00 CET',
-        linkUrl: '#',
-        icon: 'presentation',
-    },
-    {
-        title: 'Technical Setup & Tools Overview',
-        speaker: 'Carlos Vivar Rios, SDSC',
-        date: '17 Oct 2026, 14:00 CET',
-        linkUrl: '#',
-        icon: 'wrench',
-    },
-]} />
-
-<HighlightsSection highlights={[
-    {
-        message: 'Build tools that make Swiss research data findable and reusable across institutions.',
-        imageUrl: '/images/hackathon-ord-2024/ambiance/ambiance_1.jpg',
-    },
-    {
-        message: 'Collaborate with researchers, engineers, and data stewards from across Switzerland.',
-        imageUrl: '/images/hackathon-ord-2024/teams/teams_1.jpg',
-    },
-    {
-        message: 'Win prizes and gain recognition for innovative solutions to real data challenges.',
-        imageUrl: '/images/hackathon-ord-2024/winners/winners_1.jpg',
-    },
-]} />
-
-<VideoSection
-    title="Highlights from ORD Hackathon 2025"
-    videoUrl="https://www.youtube.com/watch?v=ACDgPmRkniU"
-    caption="A look back at last year's event and winning projects."
-/>
-
-<CtaSection
-    heading="Ready to participate?"
-    subtitle="42 of 100 spots taken. Free participation, registration mandatory."
-    buttonLabel="Register Now"
-    buttonHref={resolve(`/my/hackathon/${page.params.id}/overview`)}
-    note="Registration closes 17 Oct 2026"
-/>
+        {#if cta === 'member'}
+            <h2 class="m-0 text-display">You're in</h2>
+            <a
+                href={resolve(`/my/hackathon/${h.id}/overview`)}
+                class="btn btn-solid no-underline"
+            >
+                Open your event view
+            </a>
+        {:else if cta === 'waiting'}
+            <h2 class="m-0 text-display">You're on the waitlist</h2>
+            <p class="m-0 text-sm text-ink-2">
+                An organiser reviews registrations — the full event view opens once yours is
+                confirmed.
+            </p>
+        {:else if cta === 'join'}
+            <h2 class="m-0 text-display">Ready to participate?</h2>
+            <p class="m-0 text-sm text-ink-2">
+                Joining puts you on the list. Organisers confirm participants before the event
+                opens.
+            </p>
+            <form method="POST" action="?/join" use:enhance>
+                <button type="submit" class="btn btn-solid">Join this hackathon</button>
+            </form>
+        {:else}
+            <h2 class="m-0 text-display">Ready to participate?</h2>
+            <p class="m-0 text-sm text-ink-2">You need an account to join.</p>
+            <!-- Back to this page after signing in, not to the dashboard: someone
+                 who followed a link to an event wants that event. -->
+            <button
+                class="btn btn-solid"
+                onclick={() => signIn('keycloak', { callbackUrl: page.url.pathname })}
+            >
+                Log in to join
+            </button>
+        {/if}
+    </section>
 </div>

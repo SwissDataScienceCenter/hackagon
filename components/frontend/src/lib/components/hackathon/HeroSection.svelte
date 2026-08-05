@@ -15,12 +15,20 @@
         breadcrumbs,
     }: {
         title: string;
-        dates: string;
-        venue: string;
+        /** Formatted range, or empty when the event has no dates yet. */
+        dates?: string;
+        /**
+         * Venue and capacity are OPTIONAL because the backend does not model
+         * either one. They were required props filled with literals — "ETH
+         * Zurich, Zurich", "42 / 100 registered" — on every event alike, which
+         * is worse than an absent line: a stranger reads it as this event's
+         * venue. Each renders only when a caller has something true to pass.
+         */
+        venue?: string;
         imageUrl?: string;
         status: string;
-        registered: number;
-        capacity: number;
+        registered?: number;
+        capacity?: number;
         breadcrumbs: { label: string; href: Pathname }[];
     } = $props();
 </script>
@@ -65,18 +73,26 @@
             class="flex flex-col gap-3 text-sm text-ink-2 sm:flex-row sm:flex-wrap
                    sm:items-center sm:gap-6"
         >
-            <span class="flex min-w-0 items-center gap-2">
-                <Calendar class="h-4 w-4 shrink-0 text-accent-ink" />
-                {dates}
-            </span>
-            <span class="flex min-w-0 items-center gap-2">
-                <MapPin class="h-4 w-4 shrink-0 text-accent-ink" />
-                {venue}
-            </span>
-            <span class="flex min-w-0 items-center gap-2">
-                <Users class="h-4 w-4 shrink-0 text-accent-ink" />
-                {registered} / {capacity} registered
-            </span>
+            {#if dates}
+                <span class="flex min-w-0 items-center gap-2">
+                    <Calendar class="h-4 w-4 shrink-0 text-accent-ink" />
+                    {dates}
+                </span>
+            {/if}
+            {#if venue}
+                <span class="flex min-w-0 items-center gap-2">
+                    <MapPin class="h-4 w-4 shrink-0 text-accent-ink" />
+                    {venue}
+                </span>
+            {/if}
+            {#if registered !== undefined}
+                <span class="flex min-w-0 items-center gap-2">
+                    <Users class="h-4 w-4 shrink-0 text-accent-ink" />
+                    {capacity === undefined
+                        ? `${registered} registered`
+                        : `${registered} / ${capacity} registered`}
+                </span>
+            {/if}
         </div>
     </div>
 </section>

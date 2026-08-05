@@ -1,18 +1,20 @@
 <script lang="ts">
-    import DOMPurify from 'isomorphic-dompurify';
+    import { renderMarkdown } from '$lib/utils/markdown';
 
+    /** Markdown source. May be untrusted (author-supplied, from the database). */
     let { content }: { content: string } = $props();
 
-    // HTML in, HTML out — deliberately not run through `marked`. The one caller
-    // passes an indented HTML literal, which markdown would read as a code
-    // block. For user-written markdown use MarkdownContent instead; this stays
-    // sanitized so a description reaching it cannot smuggle in a script.
-    const html = $derived(DOMPurify.sanitize(content));
+    // Markdown in, sanitized HTML out. It briefly took raw HTML instead,
+    // because its only caller passed an indented HTML literal — the public
+    // event page's mock copy. Every caller now passes stored content
+    // (descriptions, page bodies), which is markdown, and was rendering as
+    // literal `#` and `*` characters.
+    const html = $derived(renderMarkdown(content));
 </script>
 
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="markdown-content max-w-4xl">
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -- html is DOMPurify-sanitized above -->
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by renderMarkdown above -->
         {@html html}
     </div>
 </section>

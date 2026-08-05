@@ -296,6 +296,9 @@ describe("memberNav", () => {
       "member:projects",
       "member:teams",
       "member:submissions",
+      // After Submissions, the order it happens in: you submit, then the room
+      // votes on what was submitted.
+      "member:voting",
       "member:timeline",
     ])
   })
@@ -308,6 +311,9 @@ describe("memberNav", () => {
       "member:projects",
       "member:teams",
       "member:submissions",
+      // After Submissions, the order it happens in: you submit, then the room
+      // votes on what was submitted.
+      "member:voting",
       "member:timeline",
       "member:page:p1",
     ])
@@ -397,6 +403,34 @@ describe("memberNav", () => {
     expect(titles).toEqual(["Schedule", "Welcome"])
   })
 
+  // Photos and Webinars are views over the page list, not entities: there is no
+  // photo or webinar table, and organisers publish both as ordinary content
+  // pages. An entry that is always there would be a permanent duplicate of the
+  // page it collects, so it appears only when a page reads like one.
+  it("offers no media entry when no page reads like a gallery or a session", () => {
+    const items = ids([pg("p1", "Welcome"), pg("p2", "Code of conduct")])
+
+    expect(items).not.toContain("member:photos")
+    expect(items).not.toContain("member:webinars")
+  })
+
+  it("offers Photos once a page reads like a gallery", () => {
+    expect(ids([pg("p1", "Photos & Winners")])).toContain("member:photos")
+  })
+
+  it("offers Webinars once a page reads like a session line-up", () => {
+    expect(ids([pg("p1", "Pre-event webinars")])).toContain("member:webinars")
+  })
+
+  // Both views read the same list, so one page can legitimately answer both —
+  // and the page itself still appears under its own title either way.
+  it("keeps the page in the list as well as the view that collects it", () => {
+    const items = ids([pg("p1", "Photos & Winners")])
+
+    expect(items).toContain("member:page:p1")
+    expect(items).toContain("member:photos")
+  })
+
   // The spine an owner and a member discuss has to be the same one. Manage Pages
   // is organiser-only and therefore belongs to manageNav; nothing role-dependent
   // may appear here, or the two viewers stop seeing entries in the same places.
@@ -412,6 +446,9 @@ describe("memberNav", () => {
       "member:projects",
       "member:teams",
       "member:submissions",
+      // After Submissions, the order it happens in: you submit, then the room
+      // votes on what was submitted.
+      "member:voting",
       "member:timeline",
       "member:page:p1",
     ])
@@ -439,12 +476,17 @@ describe("manageNav", () => {
   // Order follows the participant entries these extend — All Projects, then
   // Teams, then Timeline, then the page list — so the two sections read down
   // the page in the same sequence.
-  it("offers track, team, phase and page management to an owner, in spine order", () => {
+  it("offers every organiser destination to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
       "manage:tracks",
       "manage:teams",
       "manage:phase-create",
       "manage:pages",
+      "manage:prizes",
+      "manage:windows",
+      "manage:forms",
+      "manage:email",
+      "manage:invites",
     ])
   })
 
@@ -458,6 +500,11 @@ describe("manageNav", () => {
       "manage:teams",
       "manage:phase-create",
       "manage:pages",
+      "manage:prizes",
+      "manage:windows",
+      "manage:forms",
+      "manage:email",
+      "manage:invites",
     ])
   })
 
@@ -467,6 +514,11 @@ describe("manageNav", () => {
       "/my/hackathon/hack-1/teams/manage",
       "/my/hackathon/hack-1/timeline/new",
       "/my/hackathon/hack-1/pages",
+      "/my/hackathon/hack-1/prizes",
+      "/my/hackathon/hack-1/windows",
+      "/my/hackathon/hack-1/forms",
+      "/my/hackathon/hack-1/email",
+      "/my/hackathon/hack-1/invites",
     ])
   })
 
@@ -475,7 +527,7 @@ describe("manageNav", () => {
   it("does not withhold management from a waitlisted owner", () => {
     expect(
       manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(4)
+    ).toHaveLength(9)
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not

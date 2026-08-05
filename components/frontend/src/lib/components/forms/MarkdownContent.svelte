@@ -1,14 +1,18 @@
 <script lang="ts">
-    import { marked } from 'marked';
-    import DOMPurify from 'isomorphic-dompurify';
+    import { renderMarkdown } from '$lib/utils/markdown';
 
+    /** Markdown source. May be untrusted (author-supplied, from the database). */
     let { content }: { content: string } = $props();
 
-    const html = $derived(DOMPurify.sanitize(marked(content, { async: false })));
+    // The audited pipeline (marked → DOMPurify allowlist) rather than an inline
+    // `DOMPurify.sanitize`, which keeps the library's DEFAULT allowlist: forms,
+    // svg and math all survive it, and the mXSS surface with them. One policy,
+    // one place, 23 tests — see $lib/utils/markdown.
+    const html = $derived(renderMarkdown(content));
 </script>
 
 <div class="markdown-content">
-    <!-- eslint-disable-next-line svelte/no-at-html-tags -- html is DOMPurify-sanitized above -->
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by renderMarkdown above -->
     {@html html}
 </div>
 
