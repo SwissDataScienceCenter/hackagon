@@ -6,6 +6,7 @@
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { canEditHackathon, platformNav, type NavItem } from '$lib/navigation';
     import { statusLabel, statusBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
 
     interface HackathonMember {
         role: number;
@@ -46,6 +47,12 @@
          * every entry in it needs the same role.
          */
         isGlobalAdmin?: boolean;
+        /**
+         * The viewer's global roles, as casbin reports them. Shown, not acted
+         * on — what any of them permits is decided by the flags above and by
+         * the backend, so an empty array costs a viewer nothing but the badges.
+         */
+        globalRoles?: number[];
     }
 
     const {
@@ -54,8 +61,13 @@
         otherHackathons,
         canCreate = false,
         isGlobalAdmin = false,
+        globalRoles = [],
     }: Props = $props();
     const userName = session?.user?.name ?? 'there';
+
+    // Most people hold no global role at all, so this is usually empty and the
+    // greeting stays a greeting.
+    const roleBadges = $derived(displayableGlobalRoles(globalRoles));
 
     // The same list the sidebar's Platform section renders, so an admin page
     // added to `platformNav` appears in both without being named twice. It is
@@ -98,7 +110,32 @@
      than acting on the lists below. -->
 <div class="flex flex-wrap items-start justify-between gap-4 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
-        <h1 class="text-display">Welcome back, {userName}</h1>
+        <!-- Roles ride beside the name rather than in the count line below: they
+             qualify the person, not their hackathons, and this is the one place
+             on the page that names the viewer at all. Absent for most people,
+             who hold no global role — the row then collapses to just the name.
+
+             `badge-accent` on Admin is the theme's one sanctioned accent that is
+             not an action: accent may mean "your role here", and these are tonal
+             rather than solid, so Create Hackathon opposite keeps the view's
+             single solid accent to itself. -->
+        <div class="flex flex-wrap items-center gap-3">
+            <h1 class="text-display">Welcome back, {userName}</h1>
+            {#if roleBadges.length > 0}
+                <div class="flex flex-wrap gap-1">
+                    <!-- Badges alone read as decoration out of context; this says
+                         whose roles they are for a screen reader. -->
+                    <span class="sr-only">Your roles:</span>
+                    {#each roleBadges as role (role)}
+                        <!-- The label is always defined: displayableGlobalRoles
+                             only returns roles this build can name. -->
+                        <span class="badge {globalRoleBadgeVariant(role) ?? 'badge-neutral'}">
+                            {globalRoleLabel(role)}
+                        </span>
+                    {/each}
+                </div>
+            {/if}
+        </div>
         <p class="text-sm text-ink-3">
             You are connected to {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
         </p>
