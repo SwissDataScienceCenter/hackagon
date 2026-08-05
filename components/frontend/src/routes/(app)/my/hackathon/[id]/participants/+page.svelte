@@ -1,6 +1,8 @@
 <script lang="ts">
-    import { Search } from 'lucide-svelte';
+    import DataToolbar from '$lib/components/data/DataToolbar.svelte';
+    import DataTable from '$lib/components/data/DataTable.svelte';
     import { membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+    import { matchesQuery, type Column, type FilterDef, type ViewMode } from '$lib/utils/dataView';
     import type { PageData } from './$types';
 
     // Every row below is a real participant row from the backend. Affiliation,
@@ -12,17 +14,59 @@
     type Person = PageData['confirmed'][number];
 
     let search = $state('');
+    let view = $state<ViewMode>('cards');
+    let filterValues = $state<Record<string, string>>({ state: '', role: '' });
 
-    const query = $derived(search.trim().toLowerCase());
+    function matches(p: Person): boolean {
+        const wantState = filterValues.state;
+        const wantRole = filterValues.role;
 
-    function matches(p: Person, q: string): boolean {
-        if (q === '') return true;
-        return `${p.name} ${p.username}`.toLowerCase().includes(q);
+        if (wantState === 'confirmed' && p.isWaiting) return false;
+        if (wantState === 'waitlisted' && !p.isWaiting) return false;
+        if (wantRole !== '' && String(p.role) !== wantRole) return false;
+
+        return matchesQuery(search, p.name, p.username);
     }
 
-    const confirmed = $derived(data.confirmed.filter((p) => matches(p, query)));
-    const waitlisted = $derived(data.waitlisted.filter((p) => matches(p, query)));
+    const confirmed = $derived(data.confirmed.filter(matches));
+    const waitlisted = $derived(data.waitlisted.filter(matches));
     const nothingMatches = $derived(confirmed.length === 0 && waitlisted.length === 0);
+
+    /** One list for the table: the confirmed/waitlisted split is a column there. */
+    const allShown = $derived([...confirmed, ...waitlisted]);
+    const total = $derived(data.confirmed.length + data.waitlisted.length);
+
+    // HackathonRole: UNSPECIFIED=0, OWNER=1, MEMBER=2.
+    const FILTERS: FilterDef[] = [
+        {
+            id: 'state',
+            label: 'Status',
+            options: [
+                { value: 'confirmed', label: 'Confirmed' },
+                { value: 'waitlisted', label: 'Waitlisted' },
+            ],
+        },
+        {
+            id: 'role',
+            label: 'Role',
+            options: [
+                { value: '1', label: 'Organizer' },
+                { value: '2', label: 'Member' },
+            ],
+        },
+    ];
+
+    const COLUMNS: Column<Person>[] = [
+        { key: 'name', label: 'Name', sort: (p) => p.name },
+        { key: 'username', label: 'Handle', sort: (p) => p.username },
+        { key: 'state', label: 'Status', sort: (p) => (p.isWaiting ? 1 : 0) },
+        {
+            key: 'joined',
+            label: 'Joined',
+            sort: (p) => (p.joinedAt ? new Date(p.joinedAt).getTime() : 0),
+            align: 'right',
+        },
+    ];
 
     const countLabel = $derived(
         `${data.confirmed.length} confirmed · ${data.waitlisted.length} waitlisted`
@@ -83,27 +127,21 @@
 {/snippet}
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">Participants</h2>
-            <span class="text-xs text-surface-500">{countLabel}</span>
-        </div>
-        <div class="relative w-full sm:w-72">
-            <Search
-                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
-                       text-surface-400"
-                aria-hidden="true"
-            />
-            <input
-                type="search"
-                bind:value={search}
-                placeholder="Search participants by name or handle…"
-                class="h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950
-                       pl-9 pr-3 text-xs text-surface-950-50 placeholder:text-surface-700-300
-                       focus:border-primary-500 focus:outline-none"
-            />
-        </div>
+    <div class="flex flex-col gap-1">
+        <h2 class="m-0 text-lg font-bold text-surface-950-50">Participants</h2>
     </div>
+
+    <DataToolbar
+        bind:search
+        bind:view
+        bind:filterValues
+        viewKey="participants"
+        filters={FILTERS}
+        placeholder="Search participants by name or handle…"
+        summary={countLabel}
+        shown={allShown.length}
+        {total}
+    />
 
     {#if data.confirmed.length === 0 && data.waitlisted.length === 0}
         <p class="m-0 py-6 text-center text-sm text-surface-500">
@@ -113,6 +151,28 @@
         <p class="m-0 py-6 text-center text-sm text-surface-500">
             No participants match your search.
         </p>
+    {:else if view === 'table'}
+        <!-- Confirmed and waitlisted are one list here, with the split as a
+             column: sorting a table by name across two separate tables would
+             not actually sort anything. -->
+        <DataTable columns={COLUMNS} rows={allShown} rowKey={(p) => p.id} caption="Participants">
+            {#snippet row(p)}
+                <td class="px-3 py-2 font-medium">
+                    {p.name}{#if p.isMe}<span class="ml-1.5 text-xs font-normal text-surface-500"
+                            >(you)</span
+                        >{/if}
+                </td>
+                <td class="px-3 py-2 text-surface-500">@{p.username}</td>
+                <td class="px-3 py-2">
+                    <span class="badge {membershipBadgePreset(p.isWaiting)} text-xs">
+                        {membershipBadgeLabel(p.isWaiting, p.role)}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-right whitespace-nowrap text-surface-500">
+                    {joined(p.joinedAt) || '—'}
+                </td>
+            {/snippet}
+        </DataTable>
     {:else}
         {#if confirmed.length > 0}
             <section class="flex flex-col gap-2">

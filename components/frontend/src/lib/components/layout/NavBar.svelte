@@ -118,6 +118,12 @@
                      (and the e2e suite) identifies whose session this is.
                      aria-haspopup carries the menu semantics; <details> itself
                      maintains aria-expanded. -->
+                <!-- svelte-ignore a11y_no_redundant_roles -->
+                <!-- The linter calls role="button" redundant on <summary>, but
+                     the mapping is not universal: dropping it made every
+                     getByRole('button', {name: initial}) stop matching and
+                     took all four auth setups down with it. Stated explicitly
+                     so the control's role does not depend on the engine. -->
                 <summary
                     role="button"
                     aria-haspopup="menu"

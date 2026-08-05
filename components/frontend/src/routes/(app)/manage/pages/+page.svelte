@@ -1,5 +1,9 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import DataToolbar from '$lib/components/data/DataToolbar.svelte';
+    import DataTable from '$lib/components/data/DataTable.svelte';
+    import RowActions from '$lib/components/data/RowActions.svelte';
+    import { matchesQuery, type Column, type ViewMode } from '$lib/utils/dataView';
 
     const { data, form } = $props();
 
@@ -10,6 +14,42 @@
     function toggleEdit(slug: string) {
         editing = editing === slug ? null : slug;
     }
+
+    type Page = (typeof data.pages)[number];
+
+    let search = $state('');
+    let view = $state<ViewMode>('cards');
+    let filterValues = $state<Record<string, string>>({ status: '' });
+
+    const visible = $derived(
+        data.pages.filter(
+            (p) =>
+                matchesQuery(search, p.title, p.slug, p.content) &&
+                (filterValues.status === '' ||
+                    (filterValues.status === 'published') === p.visible),
+        ),
+    );
+
+    // Searching the CONTENT too, not just the title: "where did I write the
+    // data-protection paragraph" is the question these pages get asked.
+    const FILTERS = [
+        {
+            id: 'status',
+            label: 'Status',
+            options: [
+                { value: 'published', label: 'Published' },
+                { value: 'draft', label: 'Draft' },
+            ],
+        },
+    ];
+
+    const COLUMNS: Column<Page>[] = [
+        { key: 'title', label: 'Title', sort: (p) => p.title },
+        { key: 'slug', label: 'URL', sort: (p) => p.slug },
+        { key: 'status', label: 'Status', sort: (p) => (p.visible ? 0 : 1) },
+        { key: 'order', label: 'Order', sort: (p) => p.order, align: 'right' },
+        { key: 'actions', label: '', align: 'right' },
+    ];
 </script>
 
 <svelte:head>
@@ -75,8 +115,66 @@
             <code>about</code>, <code>privacy</code> and <code>terms</code>.
         </p>
     {:else}
+        <div class="mb-4">
+            <DataToolbar
+                bind:search
+                bind:view
+                bind:filterValues
+                viewKey="manage-pages"
+                filters={FILTERS}
+                placeholder="Search title, URL or content…"
+                summary="{data.pages.length} page{data.pages.length === 1 ? '' : 's'}"
+                shown={visible.length}
+                total={data.pages.length}
+            />
+        </div>
+    {/if}
+
+    {#if data.pages.length > 0 && visible.length === 0}
+        <p class="py-6 text-center text-sm text-surface-500">No pages match your search.</p>
+    {/if}
+
+    {#if visible.length > 0 && view === 'table'}
+        <DataTable
+            columns={COLUMNS}
+            rows={visible}
+            rowKey={(p) => p.slug}
+            caption="Platform pages"
+        >
+            {#snippet row(page)}
+                <td class="px-3 py-2 font-medium">{page.title}</td>
+                <td class="px-3 py-2"><code class="text-xs">/{page.slug}</code></td>
+                <td class="px-3 py-2">
+                    <span
+                        class="badge {page.visible ? 'preset-tonal-success' : 'preset-tonal-warning'}"
+                    >
+                        {page.visible ? 'Published' : 'Draft'}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-right tabular-nums">{page.order}</td>
+                <td class="px-3 py-2 text-right">
+                    <RowActions label="Actions for {page.title}">
+                        <!-- Editing opens the same form the card view uses, so
+                             there is one editor rather than two to keep in
+                             step; switching view is what reveals it. -->
+                        <button
+                            onclick={() => {
+                                view = 'cards';
+                                editing = page.slug;
+                            }}>Edit</button
+                        >
+                        <a href="/{page.slug}" target="_blank" rel="noopener">View page</a>
+                        <form method="POST" action="?/delete" use:enhance>
+                            <input type="hidden" name="slug" value={page.slug} />
+                            <button type="submit" class="w-full text-error-500">Delete</button>
+                        </form>
+                    </RowActions>
+                </td>
+            {/snippet}
+        </DataTable>
+    {:else if visible.length > 0}
         <div class="flex flex-col gap-3">
-            {#each data.pages as page (page.slug)}
+            {#each visible as page (page.slug)}
                 <div class="card preset-outlined-surface-200-800 p-4">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="min-w-0">
