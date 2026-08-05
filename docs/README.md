@@ -16,6 +16,7 @@ by `just` and process-compose.
 | [backend/rbac.md](backend/rbac.md)                   | How are permissions modelled and enforced (casbin roles, domains, policy rows)?                        |
 | [frontend/routes-and-auth.md](frontend/routes-and-auth.md) | Which routes exist, which are public, and how does the session/auth guard work?                  |
 | [frontend/grpc-clients.md](frontend/grpc-clients.md) | How does the SvelteKit server talk to the backend, and how are gRPC errors translated to HTTP?         |
+| [user-flows.md](user-flows.md)                       | What does the platform look like to a visitor, participant, organizer and admin — screen by screen, desktop and phone? |
 | [lifecycle.md](lifecycle.md)                         | What is the end-to-end hackathon lifecycle, from publication through voting and prizes?                |
 | [testing.md](testing.md)                             | What test suites exist (Go, Vitest, Playwright e2e) and how do I run them?                             |
 | [backend/schema.dbml](backend/schema.dbml)           | The data model as DBML — paste into [dbdiagram.io](https://dbdiagram.io/d) for an interactive diagram. |
