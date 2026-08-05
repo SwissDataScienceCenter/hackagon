@@ -48,12 +48,17 @@
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
     const items = $derived(memberNav(hackathonId, pages));
+    // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
+    // section and the "Owner" chip can never disagree about the role.
     const manageItems = $derived(manageNav(hackathonId, membership ?? undefined, isGlobalAdmin));
 
     // One call across both sections, per activeNavId's contract: computing it per
     // section let each highlight its own best match, so two could light at once.
-    // It also resolves the overlap deliberately — /timeline/new is longer than
-    // /timeline, so New Phase wins there and Timeline does not stay lit behind it.
+    // It also resolves the overlaps deliberately, longest href winning:
+    // /timeline/new beats /timeline so New Phase lights rather than Timeline, and
+    // /teams/manage beats /teams. It cuts the other way for pages — an individual
+    // /pages/<id> is longer than /pages, so opening one lights that page and not
+    // Manage Pages.
     const activeId = $derived(activeNavId($page.url.pathname, [...items, ...manageItems]));
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who

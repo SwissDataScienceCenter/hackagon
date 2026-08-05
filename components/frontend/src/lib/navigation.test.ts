@@ -365,6 +365,26 @@ describe("memberNav", () => {
 
     expect(titles).toEqual(["Schedule", "Welcome"])
   })
+
+  // The spine an owner and a member discuss has to be the same one. Manage Pages
+  // is organiser-only and therefore belongs to manageNav; nothing role-dependent
+  // may appear here, or the two viewers stop seeing entries in the same places.
+  it("carries no organiser-only entry, so the spine is role-independent", () => {
+    const items = memberNav("hack-1", [
+      { id: "p1", title: "Welcome", visible: true },
+    ])
+
+    expect(items.map((i) => i.id)).toEqual([
+      "member:overview",
+      "member:participants",
+      "member:my-projects",
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+      "member:timeline",
+      "member:page:p1",
+    ])
+  })
 })
 
 describe("manageNav", () => {
@@ -385,22 +405,26 @@ describe("manageNav", () => {
     ).toEqual([])
   })
 
-  // Order follows the participant entries these extend — Teams before Timeline —
-  // so the two sections read down the page in the same sequence.
-  it("offers team and phase management to an owner, in spine order", () => {
+  // Order follows the participant entries these extend — Teams, then Timeline,
+  // then the page list — so the two sections read down the page in the same
+  // sequence.
+  it("offers team, phase and page management to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
       "manage:teams",
       "manage:phase-create",
+      "manage:pages",
     ])
   })
 
-  // Casbin's global escape hatch grants an admin `phase:write` on any hackathon,
-  // joined or not — the same condition mayManagePhases mirrors. The teams manage
-  // route's own load takes the same owner-or-admin pair.
+  // Casbin's global escape hatch grants an admin `phase:write` and `page:write`
+  // on any hackathon, joined or not — the condition mayManagePhases and
+  // mayManagePages both mirror. The teams manage route's own load takes the same
+  // owner-or-admin pair.
   it("offers the same to an admin who never joined", () => {
     expect(manageNav("hack-1", undefined, true).map((i) => i.id)).toEqual([
       "manage:teams",
       "manage:phase-create",
+      "manage:pages",
     ])
   })
 
@@ -408,6 +432,7 @@ describe("manageNav", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.href)).toEqual([
       "/my/hackathon/hack-1/teams/manage",
       "/my/hackathon/hack-1/timeline/new",
+      "/my/hackathon/hack-1/pages",
     ])
   })
 
@@ -415,7 +440,7 @@ describe("manageNav", () => {
   it("does not withhold management from a waitlisted owner", () => {
     expect(
       manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(2)
+    ).toHaveLength(3)
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not
@@ -440,6 +465,16 @@ describe("manageNav", () => {
     )
     expect(activeNavId("/my/hackathon/hack-1/teams/manage", items)).toBe(
       "manage:teams",
+    )
+
+    // Pages nest the other way round: the Manage entry is the *parent* of the
+    // individual page routes, so opening a page must light that page and not
+    // Manage Pages, which only wins on its own index.
+    expect(activeNavId("/my/hackathon/hack-1/pages", items)).toBe(
+      "manage:pages",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/pages/p1", items)).toBe(
+      "member:page:p1",
     )
   })
 })

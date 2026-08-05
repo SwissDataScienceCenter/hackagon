@@ -30,6 +30,8 @@ import "vote/messages/vote_svc/list_votes_request.proto";
 import "vote/messages/vote_svc/list_votes_response.proto";
 import "vote/messages/vote_svc/submit_vote_request.proto";
 import "vote/messages/vote_svc/submit_vote_response.proto";
+import "vote/messages/vote_svc/suggest_results_request.proto";
+import "vote/messages/vote_svc/suggest_results_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote";
 
@@ -52,5 +54,6 @@ service VoteService {
   rpc CreateVoteResult(vote.messages.vote_svc.CreateVoteResultRequest) returns (vote.messages.vote_svc.CreateVoteResultResponse);
   rpc EditVoteResult(vote.messages.vote_svc.EditVoteResultRequest) returns (vote.messages.vote_svc.EditVoteResultResponse);
   rpc DeleteVoteResult(vote.messages.vote_svc.DeleteVoteResultRequest) returns (vote.messages.vote_svc.DeleteVoteResultResponse);
+  rpc SuggestResults(vote.messages.vote_svc.SuggestResultsRequest) returns (vote.messages.vote_svc.SuggestResultsResponse);
   rpc ExportResults(vote.messages.vote_svc.ExportResultsRequest) returns (vote.messages.vote_svc.ExportResultsResponse);
 }

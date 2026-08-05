@@ -541,6 +541,12 @@
 - [vote/messages/vote_svc/submit_vote_response.proto](#vote_messages_vote_svc_submit_vote_response-proto)
     - [SubmitVoteResponse](#vote-messages-vote_svc-SubmitVoteResponse)
   
+- [vote/messages/vote_svc/suggest_results_request.proto](#vote_messages_vote_svc_suggest_results_request-proto)
+    - [SuggestResultsRequest](#vote-messages-vote_svc-SuggestResultsRequest)
+  
+- [vote/messages/vote_svc/suggest_results_response.proto](#vote_messages_vote_svc_suggest_results_response-proto)
+    - [SuggestResultsResponse](#vote-messages-vote_svc-SuggestResultsResponse)
+  
 - [vote/vote_service.proto](#vote_vote_service-proto)
     - [VoteService](#vote-VoteService)
   
@@ -6275,6 +6281,69 @@ VoteResult is a placement entry within a vote category.
 
 
 
+<a name="vote_messages_vote_svc_suggest_results_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/suggest_results_request.proto
+
+
+
+<a name="vote-messages-vote_svc-SuggestResultsRequest"></a>
+
+### SuggestResultsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| category_id | [string](#string) |  |  |
+| force | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_suggest_results_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/suggest_results_response.proto
+
+
+
+<a name="vote-messages-vote_svc-SuggestResultsResponse"></a>
+
+### SuggestResultsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| results | [vote.entities.VoteResult](#vote-entities-VoteResult) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="vote_vote_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -6308,6 +6377,7 @@ VoteResult is a placement entry within a vote category.
 | CreateVoteResult | [messages.vote_svc.CreateVoteResultRequest](#vote-messages-vote_svc-CreateVoteResultRequest) | [messages.vote_svc.CreateVoteResultResponse](#vote-messages-vote_svc-CreateVoteResultResponse) |  |
 | EditVoteResult | [messages.vote_svc.EditVoteResultRequest](#vote-messages-vote_svc-EditVoteResultRequest) | [messages.vote_svc.EditVoteResultResponse](#vote-messages-vote_svc-EditVoteResultResponse) |  |
 | DeleteVoteResult | [messages.vote_svc.DeleteVoteResultRequest](#vote-messages-vote_svc-DeleteVoteResultRequest) | [messages.vote_svc.DeleteVoteResultResponse](#vote-messages-vote_svc-DeleteVoteResultResponse) |  |
+| SuggestResults | [messages.vote_svc.SuggestResultsRequest](#vote-messages-vote_svc-SuggestResultsRequest) | [messages.vote_svc.SuggestResultsResponse](#vote-messages-vote_svc-SuggestResultsResponse) |  |
 | ExportResults | [messages.vote_svc.ExportResultsRequest](#vote-messages-vote_svc-ExportResultsRequest) | [messages.vote_svc.ExportResultsResponse](#vote-messages-vote_svc-ExportResultsResponse) |  |
 
  

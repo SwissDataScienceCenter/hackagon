@@ -15,6 +15,7 @@ import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import CalendarPlus from "lucide-svelte/icons/calendar-plus"
 import FileText from "lucide-svelte/icons/file-text"
 import EyeOff from "lucide-svelte/icons/eye-off"
+import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 
 /**
@@ -108,6 +109,10 @@ export function homeNav(roles: {
  * theirs to change, and the fixed entries above must not move when it does. The
  * caller passes them already filtered and ordered — `PageService.List` does both
  * server-side — so this function never decides what a member may see.
+ *
+ * Every entry here is one a participant can use, so this list is identical
+ * whatever the viewer's role. Organiser-only destinations — including "Manage
+ * Pages", which acts on the page list below — live in `manageNav` instead.
  */
 export function memberNav(
   hackathonId: string,
@@ -281,12 +286,13 @@ const MEMBER = 2
  * explains why they can see it.
  *
  * One gate covers every entry because the backend applies the same one to each:
- * `mayManagePhases` (`$lib/server/hackathon/capabilities.ts`) and the team
- * management route's own load both reduce to owner-or-admin, and casbin grants
- * the underlying `phase:write` to `Owner` outright and to an admin through the
- * global escape hatch, with no capability gating it. So there is no state where
- * this offers a link that then refuses. Add a per-entry gate the day an entry
- * needs a narrower one, rather than widening this one. `isWaiting` is
+ * `mayManagePhases` and `mayManagePages`
+ * (`$lib/server/hackathon/capabilities.ts`) and the team management route's own
+ * load all reduce to owner-or-admin, and casbin grants the underlying
+ * `phase:write` / `page:write` to `Owner` outright and to an admin through the
+ * global escape hatch, with no capability gating either. So there is no state
+ * where this offers a link that then refuses. Add a per-entry gate the day an
+ * entry needs a narrower one, rather than widening this one. `isWaiting` is
  * deliberately not consulted — the backend does not consult it either, and an
  * owner is not waitlisted in practice.
  *
@@ -295,9 +301,9 @@ const MEMBER = 2
  * lists.
  *
  * Deliberately short, and deliberately not padded with stubs: `memberNav` lists
- * only routes that exist and this follows it. Hackathon settings and page
- * management have no routes yet, so they are absent rather than present and
- * dead. Add them here as they land.
+ * only routes that exist and this follows it. Hackathon settings have no route
+ * yet, so they are absent rather than present and dead. Add them here as they
+ * land.
  */
 export function manageNav(
   hackathonId: string,
@@ -330,6 +336,15 @@ export function manageNav(
       label: "New Phase",
       icon: CalendarPlus,
       href: resolve(`/my/hackathon/${hackathonId}/timeline/new`),
+    },
+    // Last, because the page list it acts on is last in `memberNav` for the same
+    // reason: an organiser can add and remove pages at will, so anything below it
+    // would move as they did.
+    {
+      id: "manage:pages",
+      label: "Manage Pages",
+      icon: Pencil,
+      href: resolve(`/my/hackathon/${hackathonId}/pages`),
     },
   ]
 }

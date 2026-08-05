@@ -77,6 +77,11 @@
     const navId = $derived(urlHackathonId ?? defaultHackathon(myHackathons)?.id);
     const navHackathon = $derived(myHackathons.find((h) => h.id === navId));
 
+    // No Manage section here: organiser entries live in `manageNav`, which the
+    // per-hackathon HackathonSidebar renders. This component is currently rendered
+    // by nothing (see the note at the top of the file) and is kept compiling only,
+    // so it deliberately shows the participant spine and no more.
+    //
     // Pages are only loaded for the hackathon the URL names, so when navId comes
     // from the default-hackathon fallback there are none to append.
     const hackathonItems = $derived(
