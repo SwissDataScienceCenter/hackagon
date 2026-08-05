@@ -123,17 +123,14 @@
         plateOnDark?: boolean;
     }
 
-    // A partner without a `logo` renders as its name alone. Deliberate for
-    // Durham until the asset is added: pointing at a file that is not there
-    // costs every visitor a 404, which the mobile suite's broken-image check
-    // flags — the onerror fallback only hides the symptom. To add it, drop the
-    // file at static/images/logos/durham.png and set
-    // `logo: '/images/logos/durham.png', plateOnDark: true`.
+    // A partner without a `logo` renders as its name alone, so adding one is a
+    // file plus an entry. Assets are sized for the 40px-tall slot they render
+    // in — the Durham original was 3227px wide, which is 111 KB to ship 40px.
     const PARTNERS: Partner[] = [
         { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
         { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
         { name: 'EPFL', logo: '/images/logos/epfl.svg' },
-        { name: 'Durham University' },
+        { name: 'Durham University', logo: '/images/logos/durham.png', plateOnDark: true },
     ];
 
     /* --------------------------------------------------------------- showcase */
