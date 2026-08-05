@@ -55,7 +55,11 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
 nowhere else to put these. Main has somewhere else, so each section moves:
 
 - [ ] Windows, capabilities, settings → their existing `…/edit`
-- [ ] Registration + submission form builders → new `…/forms`
+- [x] Registration + submission form builders → `…/forms`, with a
+      `manage:forms` nav entry. The builder posts parallel arrays rather than
+      JSON, so it works without JavaScript and a half-filled row is recoverable;
+      duplicate keys are rejected, because a repeated key silently overwrites
+      the earlier question's answers.
 - [x] Invitation links → `…/invites`, with a `manage:invites` entry in
       `navigation.ts`. Copy-link, revoke, and the full URL shown rather than a
       truncated hint — it is a credential someone has to paste somewhere.

@@ -19,6 +19,7 @@ import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 import Tag from "lucide-svelte/icons/tag"
 import Link2 from "lucide-svelte/icons/link-2"
+import ClipboardType from "lucide-svelte/icons/clipboard-type"
 
 /**
  * A single sidebar entry.
@@ -385,6 +386,15 @@ export function manageNav(
       label: "Manage Pages",
       icon: Pencil,
       href: resolve(`/my/hackathon/${hackathonId}/pages`),
+    },
+    // What the event asks people, registration and submission. Sits under
+    // Manage rather than beside the participant-facing pages: a participant
+    // answers these forms, only an organiser writes them.
+    {
+      id: "manage:forms",
+      label: "Manage Forms",
+      icon: ClipboardType,
+      href: resolve(`/my/hackathon/${hackathonId}/forms`),
     },
     // How a private event is shared. Sits with the other organiser tools rather
     // than on the participants page: a link grants visibility, and approving
