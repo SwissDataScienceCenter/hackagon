@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { Check, FileText, Pencil, Plus, TriangleAlert } from 'lucide-svelte';
+    import { Check, FileText, Pencil, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
+    import RightNowPanel from '$lib/components/hackathon/RightNowPanel.svelte';
     import { capabilityLabel } from '$lib/utils/phase';
     import type { ActionData, PageData } from './$types';
 
@@ -31,6 +32,8 @@
         upcoming: 'preset-tonal-surface',
         current: 'preset-filled-primary-500',
     } as const;
+
+    const currentPhase = $derived(data.phases.find((p) => p.id === data.currentPhaseId));
 </script>
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
@@ -53,42 +56,22 @@
         {/if}
     </div>
 
-    {#if form?.message}
-        <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
-    {/if}
-
-    <!-- The cost of phases being descriptive, made visible: the phase says these
-         should be happening and they are switched off. Only an organizer sees it,
-         because only an organizer can act on it. -->
-    {#if data.unmet.length > 0}
-        <div
-            class="flex flex-col gap-2 border border-warning-500/40 bg-warning-500/10 px-4 py-3"
-            role="status"
-        >
-            <div class="flex items-center gap-2">
-                <TriangleAlert class="h-4 w-4 shrink-0 text-warning-700-300" aria-hidden="true" />
-                <span class="text-xs font-bold text-surface-950-50">
-                    {data.currentPhaseName} expects things that are switched off
-                </span>
-            </div>
-            <p class="m-0 text-xs text-surface-600-400">
-                Moving to a phase does not enable anything on its own. Participants
-                cannot yet
-                {#each data.unmet as capability, i (capability)}{i > 0
-                        ? i === data.unmet.length - 1
-                            ? ' or '
-                            : ', '
-                        : ''}<strong class="font-semibold text-surface-950-50"
-                        >{(capabilityLabel(capability) ?? 'Unknown').toLowerCase()}</strong
-                    >{/each}.
-            </p>
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/settings`)}
-                class="btn btn-sm w-fit preset-tonal-warning no-underline"
-            >
-                Review capabilities
-            </a>
-        </div>
+    <!-- Organizer-only, and first on the page: it is the only part that answers
+         what is true this minute, and every organizer action starts here. The
+         loader sends a participant none of the data it needs. -->
+    {#if data.mayManage}
+        <RightNowPanel
+            currentPhaseName={data.currentPhaseName}
+            currentPhaseRange={currentPhase
+                ? formatRange(currentPhase.startsAt, currentPhase.endsAt)
+                : ''}
+            hasCurrentPhase={data.currentPhaseId !== ''}
+            hasState={data.hasState}
+            capabilities={data.capabilities}
+            unmet={data.unmet}
+            message={form?.message}
+            saved={form?.saved ?? false}
+        />
     {/if}
 
     {#if data.phases.length === 0}
@@ -138,10 +121,20 @@
                                 {phase.description}
                             </p>
                         {/if}
-                        <!-- Informational tags, not permissions: what participants
-                             may actually do is set separately on the hackathon. -->
+
+                        <!-- What the phase is *for* — a plan, not permissions. Dimmed
+                             on purpose: it is reference information, and the switches
+                             in Right now are the ones that decide anything. The
+                             current phase carries the same tags undimmed, since that
+                             is the row the warning above refers to. -->
                         {#if phase.capabilities.length > 0}
-                            <div class="flex flex-wrap gap-1 pt-0.5">
+                            <div
+                                class="flex flex-wrap items-baseline gap-1 pt-0.5
+                                       {phase.status === 'current' ? '' : 'opacity-60'}"
+                            >
+                                <span class="text-[0.625rem] text-surface-500">
+                                    For this phase:
+                                </span>
                                 {#each phase.capabilities as capability (capability)}
                                     <span class="badge preset-tonal-surface text-[0.625rem]">
                                         {capabilityLabel(capability) ?? 'Unknown'}
@@ -150,50 +143,39 @@
                             </div>
                         {/if}
 
-                        <div class="flex flex-wrap items-center gap-3 pt-1">
-                            {#if phase.pageId}
-                                <a
-                                    href={resolve(
-                                        `/my/hackathon/${data.hackathonId}/pages/${phase.pageId}`
-                                    )}
-                                    class="inline-flex items-center gap-1 text-xs font-semibold
-                                           text-primary-700-300 no-underline hover:underline"
-                                >
-                                    <FileText class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                    Read more
-                                </a>
-                            {/if}
-                            <!-- Declaring a phase current is a write, so a form
-                                 rather than a link. The backend stays the authority;
-                                 mayManage only decides whether to offer it. -->
-                            {#if data.mayManage && phase.status !== 'current'}
-                                <form method="POST" action="?/setCurrent">
-                                    <input type="hidden" name="phaseId" value={phase.id} />
-                                    <button
-                                        type="submit"
-                                        class="btn btn-sm preset-tonal-surface text-xs"
+                        {#if phase.pageId || (data.mayManage && phase.status !== 'current')}
+                            <div class="flex flex-wrap items-center gap-3 pt-1">
+                                {#if phase.pageId}
+                                    <a
+                                        href={resolve(
+                                            `/my/hackathon/${data.hackathonId}/pages/${phase.pageId}`
+                                        )}
+                                        class="inline-flex items-center gap-1 text-xs font-semibold
+                                               text-primary-700-300 no-underline hover:underline"
                                     >
-                                        Make current
-                                    </button>
-                                </form>
-                            {/if}
-                        </div>
+                                        <FileText class="h-3 w-3 shrink-0" aria-hidden="true" />
+                                        Read more
+                                    </a>
+                                {/if}
+                                <!-- Declaring a phase current is a write, so a form
+                                     rather than a link. It moves the pointer only;
+                                     what participants may do is unchanged. -->
+                                {#if data.mayManage && phase.status !== 'current'}
+                                    <form method="POST" action="?/setCurrent">
+                                        <input type="hidden" name="phaseId" value={phase.id} />
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm preset-tonal-surface text-xs"
+                                        >
+                                            Make current<span class="sr-only"> — {phase.name}</span>
+                                        </button>
+                                    </form>
+                                {/if}
+                            </div>
+                        {/if}
                     </div>
                 </li>
             {/each}
         </ol>
-
-        <!-- Omitting phaseId entirely is what clears the declaration: the action
-             sends "" and SetCurrentPhase reads that as ClearCurrentPhase. -->
-        {#if data.mayManage && data.currentPhaseId}
-            <form method="POST" action="?/setCurrent" class="flex flex-col gap-1">
-                <button type="submit" class="btn btn-sm w-fit preset-tonal-surface text-xs">
-                    Clear current phase
-                </button>
-                <span class="text-xs text-surface-500">
-                    The timeline goes back to deriving progress from the dates alone.
-                </span>
-            </form>
-        {/if}
     {/if}
 </div>

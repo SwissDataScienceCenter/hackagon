@@ -27,6 +27,34 @@ export function enabledCapabilities(
     .map((c) => c.capability as number)
 }
 
+/**
+ * The six capabilities in the order the switches render.
+ *
+ * Registration first because it gates getting in at all, results last because it
+ * only matters once everything else is over. `SetCapabilities` takes a full list
+ * of states rather than a delta, so this is also the list every write walks.
+ */
+export const CAPABILITY_ORDER: Capability[] = [
+  Capability.CAPABILITY_REGISTER,
+  Capability.CAPABILITY_PROPOSE_PROJECTS,
+  Capability.CAPABILITY_SET_TEAM_PREFERENCES,
+  Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+  Capability.CAPABILITY_VOTE,
+  Capability.CAPABILITY_VIEW_RESULTS,
+]
+
+/** `SetCapabilities` input turning exactly `enabled` on and the rest off. */
+export function capabilityStates(
+  enabled: readonly number[],
+): { capability: Capability; enabled: boolean }[] {
+  const on = new Set(enabled)
+
+  return CAPABILITY_ORDER.map((c) => ({
+    capability: c,
+    enabled: on.has(c as number),
+  }))
+}
+
 /** A parsed, validated phase form, in the shape the RPCs want. */
 export interface PhaseFormValues {
   name: string

@@ -336,28 +336,3 @@ describe("platformNav", () => {
     ])
   })
 })
-
-describe("memberNav settings entry", () => {
-  it("is absent for a participant", () => {
-    expect(memberNav("hack-1").map((i) => i.id)).not.toContain(
-      "member:settings",
-    )
-  })
-
-  it("appears for someone who may manage", () => {
-    const items = memberNav("hack-1", [], { mayManage: true })
-    expect(items.at(-1)?.id).toBe("member:settings")
-    expect(items.at(-1)?.href).toContain("/settings")
-  })
-
-  // Below the content pages: organizer config is the least travelled entry, and
-  // this keeps the participant-facing run of the nav unbroken.
-  it("sits after the content pages", () => {
-    const ids = memberNav("hack-1", [{ id: "p1", title: "Schedule" }], {
-      mayManage: true,
-    }).map((i) => i.id)
-    expect(ids.indexOf("member:settings")).toBeGreaterThan(
-      ids.indexOf("member:page:p1"),
-    )
-  })
-})

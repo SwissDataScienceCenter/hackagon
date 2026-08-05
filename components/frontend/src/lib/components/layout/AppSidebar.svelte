@@ -72,13 +72,8 @@
 
     // Pages are only loaded for the hackathon the URL names, so when navId comes
     // from the default-hackathon fallback there are none to append.
-    // OWNER = 1. An owner or a global admin gets the Settings entry; the route
-    // enforces it for real, so this only decides whether to show the link.
-    const mayManage = $derived(navHackathon?.viewerMembership?.role === 1 || isGlobalAdmin);
     const hackathonItems = $derived(
-        navId
-            ? memberNav(navId, navId === urlHackathonId ? hackathonPages : [], { mayManage })
-            : [],
+        navId ? memberNav(navId, navId === urlHackathonId ? hackathonPages : []) : [],
     );
     const homeItems = $derived(homeNav({ isGlobalAdmin, isHackathonOrganizer }));
     const platformItems = $derived(platformNav({ isGlobalAdmin }));

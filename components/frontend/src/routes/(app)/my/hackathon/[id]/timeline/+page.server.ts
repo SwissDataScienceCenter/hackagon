@@ -3,11 +3,16 @@ import {
   resolvePhaseStatus,
   sortPhasesByStart,
   unmetPhaseCapabilities,
+  withPhaseCapabilitiesEnabled,
 } from "$lib/utils/phase"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
-import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
+import {
+  CAPABILITY_ORDER,
+  capabilityStates,
+  enabledCapabilities,
+} from "$lib/server/hackathon/phaseForm"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -45,27 +50,88 @@ export const load: PageServerLoad = async (event) => {
     pageId: p.pageId ?? "",
   }))
 
-  // What the current phase says should be happening but is switched off. Only an
-  // organizer can act on it, so only an organizer is told.
   const current = phases.find((p) => p.id === currentPhaseId)
-  const unmet = mayManage
-    ? unmetPhaseCapabilities(current?.capabilities ?? [], enabled)
-    : []
 
   return {
     hackathonId: hackathon.id,
     phases,
     currentPhaseId,
     currentPhaseName: current?.name ?? "",
-    unmet,
     mayManage,
+    // Everything below is organizer-only: a participant is sent none of it, so
+    // the switches cannot be rendered even by a tampered client.
+    //
+    // A hackathon with no state row cannot be configured at all —
+    // `SetCapabilities` answers NotFound. Every seeded and app-created hackathon
+    // has one, so this is a data gap rather than a state to design around.
+    hasState: mayManage ? hackathon.state !== undefined : false,
+    capabilities: mayManage
+      ? CAPABILITY_ORDER.map((c) => ({
+          value: c as number,
+          enabled: enabled.includes(c as number),
+        }))
+      : [],
+    // What the current phase says should be happening but is switched off. Only
+    // an organizer is told, because only an organizer can act on it.
+    unmet: mayManage
+      ? unmetPhaseCapabilities(current?.capabilities ?? [], enabled)
+      : [],
   }
+}
+
+/**
+ * Reads the hackathon fresh, rather than trusting the client for what is
+ * currently enabled or which phase is current.
+ *
+ * `event.parent()` is not available in an action, and re-reading is the right
+ * thing anyway: `applyPhaseCapabilities` computes a union against the live state,
+ * so a stale page cannot switch something back on that was just turned off.
+ */
+async function readState(
+  grpc: ReturnType<typeof requireGrpc>,
+  hackathonId: string,
+) {
+  const { hackathon } = await grpc.hackathon.get({ hackathonId })
+
+  return {
+    enabled: enabledCapabilities(hackathon?.state),
+    currentPhaseId: hackathon?.state?.currentPhaseId ?? "",
+    phases: hackathon?.phases ?? [],
+  }
+}
+
+/** Shared translation: every action here writes through the same two RPCs. */
+function toFailure(e: unknown) {
+  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+    return fail(403, {
+      message: "You don't have permission to change this hackathon",
+    })
+  }
+  // TODO(backend: project-preferences-capability): on `SetCapabilities` a
+  // NotFound means the hackathon has no HackathonState row — and by then the
+  // casbin policies have already been written, because they are added inside the
+  // capability loop before the state re-read fails (`hackathon_service.go:655`
+  // then `:681`). So a failure reported here may have granted permissions anyway.
+  // No hackathon reachable from the app is in that state, so this is a guard.
+  if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+    return fail(404, { message: e.details })
+  }
+  if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+    return fail(400, { message: e.details })
+  }
+
+  return undefined
 }
 
 export const actions: Actions = {
   // Declare a phase current, or clear the declaration when `phaseId` is absent.
   // `SetCurrentPhase` reads an empty string as "clear", which is why the clear
   // form simply omits the field.
+  //
+  // Deliberately does *not* touch capabilities. Moving between phases changes
+  // what the timeline says, never what participants may do — that stays an
+  // explicit act on the switches, or one click on "enable what this phase
+  // expects".
   setCurrent: async (event) => {
     const { hackathon } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
@@ -77,22 +143,69 @@ export const actions: Actions = {
         phaseId: typeof phaseId === "string" ? phaseId : "",
       })
     } catch (e) {
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          message: "You don't have permission to change the current phase",
-        })
-      }
-      // Either the phase is gone, or the hackathon has no state row to point at
-      // — the latter is a data gap rather than anything the organizer did.
-      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { message: e.details })
-      }
-      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { message: e.details })
-      }
+      const failure = toFailure(e)
+      if (failure) return failure
       throw e
     }
 
     return { message: "" }
+  },
+
+  // The six switches, saved together. `SetCapabilities` takes a full list of
+  // states rather than a delta, and unchecked boxes submit nothing — hence
+  // building the list from CAPABILITY_ORDER rather than from what arrived.
+  saveCapabilities: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+
+    const checked = new Set(form.getAll("capabilities").map(String))
+    const enabled = CAPABILITY_ORDER.filter((c) =>
+      checked.has(String(c as number)),
+    ).map((c) => c as number)
+
+    try {
+      await hackathon.setCapabilities({
+        hackathonId: event.params.id,
+        capabilities: capabilityStates(enabled),
+      })
+    } catch (e) {
+      const failure = toFailure(e)
+      if (failure) return failure
+      throw e
+    }
+
+    return { message: "", saved: true }
+  },
+
+  // Switch on whatever the current phase expects and is off. Additive only — see
+  // `withPhaseCapabilitiesEnabled`; nothing is ever switched off here, so this
+  // cannot close registration as a side effect of moving through phases.
+  applyPhaseCapabilities: async (event) => {
+    const grpc = requireGrpc(event.locals.grpc)
+
+    try {
+      const state = await readState(grpc, event.params.id)
+      const current = state.phases.find((p) => p.id === state.currentPhaseId)
+      if (!current) {
+        return fail(400, {
+          message: "This hackathon has no current phase to take settings from",
+        })
+      }
+
+      const enabled = withPhaseCapabilitiesEnabled(
+        state.enabled,
+        current.capabilities as number[],
+      )
+      await grpc.hackathon.setCapabilities({
+        hackathonId: event.params.id,
+        capabilities: capabilityStates(enabled),
+      })
+    } catch (e) {
+      const failure = toFailure(e)
+      if (failure) return failure
+      throw e
+    }
+
+    return { message: "", saved: true }
   },
 }

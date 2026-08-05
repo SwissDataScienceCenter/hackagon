@@ -127,6 +127,29 @@ export function unmetPhaseCapabilities(
 }
 
 /**
+ * What should be enabled after "enable what this phase expects".
+ *
+ * **Strictly additive: it never switches anything off.** An exact match to the
+ * phase's tags would be destructive — Registration is tagged on no phase, so
+ * "apply the Hacking phase" would close sign-ups as a side effect. Turning a
+ * capability off stays a deliberate act on the switches.
+ *
+ * Unknown tag values are dropped rather than passed through: `SetCapabilities`
+ * refuses anything outside the enum, so sending one would fail the whole call.
+ * Result is sorted so it is stable to assert on.
+ */
+export function withPhaseCapabilitiesEnabled(
+  enabled: readonly number[],
+  phaseCapabilities: readonly number[],
+): number[] {
+  const known = phaseCapabilities.filter(
+    (c) => CAPABILITY_LABEL[c] !== undefined,
+  )
+
+  return [...new Set([...enabled, ...known])].sort((a, b) => a - b)
+}
+
+/**
  * A `Date` as `datetime-local` wants it: `YYYY-MM-DDTHH:mm`, in the viewer's
  * own timezone.
  *

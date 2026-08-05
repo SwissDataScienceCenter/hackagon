@@ -5,6 +5,7 @@ import {
   resolvePhaseStatus,
   toDateTimeLocal,
   unmetPhaseCapabilities,
+  withPhaseCapabilitiesEnabled,
 } from "./phase"
 
 // Capability numeric values.
@@ -111,6 +112,46 @@ describe("unmetPhaseCapabilities", () => {
   // An unknown tag cannot be switched on, so calling it missing would be noise.
   it("drops unknown tag values", () => {
     expect(unmetPhaseCapabilities([99, VOTE], [])).toEqual([VOTE])
+  })
+})
+
+describe("withPhaseCapabilitiesEnabled", () => {
+  const REGISTER = 1
+
+  it("switches on what the phase expects", () => {
+    expect(withPhaseCapabilitiesEnabled([], [VOTE, VIEW_RESULTS])).toEqual([
+      VOTE,
+      VIEW_RESULTS,
+    ])
+  })
+
+  // The property the whole design rests on. Registration is tagged on no phase,
+  // so an exact match would close sign-ups just because Hacking does not
+  // mention them.
+  it("never switches anything off", () => {
+    expect(
+      withPhaseCapabilitiesEnabled([REGISTER, PROPOSE], [SUBMISSIONS]),
+    ).toEqual([REGISTER, PROPOSE, SUBMISSIONS])
+  })
+
+  it("is a no-op when the phase asks for nothing new", () => {
+    expect(withPhaseCapabilitiesEnabled([PROPOSE], [PROPOSE])).toEqual([
+      PROPOSE,
+    ])
+  })
+
+  it("is a no-op for an untagged phase", () => {
+    expect(withPhaseCapabilitiesEnabled([PROPOSE], [])).toEqual([PROPOSE])
+  })
+
+  // SetCapabilities refuses anything outside the enum, so one bad tag would fail
+  // the whole call rather than being ignored.
+  it("drops unknown tag values", () => {
+    expect(withPhaseCapabilitiesEnabled([], [99, VOTE])).toEqual([VOTE])
+  })
+
+  it("deduplicates", () => {
+    expect(withPhaseCapabilitiesEnabled([VOTE], [VOTE, VOTE])).toEqual([VOTE])
   })
 })
 
