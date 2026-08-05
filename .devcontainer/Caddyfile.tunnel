@@ -22,6 +22,12 @@
 		}
 	}
 	handle {
-		reverse_proxy dev:8081
+		reverse_proxy dev:8081 {
+			# Same reason as Keycloak above, for a different consumer: the
+			# frontend builds absolute og:url / og:image / canonical URLs from
+			# these headers. Without them a link preview advertises
+			# http://<tunnel>/og-default.jpg, which crawlers refuse to fetch.
+			header_up X-Forwarded-Proto https
+		}
 	}
 }

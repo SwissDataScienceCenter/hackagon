@@ -46,7 +46,11 @@
     // reject a relative og:image, and this app is served from localhost, from
     // an ephemeral tunnel hostname, and (eventually) from production — a
     // baked-in origin would be wrong in two of the three.
-    const origin = $derived($page.url.origin);
+    //
+    // publicOrigin (root layout load) is what the VISITOR reached, taken from
+    // the proxy's X-Forwarded-* headers; $page.url.origin is the internal one,
+    // which behind the tunnel is plain http.
+    const origin = $derived($page.data.publicOrigin ?? $page.url.origin);
     const canonical = $derived(origin + $page.url.pathname);
     const absoluteImage = $derived(image.startsWith('http') ? image : origin + image);
 
