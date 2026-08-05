@@ -301,9 +301,13 @@ const MEMBER = 2
  * lists.
  *
  * Deliberately short, and deliberately not padded with stubs: `memberNav` lists
- * only routes that exist and this follows it. Hackathon settings have no route
- * yet, so they are absent rather than present and dead. Add them here as they
- * land.
+ * only routes that exist and this follows it.
+ *
+ * Editing the hackathon itself (`/my/hackathon/<id>/edit`) is the one existing
+ * organiser route left out, and not by oversight: `canEditHackathon` also
+ * requires the owner be confirmed, so it is the first entry that would need a
+ * narrower gate than the section's. It reaches that route from the dashboard's
+ * edit pencil today. Adding it here means adding that per-entry gate first.
  */
 export function manageNav(
   hackathonId: string,
@@ -369,6 +373,24 @@ export function hackathonRoleBadge(
   if (membership?.role === MEMBER) return "Member"
 
   return undefined
+}
+
+/**
+ * Whether the viewer may edit a hackathon's own fields (name, description,
+ * visibility, dates, logo) — the backend's `hackathon:write`, held by the
+ * confirmed owner (a waitlisted owner does not count, same rule
+ * `hackathonRoleBadge` applies) and, via the admin escape hatch, by a global
+ * admin. Shared by the dashboard (to show the edit pencil) and the edit
+ * route's own load (to guard it), so the two can never disagree about who is
+ * let in.
+ */
+export function canEditHackathon(
+  membership: ViewerMembership | undefined,
+  isGlobalAdmin: boolean,
+): boolean {
+  if (isGlobalAdmin) return true
+
+  return membership?.role === OWNER && !membership.isWaiting
 }
 
 /**

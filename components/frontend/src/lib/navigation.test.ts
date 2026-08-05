@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   activeNavId,
+  canEditHackathon,
   defaultHackathon,
   hackathonRoleBadge,
   hackathonsRoleBadge,
@@ -190,6 +191,36 @@ describe("hackathonRoleBadge", () => {
     expect(
       hackathonRoleBadge({ role: ROLE_UNSPECIFIED, isWaiting: false }, false),
     ).toBeUndefined()
+  })
+})
+
+describe("canEditHackathon", () => {
+  it("admits the confirmed owner", () => {
+    expect(
+      canEditHackathon({ role: ROLE_OWNER, isWaiting: false }, false),
+    ).toBe(true)
+  })
+
+  it("refuses a waitlisted owner", () => {
+    // Not-yet-approved is the more important fact, same rule hackathonRoleBadge
+    // applies to the badge.
+    expect(canEditHackathon({ role: ROLE_OWNER, isWaiting: true }, false)).toBe(
+      false,
+    )
+  })
+
+  it("refuses a plain member", () => {
+    expect(
+      canEditHackathon({ role: ROLE_MEMBER, isWaiting: false }, false),
+    ).toBe(false)
+  })
+
+  it("admits a global admin with no membership row", () => {
+    expect(canEditHackathon(undefined, true)).toBe(true)
+  })
+
+  it("refuses someone with no relationship to the hackathon", () => {
+    expect(canEditHackathon(undefined, false)).toBe(false)
   })
 })
 

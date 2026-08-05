@@ -5,6 +5,7 @@ import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibi
 export const load: PageServerLoad = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
   const participantId = event.locals.platformUser!.id
+  const { isGlobalAdmin } = await event.parent()
 
   // TODO(backend: enroll creator as participant): myResult is participation, not
   // ownership, so a hackathon the viewer created never reaches myHackathons. A
@@ -23,5 +24,6 @@ export const load: PageServerLoad = async (event) => {
     session: event.locals.session,
     myHackathons: myResult.hackathons,
     otherHackathons: allResult.hackathons.filter((h) => !myIds.has(h.id)),
+    isGlobalAdmin,
   }
 }
