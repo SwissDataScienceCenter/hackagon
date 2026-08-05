@@ -1,13 +1,17 @@
-# Adopting main's design on this branch
+# Bringing main's design and screens onto this branch
 
-Written 2026-08-05, comparing `sketch/04-08-26` (this branch, `d0aa6098`) with
-`origin/main` (`6f8c7346`). A worktree of main sits at `../hackagon-main` for
-side-by-side reading.
+Written 2026-08-05, comparing `sketch/04-08-26` (this branch) with `origin/main`
+(`6f8c7346`). A worktree of main sits at `../hackagon-main` for side-by-side
+reading.
 
-**The short version:** main's frontend is the better base and should be taken
-wholesale. This branch's advantage is not its design — it is a wider feature
-surface (65 RPCs against main's 48) that main has no screens for. The work is
-porting our surface onto their design, not the reverse.
+**Direction: main's work comes to us.** We keep this branch's backend and its
+feature surface, and take main's design system, shell, navigation model and
+per-entity CRUD screens on top.
+
+That is cheaper than it looks. The backend delta runs almost entirely in our
+favour — 65 RPCs to their 48, and we serve three whole services they do not
+have (voting, prizes, config). Only **four RPCs** have to come the other way.
+The bulk of the work is frontend, and most of it is mechanical.
 
 ## What main actually changed
 
@@ -16,14 +20,14 @@ Not a reskin. Four things, in descending order of how much they constrain us:
 1. **A token-based theme** (`src/themes/hackagon.css`, 578 lines). `--hk-*`
    custom properties in oklch, redefined per colour mode, exposed to Tailwind
    via `@theme`. It replaces `hackathonsdsc.css` and, with it, the
-   `bg-surface-100-900` mode-pair machinery every component of ours is written
-   in. **Every component we port has to be reclassed.**
+   `bg-surface-100-900` mode-pair machinery **every component of ours is
+   written in**. This is the single biggest cost in the migration.
 2. **A different app shell.** The top bar carries identity, theme and sign-out
    only; per-hackathon navigation moved into a `HackathonSidebar` rendered
    inside `my/hackathon/[id]`, because as shell chrome it followed you onto the
    dashboard where it had nothing to say.
 3. **A navigation model** (`lib/navigation.ts`, with tests). Sections, stable
-   ids that never derive from editable titles, role chips per section, and one
+   ids that never derive from editable titles, role chips per section, one
    active-match pass across all sections. Adding a destination means adding an
    entry here, not writing an anchor.
 4. **Per-entity CRUD depth.** Where we built one long `manage` cockpit, main
@@ -40,99 +44,125 @@ same posture as ours — nothing to defend there.
 | --- | --- | --- |
 | Design tokens, sidebar shell, nav model | **yes** | no |
 | Organiser CRUD for pages/tracks/phases/projects | **yes**, per-entity routes | one `manage` cockpit |
-| Multiple owners, capabilities, current phase, suggested results | **yes** (4 RPCs) | no |
+| Capabilities, current phase, preference read, suggested results | **yes** (4 RPCs) | no |
+| Voting, prizes, config services | no | **yes** (3 services) |
 | Platform CMS (About/Privacy/Terms + `/manage/pages`) | no | **yes** |
-| Invitation links for private events | no | **yes** (`HackathonInvite`) |
+| Invitation links for private events | no | **yes** |
 | Account page, `EditProfile`, `DeleteAccount` | no | **yes** |
 | Registration forms: define, fill, read back, edit | no | **yes** |
 | Public browse page, event SEO/OpenGraph | no | **yes** |
 | Email composer, event branding | no | **yes** |
-| Voting UI, photos, webinars | no | **yes** |
-| Search/filter/table views on lists | no | **yes** (`lib/components/data`) |
+| Search/filter/table views on lists | no | **yes** |
 
-## Strategy
+## The plan
 
-**Rebase our features onto main, not main onto us.** Their design is a system
-with rules; ours is a set of screens. Re-theming their 25 routes into our idiom
-would cost more and leave us with the weaker structure.
+Six phases. Each ends green and is independently shippable — this must not
+land as one merge.
 
-Concretely: branch from `origin/main`, then port in the order below. Each item
-is independently shippable, so this does not need to land as one merge.
+### Phase 0 — baseline (half a day)
 
-### 1. Take main as-is, verify it, then port (blocking)
+- Branch `feat/main-design` from this branch.
+- Record the baseline: journey 272, smoke 66, mobile 14, units 39. Any number
+  that drops later is a regression, not a surprise.
+- Keep `../hackagon-main` as the reference worktree.
 
-Nothing else starts until the suite runs against main's routes. The e2e recipe
-is our product spec and it addresses screens by URL — routes main does not have
-are referenced **15×** (`/manage/pages`), **8×** (`/account`), **3×** each for
-`/hackathon/create` and `/register/`, plus `/voting`, `/webinars`, `/photos`,
-`/proposals`. `/hackathon/create` is `/hackathons/create` there (plural).
+### Phase 1 — backend delta first (small)
 
-Budget this properly: the recipe is 278 actions and the URL remap is mechanical
-but wide. Re-specify, do not delete — the same rule that applied when fixing a
-bug turned an action red.
+Their screens call four RPCs we do not serve, so the frontend cannot land
+before these:
 
-### 2. Port the public surface (high value, low conflict)
+- `HackathonService.SetCapabilities`, `HackathonService.SetCurrentPhase`
+- `ProjectService.GetPreference`
+- `SuggestResults`
 
-main's `(public)` is two pages: landing and event detail. Everything else of
-ours slots in beside it without touching their app shell:
+Port the handlers rather than cherry-picking commits — their service files have
+diverged from ours and a cherry-pick will fight over every neighbour. Regenerate
+proto, keep everything of ours untouched.
 
-- `[slug=sitepage]` + `sitePageSlug.ts` + the `sitepage` param matcher, and the
-  `/manage/pages` CMS behind it. Needs the `SitePage` backend, which main lacks.
-- `(public)/hackathon` browse page — reclass `HackathonCard` to the new tokens.
-- `invite/[token]` — needs `HackathonInvite`.
-- `Seo.svelte` — no visual surface at all, drops in unchanged apart from the
-  `publicOrigin` layout load it depends on.
+**Decide, do not merge:** participant approval and multiple owners exist on both
+sides. Their screens are written against theirs, so theirs wins unless ours has
+a behaviour we pinned in the recipe. Check `AddOwner`/`RemoveOwner` — proto-only
+stubs here (audit B15), implemented there.
 
-### 3. Port the participant surface
+### Phase 2 — theme and shell (the design)
 
-- `/account` (profile edit, GDPR deletion) → main's nav has no home for it; it
-  belongs in `SidebarUserFooter` next to sign-out.
-- `/register/[id]` (fill and edit registration answers) → reachable from the
-  dashboard join action and the event overview, as here.
+Take wholesale, no edits: `themes/hackagon.css`, `app.html`, `NavBar`,
+`AppSidebar`, `HackathonSidebar`, `SidebarNavSection`, `SidebarUserFooter`,
+`lib/navigation.ts` + its tests, `MarkdownContent`, `MarkdownEditor`.
 
-### 4. Fold our cockpit into their per-entity routes
+Then the mechanical bulk: **reclass every component of ours** from
+`bg-surface-100-900`-style pairs to the new tokens. Ours that survive and need
+this: `HackathonRow`, `HackathonCard`, `DataToolbar`, `DataTable`,
+`RowActions`, `EmailComposer`, `EventBranding`, the vote components,
+`ParticipationCard`, `CtaSection`, `HeroSection`.
 
-This is the only part with real design decisions. Our `manage` page holds ~15
-sections; main has routes for pages, tracks, phases, projects and teams
-already. The remainder needs homes:
+Expect the light/dark screenshots to be the check that catches what typing
+cannot.
 
-| Ours | Suggested destination in their IA |
+### Phase 3 — take their routes where we have nothing better
+
+Wholesale: `pages/**`, `tracks/**`, `timeline/**`, `projects/**` (including
+`proposals/propose`), `teams/manage`, `participants`, `edit`,
+`hackathons/create`, `dashboard`, `manage/users`.
+
+Retire ours as each lands: our `manage` cockpit (only after Phase 4 redistributes
+it), `proposals/`, `hackathon/create` (note the rename to plural `hackathons/`).
+
+### Phase 4 — re-home our exclusive features into their IA
+
+The only part with real design decisions.
+
+| Ours | Destination in their information architecture |
 | --- | --- |
-| Windows, capabilities, settings | `my/hackathon/[id]/edit` (exists) |
-| Registration + submission form builders | new `…/forms` entry under Manage |
-| Invitation links | new `…/invites` entry under Manage |
-| Email templates + composer | new `…/email` entry under Manage |
+| `/account` | `SidebarUserFooter`, next to sign-out |
+| `/register/[id]` | reached from the dashboard join action and event overview, as now |
+| `[slug=sitepage]`, `/manage/pages` | Platform section, beside Users |
+| `(public)/hackathon` browse | public nav: Home · Hackathons · About |
+| `invite/[token]` | public, unlinked by design (the token is the credential) |
+| Windows, capabilities, settings | their existing `…/edit` |
+| Registration + submission form builders | new `…/forms` under Manage |
+| Invitation links | new `…/invites` under Manage |
+| Email templates + composer | new `…/email` under Manage |
 | Branding | fold into `…/edit` |
-| Prizes | new `…/prizes`, or fold into results |
+| Prizes | new `…/prizes` |
+| Voting, photos, webinars | keep as routes, add nav entries |
 
-### 5. Re-add the list ergonomics
+`Seo.svelte`, `sitePageSlug.ts`, the `sitepage` param matcher, `returnTo.ts`
+and the `publicOrigin` layout load have no visual surface and move unchanged.
 
-`DataToolbar` / `DataTable` / `RowActions` are ours alone and main's lists grow
-the same way. Reclass to the tokens and apply to participants, users, tracks,
-pages. Keep the toolbar's hydration caveat documented — it is invisible and
-costs an hour to rediscover.
+### Phase 5 — tests (the expensive part, budget it)
 
-### 6. Backend
+The recipe is our product spec and addresses screens by URL. Routes main does
+not have are referenced **15×** (`/manage/pages`), **8×** (`/account`), **3×**
+each for `/hackathon/create` and `/register/`, plus `/voting`, `/webinars`,
+`/photos`, `/proposals`. `hackathons/create` is plural there.
 
-Ours is a superset except four RPCs to take from main: `GetPreference`,
-`SetCapabilities`, `SetCurrentPhase`, `SuggestResults`. Everything else main
-calls, we already serve. Expect churn where both sides implemented the same
-idea differently — participant approval and multiple owners exist on both.
+- Remap URLs across the 278 actions; **re-specify, never delete** — an action
+  that loses its assertion loses the pin silently. Action count may only go up.
+- Smoke selectors will break on classes and headings, not just paths.
+- Re-run journey, smoke, mobile, units, and the theme screenshots.
 
-## What I would not port
+### Phase 6 — docs and screenshots
 
-- Our `manage` cockpit as a page. It exists because there was nowhere else to
-  put those controls; main has somewhere else.
-- `HackathonSubNav`. Their sidebar replaces it.
-- Our `hackathonsdsc.css` theme.
+Regenerate `docs/flows/` (the generator drives the real UI, so it re-shoots
+itself), update `user-flows.md`, and refresh the status block in
+`.claude/CLAUDE.md`.
 
 ## Risks
 
 - **Two implementations of the same feature.** Approve/remove participants and
-  multiple owners were built on both sides. Pick one per feature deliberately.
-- **The recipe is the spec.** If a re-specified action loses an assertion, we
-  lose the pin silently. Diff action count before and after; it should only go
-  up.
+  multiple owners. Pick one per feature deliberately; do not let a merge decide.
+- **The reclass is where the bugs hide.** A component that types fine can still
+  be unreadable in one mode. The light/dark screenshot pass is not optional.
 - **`.claude/` is gitignored**, so the e2e skill, its 278-action recipe and the
-  tunnel tooling do not exist on main's side of the comparison. They travel
-  with the working copy, not the branch.
+  tunnel tooling do not exist on main's side. They travel with the working
+  copy, not the branch — nothing to merge, but nothing to inherit either.
+- **Route renames are silent breakage.** `/hackathon/create` →
+  `/hackathons/create` and `/proposals` → `/projects/proposals` will not fail a
+  type check.
+
+## What I would not bring
+
+- Their `dashboard` if it loses our membership badges — check before replacing.
+- Anything that would drop the markdown sanitiser, the invite token's
+  indistinguishable failure modes, or the `noindex` on signed-in pages.
