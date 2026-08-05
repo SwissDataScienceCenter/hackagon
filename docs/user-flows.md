@@ -194,6 +194,12 @@ slug, and draft pages return "not found" to everyone else so their existence
 stays private until published. A published slug is reachable immediately,
 without a code change per page.
 
+Every management list shares one toolbar: a quick search, dropdown filters, and
+a cards/table toggle whose choice is remembered per list. Here the search covers
+the page **content** as well as the title — "where did I write that paragraph"
+is the question these pages actually get asked. The table view puts Edit, View
+and Delete behind a per-row menu so a row stays one line.
+
 | Desktop | Phone |
 | --- | --- |
 | <img src="flows/admin-1-pages-desktop.webp" alt="Platform pages CMS on desktop" width="720"> | <img src="flows/admin-1-pages-phone.webp" alt="Platform pages CMS on a phone" width="220"> |
@@ -201,7 +207,10 @@ without a code change per page.
 ### 5.2 Users
 
 Everyone who has ever signed in. Profiles are created on first login, so this
-list grows by itself.
+list grows by itself — which is why it is searchable across name, handle, email
+and Keycloak ID, and filterable by global role. There are deliberately no
+per-row actions: granting and revoking global roles are proto-only stubs today,
+and a button that cannot work is worse than none.
 
 | Desktop | Phone |
 | --- | --- |
