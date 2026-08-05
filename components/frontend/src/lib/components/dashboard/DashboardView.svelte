@@ -1,5 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import { enhance } from '$app/forms';
+    import { SvelteSet } from 'svelte/reactivity';
     import Plus from 'lucide-svelte/icons/plus';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { statusLabel, statusBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
@@ -63,9 +65,7 @@
         return '';
     }
 
-    function joinStub() {
-        alert('Join: not yet implemented');
-    }
+    const joiningIds = new SvelteSet<string>();
 </script>
 
 <!-- Welcome Banner. Creating a hackathon rides here rather than beside "Your
@@ -150,12 +150,26 @@
                                     gradTo={gradient(i).to}
                                 />
                             </div>
-                            <button
-                                onclick={joinStub}
-                                class="mr-4 btn btn-sm btn-accent shrink-0"
+                            <form
+                                method="POST"
+                                action="?/join"
+                                use:enhance={() => {
+                                    joiningIds.add(h.id);
+                                    return async ({ update }) => {
+                                        await update();
+                                        joiningIds.delete(h.id);
+                                    };
+                                }}
                             >
-                                Join
-                            </button>
+                                <input type="hidden" name="hackathonId" value={h.id} />
+                                <button
+                                    type="submit"
+                                    disabled={joiningIds.has(h.id)}
+                                    class="mr-4 btn btn-sm btn-accent shrink-0"
+                                >
+                                    {joiningIds.has(h.id) ? 'Joining…' : 'Join'}
+                                </button>
+                            </form>
                         </div>
                     {/each}
                 </div>
