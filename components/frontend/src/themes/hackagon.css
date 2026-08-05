@@ -57,6 +57,11 @@
   --hk-danger-ink: oklch(72% 0.16 20);
   --hk-info: oklch(68% 0.11 225);
   --hk-info-ink: oklch(78% 0.09 225);
+
+  /* The wash behind a drawer or dialog. A token rather than `bg-black/50` at
+   * each call site: the two modes want different densities, and a literal
+   * cannot flip. Denser here, because the ground it covers is already dark. */
+  --hk-scrim: oklch(0% 0 0 / 0.62);
 }
 
 [data-mode="light"] {
@@ -88,6 +93,10 @@
   --hk-danger-ink: oklch(50% 0.16 22);
   --hk-info: oklch(55% 0.12 235);
   --hk-info-ink: oklch(46% 0.1 235);
+
+  /* Tinted with the ground hue rather than pure black, so the wash reads as
+   * the page dimming instead of a grey sheet laid over it. */
+  --hk-scrim: oklch(21% 0.012 196 / 0.42);
 }
 
 /* `inline` so the generated utilities resolve the `--hk-*` var at use time
@@ -120,6 +129,8 @@
   --color-danger-ink: var(--hk-danger-ink);
   --color-info: var(--hk-info);
   --color-info-ink: var(--hk-info-ink);
+
+  --color-scrim: var(--hk-scrim);
 }
 
 @theme {
@@ -484,6 +495,13 @@
     border-radius: var(--radius-card);
   }
 
+  /* A card one lightness step up. For rows in a list that sits directly on the
+   * canvas, where `surface` is too close to the ground to separate the row from
+   * it. Depth is lightness here, as everywhere — no shadow. */
+  .card-raised {
+    background-color: var(--color-raised);
+  }
+
   /* Absorbs the input recipe that was hand-copied across seven forms. */
   .field {
     height: --spacing(9);
@@ -506,6 +524,30 @@
   .field:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: -1px;
+  }
+
+  /* `.field` for anything that wraps: textareas and the panes rendered beside
+   * them. The fixed control height is what makes it single-line, so this drops
+   * it and pays the padding back vertically. */
+  .field-area {
+    height: auto;
+    padding: --spacing(2) --spacing(3);
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  /* The caption-above-input pair, which four forms had each spelled out as the
+   * same string of utilities. Deliberately not uppercase like `.meta`:
+   * `text-transform` inherits, and this element wraps the input, so it would
+   * uppercase whatever the user typed. */
+  .field-label {
+    display: flex;
+    flex-direction: column;
+    gap: --spacing(1);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-ink-3);
   }
 
   .chip {
