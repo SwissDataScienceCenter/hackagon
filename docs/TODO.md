@@ -89,6 +89,37 @@ under it. The UI therefore confirms before submitting ("this cannot be undone").
       JSON column: `CreateSubmission` previously validated the map against the
       schema and then discarded it, so nothing was stored to edit or judge.
 
+### Personal data people can change (2026-08-05)
+
+Pinned policy: **Keycloak owns the identity, the platform owns the profile.**
+`username` and `email` arrive on every token and are re-synced from it, so the
+platform must not offer to edit them — the next request would revert it. The
+display name is the platform's own field and is editable.
+
+- [x] `UserService.EditProfile` (display name, self-only — no user id in the
+      request, so it cannot reach another account). The reason the account page
+      was read-only was not a missing form: `WhoAmI` re-synced `display_name`
+      from the token on every request, and hooks calls it on every protected
+      page load. `syncFromKeycloak` now refreshes only the IdP-owned fields and
+      backfills an empty display name, so a nameless profile still gets one.
+- [x] `SubmitRegistrationForm` is an upsert. It inserted only, so a second
+      submit hit the unique (hackathon, user) index and came back
+      `AlreadyExists` — a typo in your affiliation was permanent. One row per
+      person is the current state of the answers, not an append-only log;
+      `submitted_by` is re-stamped so an organizer correcting a walk-in's paper
+      form is recorded as the author of THOSE answers.
+- [x] `GetRegistrationResponse` reads the answers back. Deliberately its own
+      RPC rather than a field on `Get`: `Get` denies waitlisted users, who are
+      exactly the people who still need to review their form. Own answers need
+      no casbin check; someone else's needs hackathon `Write`.
+- [ ] Changing email/password still means leaving for Keycloak's account
+      console (`/account` links to it). Proxying those through a backend
+      Keycloak Admin API client would keep people in the app, at the cost of
+      giving the backend admin credentials it does not have today.
+- [ ] Consent withdrawal is only as granular as the form: unticking the photo
+      consent updates the row, but nothing propagates that to photos already
+      published.
+
 ### Security
 - [ ] F6 — markdown pipeline: parser + sanitizer (no raw HTML, allowlisted video embeds) **before** rendering `Page.content`/`description`
 - [x] F3 — `PERMISSION_DENIED` → 403 on `/manage/users`; audit found and fixed

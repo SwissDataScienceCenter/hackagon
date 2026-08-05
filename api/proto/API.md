@@ -232,6 +232,13 @@
 - [hackathon/messages/hackathon_svc/submit_registration_form_response.proto](#hackathon_messages_hackathon_svc_submit_registration_form_response-proto)
     - [SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse)
   
+- [hackathon/messages/hackathon_svc/get_registration_response_request.proto](#hackathon_messages_hackathon_svc_get_registration_response_request-proto)
+    - [GetRegistrationResponseRequest](#hackathon-messages-hackathon_svc-GetRegistrationResponseRequest)
+  
+- [hackathon/messages/hackathon_svc/get_registration_response_response.proto](#hackathon_messages_hackathon_svc_get_registration_response_response-proto)
+    - [GetRegistrationResponseResponse](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse)
+    - [GetRegistrationResponseResponse.ConsentsEntry](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse-ConsentsEntry)
+  
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
   
@@ -572,6 +579,12 @@
   
 - [user/messages/user_svc/delete_account_response.proto](#user_messages_user_svc_delete_account_response-proto)
     - [DeleteAccountResponse](#user-messages-user_svc-DeleteAccountResponse)
+  
+- [user/messages/user_svc/edit_profile_request.proto](#user_messages_user_svc_edit_profile_request-proto)
+    - [EditProfileRequest](#user-messages-user_svc-EditProfileRequest)
+  
+- [user/messages/user_svc/edit_profile_response.proto](#user_messages_user_svc_edit_profile_response-proto)
+    - [EditProfileResponse](#user-messages-user_svc-EditProfileResponse)
   
 - [user/messages/user_svc/get_request.proto](#user_messages_user_svc_get_request-proto)
     - [GetRequest](#user-messages-user_svc-GetRequest)
@@ -3306,6 +3319,101 @@ for another registrant (walk-ins at the check-in desk).
 
 
 
+<a name="hackathon_messages_hackathon_svc_get_registration_response_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/get_registration_response_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-GetRegistrationResponseRequest"></a>
+
+### GetRegistrationResponseRequest
+Reads back the registration answers already on file, so a registrant can see
+and correct what they submitted.
+
+Deliberately NOT part of HackathonService.Get: Get denies waitlisted users,
+and a waitlisted user is exactly who still needs to review their form. This
+takes only the hackathon id and answers for the caller.
+
+`user_id` lets an organizer (hackathon Write) read someone else&#39;s answers —
+the check-in desk correcting a paper form, mirroring `on_behalf_of` on
+SubmitRegistrationForm.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| user_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_get_registration_response_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/get_registration_response_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-GetRegistrationResponseResponse"></a>
+
+### GetRegistrationResponseResponse
+`submitted` distinguishes &#34;no answers on file&#34; from &#34;answers that happen to
+be empty&#34; — an empty form is a legitimate state when every field is
+optional, so a bare empty map would be ambiguous.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submitted | [bool](#bool) |  |  |
+| responses | [google.protobuf.Struct](#google-protobuf-Struct) |  |  |
+| consents | [GetRegistrationResponseResponse.ConsentsEntry](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse-ConsentsEntry) | repeated |  |
+| submitted_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| submitted_by_id | [string](#string) | optional | Set when someone else entered the answers (organizer-assisted signup). |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-GetRegistrationResponseResponse-ConsentsEntry"></a>
+
+### GetRegistrationResponseResponse.ConsentsEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_remove_participant_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3364,6 +3472,7 @@ for another registrant (walk-ins at the check-in desk).
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
 | SubmitRegistrationForm | [messages.hackathon_svc.SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest) | [messages.hackathon_svc.SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse) |  |
+| GetRegistrationResponse | [messages.hackathon_svc.GetRegistrationResponseRequest](#hackathon-messages-hackathon_svc-GetRegistrationResponseRequest) | [messages.hackathon_svc.GetRegistrationResponseResponse](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse) | Reads the answers back so a registrant can review and correct them. |
 | AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
 | RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
 | CreateInvite | [messages.hackathon_svc.CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest) | [messages.hackathon_svc.CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse) | --- Invitations: private-hackathon access, see HackathonInvite --- |
@@ -6861,6 +6970,76 @@ this is a self-service GDPR action, not an admin tool for removing people.
 
 
 
+<a name="user_messages_user_svc_edit_profile_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/edit_profile_request.proto
+
+
+
+<a name="user-messages-user_svc-EditProfileRequest"></a>
+
+### EditProfileRequest
+Edits the caller&#39;s OWN profile — there is no user id, so this RPC can never
+touch anyone else&#39;s.
+
+Only the fields the platform owns are here. `username` and `email` come from
+Keycloak on every token and are re-synced by WhoAmI, so accepting them would
+be a lie: the next page load would overwrite whatever was stored. Those are
+changed in Keycloak&#39;s own account console.
+
+Every field is optional; absent means &#34;leave unchanged&#34;.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| display_name | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="user_messages_user_svc_edit_profile_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## user/messages/user_svc/edit_profile_response.proto
+
+
+
+<a name="user-messages-user_svc-EditProfileResponse"></a>
+
+### EditProfileResponse
+Edit returns the updated entity (write-path convention).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [user.entities.User](#user-entities-User) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="user_messages_user_svc_get_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -7181,6 +7360,7 @@ this is a self-service GDPR action, not an admin tool for removing people.
 | Get | [messages.user_svc.GetRequest](#user-messages-user_svc-GetRequest) | [messages.user_svc.GetResponse](#user-messages-user_svc-GetResponse) |  |
 | WhoAmI | [messages.user_svc.WhoAmIRequest](#user-messages-user_svc-WhoAmIRequest) | [messages.user_svc.WhoAmIResponse](#user-messages-user_svc-WhoAmIResponse) |  |
 | Register | [messages.user_svc.RegisterRequest](#user-messages-user_svc-RegisterRequest) | [messages.user_svc.RegisterResponse](#user-messages-user_svc-RegisterResponse) |  |
+| EditProfile | [messages.user_svc.EditProfileRequest](#user-messages-user_svc-EditProfileRequest) | [messages.user_svc.EditProfileResponse](#user-messages-user_svc-EditProfileResponse) | Self-service: edits the caller&#39;s own profile, no user id in the request. |
 | AddRole | [messages.user_svc.AddRoleRequest](#user-messages-user_svc-AddRoleRequest) | [messages.user_svc.AddRoleResponse](#user-messages-user_svc-AddRoleResponse) |  |
 | RemoveRole | [messages.user_svc.RemoveRoleRequest](#user-messages-user_svc-RemoveRoleRequest) | [messages.user_svc.RemoveRoleResponse](#user-messages-user_svc-RemoveRoleResponse) |  |
 | DeleteAccount | [messages.user_svc.DeleteAccountRequest](#user-messages-user_svc-DeleteAccountRequest) | [messages.user_svc.DeleteAccountResponse](#user-messages-user_svc-DeleteAccountResponse) | Self-service account deletion (GDPR). Removes the platform profile and every casbin role; the Keycloak identity is NOT touched, so the person can sign in again and start fresh. |
