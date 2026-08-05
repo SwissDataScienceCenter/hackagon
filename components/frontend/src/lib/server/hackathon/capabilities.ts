@@ -126,3 +126,56 @@ export function mayManageParticipants(
 
   return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
 }
+
+/**
+ * Whether to offer "new submission" for a team.
+ *
+ * Unlike `mayPreferProjects`, this mirrors the backend exactly: seeded
+ * hackathons *do* carry a `HackathonState` with `CREATE_PROJECT_SUBMISSIONS`
+ * set (verified live against "Climate Tech Hackathon 2026" — `bob`, a plain
+ * team member, succeeds at `TeamService.CreateSubmission` there), so there is
+ * no known gap to work around and no TODO to leave. `capabilityEnabled` is the
+ * matching `CapabilityState.enabled` read off `hackathon.state.capabilities`;
+ * pass `false` when the hackathon has no state row at all (a hackathon created
+ * without ever calling `SetCapabilities`).
+ *
+ * Still just a courtesy check — `TeamService.CreateSubmission` enforces
+ * `submission:create` scoped to the team itself (`team_service.go:450`), so a
+ * waitlisted or non-member caller is refused regardless of what this returns.
+ */
+export function mayCreateSubmissions(
+  membership: HackathonMember | undefined,
+  capabilityEnabled: boolean,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return capabilityEnabled && membership !== undefined && !membership.isWaiting
+}
+
+/**
+ * Whether to offer "finalize this draft".
+ *
+ * Deliberately *not* gated on `CREATE_PROJECT_SUBMISSIONS`, unlike
+ * `mayCreateSubmissions`: `FinalizeSubmission` enforces team-scoped
+ * `submission:write` (`team_service.go:632-640`), which is a **default** policy
+ * granted to `Member` (`rbac.go:214`) and never touched by `SetCapabilities`.
+ * Verified live in the seeded "Internal Product Sprint", where the capability is
+ * off: `CreateSubmission` is refused while `FinalizeSubmission` succeeds.
+ *
+ * So closing submissions stops new versions but still lets a team finalize a
+ * draft they already hold — gating this on the capability would withhold an
+ * action the backend grants, stranding that team with an unfinalized entry.
+ *
+ * The team-membership half needs no check here: callers only offer this for
+ * teams the viewer is on, which is what grants the `member` role in the team's
+ * casbin domain in the first place.
+ */
+export function mayFinalizeSubmissions(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership !== undefined && !membership.isWaiting
+}
