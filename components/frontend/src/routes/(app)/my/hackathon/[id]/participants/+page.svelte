@@ -1,14 +1,11 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
-    import { enhance } from '$app/forms';
-    import { SvelteSet } from 'svelte/reactivity';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
 
     let search = $state('');
-    const pendingIds = new SvelteSet<string>();
 
     // TODO(backend: user-profile-fields): search covers name and role only.
     // Affiliation and skills were the other two axes, and User carries neither,
@@ -27,6 +24,12 @@
     );
 </script>
 
+<!--
+  Who is here, and nothing to act on: Approve and Remove live on the Manage
+  Participants page (see $lib/navigation's manageNav), which is the one place an
+  owner's extra capabilities are collected. No "View" link either — participant
+  profiles have no page of their own yet.
+-->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
@@ -64,58 +67,7 @@
             </p>
         {:else}
             {#each filtered as participant (participant.id)}
-                <ParticipantCard
-                    name={participant.name}
-                    role={participant.roleLabel}
-                    profileDetailsHref="#participant-{participant.id}"
-                >
-                    {#snippet actions()}
-                        {#if data.mayManage && participant.isWaiting}
-                            <form
-                                method="POST"
-                                action="?/approve"
-                                use:enhance={() => {
-                                    pendingIds.add(participant.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        pendingIds.delete(participant.id);
-                                    };
-                                }}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-accent"
-                                >
-                                    Approve
-                                </button>
-                            </form>
-                        {/if}
-                        {#if data.mayManage && !participant.isWaiting && !participant.isOwner}
-                            <form
-                                method="POST"
-                                action="?/remove"
-                                use:enhance={() => {
-                                    pendingIds.add(participant.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        pendingIds.delete(participant.id);
-                                    };
-                                }}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-danger"
-                                >
-                                    Remove
-                                </button>
-                            </form>
-                        {/if}
-                    {/snippet}
-                </ParticipantCard>
+                <ParticipantCard name={participant.name} role={participant.roleLabel} />
             {/each}
         {/if}
     </div>

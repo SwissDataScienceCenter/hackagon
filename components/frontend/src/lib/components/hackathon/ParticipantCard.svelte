@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import type { Snippet } from 'svelte';
 
     let {
@@ -9,7 +8,6 @@
         role: roleProp,
         skills = [],
         linkedinUrl,
-        profileDetailsHref = '#',
         actions,
     }: {
         name: string;
@@ -26,11 +24,14 @@
         role?: string;
         skills?: string[];
         linkedinUrl?: string;
-        profileDetailsHref?: string;
         /**
-         * Extra controls rendered beside "View" — e.g. an owner's Approve/Remove
-         * buttons. Left to the caller so this card stays ignorant of hackathon
-         * roles and permissions.
+         * The card's controls — e.g. an owner's Approve/Remove buttons. Left to
+         * the caller so this card stays ignorant of hackathon roles and
+         * permissions.
+         *
+         * There is no "View" link any more: participant profiles have no page of
+         * their own, and a button onto `#` is a control that looks live and does
+         * nothing. Add one back when a profile route exists.
          */
         actions?: Snippet;
     } = $props();
@@ -106,12 +107,10 @@
             </div>
         </div>
 
-        <div class="flex shrink-0 items-center gap-2">
-            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-            <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
-            {#if actions}
+        {#if actions}
+            <div class="flex shrink-0 items-center gap-2">
                 {@render actions()}
-            {/if}
-        </div>
+            </div>
+        {/if}
     </div>
 </div>
