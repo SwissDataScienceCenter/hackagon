@@ -2,7 +2,7 @@
     import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
-    import { projectStatusLabel, projectStatusBadgePreset } from '$lib/utils/projectStatus';
+    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -18,14 +18,14 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">Proposals</h2>
-            <span class="text-xs text-surface-500">{countLabel} awaiting review</span>
+            <h2 class="m-0 text-lg font-bold text-ink">Proposals</h2>
+            <span class="text-xs text-ink-3">{countLabel} awaiting review</span>
         </div>
         <a
             href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals/propose`)}
             class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
                    rounded-none px-3 text-center text-xs font-semibold no-underline
-                   sm:w-auto sm:min-w-[9rem] preset-filled-primary-500"
+                   sm:w-auto sm:min-w-[9rem] bg-accent text-on-accent"
         >
             <Plus class="h-3.5 w-3.5 shrink-0" />
             Propose a Project
@@ -37,7 +37,7 @@
          before it exists. -->
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.projects.length === 0}
-            <p class="m-0 py-6 text-center text-sm text-surface-500">
+            <p class="m-0 py-6 text-center text-sm text-ink-3">
                 {#if data.approvedCount > 0}
                     <!-- Approved proposals leave this page, so an author whose
                          proposals all landed would otherwise be told they had
@@ -57,7 +57,7 @@
                     description={project.description}
                     imageUrl={project.imageUrl}
                     badge={projectStatusLabel(project.status)}
-                    badgePreset={projectStatusBadgePreset(project.status) ?? 'preset-tonal-surface'}
+                    badgeVariant={projectStatusBadgeVariant(project.status) ?? 'badge-neutral'}
                     creator={project.creator}
                     track={project.track}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/proposals/{project.id}/edit"

@@ -8,7 +8,7 @@
         org,
         meta,
         badge,
-        badgePreset = 'preset-tonal-primary',
+        badgeVariant = 'badge-accent',
         count,
         gradFrom,
         gradTo,
@@ -19,7 +19,7 @@
         org?: string;
         meta: string;
         badge?: string;
-        badgePreset?: string;
+        badgeVariant?: string;
         count?: string;
         gradFrom: string;
         gradTo: string;
@@ -32,7 +32,7 @@
 
 <a
     href={resolve(href)}
-    class="flex {rowHeight} items-center gap-4 px-4 no-underline transition-colors hover:bg-surface-100-900"
+    class="flex {rowHeight} items-center gap-4 px-4 no-underline transition-colors hover:bg-raised"
 >
     <div
         class="{thumbSize} shrink-0"
@@ -41,20 +41,20 @@
     <div class="flex flex-1 flex-col gap-0.5">
         <div class="flex items-center gap-2">
             {#if org}
-                <span class="text-sm text-surface-500">{org}</span>
-                <span class="text-sm text-surface-400">/</span>
+                <span class="text-sm text-ink-3">{org}</span>
+                <span class="text-sm text-ink-3">/</span>
             {/if}
             <span class="text-sm font-semibold">{name}</span>
         </div>
-        <span class="text-xs text-surface-500">{meta}</span>
+        <span class="text-xs text-ink-3">{meta}</span>
     </div>
     {#if badge}
-        <span class="badge {badgePreset}">
+        <span class="badge {badgeVariant}">
             {badge}
         </span>
     {/if}
     {#if count}
-        <div class="flex items-center gap-1 text-surface-500">
+        <div class="flex items-center gap-1 text-ink-3">
             <Users class="h-3 w-3" />
             <span class="text-xs">{count}</span>
         </div>

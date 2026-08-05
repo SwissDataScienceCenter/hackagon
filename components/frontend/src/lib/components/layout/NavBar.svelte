@@ -30,7 +30,7 @@
 
 <header
     class="sticky top-0 z-50 flex h-14 items-center justify-between border-b
-           border-surface-200-800 bg-surface-50-950 px-4 sm:px-10 md:px-20"
+           border-line bg-surface px-4 sm:px-10 md:px-20"
 >
     <!-- The two branches differ only in destination, but each has to spell out its
          own resolve() call: svelte/no-navigation-without-resolve only recognizes a
@@ -53,14 +53,14 @@
         {#if session?.user}
             <a
                 href={resolve('/(app)/dashboard')}
-                class="text-sm font-medium no-underline hover:text-primary-500"
+                class="text-sm font-medium no-underline hover:text-accent-ink"
             >
                 Hackathons
             </a>
         {:else}
             <a
                 href={resolve('/')}
-                class="text-sm font-medium no-underline hover:text-primary-500"
+                class="text-sm font-medium no-underline hover:text-accent-ink"
             >
                 Hackathons
             </a>
@@ -68,13 +68,13 @@
         {#if showPublicLinks}
             <a
                 href={resolve('/')}
-                class="text-sm text-surface-400 no-underline hover:text-primary-500"
+                class="text-sm text-ink-3 no-underline hover:text-accent-ink"
             >
                 Challenges
             </a>
             <a
                 href={resolve('/')}
-                class="text-sm text-surface-400 no-underline hover:text-primary-500"
+                class="text-sm text-ink-3 no-underline hover:text-accent-ink"
             >
                 About
             </a>
@@ -82,7 +82,7 @@
         {#if isGlobalAdmin}
             <a
                 href={resolve('/(app)/manage/users')}
-                class="text-sm text-surface-400 no-underline hover:text-primary-500"
+                class="text-sm text-ink-3 no-underline hover:text-accent-ink"
             >
                 Users
             </a>
@@ -96,7 +96,7 @@
             <div class="flex min-w-0 items-center gap-2">
                 <span
                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                           preset-filled-primary-500 text-sm font-bold"
+                           bg-accent text-on-accent text-sm font-bold"
                     title={userName}
                 >
                     {initial}
@@ -107,14 +107,14 @@
             </div>
             <button
                 onclick={() => signOut({ callbackUrl: '/' })}
-                class="btn btn-sm preset-tonal-surface"
+                class="btn btn-sm btn-ghost"
             >
                 Log out
             </button>
         {:else}
             <button
                 onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
-                class="btn btn-sm preset-filled-primary-500"
+                class="btn btn-sm btn-solid"
             >
                 Log in
             </button>

@@ -23,10 +23,10 @@
     } = $props();
 
     const FIELD_CLASS =
-        'h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950 px-3 text-xs ' +
-        'text-surface-950-50 placeholder:text-surface-700-300 focus:border-primary-500 ' +
+        'h-9 w-full rounded-none border border-line bg-surface px-3 text-xs ' +
+        'text-ink placeholder:text-ink-2 focus:border-accent ' +
         'focus:outline-none';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-surface-500';
+    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
 
     // See the TODO in the calling +page.server.ts: `Edit` cannot unset a track,
     // so the "No track" option is offered only while there is nothing to lose
@@ -41,7 +41,7 @@
      using it must expose an action by that name. -->
 <form method="POST" action="?/save" class="flex w-full flex-col gap-6">
     {#if message}
-        <p class="m-0 text-xs text-error-500" role="alert">{message}</p>
+        <p class="m-0 text-xs text-danger-ink" role="alert">{message}</p>
     {/if}
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -72,7 +72,7 @@
                     {/each}
                 </select>
                 {#if hasTrack}
-                    <span class="font-normal text-surface-500">
+                    <span class="font-normal text-ink-3">
                         A track can be changed but not removed.
                     </span>
                 {/if}
@@ -107,9 +107,9 @@
     </div>
 
     <div class="flex gap-2">
-        <button type="submit" class="btn btn-sm preset-filled-primary-500"> Save changes </button>
+        <button type="submit" class="btn btn-sm btn-solid"> Save changes </button>
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a href={resolve(cancelHref as any)} class="btn btn-sm preset-tonal-surface no-underline">
+        <a href={resolve(cancelHref as any)} class="btn btn-sm btn-ghost no-underline">
             Cancel
         </a>
     </div>

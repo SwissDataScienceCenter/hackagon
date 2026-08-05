@@ -4,18 +4,18 @@ const LABEL: Partial<Record<number, string>> = {
   2: "Active",
   3: "Finished",
 }
-const BADGE_PRESET: Partial<Record<number, string>> = {
-  1: "preset-tonal-warning",
-  2: "preset-tonal-primary",
-  3: "preset-outlined-surface-200-800",
+const BADGE_VARIANT: Partial<Record<number, string>> = {
+  1: "badge-warning",
+  2: "badge-accent",
+  3: "badge-neutral",
 }
 
 export function statusLabel(s: number): string | undefined {
   return LABEL[s]
 }
 
-export function statusBadgePreset(s: number): string | undefined {
-  return BADGE_PRESET[s]
+export function statusBadgeVariant(s: number): string | undefined {
+  return BADGE_VARIANT[s]
 }
 
 // Visibility numeric values: PUBLIC=1, PRIVATE=2
@@ -23,17 +23,17 @@ const VISIBILITY_LABEL: Partial<Record<number, string>> = {
   1: "Public",
   2: "Private",
 }
-const VISIBILITY_PRESET: Partial<Record<number, string>> = {
-  1: "preset-tonal-tertiary",
-  2: "preset-tonal-error",
+const VISIBILITY_VARIANT: Partial<Record<number, string>> = {
+  1: "badge-info",
+  2: "badge-danger",
 }
 
 export function visibilityLabel(v: number): string | undefined {
   return VISIBILITY_LABEL[v]
 }
 
-export function visibilityBadgePreset(v: number): string | undefined {
-  return VISIBILITY_PRESET[v]
+export function visibilityBadgeVariant(v: number): string | undefined {
+  return VISIBILITY_VARIANT[v]
 }
 
 // HackathonRole numeric values: UNSPECIFIED=0, OWNER=1, MEMBER=2
@@ -44,6 +44,6 @@ export function membershipBadgeLabel(isWaiting: boolean, role: number): string {
   return "Member"
 }
 
-export function membershipBadgePreset(isWaiting: boolean): string {
-  return isWaiting ? "preset-tonal-warning" : "preset-tonal-success"
+export function membershipBadgeVariant(isWaiting: boolean): string {
+  return isWaiting ? "badge-warning" : "badge-success"
 }

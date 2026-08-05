@@ -24,12 +24,12 @@
     <div class="flex flex-col gap-1">
         <a
             href={resolve(`/my/hackathon/${data.hackathonId}/timeline`)}
-            class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
             &larr; Back to timeline
         </a>
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Add Phase</h1>
-        <p class="m-0 text-xs text-surface-500">
+        <h1 class="m-0 text-lg font-bold text-ink">Add Phase</h1>
+        <p class="m-0 text-xs text-ink-3">
             Participants see the phase as soon as it is saved. Undated phases sort to the
             top of the timeline until they are scheduled.
         </p>

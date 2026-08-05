@@ -12,10 +12,6 @@ const coverageDir = path.join(
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
 
-  optimizeDeps: {
-    exclude: ["@sjsf/form", "@sjsf/skeleton3-theme", "@sjsf/basic-theme"],
-  },
-
   // configuration for Vitest
   server: {
     port: 8081, // Port fixed also in keycloak realm allowed redirects.

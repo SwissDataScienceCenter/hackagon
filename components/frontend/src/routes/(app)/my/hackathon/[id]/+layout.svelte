@@ -6,7 +6,7 @@
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
-    import { statusLabel, statusBadgePreset, visibilityLabel, visibilityBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
     import { resolvePhaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -45,13 +45,13 @@
     );
 
     const heroBadges = $derived((() => {
-        const chips: { label: string; preset: string }[] = [];
+        const chips: { label: string; variant: string }[] = [];
         const sl = statusLabel(hackathon.status);
-        if (sl) chips.push({ label: sl, preset: statusBadgePreset(hackathon.status) ?? 'preset-tonal-surface' });
+        if (sl) chips.push({ label: sl, variant: statusBadgeVariant(hackathon.status) ?? 'badge-neutral' });
         const vl = visibilityLabel(hackathon.visibility);
-        if (vl) chips.push({ label: vl, preset: visibilityBadgePreset(hackathon.visibility) ?? 'preset-tonal-surface' });
+        if (vl) chips.push({ label: vl, variant: visibilityBadgeVariant(hackathon.visibility) ?? 'badge-neutral' });
         const mem = data.myMembership;
-        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), preset: membershipBadgePreset(mem.isWaiting) });
+        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), variant: membershipBadgeVariant(mem.isWaiting) });
         return chips;
     })());
 

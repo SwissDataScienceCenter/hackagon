@@ -31,14 +31,14 @@
         <button
             type="button"
             onclick={() => (mode = 'write')}
-            class="btn btn-sm {mode === 'write' ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+            class="btn btn-sm {mode === 'write' ? 'btn-solid' : 'btn-ghost'}"
         >
             Write
         </button>
         <button
             type="button"
             onclick={() => (mode = 'preview')}
-            class="btn btn-sm {mode === 'preview' ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+            class="btn btn-sm {mode === 'preview' ? 'btn-solid' : 'btn-ghost'}"
         >
             Preview
         </button>
@@ -57,22 +57,22 @@
         {placeholder}
         {required}
         {maxlength}
-        class="border border-surface-200-800 bg-surface-50-950 px-3 py-2 font-mono text-sm
-               text-surface-950-50 focus:border-primary-500 focus:outline-none
+        class="border border-line bg-surface px-3 py-2 font-mono text-sm
+               text-ink focus:border-accent focus:outline-none
                {mode === 'write' ? '' : 'hidden'}"
     ></textarea>
 
     <div
-        class="border border-surface-200-800 bg-surface-50-950 px-3 py-2
-               text-sm text-surface-950-50 {mode === 'preview' ? '' : 'hidden'}"
+        class="border border-line bg-surface px-3 py-2
+               text-sm text-ink {mode === 'preview' ? '' : 'hidden'}"
         style="min-height: {rows * 1.5}rem"
     >
         {#if text.trim()}
             <MarkdownContent content={text} />
         {:else}
-            <p class="m-0 text-surface-500">Nothing to preview yet.</p>
+            <p class="m-0 text-ink-3">Nothing to preview yet.</p>
         {/if}
     </div>
 
-    <p class="m-0 text-[10px] text-surface-500">Markdown supported.</p>
+    <p class="m-0 text-[10px] text-ink-3">Markdown supported.</p>
 </div>

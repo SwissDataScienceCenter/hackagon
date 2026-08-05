@@ -14,15 +14,19 @@
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
-    import { statusLabel, statusBadgePreset } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
 
+    // See DashboardView for why these are token-derived rather than palette steps.
     const GRADIENTS = [
-        { from: 'var(--color-primary-700)', to: 'var(--color-primary-950)' },
-        { from: 'var(--color-secondary-500)', to: 'var(--color-secondary-950)' },
-        { from: 'var(--color-tertiary-500)', to: 'var(--color-tertiary-950)' },
+        { from: 'var(--color-accent)', to: 'color-mix(in oklab, var(--color-accent) 35%, black)' },
+        { from: 'var(--color-info)', to: 'color-mix(in oklab, var(--color-info) 35%, black)' },
+        {
+            from: 'var(--color-success)',
+            to: 'color-mix(in oklab, var(--color-success) 35%, black)',
+        },
     ];
 
     function formatMeta(h: { startsAt?: Date; endsAt?: Date }): string {
@@ -63,11 +67,11 @@
         alt=""
         class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40 dark:opacity-25"
     />
-    <div class="pointer-events-none absolute inset-0 bg-surface-50/70 dark:bg-surface-950/65"></div>
+    <div class="pointer-events-none absolute inset-0 bg-canvas/65"></div>
 
     <div class="relative z-10 flex flex-col items-center gap-6">
-        <span class="badge preset-outlined-primary-500">
-            <span class="h-1.5 w-1.5 rounded-full bg-primary-500"></span>
+        <span class="badge badge-outline-accent">
+            <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
             <span>ORD Hackathon 2026 — Registration open</span>
         </span>
 
@@ -75,7 +79,7 @@
             SDSC Hackathon Platform
         </h1>
 
-        <p class="max-w-xl text-base leading-relaxed text-surface-600-400">
+        <p class="max-w-xl text-base leading-relaxed text-ink-2">
             Propose projects, form teams, and build solutions together.
             Hosted by SDSC for the Swiss scientific community.
         </p>
@@ -83,11 +87,11 @@
         <div class="flex items-center gap-3">
             <a
                 href={resolve('/hackathon/ord-2026')}
-                class="btn preset-filled-primary-500 no-underline"
+                class="btn btn-solid no-underline"
             >
                 Get Started
             </a>
-            <a href="#trending" class="btn preset-outlined-surface-200-800 no-underline">
+            <a href="#trending" class="btn btn-outline no-underline">
                 Browse Hackathons
                 <ArrowRight class="h-3.5 w-3.5 opacity-60" />
             </a>
@@ -100,27 +104,27 @@
 <section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Trending this month</h2>
-        <a href={resolve('/')} class="text-sm text-primary-500 no-underline">Browse all →</a>
+        <a href={resolve('/')} class="text-sm text-accent-ink no-underline">Browse all →</a>
     </div>
 
-    <div class="mt-6 flex gap-1 border-b border-surface-200-800">
-        <button class="chip preset-tonal-primary border-b-2 border-primary-500">
+    <div class="mt-6 flex gap-1 border-b border-line">
+        <button class="chip chip-active border-b-2 border-accent">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
         </button>
-        <button class="chip hover:preset-tonal">
+        <button class="chip">
             <Trophy class="h-3.5 w-3.5" />
             <span>Challenges</span>
         </button>
-        <button class="chip hover:preset-tonal">
+        <button class="chip">
             <Archive class="h-3.5 w-3.5" />
             <span>Past Events</span>
         </button>
     </div>
 
-    <div class="mt-0 divide-y divide-surface-200-800">
+    <div class="mt-0 divide-y divide-line">
         {#if data.hackathons.length === 0}
-            <p class="py-6 text-sm text-surface-500">No hackathons available yet.</p>
+            <p class="py-6 text-sm text-ink-3">No hackathons available yet.</p>
         {:else}
             {#each data.hackathons as h, i (h.id)}
                 <HackathonRow
@@ -128,7 +132,7 @@
                     name={h.name}
                     meta={formatMeta(h)}
                     badge={statusLabel(h.status)}
-                    badgePreset={statusBadgePreset(h.status)}
+                    badgeVariant={statusBadgeVariant(h.status)}
                     gradFrom={gradient(i).from}
                     gradTo={gradient(i).to}
                 />
@@ -141,7 +145,7 @@
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Award-winning projects</h2>
-        <a href={resolve('/')} class="text-sm text-primary-500 no-underline">See all →</a>
+        <a href={resolve('/')} class="text-sm text-accent-ink no-underline">See all →</a>
     </div>
 
     <div class="mt-6 grid grid-cols-3 gap-4">
@@ -151,21 +155,21 @@
             { hackathon: 'Climate Data 2025', project: 'ClimateQA', team: 'by Green Bytes', summary: 'RAG-based Q&A trained on Swiss climate data, making decades of measurements queryable.' },
         ] as card, i (i)}
             <div
-                class="card preset-filled-surface-50-950 overflow-hidden border border-surface-200-800"
+                class="card overflow-hidden border border-line"
             >
                 <div
-                    class="flex h-10 items-center justify-between border-b border-surface-200-800 px-4"
+                    class="flex h-10 items-center justify-between border-b border-line px-4"
                 >
-                    <div class="flex items-center gap-1.5 text-warning-500">
+                    <div class="flex items-center gap-1.5 text-warning-ink">
                         <Trophy class="h-3.5 w-3.5" />
                         <span class="text-xs font-bold">1st Place</span>
                     </div>
-                    <span class="text-xs text-surface-500">{card.hackathon}</span>
+                    <span class="text-xs text-ink-3">{card.hackathon}</span>
                 </div>
                 <div class="flex flex-col gap-2 p-4">
                     <p class="text-sm font-semibold leading-tight whitespace-pre-line">{card.project}</p>
-                    <span class="text-xs text-primary-500">{card.team}</span>
-                    <p class="text-xs leading-snug text-surface-500">{card.summary}</p>
+                    <span class="text-xs text-accent-ink">{card.team}</span>
+                    <p class="text-xs leading-snug text-ink-3">{card.summary}</p>
                 </div>
             </div>
         {/each}
@@ -177,10 +181,10 @@
     <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold">Event showcase</h2>
         <div class="flex items-center gap-2">
-            <button onclick={prevSlide} class="btn-icon btn-sm preset-outlined-surface-200-800">
+            <button onclick={prevSlide} class="btn btn-icon btn-sm btn-outline">
                 <ChevronLeft class="h-4 w-4" />
             </button>
-            <button onclick={nextSlide} class="btn-icon btn-sm preset-outlined-surface-200-800">
+            <button onclick={nextSlide} class="btn btn-icon btn-sm btn-outline">
                 <ChevronRight class="h-4 w-4" />
             </button>
         </div>
@@ -193,14 +197,14 @@
         >
             {#each carouselSlides as slide, i (i)}
                 <div class="w-[calc(25%-12px)] shrink-0">
-                    <div class="relative aspect-video overflow-hidden preset-outlined-surface-200-800">
+                    <div class="relative aspect-video overflow-hidden border border-line">
                         <img
                             src={slide.src}
                             alt={slide.caption}
                             class="h-full w-full object-cover"
                         />
                     </div>
-                    <p class="mt-2 text-xs text-surface-500">{slide.caption}</p>
+                    <p class="mt-2 text-xs text-ink-3">{slide.caption}</p>
                 </div>
             {/each}
         </div>
@@ -211,8 +215,8 @@
             <button
                 onclick={() => carouselIndex = i}
                 class="h-1.5 w-1.5 rounded-full transition-colors {i === carouselIndex
-                    ? 'bg-primary-500'
-                    : 'bg-surface-300-700'}"
+                    ? 'bg-accent'
+                    : 'bg-overlay'}"
                 aria-label="Go to slide: {slide.caption}"
             ></button>
         {/each}
@@ -220,10 +224,10 @@
 </section>
 
 <!-- Features -->
-<section class="bg-surface-100-900 px-4 py-12 sm:px-10 md:px-20">
+<section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="flex flex-col items-center gap-2 text-center">
         <h2 class="text-2xl font-bold">The hackathon platform for science</h2>
-        <p class="text-base text-surface-500">
+        <p class="text-base text-ink-3">
             Everything you need to run or participate in a hackathon.
         </p>
     </div>
@@ -237,12 +241,12 @@
         ] as feat, i (i)}
             {@const Icon = feat.icon}
             <div
-                class="card preset-filled-surface-50-950 flex flex-col gap-3 border
-                       border-surface-200-800 p-5"
+                class="card flex flex-col gap-3 border
+                       border-line p-5"
             >
-                <Icon class="h-6 w-6 text-primary-500" />
+                <Icon class="h-6 w-6 text-accent-ink" />
                 <h3 class="text-base font-semibold">{feat.title}</h3>
-                <p class="text-sm leading-relaxed text-surface-500">{feat.desc}</p>
+                <p class="text-sm leading-relaxed text-ink-3">{feat.desc}</p>
             </div>
         {/each}
     </div>
@@ -254,8 +258,8 @@
     <div class="flex items-center gap-12">
         {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
             <div class="flex flex-col items-center gap-2">
-                <div class="h-14 w-14 preset-outlined-surface-200-800 flex items-center justify-center"></div>
-                <span class="text-xs font-medium text-surface-500">{name}</span>
+                <div class="h-14 w-14 border border-line flex items-center justify-center"></div>
+                <span class="text-xs font-medium text-ink-3">{name}</span>
             </div>
         {/each}
     </div>

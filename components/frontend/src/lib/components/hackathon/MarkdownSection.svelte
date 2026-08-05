@@ -32,7 +32,7 @@
     .markdown-content :global(p) {
         font-size: 0.875rem;
         line-height: 1.625;
-        color: var(--color-surface-700);
+        color: var(--color-ink-2);
         margin-bottom: 0.75rem;
     }
     .markdown-content :global(ul) {
@@ -42,11 +42,11 @@
     }
     .markdown-content :global(li) {
         font-size: 0.875rem;
-        color: var(--color-surface-700);
+        color: var(--color-ink-2);
         margin-bottom: 0.25rem;
     }
     .markdown-content :global(a) {
-        color: var(--color-primary-700);
+        color: var(--color-accent-ink);
         text-decoration: none;
     }
     .markdown-content :global(a:hover) {
@@ -56,11 +56,7 @@
         font-weight: 600;
     }
 
-    :global([data-mode="dark"]) .markdown-content :global(p),
-    :global([data-mode="dark"]) .markdown-content :global(li) {
-        color: var(--color-surface-100);
-    }
-    :global([data-mode="dark"]) .markdown-content :global(a) {
-        color: var(--color-primary-500);
-    }
+    /* The two `[data-mode="dark"]` overrides that used to live here are gone:
+       `ink-2` and `accent-ink` already flip with the mode, so restating them
+       per-mode is exactly the hand-rolled swap the token layer exists to avoid. */
 </style>

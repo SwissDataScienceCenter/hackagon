@@ -26,17 +26,17 @@
         current: 'Current phase',
     } as const;
 
-    const STATUS_PRESET = {
-        completed: 'preset-outlined-surface-200-800',
-        active: 'preset-filled-primary-500',
-        upcoming: 'preset-tonal-surface',
-        current: 'preset-filled-primary-500',
+    const STATUS_VARIANT = {
+        completed: 'badge-neutral',
+        active: 'badge-solid',
+        upcoming: 'badge-neutral',
+        current: 'badge-solid',
     } as const;
 </script>
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <h2 class="m-0 text-lg font-bold text-surface-950-50">Timeline</h2>
+    <h2 class="m-0 text-lg font-bold text-ink">Timeline</h2>
 
     <!-- Organizer-only, and above the phases: what participants may do is
          hackathon-wide, so it is not one of the phases and does not sit among
@@ -58,15 +58,15 @@
          else sits above it. -->
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-0.5">
-            <h3 class="m-0 text-sm font-bold text-surface-950-50">Phases</h3>
-            <span class="text-xs text-surface-500">
+            <h3 class="m-0 text-sm font-bold text-ink">Phases</h3>
+            <span class="text-xs text-ink-3">
                 {data.phases.length === 1 ? '1 phase' : `${data.phases.length} phases`}
             </span>
         </div>
         {#if data.mayManage}
             <a
                 href={resolve(`/my/hackathon/${data.hackathonId}/timeline/new`)}
-                class="btn btn-sm preset-filled-primary-500 no-underline"
+                class="btn btn-sm btn-solid no-underline"
             >
                 <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
                 Add phase
@@ -75,7 +75,7 @@
     </div>
 
     {#if data.phases.length === 0}
-        <p class="m-0 py-6 text-center text-sm text-surface-500">
+        <p class="m-0 py-6 text-center text-sm text-ink-3">
             {#if data.mayManage}
                 No phases yet. Add one to give participants a timeline to follow.
             {:else}
@@ -86,15 +86,15 @@
         <ol class="m-0 flex list-none flex-col gap-2 p-0">
             {#each data.phases as phase (phase.id)}
                 <li
-                    class="box-border w-full border border-surface-200-800 bg-surface-100-900
+                    class="box-border w-full border border-line bg-raised
                            px-5 py-4"
                 >
                     <div class="flex flex-col gap-1.5">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
+                            <h3 class="m-0 text-sm font-bold leading-snug text-ink">
                                 {phase.name}
                             </h3>
-                            <span class="badge {STATUS_PRESET[phase.status]} text-xs">
+                            <span class="badge {STATUS_VARIANT[phase.status]} text-xs">
                                 {#if phase.status === 'completed'}
                                     <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
                                 {/if}
@@ -105,7 +105,7 @@
                                     href={resolve(
                                         `/my/hackathon/${data.hackathonId}/timeline/${phase.id}/edit`
                                     )}
-                                    class="ml-auto text-xs font-semibold text-primary-700-300
+                                    class="ml-auto text-xs font-semibold text-accent-ink
                                            no-underline hover:underline"
                                 >
                                     <Pencil class="inline h-3 w-3 shrink-0" aria-hidden="true" />
@@ -113,11 +113,11 @@
                                 </a>
                             {/if}
                         </div>
-                        <span class="text-xs text-primary-700-300">
+                        <span class="text-xs text-accent-ink">
                             {formatRange(phase.startsAt, phase.endsAt)}
                         </span>
                         {#if phase.description}
-                            <p class="m-0 text-xs leading-snug text-surface-600-400">
+                            <p class="m-0 text-xs leading-snug text-ink-2">
                                 {phase.description}
                             </p>
                         {/if}
@@ -137,7 +137,7 @@
                                 class="flex flex-wrap items-baseline gap-1 pt-0.5
                                        {phase.status === 'current' ? '' : 'opacity-60'}"
                             >
-                                <span class="text-[0.625rem] text-surface-500">
+                                <span class="text-[0.625rem] text-ink-3">
                                     Planned for this phase:
                                 </span>
                                 {#each phase.capabilities as capability (capability)}
@@ -151,10 +151,10 @@
                                          signal for anyone who cannot distinguish it. -->
                                     <span
                                         class="badge text-[0.625rem] {live
-                                            ? 'preset-tonal-success'
+                                            ? 'badge-success'
                                             : pending
-                                              ? 'preset-tonal-warning'
-                                              : 'preset-tonal-surface'}"
+                                              ? 'badge-warning'
+                                              : 'badge-neutral'}"
                                     >
                                         {#if live}
                                             <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -177,11 +177,11 @@
                              planned for no phase yet legitimately spans several. -->
                         {#if phase.status === 'current' && data.alsoEnabled.length > 0}
                             <div class="flex flex-wrap items-baseline gap-1">
-                                <span class="text-[0.625rem] text-surface-500">
+                                <span class="text-[0.625rem] text-ink-3">
                                     Also enabled:
                                 </span>
                                 {#each data.alsoEnabled as capability (capability)}
-                                    <span class="badge preset-tonal-success text-[0.625rem]">
+                                    <span class="badge badge-success text-[0.625rem]">
                                         <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
                                         {capabilityLabel(capability) ?? 'Unknown'}
                                     </span>
@@ -197,7 +197,7 @@
                                             `/my/hackathon/${data.hackathonId}/pages/${phase.pageId}`
                                         )}
                                         class="inline-flex items-center gap-1 text-xs font-semibold
-                                               text-primary-700-300 no-underline hover:underline"
+                                               text-accent-ink no-underline hover:underline"
                                     >
                                         <FileText class="h-3 w-3 shrink-0" aria-hidden="true" />
                                         Read more
@@ -212,7 +212,7 @@
                                         <form method="POST" action="?/setCurrent">
                                             <button
                                                 type="submit"
-                                                class="btn btn-sm preset-tonal-surface text-xs"
+                                                class="btn btn-sm btn-ghost text-xs"
                                             >
                                                 Clear current phase
                                             </button>
@@ -222,7 +222,7 @@
                                             <input type="hidden" name="phaseId" value={phase.id} />
                                             <button
                                                 type="submit"
-                                                class="btn btn-sm preset-tonal-surface text-xs"
+                                                class="btn btn-sm btn-ghost text-xs"
                                             >
                                                 Make current<span class="sr-only">
                                                     — {phase.name}</span

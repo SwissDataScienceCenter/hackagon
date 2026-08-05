@@ -20,12 +20,12 @@
     <div class="flex flex-col gap-1">
         <a
             href={resolve(`/my/hackathon/${data.hackathonId}/timeline`)}
-            class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
             &larr; Back to timeline
         </a>
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Edit Phase</h1>
-        <p class="m-0 text-xs text-surface-500">
+        <h1 class="m-0 text-lg font-bold text-ink">Edit Phase</h1>
+        <p class="m-0 text-xs text-ink-3">
             Changes are visible to participants immediately.
         </p>
     </div>
@@ -38,33 +38,33 @@
         message={form?.message}
     />
 
-    <div class="flex flex-col gap-2 border-t border-surface-200-800 pt-6">
-        <h2 class="m-0 text-xs font-semibold text-surface-500">Delete this phase</h2>
+    <div class="flex flex-col gap-2 border-t border-line pt-6">
+        <h2 class="m-0 text-xs font-semibold text-ink-3">Delete this phase</h2>
         {#if confirming}
-            <p class="m-0 text-xs text-surface-600-400">
-                Deleting <strong class="text-surface-950-50">{data.phase.name}</strong> cannot
+            <p class="m-0 text-xs text-ink-2">
+                Deleting <strong class="text-ink">{data.phase.name}</strong> cannot
                 be undone. Any page linked to it stays, only the phase goes.
             </p>
             <form method="POST" action="?/delete" class="flex gap-2">
-                <button type="submit" class="btn btn-sm preset-filled-error-500">
+                <button type="submit" class="btn btn-sm btn-danger-solid">
                     Delete permanently
                 </button>
                 <button
                     type="button"
                     onclick={() => (confirming = false)}
-                    class="btn btn-sm preset-tonal-surface"
+                    class="btn btn-sm btn-ghost"
                 >
                     Keep it
                 </button>
             </form>
         {:else}
-            <p class="m-0 text-xs text-surface-600-400">
+            <p class="m-0 text-xs text-ink-2">
                 Removes the phase from the timeline for everyone.
             </p>
             <button
                 type="button"
                 onclick={() => (confirming = true)}
-                class="btn btn-sm w-fit preset-outlined-error-500"
+                class="btn btn-sm w-fit btn-danger"
             >
                 Delete phase
             </button>

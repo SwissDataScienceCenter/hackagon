@@ -22,18 +22,18 @@
     } = $props();
 
     const ACTIVE_CLASS = {
-        primary: 'bg-surface-100-900 font-medium text-primary-700-300',
-        tertiary: 'bg-surface-100-900 font-medium text-tertiary-700-300',
+        primary: 'bg-raised font-medium text-accent-ink',
+        tertiary: 'bg-raised font-medium text-info-ink',
     };
 
     const LABEL_CLASS = {
-        primary: 'text-surface-500',
-        tertiary: 'text-tertiary-500',
+        primary: 'text-ink-3',
+        tertiary: 'text-info-ink',
     };
 
     const BADGE_CLASS = {
-        primary: 'preset-tonal-primary',
-        tertiary: 'preset-tonal-tertiary',
+        primary: 'badge-accent',
+        tertiary: 'badge-info',
     };
 
     // A section can be heading-only — an organiser has a role worth naming but
@@ -43,7 +43,7 @@
 </script>
 
 {#if !hidden}
-    <div class="flex flex-col gap-0.5 border-t border-surface-200-800 p-2">
+    <div class="flex flex-col gap-0.5 border-t border-line p-2">
         {#if label && !collapsed}
             <div class="flex items-baseline gap-2 px-2 pb-1">
                 <span
@@ -75,7 +75,7 @@
                            transition-colors
                            {isActive
                         ? ACTIVE_CLASS[accent]
-                        : 'text-surface-500 hover:text-surface-700-300'}
+                        : 'text-ink-3 hover:text-ink-2'}
                            {collapsed ? 'justify-center' : ''}"
                 >
                     <Icon class="h-4 w-4 shrink-0" />
@@ -88,7 +88,7 @@
                 <span
                     title="Not available yet"
                     class="flex h-10 cursor-not-allowed items-center gap-2 rounded-lg px-2 text-sm
-                           text-surface-500 opacity-50 {collapsed ? 'justify-center' : ''}"
+                           text-ink-3 opacity-50 {collapsed ? 'justify-center' : ''}"
                 >
                     <Icon class="h-4 w-4 shrink-0" />
                     {#if !collapsed}

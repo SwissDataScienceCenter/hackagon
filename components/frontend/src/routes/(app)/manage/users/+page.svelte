@@ -49,13 +49,13 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
-            <h1 class="m-0 text-lg font-bold text-surface-950-50">Users</h1>
-            <p class="m-0 text-xs text-surface-500">{countLabel} registered on the platform</p>
+            <h1 class="m-0 text-lg font-bold text-ink">Users</h1>
+            <p class="m-0 text-xs text-ink-3">{countLabel} registered on the platform</p>
         </div>
         <div class="relative w-full sm:w-72">
             <Search
                 class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
-                       text-surface-400"
+                       text-ink-3"
                 aria-hidden="true"
             />
             <label class="sr-only" for="user-search">Search users</label>
@@ -64,9 +64,9 @@
                 type="search"
                 bind:value={search}
                 placeholder="Name, username or email…"
-                class="h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950
-                       pl-9 pr-3 text-xs text-surface-950-50 placeholder:text-surface-700-300
-                       focus:border-primary-500 focus:outline-none"
+                class="h-9 w-full rounded-none border border-line bg-surface
+                       pl-9 pr-3 text-xs text-ink placeholder:text-ink-2
+                       focus:border-accent focus:outline-none"
             />
         </div>
     </div>
@@ -76,14 +76,14 @@
     {/if}
 
     {#if data.users.length === 0}
-        <p class="m-0 py-6 text-center text-sm text-surface-500">No users found.</p>
+        <p class="m-0 py-6 text-center text-sm text-ink-3">No users found.</p>
     {:else if filtered.length === 0}
-        <p class="m-0 py-6 text-center text-sm text-surface-500">No users match “{search}”.</p>
+        <p class="m-0 py-6 text-center text-sm text-ink-3">No users match “{search}”.</p>
     {:else}
-        <div class="w-full overflow-x-auto border border-surface-200-800">
+        <div class="w-full overflow-x-auto border border-line">
             <table class="w-full min-w-[720px] border-collapse text-left text-xs">
                 <thead>
-                    <tr class="border-b border-surface-200-800 bg-surface-100-900 text-surface-500">
+                    <tr class="border-b border-line bg-raised text-ink-3">
                         <th class="px-3 py-2 font-semibold">
                             <span class="sr-only">Avatar</span>
                         </th>
@@ -97,19 +97,19 @@
                 </thead>
                 <tbody>
                     {#each filtered as user (user.id)}
-                        <tr class="border-b border-surface-200-800 last:border-0">
+                        <tr class="border-b border-line last:border-0">
                             <td class="px-3 py-2">
                                 <div
                                     class="flex size-8 shrink-0 items-center justify-center
-                                           rounded-full border-2 border-surface-200-800
-                                           bg-surface-200-800 text-[10px] font-bold
-                                           text-surface-950-50"
+                                           rounded-full border-2 border-line
+                                           bg-overlay text-[10px] font-bold
+                                           text-ink"
                                     aria-hidden="true"
                                 >
                                     {initials(user.displayName, user.username)}
                                 </div>
                             </td>
-                            <td class="px-3 py-2 font-semibold text-surface-950-50">
+                            <td class="px-3 py-2 font-semibold text-ink">
                                 {user.displayName || user.username}
                             </td>
                             <td class="px-3 py-2 text-surface-500">{user.username}</td>

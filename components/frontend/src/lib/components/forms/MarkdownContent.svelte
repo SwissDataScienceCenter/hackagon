@@ -28,23 +28,23 @@
         padding-left: 1.25em;
     }
     .markdown-content :global(code) {
-        background: var(--color-surface-200-800);
+        background: var(--color-raised);
         padding: 0.1em 0.3em;
         font-size: 0.9em;
     }
     .markdown-content :global(pre) {
-        background: var(--color-surface-200-800);
+        background: var(--color-raised);
         padding: 0.6em;
         overflow-x: auto;
     }
     .markdown-content :global(blockquote) {
-        border-left: 2px solid var(--color-surface-200-800);
+        border-left: 2px solid var(--color-line);
         margin: 0 0 0.6em;
         padding-left: 0.75em;
-        color: var(--color-surface-500);
+        color: var(--color-ink-3);
     }
     .markdown-content :global(a) {
-        color: var(--color-primary-700-300);
+        color: var(--color-accent-ink);
     }
     .markdown-content :global(:first-child) {
         margin-top: 0;

@@ -6,22 +6,22 @@
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const FIELD_CLASS =
-        'h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950 px-3 text-xs ' +
-        'text-surface-950-50 placeholder:text-surface-700-300 focus:border-primary-500 ' +
+        'h-9 w-full rounded-none border border-line bg-surface px-3 text-xs ' +
+        'text-ink placeholder:text-ink-2 focus:border-accent ' +
         'focus:outline-none';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-surface-500';
+    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-ink-3';
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
             href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals`)}
-            class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
             &larr; Back to my projects
         </a>
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Propose a Project</h1>
-        <p class="m-0 text-xs text-surface-500">
+        <h1 class="m-0 text-lg font-bold text-ink">Propose a Project</h1>
+        <p class="m-0 text-xs text-ink-3">
             An organizer reviews it before it appears on the Projects page. You can keep editing
             it in the meantime.
         </p>
@@ -31,7 +31,7 @@
          and the action is what the backend actually sees. -->
     <form method="POST" action="?/propose" class="flex w-full flex-col gap-6">
         {#if form?.message}
-            <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+            <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
         {/if}
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -81,7 +81,7 @@
             />
         </div>
 
-        <button type="submit" class="btn btn-sm preset-filled-primary-500 self-start">
+        <button type="submit" class="btn btn-sm btn-solid self-start">
             Propose project
         </button>
     </form>

@@ -5,15 +5,15 @@ const LABEL: Partial<Record<number, string>> = {
   1: "Draft",
   2: "Final",
 }
-const BADGE_PRESET: Partial<Record<number, string>> = {
-  1: "preset-tonal-warning",
-  2: "preset-tonal-success",
+const BADGE_VARIANT: Partial<Record<number, string>> = {
+  1: "badge-warning",
+  2: "badge-success",
 }
 
 export function submissionStatusLabel(s: number): string | undefined {
   return LABEL[s]
 }
 
-export function submissionStatusBadgePreset(s: number): string | undefined {
-  return BADGE_PRESET[s]
+export function submissionStatusBadgeVariant(s: number): string | undefined {
+  return BADGE_VARIANT[s]
 }
