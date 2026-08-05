@@ -56,6 +56,10 @@ type capabilities struct {
 // (hackathon_service.go:616-653) so seeded hackathons behave like ones created
 // through the API. Registration grants to `*` rather than a role, since the
 // whole point is that a non-member can join.
+//
+// `currentPhase` is the phase an organizer has declared current, or nil for a
+// hackathon sitting in none. It is display state only — SetCurrentPhase does not
+// touch capabilities either, so nothing here depends on which phase it is.
 func seedCapabilities(
 	ctx context.Context,
 	db *ent.Client,
@@ -63,8 +67,9 @@ func seedCapabilities(
 	h *ent.Hackathon,
 	modifier *ent.User,
 	caps capabilities,
+	currentPhase *ent.Phase,
 ) error {
-	if _, err := db.HackathonState.Create().
+	state := db.HackathonState.Create().
 		SetHackathonID(h.ID).
 		SetModifier(modifier).
 		SetRegistrationsEnabled(caps.register).
@@ -72,8 +77,11 @@ func seedCapabilities(
 		SetSetTeamPreferencesEnabled(caps.teamPreferences).
 		SetCreateProjectSubmissionsEnabled(caps.projectSubmissions).
 		SetVotingEnabled(caps.vote).
-		SetViewResultsEnabled(caps.viewResults).
-		Save(ctx); err != nil {
+		SetViewResultsEnabled(caps.viewResults)
+	if currentPhase != nil {
+		state = state.SetCurrentPhase(currentPhase)
+	}
+	if _, err := state.Save(ctx); err != nil {
 		return fmt.Errorf("hackathon state for %q: %w", h.Name, err)
 	}
 
@@ -117,6 +125,69 @@ func seedCapabilities(
 	}
 
 	return nil
+}
+
+// The six capability tags a phase can carry, spelled as PhaseService stores them
+// (capabilityToString, internal/service/phase_service.go:452). The column is a
+// JSON array of raw strings with no enum behind it, so a typo would round-trip
+// as an unknown capability rather than fail — hence constants.
+const (
+	capRegister    = "register"
+	capPropose     = "propose_projects"
+	capTeamPrefs   = "set_team_preferences"
+	capSubmissions = "create_project_submissions"
+	capVote        = "vote"
+	capViewResults = "view_results"
+)
+
+// phaseSeed is one phase to create.
+//
+// `caps` are the capability tags the phase advertises. They are **descriptive
+// only** — db/schema/phase.go:47 says so, and nothing reads them to gate
+// anything. What participants may actually do comes from the HackathonState
+// booleans and casbin rows that seedCapabilities writes, and the two are set
+// independently on purpose. A phase tagged `vote` in a hackathon whose
+// `voting_enabled` is false is a legitimate fixture: it says "this is when
+// voting is meant to happen", not "voting is open".
+//
+// `capRegister` appears on no phase. Registering is not something that happens
+// *during* a phase in this fixture — all three hackathons run Ideation → build →
+// judge, none of which is a sign-up window — so tagging one with it would
+// misdescribe the data.
+type phaseSeed struct {
+	name, desc string
+	start, end time.Time
+	caps       []string
+}
+
+// seedPhases creates a hackathon's phases and returns them keyed by name, so the
+// caller can nominate one as the current phase without re-querying.
+func seedPhases(
+	ctx context.Context,
+	db *ent.Client,
+	h *ent.Hackathon,
+	author *ent.User,
+	phases []phaseSeed,
+) (map[string]*ent.Phase, error) {
+	created := make(map[string]*ent.Phase, len(phases))
+	for _, ph := range phases {
+		p, err := db.Phase.Create().
+			SetName(ph.name).
+			SetDescription(ph.desc).
+			SetStartsAt(ph.start).
+			SetEndsAt(ph.end).
+			SetCapabilities(ph.caps).
+			SetHackathon(h).
+			SetCreator(author).
+			SetModifier(author).
+			Save(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("phase %q: %w", ph.name, err)
+		}
+		created[ph.name] = p
+	}
+
+	return created, nil
 }
 
 func main() {
@@ -283,25 +354,24 @@ func seedH1(
 		return err
 	}
 
-	for _, ph := range []struct {
-		name, desc string
-		start, end time.Time
-	}{
-		{"Ideation", "Define your project idea and form your team.", now.AddDate(0, 0, 19).Add(9 * time.Hour), now.AddDate(0, 0, 19).Add(18 * time.Hour)},
-		{"Hacking", "Build your project. Mentors available throughout the day.", now.AddDate(0, 0, 20).Add(9 * time.Hour), now.AddDate(0, 0, 20).Add(21 * time.Hour)},
-		{"Judging", "Present your project to the judges. Top 3 teams win prizes.", now.AddDate(0, 0, 21).Add(10 * time.Hour), now.AddDate(0, 0, 21).Add(16 * time.Hour)},
-	} {
-		if _, err := db.Phase.Create().
-			SetName(ph.name).
-			SetDescription(ph.desc).
-			SetStartsAt(ph.start).
-			SetEndsAt(ph.end).
-			SetHackathon(h).
-			SetCreator(alice).
-			SetModifier(alice).
-			Save(ctx); err != nil {
-			return fmt.Errorf("phase %q: %w", ph.name, err)
-		}
+	if _, err := seedPhases(ctx, db, h, alice, []phaseSeed{
+		{
+			"Ideation", "Define your project idea and form your team.",
+			now.AddDate(0, 0, 19).Add(9 * time.Hour), now.AddDate(0, 0, 19).Add(18 * time.Hour),
+			[]string{capPropose, capTeamPrefs},
+		},
+		{
+			"Hacking", "Build your project. Mentors available throughout the day.",
+			now.AddDate(0, 0, 20).Add(9 * time.Hour), now.AddDate(0, 0, 20).Add(21 * time.Hour),
+			[]string{capSubmissions},
+		},
+		{
+			"Judging", "Present your project to the judges. Top 3 teams win prizes.",
+			now.AddDate(0, 0, 21).Add(10 * time.Hour), now.AddDate(0, 0, 21).Add(16 * time.Hour),
+			[]string{capVote, capViewResults},
+		},
+	}); err != nil {
+		return err
 	}
 
 	for i, pg := range []struct {
@@ -545,6 +615,10 @@ func seedH1(
 	// Submissions are enabled anyway because the fixture already contains team
 	// Alpha's two submissions, and a capability that contradicts the data on
 	// screen is more confusing than one that is early.
+	//
+	// No current phase: the doors have not opened, so the hackathon is not "in"
+	// any of its three phases yet. The one fixture that exercises an empty
+	// `current_phase_id`.
 	if err := seedCapabilities(ctx, db, enf, h, alice, capabilities{
 		register:           true,
 		proposeProjects:    true,
@@ -552,7 +626,7 @@ func seedH1(
 		projectSubmissions: true,
 		vote:               false,
 		viewResults:        false,
-	}); err != nil {
+	}, nil); err != nil {
 		return err
 	}
 
@@ -580,25 +654,25 @@ func seedH2(
 		return err
 	}
 
-	for _, ph := range []struct {
-		name, desc string
-		start, end time.Time
-	}{
-		{"Ideation", "Research the problem space and define your approach.", now.AddDate(0, 0, -2), now.AddDate(0, 0, -1)},
-		{"Hacking", "Build your climate tech solution with support from domain experts.", now.AddDate(0, 0, 0), now.AddDate(0, 0, 1)},
-		{"Judging", "Demo day: present your solution to a panel of sustainability experts.", now.AddDate(0, 0, 2).Add(9 * time.Hour), now.AddDate(0, 0, 2).Add(17 * time.Hour)},
-	} {
-		if _, err := db.Phase.Create().
-			SetName(ph.name).
-			SetDescription(ph.desc).
-			SetStartsAt(ph.start).
-			SetEndsAt(ph.end).
-			SetHackathon(h).
-			SetCreator(admin).
-			SetModifier(admin).
-			Save(ctx); err != nil {
-			return fmt.Errorf("phase %q: %w", ph.name, err)
-		}
+	phases, err := seedPhases(ctx, db, h, admin, []phaseSeed{
+		{
+			"Ideation", "Research the problem space and define your approach.",
+			now.AddDate(0, 0, -2), now.AddDate(0, 0, -1),
+			[]string{capPropose, capTeamPrefs},
+		},
+		{
+			"Hacking", "Build your climate tech solution with support from domain experts.",
+			now.AddDate(0, 0, 0), now.AddDate(0, 0, 1),
+			[]string{capSubmissions},
+		},
+		{
+			"Judging", "Demo day: present your solution to a panel of sustainability experts.",
+			now.AddDate(0, 0, 2).Add(9 * time.Hour), now.AddDate(0, 0, 2).Add(17 * time.Hour),
+			[]string{capVote, capViewResults},
+		},
+	})
+	if err != nil {
+		return err
 	}
 
 	for i, pg := range []struct {
@@ -763,6 +837,10 @@ func seedH2(
 	//
 	// This is the hackathon to test preferences in: admin owns it, and alice and
 	// bob are both confirmed members.
+	//
+	// Current phase is Hacking, which is also the phase today's date falls in — so
+	// the declared phase and the one derived from dates agree here. They are
+	// separate mechanisms and can disagree; H3 is where that shows.
 	if err := seedCapabilities(ctx, db, enf, h, admin, capabilities{
 		register:           false,
 		proposeProjects:    true,
@@ -770,7 +848,7 @@ func seedH2(
 		projectSubmissions: true,
 		vote:               false,
 		viewResults:        false,
-	}); err != nil {
+	}, phases["Hacking"]); err != nil {
 		return err
 	}
 
@@ -798,25 +876,27 @@ func seedH3(
 		return err
 	}
 
-	for _, ph := range []struct {
-		name, desc string
-		start, end time.Time
-	}{
-		{"Ideation", "Identify pain points in the current developer workflow and scope your proposal.", now.AddDate(0, -1, -20).Add(9 * time.Hour), now.AddDate(0, -1, -20).Add(18 * time.Hour)},
-		{"Building", "Implement your improvement prototype.", now.AddDate(0, -1, -19).Add(9 * time.Hour), now.AddDate(0, -1, -19).Add(21 * time.Hour)},
-		{"Demo", "Present your prototype and gather feedback from the team.", now.AddDate(0, -1, -18).Add(10 * time.Hour), now.AddDate(0, -1, -18).Add(16 * time.Hour)},
-	} {
-		if _, err := db.Phase.Create().
-			SetName(ph.name).
-			SetDescription(ph.desc).
-			SetStartsAt(ph.start).
-			SetEndsAt(ph.end).
-			SetHackathon(h).
-			SetCreator(admin).
-			SetModifier(admin).
-			Save(ctx); err != nil {
-			return fmt.Errorf("phase %q: %w", ph.name, err)
-		}
+	phases, err := seedPhases(ctx, db, h, admin, []phaseSeed{
+		{
+			"Ideation", "Identify pain points in the current developer workflow and scope your proposal.",
+			now.AddDate(0, -1, -20).Add(9 * time.Hour), now.AddDate(0, -1, -20).Add(18 * time.Hour),
+			[]string{capPropose, capTeamPrefs},
+		},
+		{
+			"Building", "Implement your improvement prototype.",
+			now.AddDate(0, -1, -19).Add(9 * time.Hour), now.AddDate(0, -1, -19).Add(21 * time.Hour),
+			[]string{capSubmissions},
+		},
+		{
+			"Demo", "Present your prototype and gather feedback from the team.",
+			now.AddDate(0, -1, -18).
+				Add(10 * time.Hour),
+			now.AddDate(0, -1, -18).Add(16 * time.Hour),
+			[]string{capVote, capViewResults},
+		},
+	})
+	if err != nil {
+		return err
 	}
 
 	for i, pg := range []struct {
@@ -987,6 +1067,10 @@ func seedH3(
 	// Over a month past: nothing left to do but look at what happened. Results
 	// only — this is the fixture for a hackathon where every write is refused
 	// because the event has ended, not because anything is misconfigured.
+	//
+	// Current phase stays on Demo, the last one it reached. Every phase is in the
+	// past, so a date-derived reading calls them all "completed" while the declared
+	// phase still names one — the case that shows the two are different mechanisms.
 	if err := seedCapabilities(ctx, db, enf, h, admin, capabilities{
 		register:           false,
 		proposeProjects:    false,
@@ -994,7 +1078,7 @@ func seedH3(
 		projectSubmissions: false,
 		vote:               false,
 		viewResults:        true,
-	}); err != nil {
+	}, phases["Demo"]); err != nil {
 		return err
 	}
 

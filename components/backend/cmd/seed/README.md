@@ -85,8 +85,49 @@ behaviour. Tracked in
 `mydocs/docs/backend-tickets/project-preferences-capability.md`; the row is one
 line in `seedCapabilities` if you would rather mirror the handler exactly.
 
-`current_phase_id` is left nil — no hackathon has a phase declared current. The
-schema allows it and it is display-only.
+## Phases
+
+Every phase carries **capability tags** and every hackathon but H1 has a
+**current phase**. Both are set by `seedPhases` / `seedCapabilities` in
+[main.go](main.go).
+
+The two are unrelated to the table above, and that is the point:
+
+- **`Phase.capabilities` is descriptive.** It says when something is _meant_ to
+  happen. Nothing reads it to gate anything — `db/schema/phase.go` says so
+  outright.
+- **`HackathonState` is what actually gates.** The table above is the real one.
+- **`current_phase_id` is display-only.** `SetCurrentPhase` moves a pointer; it
+  touches neither the booleans nor casbin.
+
+So a phase tagged `vote` inside a hackathon whose `voting_enabled` is false is a
+correct fixture, not a contradiction — H1's Judging phase is exactly that.
+
+| Hackathon | Phase    | Tags                               | Current |
+| --------- | -------- | ---------------------------------- | ------- |
+| H1        | Ideation | propose projects, team preferences | —       |
+| H1        | Hacking  | project submissions                | —       |
+| H1        | Judging  | vote, view results                 | —       |
+| H2        | Ideation | propose projects, team preferences | —       |
+| H2        | Hacking  | project submissions                | ✅      |
+| H2        | Judging  | vote, view results                 | —       |
+| H3        | Ideation | propose projects, team preferences | —       |
+| H3        | Building | project submissions                | —       |
+| H3        | Demo     | vote, view results                 | ✅      |
+
+Three states worth having, one per hackathon:
+
+- **H1 has no current phase** — the doors have not opened, so it is not "in" any
+  phase. Exercises an empty `current_phase_id`.
+- **H2's current phase is Hacking**, which is also the phase today falls inside,
+  so the declared phase and a date-derived one agree.
+- **H3's current phase is Demo**, and every one of its phases is in the past —
+  so a date-derived reading calls them all completed while the declared phase
+  still names one. This is the fixture that shows the two are different
+  mechanisms.
+
+`register` is tagged on no phase: none of the nine is a sign-up window, so
+tagging one would misdescribe the fixture.
 
 ## User involvement
 
@@ -104,6 +145,8 @@ Phases:
 - Ideation — day `+19`, 09:00–18:00
 - Hacking — day `+20`, 09:00–21:00
 - Judging — day `+21`, 10:00–16:00
+
+No current phase — the hackathon has not started.
 
 Tracks: **Machine Learning**, **Natural Language Processing**, **Computer
 Vision**
@@ -128,7 +171,7 @@ Pages: `Welcome`, `Schedule` (visible); `Rules & Guidelines` (hidden).
 Phases:
 
 - Ideation — days `-2` to `-1` (all-day)
-- Hacking — days `0` to `+1` (all-day)
+- Hacking — days `0` to `+1` (all-day) — **current phase**
 - Judging — day `+2`, 09:00–17:00
 
 Tracks: **Energy**, **Agriculture & Food**
@@ -151,7 +194,7 @@ Phases (dates are 1 month + ~20 days before seed time):
 
 - Ideation — day `-1mo-20`, 09:00–18:00
 - Building — day `-1mo-19`, 09:00–21:00
-- Demo — day `-1mo-18`, 10:00–16:00
+- Demo — day `-1mo-18`, 10:00–16:00 — **current phase** (all phases are past)
 
 Tracks: **Developer Tools**, **Data Platform**
 
