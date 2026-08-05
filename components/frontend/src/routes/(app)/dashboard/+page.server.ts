@@ -1,6 +1,8 @@
-import type { PageServerLoad } from "./$types"
+import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { fail } from "@sveltejs/kit"
+import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
@@ -26,4 +28,30 @@ export const load: PageServerLoad = async (event) => {
     otherHackathons: allResult.hackathons.filter((h) => !myIds.has(h.id)),
     isGlobalAdmin,
   }
+}
+
+export const actions: Actions = {
+  join: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const form = await event.request.formData()
+    const hackathonId = form.get("hackathonId")
+    if (typeof hackathonId !== "string" || hackathonId === "")
+      return fail(400, { message: "No hackathon was given" })
+
+    try {
+      await hackathon.join({ hackathonId })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
+        return fail(403, { message: "You can't join this hackathon" })
+      if (e instanceof ClientError && e.code === Status.NOT_FOUND)
+        return fail(404, { message: "This hackathon no longer exists" })
+      throw e
+    }
+
+    // No redirect: SvelteKit re-runs `load` after an action, so the hackathon
+    // moves from "Other hackathons" into "Your hackathons" with a Waitlisted
+    // badge on its own.
+    return {}
+  },
 }
