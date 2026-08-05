@@ -6,7 +6,7 @@
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import SidebarNavSection from './SidebarNavSection.svelte';
-    import { activeNavId, hackathonRoleBadge, memberNav } from '$lib/navigation';
+    import { activeNavId, hackathonRoleBadge, manageNav, memberNav } from '$lib/navigation';
 
     interface HackathonMember {
         role: number;
@@ -16,6 +16,8 @@
     interface HackathonPage {
         id: string;
         title: string;
+        /** False for a draft only its organisers can see — badged, not hidden. */
+        visible: boolean;
     }
 
     let {
@@ -46,7 +48,13 @@
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
     const items = $derived(memberNav(hackathonId, pages));
-    const activeId = $derived(activeNavId($page.url.pathname, items));
+    const manageItems = $derived(manageNav(hackathonId, membership ?? undefined, isGlobalAdmin));
+
+    // One call across both sections, per activeNavId's contract: computing it per
+    // section let each highlight its own best match, so two could light at once.
+    // It also resolves the overlap deliberately — /timeline/new is longer than
+    // /timeline, so New Phase wins there and Timeline does not stay lit behind it.
+    const activeId = $derived(activeNavId($page.url.pathname, [...items, ...manageItems]));
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who
     // never joined, hence the second argument.
@@ -174,8 +182,26 @@
     </div>
 
     <nav class="flex-1 overflow-y-auto">
-        <!-- No section label: the header directly above already names the
-             hackathon, and a lone section needs no heading to separate it from. -->
+        <!-- The participant entries carry no section label: the header directly
+             above already names the hackathon, and labelling this one too would
+             imply the Manage section below is a peer rather than an addition to
+             it. -->
         <SidebarNavSection {items} {activeId} collapsed={effectiveCollapsed} />
+
+        <!-- Organiser-only, and empty for everyone else — SidebarNavSection drops
+             a section with no items. The heading is what makes the difference
+             legible, so unlike the section above this one needs it.
+
+             No role chip here even though the section is role-gated: the header
+             above already states the viewer's role, and a second "Owner" chip
+             reads as two roles rather than one role stated twice. The tertiary
+             accent does the distinguishing instead. -->
+        <SidebarNavSection
+            label="Manage"
+            items={manageItems}
+            {activeId}
+            collapsed={effectiveCollapsed}
+            accent="tertiary"
+        />
     </nav>
 </aside>

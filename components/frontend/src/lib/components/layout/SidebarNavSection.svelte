@@ -82,7 +82,20 @@
                 >
                     <Icon class="h-4 w-4 shrink-0" />
                     {#if !collapsed}
-                        <span class="truncate">{item.label}</span>
+                        <span class="min-w-0 truncate">{item.label}</span>
+                        <!-- A state chip on the entry, not a role chip: it says
+                             what this destination is, so it keeps its own variant
+                             from the item rather than the section's accent. On the
+                             collapsed rail there is no room, and the item's icon
+                             carries the state instead. -->
+                        {#if item.badge}
+                            <span
+                                class="badge ml-auto shrink-0 {item.badgeVariant ??
+                                    'badge-neutral'}"
+                            >
+                                {item.badge}
+                            </span>
+                        {/if}
                     {/if}
                 </a>
                 <!-- eslint-enable svelte/no-navigation-without-resolve -->

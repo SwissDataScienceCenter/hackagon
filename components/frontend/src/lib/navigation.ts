@@ -11,7 +11,9 @@ import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
+import CalendarPlus from "lucide-svelte/icons/calendar-plus"
 import FileText from "lucide-svelte/icons/file-text"
+import EyeOff from "lucide-svelte/icons/eye-off"
 import Plus from "lucide-svelte/icons/plus"
 
 /**
@@ -27,6 +29,14 @@ export interface NavItem {
   icon: ComponentType
   /** Omit for a "not available yet" stub entry. */
   href?: string
+  /**
+   * State chip on the entry itself, e.g. "Draft" on a page only its organisers
+   * can see. Kept a plain string with a caller-supplied variant, so the nav
+   * never grows a per-status vocabulary of its own.
+   */
+  badge?: string
+  /** Badge class for `badge`. A lifecycle state, so never `badge-accent`. */
+  badgeVariant?: string
 }
 
 /**
@@ -39,6 +49,17 @@ export interface NavItem {
 export interface HackathonPageRef {
   id: string
   title: string
+  /**
+   * Whether participants can see this page.
+   *
+   * Required rather than optional on purpose: `PageService.List` only filters
+   * `visible: false` out for callers *without* `page:write`
+   * (`page_service.go:31`), so an organiser's list mixes drafts in with
+   * published pages. Defaulting a missing flag to "visible" would silently
+   * restore exactly the ambiguity the badge exists to remove, so the compiler
+   * makes every caller state it.
+   */
+  visible: boolean
 }
 
 /**
@@ -147,11 +168,20 @@ export function memberNav(
     },
     // Keyed by page id, never by title: two pages named the same would collide
     // on a title-derived key and take the sidebar down with them.
+    //
+    // A page the viewer can see but participants cannot is marked, not hidden:
+    // this list is the only place an organiser sees their pages, so rendering a
+    // draft identically to a published one leaves them no way to tell what is
+    // actually live. `EyeOff` carries it on the icon rail, where the badge is
+    // not rendered.
     ...pages.map((p) => ({
       id: `member:page:${p.id}`,
       label: p.title,
-      icon: FileText,
+      icon: p.visible ? FileText : EyeOff,
       href: resolve(`/my/hackathon/${hackathonId}/pages/${p.id}`),
+      ...(p.visible
+        ? {}
+        : { badge: "Draft", badgeVariant: "badge-warning" as const }),
     })),
   ]
 }
@@ -238,14 +268,56 @@ const OWNER = 1
 const MEMBER = 2
 
 /**
+ * Organiser-only destinations for one hackathon, rendered as its own section.
+ *
+ * Separate from `memberNav` rather than mixed into it so the participant spine
+ * is byte-identical across roles: an owner and a member looking at "Timeline"
+ * are looking at the same entry in the same position, and can say so to each
+ * other. What an owner gains is additive and grouped under one heading that
+ * explains why they can see it.
+ *
+ * Mirrors `mayManagePhases` (`$lib/server/hackathon/capabilities.ts`) exactly,
+ * and can: casbin grants `phase:write` to `Owner` outright and to an admin
+ * through the global escape hatch, with no capability gating it, so there is no
+ * state where this offers a link that then refuses. `isWaiting` is deliberately
+ * not consulted — the backend does not consult it either, and an owner is not
+ * waitlisted in practice.
+ *
+ * Deliberately short, and deliberately not padded with stubs: `memberNav` lists
+ * only routes that exist and this follows it. Hackathon settings and page
+ * management have no routes yet, so they are absent rather than present and
+ * dead. Add them here as they land.
+ */
+export function manageNav(
+  hackathonId: string,
+  membership: ViewerMembership | undefined,
+  isGlobalAdmin: boolean,
+): NavItem[] {
+  if (!isGlobalAdmin && membership?.role !== OWNER) return []
+
+  return [
+    // A create route rather than a landing page, following `homeNav`'s Create
+    // Hackathon: the timeline itself is already in the participant nav, so a
+    // second entry pointing at the same URL would be the one thing this split is
+    // meant to avoid.
+    {
+      id: "manage:phase-create",
+      label: "New Phase",
+      icon: CalendarPlus,
+      href: resolve(`/my/hackathon/${hackathonId}/timeline/new`),
+    },
+  ]
+}
+
+/**
  * Role chip for the hackathon section heading.
  *
- * Owners get no extra nav entries — organizer controls live on the pages they
- * belong to, phases and capabilities on the timeline — so the badge is the only
- * thing in the sidebar distinguishing them, and it must not imply capabilities
- * that are not there. `isWaiting` wins over `role` because a waitlisted user is
- * not yet a member in any useful sense. Global admins can manage any hackathon
- * without joining it, so they get a badge even with no membership row.
+ * This is the only role signal a participant gets — `manageNav` gives an owner a
+ * labelled section of their own, but everyone else has just this chip — and it
+ * must not imply capabilities that are not there. `isWaiting` wins over `role`
+ * because a waitlisted user is not yet a member in any useful sense. Global
+ * admins can manage any hackathon without joining it, so they get a badge even
+ * with no membership row.
  */
 export function hackathonRoleBadge(
   membership: ViewerMembership | undefined,

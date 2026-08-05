@@ -5,6 +5,7 @@ import {
   hackathonRoleBadge,
   hackathonsRoleBadge,
   homeNav,
+  manageNav,
   memberNav,
   platformNav,
   platformRoleBadge,
@@ -245,7 +246,15 @@ describe("homeNav", () => {
 })
 
 describe("memberNav", () => {
-  const ids = (pages: { id: string; title: string }[] = []) =>
+  // Published unless a test says otherwise — the draft cases below are the ones
+  // that care, and spelling `visible: true` out everywhere else buries them.
+  const pg = (id: string, title: string, visible = true) => ({
+    id,
+    title,
+    visible,
+  })
+
+  const ids = (pages: { id: string; title: string; visible: boolean }[] = []) =>
     memberNav("hack-1", pages).map((i) => i.id)
 
   it("lists the fixed hackathon destinations", () => {
@@ -261,7 +270,7 @@ describe("memberNav", () => {
   })
 
   it("appends one entry per content page, after the fixed ones", () => {
-    expect(ids([{ id: "p1", title: "Welcome" }])).toEqual([
+    expect(ids([pg("p1", "Welcome")])).toEqual([
       "member:overview",
       "member:participants",
       "member:my-projects",
@@ -297,32 +306,126 @@ describe("memberNav", () => {
   })
 
   it("labels a page entry with its title and links to it by id", () => {
-    const item = memberNav("hack-1", [{ id: "p1", title: "Schedule" }]).at(-1)
+    const item = memberNav("hack-1", [pg("p1", "Schedule")]).at(-1)
 
     expect(item?.label).toBe("Schedule")
+    expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
+  })
+
+  // PageService.List only filters hidden pages out for callers without
+  // `page:write`, so an organiser's list arrives with drafts mixed in. Rendering
+  // one identically to a published page leaves them no way to tell what is live.
+  it("badges a page participants cannot see", () => {
+    const item = memberNav("hack-1", [pg("p1", "Judging notes", false)]).at(-1)
+
+    expect(item?.badge).toBe("Draft")
+    // A lifecycle state, so a status hue and never the accent, which means role.
+    expect(item?.badgeVariant).toBe("badge-warning")
+  })
+
+  it("leaves a published page unbadged", () => {
+    const item = memberNav("hack-1", [pg("p1", "Welcome")]).at(-1)
+
+    expect(item?.badge).toBeUndefined()
+  })
+
+  // The badge is dropped on the collapsed icon rail, so the icon has to carry the
+  // distinction on its own.
+  it("gives a draft a different icon from a published page", () => {
+    const draft = memberNav("hack-1", [pg("p1", "Draft", false)]).at(-1)
+    const live = memberNav("hack-1", [pg("p2", "Live")]).at(-1)
+
+    expect(draft?.icon).not.toBe(live?.icon)
+  })
+
+  // A draft is still linked: its organiser is exactly who needs to open it.
+  it("still links a draft page", () => {
+    const item = memberNav("hack-1", [pg("p1", "Draft", false)]).at(-1)
+
     expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
   })
 
   // Page titles are editable and need not be unique. Keying on them would give
   // two same-named pages the same key, which takes the sidebar's {#each} down.
   it("keys same-titled pages distinctly", () => {
-    const items = memberNav("hack-1", [
-      { id: "p1", title: "Notes" },
-      { id: "p2", title: "Notes" },
-    ])
+    const items = memberNav("hack-1", [pg("p1", "Notes"), pg("p2", "Notes")])
 
     expect(new Set(items.map((i) => i.id)).size).toBe(items.length)
   })
 
   it("preserves the order it is given, since the backend already sorted it", () => {
     const titles = memberNav("hack-1", [
-      { id: "p2", title: "Schedule" },
-      { id: "p1", title: "Welcome" },
+      pg("p2", "Schedule"),
+      pg("p1", "Welcome"),
     ])
       .slice(-2)
       .map((i) => i.label)
 
     expect(titles).toEqual(["Schedule", "Welcome"])
+  })
+})
+
+describe("manageNav", () => {
+  const owner = { role: ROLE_OWNER, isWaiting: false }
+  const member = { role: ROLE_MEMBER, isWaiting: false }
+
+  it("is empty for a participant, so the section does not render at all", () => {
+    expect(manageNav("hack-1", member, false)).toEqual([])
+  })
+
+  it("is empty for someone with no membership row", () => {
+    expect(manageNav("hack-1", undefined, false)).toEqual([])
+  })
+
+  it("is empty for an unspecified role", () => {
+    expect(
+      manageNav("hack-1", { role: ROLE_UNSPECIFIED, isWaiting: false }, false),
+    ).toEqual([])
+  })
+
+  it("offers phase creation to an owner", () => {
+    expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
+      "manage:phase-create",
+    ])
+  })
+
+  // Casbin's global escape hatch grants an admin `phase:write` on any hackathon,
+  // joined or not — the same condition mayManagePhases mirrors.
+  it("offers phase creation to an admin who never joined", () => {
+    expect(manageNav("hack-1", undefined, true).map((i) => i.id)).toEqual([
+      "manage:phase-create",
+    ])
+  })
+
+  it("links phase creation to the route that exists", () => {
+    expect(manageNav("hack-1", owner, false).at(0)?.href).toBe(
+      "/my/hackathon/hack-1/timeline/new",
+    )
+  })
+
+  // Mirrors the backend, which does not consult isWaiting for phase:write either.
+  it("does not withhold management from a waitlisted owner", () => {
+    expect(
+      manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
+    ).toHaveLength(1)
+  })
+
+  // Both sections' items go to activeNavId in one call, so their ids must not
+  // collide and the deeper Manage route has to win over the member entry it nests
+  // under — otherwise Timeline stays lit while you are creating a phase.
+  it("does not collide with memberNav, and wins the highlight on its own route", () => {
+    const items = [
+      ...memberNav("hack-1", [{ id: "p1", title: "Welcome", visible: true }]),
+      ...manageNav("hack-1", owner, false),
+    ]
+
+    expect(new Set(items.map((i) => i.id)).size).toBe(items.length)
+    expect(activeNavId("/my/hackathon/hack-1/timeline", items)).toBe(
+      "member:timeline",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/timeline/new", items)).toBe(
+      "manage:phase-create",
+    )
   })
 })
 

@@ -36,6 +36,13 @@
     interface HackathonPage {
         id: string;
         title: string;
+        /**
+         * Whether participants can see the page. This sidebar's caller passes only
+         * visible pages (see the prop doc below), but `memberNav` badges a draft
+         * rather than hiding it and so requires the flag either way — and an
+         * absent one reads as `false`, which would mark every page a draft.
+         */
+        visible: boolean;
     }
 
     let {
