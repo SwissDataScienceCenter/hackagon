@@ -14,5 +14,6 @@
         myHackathons={data.myHackathons}
         otherHackathons={data.otherHackathons}
         canCreate={data.isGlobalAdmin || data.isHackathonOrganizer}
+        isGlobalAdmin={data.isGlobalAdmin}
     />
 </div>

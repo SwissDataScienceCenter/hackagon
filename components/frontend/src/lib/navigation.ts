@@ -297,6 +297,24 @@ export function canManagePages(
 }
 
 /**
+ * Whether the viewer may edit a hackathon's own fields (name, description,
+ * visibility, dates, logo) — the backend's `hackathon:write`, held by the
+ * confirmed owner (a waitlisted owner does not count, same rule
+ * `hackathonRoleBadge` applies) and, via the admin escape hatch, by a global
+ * admin. Shared by the dashboard (to show the edit pencil) and the edit
+ * route's own load (to guard it), so the two can never disagree about who is
+ * let in.
+ */
+export function canEditHackathon(
+  membership: ViewerMembership | undefined,
+  isGlobalAdmin: boolean,
+): boolean {
+  if (isGlobalAdmin) return true
+
+  return membership?.role === OWNER && !membership.isWaiting
+}
+
+/**
  * Role chip for the Hackathons section heading.
  *
  * Names the global role that puts Create Hackathon there. An admin gets no chip
