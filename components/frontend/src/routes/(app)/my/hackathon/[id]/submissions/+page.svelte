@@ -8,6 +8,10 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
+    // Derived from the load's return shape rather than restated, so the two
+    // can't drift.
+    type Version = NonNullable<PageData['groups'][number]['latest']>;
+
     let pending: boolean = $state(false);
 
     function formatDate(d: Date | undefined): string {
@@ -21,7 +25,7 @@
         });
     }
 
-    // `result` is free text (README says "e.g. a URL", but nothing enforces
+    // `result` is free text (the schema says "e.g. a URL", but nothing enforces
     // it) — only linkify it when it actually parses as http(s), so a team that
     // wrote a plain description doesn't get a dead link.
     function isHttpUrl(value: string): boolean {
@@ -51,6 +55,34 @@
     {/if}
 {/snippet}
 
+{#snippet version(v: Version, heading: string)}
+    <div class="flex flex-col gap-1 border-t border-line pt-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold text-ink">{heading}</span>
+            <span class="badge {submissionStatusBadgeVariant(v.status) ?? 'badge-neutral'}">
+                {submissionStatusLabel(v.status) ?? 'Unknown'}
+            </span>
+        </div>
+        <span class="text-xs text-ink-3">
+            Submitted {formatDate(v.createdAt)}{#if v.creator} by {v.creator}{/if}
+        </span>
+        {#if v.finalizedAt}
+            <span class="text-xs text-ink-3">
+                Finalized {formatDate(v.finalizedAt)}{#if v.finalizedBy} by {v.finalizedBy}{/if}
+            </span>
+        {/if}
+        {#if v.result}
+            {@render resultLine(v.result)}
+        {:else}
+            <!-- Said outright: `result` is optional on the backend, and a blank
+                 one would otherwise be indistinguishable from a broken render. -->
+            <p class="m-0 text-xs leading-snug text-ink-3 italic">
+                No link or notes on this version.
+            </p>
+        {/if}
+    </div>
+{/snippet}
+
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
     <div class="flex min-w-0 flex-col gap-1">
@@ -58,7 +90,9 @@
         <span class="text-xs text-ink-3">Your team's submitted work</span>
     </div>
 
-    {#if form?.message}
+    <!-- A failure that never reached a team (a malformed form) has no card to
+         sit in, so it is reported here rather than swallowed. -->
+    {#if form?.message && !form?.teamId}
         <p
             class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2 text-xs
                    text-danger-ink"
@@ -74,7 +108,7 @@
         </p>
     {:else}
         {#each data.groups as group (group.teamId)}
-            <div class="card card-raised box-border w-full px-5 py-4">
+            <div class="card card-raised box-border flex w-full flex-col gap-3 px-5 py-4">
                 <div class="flex flex-col gap-1.5">
                     <h3 class="m-0 text-sm leading-snug text-ink">
                         {group.teamName}
@@ -82,120 +116,22 @@
                     <span class="text-xs text-ink-3">{group.projectTitle}</span>
                 </div>
 
-                {#if !group.latest}
-                    <p class="mt-3 mb-0 text-xs text-ink-3">
-                        No submission yet.
+                {#if form?.message && form?.teamId === group.teamId}
+                    <p
+                        class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2
+                               text-xs text-danger-ink"
+                        role="alert"
+                    >
+                        {form.message}
                     </p>
-                {:else}
-                    {#if group.latestFinal}
-                        <div class="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-semibold text-ink">
-                                    Version {group.latestFinal.version}
-                                </span>
-                                <span
-                                    class="badge {submissionStatusBadgeVariant(
-                                        group.latestFinal.status
-                                    ) ?? 'badge-neutral'}"
-                                >
-                                    {submissionStatusLabel(group.latestFinal.status) ?? 'Unknown'}
-                                </span>
-                                <span class="text-xs text-ink-3">
-                                    {formatDate(
-                                        group.latestFinal.modifiedAt ?? group.latestFinal.createdAt
-                                    )}
-                                    {#if group.latestFinal.creator}
-                                        · by {group.latestFinal.creator}
-                                    {/if}
-                                </span>
-                            </div>
-                            {#if group.latestFinal.result}
-                                {@render resultLine(group.latestFinal.result)}
-                            {/if}
-                        </div>
-                    {/if}
-
-                    {#if group.latest.id !== group.latestFinal?.id}
-                        <div class="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-semibold text-ink">
-                                    {group.latestFinal ? 'Newer draft' : 'Draft'} — version {group.latest.version}
-                                </span>
-                                <span
-                                    class="badge {submissionStatusBadgeVariant(group.latest.status) ??
-                                        'badge-neutral'}"
-                                >
-                                    {submissionStatusLabel(group.latest.status) ?? 'Unknown'}
-                                </span>
-                                <span class="text-xs text-ink-3">
-                                    {formatDate(group.latest.modifiedAt ?? group.latest.createdAt)}
-                                    {#if group.latest.creator}
-                                        · by {group.latest.creator}
-                                    {/if}
-                                </span>
-                            </div>
-                            {#if group.latest.result}
-                                {@render resultLine(group.latest.result)}
-                            {/if}
-                            {#if group.maySubmit}
-                                <form
-                                    method="POST"
-                                    action="?/finalizeSubmission"
-                                    use:enhance={() => {
-                                        pending = true;
-                                        return async ({ update }) => {
-                                            await update();
-                                            pending = false;
-                                        };
-                                    }}
-                                >
-                                    <input type="hidden" name="submissionId" value={group.latest.id} />
-                                    <button type="submit" class="btn btn-sm btn-primary" disabled={pending}>
-                                        Finalize this version
-                                    </button>
-                                </form>
-                            {/if}
-                        </div>
-                    {/if}
-
-                    {#if group.earlier.length > 0}
-                        <details class="mt-3 border-t border-line pt-3">
-                            <summary class="cursor-pointer text-xs text-ink-3">
-                                {group.earlier.length === 1
-                                    ? '1 earlier version'
-                                    : `${group.earlier.length} earlier versions`}
-                            </summary>
-                            <ul class="m-0 mt-2 flex list-none flex-col gap-1.5 p-0">
-                                {#each group.earlier as submission (submission.id)}
-                                    <li class="flex flex-wrap items-center gap-2">
-                                        <span class="text-xs text-ink-2">
-                                            Version {submission.version}
-                                        </span>
-                                        <span
-                                            class="badge {submissionStatusBadgeVariant(
-                                                submission.status
-                                            ) ?? 'badge-neutral'}"
-                                        >
-                                            {submissionStatusLabel(submission.status) ?? 'Unknown'}
-                                        </span>
-                                        <span class="text-xs text-ink-3">
-                                            {formatDate(submission.modifiedAt ?? submission.createdAt)}
-                                            {#if submission.creator}
-                                                · by {submission.creator}
-                                            {/if}
-                                        </span>
-                                    </li>
-                                {/each}
-                            </ul>
-                        </details>
-                    {/if}
                 {/if}
 
-                {#if group.maySubmit}
+                <!-- Entry sits at the top; versions below it run newest first. -->
+                {#if data.maySubmit}
                     <form
                         method="POST"
                         action="?/createSubmission"
-                        class="mt-3 flex flex-col gap-2 border-t border-line pt-3"
+                        class="flex flex-col gap-2 border-t border-line pt-3"
                         use:enhance={() => {
                             pending = true;
                             return async ({ update }) => {
@@ -208,13 +144,12 @@
                         <input type="hidden" name="projectId" value={group.projectId} />
                         <label class="flex flex-col gap-1">
                             <span class="text-xs text-ink-3">
-                                {group.latest
-                                    ? 'Submit a new version'
-                                    : 'Submission link or notes'}
+                                {group.latest ? 'Submit a new version' : 'Submission link or notes'}
                             </span>
                             <input
                                 type="text"
                                 name="result"
+                                required
                                 placeholder="https://github.com/your-team/your-repo"
                                 class="field h-8 px-2 text-xs"
                             />
@@ -227,6 +162,89 @@
                             {group.latest ? 'Save new draft' : 'Save draft'}
                         </button>
                     </form>
+                {:else}
+                    <p class="m-0 border-t border-line pt-3 text-xs text-ink-3">
+                        Submissions are closed for this hackathon, so no new version can be
+                        added.
+                    </p>
+                {/if}
+
+                {#if !group.latest}
+                    <p class="m-0 border-t border-line pt-3 text-xs text-ink-3">
+                        No submission yet.
+                    </p>
+                {:else}
+                    {#if group.latest.id !== group.latestFinal?.id}
+                        <!-- A draft ahead of the team's entry. Kept visually distinct from
+                             the final block, since which one counts is not obvious. -->
+                        {@render version(
+                            group.latest,
+                            `${group.latestFinal ? 'Newer draft' : 'Draft'} — version ${group.latest.version}`
+                        )}
+                        {#if data.mayFinalize}
+                            <form
+                                method="POST"
+                                action="?/finalizeSubmission"
+                                use:enhance={() => {
+                                    pending = true;
+                                    return async ({ update }) => {
+                                        await update();
+                                        pending = false;
+                                    };
+                                }}
+                            >
+                                <input type="hidden" name="teamId" value={group.teamId} />
+                                <input
+                                    type="hidden"
+                                    name="submissionId"
+                                    value={group.latest.id}
+                                />
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-primary"
+                                    disabled={pending}
+                                    onclick={(e) => {
+                                        // No un-finalize RPC exists — the only way past a
+                                        // final version is to submit another draft.
+                                        if (
+                                            !confirm(
+                                                'Finalize this version as your team’s entry? This cannot be undone.'
+                                            )
+                                        ) {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                >
+                                    Finalize this version
+                                </button>
+                            </form>
+                        {/if}
+                    {/if}
+
+                    {#if group.latestFinal}
+                        {@render version(
+                            group.latestFinal,
+                            `Your entry — version ${group.latestFinal.version}`
+                        )}
+                    {/if}
+
+                    {#if group.earlier.length > 0}
+                        <details class="border-t border-line pt-3">
+                            <summary class="cursor-pointer text-xs text-ink-3">
+                                {group.earlier.length === 1
+                                    ? '1 earlier version'
+                                    : `${group.earlier.length} earlier versions`}
+                            </summary>
+                            <div class="mt-2 flex flex-col gap-3">
+                                {#each group.earlier as submission (submission.id)}
+                                    {@render version(
+                                        submission,
+                                        `Version ${submission.version}`
+                                    )}
+                                {/each}
+                            </div>
+                        </details>
+                    {/if}
                 {/if}
             </div>
         {/each}
