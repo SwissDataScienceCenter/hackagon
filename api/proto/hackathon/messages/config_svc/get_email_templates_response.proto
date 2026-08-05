@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package hackathon.messages.config_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/config_svc";
+
+// The stored notification copy, keyed exactly as SetEmailTemplates takes it.
+//
+// A read is required rather than convenient: Set REPLACES the whole map, so a
+// form that cannot prefill blanks every template the organizer did not have in
+// front of them. Same reason GetWindows and PrizeService.Get exist.
+//
+// Empty map = nothing authored yet, which is a valid state and not an error.
+message GetEmailTemplatesResponse {
+  map<string, string> templates = 1;
+}

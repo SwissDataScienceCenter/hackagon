@@ -1,4 +1,6 @@
 <script lang="ts">
+    // See HackathonRow: resolve() is typed against the route tree.
+    import type { Pathname } from '$app/types';
     import { resolve } from '$app/paths';
     import { Calendar, MapPin, Users } from 'lucide-svelte';
 
@@ -19,7 +21,7 @@
         status: string;
         registered: number;
         capacity: number;
-        breadcrumbs: { label: string; href: string }[];
+        breadcrumbs: { label: string; href: Pathname }[];
     } = $props();
 </script>
 

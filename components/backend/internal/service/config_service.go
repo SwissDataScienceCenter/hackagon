@@ -491,6 +491,40 @@ var emailTemplateKeys = map[string]bool{
 	"resultsSubject":               true,
 }
 
+// GetEmailTemplates reads the stored copy back.
+//
+// Write, not Read: the deadlines GetWindows serves are announced to
+// participants, but half-written notification copy is the organizers' own
+// drafting and has no audience yet.
+func (s *ConfigService) GetEmailTemplates(
+	ctx context.Context,
+	req *cfgMsgs.GetEmailTemplatesRequest,
+) (*cfgMsgs.GetEmailTemplatesResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	row, err := s.dbClient.HackathonForms.Query().
+		Where(enthackathonforms.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Nothing authored yet — a valid state, not an error for the UI to
+			// translate. Same shape as GetWindows on an unscheduled event.
+			return &cfgMsgs.GetEmailTemplatesResponse{}, nil
+		}
+		slog.Error("query hackathon forms", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return &cfgMsgs.GetEmailTemplatesResponse{Templates: row.EmailTemplates}, nil
+}
+
 func (s *ConfigService) SetEmailTemplates(
 	ctx context.Context,
 	req *cfgMsgs.SetEmailTemplatesRequest,

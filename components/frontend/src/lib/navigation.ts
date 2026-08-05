@@ -3,6 +3,7 @@
 // rejects.
 import type { ComponentType } from "svelte"
 import { resolve } from "$app/paths"
+import { PHOTO_HINT, SESSION_HINT, collects } from "$lib/pageCollections"
 
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
@@ -22,6 +23,10 @@ import Link2 from "lucide-svelte/icons/link-2"
 import ClipboardType from "lucide-svelte/icons/clipboard-type"
 import Timer from "lucide-svelte/icons/timer"
 import Trophy from "lucide-svelte/icons/trophy"
+import Vote from "lucide-svelte/icons/vote"
+import Presentation from "lucide-svelte/icons/presentation"
+import Images from "lucide-svelte/icons/images"
+import Mail from "lucide-svelte/icons/mail"
 
 /**
  * A single sidebar entry.
@@ -182,12 +187,46 @@ export function memberNav(
       icon: Send,
       href: resolve(`/my/hackathon/${hackathonId}/submissions`),
     },
+    // After Submissions because that is the order it happens in: you submit,
+    // then the room votes on what was submitted. Shown to everyone — the page
+    // itself decides what you get, since an organiser may not vote but does
+    // shape the categories and publish the placements.
+    {
+      id: "member:voting",
+      label: "Voting",
+      icon: Vote,
+      href: resolve(`/my/hackathon/${hackathonId}/voting`),
+    },
     {
       id: "member:timeline",
       label: "Timeline",
       icon: CalendarClock,
       href: resolve(`/my/hackathon/${hackathonId}/timeline`),
     },
+    // Two views over the pages below rather than entities of their own — there
+    // is no photo or webinar table, and organisers publish both as ordinary
+    // content pages. Listed only when there is something to collect, so neither
+    // sits there as a permanent duplicate of the page list underneath.
+    ...(collects(SESSION_HINT, pages)
+      ? [
+          {
+            id: "member:webinars",
+            label: "Webinars",
+            icon: Presentation,
+            href: resolve(`/my/hackathon/${hackathonId}/webinars`),
+          },
+        ]
+      : []),
+    ...(collects(PHOTO_HINT, pages)
+      ? [
+          {
+            id: "member:photos",
+            label: "Photos",
+            icon: Images,
+            href: resolve(`/my/hackathon/${hackathonId}/photos`),
+          },
+        ]
+      : []),
     // Keyed by page id, never by title: two pages named the same would collide
     // on a title-derived key and take the sidebar down with them.
     //
@@ -414,6 +453,15 @@ export function manageNav(
       label: "Manage Forms",
       icon: ClipboardType,
       href: resolve(`/my/hackathon/${hackathonId}/forms`),
+    },
+    // What the event says to people, and to which group. Next to Manage Forms
+    // because the pair is the event's whole outbound voice: what it asks, and
+    // what it tells.
+    {
+      id: "manage:email",
+      label: "Notifications",
+      icon: Mail,
+      href: resolve(`/my/hackathon/${hackathonId}/email`),
     },
     // How a private event is shared. Sits with the other organiser tools rather
     // than on the participants page: a link grants visibility, and approving

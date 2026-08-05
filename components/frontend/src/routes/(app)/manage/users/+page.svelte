@@ -95,6 +95,7 @@
                 </thead>
                 <tbody>
                     {#each filtered as user (user.id)}
+                        {@const missing = missingRoles(user.roles)}
                         <tr class="border-b border-line last:border-0">
                             <td class="px-3 py-2">
                                 <div
@@ -167,7 +168,7 @@
                                     : '—'}
                             </td>
                             <td class="px-3 py-2">
-                                {#if missingRoles(user.roles).length === 0}
+                                {#if missing.length === 0}
                                     <span class="text-ink-3">—</span>
                                 {:else}
                                     <form
@@ -176,26 +177,21 @@
                                         class="flex items-center gap-1"
                                     >
                                         <input type="hidden" name="userId" value={user.id} />
-                                        {#if missingRoles(user.roles).length === 1}
-                                            <input
-                                                type="hidden"
-                                                name="role"
-                                                value={missingRoles(user.roles)[0]}
-                                            />
+                                        {#if missing.length === 1 && missing[0] !== undefined}
+                                            {@const only = missing[0]}
+                                            <input type="hidden" name="role" value={only} />
                                             <button
                                                 type="submit"
                                                 class="btn btn-sm btn-ghost"
                                             >
-                                                Grant {globalRoleLabel(
-                                                    missingRoles(user.roles)[0]
-                                                )}
+                                                Grant {globalRoleLabel(only)}
                                             </button>
                                         {:else}
                                             <select
                                                 name="role"
                                                 class="field h-8 w-auto px-2"
                                             >
-                                                {#each missingRoles(user.roles) as role (role)}
+                                                {#each missing as role (role)}
                                                     <!-- Hackathon Organizer (2) is the
                                                          pre-selected default, not Admin (1):
                                                          a dropdown that silently grants the

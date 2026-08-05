@@ -1,4 +1,8 @@
 <script lang="ts">
+    // Pathname, not string: resolve() is typed against the route tree, and a
+    // bare string is not assignable to it. Every caller passes an absolute path
+    // it built itself, which `/${string}` covers.
+    import type { Pathname } from '$app/types';
     import { resolve } from '$app/paths';
     import { Users } from 'lucide-svelte';
 
@@ -14,7 +18,7 @@
         gradTo,
         size = 'default',
     }: {
-        href: string;
+        href: Pathname;
         name: string;
         org?: string;
         meta: string;

@@ -89,4 +89,41 @@ export const actions: Actions = {
 
     redirect(303, "/dashboard")
   },
+
+  // Its own action because it is its own RPC: ConfigService.SetBranding writes
+  // the forms row, HackathonService.Edit writes the hackathon row, and one
+  // submit that half-succeeds is worse than two that each say what they did.
+  //
+  // No redirect: an organiser adjusting colours wants to see the preview
+  // update, not to be thrown back to the dashboard.
+  branding: async (event) => {
+    const { config } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+
+    const text = (key: string) => String(form.get(key) ?? "").trim()
+
+    try {
+      await config.setBranding({
+        hackathonId: event.params.id,
+        // Empty means "unset" and must reach the backend as an empty string
+        // rather than undefined: this form is always prefilled, so a cleared
+        // field is a deliberate removal, not an untouched one.
+        primaryColor: text("primaryColor"),
+        accentColor: text("accentColor"),
+        bannerText: text("bannerText"),
+      })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+        return fail(400, { message: e.details })
+      }
+      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+        return fail(403, {
+          message: "You don't have permission to edit this hackathon",
+        })
+      }
+      throw e
+    }
+
+    return { branded: true }
+  },
 }

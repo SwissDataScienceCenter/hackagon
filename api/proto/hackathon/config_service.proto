@@ -16,6 +16,8 @@ import "hackathon/messages/config_svc/set_voting_policy_request.proto";
 import "hackathon/messages/config_svc/set_voting_policy_response.proto";
 import "hackathon/messages/config_svc/set_windows_request.proto";
 import "hackathon/messages/config_svc/set_windows_response.proto";
+import "hackathon/messages/config_svc/get_email_templates_request.proto";
+import "hackathon/messages/config_svc/get_email_templates_response.proto";
 import "hackathon/messages/config_svc/get_windows_request.proto";
 import "hackathon/messages/config_svc/get_windows_response.proto";
 
@@ -36,6 +38,12 @@ service ConfigService {
   rpc SetVotingPolicy(hackathon.messages.config_svc.SetVotingPolicyRequest) returns (hackathon.messages.config_svc.SetVotingPolicyResponse);
   // Organizer-authored notification copy and event branding. Stored config;
   // delivery/rendering are separate concerns.
+  //
+  // Get exists for the same reason GetWindows does: Set replaces the whole
+  // map, so a form that cannot prefill blanks the templates its author never
+  // saw. Gated on Write rather than Read — this copy is internal drafting,
+  // unlike the deadlines, which the event announces.
+  rpc GetEmailTemplates(hackathon.messages.config_svc.GetEmailTemplatesRequest) returns (hackathon.messages.config_svc.GetEmailTemplatesResponse);
   rpc SetEmailTemplates(hackathon.messages.config_svc.SetEmailTemplatesRequest) returns (hackathon.messages.config_svc.SetEmailTemplatesResponse);
   rpc SetBranding(hackathon.messages.config_svc.SetBrandingRequest) returns (hackathon.messages.config_svc.SetBrandingResponse);
 }

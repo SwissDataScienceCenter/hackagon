@@ -1,10 +1,35 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import { enhance } from '$app/forms';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
+    import EventBranding, { safeHex } from '$lib/components/hackathon/EventBranding.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     const hackathon = $derived(data.hackathon);
+
+    // Branding is edited live so the preview below means something. Seeded from
+    // the server once — `$state` from a prop is intentional here: this form owns
+    // the values from first paint, and re-syncing on every navigation would
+    // discard what the organiser is halfway through typing.
+    let primaryColor = $state(hackathon.branding?.primaryColor ?? '');
+    let accentColor = $state(hackathon.branding?.accentColor ?? '');
+    let bannerText = $state(hackathon.branding?.bannerText ?? '');
+
+    /** `<input type="color">` has no empty state; unset shows as black. */
+    function swatch(value: string): string {
+        return safeHex(value) ?? '#000000';
+    }
+
+    // Named rather than silently dropped: the backend rejects a bad hex and the
+    // renderer ignores one, so without this the field just appears to do
+    // nothing.
+    const invalidHex = $derived(
+        [
+            primaryColor.trim() && !safeHex(primaryColor) ? 'Primary colour' : '',
+            accentColor.trim() && !safeHex(accentColor) ? 'Accent colour' : '',
+        ].filter(Boolean)
+    );
 
     // Visibility numeric values: PUBLIC=1, PRIVATE=2.
     const PRIVATE = 2;
@@ -22,29 +47,30 @@
     // letting someone clear the fields and believe it worked.
     const hasDates = $derived(Boolean(hackathon.startsAt || hackathon.endsAt));
 
-    const FIELD_CLASS =
-        'h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950 px-3 text-xs ' +
-        'text-surface-950-50 placeholder:text-surface-700-300 focus:border-primary-500 ' +
-        'focus:outline-none';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-surface-500';
+    // The theme owns the input chrome now — `field` is the same control the
+    // rest of the app renders, rather than this page's own hand-rolled copy of
+    // it, which is how it ended up still painting Skeleton colours after the
+    // design swap.
+    const FIELD_CLASS = 'field';
+    const LABEL_CLASS = 'flex flex-col gap-1 field-label';
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
             href={resolve(`/my/hackathon/${hackathon.id}/overview`)}
-            class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
             &larr; Back to {hackathon.name}
         </a>
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Edit Hackathon</h1>
+        <h1 class="m-0 text-title text-ink">Edit Hackathon</h1>
     </div>
 
     <!-- Server-side validation only: every rule here is one the action repeats,
          and the action is what the backend actually sees. -->
     <form method="POST" action="?/edit" class="flex w-full flex-col gap-6">
         {#if form?.message}
-            <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+            <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
         {/if}
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -62,8 +88,8 @@
             </label>
 
             <fieldset class="m-0 flex flex-col gap-1 border-0 p-0 sm:col-span-2">
-                <legend class="mb-1 p-0 text-xs font-semibold text-surface-500">Visibility</legend>
-                <label class="flex items-center gap-2 text-xs text-surface-950-50">
+                <legend class="mb-1 p-0 field-label">Visibility</legend>
+                <label class="flex items-center gap-2 text-xs text-ink">
                     <input
                         type="radio"
                         name="visibility"
@@ -72,7 +98,7 @@
                     />
                     Public — anyone can see it and ask to join
                 </label>
-                <label class="flex items-center gap-2 text-xs text-surface-950-50">
+                <label class="flex items-center gap-2 text-xs text-ink">
                     <input
                         type="radio"
                         name="visibility"
@@ -104,7 +130,7 @@
             </label>
 
             {#if hasDates}
-                <p class="m-0 text-xs text-surface-500 sm:col-span-2">
+                <p class="m-0 text-xs text-ink-3 sm:col-span-2">
                     Dates can be changed but not removed.
                 </p>
             {/if}
@@ -135,8 +161,110 @@
             />
         </div>
 
-        <button type="submit" class="btn btn-sm preset-filled-primary-500 self-start">
+        <button type="submit" class="btn btn-accent self-start">
             Save changes
         </button>
+    </form>
+
+    <!-- Branding is its own form because it is its own RPC (SetBranding, on
+         ConfigService) — posting it with the fields above would mean one submit
+         that half-succeeds. Same page, though: it is the event's identity, and
+         an organiser looking for "how this event looks" comes here. -->
+    <form
+        method="POST"
+        action="?/branding"
+        use:enhance
+        class="card flex w-full flex-col gap-4 p-4"
+    >
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="m-0 text-section text-ink">Branding</h2>
+            {#if form?.branded}<span class="text-xs text-success-ink">Saved.</span>{/if}
+        </div>
+        <p class="m-0 text-meta text-ink-3">
+            Applied to this event's pages only — never to the rest of the platform. Leave
+            both colours empty and it renders in the platform theme.
+        </p>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label class={LABEL_CLASS}>
+                Primary colour
+                <!-- Paired text + swatch: `type="color"` cannot express "unset",
+                     and clearing the branding is a thing organisers do. -->
+                <span class="flex items-center gap-2">
+                    <input
+                        name="primaryColor"
+                        class="field"
+                        bind:value={primaryColor}
+                        placeholder="#1c4b8f"
+                    />
+                    <input
+                        type="color"
+                        aria-label="Pick primary colour"
+                        class="h-9 w-9 shrink-0 rounded-control border border-line bg-transparent"
+                        value={swatch(primaryColor)}
+                        oninput={(e) => (primaryColor = e.currentTarget.value)}
+                    />
+                </span>
+            </label>
+
+            <label class={LABEL_CLASS}>
+                Accent colour
+                <span class="flex items-center gap-2">
+                    <input
+                        name="accentColor"
+                        class="field"
+                        bind:value={accentColor}
+                        placeholder="#e8590c"
+                    />
+                    <input
+                        type="color"
+                        aria-label="Pick accent colour"
+                        class="h-9 w-9 shrink-0 rounded-control border border-line bg-transparent"
+                        value={swatch(accentColor)}
+                        oninput={(e) => (accentColor = e.currentTarget.value)}
+                    />
+                </span>
+            </label>
+
+            <label class="{LABEL_CLASS} sm:col-span-2">
+                Banner text (optional)
+                <input
+                    name="bannerText"
+                    class="field"
+                    bind:value={bannerText}
+                    maxlength="200"
+                    placeholder="Registration closes Friday"
+                />
+            </label>
+        </div>
+
+        <!-- The real component, not a mock-up of it: what this shows is what the
+             event page renders, including the automatic text colour that keeps
+             a pale brand colour from producing white-on-yellow. -->
+        <div class="flex flex-col gap-1">
+            <span class="field-label">Preview</span>
+            <EventBranding
+                primaryColor={primaryColor}
+                accentColor={accentColor}
+                bannerText={bannerText}
+            >
+                <div class="p-4">
+                    <p class="m-0 text-sm text-ink">{hackathon.name}</p>
+                    <p class="m-0 text-meta text-ink-3">
+                        Body text renders in the platform theme; only the banner and
+                        accents take your colours.
+                    </p>
+                </div>
+            </EventBranding>
+        </div>
+
+        {#if invalidHex.length > 0}
+            <p class="m-0 text-xs text-warning-ink" role="alert">
+                {invalidHex.join(' and ')} must be a hex colour like #1c4b8f — anything else
+                is ignored, and the event falls back to the platform theme.
+            </p>
+        {/if}
+
+        <button type="submit" class="btn btn-accent self-start">Save branding</button>
     </form>
 </div>

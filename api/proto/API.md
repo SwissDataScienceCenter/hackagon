@@ -55,6 +55,13 @@
 - [hackathon/messages/config_svc/set_windows_response.proto](#hackathon_messages_config_svc_set_windows_response-proto)
     - [SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse)
   
+- [hackathon/messages/config_svc/get_email_templates_request.proto](#hackathon_messages_config_svc_get_email_templates_request-proto)
+    - [GetEmailTemplatesRequest](#hackathon-messages-config_svc-GetEmailTemplatesRequest)
+  
+- [hackathon/messages/config_svc/get_email_templates_response.proto](#hackathon_messages_config_svc_get_email_templates_response-proto)
+    - [GetEmailTemplatesResponse](#hackathon-messages-config_svc-GetEmailTemplatesResponse)
+    - [GetEmailTemplatesResponse.TemplatesEntry](#hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry)
+  
 - [hackathon/messages/config_svc/get_windows_request.proto](#hackathon_messages_config_svc_get_windows_request-proto)
     - [GetWindowsRequest](#hackathon-messages-config_svc-GetWindowsRequest)
   
@@ -1353,6 +1360,90 @@ not enforced.
 
 
 
+<a name="hackathon_messages_config_svc_get_email_templates_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_email_templates_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetEmailTemplatesRequest"></a>
+
+### GetEmailTemplatesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_get_email_templates_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_email_templates_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetEmailTemplatesResponse"></a>
+
+### GetEmailTemplatesResponse
+The stored notification copy, keyed exactly as SetEmailTemplates takes it.
+
+A read is required rather than convenient: Set REPLACES the whole map, so a
+form that cannot prefill blanks every template the organizer did not have in
+front of them. Same reason GetWindows and PrizeService.Get exist.
+
+Empty map = nothing authored yet, which is a valid state and not an error.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| templates | [GetEmailTemplatesResponse.TemplatesEntry](#hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry) | repeated |  |
+
+
+
+
+
+
+<a name="hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry"></a>
+
+### GetEmailTemplatesResponse.TemplatesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_config_svc_get_windows_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1444,7 +1535,10 @@ slices of the same configuration engine.
 | SetRegistrationForm | [messages.config_svc.SetRegistrationFormRequest](#hackathon-messages-config_svc-SetRegistrationFormRequest) | [messages.config_svc.SetRegistrationFormResponse](#hackathon-messages-config_svc-SetRegistrationFormResponse) |  |
 | SetSubmissionForm | [messages.config_svc.SetSubmissionFormRequest](#hackathon-messages-config_svc-SetSubmissionFormRequest) | [messages.config_svc.SetSubmissionFormResponse](#hackathon-messages-config_svc-SetSubmissionFormResponse) |  |
 | SetVotingPolicy | [messages.config_svc.SetVotingPolicyRequest](#hackathon-messages-config_svc-SetVotingPolicyRequest) | [messages.config_svc.SetVotingPolicyResponse](#hackathon-messages-config_svc-SetVotingPolicyResponse) |  |
-| SetEmailTemplates | [messages.config_svc.SetEmailTemplatesRequest](#hackathon-messages-config_svc-SetEmailTemplatesRequest) | [messages.config_svc.SetEmailTemplatesResponse](#hackathon-messages-config_svc-SetEmailTemplatesResponse) | Organizer-authored notification copy and event branding. Stored config; delivery/rendering are separate concerns. |
+| GetEmailTemplates | [messages.config_svc.GetEmailTemplatesRequest](#hackathon-messages-config_svc-GetEmailTemplatesRequest) | [messages.config_svc.GetEmailTemplatesResponse](#hackathon-messages-config_svc-GetEmailTemplatesResponse) | Organizer-authored notification copy and event branding. Stored config; delivery/rendering are separate concerns.
+
+Get exists for the same reason GetWindows does: Set replaces the whole map, so a form that cannot prefill blanks the templates its author never saw. Gated on Write rather than Read — this copy is internal drafting, unlike the deadlines, which the event announces. |
+| SetEmailTemplates | [messages.config_svc.SetEmailTemplatesRequest](#hackathon-messages-config_svc-SetEmailTemplatesRequest) | [messages.config_svc.SetEmailTemplatesResponse](#hackathon-messages-config_svc-SetEmailTemplatesResponse) |  |
 | SetBranding | [messages.config_svc.SetBrandingRequest](#hackathon-messages-config_svc-SetBrandingRequest) | [messages.config_svc.SetBrandingResponse](#hackathon-messages-config_svc-SetBrandingResponse) |  |
 
  
