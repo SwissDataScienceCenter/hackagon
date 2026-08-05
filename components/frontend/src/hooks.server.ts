@@ -1,4 +1,3 @@
-import { resolve as resolvePath } from "$app/paths"
 import { sequence } from "@sveltejs/kit/hooks"
 import {
   error,
@@ -212,24 +211,28 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// A logged-in user has no business on the login page: send them to the deep
-// link the guards parked in `returnTo` (where they were headed before being
-// bounced), or to the dashboard. Sessions that can no longer authenticate are
-// left on the landing page so they can log in again instead of being bounced
-// back and forth by the guard in sessionSetupHandle.
+// "/" is two things: the landing page, and the place a guard parks someone who
+// needs to log in first. This forwards the SECOND case only — a session that
+// arrives with a `returnTo` is finishing an interrupted journey and belongs at
+// the deep link, not on the marketing page.
+//
+// A signed-in visitor who simply navigates to "/" is left there. They used to
+// be bounced to the dashboard, which made the landing page unreachable once
+// you had an account: clicking the logo, or typing the bare domain, snapped
+// straight back and there was no way to see the public site at all.
+//
+// Sessions that can no longer authenticate are left here too, so they can log
+// in again instead of ping-ponging against the guard in sessionSetupHandle.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
+  const parked = safeReturnTo(event.url.searchParams.get("returnTo"))
 
-  if (isRootPath && event.locals.sessionUsable) {
-    const target =
-      safeReturnTo(event.url.searchParams.get("returnTo")) ??
-      resolvePath("/(app)/dashboard")
-
+  if (isRootPath && event.locals.sessionUsable && parked) {
     event.locals.logger.debug(
-      { userId: event.locals.session?.user?.id, target },
-      "HOOKS: Logged-in user on login page -> Redirecting.",
+      { userId: event.locals.session?.user?.id, target: parked },
+      "HOOKS: Logged-in user with a parked returnTo -> Redirecting.",
     )
-    throw redirect(303, target)
+    throw redirect(303, parked)
   }
 
   return resolve(event)

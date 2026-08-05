@@ -1,7 +1,6 @@
 <script lang="ts">
     import { signIn, signOut } from '@auth/sveltekit/client';
     import { page } from '$app/stores';
-    import { resolve } from '$app/paths';
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
     import { safeReturnTo } from '$lib/utils/returnTo';
@@ -51,9 +50,16 @@
     /** Is this entry the page we are already on? */
     const isCurrent = (href: string) => $page.url.pathname === href;
 
-    /** Deep link the guards parked in `returnTo`, else back to the current page. */
+    /**
+     * Deep link the guards parked in `returnTo`, else back to the current page.
+     *
+     * Signing in FROM the landing page goes to the dashboard instead of back to
+     * "/": the landing page is what you were reading before you had an account,
+     * not where you want to be once you do.
+     */
     const loginCallbackUrl = $derived(
-        safeReturnTo($page.url.searchParams.get('returnTo')) ?? $page.url.pathname,
+        safeReturnTo($page.url.searchParams.get('returnTo')) ??
+            ($page.url.pathname === '/' ? '/dashboard' : $page.url.pathname),
     );
 </script>
 
@@ -61,44 +67,35 @@
     class="sticky top-0 z-50 flex h-14 items-center justify-between border-b
            border-surface-200-800 bg-surface-50-950 px-4 sm:px-10 md:px-20"
 >
-    {#if session?.user}
-        <a href={resolve('/(app)/dashboard')} class="flex items-center gap-3 no-underline">
-            <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
-            <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-            <span class="text-base font-bold">Hackathons</span>
-        </a>
-    {:else}
-        <a href={resolve('/')} class="flex items-center gap-3 no-underline">
-            <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
-            <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-            <span class="text-base font-bold">Hackathons</span>
-        </a>
-    {/if}
+    <!-- The logo goes to the public site for everyone, signed in or not — the
+         convention every site follows, and previously the one thing a member
+         could not do: it pointed at the dashboard, so there was no way back to
+         the landing page. The dashboard has its own link, next to it. -->
+    <a href="/" class="flex items-center gap-3 no-underline">
+        <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
+        <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
+        <span class="text-base font-bold">Hackathons</span>
+    </a>
 
+    <!-- The platform's top-level destinations. The logo is the instance
+         itself; these are its pages. Challenges and Showcase join them later,
+         which is why this is a list rather than three hand-written anchors. -->
     <nav class="hidden items-center gap-6 md:flex">
-        {#if session?.user}
+        {#each [
+            { href: '/', label: 'Home' },
+            { href: '/hackathon', label: 'Hackathons' },
+            { href: '/about', label: 'About' }
+        ] as item (item.href)}
             <a
-                href={resolve('/(app)/dashboard')}
-                class="text-sm font-medium no-underline hover:text-primary-500"
+                href={item.href}
+                aria-current={$page.url.pathname === item.href ? 'page' : undefined}
+                class="text-sm no-underline hover:text-primary-500
+                       aria-[current]:font-semibold aria-[current]:text-primary-500
+                       {$page.url.pathname === item.href ? '' : 'text-surface-400'}"
             >
-                Hackathons
+                {item.label}
             </a>
-        {:else}
-            <a
-                href={resolve('/')}
-                class="text-sm font-medium no-underline hover:text-primary-500"
-            >
-                Hackathons
-            </a>
-        {/if}
-        <!-- "Challenges" had no backing entity and pointed at "/" — dropped
-             rather than kept as a link to nowhere. About is a real SitePage. -->
-        <a
-            href="/about"
-            class="text-sm text-surface-400 no-underline hover:text-primary-500"
-        >
-            About
-        </a>
+        {/each}
     </nav>
 
     <div class="flex items-center gap-3">
