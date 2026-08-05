@@ -23,9 +23,7 @@
         </div>
         <a
             href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals/propose`)}
-            class="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5
-                   px-3 text-center text-xs font-semibold no-underline
-                   sm:w-auto sm:min-w-[9rem] bg-accent text-on-accent"
+            class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
         >
             <Plus class="h-3.5 w-3.5 shrink-0" />
             Propose a Project
