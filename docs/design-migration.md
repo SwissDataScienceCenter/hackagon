@@ -100,6 +100,35 @@ stubs here (audit B15), implemented there.
 
 ### Phase 2 — theme and shell (the design)
 
+**Main deleted Skeleton.** `@skeletonlabs/skeleton` is gone from their
+`package.json` and `app.css`; the theme ships its own component classes
+instead (`.btn` `.btn-accent` `.btn-outline` `.btn-ghost` `.btn-icon` `.card`
+`.card-raised` `.badge-*` `.field` `.field-area` `.field-label` `.chip`
+`.meta` `.prose`).
+
+That makes this phase bigger than "reclass the colour pairs". Our components
+carry roughly a thousand Skeleton class usages — `input` x206, `btn` x134,
+`btn-sm` x118, `card` x91, `select` x67, `textarea` x60, plus the
+`preset-*` and `surface-N-N` families — and every one of them loses its
+styling the moment Skeleton goes. There is a clean mapping
+(`card preset-outlined-surface-200-800` -> `card`,
+`btn preset-filled-primary-500` -> `btn btn-accent`,
+`badge preset-tonal-success` -> `badge badge-success`,
+`input`/`select`/`textarea` -> `field`/`field-area`), so it is mechanical —
+but it cannot be done a component at a time while both stylesheets are loaded,
+because `card`, `btn` and `badge` exist in *both* and would collide
+unpredictably.
+
+**Therefore the order changes: swap first, re-add second.** Take their `src/`
+wholesale, drop our superseded and not-yet-ported screens in the same commit,
+and treat git as the staging area — each feature is recovered from
+`git show <swap-commit>^:<path>` when its turn comes, reclassed as it lands.
+The branch is red between the swap and the end of Phase 4; that is the honest
+cost of removing a component library, and pretending otherwise by
+half-migrating would be worse.
+
+
+
 Take wholesale, no edits: `themes/hackagon.css`, `app.html`, `NavBar`,
 `AppSidebar`, `HackathonSidebar`, `SidebarNavSection`, `SidebarUserFooter`,
 `lib/navigation.ts` + its tests, `MarkdownContent`, `MarkdownEditor`.
