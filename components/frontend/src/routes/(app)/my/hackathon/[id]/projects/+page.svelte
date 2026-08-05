@@ -108,13 +108,13 @@
                             {/if}
                         {/if}
                         {#if data.mayPrefer && !project.isPending}
-                            <!-- One-way: see the TODO in +page.server.ts. The
-                                 confirmation lasts until the next load, because
-                                 no read path exists to render it from. -->
-                            {#if form?.preferredId === project.id}
-                                <span class="text-xs font-semibold text-success-700-300">
-                                    Preferred
-                                </span>
+                            {#if project.isPreferred}
+                                <form method="POST" action="?/unprefer">
+                                    <input type="hidden" name="projectId" value={project.id} />
+                                    <button type="submit" class="btn btn-sm preset-tonal-success">
+                                        &starf; Preferred
+                                    </button>
+                                </form>
                             {:else}
                                 <form method="POST" action="?/prefer">
                                     <input type="hidden" name="projectId" value={project.id} />
