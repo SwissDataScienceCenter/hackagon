@@ -257,17 +257,15 @@ body#keycloak-bg {
   color: var(--hk-ink);
 }
 
+/* The brand block renders the SDSC mark (::before) and the tagline (::after)
+ * only — no wordmark. */
 .pf-v5-c-login__header .pf-v5-c-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.9rem;
   font-family: var(--hk-font);
-  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: 0.45em;
-  text-indent: 0.45em; /* recenter: tracking adds a trailing gap */
-  text-transform: uppercase;
   line-height: 1.2;
   color: var(--hk-ink);
 }
@@ -275,10 +273,19 @@ body#keycloak-bg {
 /* keycloak.v2 hard-sets `#kc-header-wrapper { color: <light> !important }` for
  * that same dark hero — the only way past an !important is another one. It also
  * sets `text-align: center` at id specificity, which the desktop panel below
- * has to beat with another id selector. */
+ * has to beat with another id selector.
+ *
+ * `font-size: 0` suppresses the element's own TEXT, which Keycloak fills from
+ * the realm's displayName and, failing that, from the realm NAME — so clearing
+ * displayName is not enough on its own, "hackagon" comes back through the
+ * fallback. It has to sit HERE rather than on the class rule above: the stock
+ * `#kc-header-wrapper { font-size: 29px; text-transform: uppercase }` is an id
+ * selector, so a class-only override loses to it and the wordmark reappears.
+ * The pseudo-elements set their own font-size and are unaffected. */
 #kc-header-wrapper.pf-v5-c-brand {
   color: var(--hk-ink) !important;
   text-align: center;
+  font-size: 0;
 }
 
 .pf-v5-c-login__header .pf-v5-c-brand::before {
@@ -323,9 +330,7 @@ body#keycloak-bg {
   #kc-header-wrapper.pf-v5-c-brand {
     align-items: flex-start;
     gap: 1.4rem;
-    font-size: 1.375rem;
     text-align: start;
-    text-indent: 0;
   }
 
   .pf-v5-c-login__header .pf-v5-c-brand::before {
@@ -396,7 +401,6 @@ body#keycloak-bg {
 
   .pf-v5-c-login__header .pf-v5-c-brand {
     gap: 0.6rem;
-    font-size: 0.875rem;
   }
 
   .pf-v5-c-login__header .pf-v5-c-brand::before {
