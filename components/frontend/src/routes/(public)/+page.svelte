@@ -121,16 +121,58 @@
          * detail.
          */
         plateOnDark?: boolean;
+        /**
+         * The asset's intrinsic pixel size — read from the file, not guessed.
+         * The sizing rule below needs each mark's shape.
+         */
+        size?: { w: number; h: number };
+    }
+
+    // Logos are sized by equal AREA, not equal height.
+    //
+    // At a shared height the row is dominated by whichever mark happens to be
+    // widest: ETH is 6.2:1, so at 40px tall it ran 246px wide against Durham's
+    // 92px — nearly three times the ink for the same institution. Equal area
+    // gives every mark roughly the same visual weight regardless of whether it
+    // is a long single-line wordmark or a compact stacked lockup:
+    //
+    //   height = sqrt(AREA / aspect)
+    //
+    // Clamped at both ends so a pathologically wide or tall logo can neither
+    // shrink to nothing nor tower over its neighbours. Computed at render
+    // time from data, so adding a partner needs no eyeballing — just the
+    // asset's real dimensions.
+    const LOGO_AREA = 4000;
+    const LOGO_MIN_H = 24;
+    const LOGO_MAX_H = 46;
+
+    function logoHeight(size?: { w: number; h: number }): number {
+        if (!size) return 40;
+        const aspect = size.w / size.h;
+
+        return Math.round(
+            Math.min(LOGO_MAX_H, Math.max(LOGO_MIN_H, Math.sqrt(LOGO_AREA / aspect))),
+        );
     }
 
     // A partner without a `logo` renders as its name alone, so adding one is a
-    // file plus an entry. Assets are sized for the 40px-tall slot they render
-    // in — the Durham original was 3227px wide, which is 111 KB to ship 40px.
+    // file plus an entry. Ship the asset at ~4x its rendered size and no more:
+    // Durham's original was 3227px wide, 111 KB to draw 96px.
     const PARTNERS: Partner[] = [
-        { name: 'SDSC', logo: '/logos/sdsc.svg', logoDark: '/logos/sdsc_white.svg' },
-        { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg' },
-        { name: 'EPFL', logo: '/images/logos/epfl.svg' },
-        { name: 'Durham University', logo: '/images/logos/durham.png', plateOnDark: true },
+        {
+            name: 'SDSC',
+            logo: '/logos/sdsc.svg',
+            logoDark: '/logos/sdsc_white.svg',
+            size: { w: 186, h: 70 },
+        },
+        { name: 'ETH Zurich', logo: '/images/logos/eth-zurich.svg', size: { w: 154, h: 25 } },
+        { name: 'EPFL', logo: '/images/logos/epfl.svg', size: { w: 86, h: 25 } },
+        {
+            name: 'Durham University',
+            logo: '/images/logos/durham.png',
+            plateOnDark: true,
+            size: { w: 366, h: 160 },
+        },
     ];
 
     /* --------------------------------------------------------------- showcase */
@@ -454,7 +496,7 @@
     <!-- flex-wrap: entries must never force horizontal page overflow on phone
          widths. Logos render only where the asset actually exists; the rest
          show their name alone. -->
-    <div class="flex flex-wrap items-end justify-center gap-8">
+    <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
         {#each PARTNERS as org (org.name)}
             <div class="flex flex-col items-center gap-2">
                 {#if org.logo}
@@ -465,8 +507,9 @@
                     <img
                         src={org.logo}
                         alt="{org.name} logo"
+                        style="height: {logoHeight(org.size)}px"
                         onerror={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
-                        class="h-10 w-auto {org.plateOnDark
+                        class="w-auto {org.plateOnDark
                             ? 'dark:rounded dark:bg-white dark:px-2 dark:py-1'
                             : org.logoDark
                               ? 'dark:hidden'
@@ -476,7 +519,8 @@
                         <img
                             src={org.logoDark}
                             alt="{org.name} logo"
-                            class="hidden h-10 w-auto dark:block"
+                            style="height: {logoHeight(org.size)}px"
+                            class="hidden w-auto dark:block"
                         />
                     {/if}
                 {/if}
