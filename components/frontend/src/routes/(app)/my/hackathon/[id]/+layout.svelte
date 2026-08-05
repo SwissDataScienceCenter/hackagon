@@ -6,7 +6,7 @@
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
     import { statusLabel, statusBadgePreset, visibilityLabel, visibilityBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
-    import { phaseStatus, sortPhasesByStart } from '$lib/utils/phase';
+    import { resolvePhaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -33,10 +33,12 @@
     const title = $derived(hackathon.name);
     const dates = $derived(formatDates(hackathon.startsAt, hackathon.endsAt));
     const participantCount = $derived(hackathon.members.length);
+    // Same resolution the timeline page uses, so the header bar and the page never
+    // disagree about which phase is the live one.
     const phases = $derived(
         sortPhasesByStart(hackathon.phases).map((p) => ({
             name: p.name,
-            status: phaseStatus(p.startsAt, p.endsAt),
+            status: resolvePhaseStatus(p, hackathon.state?.currentPhaseId || undefined),
         })),
     );
 

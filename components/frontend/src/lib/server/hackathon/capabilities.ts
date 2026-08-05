@@ -1,4 +1,5 @@
 import type { HackathonMember } from "$lib/server/grpc/generated/hackathon/entities/hackathon_member"
+import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 
 /**
  * Server-only: reads generated types, so it must never be imported by a
@@ -42,4 +43,27 @@ export function mayPreferProjects(
   if (isAdmin) return true
 
   return membership !== undefined && !membership.isWaiting
+}
+
+/**
+ * Whether to offer phase management — create, edit, delete.
+ *
+ * Unlike `mayPreferProjects`, this mirrors the backend **exactly**, and can:
+ * `PhaseService.Create`/`Edit`/`Delete` all enforce hackathon-scoped
+ * `phase:write` (`phase_service.go:139`, `:253`, `:385`), which casbin grants to
+ * `Owner` outright (`rbac.go:182`) and to an admin through the global escape
+ * hatch. No capability gates it, so there is no state in which this returns true
+ * and the RPC then refuses — which is why there is no TODO here and no
+ * shown-then-refused control.
+ *
+ * `Member` holds `phase:read` only (`rbac.go:202`), so participants see the
+ * timeline and none of the controls.
+ */
+export function mayManagePhases(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
 }

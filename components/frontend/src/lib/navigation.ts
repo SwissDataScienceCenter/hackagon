@@ -247,12 +247,12 @@ const MEMBER = 2
 /**
  * Role chip for the hackathon section heading.
  *
- * Owners get no extra nav entries — the organizer pages do not exist yet — so
- * the badge is the only thing distinguishing them, and it must not imply
- * capabilities that are not there. `isWaiting` wins over `role` because a
- * waitlisted user is not yet a member in any useful sense. Global admins can
- * manage any hackathon without joining it, so they get a badge even with no
- * membership row.
+ * Owners get no extra nav entries — organizer controls live on the pages they
+ * belong to, phases and capabilities on the timeline — so the badge is the only
+ * thing in the sidebar distinguishing them, and it must not imply capabilities
+ * that are not there. `isWaiting` wins over `role` because a waitlisted user is
+ * not yet a member in any useful sense. Global admins can manage any hackathon
+ * without joining it, so they get a badge even with no membership row.
  */
 export function hackathonRoleBadge(
   membership: ViewerMembership | undefined,
