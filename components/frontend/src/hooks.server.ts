@@ -30,7 +30,13 @@ let configLoader: ConfigLoader
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
-  /^\/hackathon(\/|$)/,
+  // Public EVENT pages, but not /hackathon/create — that route lives in the
+  // (app) group and needs locals.grpc. Matching it here made it public, so the
+  // group's own guard found no grpc and redirected to login, which sent the
+  // signed-in user straight back: an infinite redirect loop on the one page
+  // that creates a hackathon.
+  /^\/hackathon$/,
+  /^\/hackathon\/(?!create(\/|$))/,
   // Invitation links must open for someone who is not signed in yet — the
   // token in the URL is the credential, and they sign in from that page.
   /^\/invite(\/|$)/,
