@@ -43,11 +43,26 @@ export const load: PageServerLoad = async (event) => {
     error(404, "This hackathon has no registration form")
   }
 
+  // Answers already on file, so the form opens filled in and can be corrected
+  // rather than re-typed from memory. Its own RPC, not part of Get: Get denies
+  // waitlisted users, who are exactly the people still reviewing their form.
+  const existing = await hackathon.getRegistrationResponse({ hackathonId })
+
+  // Struct values arrive as unknown; the form only ever renders text, and a
+  // list field (`tags`) round-trips as a comma-separated string.
+  const answers: Record<string, string> = {}
+  for (const [k, v] of Object.entries(existing.responses ?? {})) {
+    answers[k] = Array.isArray(v) ? v.join(", ") : v == null ? "" : String(v)
+  }
+
   return {
     hackathonId,
     name: found.name,
     fields: found.registrationForm.fields,
     consents: found.registrationForm.consents,
+    alreadySubmitted: existing.submitted,
+    answers,
+    consentValues: existing.consents ?? {},
   }
 }
 
@@ -92,6 +107,12 @@ export const actions: Actions = {
             message:
               e.details ||
               "Registration is closed — this is a deadline, not a permission problem.",
+          })
+        if (e.code === Status.ALREADY_EXISTS)
+          // Only reachable by losing a race with a concurrent first submit;
+          // normal edits are an upsert. Either way the answers are on file.
+          return fail(409, {
+            message: "Your answers were already saved — reload to see them.",
           })
       }
       throw e

@@ -20,6 +20,27 @@
             deadline="Closes in 12 days"
         />
 
+        <!-- The registration form had no link anywhere in the UI: you could
+             only reach it by knowing the URL, so answers were effectively
+             write-once even after the backend allowed editing them. -->
+        {#if data.hackathon.registrationForm}
+            <div class="card preset-outlined-surface-200-800 flex flex-wrap items-center justify-between gap-3 p-5">
+                <div>
+                    <h2 class="text-base font-bold">Your registration answers</h2>
+                    <p class="mt-1 text-sm text-surface-500">
+                        Affiliation, skills, dietary needs and consents. You can change these
+                        while the event runs.
+                    </p>
+                </div>
+                <a
+                    href="/register/{data.hackathon.id}"
+                    class="btn btn-sm preset-tonal-surface no-underline"
+                >
+                    View or edit
+                </a>
+            </div>
+        {/if}
+
         <div class="card preset-outlined-surface-200-800 p-5">
             <h2 class="mb-3 text-base font-bold">About</h2>
             {#if data.hackathon.description}

@@ -24,6 +24,7 @@ import (
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -1241,6 +1242,39 @@ func (s *HackathonService) SubmitRegistrationForm(
 		}
 	}
 
+	// Upsert, not insert. People correct their answers — a changed diet, a new
+	// affiliation, a skill they forgot — and a form you can submit exactly once
+	// makes the first typo permanent. The unique (hackathon, user) row is the
+	// current state of the answers, not an append-only log.
+	existing, err := s.dbClient.FormResponse.Query().
+		Where(
+			entformresponse.HasHackathonWith(enthackathon.IDEQ(id)),
+			entformresponse.HasUserWith(entuser.IDEQ(target.ID)),
+		).
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		slog.Error("query form response", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	if existing != nil {
+		// submitted_by is re-stamped: the organizer who corrected a walk-in's
+		// paper form is the one who entered THESE answers.
+		updated, err := existing.Update().
+			SetSubmittedByID(caller.ID).
+			SetResponses(responses).
+			SetConsents(consents).
+			Save(ctx)
+		if err != nil {
+			slog.Error("update form response", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't store form response")
+		}
+
+		return &msgs.SubmitRegistrationFormResponse{Id: updated.ID.String()}, nil
+	}
+
 	row, err := s.dbClient.FormResponse.Create().
 		SetHackathonID(id).
 		SetUserID(target.ID).
@@ -1250,6 +1284,8 @@ func (s *HackathonService) SubmitRegistrationForm(
 		Save(ctx)
 	if err != nil {
 		if ent.IsConstraintError(err) {
+			// Lost a race with a concurrent first submit; the other one won and
+			// the answers are on file either way.
 			return nil, status.Error(codes.AlreadyExists, "registration form already submitted")
 		}
 		slog.Error("create form response", "err", err)
@@ -1258,6 +1294,92 @@ func (s *HackathonService) SubmitRegistrationForm(
 	}
 
 	return &msgs.SubmitRegistrationFormResponse{Id: row.ID.String()}, nil
+}
+
+// GetRegistrationResponse reads back the answers on file so a registrant can
+// review and correct them.
+//
+// No casbin check for the caller's OWN answers: the form is their personal
+// data, and Get-level hackathon permission is the wrong gate — waitlisted
+// users are denied there and are exactly who still needs to see their form.
+// Reading someone ELSE's answers requires hackathon Write.
+func (s *HackathonService) GetRegistrationResponse(
+	ctx context.Context,
+	req *msgs.GetRegistrationResponseRequest,
+) (*msgs.GetRegistrationResponseResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	caller, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	targetID := caller.ID
+	if req.UserId != nil {
+		parsed, err := uuid.Parse(req.GetUserId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+		}
+		if parsed != caller.ID {
+			if err := s.enforcer.RequirePermission(
+				ctx, id.String(), m.Hackathon, m.Write,
+			); err != nil {
+				return nil, err
+			}
+		}
+		targetID = parsed
+	}
+
+	row, err := s.dbClient.FormResponse.Query().
+		Where(
+			entformresponse.HasHackathonWith(enthackathon.IDEQ(id)),
+			entformresponse.HasUserWith(entuser.IDEQ(targetID)),
+		).
+		WithSubmittedBy().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Not an error: "you have not filled this in yet" is a normal
+			// state the form page renders as an empty form.
+			return &msgs.GetRegistrationResponseResponse{Submitted: false}, nil
+		}
+		slog.Error("query form response", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	responses, err := structpb.NewStruct(row.Responses)
+	if err != nil {
+		slog.Error("encode form responses", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't encode form response")
+	}
+
+	out := &msgs.GetRegistrationResponseResponse{
+		Submitted: true,
+		Responses: responses,
+		Consents:  row.Consents,
+	}
+	out.SubmittedAt = timestamppb.New(row.CreatedAt)
+	out.ModifiedAt = timestamppb.New(row.ModifiedAt)
+	if sb := row.Edges.SubmittedBy; sb != nil && sb.ID != targetID {
+		submitter := sb.ID.String()
+		out.SubmittedById = &submitter
+	}
+
+	return out, nil
 }
 
 // Delete removes a hackathon and its owned configuration rows. Content-heavy

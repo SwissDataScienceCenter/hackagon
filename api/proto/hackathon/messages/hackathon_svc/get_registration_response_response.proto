@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// `submitted` distinguishes "no answers on file" from "answers that happen to
+// be empty" — an empty form is a legitimate state when every field is
+// optional, so a bare empty map would be ambiguous.
+message GetRegistrationResponseResponse {
+  bool submitted = 1;
+  google.protobuf.Struct responses = 2;
+  map<string, bool> consents = 3;
+  optional google.protobuf.Timestamp submitted_at = 4;
+  optional google.protobuf.Timestamp modified_at = 5;
+  // Set when someone else entered the answers (organizer-assisted signup).
+  optional string submitted_by_id = 6;
+}

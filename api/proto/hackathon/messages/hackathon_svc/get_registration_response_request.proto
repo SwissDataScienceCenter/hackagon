@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// Reads back the registration answers already on file, so a registrant can see
+// and correct what they submitted.
+//
+// Deliberately NOT part of HackathonService.Get: Get denies waitlisted users,
+// and a waitlisted user is exactly who still needs to review their form. This
+// takes only the hackathon id and answers for the caller.
+//
+// `user_id` lets an organizer (hackathon Write) read someone else's answers —
+// the check-in desk correcting a paper form, mirroring `on_behalf_of` on
+// SubmitRegistrationForm.
+message GetRegistrationResponseRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string user_id = 2 [(buf.validate.field).string.uuid = true];
+}

@@ -37,6 +37,8 @@ import "hackathon/messages/hackathon_svc/remove_owner_response.proto";
 import "hackathon/messages/hackathon_svc/remove_participant_request.proto";
 import "hackathon/messages/hackathon_svc/submit_registration_form_request.proto";
 import "hackathon/messages/hackathon_svc/submit_registration_form_response.proto";
+import "hackathon/messages/hackathon_svc/get_registration_response_request.proto";
+import "hackathon/messages/hackathon_svc/get_registration_response_response.proto";
 import "hackathon/messages/hackathon_svc/remove_participant_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
@@ -54,6 +56,8 @@ service HackathonService {
   rpc ApproveParticipant(hackathon.messages.hackathon_svc.ApproveParticipantRequest) returns (hackathon.messages.hackathon_svc.ApproveParticipantResponse);
   rpc RemoveParticipant(hackathon.messages.hackathon_svc.RemoveParticipantRequest) returns (hackathon.messages.hackathon_svc.RemoveParticipantResponse);
   rpc SubmitRegistrationForm(hackathon.messages.hackathon_svc.SubmitRegistrationFormRequest) returns (hackathon.messages.hackathon_svc.SubmitRegistrationFormResponse);
+  // Reads the answers back so a registrant can review and correct them.
+  rpc GetRegistrationResponse(hackathon.messages.hackathon_svc.GetRegistrationResponseRequest) returns (hackathon.messages.hackathon_svc.GetRegistrationResponseResponse);
   rpc AddOwner(hackathon.messages.hackathon_svc.AddOwnerRequest) returns (hackathon.messages.hackathon_svc.AddOwnerResponse);
   rpc RemoveOwner(hackathon.messages.hackathon_svc.RemoveOwnerRequest) returns (hackathon.messages.hackathon_svc.RemoveOwnerResponse);
   // --- Invitations: private-hackathon access, see HackathonInvite ---
