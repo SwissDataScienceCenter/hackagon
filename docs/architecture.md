@@ -117,7 +117,7 @@ sequenceDiagram
     participant DB as Postgres :5432
 
     B->>SK: GET /my/hackathon/:id
-    SK->>SK: auth() session; protected route guard
+    SK->>SK: auth() session, protected route guard
     alt no session
         SK-->>B: 303 /?returnTo=...
     end

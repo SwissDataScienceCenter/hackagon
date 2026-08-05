@@ -11,6 +11,7 @@ by `just` and process-compose.
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | [architecture.md](architecture.md)                   | How do the pieces fit together — repo layout, runtime topology, request flow, codegen?                 |
 | [getting-started.md](getting-started.md)             | How do I get a working environment and run/seed/inspect the stack?                                     |
+| [architecture-model.md](architecture-model.md)       | The architecture as C4 (context / containers / components), channels, and the endpoint catalogue — generated from the model. |
 | [backend/services.md](backend/services.md)           | Which gRPC services and RPCs exist, and what does each handler do?                                     |
 | [backend/data-model.md](backend/data-model.md)       | What tables/entities exist and how do they relate?                                                     |
 | [backend/rbac.md](backend/rbac.md)                   | How are permissions modelled and enforced (casbin roles, domains, policy rows)?                        |
