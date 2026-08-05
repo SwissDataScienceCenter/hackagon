@@ -1,24 +1,23 @@
 <script lang="ts">
-    // No header/footer in the app shell — authenticated chrome (sidebar,
-    // hackathon nav) lands in the left column instead. On mobile AppSidebar
-    // brings its own header bar, since there is no NavBar here to hang a menu
-    // button off.
-    import AppSidebar from '$lib/components/layout/AppSidebar.svelte';
+    // The app shell is a top bar and nothing else: identity, theme and sign-out.
+    // Per-hackathon navigation is not shell chrome — it belongs to one hackathon,
+    // so HackathonSidebar renders inside my/hackathon/[id] instead of here, where
+    // it followed you onto the dashboard and the admin routes it had nothing to
+    // say about.
+    import NavBar from '$lib/components/layout/NavBar.svelte';
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
 
     let { children, data }: { children: Snippet; data: LayoutData } = $props();
 </script>
 
-<div class="flex min-h-screen flex-col md:flex-row">
-    <AppSidebar
-        myHackathons={data.myHackathons}
-        hackathonPages={data.hackathonPages}
-        isGlobalAdmin={data.isGlobalAdmin}
-        isHackathonOrganizer={data.isHackathonOrganizer}
+<div class="flex min-h-screen flex-col">
+    <NavBar
         session={data.session ?? null}
+        showPublicLinks={false}
+        isGlobalAdmin={data.isGlobalAdmin}
     />
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1">
         {@render children()}
     </main>
 </div>
