@@ -8,10 +8,15 @@
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
 
+    // The header carries identity, theme and sign-out — no administration entry.
+    // That moved to the dashboard's Manage platform section, which is the single
+    // place the platform pages are offered from. The trade is deliberate: from
+    // inside a hackathon an admin now returns to the dashboard first, via the
+    // wordmark, rather than jumping straight there from the header — on a phone
+    // as much as on a desktop, since the mobile panel drops the entry too.
     let {
         session,
         showPublicLinks = true,
-        isGlobalAdmin = false,
     }: {
         session: Omit<Session, 'accessToken'> | null;
         /**
@@ -19,12 +24,6 @@
          * header is chrome for a signed-in workspace rather than a landing page.
          */
         showPublicLinks?: boolean;
-        /**
-         * Shows the platform administration entry. It lives here rather than on the
-         * dashboard because it is the only route to it from inside a hackathon,
-         * where the dashboard's own actions are out of reach.
-         */
-        isGlobalAdmin?: boolean;
     } = $props();
 
     let mobileOpen = $state(false);
@@ -132,14 +131,6 @@
                     About
                 </a>
             {/if}
-            {#if isGlobalAdmin}
-                <a
-                    href={resolve('/(app)/manage/users')}
-                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
-                >
-                    Users
-                </a>
-            {/if}
         </nav>
 
         <div class="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -228,12 +219,6 @@
             {#if showPublicLinks}
                 <a href={resolve('/')} class="{ROW} {ROW_IDLE}">Challenges</a>
                 <a href={resolve('/')} class="{ROW} {ROW_IDLE}">About</a>
-            {/if}
-            {#if isGlobalAdmin}
-                <!-- The one entry with no other route on a phone: inside a hackathon
-                     the dashboard is out of reach, and the desktop bar that used to
-                     carry this was simply hidden below md. -->
-                <a href={resolve('/(app)/manage/users')} class="{ROW} {ROW_IDLE}">Users</a>
             {/if}
             {#if session?.user}
                 <button

@@ -208,10 +208,11 @@
              the pages exist. The backend refuses them regardless; this only
              decides whether to offer them.
 
-             Deliberately unheaded — the tiles name themselves, and a heading
-             over a single tile was more furniture than signal. The aria-label
-             is the invisible replacement, so the landmark still has a name for
-             a screen reader.
+             Headed like the two sections above it, and in the same `text-section`
+             role, so the three read as peers rather than the last one being an
+             afterthought bolted to the foot of the page. "Platform" rather than
+             "hackathons": this is the one section that is not about them, which
+             is the whole reason it is separate.
 
              Tiles rather than rows: unlike the two lists above, these are fixed
              destinations that want a line of explanation each, and the grid has
@@ -219,7 +220,9 @@
              never accent — Create Hackathon above is the view's one solid
              accent, and a role is not a status. -->
         {#if adminItems.length > 0}
-            <section aria-label="Platform administration">
+            <section class="flex flex-col gap-4">
+                <h2 class="text-section">Manage platform</h2>
+
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {#each adminItems as item (item.id)}
                         {#if item.href}

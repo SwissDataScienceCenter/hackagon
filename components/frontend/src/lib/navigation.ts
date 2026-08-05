@@ -45,7 +45,7 @@ export interface NavItem {
    * Optional, and ignored by the sidebar — a 4rem-collapsible rail has no room
    * for it, and the label is enough when the entry sits under a heading that
    * already frames it. It exists for callers that render the same entries with
-   * space to explain them, such as the dashboard's administration tiles, so a
+   * space to explain them, such as the dashboard's Manage platform tiles, so a
    * destination is described once here rather than restated per surface.
    */
   description?: string
@@ -213,10 +213,12 @@ export function memberNav(
  * hackathon action and sits in `homeNav` instead, so an organizer sees no
  * Platform section at all rather than an empty one.
  *
- * Two surfaces render this list — the sidebar's Platform section and the
- * dashboard's administration tiles — and neither keeps a list of its own, so
- * an admin page added here reaches both at once. That is also why the entries
- * carry a `description` the sidebar never shows.
+ * The dashboard's Manage platform section is what renders this, and it is now
+ * the only way in: the header used to carry a Users link of its own, hard-coded
+ * rather than read from here, and it is gone. Keeping the list here rather than
+ * inline in the view means a settings page added below reaches every surface
+ * that asks — `AppSidebar` still renders it too, though nothing mounts that
+ * component at present.
  */
 export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
   if (!roles.isGlobalAdmin) return []
