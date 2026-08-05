@@ -87,6 +87,26 @@ export function mayManagePages(
 }
 
 /**
+ * Whether to offer track management — create, edit, delete.
+ *
+ * Mirrors the backend exactly, same as `mayManagePhases`/`mayManagePages`:
+ * `TrackService.Create`/`Edit`/`Delete` all enforce hackathon-scoped
+ * `track:write` (`rbac.go:186`), which casbin grants to `Owner` outright and to
+ * an admin through the global escape hatch. `Member` holds `track:read` only
+ * (`rbac.go:204`), so participants see tracks wherever they're offered (the
+ * project picker, the overview) and none of the controls. No capability gates
+ * it, so there is no shown-then-refused control.
+ */
+export function mayManageTracks(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}
+
+/**
  * Whether to offer participant management — approve a waitlisted participant,
  * remove one.
  *

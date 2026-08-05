@@ -6,6 +6,7 @@ import { TeamServiceDefinition } from "./generated/hackathon/team_service"
 import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
 import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
+import { TrackServiceDefinition } from "./generated/hackathon/track_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
@@ -13,6 +14,7 @@ import type { TeamServiceClient } from "./generated/hackathon/team_service"
 import type { PageServiceClient } from "./generated/hackathon/page_service"
 import type { ProjectServiceClient } from "./generated/hackathon/project_service"
 import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
+import type { TrackServiceClient } from "./generated/hackathon/track_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -34,8 +36,7 @@ export interface AuthorizedGrpc {
   health: HealthServiceClient
   hackathon: HackathonServiceClient
   // Teams are the one participant-facing collection `hackathon.get` does not
-  // return, so they need their own client. Tracks arrive nested in the Get
-  // response — no client of their own on purpose.
+  // return, so they need their own client.
   team: TeamServiceClient
   // Pages have their own client despite `hackathon.get` nesting them, because
   // that response includes pages with `visible: false`, while PageService.List
@@ -51,6 +52,12 @@ export interface AuthorizedGrpc {
   // Edit, Delete — plus Get, which re-reads a single phase after a write rather
   // than trusting the layout's cached tree.
   phase: PhaseServiceClient
+  // Tracks arrive nested in `hackathon.get` too, so the propose/edit-project
+  // pickers and the Manage Tracks list all read from there. This client is for
+  // the organizer write path — Create, Edit, Delete — plus Get, same reason as
+  // `phase`: the edit form re-reads the single track rather than trusting the
+  // layout's cached tree.
+  track: TrackServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -72,6 +79,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     page: factory.create(PageServiceDefinition, channel),
     project: factory.create(ProjectServiceDefinition, channel),
     phase: factory.create(PhaseServiceDefinition, channel),
+    track: factory.create(TrackServiceDefinition, channel),
   }
 }
 
