@@ -13,13 +13,13 @@
 </script>
 
 <div
-    class="flex items-center gap-2 border-t border-surface-200-800 p-2
+    class="flex items-center gap-2 border-t border-line p-2
            {collapsed ? 'flex-col' : 'justify-between'}"
 >
     <div class="flex min-w-0 items-center gap-2">
         <div
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                   preset-filled-primary-500 text-sm font-bold"
+                   bg-accent text-on-accent text-sm font-bold"
             title={session?.user?.name ?? 'User'}
         >
             {initial}
@@ -33,7 +33,7 @@
         <button
             onclick={() => signOut({ callbackUrl: '/' })}
             aria-label="Sign out"
-            class="btn-icon btn-sm hover:preset-tonal-secondary"
+            class="btn btn-icon btn-sm btn-quiet"
         >
             <LogOut class="h-4 w-4" />
         </button>

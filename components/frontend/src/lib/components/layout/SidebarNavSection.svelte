@@ -22,18 +22,20 @@
     } = $props();
 
     const ACTIVE_CLASS = {
-        primary: 'bg-surface-100-900 font-medium text-primary-700-300',
-        tertiary: 'bg-surface-100-900 font-medium text-tertiary-700-300',
+        primary: 'bg-raised font-medium text-accent-ink',
+        tertiary: 'bg-raised font-medium text-info-ink',
     };
 
+    // Only the tertiary heading departs from `.meta`'s own ink-3; primary would
+    // just restate it.
     const LABEL_CLASS = {
-        primary: 'text-surface-500',
-        tertiary: 'text-tertiary-500',
+        primary: '',
+        tertiary: 'text-info-ink',
     };
 
     const BADGE_CLASS = {
-        primary: 'preset-tonal-primary',
-        tertiary: 'preset-tonal-tertiary',
+        primary: 'badge-accent',
+        tertiary: 'badge-info',
     };
 
     // A section can be heading-only — an organiser has a role worth naming but
@@ -43,17 +45,17 @@
 </script>
 
 {#if !hidden}
-    <div class="flex flex-col gap-0.5 border-t border-surface-200-800 p-2">
+    <div class="flex flex-col gap-0.5 border-t border-line p-2">
         {#if label && !collapsed}
             <div class="flex items-baseline gap-2 px-2 pb-1">
                 <span
-                    class="min-w-0 truncate text-xs font-bold tracking-widest {LABEL_CLASS[accent]}"
+                    class="meta min-w-0 truncate {LABEL_CLASS[accent]}"
                 >
                     {label}
                 </span>
                 {#if badge}
                     <span
-                        class="badge shrink-0 text-[0.625rem] {BADGE_CLASS[accent]}"
+                        class="badge shrink-0 {BADGE_CLASS[accent]}"
                     >
                         {badge}
                     </span>
@@ -71,11 +73,11 @@
                     href={item.href}
                     aria-current={isActive ? 'page' : undefined}
                     title={collapsed ? item.label : undefined}
-                    class="flex h-10 items-center gap-2 rounded-lg px-2 text-sm no-underline
+                    class="flex h-10 items-center gap-2 rounded-control px-2 text-sm no-underline
                            transition-colors
                            {isActive
                         ? ACTIVE_CLASS[accent]
-                        : 'text-surface-500 hover:text-surface-700-300'}
+                        : 'text-ink-3 hover:text-ink-2'}
                            {collapsed ? 'justify-center' : ''}"
                 >
                     <Icon class="h-4 w-4 shrink-0" />
@@ -87,8 +89,8 @@
             {:else}
                 <span
                     title="Not available yet"
-                    class="flex h-10 cursor-not-allowed items-center gap-2 rounded-lg px-2 text-sm
-                           text-surface-500 opacity-50 {collapsed ? 'justify-center' : ''}"
+                    class="flex h-10 cursor-not-allowed items-center gap-2 rounded-control px-2 text-sm
+                           text-ink-3 opacity-50 {collapsed ? 'justify-center' : ''}"
                 >
                     <Icon class="h-4 w-4 shrink-0" />
                     {#if !collapsed}

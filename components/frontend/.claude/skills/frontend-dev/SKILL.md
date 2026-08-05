@@ -2,19 +2,20 @@
 name: frontend-dev
 description:
   Building UI in the Hackagon SvelteKit frontend — route-group structure, Svelte
-  5 runes, Skeleton v3 + Tailwind styling, reusable components, enum→label
-  display helpers and the server-only boundary, and the dev/lint/test/format
-  commands. Use when adding a page or component, styling UI, writing display
-  helpers, or running/checking the frontend. For calling the backend from a
-  load/action, see frontend-backend-wiring.
+  5 runes, reusable components, enum→label display helpers and the server-only
+  boundary, and the dev/lint/test/format commands. Use when adding a page or
+  component, writing display helpers, or running/checking the frontend. For the
+  visual system (colour tokens, type roles, component classes) see
+  frontend-theme; for calling the backend from a load/action, see
+  frontend-backend-wiring.
 ---
 
 # Frontend development
 
-SvelteKit + **Svelte 5 (runes)**, **Skeleton v3** (Tailwind v4) UI,
-`adapter-node`, pnpm + Vite. Dev server runs on **:8081**. This skill is the
-client/UI side; for gRPC data loading and error translation see the
-**frontend-backend-wiring** skill.
+SvelteKit + **Svelte 5 (runes)**, **Tailwind v4** with the app's own theme
+layer, `adapter-node`, pnpm + Vite. Dev server runs on **:8081**. This skill is
+the client/UI side; for the visual system see the **frontend-theme** skill, and
+for gRPC data loading and error translation see **frontend-backend-wiring**.
 
 ## Route structure (`src/routes`)
 
@@ -58,9 +59,8 @@ for a list row is `hackathon/HackathonRow.svelte`. Conventions:
 
 - Type props inline in the `$props()` destructure; give optionals defaults.
 - Keep display props **generic strings** so a component is reusable — e.g.
-  `badge?: string` + `badgePreset = 'preset-tonal-primary'`, not a
-  status-specific enum. The caller resolves the label/preset (see helpers
-  below).
+  `badge?: string` + `badgeVariant = 'badge-accent'`, not a status-specific
+  enum. The caller resolves the label/variant (see helpers below).
 - Icons: `lucide-svelte`. Internal links: `resolve()` from `$app/paths`
   (`href={resolve(href)}`).
 - Size/variant via a `size?: 'default' | 'compact'` prop that switches Tailwind
@@ -80,7 +80,7 @@ export const projectStatusLabel = (s: number) => LABEL[s]
 ```
 
 ```svelte
-<span class="badge {projectStatusBadgePreset(status) ?? 'preset-tonal-surface'}">
+<span class="badge {projectStatusBadgeVariant(status) ?? 'badge-neutral'}">
   {projectStatusLabel(status) ?? 'Unknown'}
 </span>
 ```
@@ -90,13 +90,18 @@ export const projectStatusLabel = (s: number) => LABEL[s]
 helpers: `hackathonStatus.ts`, `projectStatus.ts`, `submissionStatus.ts`,
 `phase.ts`.
 
-## Styling (Skeleton v3 + Tailwind)
+## Styling
 
-Use Skeleton preset classes (`badge preset-tonal-success`,
-`preset-tonal-warning`, `preset-tonal-primary`) and Skeleton surface tokens
-(`bg-surface-100-900`, `text-surface-500`) alongside plain Tailwind utilities.
-Match the surrounding files' class density and ordering rather than inventing a
-new style.
+The app owns its theme — no UI framework underneath. Semantic colour tokens
+(`bg-surface`, `text-ink-3`, `text-accent-ink`), a mono/sans type split, and a
+small component set (`.btn`, `.badge`, `.card`, `.field`, `.chip`) live in
+`src/themes/hackagon.css`, alongside plain Tailwind utilities.
+
+**Load the frontend-theme skill before styling anything** — it carries the token
+vocabulary, the component variants, and the rules that keep them coherent (one
+solid accent per view, accent is never a status, no hand-rolled dark-mode
+swaps). Match the surrounding files' class density and ordering rather than
+inventing a new style.
 
 ## Commands (from `components/frontend/`)
 

@@ -40,7 +40,7 @@
 <button
     onclick={toggle}
     aria-label="Toggle light/dark mode"
-    class="btn-icon btn-sm hover:preset-tonal-secondary"
+    class="btn btn-icon btn-sm btn-quiet"
 >
     {#if checked}
         <Sun class="h-4 w-4" />

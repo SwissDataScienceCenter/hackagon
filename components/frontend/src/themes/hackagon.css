@@ -1,0 +1,578 @@
+/* Hackagon theme — the tokens and component classes the app is built from.
+ *
+ * This file has three parts, in cascade order:
+ *
+ *   1. Tokens      — `--hk-*` custom properties, redefined per colour mode.
+ *   2. @theme      — exposes those tokens to Tailwind as utility classes.
+ *   3. base/components — element defaults and the component class set.
+ *
+ * Dark is the default mode: `:root` holds the dark values and
+ * `[data-mode="light"]` overrides them. `data-mode` is set on <html> by
+ * app.html and flipped by LightSwitch.svelte.
+ *
+ * Why tokens rather than a numeric palette: a token means one thing
+ * ("the page background"), so a component names its intent instead of picking a
+ * step and a mode-flipped partner. That removes the `bg-surface-100-900` pair
+ * machinery and, with it, the class of bug where one usage flips with the mode
+ * and its neighbour doesn't.
+ *
+ * The rules that keep this coherent — one solid accent per view, accent is not
+ * a status, mono for labels and sans for sentences — live in the
+ * `frontend-theme` skill, not here.
+ */
+
+:root {
+  /* Ground. A cyan-slate at hue 196 rather than a neutral grey: the previous
+   * palette carried a 196deg hue on its three darkest steps at chroma 0, where
+   * hue has no effect. Giving it real chroma makes that deliberate, and puts
+   * 65deg between the ground and the lime so the accent reads as a chosen
+   * colour on tinted metal instead of a pop on black. */
+  --hk-canvas: oklch(17.5% 0.009 196);
+  --hk-surface: oklch(21% 0.01 196);
+  --hk-raised: oklch(25.5% 0.011 196);
+  --hk-overlay: oklch(29% 0.012 196);
+
+  --hk-line: oklch(33% 0.013 196);
+  --hk-line-strong: oklch(41% 0.015 196);
+
+  --hk-ink: oklch(95% 0.005 196);
+  --hk-ink-2: oklch(79% 0.009 196);
+  --hk-ink-3: oklch(64% 0.011 196);
+
+  /* Accent. The lime is kept but pulled from chroma 0.18 to 0.155: at full
+   * strength it only ever appears on small solid marks, so the extra saturation
+   * bought nothing except making large fills shout. */
+  --hk-accent: oklch(80% 0.155 131);
+  --hk-accent-hover: oklch(86% 0.16 131);
+  --hk-accent-ink: oklch(84% 0.14 131);
+  --hk-on-accent: oklch(20% 0.04 131);
+
+  /* Status. Success moved to a teal at 168deg: at its old 141deg it sat 11deg
+   * from the brand lime, so a status colour read as the brand colour. */
+  --hk-success: oklch(72% 0.13 168);
+  --hk-success-ink: oklch(80% 0.12 168);
+  --hk-warning: oklch(75% 0.14 78);
+  --hk-warning-ink: oklch(82% 0.13 78);
+  --hk-danger: oklch(65% 0.18 20);
+  --hk-danger-ink: oklch(72% 0.16 20);
+  --hk-info: oklch(68% 0.11 225);
+  --hk-info-ink: oklch(78% 0.09 225);
+
+  /* The wash behind a drawer or dialog. A token rather than `bg-black/50` at
+   * each call site: the two modes want different densities, and a literal
+   * cannot flip. Denser here, because the ground it covers is already dark. */
+  --hk-scrim: oklch(0% 0 0 / 0.62);
+}
+
+[data-mode="light"] {
+  --hk-canvas: oklch(99% 0.003 196);
+  --hk-surface: oklch(100% 0 0);
+  --hk-raised: oklch(97% 0.005 196);
+  --hk-overlay: oklch(94% 0.006 196);
+
+  --hk-line: oklch(92% 0.007 196);
+  --hk-line-strong: oklch(84% 0.01 196);
+
+  --hk-ink: oklch(21% 0.012 196);
+  --hk-ink-2: oklch(40% 0.013 196);
+  --hk-ink-3: oklch(54% 0.014 196);
+
+  /* The solid field stays bright — it carries dark ink in both modes — while
+   * the accent-as-text token has to darken to stay legible on white. Keeping
+   * these separate is what makes the accent safe to use either way. */
+  --hk-accent: oklch(76% 0.16 131);
+  --hk-accent-hover: oklch(70% 0.16 131);
+  --hk-accent-ink: oklch(47% 0.125 131);
+  --hk-on-accent: oklch(20% 0.04 131);
+
+  --hk-success: oklch(55% 0.12 168);
+  --hk-success-ink: oklch(45% 0.1 168);
+  --hk-warning: oklch(62% 0.13 70);
+  --hk-warning-ink: oklch(50% 0.11 70);
+  --hk-danger: oklch(58% 0.19 22);
+  --hk-danger-ink: oklch(50% 0.16 22);
+  --hk-info: oklch(55% 0.12 235);
+  --hk-info-ink: oklch(46% 0.1 235);
+
+  /* Tinted with the ground hue rather than pure black, so the wash reads as
+   * the page dimming instead of a grey sheet laid over it. */
+  --hk-scrim: oklch(21% 0.012 196 / 0.42);
+}
+
+/* `inline` so the generated utilities resolve the `--hk-*` var at use time
+ * rather than baking in a copy — that is what lets `[data-mode="light"]`
+ * above re-point every utility at once. Without it, mode switching silently
+ * stops working. */
+@theme inline {
+  --color-canvas: var(--hk-canvas);
+  --color-surface: var(--hk-surface);
+  --color-raised: var(--hk-raised);
+  --color-overlay: var(--hk-overlay);
+
+  --color-line: var(--hk-line);
+  --color-line-strong: var(--hk-line-strong);
+
+  --color-ink: var(--hk-ink);
+  --color-ink-2: var(--hk-ink-2);
+  --color-ink-3: var(--hk-ink-3);
+
+  --color-accent: var(--hk-accent);
+  --color-accent-hover: var(--hk-accent-hover);
+  --color-accent-ink: var(--hk-accent-ink);
+  --color-on-accent: var(--hk-on-accent);
+
+  --color-success: var(--hk-success);
+  --color-success-ink: var(--hk-success-ink);
+  --color-warning: var(--hk-warning);
+  --color-warning-ink: var(--hk-warning-ink);
+  --color-danger: var(--hk-danger);
+  --color-danger-ink: var(--hk-danger-ink);
+  --color-info: var(--hk-info);
+  --color-info-ink: var(--hk-info-ink);
+
+  --color-scrim: var(--hk-scrim);
+}
+
+@theme {
+  /* Two faces, two jobs. Mono is the app's voice — headings, labels, counts,
+   * IDs, anything scanned. Sans carries anything read as a sentence, because
+   * mono at paragraph length is tiring and leaves no contrast to build
+   * hierarchy from. Both are system stacks: no webfont request, no flash of
+   * unstyled text, and it avoids the faces every other product reaches for. */
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", "JetBrains Mono",
+    Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+  /* Four display steps plus a meta step. Mono needs negative tracking as it
+   * scales up, so each step carries its own. */
+  --text-display: clamp(1.6rem, 3.2vw, 2.1rem);
+  --text-display--line-height: 1.12;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 600;
+
+  --text-title: 1.3125rem;
+  --text-title--line-height: 1.24;
+  --text-title--letter-spacing: -0.018em;
+  --text-title--font-weight: 600;
+
+  --text-section: 1.0625rem;
+  --text-section--line-height: 1.4;
+  --text-section--letter-spacing: -0.012em;
+  --text-section--font-weight: 600;
+
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.62;
+
+  --text-meta: 0.6875rem;
+  --text-meta--line-height: 1.4;
+  --text-meta--letter-spacing: 0.09em;
+
+  /* Controls are rounded against the squarer frames they sit in, so the
+   * roundness reads as a deliberate contrast rather than a global softening. */
+  --radius-control: 999px;
+  --radius-card: 0.375rem;
+  --radius-field: 0.375rem;
+
+  /* Carried over from the previous theme rather than reset to Tailwind's
+   * 0.25rem: every `gap-*`/`p-*` in the app was authored against this, so
+   * changing it here would resize every screen at once. Revisit deliberately. */
+  --spacing: 0.28rem;
+}
+
+@layer base {
+  /* Tailwind's preflight defaults every border to currentColor, which makes a
+   * bare `border` invisible against text. Point it at the hairline token so
+   * `border` alone is always the right colour. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  a {
+    color: var(--color-accent-ink);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------
+   * Typographic roles
+   * --------------------------------------------------------------- */
+
+  /* Running text. Switches to the sans face and caps the measure in `ch`, so
+   * the line length holds regardless of how wide the container gets. */
+  .prose {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.62;
+    max-width: 68ch;
+  }
+
+  /* Small uppercase mono label: eyebrows, field labels, attribute names. */
+  .meta {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+  }
+
+  /* Any figure that stacks with another figure — counts down a list, times in
+   * a column. Non-aligning digits are the fastest way to make a table look
+   * unfinished. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------------------------------------------------------
+   * Buttons. `.btn` is the shape; a variant supplies the colour.
+   * Exactly one `.btn-solid` per view — see the frontend-theme skill.
+   * --------------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: --spacing(1.5);
+    padding: --spacing(2) --spacing(4.5);
+    border-radius: var(--radius-control);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-sm {
+    padding: --spacing(1.5) --spacing(3.5);
+    font-size: var(--text-meta);
+    letter-spacing: 0;
+    line-height: 1rem;
+  }
+
+  .btn-icon {
+    padding: --spacing(2);
+    aspect-ratio: 1;
+  }
+
+  .btn-solid {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+  .btn-solid:hover {
+    background-color: var(--color-accent-hover);
+  }
+
+  .btn-outline {
+    color: var(--color-ink);
+    border-color: var(--color-line-strong);
+  }
+  .btn-outline:hover {
+    background-color: var(--color-raised);
+    border-color: var(--color-ink-3);
+  }
+
+  .btn-outline-accent {
+    color: var(--color-accent-ink);
+    border-color: var(--color-accent);
+  }
+  .btn-outline-accent:hover {
+    background-color: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  }
+
+  .btn-ghost {
+    color: var(--color-ink);
+    background-color: var(--color-raised);
+  }
+  .btn-ghost:hover {
+    background-color: var(--color-overlay);
+  }
+
+  .btn-quiet {
+    color: var(--color-ink-2);
+    background-color: transparent;
+  }
+  .btn-quiet:hover {
+    background-color: var(--color-raised);
+    color: var(--color-ink);
+  }
+
+  .btn-accent {
+    color: var(--color-accent-ink);
+    background-color: color-mix(in oklab, var(--color-accent) 20%, transparent);
+  }
+  .btn-accent:hover {
+    background-color: color-mix(in oklab, var(--color-accent) 30%, transparent);
+  }
+
+  .btn-success {
+    color: var(--color-success-ink);
+    background-color: color-mix(
+      in oklab,
+      var(--color-success) 20%,
+      transparent
+    );
+  }
+  .btn-success:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--color-success) 30%,
+      transparent
+    );
+  }
+
+  .btn-warning {
+    color: var(--color-warning-ink);
+    background-color: color-mix(
+      in oklab,
+      var(--color-warning) 20%,
+      transparent
+    );
+  }
+  .btn-warning:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--color-warning) 30%,
+      transparent
+    );
+  }
+
+  .btn-danger {
+    color: var(--color-danger-ink);
+    border-color: color-mix(in oklab, var(--color-danger) 45%, transparent);
+  }
+  .btn-danger:hover {
+    background-color: color-mix(in oklab, var(--color-danger) 12%, transparent);
+  }
+
+  .btn-danger-solid {
+    background-color: var(--color-danger);
+    color: oklch(98% 0.01 20);
+  }
+  .btn-danger-solid:hover {
+    background-color: color-mix(in oklab, var(--color-danger) 85%, black);
+  }
+
+  /* ---------------------------------------------------------------
+   * Badges. Status vocabulary, so the variants are named after the
+   * state rather than after a colour.
+   * --------------------------------------------------------------- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: --spacing(1.5);
+    padding: --spacing(1) --spacing(3);
+    border-radius: var(--radius-control);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1rem;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: --spacing(1);
+    aspect-ratio: 1;
+    border-radius: var(--radius-control);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    border: 1px solid transparent;
+  }
+
+  .badge-solid {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .badge-accent {
+    background-color: color-mix(in oklab, var(--color-accent) 20%, transparent);
+    color: var(--color-accent-ink);
+    border-color: color-mix(in oklab, var(--color-accent-ink) 24%, transparent);
+  }
+
+  .badge-outline-accent {
+    border-color: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  .badge-neutral {
+    background-color: var(--color-raised);
+    color: var(--color-ink-2);
+    border-color: var(--color-line);
+  }
+
+  .badge-success {
+    background-color: color-mix(
+      in oklab,
+      var(--color-success) 20%,
+      transparent
+    );
+    color: var(--color-success-ink);
+    border-color: color-mix(
+      in oklab,
+      var(--color-success-ink) 24%,
+      transparent
+    );
+  }
+
+  .badge-warning {
+    background-color: color-mix(
+      in oklab,
+      var(--color-warning) 20%,
+      transparent
+    );
+    color: var(--color-warning-ink);
+    border-color: color-mix(
+      in oklab,
+      var(--color-warning-ink) 24%,
+      transparent
+    );
+  }
+
+  .badge-danger {
+    background-color: color-mix(in oklab, var(--color-danger) 20%, transparent);
+    color: var(--color-danger-ink);
+    border-color: color-mix(in oklab, var(--color-danger-ink) 24%, transparent);
+  }
+
+  .badge-info {
+    background-color: color-mix(in oklab, var(--color-info) 20%, transparent);
+    color: var(--color-info-ink);
+    border-color: color-mix(in oklab, var(--color-info-ink) 24%, transparent);
+  }
+
+  /* ---------------------------------------------------------------
+   * Surfaces and inputs
+   * --------------------------------------------------------------- */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+
+  /* A card one lightness step up. For rows in a list that sits directly on the
+   * canvas, where `surface` is too close to the ground to separate the row from
+   * it. Depth is lightness here, as everywhere — no shadow. */
+  .card-raised {
+    background-color: var(--color-raised);
+  }
+
+  /* Absorbs the input recipe that was hand-copied across seven forms. */
+  .field {
+    height: --spacing(9);
+    width: 100%;
+    padding: 0 --spacing(3);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-field);
+    background-color: var(--color-raised);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+  }
+  .field::placeholder {
+    color: var(--color-ink-3);
+  }
+  .field:focus {
+    border-color: var(--color-accent);
+    outline: none;
+  }
+  .field:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -1px;
+  }
+
+  /* `.field` for anything that wraps: textareas and the panes rendered beside
+   * them. The fixed control height is what makes it single-line, so this drops
+   * it and pays the padding back vertically. */
+  .field-area {
+    height: auto;
+    padding: --spacing(2) --spacing(3);
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  /* The caption-above-input pair, which four forms had each spelled out as the
+   * same string of utilities. Deliberately not uppercase like `.meta`:
+   * `text-transform` inherits, and this element wraps the input, so it would
+   * uppercase whatever the user typed. */
+  .field-label {
+    display: flex;
+    flex-direction: column;
+    gap: --spacing(1);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-ink-3);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: --spacing(1.5);
+    padding: --spacing(1.5) --spacing(3.5);
+    border-radius: var(--radius-control);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--color-ink-3);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  .chip:hover {
+    background-color: var(--color-raised);
+    color: var(--color-ink);
+  }
+
+  .chip-active {
+    background-color: color-mix(in oklab, var(--color-accent) 20%, transparent);
+    color: var(--color-accent-ink);
+  }
+}

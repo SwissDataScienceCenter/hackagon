@@ -13,7 +13,7 @@
         moreInfoHref = '#',
         moreInfoLabel = 'More Info',
         badge,
-        badgePreset = 'preset-tonal-surface',
+        badgeVariant = 'badge-neutral',
         actions,
     }: {
         num: number;
@@ -31,7 +31,7 @@
         /** Generic chip text — kept a plain string so the card is not tied to
          *  any one vocabulary. Both project lists pass a status; others may not. */
         badge?: string;
-        badgePreset?: string;
+        badgeVariant?: string;
         /** Extra controls beside the CTA, e.g. a prefer form. A snippet rather
          *  than props so the card stays ignorant of what the action does. */
         actions?: Snippet;
@@ -50,15 +50,20 @@
     );
 </script>
 
-<!-- Matches TeamCard: py-4 px-5, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
+<!-- Matches TeamCard: px-5 py-4, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
 <div
-    class="box-border flex w-full items-start gap-4 border border-surface-200-800
-           bg-surface-100-900 py-4 px-5"
+    class="card card-raised box-border flex w-full items-start gap-4 px-5 py-4"
 >
+    <!-- The ordinal leaves the title and becomes a gutter figure, so titles all
+         start on one left edge and the numbers align down the list. -->
+    <span class="tnum shrink-0 pt-0.5 text-meta text-ink-3">
+        {String(num).padStart(2, '0')}
+    </span>
+
     {#if imageUrl}
         <div
             class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                   border-surface-200-800 bg-surface-100-900"
+                   border-line bg-raised"
         >
             <img
                 src={imageUrl}
@@ -69,7 +74,7 @@
     {:else}
         <div
             class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
-                   border-surface-200-800 bg-surface-200-800 text-xs font-bold text-surface-950-50"
+                   border-line bg-overlay text-xs font-bold text-ink"
         >
             {initials}
         </div>
@@ -77,27 +82,28 @@
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <div class="flex flex-wrap items-center gap-2">
-            <h3 class="m-0 text-sm font-bold leading-snug text-surface-950-50">
-                {num}. {title}
+            <h3 class="m-0 text-sm leading-snug text-ink">
+                {title}
             </h3>
             {#if badge}
-                <span class="badge {badgePreset} shrink-0 rounded-none text-[0.625rem] font-semibold uppercase">
+                <span class="badge {badgeVariant} shrink-0">
                     {badge}
                 </span>
             {/if}
         </div>
-        <div class="block w-2/3 min-w-0">
-            <p class="m-0 text-xs leading-snug text-surface-600-400">
-                {description}
-            </p>
-        </div>
+        <!-- The description is the one genuinely prose-shaped thing on the card,
+             so it takes the sans face. `max-width` in `ch` rather than `w-2/3`
+             keeps the measure readable at any container width. -->
+        <p class="prose m-0 max-w-[52ch] text-xs leading-snug text-ink-2">
+            {description}
+        </p>
         <!-- Author and track on one line, each behind its own icon, so the two
              facts read as attributes of the row rather than sentences. The
              icons carry no information a sighted reader needs spelling out and
              no screen reader needs repeating — the text beside them says it —
              so they are aria-hidden. -->
         {#if creator || track}
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-surface-500">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
                 {#if creator}
                     <span class="inline-flex items-center gap-1.5">
                         <User class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -117,7 +123,7 @@
     <div class="flex shrink-0 items-center gap-2">
         {@render actions?.()}
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a href={resolve(moreInfoHref as any)} class="btn btn-sm preset-tonal-surface">
+        <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">
             {moreInfoLabel}
         </a>
     </div>

@@ -27,18 +27,22 @@
 </script>
 
 <div class="flex flex-col gap-2">
+    <!-- Chips, not buttons: this picks which pane is showing, and a solid accent
+         would both read as an action and compete with the form's real submit. -->
     <div class="flex gap-1">
         <button
             type="button"
             onclick={() => (mode = 'write')}
-            class="btn btn-sm {mode === 'write' ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+            aria-pressed={mode === 'write'}
+            class="chip {mode === 'write' ? 'chip-active' : ''}"
         >
             Write
         </button>
         <button
             type="button"
             onclick={() => (mode = 'preview')}
-            class="btn btn-sm {mode === 'preview' ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+            aria-pressed={mode === 'preview'}
+            class="chip {mode === 'preview' ? 'chip-active' : ''}"
         >
             Preview
         </button>
@@ -57,22 +61,22 @@
         {placeholder}
         {required}
         {maxlength}
-        class="border border-surface-200-800 bg-surface-50-950 px-3 py-2 font-mono text-sm
-               text-surface-950-50 focus:border-primary-500 focus:outline-none
-               {mode === 'write' ? '' : 'hidden'}"
+        class="field field-area {mode === 'write' ? '' : 'hidden'}"
     ></textarea>
 
+    <!-- The same box as the textarea it replaces, by construction rather than by
+         coincidence: switching panes must not move the frame, so the preview
+         takes `field field-area` too instead of re-spelling its padding. -->
     <div
-        class="border border-surface-200-800 bg-surface-50-950 px-3 py-2
-               text-sm text-surface-950-50 {mode === 'preview' ? '' : 'hidden'}"
+        class="field field-area {mode === 'preview' ? '' : 'hidden'}"
         style="min-height: {rows * 1.5}rem"
     >
         {#if text.trim()}
             <MarkdownContent content={text} />
         {:else}
-            <p class="m-0 text-surface-500">Nothing to preview yet.</p>
+            <p class="m-0 text-ink-3">Nothing to preview yet.</p>
         {/if}
     </div>
 
-    <p class="m-0 text-[10px] text-surface-500">Markdown supported.</p>
+    <p class="m-0 text-xs text-ink-3">Markdown supported.</p>
 </div>

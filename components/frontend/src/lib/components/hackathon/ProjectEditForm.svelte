@@ -22,12 +22,6 @@
         message?: string;
     } = $props();
 
-    const FIELD_CLASS =
-        'h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950 px-3 text-xs ' +
-        'text-surface-950-50 placeholder:text-surface-700-300 focus:border-primary-500 ' +
-        'focus:outline-none';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-surface-500';
-
     // See the TODO in the calling +page.server.ts: `Edit` cannot unset a track,
     // so the "No track" option is offered only while there is nothing to lose
     // by it.
@@ -41,11 +35,11 @@
      using it must expose an action by that name. -->
 <form method="POST" action="?/save" class="flex w-full flex-col gap-6">
     {#if message}
-        <p class="m-0 text-xs text-error-500" role="alert">{message}</p>
+        <p class="m-0 text-xs text-danger-ink" role="alert">{message}</p>
     {/if}
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label class="{LABEL_CLASS} sm:col-span-2">
+        <label class="field-label sm:col-span-2">
             Title
             <input
                 type="text"
@@ -54,14 +48,14 @@
                 minlength="3"
                 maxlength="255"
                 value={project.title}
-                class={FIELD_CLASS}
+                class="field"
             />
         </label>
 
         {#if tracks.length > 0}
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Track {hasTrack ? '' : '(optional)'}
-                <select name="trackId" class={FIELD_CLASS}>
+                <select name="trackId" class="field">
                     {#if !hasTrack}
                         <option value="">No track</option>
                     {/if}
@@ -72,28 +66,28 @@
                     {/each}
                 </select>
                 {#if hasTrack}
-                    <span class="font-normal text-surface-500">
+                    <span class="font-normal text-ink-3">
                         A track can be changed but not removed.
                     </span>
                 {/if}
             </label>
         {/if}
 
-        <label class="{LABEL_CLASS} {tracks.length > 0 ? '' : 'sm:col-span-2'}">
+        <label class="field-label {tracks.length > 0 ? '' : 'sm:col-span-2'}">
             Image URL (optional)
             <input
                 type="url"
                 name="image"
                 placeholder="https://…"
                 value={project.image ?? ''}
-                class={FIELD_CLASS}
+                class="field"
             />
         </label>
     </div>
 
     <!-- Last and full width: the only field with no natural size, and the one
          where the room is worth having for the source and its preview both. -->
-    <div class="{LABEL_CLASS} w-full">
+    <div class="field-label w-full">
         <label for="project-description">Description</label>
         <MarkdownEditor
             id="project-description"
@@ -107,9 +101,9 @@
     </div>
 
     <div class="flex gap-2">
-        <button type="submit" class="btn btn-sm preset-filled-primary-500"> Save changes </button>
+        <button type="submit" class="btn btn-sm btn-solid"> Save changes </button>
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a href={resolve(cancelHref as any)} class="btn btn-sm preset-tonal-surface no-underline">
+        <a href={resolve(cancelHref as any)} class="btn btn-sm btn-ghost no-underline">
             Cancel
         </a>
     </div>

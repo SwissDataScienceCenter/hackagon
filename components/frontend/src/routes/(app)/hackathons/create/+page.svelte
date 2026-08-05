@@ -5,23 +5,18 @@
 
     let { form }: { form: ActionData } = $props();
 
-    const FIELD_CLASS =
-        'h-9 w-full rounded-none border border-surface-200-800 bg-surface-50-950 px-3 text-xs ' +
-        'text-surface-950-50 placeholder:text-surface-700-300 focus:border-primary-500 ' +
-        'focus:outline-none';
-    const LABEL_CLASS = 'flex flex-col gap-1 text-xs font-semibold text-surface-500';
 </script>
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <a
             href={resolve('/(app)/dashboard')}
-            class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+            class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
             &larr; Back to my hackathons
         </a>
-        <h1 class="m-0 text-lg font-bold text-surface-950-50">Create Hackathon</h1>
-        <p class="m-0 text-xs text-surface-500">
+        <h1 class="m-0 text-title text-ink">Create Hackathon</h1>
+        <p class="m-0 text-xs text-ink-3">
             You become its owner and can edit everything else afterwards.
         </p>
     </div>
@@ -30,7 +25,7 @@
          and the action is what the backend actually sees. -->
     <form method="POST" action="?/create" class="flex w-full flex-col gap-6">
         {#if form?.message}
-            <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+            <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
         {/if}
 
         <!-- The short fields share the width in a 4-column grid, each spanning as
@@ -38,7 +33,7 @@
              rather than stretching across the page. All collapse to one column
              below sm. -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="{LABEL_CLASS} sm:col-span-2">
+            <label class="field-label sm:col-span-2">
                 Name
                 <input
                     type="text"
@@ -47,41 +42,41 @@
                     minlength="3"
                     maxlength="255"
                     placeholder="Spring Data Hackathon"
-                    class={FIELD_CLASS}
+                    class="field"
                 />
             </label>
 
             <fieldset class="m-0 flex flex-col gap-1 border-0 p-0 sm:col-span-2">
-                <legend class="mb-1 p-0 text-xs font-semibold text-surface-500">Visibility</legend>
-                <label class="flex items-center gap-2 text-xs text-surface-950-50">
+                <legend class="mb-1 p-0 text-xs font-semibold text-ink-3">Visibility</legend>
+                <label class="flex items-center gap-2 text-xs text-ink">
                     <input type="radio" name="visibility" value="public" checked />
                     Public — anyone can see it and ask to join
                 </label>
-                <label class="flex items-center gap-2 text-xs text-surface-950-50">
+                <label class="flex items-center gap-2 text-xs text-ink">
                     <input type="radio" name="visibility" value="private" />
                     Private — only people you give access to
                 </label>
             </fieldset>
 
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Starts at (optional)
-                <input type="date" name="startsAt" class={FIELD_CLASS} />
+                <input type="date" name="startsAt" class="field" />
             </label>
 
-            <label class={LABEL_CLASS}>
+            <label class="field-label">
                 Ends at (optional)
-                <input type="date" name="endsAt" class={FIELD_CLASS} />
+                <input type="date" name="endsAt" class="field" />
             </label>
 
-            <label class="{LABEL_CLASS} sm:col-span-2">
+            <label class="field-label sm:col-span-2">
                 Logo URL (optional)
-                <input type="url" name="logo" placeholder="https://…" class={FIELD_CLASS} />
+                <input type="url" name="logo" placeholder="https://…" class="field" />
             </label>
         </div>
 
         <!-- Last and full width: the only field with no natural size, and the one
              where the room is worth having for the source and its preview both. -->
-        <div class="{LABEL_CLASS} w-full">
+        <div class="field-label w-full">
             <label for="hackathon-description">Description (optional)</label>
             <MarkdownEditor
                 id="hackathon-description"
@@ -92,7 +87,7 @@
             />
         </div>
 
-        <button type="submit" class="btn btn-sm preset-filled-primary-500 self-start">
+        <button type="submit" class="btn btn-sm btn-solid self-start">
             Create hackathon
         </button>
     </form>

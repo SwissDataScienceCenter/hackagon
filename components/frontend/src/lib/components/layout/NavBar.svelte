@@ -26,11 +26,17 @@
 
     const userName = $derived(session?.user?.name ?? 'User');
     const initial = $derived(userName.charAt(0).toUpperCase());
+
+    // The accent marks where you are rather than decorating the monogram, so the
+    // header spends no accent and leaves the page's one primary action to own it.
+    const onHackathons = $derived(
+        $page.url.pathname === '/' || $page.url.pathname.startsWith('/dashboard')
+    );
 </script>
 
 <header
     class="sticky top-0 z-50 flex h-14 items-center justify-between border-b
-           border-surface-200-800 bg-surface-50-950 px-4 sm:px-10 md:px-20"
+           border-line bg-surface px-4 sm:px-10 md:px-20"
 >
     <!-- The two branches differ only in destination, but each has to spell out its
          own resolve() call: svelte/no-navigation-without-resolve only recognizes a
@@ -39,13 +45,13 @@
         <a href={resolve('/(app)/dashboard')} class="flex items-center gap-3 no-underline">
             <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
             <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-            <span class="text-base font-bold">Hackathons</span>
+            <span class="text-section">Hackathons</span>
         </a>
     {:else}
         <a href={resolve('/')} class="flex items-center gap-3 no-underline">
             <img src="/logos/sdsc_white.svg" alt="SDSC" class="hidden h-7 dark:block" />
             <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
-            <span class="text-base font-bold">Hackathons</span>
+            <span class="text-section">Hackathons</span>
         </a>
     {/if}
 
@@ -53,14 +59,22 @@
         {#if session?.user}
             <a
                 href={resolve('/(app)/dashboard')}
-                class="text-sm font-medium no-underline hover:text-primary-500"
+                aria-current={onHackathons ? 'page' : undefined}
+                class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                       {onHackathons
+                    ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                    : 'text-ink-2'}"
             >
                 Hackathons
             </a>
         {:else}
             <a
                 href={resolve('/')}
-                class="text-sm font-medium no-underline hover:text-primary-500"
+                aria-current={onHackathons ? 'page' : undefined}
+                class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                       {onHackathons
+                    ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                    : 'text-ink-2'}"
             >
                 Hackathons
             </a>
@@ -68,13 +82,13 @@
         {#if showPublicLinks}
             <a
                 href={resolve('/')}
-                class="text-sm text-surface-400 no-underline hover:text-primary-500"
+                class="text-sm text-ink-3 no-underline hover:text-accent-ink"
             >
                 Challenges
             </a>
             <a
                 href={resolve('/')}
-                class="text-sm text-surface-400 no-underline hover:text-primary-500"
+                class="text-sm text-ink-3 no-underline hover:text-accent-ink"
             >
                 About
             </a>
@@ -82,7 +96,7 @@
         {#if isGlobalAdmin}
             <a
                 href={resolve('/(app)/manage/users')}
-                class="text-sm text-surface-400 no-underline hover:text-primary-500"
+                class="text-sm text-ink-3 no-underline hover:text-accent-ink"
             >
                 Users
             </a>
@@ -93,10 +107,13 @@
         <LightSwitch />
 
         {#if session?.user}
+            <!-- A quiet outlined tile, not an accent-filled disc: a monogram is
+                 identity, not an action to be drawn toward. The header's accent
+                 is spent on the active-nav underline instead. -->
             <div class="flex min-w-0 items-center gap-2">
                 <span
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-                           preset-filled-primary-500 text-sm font-bold"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-field
+                           border border-line-strong bg-raised text-sm font-semibold text-ink-2"
                     title={userName}
                 >
                     {initial}
@@ -107,14 +124,17 @@
             </div>
             <button
                 onclick={() => signOut({ callbackUrl: '/' })}
-                class="btn btn-sm preset-tonal-surface"
+                class="btn btn-sm btn-quiet"
             >
                 Log out
             </button>
         {:else}
+            <!-- Outline, not solid: the bar sits over public pages that carry
+                 their own CTA, and shell chrome does not outrank the thing the
+                 page is for. -->
             <button
                 onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
-                class="btn btn-sm preset-filled-primary-500"
+                class="btn btn-sm btn-outline-accent"
             >
                 Log in
             </button>

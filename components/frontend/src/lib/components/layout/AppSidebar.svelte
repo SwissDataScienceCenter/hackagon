@@ -133,13 +133,13 @@
 <!-- The (app) shell has no header, so the drawer needs its own trigger on
      mobile: without this bar there is no way to reach the navigation there. -->
 <div
-    class="flex h-14 items-center gap-3 border-b border-surface-200-800 bg-surface-50-950 px-4
+    class="flex h-14 items-center gap-3 border-b border-line bg-surface px-4
            md:hidden"
 >
     <button
         onclick={() => (mobileOpen = true)}
         aria-label="Open navigation"
-        class="btn-icon btn-sm"
+        class="btn btn-icon btn-sm"
     >
         <Menu class="h-5 w-5" />
     </button>
@@ -153,7 +153,7 @@
 {#if mobileOpen}
     <button
         aria-label="Close navigation"
-        class="fixed inset-0 z-30 bg-black/50 md:hidden"
+        class="fixed inset-0 z-30 bg-scrim md:hidden"
         onclick={() => (mobileOpen = false)}
     ></button>
 {/if}
@@ -166,13 +166,13 @@
      stretching it back out. -->
 <aside
     class="fixed inset-y-0 left-0 z-40 flex h-screen w-64 -translate-x-full flex-col
-           border-r border-surface-200-800 bg-surface-50-950 transition-transform
+           border-r border-line bg-surface transition-transform
            duration-200 md:sticky md:top-0 md:bottom-auto md:z-auto md:h-screen
            md:translate-x-0 md:self-start md:transition-[width]
            {mobileOpen ? 'translate-x-0' : ''} {collapsed ? 'md:w-16' : 'md:w-64'}"
 >
     <div
-        class="flex h-14 shrink-0 items-center gap-3 border-b border-surface-200-800 px-4
+        class="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4
                {effectiveCollapsed ? 'justify-center px-0' : 'justify-between'}"
     >
         {#if effectiveCollapsed}
@@ -206,14 +206,14 @@
             <button
                 onclick={toggleCollapsed}
                 aria-label="Collapse sidebar"
-                class="btn-icon btn-sm hidden md:inline-flex"
+                class="btn btn-icon btn-sm hidden md:inline-flex"
             >
                 <PanelLeftClose class="h-4 w-4" />
             </button>
             <button
                 onclick={() => (mobileOpen = false)}
                 aria-label="Close navigation"
-                class="btn-icon btn-sm md:hidden"
+                class="btn btn-icon btn-sm md:hidden"
             >
                 <X class="h-4 w-4" />
             </button>

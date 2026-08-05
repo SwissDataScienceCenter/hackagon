@@ -96,13 +96,13 @@
      names the hackathon rather than repeating the wordmark, which NavBar above it
      already carries. -->
 <div
-    class="flex h-12 items-center gap-3 border-b border-surface-200-800 bg-surface-50-950 px-4
+    class="flex h-12 items-center gap-3 border-b border-line bg-surface px-4
            md:hidden"
 >
     <button
         onclick={() => (mobileOpen = true)}
         aria-label="Open hackathon navigation"
-        class="btn-icon btn-sm"
+        class="btn btn-icon btn-sm"
     >
         <Menu class="h-5 w-5" />
     </button>
@@ -112,7 +112,7 @@
 {#if mobileOpen}
     <button
         aria-label="Close hackathon navigation"
-        class="fixed inset-0 z-30 bg-black/50 md:hidden"
+        class="fixed inset-0 z-30 bg-scrim md:hidden"
         onclick={() => (mobileOpen = false)}
     ></button>
 {/if}
@@ -124,13 +124,13 @@
      out. -->
 <aside
     class="fixed inset-y-0 left-0 z-40 flex h-screen w-64 -translate-x-full flex-col
-           border-r border-surface-200-800 bg-surface-50-950 transition-transform
+           border-r border-line bg-surface transition-transform
            duration-200 md:sticky md:top-14 md:bottom-auto md:z-auto
            md:h-[calc(100vh-3.5rem)] md:translate-x-0 md:self-start md:transition-[width]
            {mobileOpen ? 'translate-x-0' : ''} {collapsed ? 'md:w-16' : 'md:w-64'}"
 >
     <div
-        class="flex h-12 shrink-0 items-center gap-2 border-b border-surface-200-800 px-4
+        class="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4
                {effectiveCollapsed ? 'justify-center px-0' : 'justify-between'}"
     >
         {#if effectiveCollapsed}
@@ -138,7 +138,7 @@
                 onclick={toggleCollapsed}
                 title="Expand sidebar"
                 aria-label="Expand sidebar"
-                class="btn-icon btn-sm"
+                class="btn btn-icon btn-sm"
             >
                 <PanelLeftOpen class="h-4 w-4" />
             </button>
@@ -151,7 +151,7 @@
             <div class="flex min-w-0 items-baseline gap-2">
                 <span class="min-w-0 truncate text-sm font-bold">{hackathonName}</span>
                 {#if badge}
-                    <span class="badge shrink-0 preset-tonal-primary text-[0.625rem]">
+                    <span class="badge shrink-0 badge-accent">
                         {badge}
                     </span>
                 {/if}
@@ -159,14 +159,14 @@
             <button
                 onclick={toggleCollapsed}
                 aria-label="Collapse sidebar"
-                class="btn-icon btn-sm hidden md:inline-flex"
+                class="btn btn-icon btn-sm hidden md:inline-flex"
             >
                 <PanelLeftClose class="h-4 w-4" />
             </button>
             <button
                 onclick={() => (mobileOpen = false)}
                 aria-label="Close hackathon navigation"
-                class="btn-icon btn-sm md:hidden"
+                class="btn btn-icon btn-sm md:hidden"
             >
                 <X class="h-4 w-4" />
             </button>

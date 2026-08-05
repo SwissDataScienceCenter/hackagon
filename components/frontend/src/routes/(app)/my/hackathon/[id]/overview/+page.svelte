@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
+    import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -14,8 +15,8 @@
     // rather than the two the placeholder hardcoded.
     function trackTone(i: number): { box: string; text: string } {
         return i % 2 === 0
-            ? { box: 'bg-primary-500/5 dark:bg-primary-950', text: 'text-primary-700-300' }
-            : { box: 'bg-secondary-500/5 dark:bg-secondary-950', text: 'text-secondary-700-300' };
+            ? { box: 'bg-accent/10', text: 'text-accent-ink' }
+            : { box: 'bg-info/10', text: 'text-info-ink' };
     }
 </script>
 
@@ -28,6 +29,7 @@
     {#if data.myTeam}
         <ParticipationCard
             membershipLabel={data.membershipLabel}
+            membershipIsWaiting={data.membershipIsWaiting}
             teamName={data.myTeam.name}
             teamRole={data.myTeam.role}
             teamMemberCount={data.myTeam.memberCount}
@@ -36,41 +38,43 @@
             projectStatus={data.myTeam.projectStatus}
         />
     {:else}
-        <div class="card preset-outlined-surface-200-800 p-5">
+        <div class="card p-5">
             <div class="mb-3 flex items-center justify-between">
-                <h2 class="text-base font-bold">Your Participation</h2>
-                <span class="badge preset-filled-primary-500 text-xs font-bold uppercase">
+                <h2 class="text-section">Your Participation</h2>
+                <span class="badge {membershipBadgeVariant(data.membershipIsWaiting)}">
                     {data.membershipLabel}
                 </span>
             </div>
-            <p class="text-sm text-surface-700-300">
+            <p class="text-sm text-ink-2">
                 You are not on a team yet.
             </p>
         </div>
     {/if}
 
-    <div class="card preset-outlined-surface-200-800 p-5">
-        <h2 class="mb-3 text-base font-bold">About</h2>
+    <div class="card p-5">
+        <h2 class="mb-3 text-section">About</h2>
         {#if data.hackathon.description}
-            <p class="text-sm leading-relaxed text-surface-700-300">{data.hackathon.description}</p>
+            <p class="text-sm leading-relaxed text-ink-2">{data.hackathon.description}</p>
         {:else}
-            <p class="text-sm text-surface-500">No description provided.</p>
+            <p class="text-sm text-ink-3">No description provided.</p>
         {/if}
     </div>
 
-    <div class="card preset-outlined-surface-200-800 p-5">
+    <div class="card p-5">
         <div class="mb-4 flex items-center justify-between">
-            <h2 class="text-base font-bold">Projects</h2>
-            <span class="text-xs text-surface-500">{projectCountLabel}</span>
+            <h2 class="text-section">Projects</h2>
+            <span class="text-xs text-ink-3">{projectCountLabel}</span>
         </div>
 
         {#if data.trackCounts.length > 0}
             <div class="mb-4 flex flex-wrap gap-3">
                 {#each data.trackCounts as track, i (track.id)}
                     {@const tone = trackTone(i)}
-                    <div class="flex min-w-[8rem] flex-1 flex-col gap-1 p-3 {tone.box}">
-                        <span class="text-xs font-bold uppercase {tone.text}">{track.name}</span>
-                        <span class="text-xs text-surface-500">
+                    <div
+                        class="flex min-w-[8rem] flex-1 flex-col gap-1 rounded-card p-3 {tone.box}"
+                    >
+                        <span class="meta {tone.text}">{track.name}</span>
+                        <span class="tnum text-xs text-ink-3">
                             {track.count === 1 ? '1 project' : `${track.count} projects`}
                         </span>
                     </div>
@@ -79,7 +83,7 @@
         {/if}
 
         {#if data.previewProjects.length === 0}
-            <p class="m-0 py-3 text-sm text-surface-500">
+            <p class="m-0 py-3 text-sm text-ink-3">
                 No projects have been approved yet.
             </p>
         {:else}
@@ -89,13 +93,13 @@
               row that plainly is not. The link below reaches the real list.
             -->
             {#each data.previewProjects as project (project.id)}
-                <div class="flex items-start gap-3 border-t border-surface-200-800 py-3">
-                    <div class="h-12 w-12 shrink-0 bg-surface-100-900"></div>
+                <div class="flex items-start gap-3 border-t border-line py-3">
+                    <div class="h-12 w-12 shrink-0 bg-raised"></div>
                     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span class="text-xs font-semibold">{project.num}. {project.title}</span>
-                        <span class="truncate text-xs text-surface-500">{project.description}</span>
+                        <span class="truncate text-xs text-ink-3">{project.description}</span>
                         {#if project.creator}
-                            <span class="text-xs text-surface-500">Proposed by {project.creator}</span>
+                            <span class="text-xs text-ink-3">Proposed by {project.creator}</span>
                         {/if}
                     </div>
                 </div>
@@ -105,7 +109,7 @@
                  only recognizes it at the href, not via a $derived. -->
             <a
                 href={resolve(`/my/hackathon/${data.hackathon.id}/projects`)}
-                class="mt-2 block text-center text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+                class="mt-2 block text-center text-xs font-semibold text-accent-ink no-underline hover:underline"
             >
                 View all {projectCountLabel} →
             </a>

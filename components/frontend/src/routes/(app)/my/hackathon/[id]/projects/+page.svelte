@@ -1,7 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
-    import { projectStatusLabel, projectStatusBadgePreset } from '$lib/utils/projectStatus';
+    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -34,20 +34,20 @@
     <!-- No propose CTA here: proposing belongs to Proposals, which is the page
          that then tracks what you put forward. One entry point, not two. -->
     <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-lg font-bold text-surface-950-50">All Projects</h2>
-        <span class="text-xs text-surface-500">
+        <h2 class="m-0 text-title text-ink">All Projects</h2>
+        <span class="text-xs text-ink-3">
             {countLabel}{#if data.mayReview && pendingCount > 0}
                 &middot; {pendingCount} awaiting review{/if}
         </span>
     </div>
 
     {#if form?.message}
-        <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
     {/if}
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.projects.length === 0}
-            <p class="m-0 py-6 text-center text-sm text-surface-500">
+            <p class="m-0 py-6 text-center text-sm text-ink-3">
                 {#if data.mayReview}
                     No projects have been proposed yet.
                 {:else}
@@ -64,8 +64,8 @@
                     track={project.track}
                     imageUrl={project.imageUrl}
                     badge={projectStatusLabel(project.status)}
-                    badgePreset={projectStatusBadgePreset(project.status) ??
-                        'preset-tonal-surface'}
+                    badgeVariant={projectStatusBadgeVariant(project.status) ??
+                        'badge-neutral'}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}
@@ -79,7 +79,7 @@
                                 href={resolve(
                                     `/my/hackathon/${data.hackathonId}/projects/${project.id}/edit`
                                 )}
-                                class="btn btn-sm preset-tonal-surface no-underline"
+                                class="btn btn-sm btn-ghost no-underline"
                             >
                                 Edit
                             </a>
@@ -90,7 +90,7 @@
                                     <input type="hidden" name="projectId" value={project.id} />
                                     <button
                                         type="submit"
-                                        class="btn btn-sm preset-filled-primary-500"
+                                        class="btn btn-sm btn-solid"
                                     >
                                         Approve
                                     </button>
@@ -101,7 +101,7 @@
                                      TODO in +page.server.ts. -->
                                 <form method="POST" action="?/disapprove">
                                     <input type="hidden" name="projectId" value={project.id} />
-                                    <button type="submit" class="btn btn-sm preset-tonal-warning">
+                                    <button type="submit" class="btn btn-sm btn-warning">
                                         Revoke approval
                                     </button>
                                 </form>
@@ -111,14 +111,14 @@
                             {#if project.isPreferred}
                                 <form method="POST" action="?/unprefer">
                                     <input type="hidden" name="projectId" value={project.id} />
-                                    <button type="submit" class="btn btn-sm preset-tonal-success">
+                                    <button type="submit" class="btn btn-sm btn-success">
                                         &starf; Preferred
                                     </button>
                                 </form>
                             {:else}
                                 <form method="POST" action="?/prefer">
                                     <input type="hidden" name="projectId" value={project.id} />
-                                    <button type="submit" class="btn btn-sm preset-tonal-primary">
+                                    <button type="submit" class="btn btn-sm btn-accent">
                                         Prefer
                                     </button>
                                 </form>
@@ -139,9 +139,8 @@
                 <button
                     type="button"
                     onclick={() => (page = p)}
-                    class="btn btn-sm flex h-8 w-8 items-center justify-center rounded-none p-0
-                           text-xs font-semibold transition-colors
-                           {page === p ? 'preset-filled-primary-500' : 'preset-tonal-surface'}"
+                    class="btn btn-sm tnum h-8 w-8 p-0
+                           {page === p ? 'btn-accent' : 'btn-quiet'}"
                     aria-label="Page {p}"
                     aria-current={page === p ? 'page' : undefined}
                 >

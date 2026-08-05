@@ -1,14 +1,14 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
-    import { projectStatusLabel, projectStatusBadgePreset } from '$lib/utils/projectStatus';
+    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const statusText = $derived(projectStatusLabel(data.project.status));
-    const statusPreset = $derived(
-        projectStatusBadgePreset(data.project.status) ?? 'preset-tonal-surface'
+    const statusVariant = $derived(
+        projectStatusBadgeVariant(data.project.status) ?? 'badge-neutral'
     );
 
     function on(d: Date | undefined): string | undefined {
@@ -42,7 +42,7 @@
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <a
         href={resolve(`/my/hackathon/${data.hackathonId}/projects`)}
-        class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
+        class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
     >
         &larr; Back to projects
     </a>
@@ -53,7 +53,7 @@
         {#if data.project.imageUrl}
             <div
                 class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                       border-surface-200-800 bg-surface-100-900"
+                       border-line bg-raised"
             >
                 <img
                     src={data.project.imageUrl}
@@ -64,8 +64,8 @@
         {:else}
             <div
                 class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
-                       border-surface-200-800 bg-surface-200-800 text-xs font-bold
-                       text-surface-950-50"
+                       border-line bg-overlay text-xs font-bold
+                       text-ink"
             >
                 {initials}
             </div>
@@ -73,19 +73,18 @@
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <div class="flex flex-wrap items-center gap-2">
-                <h1 class="m-0 text-lg font-bold leading-snug text-surface-950-50">
+                <h1 class="m-0 text-title leading-snug text-ink">
                     {data.project.title}
                 </h1>
                 {#if statusText}
                     <span
-                        class="badge {statusPreset} shrink-0 rounded-none text-[0.625rem]
-                               font-semibold uppercase"
+                        class="badge {statusVariant} shrink-0"
                     >
                         {statusText}
                     </span>
                 {/if}
             </div>
-            <p class="m-0 text-xs leading-snug text-surface-500">
+            <p class="m-0 text-xs leading-snug text-ink-3">
                 {#if data.project.proposer}Proposed by {data.project.proposer}{/if}
                 {#if data.project.proposer && proposedOn}&middot;{/if}
                 {#if proposedOn}{proposedOn}{/if}
@@ -95,42 +94,42 @@
     </div>
 
     {#if form?.message}
-        <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
     {/if}
 
     <!-- Track and status as a labelled pair rather than more chips: this is the
          page someone opens to find out exactly these two things. -->
     <dl class="m-0 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="flex flex-col gap-1">
-            <dt class="text-xs font-semibold text-surface-500">Status</dt>
-            <dd class="m-0 text-xs text-surface-950-50">
+            <dt class="text-xs font-semibold text-ink-3">Status</dt>
+            <dd class="m-0 text-xs text-ink">
                 {statusText ?? 'Unknown'}
             </dd>
         </div>
         <div class="flex flex-col gap-1">
-            <dt class="text-xs font-semibold text-surface-500">Track</dt>
-            <dd class="m-0 text-xs text-surface-950-50">
+            <dt class="text-xs font-semibold text-ink-3">Track</dt>
+            <dd class="m-0 text-xs text-ink">
                 {data.project.track ?? 'No track'}
             </dd>
         </div>
     </dl>
 
     <div class="flex flex-col gap-1">
-        <h2 class="m-0 text-xs font-semibold uppercase text-surface-500">Description</h2>
+        <h2 class="m-0 meta">Description</h2>
         {#if data.project.description}
             <!-- Rendered, not truncated: the proposal is written in the markdown
                  editor on the edit form, and this is the one place it is read in
                  full before a decision. -->
-            <div class="text-xs leading-relaxed text-surface-600-400">
+            <div class="text-xs leading-relaxed text-ink-2">
                 <MarkdownContent content={data.project.description} />
             </div>
         {:else}
-            <p class="m-0 text-xs text-surface-500">No description was given.</p>
+            <p class="m-0 text-xs text-ink-3">No description was given.</p>
         {/if}
     </div>
 
     {#if data.mayApprove || data.mayRevoke || data.mayEdit || data.mayPrefer}
-        <div class="flex flex-wrap items-center gap-2 border-t border-surface-200-800 pt-6">
+        <div class="flex flex-wrap items-center gap-2 border-t border-line pt-6">
             {#if data.mayApprove}
                 <!-- A plain form post, like every other write on this site:
                      `load` re-runs afterwards, so the badge above turns Approved
@@ -138,7 +137,7 @@
 
                      No reject button: see the TODO in +page.server.ts. -->
                 <form method="POST" action="?/approve">
-                    <button type="submit" class="btn btn-sm preset-filled-primary-500">
+                    <button type="submit" class="btn btn-sm btn-solid">
                         Approve project
                     </button>
                 </form>
@@ -148,7 +147,7 @@
                      rather than turning it down. See the TODO in
                      +page.server.ts. -->
                 <form method="POST" action="?/disapprove">
-                    <button type="submit" class="btn btn-sm preset-tonal-warning">
+                    <button type="submit" class="btn btn-sm btn-warning">
                         Revoke approval
                     </button>
                 </form>
@@ -158,12 +157,12 @@
                      lasts until the next load, because no read path exists to
                      render it from. -->
                 {#if form?.preferred}
-                    <span class="text-xs font-semibold text-success-700-300">
+                    <span class="text-xs font-semibold text-success-ink">
                         Marked as preferred
                     </span>
                 {:else}
                     <form method="POST" action="?/prefer">
-                        <button type="submit" class="btn btn-sm preset-tonal-primary">
+                        <button type="submit" class="btn btn-sm btn-accent">
                             Mark as preferred
                         </button>
                     </form>
@@ -174,7 +173,7 @@
                     href={resolve(
                         `/my/hackathon/${data.hackathonId}/projects/${data.project.id}/edit`
                     )}
-                    class="btn btn-sm preset-tonal-surface no-underline"
+                    class="btn btn-sm btn-ghost no-underline"
                 >
                     Edit
                 </a>

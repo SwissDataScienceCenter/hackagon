@@ -23,7 +23,8 @@ Detailed guidance lives in skills, not here. This file is orientation only.
 | Find what services/RPCs exist, what a request looks like, whether it works, call an endpoint | **backend-api-explore**     |
 | Write or change a Go handler, proto, DB schema, RBAC rule                                    | **backend-service-dev**     |
 | Add or change dev fixture data                                                               | **backend-seeding**         |
-| Build UI — routes, components, Svelte 5, styling                                             | **frontend-dev**            |
+| Build UI — routes, components, Svelte 5                                                      | **frontend-dev**            |
+| Style anything — colours, type, buttons/badges/cards                                         | **frontend-theme**          |
 | Wire a route to a gRPC service, handle auth/errors                                           | **frontend-backend-wiring** |
 
 Backend skills are at `.claude/skills/`; frontend skills at
