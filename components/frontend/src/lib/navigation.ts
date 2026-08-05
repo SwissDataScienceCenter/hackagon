@@ -9,6 +9,7 @@ import Users from "lucide-svelte/icons/users"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UsersRound from "lucide-svelte/icons/users-round"
+import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import CalendarPlus from "lucide-svelte/icons/calendar-plus"
@@ -279,12 +280,19 @@ const MEMBER = 2
  * other. What an owner gains is additive and grouped under one heading that
  * explains why they can see it.
  *
- * Mirrors `mayManagePhases` (`$lib/server/hackathon/capabilities.ts`) exactly,
- * and can: casbin grants `phase:write` to `Owner` outright and to an admin
- * through the global escape hatch, with no capability gating it, so there is no
- * state where this offers a link that then refuses. `isWaiting` is deliberately
- * not consulted — the backend does not consult it either, and an owner is not
- * waitlisted in practice.
+ * One gate covers every entry because the backend applies the same one to each:
+ * `mayManagePhases` (`$lib/server/hackathon/capabilities.ts`) and the team
+ * management route's own load both reduce to owner-or-admin, and casbin grants
+ * the underlying `phase:write` to `Owner` outright and to an admin through the
+ * global escape hatch, with no capability gating it. So there is no state where
+ * this offers a link that then refuses. Add a per-entry gate the day an entry
+ * needs a narrower one, rather than widening this one. `isWaiting` is
+ * deliberately not consulted — the backend does not consult it either, and an
+ * owner is not waitlisted in practice.
+ *
+ * Entries follow the order of the participant entries they extend, so the two
+ * sections read down the page in the same sequence rather than as two unrelated
+ * lists.
  *
  * Deliberately short, and deliberately not padded with stubs: `memberNav` lists
  * only routes that exist and this follows it. Hackathon settings and page
@@ -299,6 +307,20 @@ export function manageNav(
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
   return [
+    // Nested under the participant Teams route, so `activeNavId`'s longest match
+    // lights this entry and not that one while the page is open — the same
+    // mechanism New Phase relies on below.
+    //
+    // Labelled for the page it opens rather than trimmed to "Teams": the
+    // heading already says Manage, but an entry whose label repeats a
+    // participant entry's verbatim is worse than one that repeats the heading,
+    // and this way the label matches the `<h2>` it lands on.
+    {
+      id: "manage:teams",
+      label: "Manage Teams",
+      icon: UserRoundCog,
+      href: resolve(`/my/hackathon/${hackathonId}/teams/manage`),
+    },
     // A create route rather than a landing page, following `homeNav`'s Create
     // Hackathon: the timeline itself is already in the participant nav, so a
     // second entry pointing at the same URL would be the one thing this split is

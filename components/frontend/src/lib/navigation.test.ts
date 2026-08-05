@@ -385,37 +385,44 @@ describe("manageNav", () => {
     ).toEqual([])
   })
 
-  it("offers phase creation to an owner", () => {
+  // Order follows the participant entries these extend — Teams before Timeline —
+  // so the two sections read down the page in the same sequence.
+  it("offers team and phase management to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
+      "manage:teams",
       "manage:phase-create",
     ])
   })
 
   // Casbin's global escape hatch grants an admin `phase:write` on any hackathon,
-  // joined or not — the same condition mayManagePhases mirrors.
-  it("offers phase creation to an admin who never joined", () => {
+  // joined or not — the same condition mayManagePhases mirrors. The teams manage
+  // route's own load takes the same owner-or-admin pair.
+  it("offers the same to an admin who never joined", () => {
     expect(manageNav("hack-1", undefined, true).map((i) => i.id)).toEqual([
+      "manage:teams",
       "manage:phase-create",
     ])
   })
 
-  it("links phase creation to the route that exists", () => {
-    expect(manageNav("hack-1", owner, false).at(0)?.href).toBe(
+  it("links every entry to a route that exists", () => {
+    expect(manageNav("hack-1", owner, false).map((i) => i.href)).toEqual([
+      "/my/hackathon/hack-1/teams/manage",
       "/my/hackathon/hack-1/timeline/new",
-    )
+    ])
   })
 
   // Mirrors the backend, which does not consult isWaiting for phase:write either.
   it("does not withhold management from a waitlisted owner", () => {
     expect(
       manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(1)
+    ).toHaveLength(2)
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not
   // collide and the deeper Manage route has to win over the member entry it nests
-  // under — otherwise Timeline stays lit while you are creating a phase.
-  it("does not collide with memberNav, and wins the highlight on its own route", () => {
+  // under — otherwise Timeline stays lit while you are creating a phase, and Teams
+  // while you are assigning them.
+  it("does not collide with memberNav, and wins the highlight on its own routes", () => {
     const items = [
       ...memberNav("hack-1", [{ id: "p1", title: "Welcome", visible: true }]),
       ...manageNav("hack-1", owner, false),
@@ -427,6 +434,12 @@ describe("manageNav", () => {
     )
     expect(activeNavId("/my/hackathon/hack-1/timeline/new", items)).toBe(
       "manage:phase-create",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/teams", items)).toBe(
+      "member:teams",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/teams/manage", items)).toBe(
+      "manage:teams",
     )
   })
 })

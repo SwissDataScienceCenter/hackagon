@@ -1,21 +1,13 @@
 import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
-import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
-import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 
+// No owner/admin check here: the way into team management is the sidebar's
+// Manage section, which gates itself on the same subjects (see $lib/navigation's
+// manageNav). This page is the participant view and reads the same for everyone.
 export const load: PageServerLoad = async (event) => {
-  const { hackathon, myMembership } = await event.parent()
+  const { hackathon } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
   const platformUserId = event.locals.platformUser?.id
-
-  const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
-    GlobalRole.GLOBAL_ROLE_ADMIN,
-  )
-  const isHackathonOwner =
-    myMembership?.role === HackathonRole.HACKATHON_ROLE_OWNER
-  // Same subjects the manage route's load gates on — shown here only to
-  // decide whether to offer the link into it.
-  const mayManageTeams = isHackathonOwner || isAdmin
 
   // Teams are the one collection `hackathon.get` does not nest, so this page
   // needs its own call. No error translation here: `TeamService.List` gates on
@@ -53,5 +45,5 @@ export const load: PageServerLoad = async (event) => {
     }
   })
 
-  return { teams: rows, hackathonId: event.params.id, mayManageTeams }
+  return { teams: rows, hackathonId: event.params.id }
 }

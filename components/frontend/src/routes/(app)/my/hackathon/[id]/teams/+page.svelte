@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { Plus, Search } from 'lucide-svelte';
-    import { resolve } from '$app/paths';
+    import { Search } from 'lucide-svelte';
     import TeamCard from '$lib/components/hackathon/TeamCard.svelte';
     import type { PageData } from './$types';
 
@@ -41,7 +40,12 @@
 </script>
 
 <!--
-  Aligned with participants/projects: same shell; title + count left; Create Team + search right
+  Aligned with participants/projects: same shell; title + count left; search right.
+
+  No Manage Teams control here: it is an organiser action and lives in the
+  sidebar's Manage section (see $lib/navigation's manageNav), which is the one
+  place an owner's extra capabilities are collected. Nor a Create Team one —
+  teams are formed on the manage page, by assigning people to a project.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -51,23 +55,8 @@
         </div>
         <div
             class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
-                   sm:justify-end sm:gap-2"
+                   sm:justify-end"
         >
-            {#if data.mayManageTeams}
-                <a
-                    href={resolve(`/my/hackathon/${data.hackathonId}/teams/manage`)}
-                    class="btn btn-ghost w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
-                >
-                    Manage Teams
-                </a>
-            {/if}
-            <a
-                href="#create-team"
-                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[7.5rem]"
-            >
-                <Plus class="h-3.5 w-3.5 shrink-0" />
-                Create Team
-            </a>
             <div class="relative w-full sm:w-72">
                 <Search
                     class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
