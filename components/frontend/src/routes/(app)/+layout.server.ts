@@ -1,5 +1,6 @@
 import { redirect } from "@sveltejs/kit"
 import type { LayoutServerLoad } from "./$types"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 
 // Every authenticated route lives under (app), so this load is the single choke
 // point for "you must be signed in". hooks.server.ts already guards by path
@@ -12,5 +13,17 @@ export const load: LayoutServerLoad = async (event) => {
     redirect(303, `/?returnTo=${returnTo}`)
   }
 
-  return { session: event.locals.session }
+  // Global roles drive which entries the account menu shows. They are the
+  // backend's own answer (casbin g2, surfaced by WhoAmI), not a client guess —
+  // every page behind them enforces independently, so this only avoids
+  // offering doors that will not open.
+  const roles = event.locals.platformUser?.roles ?? []
+
+  return {
+    session: event.locals.session,
+    isAdmin: roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN),
+    canCreateHackathon:
+      roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN) ||
+      roles.includes(GlobalRole.GLOBAL_ROLE_HACKATHON_ORGANIZER),
+  }
 }

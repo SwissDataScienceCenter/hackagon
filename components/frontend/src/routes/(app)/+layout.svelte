@@ -9,7 +9,11 @@
 </script>
 
 <div class="flex min-h-screen flex-col">
-    <NavBar session={data.session ?? null} />
+    <NavBar
+        session={data.session ?? null}
+        isAdmin={data.isAdmin}
+        canCreateHackathon={data.canCreateHackathon}
+    />
     <main class="flex-1">
         {@render children()}
     </main>
