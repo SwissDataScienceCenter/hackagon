@@ -1,10 +1,21 @@
 import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 
 export const load: PageServerLoad = async (event) => {
-  const { hackathon } = await event.parent()
+  const { hackathon, myMembership } = await event.parent()
   const { team } = requireGrpc(event.locals.grpc)
   const platformUserId = event.locals.platformUser?.id
+
+  const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
+    GlobalRole.GLOBAL_ROLE_ADMIN,
+  )
+  const isHackathonOwner =
+    myMembership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+  // Same subjects the manage route's load gates on — shown here only to
+  // decide whether to offer the link into it.
+  const mayManageTeams = isHackathonOwner || isAdmin
 
   // Teams are the one collection `hackathon.get` does not nest, so this page
   // needs its own call. No error translation here: `TeamService.List` gates on
@@ -42,5 +53,5 @@ export const load: PageServerLoad = async (event) => {
     }
   })
 
-  return { teams: rows }
+  return { teams: rows, hackathonId: event.params.id, mayManageTeams }
 }
