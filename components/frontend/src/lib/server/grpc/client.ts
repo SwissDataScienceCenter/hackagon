@@ -5,12 +5,14 @@ import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_serv
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
 import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
+import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { TeamServiceClient } from "./generated/hackathon/team_service"
 import type { PageServiceClient } from "./generated/hackathon/page_service"
 import type { ProjectServiceClient } from "./generated/hackathon/project_service"
+import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -44,6 +46,11 @@ export interface AuthorizedGrpc {
   // uses that. This client exists for the write path only — Propose and Edit,
   // which have no equivalent anywhere else.
   project: ProjectServiceClient
+  // Phases arrive nested in `hackathon.get` as well, so the participant-facing
+  // timeline needs no client. This one is for the organizer write path — Create,
+  // Edit, Delete — plus Get, which re-reads a single phase after a write rather
+  // than trusting the layout's cached tree.
+  phase: PhaseServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -64,6 +71,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     team: factory.create(TeamServiceDefinition, channel),
     page: factory.create(PageServiceDefinition, channel),
     project: factory.create(ProjectServiceDefinition, channel),
+    phase: factory.create(PhaseServiceDefinition, channel),
   }
 }
 
