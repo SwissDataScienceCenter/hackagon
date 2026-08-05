@@ -22,12 +22,22 @@
 		}
 	}
 	handle {
-		reverse_proxy dev:8081 {
-			# Same reason as Keycloak above, for a different consumer: the
-			# frontend builds absolute og:url / og:image / canonical URLs from
-			# these headers. Without them a link preview advertises
-			# http://<tunnel>/og-default.jpg, which crawlers refuse to fetch.
-			header_up X-Forwarded-Proto https
-		}
+		# Deliberately NOT X-Forwarded-Proto https here, unlike Keycloak above.
+		#
+		# Auth.js picks its cookie NAMES from whether it believes the site is
+		# secure (`__Secure-authjs.session-token` vs `authjs.session-token`).
+		# The vite dev server does not apply the header to `event.url`, so
+		# forwarding it made Auth.js see https on some requests and http on
+		# others: it wrote the session under the plain name, then looked for
+		# the `__Secure-` one and found nothing. Login through the tunnel
+		# silently dead-ended back on the public page with tokens successfully
+		# issued — the worst kind of broken.
+		#
+		# The frontend infers the public scheme itself (src/routes/
+		# +layout.server.ts) for the absolute URLs link previews need. In
+		# production the header IS the right answer, together with
+		# adapter-node's PROTOCOL_HEADER, which makes `event.url` https
+		# everywhere and keeps Auth.js consistent.
+		reverse_proxy dev:8081
 	}
 }
