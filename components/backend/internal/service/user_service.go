@@ -80,7 +80,7 @@ func (s *UserService) EditProfile(
 	ctx context.Context,
 	req *msgs.EditProfileRequest,
 ) (*msgs.EditProfileResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
+	sub, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (s *UserService) WhoAmI(
 	ctx context.Context,
 	_ *msgs.WhoAmIRequest,
 ) (*msgs.WhoAmIResponse, error) {
-	sub, claims, err := m.RequireSubject(ctx)
+	sub, claims, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (s *UserService) Register(
 	ctx context.Context,
 	_ *msgs.RegisterRequest,
 ) (*msgs.RegisterResponse, error) {
-	sub, claims, err := m.RequireSubject(ctx)
+	sub, claims, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +289,7 @@ func (s *UserService) DeleteAccount(
 	ctx context.Context,
 	_ *msgs.DeleteAccountRequest,
 ) (*msgs.DeleteAccountResponse, error) {
-	uid, _, err := m.RequireSubject(ctx)
+	uid, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}

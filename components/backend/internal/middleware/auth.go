@@ -139,6 +139,27 @@ func GetSubject(ctx context.Context) (string, error) {
 	return sub, nil
 }
 
+// RequireUser is RequireSubject for endpoints that act on a PERSON: it rejects
+// the anonymous subject.
+//
+// The auth interceptor injects `sub: "anonymous"` when there is no bearer
+// token so casbin can evaluate an unauthenticated caller as an unprivileged
+// one. That is right for reads, but the self-service user endpoints treat the
+// subject as an identity — an anonymous Register happily created a real
+// profile with keycloak_id "anonymous", which then showed up in the user
+// admin as a person and could have been granted roles.
+func RequireUser(ctx context.Context) (string, jwt.MapClaims, error) {
+	sub, claims, err := RequireSubject(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+	if sub == AnonSubject {
+		return "", nil, status.Error(codes.Unauthenticated, "sign in to do that")
+	}
+
+	return sub, claims, nil
+}
+
 func RequireSubject(ctx context.Context) (string, jwt.MapClaims, error) {
 	claims, ok := GetClaims(ctx)
 	if !ok {
