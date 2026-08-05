@@ -29,7 +29,7 @@ cascade order:
 | `@theme inline`     | maps `--hk-*` onto Tailwind's `--color-*` so utilities generate              |
 | `@theme`            | fonts, the type scale, radii, `--spacing`                                    |
 | `@layer base`       | element defaults: body, headings, anchors, focus ring, default border colour |
-| `@layer components` | `.prose` `.meta` `.tnum` `.btn` `.badge` `.card` `.field` `.chip`            |
+| `@layer components` | `.prose` `.meta` `.tnum` `.btn` `.badge` `.card` `.field` `.chip` + variants |
 
 The `inline` on the first `@theme` is load-bearing: it makes each generated
 utility resolve `--hk-*` at use time instead of baking in a copy, which is what
@@ -92,6 +92,7 @@ numeric palette and no `-100-900`-style pair.
 | `on-accent`                         | `text-on-accent`  | ink that sits on a solid accent field   |
 | `success` `warning` `danger` `info` | `bg-warning`      | status, solid                           |
 | `…-ink`                             | `text-danger-ink` | status, as text                         |
+| `scrim`                             | `bg-scrim`        | the wash behind a drawer or dialog      |
 
 Opacity modifiers work and are the right way to get a tonal field:
 `bg-warning/10`, `bg-accent/25`. Do not invent a token for it.
@@ -111,7 +112,10 @@ Opacity modifiers work and are the right way to get a tonal field:
 
 Each mono display step carries its own negative tracking, because mono needs it
 as it scales up. `h1`–`h6` already get the mono face, weight and
-`text-wrap: balance` from the base layer, so you only add a size.
+`text-wrap: balance` from the base layer, so you only add a size — and that size
+comes from the scale, never from `text-lg`/`text-xl`/`text-2xl`. Do not pair one
+with `font-bold`: the steps set weight 600 and `font-bold` silently overrides it
+to 700, which is how a scale ends up defined but unused.
 
 ## Component classes
 
@@ -125,10 +129,17 @@ as it scales up. `h1`–`h6` already get the mono face, weight and
 - **Badges** — `badge` + `badge-solid`, `badge-accent`, `badge-outline-accent`,
   `badge-neutral`, `badge-success`, `badge-warning`, `badge-danger`,
   `badge-info`. `badge-icon` for a bare count.
-- **Surfaces** — `.card` (surface + hairline + 6px radius). Do not also add
-  `border border-line` or a `bg-*`; the class carries both.
-- **Inputs** — `.field`. Padding overrides compose: `class="field pl-9 pr-3"`.
-- **Chips** — `.chip`, `.chip-active`.
+- **Surfaces** — `.card` (surface + hairline + 6px radius), `.card-raised` for
+  the same card one lightness step up, which is what rows in a list sitting
+  directly on the canvas want. Do not also add `border border-line` or a `bg-*`;
+  the class carries both.
+- **Inputs** — `.field`, plus `.field-area` for anything that wraps (textareas
+  and the panes rendered beside them — it drops the fixed control height).
+  Padding overrides compose: `class="field pl-9 pr-3"`.
+- **Form labels** — `.field-label`, the caption-above-input pair. Deliberately
+  not uppercase like `.meta`: it wraps the input, and `text-transform` inherits.
+- **Chips** — `.chip`, `.chip-active`. This is the segmented-control vocabulary
+  — reach for it before a pair of buttons whose selected half is `btn-solid`.
 
 ## Radius and density
 
@@ -184,6 +195,9 @@ the set is deliberately small.
 - **The mono face is an unpinned system stack**, so the app looks slightly
   different per OS. Since mono carries the identity, self-hosting one face would
   fix that; prose can stay on the system sans.
-- **Rule 1 is not yet true everywhere.** `NavBar`, `HackathonRow` and
-  `ProjectCard` were brought in line; the remaining screens have not been
-  audited for it.
+- **List-row titles sit below the scale.** Row headings in `ProjectCard`,
+  `TeamCard`, `ParticipantCard` and the submissions and timeline lists are
+  `text-sm` at the base heading weight, because the scale's smallest display
+  step (`text-section`, 17px) is too large for a dense list. They are the one
+  place a heading size does not come from the scale; a fifth step below
+  `section` would close it.
