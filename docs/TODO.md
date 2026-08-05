@@ -94,6 +94,18 @@ under it. The UI therefore confirms before submitting ("this cannot be undone").
 - [x] F3 — `PERMISSION_DENIED` → 403 on `/manage/users`; audit found and fixed
       two more unguarded loads (dashboard, submissions fan-out)
 - [ ] Votes/ballot privacy: keep individual ballots non-listable except voter+admin (see rbac matrix)
+- [ ] **Content Security Policy** — none configured today (`svelte.config.js` has no
+      `kit.csp`). It is the second line of defence behind F6: if the markdown
+      sanitizer ever has a hole, a strict `script-src 'self'` still stops the
+      injected script from executing. Sequence it right after F6, since both
+      defend the same page. Directives it must cover:
+      `script-src` (self only), `frame-src` (allowlisted video providers, for
+      the pasted-URL embeds), `img-src` (self + `data:` + the image hosts the
+      seeded editions use — Firebase Storage, SDSC CDN), `connect-src` (self;
+      plus the ingest endpoint if session replay is ever adopted),
+      `object-src 'none'`, `base-uri 'self'`.
+      Roll out with `Content-Security-Policy-Report-Only` first, watch the
+      violations for a week, then enforce.
 
 ### Contracts & polish
 - [x] B10/B11/B12 — Edit-optional semantics (team + project), modifier edges,
