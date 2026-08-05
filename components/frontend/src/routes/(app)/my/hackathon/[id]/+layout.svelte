@@ -2,6 +2,7 @@
     import { page } from '$app/stores';
     import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
+    import HackathonSidebar from '$lib/components/layout/HackathonSidebar.svelte';
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
@@ -10,9 +11,10 @@
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-    // The per-hackathon tabs moved into AppSidebar — see $lib/navigation's
-    // memberNav. Two controls listing the same eight destinations was one too
-    // many, and the sidebar is the one that survives leaving the hackathon.
+    // The per-hackathon tabs live in HackathonSidebar — see $lib/navigation's
+    // memberNav. Two controls listing the same eight destinations was one too many.
+    // The sidebar is scoped to this subtree rather than the (app) shell: outside a
+    // hackathon it had no hackathon to describe.
 
     function formatDates(startsAt: Date | undefined, endsAt: Date | undefined): string {
         if (!startsAt) return '';
@@ -63,28 +65,42 @@
     const showHero = $derived($page.route.id?.endsWith('/overview') ?? false);
 </script>
 
-{#if showHero}
-    <!--
-      TODO(backend: hackathon-venue-capacity): `venue` stays empty and
-      `participantCapacity` unset — Hackathon carries neither field. The hero
-      then shows the member count with no denominator and no location line.
-      Nothing to change here once the fields land beyond passing them through.
-    -->
-    <HeroCompact
-        {title}
-        {dates}
-        venue=""
-        imageUrl={hackathon.logo}
-        {participantCount}
-        organizers={[]}
-        badges={heroBadges}
+<div class="flex flex-col md:flex-row">
+    <HackathonSidebar
+        hackathonId={hackathon.id}
+        hackathonName={hackathon.name}
+        pages={data.hackathonPages}
+        membership={data.myMembership}
+        isGlobalAdmin={data.isGlobalAdmin}
     />
 
-    {#if phases.length > 0}
-        <PhaseTimeline {phases} />
-    {/if}
-{/if}
+    <!-- min-w-0 so a wide child (a table, a code block) shrinks inside the column
+         instead of pushing the sidebar off screen. -->
+    <div class="min-w-0 flex-1">
+        {#if showHero}
+            <!--
+              TODO(backend: hackathon-venue-capacity): `venue` stays empty and
+              `participantCapacity` unset — Hackathon carries neither field. The hero
+              then shows the member count with no denominator and no location line.
+              Nothing to change here once the fields land beyond passing them through.
+            -->
+            <HeroCompact
+                {title}
+                {dates}
+                venue=""
+                imageUrl={hackathon.logo}
+                {participantCount}
+                organizers={[]}
+                badges={heroBadges}
+            />
 
-<div class="mx-auto w-full max-w-7xl">
-    {@render children()}
+            {#if phases.length > 0}
+                <PhaseTimeline {phases} />
+            {/if}
+        {/if}
+
+        <div class="mx-auto w-full max-w-7xl">
+            {@render children()}
+        </div>
+    </div>
 </div>

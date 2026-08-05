@@ -1,8 +1,6 @@
 <script lang="ts">
-    import {
-        Bell,
-        UserPlus,
-    } from 'lucide-svelte';
+    import { resolve } from '$app/paths';
+    import Plus from 'lucide-svelte/icons/plus';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { statusLabel, statusBadgePreset, membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
 
@@ -28,9 +26,16 @@
         session: SessionProp | null | undefined;
         myHackathons: HackathonEntry[];
         otherHackathons: HackathonEntry[];
+        /**
+         * Whether to offer hackathon creation. Mirrors the backend's own
+         * `hackathon:create` — organizers and, via the admin escape hatch,
+         * admins — so the button never lands anyone on a 403. The action is
+         * still the backend's to refuse; this only decides whether to offer it.
+         */
+        canCreate?: boolean;
     }
 
-    const { session, myHackathons, otherHackathons }: Props = $props();
+    const { session, myHackathons, otherHackathons, canCreate = false }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
     const GRADIENTS = [
@@ -56,21 +61,31 @@
     }
 </script>
 
-<!-- Welcome Banner -->
-<div class="px-4 py-8 sm:px-10 md:px-20">
+<!-- Welcome Banner. Creating a hackathon rides here rather than beside "Your
+     hackathons": it is the one action on this page that makes a new one rather
+     than acting on the lists below. -->
+<div class="flex flex-wrap items-start justify-between gap-4 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
         <h1 class="text-2xl font-bold">Welcome back, {userName}</h1>
         <p class="text-sm text-surface-500">
             You are connected to {myHackathons.length} hackathon{myHackathons.length === 1 ? '' : 's'}
         </p>
     </div>
+
+    {#if canCreate}
+        <a
+            href={resolve('/(app)/hackathons/create')}
+            class="btn btn-sm preset-filled-primary-500 no-underline"
+        >
+            <Plus class="h-4 w-4" />
+            Create Hackathon
+        </a>
+    {/if}
 </div>
 
-<!-- Body: main + sidebar -->
-<div class="flex gap-6 px-4 py-8 sm:px-10 md:px-20">
-
-    <!-- Main column -->
-    <div class="flex flex-1 flex-col gap-6">
+<!-- Body -->
+<div class="px-4 py-8 sm:px-10 md:px-20">
+    <div class="flex flex-col gap-6">
 
         <!-- Your hackathons -->
         <section class="flex flex-col gap-4">
@@ -139,39 +154,5 @@
                 </div>
             {/if}
         </section>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="flex w-80 shrink-0 flex-col gap-6">
-
-        <!-- Notifications -->
-        <div class="card preset-outlined-surface-200-800 overflow-hidden">
-            <div
-                class="flex h-10 items-center justify-between border-b border-surface-200-800 px-4"
-            >
-                <span class="text-sm font-semibold">Notifications</span>
-                <span class="badge-icon preset-filled-primary-500 text-xs">
-                    2
-                </span>
-            </div>
-            <div class="flex items-start gap-3 border-b border-surface-200-800 p-4">
-                <Bell class="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-500" />
-                <div class="flex flex-col gap-1">
-                    <p class="text-xs leading-snug">
-                        Project proposals are due in 5 days for ORD Hackathon 2026.
-                    </p>
-                    <span class="text-xs text-surface-500">2 hours ago</span>
-                </div>
-            </div>
-            <div class="flex items-start gap-3 p-4">
-                <UserPlus class="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary-500" />
-                <div class="flex flex-col gap-1">
-                    <p class="text-xs leading-snug">
-                        You were added to Team DataFlow by Carlos.
-                    </p>
-                    <span class="text-xs text-surface-500">1 day ago</span>
-                </div>
-            </div>
-        </div>
     </div>
 </div>

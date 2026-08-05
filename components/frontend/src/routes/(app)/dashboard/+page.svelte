@@ -5,5 +5,14 @@
 </script>
 
 <div class="mx-auto w-full max-w-7xl">
-    <DashboardView session={data.session} myHackathons={data.myHackathons} otherHackathons={data.otherHackathons} />
+    <!-- The two role flags come from (app)/+layout.server.ts, which reads them off
+         the casbin roles WhoAmI already put on locals — no extra RPC here. Same
+         pair `homeNav` gates Create Hackathon on, since it is the same backend
+         permission. -->
+    <DashboardView
+        session={data.session}
+        myHackathons={data.myHackathons}
+        otherHackathons={data.otherHackathons}
+        canCreate={data.isGlobalAdmin || data.isHackathonOrganizer}
+    />
 </div>

@@ -220,10 +220,13 @@ describe("homeNav", () => {
     isHackathonOrganizer: boolean
   }) => homeNav(roles).map((i) => i.id)
 
-  it("offers only the dashboard to a plain user", () => {
-    expect(ids({ isGlobalAdmin: false, isHackathonOrganizer: false })).toEqual([
-      "home:dashboard",
-    ])
+  // Nothing here acts on the collection for a plain user, and the dashboard is
+  // the wordmark's job — so the section has no entries at all and the caller
+  // must not render a heading over them.
+  it("is empty for a plain user", () => {
+    expect(ids({ isGlobalAdmin: false, isHackathonOrganizer: false })).toEqual(
+      [],
+    )
   })
 
   it("offers hackathon creation to an organiser", () => {
