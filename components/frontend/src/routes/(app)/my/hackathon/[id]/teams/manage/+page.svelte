@@ -1,7 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
-    import { GripVertical, Pencil, Trash2, X } from 'lucide-svelte';
+    import { Check, GripVertical, Pencil, Trash2, X } from 'lucide-svelte';
     import type { ActionData, PageData } from './$types';
 
     type Person = { id: string; name: string; preferredTitles: string[] };
@@ -136,12 +136,16 @@
                bg-surface-50-950 px-2 py-1 text-xs text-surface-950-50
                active:cursor-grabbing"
         class:opacity-40={draggedId === person.id}
-        title="Drag onto a team to assign"
+        title={from === POOL
+            ? 'Drag onto a team to assign'
+            : person.preferredTitles.length > 0
+              ? `Prefers: ${person.preferredTitles.join(', ')}`
+              : undefined}
     >
         <GripVertical class="mt-0.5 size-3 shrink-0 text-surface-400" />
         <div class="flex min-w-0 flex-col">
             <span class="min-w-0 truncate">{person.name}</span>
-            {#if person.preferredTitles.length > 0}
+            {#if from === POOL && person.preferredTitles.length > 0}
                 <span class="min-w-0 truncate text-[0.65rem] text-surface-500">
                     Prefers: {person.preferredTitles.join(', ')}
                 </span>
@@ -227,7 +231,7 @@
                                             <form
                                                 method="POST"
                                                 action="?/renameTeam"
-                                                class="flex-1"
+                                                class="flex flex-1 items-center gap-1"
                                                 use:enhance={() => {
                                                     return async ({ result, update }) => {
                                                         if (result.type !== 'failure') {
@@ -249,11 +253,28 @@
                                                     onkeydown={(e) => {
                                                         if (e.key === 'Escape') cancelEdit();
                                                     }}
-                                                    class="h-6 w-full min-w-0 border
+                                                    class="h-6 min-w-0 flex-1 border
                                                            border-surface-200-800 bg-surface-50-950 px-1
                                                            text-xs text-surface-950-50
                                                            focus:border-primary-500 focus:outline-none"
                                                 />
+                                                <button
+                                                    type="submit"
+                                                    class="shrink-0 text-surface-400 hover:text-success-500"
+                                                    aria-label="Save name"
+                                                    title="Save"
+                                                >
+                                                    <Check class="size-3" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="shrink-0 text-surface-400 hover:text-error-500"
+                                                    aria-label="Cancel rename"
+                                                    title="Cancel"
+                                                    onclick={cancelEdit}
+                                                >
+                                                    <X class="size-3" />
+                                                </button>
                                             </form>
                                         {:else}
                                             <span

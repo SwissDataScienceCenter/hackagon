@@ -95,7 +95,7 @@ export const load: PageServerLoad = async (event) => {
 export const actions: Actions = {
   createTeam: async (event) => {
     // No `parent()` here — actions get a plain `RequestEvent`, not a load
-    // event — so the project/track lookup this needs re-fetches via `hackathon.get`.
+    // event — so the project lookup this needs re-fetches via `hackathon.get`.
     const { team, hackathon: hackathonClient } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
@@ -111,10 +111,7 @@ export const actions: Actions = {
     if (!hackathon || !proj) {
       return fail(404, { message: "Project not found" })
     }
-    const track = proj.trackId
-      ? hackathon.tracks.find((t) => t.id === proj.trackId)
-      : undefined
-    const base = `Team ${initialsOf(track?.name ?? proj.title)}`
+    const base = `Team ${initialsOf(proj.title)}`
 
     const { teams: existing } = await team.list({
       hackathonId: event.params.id,
@@ -246,7 +243,7 @@ export const actions: Actions = {
   },
 }
 
-/** "Machine Learning" -> "ML"; falls back to the project title when it has no track. */
+/** "AutoML Pipeline Builder" -> "APB". */
 function initialsOf(text: string): string {
   return (
     text
