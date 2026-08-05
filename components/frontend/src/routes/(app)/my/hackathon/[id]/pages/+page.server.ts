@@ -56,7 +56,11 @@ export const actions: Actions = {
     const formData = await event.request.formData()
     const phaseId = formData.get("phaseId")
     const pageId = formData.get("pageId")
-    if (typeof phaseId !== "string" || phaseId === "" || typeof pageId !== "string") {
+    if (
+      typeof phaseId !== "string" ||
+      phaseId === "" ||
+      typeof pageId !== "string"
+    ) {
       return fail(400, { message: "Invalid phase link" })
     }
 
