@@ -577,6 +577,56 @@ body#keycloak-bg {
   content: none;
 }
 
+/* Give "Restart login" a word.
+ *
+ * On the password step Keycloak shows the username you typed, greyed out, with
+ * this button beside it — a bare ↻ glyph whose only label is a hover tooltip.
+ * It is the sole way back if you mistyped the username, and people did not
+ * recognise it as one: they reported being stuck on the password step with the
+ * wrong account and no way to change it.
+ *
+ * The text is added here rather than in a template because the theme extends
+ * keycloak.v2 without copying its .ftl files (see the file header), and it goes
+ * in ::before: PatternFly already owns ::after on every button for its border
+ * overlay, which is `position: absolute` — so a label put there floated out of
+ * the button and landed on top of the icon. The accessible name
+ * (aria-label="Restart login") is untouched either way. */
+#reset-login {
+  /* inline-flex + width:auto because the vendor sizes this as a square icon
+   * control: without it the added word lands on top of the glyph and spills
+   * out of the button. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: auto;
+  min-width: 0;
+  font-family: var(--hk-font);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  padding-inline: 0.75rem;
+}
+
+/* The input group is a flex row; the username field must yield the width the
+ * button now needs instead of pushing it past the card edge. */
+.pf-v5-c-input-group:has(#reset-login) .pf-v5-c-input-group__item.pf-m-fill {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#reset-login::before {
+  content: "Change";
+  /* Ahead of the icon, so it reads "Change ↻" left-to-right. */
+  order: -1;
+}
+
+/* With a label on the button, the hover tooltip is repeating itself. */
+#reset-login .kc-tooltip-text {
+  display: none;
+}
+
 a,
 .pf-v5-c-button.pf-m-link {
   color: var(--hk-accent-text);
