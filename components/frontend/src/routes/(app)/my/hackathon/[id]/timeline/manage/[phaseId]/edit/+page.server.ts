@@ -109,7 +109,7 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, resolve(`/my/hackathon/${event.params.id}/timeline`))
+    redirect(303, resolve(`/my/hackathon/${event.params.id}/timeline/manage`))
   },
 
   delete: async (event) => {
@@ -129,6 +129,6 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, resolve(`/my/hackathon/${event.params.id}/timeline`))
+    redirect(303, resolve(`/my/hackathon/${event.params.id}/timeline/manage`))
   },
 }

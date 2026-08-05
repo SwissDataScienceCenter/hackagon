@@ -439,12 +439,12 @@ describe("manageNav", () => {
   // Order follows the participant entries these extend — Participants, then All
   // Projects, then Teams, then Timeline, then the page list — so the two sections
   // read down the page in the same sequence.
-  it("offers participant, track, team, phase and page management to an owner, in spine order", () => {
+  it("offers participant, track, team, timeline and page management to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
       "manage:participants",
       "manage:tracks",
       "manage:teams",
-      "manage:phase-create",
+      "manage:timeline",
       "manage:pages",
     ])
   })
@@ -459,7 +459,7 @@ describe("manageNav", () => {
       "manage:participants",
       "manage:tracks",
       "manage:teams",
-      "manage:phase-create",
+      "manage:timeline",
       "manage:pages",
     ])
   })
@@ -469,7 +469,7 @@ describe("manageNav", () => {
       "/my/hackathon/hack-1/participants/manage",
       "/my/hackathon/hack-1/tracks",
       "/my/hackathon/hack-1/teams/manage",
-      "/my/hackathon/hack-1/timeline/new",
+      "/my/hackathon/hack-1/timeline/manage",
       "/my/hackathon/hack-1/pages",
     ])
   })
@@ -502,9 +502,18 @@ describe("manageNav", () => {
     expect(activeNavId("/my/hackathon/hack-1/timeline", items)).toBe(
       "member:timeline",
     )
-    expect(activeNavId("/my/hackathon/hack-1/timeline/new", items)).toBe(
-      "manage:phase-create",
+    expect(activeNavId("/my/hackathon/hack-1/timeline/manage", items)).toBe(
+      "manage:timeline",
     )
+    // The create and edit forms live under the manage route precisely so they
+    // light Manage Timeline rather than the participant Timeline they used to sit
+    // beside.
+    expect(activeNavId("/my/hackathon/hack-1/timeline/manage/new", items)).toBe(
+      "manage:timeline",
+    )
+    expect(
+      activeNavId("/my/hackathon/hack-1/timeline/manage/ph1/edit", items),
+    ).toBe("manage:timeline")
     expect(activeNavId("/my/hackathon/hack-1/teams", items)).toBe(
       "member:teams",
     )
