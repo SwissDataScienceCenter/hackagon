@@ -3,6 +3,7 @@
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
     import LogOut from 'lucide-svelte/icons/log-out';
+    import UserCog from 'lucide-svelte/icons/user-cog';
 
     let {
         session,
@@ -30,6 +31,13 @@
     </div>
     <div class="flex items-center gap-1">
         <LightSwitch />
+        <!-- Your account sits beside sign-out because it is the same kind of
+             thing: about you, not about a hackathon. It is also the only route
+             to EditProfile and account deletion — without this entry the page
+             exists and nothing reaches it. -->
+        <a href="/account" aria-label="Your account" title="Your account" class="btn btn-icon btn-sm btn-quiet">
+            <UserCog class="h-4 w-4" />
+        </a>
         <button
             onclick={() => signOut({ callbackUrl: '/' })}
             aria-label="Sign out"

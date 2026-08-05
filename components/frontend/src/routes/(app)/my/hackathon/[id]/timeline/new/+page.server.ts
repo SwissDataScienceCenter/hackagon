@@ -2,7 +2,7 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
-import { parsePhaseForm } from "$lib/server/hackathon/phaseForm"
+import { parsePhaseForm, syncPhaseCapabilities } from "$lib/server/hackathon/phaseForm"
 import { resolve } from "$app/paths"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -27,7 +27,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   save: async (event) => {
-    const { phase } = requireGrpc(event.locals.grpc)
+    const { phase, hackathon } = requireGrpc(event.locals.grpc)
 
     const parsed = parsePhaseForm(await event.request.formData())
     if (!parsed.ok) {
@@ -36,7 +36,7 @@ export const actions: Actions = {
     const values = parsed.values
 
     try {
-      await phase.create({
+      const created = await phase.create({
         hackathonId: event.params.id,
         name: values.name,
         description: values.description,
@@ -54,8 +54,22 @@ export const actions: Actions = {
         // optional and its CEL rule only checks the shape of a value that is
         // present.
         pageId: values.pageId !== "" ? values.pageId : undefined,
-        capabilities: values.capabilities,
       })
+
+      // Capabilities are linked after the phase exists: in our model the link
+      // lives on the capability, so it needs the new phase's id.
+      if (created.phaseId) {
+        const { hackathon: current } = await hackathon.get({
+          hackathonId: event.params.id,
+        })
+        await syncPhaseCapabilities(
+          hackathon,
+          event.params.id,
+          created.phaseId,
+          values.capabilities,
+          current?.capabilities,
+        )
+      }
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
         return fail(400, { message: e.details })

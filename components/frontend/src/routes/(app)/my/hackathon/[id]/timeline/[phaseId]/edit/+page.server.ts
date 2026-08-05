@@ -2,7 +2,11 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
-import { parsePhaseForm } from "$lib/server/hackathon/phaseForm"
+import {
+  parsePhaseForm,
+  phaseCapabilities,
+  syncPhaseCapabilities,
+} from "$lib/server/hackathon/phaseForm"
 import { resolve } from "$app/paths"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -57,7 +61,7 @@ export const load: PageServerLoad = async (event) => {
       pageId: result.phase.pageId ?? "",
       // Raw enum numbers — what the form's checkboxes carry, and what
       // `capabilityLabel` in `$lib/utils/phase` is keyed by.
-      capabilities: result.phase.capabilities as number[],
+      capabilities: phaseCapabilities(hackathon.capabilities, result.phase.id),
     },
     pages: hackathon.pages.map((p) => ({ id: p.id, title: p.title })),
   }
@@ -65,7 +69,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   save: async (event) => {
-    const { phase } = requireGrpc(event.locals.grpc)
+    const { phase, hackathon } = requireGrpc(event.locals.grpc)
 
     const parsed = parsePhaseForm(await event.request.formData())
     if (!parsed.ok) {
@@ -90,10 +94,20 @@ export const actions: Actions = {
         // Empty string is meaningful on Edit and unlinks the page — unlike
         // Create, where it would fail the UUID rule.
         pageId: values.pageId,
-        // The wrapper distinguishes "no change" (omitted) from "clear them"
-        // (empty items), so the form can always send the full set.
-        capabilities: { items: values.capabilities },
       })
+
+      // Then the capability links, which live on the capability rather than on
+      // the phase — see syncPhaseCapabilities.
+      const { hackathon: current } = await hackathon.get({
+        hackathonId: event.params.id,
+      })
+      await syncPhaseCapabilities(
+        hackathon,
+        event.params.id,
+        event.params.phaseId,
+        values.capabilities,
+        current?.capabilities,
+      )
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
         return fail(400, { message: e.details })

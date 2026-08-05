@@ -19,9 +19,9 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
 
 ## Blocking — the app is incomplete without these
 
-- [ ] **Account page** — `routes/(app)/account/**`. Backs `EditProfile` and
-      `DeleteAccount`, which no other screen calls. Nav home:
-      `SidebarUserFooter`.
+- [x] **Account page** — `routes/(app)/account/**`. Backs `EditProfile` and
+      `DeleteAccount`, which no other screen calls. Reclassed to the tokens and
+      linked from `SidebarUserFooter`, next to sign-out.
 - [ ] **Registration form** — `routes/(app)/register/[id]/**`. The dashboard
       join action redirects here; without it, joining an event that asks
       questions leads nowhere.
@@ -83,13 +83,15 @@ nowhere else to put these. Main has somewhere else, so each section moves:
 
 ## Known adaptation, not yet done
 
-**Phase ↔ capability link direction.** Their timeline writes
-`Phase.capabilities` — a phase declares which capabilities it turns on. Ours
-puts the link on the capability (`open_in_phase_id` / `closed_in_phase_id`), so
-a capability names its own schedule. Ours is the better shape and stays; their
-timeline pages need adapting to write through `EditCapability` per capability
-instead. **5 type errors remain against this**, all in
-`my/hackathon/[id]/timeline/**`.
+**Phase ↔ capability link direction — DONE.** Their timeline wrote
+`Phase.capabilities`, where a phase declares which capabilities it turns on.
+Ours puts the link on the capability (`open_in_phase_id`), so a capability
+names its own schedule and there is one place to look when asking "when does
+voting open". Ours stays. `phaseForm.ts` gained two translators:
+`phaseCapabilities()` reads the relationship from the capability end, and
+`syncPhaseCapabilities()` writes a phase form's checkboxes back as one
+`EditCapability` per capability that actually changed — unchanged rows are
+skipped so `modified_at` and the modifier stay meaningful.
 
 Already adapted: `Hackathon.state.{currentPhaseId,capabilities}` → our flat
 `currentPhaseId` / `capabilities`, and `setCurrentPhase` → `advancePhase`

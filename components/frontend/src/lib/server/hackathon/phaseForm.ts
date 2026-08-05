@@ -170,3 +170,63 @@ export function parsePhaseForm(form: FormData): PhaseFormResult {
     },
   }
 }
+
+/**
+ * The capabilities a phase opens, read from our model.
+ *
+ * Main's `Phase` carried a `capabilities` list — a phase declared what it
+ * turned on. Ours puts the link on the capability (`open_in_phase_id`), so a
+ * capability names its own schedule and there is one place to look when asking
+ * "when does voting open". This reads that relationship from the other end so
+ * the phase screens can keep presenting it per phase.
+ */
+export function phaseCapabilities(
+  capabilities: CapabilityStatus[] | undefined,
+  phaseId: string,
+): number[] {
+  return (capabilities ?? [])
+    .filter((c) => c.openInPhaseId === phaseId)
+    .map((c) => c.capability as number)
+}
+
+/** Minimal shape of the generated client this needs — keeps the import server-side. */
+interface CapabilityLinker {
+  editCapability(req: {
+    hackathonId: string
+    capability: number
+    openInPhaseId?: string
+  }): Promise<unknown>
+}
+
+/**
+ * Writes a phase form's capability checkboxes back into our model.
+ *
+ * One `EditCapability` per capability that actually changed: linking is a
+ * property of the capability, so there is no single call that sets a phase's
+ * whole set. Unchanged rows are skipped rather than rewritten, which keeps
+ * `modified_at` and the modifier meaningful.
+ *
+ * Empty string unlinks — that is the documented "clear it" value on
+ * `open_in_phase_id`, distinct from omitting the field, which means "leave it".
+ */
+export async function syncPhaseCapabilities(
+  client: CapabilityLinker,
+  hackathonId: string,
+  phaseId: string,
+  wanted: number[],
+  all: CapabilityStatus[] | undefined,
+): Promise<void> {
+  const want = new Set(wanted)
+
+  for (const c of all ?? []) {
+    const linkedHere = c.openInPhaseId === phaseId
+    const shouldLink = want.has(c.capability as number)
+    if (linkedHere === shouldLink) continue
+
+    await client.editCapability({
+      hackathonId,
+      capability: c.capability as number,
+      openInPhaseId: shouldLink ? phaseId : "",
+    })
+  }
+}

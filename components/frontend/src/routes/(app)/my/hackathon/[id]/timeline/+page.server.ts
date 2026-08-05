@@ -13,6 +13,7 @@ import {
   CAPABILITY_ORDER,
   capabilityStates,
   enabledCapabilities,
+  phaseCapabilities,
 } from "$lib/server/hackathon/phaseForm"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -45,7 +46,7 @@ export const load: PageServerLoad = async (event) => {
     status: resolvePhaseStatus(p, currentPhaseId || undefined),
     // Raw enum numbers — `capabilityLabel` in `$lib/utils/phase` is keyed by
     // them, so the page needs no server-only import to render them.
-    capabilities: p.capabilities as number[],
+    capabilities: phaseCapabilities(hackathon.capabilities, p.id),
     // The page a phase links to. `hackathon.get` nests the pages, so the link
     // needs no lookup of its own; only phases with a page get one.
     pageId: p.pageId ?? "",
@@ -109,6 +110,9 @@ async function readState(
     enabled: enabledCapabilities(hackathon?.capabilities),
     currentPhaseId: hackathon?.currentPhaseId ?? "",
     phases: hackathon?.phases ?? [],
+    // The rows themselves: a phase's capabilities are read from their
+    // open_in_phase_id, not from the phase.
+    capabilities: hackathon?.capabilities ?? [],
   }
 }
 
@@ -206,7 +210,7 @@ export const actions: Actions = {
 
       const enabled = withPhaseCapabilitiesEnabled(
         state.enabled,
-        current.capabilities as number[],
+        phaseCapabilities(state.capabilities, current.id),
       )
       await grpc.hackathon.setCapabilities({
         hackathonId: event.params.id,
