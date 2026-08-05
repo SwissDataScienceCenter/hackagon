@@ -278,6 +278,19 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
         "Everyone registered on the platform. Grant or revoke the Admin and " +
         "Hackathon Organizer roles.",
     },
+    // The platform's own pages — about, privacy, terms — as opposed to a
+    // hackathon's content pages. Listed here because nothing else linked to
+    // /manage/pages at all: the CMS existed, the footer linked to what it
+    // publishes, and the only way to reach the editor was to type the URL.
+    {
+      id: "platform:pages",
+      label: "Pages",
+      icon: FileText,
+      href: resolve("/(app)/manage/pages"),
+      description:
+        "About, privacy and terms — the pages the footer links to. Published " +
+        "pages are readable by everyone, drafts by admins only.",
+    },
   ]
 }
 

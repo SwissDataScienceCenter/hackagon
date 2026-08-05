@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
+    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
 
@@ -51,10 +52,34 @@
         </div>
     {/if}
 
+    <!-- The registration form has no link anywhere else in the UI: without this
+         you can only reach it by knowing the URL, so answers are effectively
+         write-once even though the backend accepts edits (SubmitRegistrationForm
+         is an upsert). Waitlisted registrants especially — an organiser reviews
+         exactly these answers. -->
+    {#if data.hackathon.registrationForm}
+        <div class="card flex flex-wrap items-center justify-between gap-3 p-5">
+            <div>
+                <h2 class="m-0 text-section">Your registration answers</h2>
+                <p class="mt-1 text-sm text-ink-3">
+                    What this event asked when you joined. You can change your answers while
+                    it runs.
+                </p>
+            </div>
+            <a href="/register/{data.hackathon.id}" class="btn btn-sm no-underline">
+                View or edit
+            </a>
+        </div>
+    {/if}
+
     <div class="card p-5">
         <h2 class="mb-3 text-section">About</h2>
         {#if data.hackathon.description}
-            <p class="text-sm leading-relaxed text-ink-2">{data.hackathon.description}</p>
+            <!-- Markdown, because that is what the organiser wrote it in — this
+                 rendered the source as plain text, `#` and `*` included. -->
+            <div class="text-sm leading-relaxed text-ink-2">
+                <MarkdownContent content={data.hackathon.description} />
+            </div>
         {:else}
             <p class="text-sm text-ink-3">No description provided.</p>
         {/if}

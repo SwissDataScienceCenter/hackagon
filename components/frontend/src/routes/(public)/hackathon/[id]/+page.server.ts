@@ -1,4 +1,4 @@
-import { error, fail } from "@sveltejs/kit"
+import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 import type { Actions, PageServerLoad } from "./$types"
 import { publicHackathonClient, requireGrpc } from "$lib/server/grpc/client"
@@ -52,10 +52,22 @@ export const actions: Actions = {
   // joining from the event's own page is the path someone following a link
   // takes, and until now there was none.
   join: async (event) => {
-    const { hackathon } = requireGrpc(event.locals.grpc)
+    const { hackathon: client } = requireGrpc(event.locals.grpc)
+
+    // Read the form BEFORE joining: the answer is the same afterwards, and a
+    // failed join then costs one call rather than two.
+    const asksQuestions = await client
+      .list({})
+      .then((r) => {
+        const form = r.hackathons.find((h) => h.id === event.params.id)
+          ?.registrationForm
+
+        return Boolean(form && (form.fields.length > 0 || form.consents.length > 0))
+      })
+      .catch(() => false)
 
     try {
-      await hackathon.join({ hackathonId: event.params.id })
+      await client.join({ hackathonId: event.params.id })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
         return fail(403, { message: "You can't join this hackathon" })
@@ -67,6 +79,10 @@ export const actions: Actions = {
         return fail(409, { message: "You have already joined this hackathon" })
       throw e
     }
+
+    // Same rule as the dashboard's Join: an event that asks questions sends you
+    // to them, because joining is only half of signing up.
+    if (asksQuestions) redirect(303, `/register/${event.params.id}`)
 
     return { joined: true }
   },
