@@ -17,12 +17,13 @@ export const load: PageServerLoad = async (event) => {
     error(403, "Only the hackathon organizer can manage pages")
   }
 
-  // The phase (if any) each page is linked from, for display only — the link
-  // itself is set on the phase's own edit form, not here.
-  const phaseTitleByPageId = new Map(
+  // The phase (if any) each page is linked from — dropping a phase chip onto a
+  // page, or unlinking its badge, both go through `PhaseService.Edit`, since
+  // `page_id` lives on the phase side of the edge, not the page's.
+  const phaseByPageId = new Map(
     hackathon.phases
       .filter((p) => p.pageId)
-      .map((p) => [p.pageId as string, p.name]),
+      .map((p) => [p.pageId as string, { id: p.id, name: p.name }]),
   )
 
   // `hackathon.get` nests pages in whatever order ent returned them, not
@@ -35,13 +36,49 @@ export const load: PageServerLoad = async (event) => {
       id: p.id,
       title: p.title,
       visible: p.visible,
-      phaseName: phaseTitleByPageId.get(p.id),
+      phase: phaseByPageId.get(p.id),
     }))
 
-  return { hackathonId: hackathon.id, pages }
+  const phases = hackathon.phases.map((p) => ({
+    id: p.id,
+    name: p.name,
+    pageId: p.pageId,
+  }))
+
+  return { hackathonId: hackathon.id, pages, phases }
 }
 
 export const actions: Actions = {
+  // Drop target for a dragged phase chip, and the badge's unlink "×" — both
+  // just set which page (if any) the phase points to. Empty string unlinks;
+  // a non-empty id links, repointing it away from whatever page held it.
+  linkPhase: async (event) => {
+    const formData = await event.request.formData()
+    const phaseId = formData.get("phaseId")
+    const pageId = formData.get("pageId")
+    if (typeof phaseId !== "string" || phaseId === "" || typeof pageId !== "string") {
+      return fail(400, { message: "Invalid phase link" })
+    }
+
+    const { phase } = requireGrpc(event.locals.grpc)
+    try {
+      await phase.edit({ phaseId, pageId })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+        return fail(400, { message: e.details })
+      }
+      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+        return fail(403, {
+          message: "You don't have permission to link phases to pages",
+        })
+      }
+      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+        return fail(404, { message: "Phase not found" })
+      }
+      throw e
+    }
+  },
+
   toggleVisible: async (event) => {
     const formData = await event.request.formData()
     const pageId = formData.get("pageId")
