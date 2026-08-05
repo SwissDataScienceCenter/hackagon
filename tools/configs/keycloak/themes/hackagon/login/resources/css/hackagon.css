@@ -1,77 +1,147 @@
 /*
  * Hackagon branding on top of keycloak.v2 (PatternFly v5).
- * Palette + font mirror components/frontend/src/themes/hackathonsdsc.css so
- * the login page reads as part of the app, not a foreign IdP.
+ *
+ * Palette + font mirror components/frontend/src/themes/hackathonsdsc.css so the
+ * login page reads as part of the app, not a foreign IdP.
+ *
+ * Layout: a two-column split on desktop (brand panel | form card) that folds to
+ * a single centred column below 64rem. This is CSS-only — no .ftl override —
+ * because keycloak.v2 already emits exactly the two blocks the split needs
+ * (`header#kc-header` and `main.pf-v5-c-login__main`) as siblings inside
+ * `.pf-v5-c-login__container`. Copying templates out of the Keycloak jar would
+ * freeze markup that ships new features every release (password policy hints,
+ * reCAPTCHA, terms, organizations) with no signal when the copy goes stale.
+ *
+ * Four vendor bugs are fought here; each override names the rule it beats.
  */
 
 :root {
+  /* --- Palette: verbatim from the app's Hackathonsdsc theme ------------- */
   --hk-green-500: oklch(77.26% 0.18 129.66deg);
   --hk-green-600: oklch(67.3% 0.15 129.98deg);
   --hk-green-700: oklch(57.01% 0.13 130.07deg);
+  --hk-green-800: oklch(46.16% 0.11 130.55deg);
+  --hk-green-950: oklch(22.06% 0.06 131.28deg);
+  --hk-surface-50: oklch(100% 0 none);
+  --hk-surface-100: oklch(91.28% 0 none);
+  --hk-surface-300: oklch(73.48% 0 none);
+  --hk-surface-400: oklch(64.01% 0 none);
+  --hk-surface-500: oklch(54.17% 0 none);
+  --hk-surface-600: oklch(48.19% 0 none);
+  --hk-surface-800: oklch(36% 0 none);
   --hk-surface-900: oklch(29.61% 0 196.7deg);
   --hk-surface-950: oklch(22.54% 0 196.78deg);
+  --hk-error-200: oklch(77.96% 0.14 357.3deg);
+  --hk-error-700: oklch(48.97% 0.2 10.61deg);
+
   --hk-font:
     ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas,
     "DejaVu Sans Mono", monospace;
 
+  /* --- Semantic tokens, light mode -------------------------------------
+   * Contrast ratios below are against the surface each token is used on
+   * (page or card, both effectively white in light mode). WCAG AA needs
+   * 4.5:1 for text and 3:1 for UI component boundaries.
+   *   ink          21:1   ink-muted   4.8:1
+   *   accent-text  5.2:1  (green-800 — green-600 is only 2.5:1 on white)
+   *   field-border 3.9:1  focus-ring  3.5:1
+   *   danger       4.7:1  on-accent   4.9:1 rest / 6.7:1 hover */
+  --hk-page: var(--hk-surface-50);
+  --hk-card: var(--hk-surface-50);
+  --hk-ink: var(--hk-surface-950);
+  --hk-ink-muted: var(--hk-surface-600);
+  --hk-accent: var(--hk-green-600);
+  --hk-accent-text: var(--hk-green-800);
+  --hk-accent-strong: var(--hk-green-700);
+  /* The CTA lightens on hover instead of darkening. Its label is green-950
+   * (the pairing the app uses), and green-950 needs a background of at least
+   * L*64 to clear 4.5:1 — every green darker than green-600 fails, so
+   * "darker on hover" would have dipped the label to 3.5:1. Dark mode does the
+   * mirror image: it rests on green-500 and darkens to green-600. */
+  --hk-accent-hover: var(--hk-green-500);
+  --hk-on-accent: var(--hk-green-950);
+  --hk-focus-ring: var(--hk-green-700);
+  --hk-danger: var(--hk-error-700);
+  --hk-field-bg: color-mix(in oklab, var(--hk-surface-100) 45%, var(--hk-surface-50));
+  --hk-field-border: var(--hk-surface-500);
+  --hk-hairline: color-mix(in oklab, var(--hk-surface-500) 35%, transparent);
+  --hk-card-ring: color-mix(in oklab, var(--hk-green-600) 30%, transparent);
+  --hk-card-shadow: 0 24px 60px -16px rgb(0 0 0 / 22%);
+
   /* PatternFly global tokens: primary actions, links, fonts. */
-  --pf-v5-global--primary-color--100: var(--hk-green-600);
-  --pf-v5-global--primary-color--200: var(--hk-green-700);
-  --pf-v5-global--active-color--100: var(--hk-green-600);
-  --pf-v5-global--link--Color: var(--hk-green-600);
-  --pf-v5-global--link--Color--hover: var(--hk-green-700);
+  --pf-v5-global--primary-color--100: var(--hk-accent);
+  --pf-v5-global--primary-color--200: var(--hk-accent-strong);
+  --pf-v5-global--active-color--100: var(--hk-accent);
+  --pf-v5-global--link--Color: var(--hk-accent-text);
+  --pf-v5-global--link--Color--hover: var(--hk-green-950);
+  --pf-v5-global--danger-color--100: var(--hk-danger);
   --pf-v5-global--FontFamily--sans-serif: var(--hk-font);
   --pf-v5-global--FontFamily--text: var(--hk-font);
   --pf-v5-global--FontFamily--heading: var(--hk-font);
+
+  /* keycloak.v2 paints `border-top: 4px solid var(--keycloak-card-top-color)`
+   * on __main-header — recolor the var rather than the rule. */
+  --keycloak-card-top-color: var(--hk-accent);
 }
 
+/* --- Semantic tokens, dark mode ---------------------------------------
+ * Ratios against the card (surface-900) / page (surface-950):
+ *   ink 16:1   ink-muted 4.6:1   accent-text 5.1:1
+ *   field-border 3.4:1   danger 5.3:1   on-accent 6.7:1 */
 .pf-v5-theme-dark {
-  /* Lighter green carries better on dark surfaces. */
-  --pf-v5-global--primary-color--100: var(--hk-green-500);
-  --pf-v5-global--primary-color--200: var(--hk-green-600);
-  --pf-v5-global--active-color--100: var(--hk-green-500);
-  --pf-v5-global--link--Color: var(--hk-green-500);
+  --hk-page: var(--hk-surface-950);
+  --hk-card: var(--hk-surface-900);
+  --hk-ink: var(--hk-surface-50);
+  --hk-ink-muted: var(--hk-surface-300);
+  --hk-accent: var(--hk-green-500);
+  --hk-accent-text: var(--hk-green-500);
+  --hk-accent-strong: var(--hk-green-600);
+  --hk-accent-hover: var(--hk-green-600);
+  --hk-on-accent: var(--hk-green-950);
+  --hk-focus-ring: var(--hk-green-500);
+  --hk-danger: var(--hk-error-200);
+  --hk-field-bg: var(--hk-surface-800);
+  --hk-field-border: var(--hk-surface-400);
+  --hk-hairline: color-mix(in oklab, var(--hk-surface-300) 30%, transparent);
+  --hk-card-ring: color-mix(in oklab, var(--hk-green-500) 35%, transparent);
+  --hk-card-shadow: 0 24px 60px -16px rgb(0 0 0 / 60%);
+
   --pf-v5-global--link--Color--hover: var(--hk-green-600);
+  --keycloak-card-top-color: var(--hk-accent);
 }
 
-/* Layout: true vertical centering with mobile-safe viewport height (svh
- * ignores the phone browser chrome that makes 100vh overscroll), natural
- * vertical scroll only when a form is genuinely taller than the screen. */
+/* ======================================================================
+ * Page shell
+ * ==================================================================== */
+
+/* VENDOR FIX 1 — keycloak.v2's styles.css sets `.login-pf body { height: 100% }`,
+ * which pins the body box to exactly one viewport. Anything taller (the
+ * registration form is ~1000px) then lives *outside* the body box, and since
+ * the body background propagates to the canvas positioned on the root box, the
+ * gradients below tile at y = viewport height — a hard seam across the page.
+ * The previous `overflow-x: hidden` here hid the horizontal half of the same
+ * problem; it is gone, so real overflow is visible (and caught by the theme
+ * screenshot spec) instead of silently clipped.
+ * Specificity: `body#keycloak-bg` (1,0,1) beats `.login-pf body` (0,1,1). */
 html,
 body#keycloak-bg {
   margin: 0;
+  height: auto;
   min-height: 100%;
 }
 
+/* Page background: the app's surface tones with a faint green glow. Follows
+ * prefers-color-scheme, the same signal the app's `dark:` styles react to.
+ * `no-repeat` is load-bearing. The old rule used the `background` shorthand,
+ * which resets background-repeat to `repeat`; the body background propagates
+ * to the canvas positioned on the root box, so as soon as the page grew past
+ * one viewport the gradients tiled and drew a hard seam across the page.
+ * Deliberately NOT `background-attachment: fixed`: that pins the positioning
+ * area to the viewport, which iOS Safari renders badly and which slides under
+ * the page when the keyboard resizes the visual viewport. */
 body#keycloak-bg {
-  overflow-x: hidden;
-}
-
-.pf-v5-c-login {
-  min-height: 100vh;
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  box-sizing: border-box;
-}
-
-.pf-v5-c-login__container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  width: 100%;
-  max-width: 30rem;
-  margin: 0 auto;
-}
-
-/* Page background: the app's surface tones (surface-50 in light,
- * surface-950 in dark — hackathonsdsc.css) with a faint green glow. The
- * scheme follows prefers-color-scheme, the same signal the app's dark:
- * styles react to. */
-body#keycloak-bg {
-  background:
+  background-color: var(--hk-page);
+  background-image:
     radial-gradient(
       60rem 40rem at 85% -10%,
       color-mix(in oklab, var(--hk-green-500) 14%, transparent),
@@ -81,12 +151,13 @@ body#keycloak-bg {
       50rem 35rem at -10% 110%,
       color-mix(in oklab, var(--hk-green-600) 8%, transparent),
       transparent 60%
-    ),
-    oklch(100% 0 none);
+    );
+  background-repeat: no-repeat;
+  color: var(--hk-ink);
 }
 
 .pf-v5-theme-dark body#keycloak-bg {
-  background:
+  background-image:
     radial-gradient(
       60rem 40rem at 85% -10%,
       color-mix(in oklab, var(--hk-green-500) 10%, transparent),
@@ -96,22 +167,94 @@ body#keycloak-bg {
       50rem 35rem at -10% 110%,
       color-mix(in oklab, var(--hk-green-600) 7%, transparent),
       transparent 60%
-    ),
-    var(--hk-surface-950);
+    );
 }
 
-/* Brand slot: SDSC logo above a spaced-out mono wordmark (the realm
- * displayName renders as the div's text). The vendor sets
- * `#kc-header-wrapper { color: ... !important; font-size: 29px; }` for PF's
- * dark hero background — beat it on specificity AND importance. */
-#kc-header-wrapper.pf-v5-c-brand {
-  color: var(--hk-surface-950) !important;
-  font-size: 1rem;
-  letter-spacing: 0.45em;
+/* ======================================================================
+ * Layout — brand panel beside the form card on desktop, stacked below 64rem
+ * ==================================================================== */
+
+.pf-v5-c-login {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh; /* svh ignores the phone browser chrome 100vh overscrolls */
+  padding: clamp(1.5rem, 4vw, 3rem);
+  padding-block-end: calc(clamp(1.5rem, 4vw, 3rem) + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
 }
 
-.pf-v5-theme-dark #kc-header-wrapper.pf-v5-c-brand {
-  color: oklch(100% 0 none) !important;
+/* Vertical centring via auto margins rather than `align-items: center`.
+ * Auto margins yield when the content is taller than the line: the card can
+ * never be pushed above the scroll origin (where it would be unreachable), and
+ * the page keeps a normal scroll range. See the keyboard section at the end —
+ * this is half of the iOS occlusion fix. */
+.pf-v5-c-login > .pf-v5-c-login__container {
+  margin-block: auto;
+}
+
+/* VENDOR FIX 2 — the slim column. Two vendor rules conspire:
+ *   a) PatternFly at >=1200px puts `padding-inline: 6.125rem` (98px a side) on
+ *      __container. Against the old 30rem cap that left 480 - 196 = 284px of
+ *      usable width, so the card — and the six registration fields inside it —
+ *      were squeezed into a 188px content box.
+ *   b) `.pf-v5-c-login__main { align-self: start }` is harmless in PatternFly's
+ *      grid (it means "don't stretch vertically"), but the old override flipped
+ *      the container to `flex-direction: column`, which re-reads align-self on
+ *      the *inline* axis: the card stopped filling the column and shrink-wrapped
+ *      to 301px inside a 342px container, left-aligned with a lopsided gutter.
+ * Staying in grid keeps align-self on the block axis where it belongs, and the
+ * inline padding is zeroed explicitly. */
+.pf-v5-c-login__container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "brand"
+    "form";
+  gap: 2rem;
+  width: 100%;
+  max-width: 32rem;
+  margin-inline: auto;
+  padding-inline: 0;
+}
+
+.pf-v5-c-login__container > #kc-header {
+  grid-area: brand;
+  margin-block-end: 0;
+  padding-inline: 0;
+}
+
+/* Beats `.pf-v5-c-login__main { grid-area: main }` (0,1,0) with (0,2,0). */
+.pf-v5-c-login__container > .pf-v5-c-login__main {
+  grid-area: form;
+  align-self: center;
+  margin-block-end: 0;
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  .pf-v5-c-login__container {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 32rem);
+    grid-template-areas: "brand form";
+    gap: clamp(2.5rem, 6vw, 5rem);
+    max-width: 72rem;
+    align-items: center;
+  }
+}
+
+/* ======================================================================
+ * Brand panel — SDSC mark, wordmark, tagline
+ * ==================================================================== */
+
+/* VENDOR FIX 3 — PatternFly lists `.pf-v5-c-login__header` among the blocks
+ * that sit on its dark hero, so it re-points --pf-v5-global--Color--100/200 to
+ * the *light* palette; on our light page that renders the header invisible.
+ * An id selector re-points them back without !important. */
+#kc-header.pf-v5-c-login__header {
+  --pf-v5-global--Color--100: var(--hk-ink);
+  --pf-v5-global--Color--200: var(--hk-ink-muted);
+
+  color: var(--hk-ink);
 }
 
 .pf-v5-c-login__header .pf-v5-c-brand {
@@ -125,7 +268,17 @@ body#keycloak-bg {
   letter-spacing: 0.45em;
   text-indent: 0.45em; /* recenter: tracking adds a trailing gap */
   text-transform: uppercase;
-  color: var(--hk-surface-950);
+  line-height: 1.2;
+  color: var(--hk-ink);
+}
+
+/* keycloak.v2 hard-sets `#kc-header-wrapper { color: <light> !important }` for
+ * that same dark hero — the only way past an !important is another one. It also
+ * sets `text-align: center` at id specificity, which the desktop panel below
+ * has to beat with another id selector. */
+#kc-header-wrapper.pf-v5-c-brand {
+  color: var(--hk-ink) !important;
+  text-align: center;
 }
 
 .pf-v5-c-login__header .pf-v5-c-brand::before {
@@ -136,85 +289,360 @@ body#keycloak-bg {
   background: url(../img/sdsc.svg) no-repeat center / contain;
 }
 
-.pf-v5-theme-dark .pf-v5-c-login__header .pf-v5-c-brand {
-  color: oklch(100% 0 none);
-}
-
 .pf-v5-theme-dark .pf-v5-c-login__header .pf-v5-c-brand::before {
   background-image: url(../img/sdsc_white.svg);
 }
 
-/* The card: rounded, floating, with a faint green ring. */
+/* Tagline. Generated content rather than markup: adding it for real would mean
+ * copying template.ftl out of the Keycloak jar (see the file header). It is
+ * decorative marketing copy, so nothing functional depends on it — and it is
+ * suppressed on phones, where vertical space belongs to the form. */
+.pf-v5-c-login__header .pf-v5-c-brand::after {
+  content: "One place for the whole hackathon — call for projects, teams, submissions and the final vote.";
+  display: none;
+  max-width: 34ch;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-indent: 0;
+  text-transform: none;
+  line-height: 1.7;
+  color: var(--hk-ink-muted);
+}
+
+@media (min-width: 48rem) {
+  .pf-v5-c-login__header .pf-v5-c-brand::after {
+    display: block;
+    padding-block-start: 0.25rem;
+  }
+}
+
+/* Desktop: the brand becomes a left-aligned panel next to the card, with a
+ * green rule tying it to the card's accent strip. */
+@media (min-width: 64rem) {
+  #kc-header-wrapper.pf-v5-c-brand {
+    align-items: flex-start;
+    gap: 1.4rem;
+    font-size: 1.375rem;
+    text-align: start;
+    text-indent: 0;
+  }
+
+  .pf-v5-c-login__header .pf-v5-c-brand::before {
+    height: 54px;
+    width: 260px;
+  }
+
+  .pf-v5-c-login__header .pf-v5-c-brand::after {
+    width: 100%;
+    max-width: 24rem;
+    padding-block-start: 1.4rem;
+    border-block-start: 3px solid var(--hk-accent);
+    font-size: 0.9375rem;
+  }
+}
+
+/* ======================================================================
+ * The card
+ * ==================================================================== */
+
 .pf-v5-c-login__main {
+  background-color: var(--hk-card);
   border-radius: 1rem;
-  overflow: hidden;
   box-shadow:
-    0 24px 60px -16px rgb(0 0 0 / 30%),
-    0 0 0 1px color-mix(in oklab, var(--hk-green-600) 30%, transparent);
+    var(--hk-card-shadow),
+    0 0 0 1px var(--hk-card-ring);
 }
 
-.pf-v5-theme-dark .pf-v5-c-login__main {
-  background-color: var(--hk-surface-900);
-  box-shadow:
-    0 24px 60px -16px rgb(0 0 0 / 60%),
-    0 0 0 1px color-mix(in oklab, var(--hk-green-500) 35%, transparent);
+/* Round the accent strip with the card. Previously the card used
+ * `overflow: hidden` for this, which doubles as a silent clip on anything too
+ * wide inside — another way to hide an overflow instead of fixing it. */
+.pf-v5-c-login__main-header {
+  border-start-start-radius: 1rem;
+  border-start-end-radius: 1rem;
 }
 
-/* The card's accent strip: keycloak.v2 paints `border-top: 4px solid
- * var(--keycloak-card-top-color)` on __main-header — recolor the var. */
-:root {
-  --keycloak-card-top-color: var(--hk-green-600);
+.pf-v5-c-login__main-header .pf-v5-c-title {
+  color: var(--hk-ink);
+  line-height: 1.25;
 }
 
-.pf-v5-theme-dark {
-  --keycloak-card-top-color: var(--hk-green-500);
+/* keycloak.v2 sets `div.pf-v5-c-login__main-header { grid-template-columns:
+ * 70% 30% }` from 768px up to reserve a lane for a utilities dropdown. None of
+ * these screens render one, so the title was wrapping inside 70% of the card
+ * for no reason. Only widen it when it really is alone — if a dropdown ever
+ * appears it is placed in column 2 and the two would collide. */
+.pf-v5-c-login__main-header > .pf-v5-c-title:only-child {
+  grid-column: 1 / -1;
 }
 
-/* Primary action reads like the app's CTA buttons. Component-level vars:
- * PF's dark stylesheet sets these directly, so global-token overrides
- * alone lose — pin them in both modes. */
-.pf-v5-c-button.pf-m-primary {
-  --pf-v5-c-button--m-primary--BackgroundColor: var(--hk-green-600);
-  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--hk-green-700);
-  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--hk-green-700);
-  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--hk-green-700);
-  --pf-v5-c-button--m-primary--Color: oklch(100% 0 none);
-  font-family: var(--hk-font);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border-radius: 0.5rem;
+.pf-v5-c-login__main-body,
+.pf-v5-c-login__main-footer {
+  color: var(--hk-ink);
 }
 
-.pf-v5-theme-dark .pf-v5-c-button.pf-m-primary {
-  /* Light green + dark text carries better on dark surfaces. */
-  --pf-v5-c-button--m-primary--BackgroundColor: var(--hk-green-500);
-  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--hk-green-600);
-  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--hk-green-600);
-  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--hk-green-600);
-  --pf-v5-c-button--m-primary--Color: var(--hk-surface-950);
+.pf-v5-c-login__main-footer-band {
+  --pf-v5-c-login__main-footer-band--BorderTopColor: var(--hk-hairline);
 }
 
-/* Inputs: subtle rounding, green focus (border, underline and outline —
- * PF styles each through a different knob). */
+/* Phones: vertical space belongs to the form, not to the chrome above it.
+ * Trimming the brand block and the card's title well lifts the first field and
+ * the submit button by ~60px, which is the difference between the Sign In
+ * button sitting above the software keyboard and under it. */
+@media (max-width: 47.99rem) {
+  .pf-v5-c-login__container {
+    gap: 1.25rem;
+  }
+
+  .pf-v5-c-login__header .pf-v5-c-brand {
+    gap: 0.6rem;
+    font-size: 0.875rem;
+  }
+
+  .pf-v5-c-login__header .pf-v5-c-brand::before {
+    height: 34px;
+  }
+
+  .pf-v5-c-login__main-header {
+    --pf-v5-c-login__main-header--PaddingTop: 1.75rem;
+    --pf-v5-c-login__main-header--PaddingBottom: 0.5rem;
+  }
+
+  .pf-v5-c-login__main-header .pf-v5-c-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* ======================================================================
+ * Form controls
+ * ==================================================================== */
+
+.pf-v5-c-form__label-text {
+  color: var(--hk-ink);
+  font-weight: 600;
+}
+
+.pf-v5-c-form__label-required,
+.pf-v5-c-helper-text__item.pf-m-error,
+.pf-v5-c-helper-text__item-text.pf-m-error,
+.kc-feedback-text {
+  color: var(--hk-danger);
+}
+
+.pf-v5-c-form__helper-text,
+.pf-v5-c-helper-text__item-text,
+.subtitle {
+  color: var(--hk-ink-muted);
+}
+
+/* keycloak.v2 spaces the "* Required fields" line with `pf-v5-u-mb-md-on-md`,
+ * which only applies from 768px up — on a phone it collides with the first
+ * label. */
+.pf-v5-c-login__main-body .subtitle {
+  display: block;
+  margin-block-end: 1rem;
+}
+
+/* Long validation messages and email addresses must wrap, not widen the card. */
+.pf-v5-c-helper-text__item-text,
+.pf-v5-c-alert__title,
+.pf-v5-c-form__helper-text {
+  overflow-wrap: anywhere;
+}
+
 .pf-v5-c-form-control {
-  --pf-v5-c-form-control--focus--BorderBottomColor: var(--hk-green-600);
-  --pf-v5-c-form-control--m-focus--after--BorderBottomColor: var(--hk-green-600);
-  --pf-v5-global--active-color--100: var(--hk-green-600);
+  --pf-v5-c-form-control--BackgroundColor: var(--hk-field-bg);
+  --pf-v5-c-form-control--before--BorderTopColor: var(--hk-field-border);
+  --pf-v5-c-form-control--before--BorderRightColor: var(--hk-field-border);
+  --pf-v5-c-form-control--before--BorderLeftColor: var(--hk-field-border);
+  --pf-v5-c-form-control--after--BorderBottomColor: var(--hk-field-border);
+  --pf-v5-c-form-control--hover--after--BorderBottomColor: var(--hk-accent-strong);
+  --pf-v5-c-form-control--focus--after--BorderBottomColor: var(--hk-accent-strong);
+  --pf-v5-c-form-control--m-error--after--BorderBottomColor: var(--hk-danger);
+
   border-radius: 0.5rem;
+  min-width: 0;
 }
 
-.pf-v5-c-form-control:focus-within {
-  border-color: var(--hk-green-600);
+/* PatternFly's dark stylesheet blanks the three non-bottom borders
+ * (`before--Border*Color: transparent`) at :where() specificity — restore them
+ * so a field still reads as a box on the dark card. */
+.pf-v5-theme-dark .pf-v5-c-form-control {
+  --pf-v5-c-form-control--before--BorderTopColor: var(--hk-field-border);
+  --pf-v5-c-form-control--before--BorderRightColor: var(--hk-field-border);
+  --pf-v5-c-form-control--before--BorderLeftColor: var(--hk-field-border);
+  --pf-v5-c-form-control--after--BorderBottomColor: var(--hk-field-border);
 }
 
-/* Firefox paints its UA blue focus ring here — replace it wholesale. */
-.pf-v5-c-form-control > input:focus {
-  outline: 2px solid var(--hk-green-600);
+/* 1rem = 16px: anything smaller makes iOS zoom the page on focus, which shoves
+ * the field further under the keyboard. Keep this at or above 16px. */
+.pf-v5-c-form-control,
+.pf-v5-c-form-control > input,
+.pf-v5-c-form-control > select,
+.pf-v5-c-form-control > textarea {
+  font-family: var(--hk-font);
+  font-size: 1rem;
+  min-width: 0;
+}
+
+/* Firefox paints its UA focus ring here — replace it wholesale. */
+.pf-v5-c-form-control > input:focus,
+.pf-v5-c-form-control > select:focus,
+.pf-v5-c-form-control > textarea:focus {
+  outline: 2px solid var(--hk-focus-ring);
   outline-offset: -1px;
 }
 
-/* ...and PF's focus underline is an ::after pseudo — recolor it too. */
+/* ...and PatternFly's focus underline is an ::after pseudo — recolor it too. */
 .pf-v5-c-form-control:focus-within::after {
-  border-bottom-color: var(--hk-green-600) !important;
-  border-block-end-color: var(--hk-green-600) !important;
+  border-bottom-color: var(--hk-accent-strong) !important;
+  border-block-end-color: var(--hk-accent-strong) !important;
+}
+
+/* Password reveal button sits in a flex input group; without min-width: 0 a
+ * long value can push the button past the card edge. */
+.pf-v5-c-input-group__item.pf-m-fill {
+  min-width: 0;
+}
+
+.pf-v5-c-button.pf-m-control {
+  --pf-v5-c-button--m-control--BackgroundColor: var(--hk-field-bg);
+  --pf-v5-c-button--m-control--after--BorderTopColor: var(--hk-field-border);
+  --pf-v5-c-button--m-control--after--BorderRightColor: var(--hk-field-border);
+  --pf-v5-c-button--m-control--after--BorderBottomColor: var(--hk-field-border);
+  --pf-v5-c-button--m-control--after--BorderLeftColor: var(--hk-field-border);
+
+  color: var(--hk-ink);
+  border-start-end-radius: 0.5rem;
+  border-end-end-radius: 0.5rem;
+}
+
+/* Primary action reads like the app's CTA buttons: the app pairs its greens
+ * with dark text (--color-primary-contrast-500 is primary-950), which is also
+ * the only accessible pairing — white on green-600 is 2.5:1, green-950 on
+ * green-600 is 4.9:1. Component-level vars, because PatternFly's dark
+ * stylesheet sets these directly and global-token overrides alone lose. */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--hk-accent);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--hk-accent-hover);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--hk-accent-hover);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--hk-accent-hover);
+  --pf-v5-c-button--m-primary--Color: var(--hk-on-accent);
+  /* :hover/:focus/:active each re-point --m-primary--Color at their own
+   * --m-primary--<state>--Color knob, so setting the base one is not enough —
+   * without these three the label snapped back to PatternFly's white the
+   * moment the pointer touched the button (2.5:1 on our green). */
+  --pf-v5-c-button--m-primary--hover--Color: var(--hk-on-accent);
+  --pf-v5-c-button--m-primary--focus--Color: var(--hk-on-accent);
+  --pf-v5-c-button--m-primary--active--Color: var(--hk-on-accent);
+
+  font-family: var(--hk-font);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 0.5rem;
+  padding-block: 0.6rem;
+}
+
+.pf-v5-c-button.pf-m-primary:focus-visible {
+  outline: 2px solid var(--hk-focus-ring);
+  outline-offset: 2px;
+}
+
+/* VENDOR FIX 4 — the "Restart login" tooltip on the password step. keycloak.v2
+ * parks `.kc-tooltip-text` at `left: 160%` of a button that already sits at the
+ * card's right edge, and hides it with `visibility: hidden` + `opacity: 0` —
+ * which keeps it in layout, so it widened the document by 47px at 1280 and
+ * 103px at 390. The old `overflow-x: hidden` on the body is what used to
+ * swallow it. Re-anchor under the button, right-aligned, width-clamped. */
+.kc-login-tooltip .kc-tooltip-text {
+  top: calc(100% + 0.5rem);
+  left: auto;
+  right: 0;
+  min-width: 0;
+  width: max-content;
+  max-width: min(14rem, 60vw);
+  background-color: var(--hk-surface-950);
+  color: var(--hk-surface-50);
+  border-radius: 0.375rem;
+  font-family: var(--hk-font);
+}
+
+/* The vendor arrow points left, at the old anchor. */
+.kc-login-tooltip .kc-tooltip-text::after {
+  content: none;
+}
+
+a,
+.pf-v5-c-button.pf-m-link {
+  color: var(--hk-accent-text);
+}
+
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--hk-focus-ring);
+  outline-offset: 2px;
+  border-radius: 0.125rem;
+}
+
+/* ======================================================================
+ * Registration: pair the name fields once the card is wide enough
+ * ==================================================================== */
+
+@supports selector(:has(*)) {
+  @media (min-width: 36rem) {
+    #kc-register-form {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #kc-register-form > * {
+      grid-column: 1 / -1;
+    }
+
+    #kc-register-form > .pf-v5-c-form__group:has(#firstName),
+    #kc-register-form > .pf-v5-c-form__group:has(#lastName) {
+      grid-column: span 1;
+    }
+  }
+}
+
+/* ======================================================================
+ * Phone soft keyboard
+ *
+ * iOS Safari does not shrink the *layout* viewport when the keyboard opens —
+ * only the visual one. A page that is exactly 100svh tall therefore has zero
+ * scroll range, and Safari has nothing to scroll: the focused field ends up
+ * under the autofill accessory bar and the submit button under the keyboard,
+ * with no way to reach either. Measured before this fix, at 390x844:
+ * document 844px, scroll range 0, password field at y=524, Sign In bottom at
+ * y=628 — against roughly 460px of usable height with the keyboard up.
+ *
+ * The fix has two halves. The auto-margin centring above is the first: the
+ * card yields instead of being pinned to the middle of a fixed-height line.
+ * The second is here — while anything inside the page has focus (i.e. exactly
+ * when the keyboard is up) reserve a keyboard's worth of scrollable space
+ * below the content. Nothing is reserved at rest, so there is no dead space
+ * and no layout jump on a page the user is only reading.
+ *
+ * Width-gated rather than `pointer: coarse` so it is deterministic (and
+ * testable): above 64rem there is no soft keyboard to dodge.
+ * ==================================================================== */
+
+@media (max-width: 63.99rem) {
+  .pf-v5-c-login:focus-within {
+    padding-block-end: calc(24rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* When the browser does scroll a focused control into view, leave clearance so
+ * it never lands flush against the top of the keyboard. */
+.pf-v5-c-form-control,
+.pf-v5-c-form__group,
+#kc-form-buttons,
+.pf-v5-c-form__actions {
+  scroll-margin-block: 5rem;
 }
