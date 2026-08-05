@@ -10,20 +10,46 @@
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
-// Top-level segments owned by real routes. A SitePage may never shadow one:
-// the router would still prefer the static route, but an admin creating
-// "dashboard" would then have an unreachable page and no idea why.
-const RESERVED_SLUGS = new Set([
-  "dashboard",
-  "signin",
-  "signout",
-  "auth",
-  "error",
-  "hackathon",
-  "manage",
-  "my",
-  "api",
-])
+// Segments owned by real routes are derived from the route tree rather than
+// listed by hand. The hand-written list was wrong twice in one day: `create`
+// (under /hackathon) and `account` were both missing, so hooks.server.ts read
+// them as SitePage slugs, treated them as public, and skipped the gRPC setup.
+// The (app) guard then found no client and redirected to login, which sent the
+// signed-in user straight back — an infinite redirect on a route that exists.
+// A derived list cannot drift: adding a route reserves its segment.
+//
+// Non-eager glob: only the KEYS are used, so this costs a path list, not the
+// modules themselves.
+const ROUTE_FILES = import.meta.glob("/src/routes/**/+page*.@(svelte|ts|js)")
+
+function routeOwnedSegments(): Set<string> {
+  const owned = new Set<string>()
+
+  for (const path of Object.keys(ROUTE_FILES)) {
+    for (const segment of path.slice("/src/routes/".length).split("/")) {
+      // A leaf (+page.svelte) directly under routes/ means the route is "/",
+      // which owns no named segment.
+      if (segment.startsWith("+")) break
+      // (group) folders are organisational and contribute nothing to the URL,
+      // so the segment that matters is further down.
+      if (segment.startsWith("(")) continue
+      // [id] / [slug=sitepage] match dynamically — there is no literal to
+      // reserve, and [slug=sitepage] is the SitePage route itself.
+      if (segment.startsWith("[")) break
+
+      owned.add(segment)
+      break
+    }
+  }
+
+  return owned
+}
+
+// Reserved beyond the route tree: paths served by hooks/handlers rather than by
+// a +page file, which therefore never show up in the glob above.
+const EXTRA_RESERVED = ["auth", "error", "api"]
+
+const RESERVED_SLUGS = new Set([...routeOwnedSegments(), ...EXTRA_RESERVED])
 
 export function isSitePageSlug(segment: string): boolean {
   return SLUG_PATTERN.test(segment) && !RESERVED_SLUGS.has(segment)
@@ -35,3 +61,6 @@ export function singleSegment(pathname: string): string | null {
 
   return m ? m[1]! : null
 }
+
+/** Exposed for the unit test that pins the derivation against the real tree. */
+export const reservedSlugs = RESERVED_SLUGS
