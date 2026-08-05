@@ -105,6 +105,7 @@
   
 - [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
     - [Hackathon](#hackathon-entities-Hackathon)
+    - [Hackathon.EmailTemplatesEntry](#hackathon-entities-Hackathon-EmailTemplatesEntry)
   
 - [hackathon/entities/hackathon_invite.proto](#hackathon_entities_hackathon_invite-proto)
     - [HackathonInvite](#hackathon-entities-HackathonInvite)
@@ -381,6 +382,12 @@
 - [hackathon/messages/project_svc/propose_response.proto](#hackathon_messages_project_svc_propose_response-proto)
     - [ProposeResponse](#hackathon-messages-project_svc-ProposeResponse)
   
+- [hackathon/messages/project_svc/remove_preference_request.proto](#hackathon_messages_project_svc_remove_preference_request-proto)
+    - [RemovePreferenceRequest](#hackathon-messages-project_svc-RemovePreferenceRequest)
+  
+- [hackathon/messages/project_svc/remove_preference_response.proto](#hackathon_messages_project_svc_remove_preference_response-proto)
+    - [RemovePreferenceResponse](#hackathon-messages-project_svc-RemovePreferenceResponse)
+  
 - [hackathon/messages/project_svc/set_preference_request.proto](#hackathon_messages_project_svc_set_preference_request-proto)
     - [SetPreferenceRequest](#hackathon-messages-project_svc-SetPreferenceRequest)
   
@@ -420,6 +427,7 @@
   
 - [hackathon/messages/team_svc/edit_submission_request.proto](#hackathon_messages_team_svc_edit_submission_request-proto)
     - [EditSubmissionRequest](#hackathon-messages-team_svc-EditSubmissionRequest)
+    - [EditSubmissionRequest.FormEntry](#hackathon-messages-team_svc-EditSubmissionRequest-FormEntry)
   
 - [hackathon/messages/team_svc/edit_submission_response.proto](#hackathon_messages_team_svc_edit_submission_response-proto)
     - [EditSubmissionResponse](#hackathon-messages-team_svc-EditSubmissionResponse)
@@ -1910,6 +1918,23 @@ Will become caller-dependent, so clients must not cache it across users. |
 | branding | [HackathonBranding](#hackathon-entities-HackathonBranding) | optional | Set by ConfigService.SetBranding. Populated on Get and on List — the public event page is built from List, so leaving it Get-only would make an event&#39;s own colours invisible exactly where visitors see it. Absent when the organizer set no branding. |
 | registration_form | [FormSchema](#hackathon-entities-FormSchema) | optional | Organizer-defined form schemas (ConfigService.SetRegistrationForm / SetSubmissionForm). Populated on Get only — a client needs them to RENDER the form it is about to submit, and without a read path the only way to fill one in was to guess the field keys. Absent when no form is defined, which means &#34;accept anything&#34; on the write side. |
 | submission_form | [FormSchema](#hackathon-entities-FormSchema) | optional |  |
+| email_templates | [Hackathon.EmailTemplatesEntry](#hackathon-entities-Hackathon-EmailTemplatesEntry) | repeated | Organizer-authored notification copy (ConfigService.SetEmailTemplates), keyed &#34;&lt;moment&gt;&#34; for the body and &#34;&lt;moment&gt;Subject&#34; for the subject line. Get only, and readable by members: it is copy about the event, not a secret — but nothing sends it, so organizers compose from it by hand. |
+
+
+
+
+
+
+<a name="hackathon-entities-Hackathon-EmailTemplatesEntry"></a>
+
+### Hackathon.EmailTemplatesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
 
 
 
@@ -4841,6 +4866,69 @@ for another registrant (walk-ins at the check-in desk).
 
 
 
+<a name="hackathon_messages_project_svc_remove_preference_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/remove_preference_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-RemovePreferenceRequest"></a>
+
+### RemovePreferenceRequest
+Withdraws a participant&#39;s project preference.
+
+Deliberately ORGANIZER-ONLY and deliberately takes a user_id: a
+participant&#39;s preference is final once expressed, so there is no
+self-service unset. Someone who picked in error asks an organizer, which
+keeps team formation working from a stable set of choices.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_remove_preference_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/remove_preference_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-RemovePreferenceResponse"></a>
+
+### RemovePreferenceResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_project_svc_set_preference_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -5244,6 +5332,23 @@ for another registrant (walk-ins at the check-in desk).
 | ----- | ---- | ----- | ----------- |
 | submission_id | [string](#string) |  |  |
 | result | [string](#string) | optional |  |
+| form | [EditSubmissionRequest.FormEntry](#hackathon-messages-team_svc-EditSubmissionRequest-FormEntry) | repeated | Structured answers, same keys and validation as CreateSubmission. Without this the form was frozen at create time: a team that mistyped a repo URL could edit the free text around it but never the field the organizer actually asked for. Absent (not merely empty) leaves the stored answers untouched, so an edit of `result` alone cannot wipe them. |
+
+
+
+
+
+
+<a name="hackathon-messages-team_svc-EditSubmissionRequest-FormEntry"></a>
+
+### EditSubmissionRequest.FormEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
 
 
 
@@ -6094,6 +6199,7 @@ the admin finalizes, and the table stays admin-editable afterwards.
 | ExportPreferences | [messages.project_svc.ExportPreferencesRequest](#hackathon-messages-project_svc-ExportPreferencesRequest) | [messages.project_svc.ExportPreferencesResponse](#hackathon-messages-project_svc-ExportPreferencesResponse) |  |
 | Edit | [messages.project_svc.EditRequest](#hackathon-messages-project_svc-EditRequest) | [messages.project_svc.EditResponse](#hackathon-messages-project_svc-EditResponse) |  |
 | Delete | [messages.project_svc.DeleteRequest](#hackathon-messages-project_svc-DeleteRequest) | [messages.project_svc.DeleteResponse](#hackathon-messages-project_svc-DeleteResponse) |  |
+| RemovePreference | [messages.project_svc.RemovePreferenceRequest](#hackathon-messages-project_svc-RemovePreferenceRequest) | [messages.project_svc.RemovePreferenceResponse](#hackathon-messages-project_svc-RemovePreferenceResponse) |  |
 
  
 

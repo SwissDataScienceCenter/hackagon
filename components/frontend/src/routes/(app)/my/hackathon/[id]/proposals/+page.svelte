@@ -1,8 +1,27 @@
 <script lang="ts">
     import { page as appPage } from '$app/stores';
     import { enhance } from '$app/forms';
+    import type { SubmitFunction } from '@sveltejs/kit';
 
     const { data, form } = $props();
+
+    /**
+     * Preferences cannot be withdrawn by the person who set them — only an
+     * organizer can — so ask before writing one rather than letting a stray
+     * click commit someone to a project.
+     */
+    function confirmPreference(title: string): SubmitFunction {
+        return ({ cancel }) => {
+            const ok = confirm(
+                `Mark "${title}" as a project you want to work on?\n\n` +
+                    `This is final: organizers use these choices to form teams, so you ` +
+                    `cannot undo it yourself. Ask an organizer if you change your mind.`
+            );
+            if (!ok) cancel();
+
+            return async ({ update }) => update({ reset: false });
+        };
+    }
 
     const hackathonId = $derived($appPage.params.id);
 
@@ -170,12 +189,45 @@
 
                     <div class="flex flex-wrap gap-2">
                         {#if canPrefer}
-                            <form method="POST" action="?/prefer" use:enhance>
+                            <!-- A preference is final: there is no self-service
+                                 unset, because team formation reads these
+                                 choices. Confirm before writing one. -->
+                            <form
+                                method="POST"
+                                action="?/prefer"
+                                use:enhance={confirmPreference(p.title)}
+                            >
                                 <input type="hidden" name="projectId" value={p.id} />
                                 <button class="btn btn-sm {p.preferred ? 'preset-tonal-success' : 'preset-tonal-primary'}">
                                     {p.preferred ? "You're in" : 'I want to work on this'}
                                 </button>
                             </form>
+                        {/if}
+
+                        {#if data.isOrganizer && p.preferrers.length > 0}
+                            <details class="w-full">
+                                <summary class="cursor-pointer text-xs text-surface-500">
+                                    Who picked this ({p.preferrers.length})
+                                </summary>
+                                <ul class="mt-2 flex flex-wrap gap-2">
+                                    {#each p.preferrers as person (person.id)}
+                                        <li class="badge preset-tonal flex items-center gap-2 text-xs">
+                                            <span>{person.name}</span>
+                                            <!-- Only organizers can withdraw a
+                                                 choice; the person who made it
+                                                 cannot. -->
+                                            <form method="POST" action="?/removePreference" use:enhance>
+                                                <input type="hidden" name="projectId" value={p.id} />
+                                                <input type="hidden" name="userId" value={person.id} />
+                                                <button
+                                                    class="text-error-500"
+                                                    aria-label="Withdraw {person.name}'s preference"
+                                                >×</button>
+                                            </form>
+                                        </li>
+                                    {/each}
+                                </ul>
+                            </details>
                         {/if}
 
                         {#if p.isMine || data.isOrganizer}

@@ -1,0 +1,291 @@
+// Hackagon — backend data model (branch sketch/04-08-26)
+// Source of truth: components/backend/db/schema/*.go (ent), rendered in
+// components/backend/Schema.md. Load this file at https://dbdiagram.io/d
+// (paste the whole thing).
+//
+// Naming: FK columns follow ent's generated <owner>_<edge> convention where
+// Schema.md's index list confirms it (e.g. hackathon_capabilities,
+// project_submissions, user_votes). The three pure M2M join tables at the
+// bottom are ent-generated; their exact physical names may differ — the
+// structure and cardinalities are exact.
+
+Enum visibility {
+  public
+  private
+}
+
+Enum capability_kind {
+  register
+  propose_projects
+  set_team_preferences
+  create_project_submissions
+  vote
+  view_results
+}
+
+Enum project_status {
+  proposed
+  approved
+}
+
+Enum submission_status {
+  draft
+  final
+}
+
+Enum vote_method {
+  single_choice
+  ranked
+  points
+}
+
+Enum voter_type {
+  all_participants
+  jury
+}
+
+Table users {
+  id uuid [pk]
+  username varchar [not null]
+  keycloak_id varchar [unique, not null, note: 'Keycloak sub claim - the RBAC subject']
+  display_name varchar
+  email varchar
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  Note: 'Synced from Keycloak on first login (WhoAmI -> Register)'
+}
+
+Table hackathons {
+  id uuid [pk]
+  name varchar [unique, not null]
+  starts_at timestamp [note: 'nullable - status is computed from these at read time']
+  ends_at timestamp
+  visibility visibility [not null]
+  description text [note: 'rich text / markdown hero']
+  logo text [note: 'URL or data URI']
+  current_phase_id uuid [ref: > phases.id, note: 'organizer-declared current phase; null = derive from dates']
+  user_created_hackathons uuid [ref: > users.id, not null, note: 'creator']
+  user_modified_hackathons uuid [ref: > users.id, not null, note: 'modifier']
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table participants {
+  id uuid [pk]
+  hackathon_id uuid [ref: > hackathons.id, not null]
+  user_id uuid [ref: > users.id, not null]
+  is_waiting bool [not null, note: 'true = waitlisted, false = confirmed']
+  created_at timestamp [not null, note: 'joined at']
+  Note: 'Explicit M2M join user<->hackathon with participation state'
+}
+
+Table hackathon_settings {
+  id uuid [pk]
+  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  registrations_enabled bool [not null]
+  voting_enabled bool [not null, note: 'the live gate for SubmitVote']
+  user_modified_settings uuid [ref: > users.id]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table hackathon_windows {
+  id uuid [pk]
+  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  registration_opens timestamp
+  registration_closes timestamp
+  proposals_close timestamp
+  preferences_close timestamp
+  submissions_close timestamp
+  registration_override_until timestamp [note: 'manual walk-in window']
+  submissions_override_until timestamp [note: 'manual grace window']
+  late_policy varchar
+  user_modified_windows uuid [ref: > users.id]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  Note: 'Enforced on Join / Propose / SetPreference / CreateSubmission; unset = not enforced'
+}
+
+Table hackathon_forms {
+  id uuid [pk]
+  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  registration_fields jsonb [note: 'array of {key,label,type,required,maxMb}']
+  registration_consents jsonb [note: 'array of {key,label,required}']
+  submission_fields jsonb
+  voting_policy jsonb [note: 'mechanism, scale, tie-breaks']
+  user_modified_forms uuid [ref: > users.id]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table hackathon_prizes {
+  id uuid [pk]
+  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  prizes jsonb [note: 'array of {rank,title}; rank 0 = special prize']
+  awards jsonb [note: 'array of {rank|special, submissionId}, set at Finalize']
+  finalized bool [not null, note: 'votes are advisory until the admin finalizes']
+  user_modified_prizes uuid [ref: > users.id]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table capabilities {
+  id uuid [pk]
+  capability capability_kind [not null]
+  enabled bool [not null, note: 'the authoritative gate']
+  hackathon_capabilities uuid [ref: > hackathons.id, not null]
+  user_modified_capabilities uuid [ref: > users.id]
+  phase_opens_capabilities uuid [ref: > phases.id, note: 'expected to open at this phase start']
+  phase_closes_capabilities uuid [ref: > phases.id, note: 'expected to close at this phase start']
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  indexes { (capability, hackathon_capabilities) [unique] }
+  Note: 'One row per member-facing action per hackathon, pre-created on creation'
+}
+
+Table form_responses {
+  id uuid [pk]
+  responses jsonb [not null, note: 'answers keyed by form field key']
+  consents jsonb [not null, note: 'checkboxes keyed by consent key']
+  hackathon_form_responses uuid [ref: > hackathons.id, not null]
+  user_form_responses uuid [ref: > users.id, not null, note: 'the registrant']
+  user_submitted_form_responses uuid [ref: > users.id, not null, note: 'who entered it (organizer for paper forms)']
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  indexes { (hackathon_form_responses, user_form_responses) [unique] }
+}
+
+Table pages {
+  id uuid [pk]
+  title varchar [not null]
+  content text [not null, note: 'rich text / markdown panel']
+  visible bool [not null]
+  "order" int [not null, note: 'lower first; MoveUp/MoveDown/SetOrder']
+  hackathon_pages uuid [ref: > hackathons.id, not null]
+  phase_page uuid [ref: - phases.id, note: 'optional O2O link to a phase']
+  user_created_pages uuid [ref: > users.id, not null]
+  user_modified_pages uuid [ref: > users.id, not null]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table phases {
+  id uuid [pk]
+  name varchar [not null]
+  description text
+  starts_at timestamp
+  ends_at timestamp
+  hackathon_phases uuid [ref: > hackathons.id, not null]
+  user_created_phases uuid [ref: > users.id, not null]
+  user_modified_phases uuid [ref: > users.id, not null]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table tracks {
+  id uuid [pk]
+  name varchar [not null]
+  description text [not null]
+  hackathon_tracks uuid [ref: > hackathons.id]
+  user_created_tracks uuid [ref: > users.id, not null]
+  user_modified_tracks uuid [ref: > users.id, not null]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  indexes { (name, hackathon_tracks) [unique] }
+}
+
+Table projects {
+  id uuid [pk]
+  title varchar [not null]
+  description text [not null]
+  status project_status [not null]
+  image varchar [note: 'cover image URL']
+  track_projects uuid [ref: > tracks.id, note: 'optional']
+  hackathon_projects uuid [ref: > hackathons.id, not null]
+  user_created_projects uuid [ref: > users.id, not null, note: 'proposer']
+  user_modified_projects uuid [ref: > users.id, not null]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table teams {
+  id uuid [pk]
+  name varchar [not null]
+  description text
+  project_teams uuid [ref: > projects.id, not null]
+  user_created_teams uuid [ref: > users.id, not null]
+  user_modified_teams uuid [ref: > users.id]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+}
+
+Table team_participants {
+  id uuid [pk]
+  team_id uuid [ref: > teams.id, not null]
+  user_id uuid [ref: > users.id, not null]
+  created_at timestamp [not null, note: 'joined the team at']
+  Note: 'Explicit M2M join user<->team'
+}
+
+Table submissions {
+  id uuid [pk]
+  result varchar [note: 'e.g. repository URL']
+  status submission_status [not null]
+  version int [not null, note: 'monotonic per project+team']
+  team_submissions uuid [ref: > teams.id, not null]
+  project_submissions uuid [ref: > projects.id, not null]
+  user_created_submissions uuid [ref: > users.id, not null]
+  user_modified_submissions uuid [ref: > users.id]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  indexes { (version, project_submissions, team_submissions) [unique] }
+}
+
+Table vote_categories {
+  id uuid [pk]
+  name varchar [not null, note: 'e.g. Impact, Novelty']
+  description text [note: 'criteria and instructions for voters']
+  voting_method vote_method [not null]
+  voter_type voter_type [not null, note: 'all_participants or jury']
+  hackathon_vote_categories uuid [ref: > hackathons.id, not null]
+}
+
+Table votes {
+  id uuid [pk]
+  vote_type vote_method [not null]
+  value int [note: 'rank position or points; null for single_choice']
+  vote_category_votes uuid [ref: > vote_categories.id, not null]
+  user_votes uuid [ref: > users.id, not null, note: 'the voter']
+  indexes { (vote_category_votes, user_votes) [unique, note: 'one ballot per voter per category'] }
+}
+
+Table vote_results {
+  id uuid [pk]
+  position int [not null, note: '1 = first place; ties allowed']
+  title varchar [note: 'e.g. Most Innovative']
+  vote_category_results uuid [ref: > vote_categories.id, not null]
+  submission_vote_results uuid [ref: > submissions.id, not null]
+}
+
+// ── ent-generated M2M join tables (exact physical names may differ) ────────
+
+Table submission_votes {
+  submission_id uuid [ref: > submissions.id, not null]
+  vote_id uuid [ref: > votes.id, not null]
+  indexes { (submission_id, vote_id) [pk] }
+  Note: 'M2M: a vote targets a submission'
+}
+
+Table user_preferred_projects {
+  user_id uuid [ref: > users.id, not null]
+  project_id uuid [ref: > projects.id, not null]
+  indexes { (user_id, project_id) [pk] }
+  Note: 'M2M: ranked project preferences'
+}
+
+Table user_jury_categories {
+  user_id uuid [ref: > users.id, not null]
+  vote_category_id uuid [ref: > vote_categories.id, not null]
+  indexes { (user_id, vote_category_id) [pk] }
+  Note: 'M2M: jury membership per vote category (voter_type = jury)'
+}

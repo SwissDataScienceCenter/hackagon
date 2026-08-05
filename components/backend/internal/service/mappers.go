@@ -139,6 +139,13 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		if len(h.Edges.Forms.SubmissionFields) > 0 {
 			e.SubmissionForm = formSchemaFromJSON(h.Edges.Forms.SubmissionFields, nil)
 		}
+		if len(h.Edges.Forms.EmailTemplates) > 0 {
+			// Copy the map: the wire message must not alias the DB row.
+			e.EmailTemplates = make(map[string]string, len(h.Edges.Forms.EmailTemplates))
+			for k, v := range h.Edges.Forms.EmailTemplates {
+				e.EmailTemplates[k] = v
+			}
+		}
 	}
 
 	return e

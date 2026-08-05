@@ -99,12 +99,24 @@ export const load: PageServerLoad = async (event) => {
   let preferenceCounts: Record<string, number> = {}
   let myPreferences: string[] = []
   let canExport = false
+  // Who preferred what, so an organizer can withdraw a choice on someone's
+  // behalf — participants cannot unset their own (see RemovePreference).
+  let preferrers: Record<string, { id: string; name: string }[]> = {}
   if (isOrganizer) {
     try {
       const res = await project.exportPreferences({ hackathonId: event.params.id })
       canExport = true
       preferenceCounts = Object.fromEntries(
         res.projects.map((p) => [p.id, p.preferences.length]),
+      )
+      preferrers = Object.fromEntries(
+        res.projects.map((p) => [
+          p.id,
+          p.preferences.map((u) => ({
+            id: u.id,
+            name: u.displayName || u.username,
+          })),
+        ]),
       )
       myPreferences = res.projects
         .filter((p) => p.preferences.some((u) => u.id === me))
@@ -137,6 +149,7 @@ export const load: PageServerLoad = async (event) => {
       isMine: p.creatorId === me,
       preferenceCount: preferenceCounts[p.id] ?? null,
       preferred: myPreferences.includes(p.id),
+      preferrers: preferrers[p.id] ?? [],
     })),
     tracks: hackathon.tracks.map((t) => ({ id: t.id, name: t.name })),
     isOrganizer,
@@ -244,5 +257,23 @@ export const actions: Actions = {
     }
 
     return { preferred: projectId }
+  },
+
+  // Organizer override. Participants cannot withdraw their own preference —
+  // team formation reads these choices — so someone who picked in error asks
+  // an organizer, who withdraws it here.
+  removePreference: async (event) => {
+    const { project } = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+    const projectId = String(form.get("projectId") ?? "")
+    const userId = String(form.get("userId") ?? "")
+    if (!projectId || !userId) return fail(400, { message: "Missing proposal or person." })
+    try {
+      await project.removePreference({ projectId, userId })
+    } catch (e) {
+      return formError(e)
+    }
+
+    return { preferenceRemoved: userId }
   },
 }

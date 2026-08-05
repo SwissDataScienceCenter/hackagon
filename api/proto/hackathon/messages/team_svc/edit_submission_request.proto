@@ -9,4 +9,10 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 message EditSubmissionRequest {
   string submission_id = 1 [(buf.validate.field).string.uuid = true];
   optional string result = 2 [(buf.validate.field).string.max_len = 50000];
+  // Structured answers, same keys and validation as CreateSubmission. Without
+  // this the form was frozen at create time: a team that mistyped a repo URL
+  // could edit the free text around it but never the field the organizer
+  // actually asked for. Absent (not merely empty) leaves the stored answers
+  // untouched, so an edit of `result` alone cannot wipe them.
+  map<string, string> form = 3;
 }

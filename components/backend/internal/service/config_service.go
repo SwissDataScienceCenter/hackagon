@@ -439,11 +439,19 @@ func (s *ConfigService) SetSubmissionForm(
 // emailTemplateKeys are the moments a hackathon can have copy for. Closed set
 // on purpose: a typo'd key would otherwise be stored silently and the intended
 // message would never be written.
+// A message needs a subject as much as a body, so each moment stores both:
+// "<moment>" is the body and "<moment>Subject" the subject line. Nothing
+// sends these yet — organizers compose from them by hand — and a mail without
+// a subject is the one most likely to be ignored.
 var emailTemplateKeys = map[string]bool{
-	"registrationConfirmed": true,
-	"teamAssigned":          true,
-	"deadlineReminder":      true,
-	"results":               true,
+	"registrationConfirmed":        true,
+	"registrationConfirmedSubject": true,
+	"teamAssigned":                 true,
+	"teamAssignedSubject":          true,
+	"deadlineReminder":             true,
+	"deadlineReminderSubject":      true,
+	"results":                      true,
+	"resultsSubject":               true,
 }
 
 func (s *ConfigService) SetEmailTemplates(

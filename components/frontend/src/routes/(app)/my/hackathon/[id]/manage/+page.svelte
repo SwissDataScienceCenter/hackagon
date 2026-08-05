@@ -3,6 +3,7 @@
     import { enhance } from '$app/forms';
     import type { SubmitFunction } from '@sveltejs/kit';
     import { membershipBadgeLabel, membershipBadgePreset } from '$lib/utils/hackathonStatus';
+    import EmailComposer from '$lib/components/hackathon/EmailComposer.svelte';
 
     const { data, form } = $props();
 
@@ -146,6 +147,48 @@
 
     function addPrizeRow() {
         prizeRows = [...prizeRows, { id: nextRowId++, rank: prizeRows.length + 1, title: '' }];
+    }
+
+    const EMAIL_MOMENTS = [
+        { key: 'registrationConfirmed', label: "When someone's registration is confirmed" },
+        { key: 'teamAssigned', label: 'When someone is put on a team' },
+        { key: 'deadlineReminder', label: 'Reminder before a deadline' },
+        { key: 'results', label: 'When results are published' }
+    ] as const;
+
+    const AUDIENCE_LABEL: Record<string, string> = {
+        confirmed: 'on the roster',
+        waiting: 'still waiting for a decision',
+        all: 'registered, confirmed or not'
+    };
+
+    // Defaults follow the moment: a "you're confirmed" note is pointless for
+    // people still waiting, while results concern everyone who registered.
+    let audience = $state<Record<string, string>>({
+        registrationConfirmed: 'confirmed',
+        teamAssigned: 'confirmed',
+        deadlineReminder: 'confirmed',
+        results: 'all'
+    });
+
+    /** Selected audience for a moment; the record is index-typed as optional. */
+    function sel(key: string): string {
+        return audience[key] ?? 'confirmed';
+    }
+
+    /** Saved copy, preferring what the last save returned over the stored value. */
+    function storedTemplate(key: string): string {
+        return form?.emailTemplates?.[key] ?? data.hackathon.emailTemplates?.[key] ?? '';
+    }
+
+    function audienceFor(which: string) {
+        const rows =
+            which === 'confirmed' ? confirmed : which === 'waiting' ? waiting : data.members;
+
+        return rows.map((m) => ({
+            email: m.user?.email ?? '',
+            name: m.user?.displayName || m.user?.username || ''
+        }));
     }
 
     function addAwardRow() {
@@ -1250,34 +1293,63 @@
             {/if}
 
             <form method="POST" action="?/setEmailTemplates" use:enhance={keepValues}
-                  class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
-                <label>
-                    <span class="text-sm">When someone's registration is confirmed</span>
-                    <textarea name="registrationConfirmed" class="textarea" rows="4"
-                              >{form?.emailTemplates?.registrationConfirmed ?? ''}</textarea>
-                </label>
-                <label>
-                    <span class="text-sm">When someone is put on a team</span>
-                    <textarea name="teamAssigned" class="textarea" rows="4"
-                              >{form?.emailTemplates?.teamAssigned ?? ''}</textarea>
-                </label>
-                <label>
-                    <span class="text-sm">Reminder before a deadline</span>
-                    <textarea name="deadlineReminder" class="textarea" rows="4"
-                              >{form?.emailTemplates?.deadlineReminder ?? ''}</textarea>
-                </label>
-                <label>
-                    <span class="text-sm">When results are published</span>
-                    <textarea name="results" class="textarea" rows="4"
-                              >{form?.emailTemplates?.results ?? ''}</textarea>
-                </label>
+                  class="card preset-outlined-surface-200-800 flex flex-col gap-5 p-4">
+                {#each EMAIL_MOMENTS as m (m.key)}
+                    <fieldset class="flex flex-col gap-2">
+                        <legend class="text-sm font-medium">{m.label}</legend>
+                        <input
+                            name="{m.key}Subject" class="input" placeholder="Subject line"
+                            value={storedTemplate(`${m.key}Subject`)}
+                        />
+                        <textarea name={m.key} class="textarea" rows="4"
+                                  >{storedTemplate(m.key)}</textarea>
+                    </fieldset>
+                {/each}
                 <p class="text-xs text-surface-500">
-                    These four are the only moments the backend accepts. Saving writes all
-                    four together, so a box left empty clears that message. There is no way
-                    to read them back.
+                    These four moments are the only ones the backend accepts. Saving writes
+                    all of them together, so a box left empty clears that message.
+                    <code>&#123;event&#125;</code> is filled in when you compose;
+                    <code>&#123;team&#125;</code>, <code>&#123;project&#125;</code> and
+                    <code>&#123;window&#125;</code> differ per person and are flagged instead.
                 </p>
                 <div><button class="btn btn-sm preset-filled-primary-500">Save templates</button></div>
             </form>
+        </section>
+
+        <!-- ── Send a message ───────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+            <div>
+                <h2 class="text-xl font-bold">Send a message</h2>
+                <p class="text-sm text-surface-500">
+                    Hackagon cannot send mail itself, so this builds the message for you:
+                    open it in your own email client, or copy the parts into whatever you
+                    use. Recipients go in BCC so participants never see each other's
+                    addresses.
+                </p>
+            </div>
+
+            {#each EMAIL_MOMENTS as m (m.key)}
+                <div class="card preset-outlined-surface-200-800 flex flex-col gap-3 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h3 class="font-semibold">{m.label}</h3>
+                        <label class="flex items-center gap-2 text-sm">
+                            <span class="text-surface-500">Send to</span>
+                            <select class="select w-auto" bind:value={audience[m.key]}>
+                                <option value="confirmed">Confirmed participants</option>
+                                <option value="waiting">Waitlisted</option>
+                                <option value="all">Everyone on the roster</option>
+                            </select>
+                        </label>
+                    </div>
+                    <EmailComposer
+                        subject={storedTemplate(`${m.key}Subject`)}
+                        body={storedTemplate(m.key)}
+                        recipients={audienceFor(sel(m.key))}
+                        eventName={data.hackathon.name}
+                        audienceLabel={AUDIENCE_LABEL[sel(m.key)] ?? ''}
+                    />
+                </div>
+            {/each}
         </section>
     {/if}
 </div>

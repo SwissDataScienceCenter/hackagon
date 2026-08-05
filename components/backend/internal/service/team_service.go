@@ -553,6 +553,7 @@ func (s *TeamService) CreateSubmission(
 			SetTeamID(teamID).
 			SetProjectID(projectID).
 			SetResult(req.GetResult()).
+			SetForm(req.GetForm()).
 			SetStatus(entsubmission.StatusDraft).
 			SetVersion(version + 1).
 			SetCreatorID(u.ID).
@@ -851,6 +852,26 @@ func (s *TeamService) EditSubmission(
 	update := s.dbClient.Submission.UpdateOne(subm).SetModifierID(u.ID)
 	if req.Result != nil {
 		update.SetResult(req.GetResult())
+	}
+	// Answers were previously frozen at create time, so a mistyped repo URL
+	// could never be corrected. An absent map leaves them alone; a present one
+	// replaces them wholesale and must satisfy the organizer's schema exactly
+	// as it did on create — a partial map would silently drop required fields.
+	if len(req.GetForm()) > 0 {
+		if forms, ferr := s.dbClient.HackathonForms.Query().
+			Where(enthackathonforms.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+			Only(ctx); ferr == nil {
+			if verr := validateAgainstFormSchema(
+				forms.SubmissionFields, req.GetForm(), "submission",
+			); verr != nil {
+				return nil, verr
+			}
+		} else if !ent.IsNotFound(ferr) {
+			slog.Error("query submission form", "err", ferr)
+
+			return nil, status.Error(codes.Internal, "couldn't query database")
+		}
+		update.SetForm(req.GetForm())
 	}
 	if _, err := update.Save(ctx); err != nil {
 		slog.Error("edit submission", "err", err)

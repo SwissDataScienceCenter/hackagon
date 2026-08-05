@@ -669,3 +669,70 @@ func (s *ProjectService) Delete(
 
 	return &msgs.DeleteResponse{}, nil
 }
+
+// RemovePreference withdraws a participant's project preference.
+//
+// Organizer-only, and it names the user explicitly: a preference is final once
+// a participant expresses it, so there is no self-service unset. Team
+// formation reads these choices, and letting people churn them mid-allocation
+// would keep moving the ground under it. Someone who picked in error asks an
+// organizer, who does it here.
+func (s *ProjectService) RemovePreference(
+	ctx context.Context,
+	req *msgs.RemovePreferenceRequest,
+) (*msgs.RemovePreferenceResponse, error) {
+	projectID, err := uuid.Parse(req.GetProjectId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
+	}
+	userID, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	project, err := s.dbClient.Project.Query().
+		Where(entproject.IDEQ(projectID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "project %s not found", projectID)
+		}
+		slog.Error("query project", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if project.Edges.Hackathon == nil {
+		return nil, status.Error(codes.Internal, "project has no hackathon")
+	}
+
+	// Write, not Read: unlike expressing a preference (which every roster
+	// member may do), withdrawing someone else's is an organizer action.
+	if err := s.enforcer.RequirePermission(
+		ctx, project.Edges.Hackathon.ID.String(), mw.Project, mw.Write,
+	); err != nil {
+		return nil, err
+	}
+
+	u, err := s.dbClient.User.Query().Where(entuser.IDEQ(userID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", userID)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Removing a preference nobody expressed is a no-op, not an error: the
+	// caller's intent (this person does not prefer this project) already holds.
+	if err := s.dbClient.Project.UpdateOne(project).
+		RemovePreferredByUsers(u).
+		Exec(ctx); err != nil {
+		slog.Error("remove preference", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't remove preference")
+	}
+
+	return &msgs.RemovePreferenceResponse{}, nil
+}

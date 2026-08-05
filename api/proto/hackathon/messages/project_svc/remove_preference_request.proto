@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package hackathon.messages.project_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/project_svc";
+
+import "buf/validate/validate.proto";
+
+// Withdraws a participant's project preference.
+//
+// Deliberately ORGANIZER-ONLY and deliberately takes a user_id: a
+// participant's preference is final once expressed, so there is no
+// self-service unset. Someone who picked in error asks an organizer, which
+// keeps team formation working from a stable set of choices.
+message RemovePreferenceRequest {
+  string project_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+}

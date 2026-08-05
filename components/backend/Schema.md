@@ -366,6 +366,7 @@ A versioned submission from a team for a project.
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the submission was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 | `result` | string | no | no | no | no | Result or output of the submission (e.g. a URL). |
+| `form` | map[string]string | no | no | no | no | Structured answers keyed by the organizer's submission form fields (ConfigService.SetSubmissionForm). Validated on write against that schema. |
 | `status` | enum(draft, final) | yes | no | no | no | Whether the submission is a draft or final. |
 | `version` | int | yes | no | no | no | Monotonically increasing version number, unique per project+team. |
 

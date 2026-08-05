@@ -146,12 +146,17 @@ function duplicateKey(keys: string[]): string | null {
 
 // SetEmailTemplates rejects any other key, and it replaces the whole map, so
 // the form always posts all four — omitting one would delete its copy.
-const EMAIL_TEMPLATE_KEYS = [
+// Each moment stores a subject and a body; the backend accepts exactly these
+// keys and rejects anything else. Both halves are always posted because
+// SetEmailTemplates replaces the whole map — a partial save would delete the
+// copy it omitted.
+const EMAIL_MOMENTS = [
   "registrationConfirmed",
   "teamAssigned",
   "deadlineReminder",
   "results",
 ] as const
+const EMAIL_TEMPLATE_KEYS = EMAIL_MOMENTS.flatMap((m) => [m, `${m}Subject`])
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon, team } = requireGrpc(event.locals.grpc)

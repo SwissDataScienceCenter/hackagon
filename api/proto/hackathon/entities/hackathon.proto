@@ -73,4 +73,9 @@ message Hackathon {
   // which means "accept anything" on the write side.
   optional FormSchema registration_form = 23;
   optional FormSchema submission_form = 24;
+  // Organizer-authored notification copy (ConfigService.SetEmailTemplates),
+  // keyed "<moment>" for the body and "<moment>Subject" for the subject line.
+  // Get only, and readable by members: it is copy about the event, not a
+  // secret — but nothing sends it, so organizers compose from it by hand.
+  map<string, string> email_templates = 25;
 }
