@@ -6,7 +6,7 @@
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import SidebarNavSection from './SidebarNavSection.svelte';
-    import { activeNavId, canManagePages, hackathonRoleBadge, memberNav } from '$lib/navigation';
+    import { activeNavId, hackathonRoleBadge, manageNav, memberNav } from '$lib/navigation';
 
     interface HackathonMember {
         role: number;
@@ -16,6 +16,8 @@
     interface HackathonPage {
         id: string;
         title: string;
+        /** False for a page only its organisers can see — badged, not omitted. */
+        visible: boolean;
     }
 
     let {
@@ -45,11 +47,19 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
-    // Sourced from the same `membership`/`isGlobalAdmin` as `badge` below, so
-    // "Manage Pages" and the "Owner" chip can never disagree about the role.
-    const mayManagePages = $derived(canManagePages(membership ?? undefined, isGlobalAdmin));
-    const items = $derived(memberNav(hackathonId, pages, mayManagePages));
-    const activeId = $derived(activeNavId($page.url.pathname, items));
+    const items = $derived(memberNav(hackathonId, pages));
+    // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
+    // section and the "Owner" chip can never disagree about the role.
+    const manageItems = $derived(manageNav(hackathonId, membership ?? undefined, isGlobalAdmin));
+
+    // One call across both sections, per activeNavId's contract: computing it per
+    // section let each highlight its own best match, so two could light at once.
+    // It also resolves the overlaps deliberately, longest href winning:
+    // /timeline/new beats /timeline so New Phase lights rather than Timeline, and
+    // /teams/manage beats /teams. It cuts the other way for pages — an individual
+    // /pages/<id> is longer than /pages, so opening one lights that page and not
+    // Manage Pages.
+    const activeId = $derived(activeNavId($page.url.pathname, [...items, ...manageItems]));
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who
     // never joined, hence the second argument.
@@ -177,8 +187,26 @@
     </div>
 
     <nav class="flex-1 overflow-y-auto">
-        <!-- No section label: the header directly above already names the
-             hackathon, and a lone section needs no heading to separate it from. -->
+        <!-- The participant entries carry no section label: the header directly
+             above already names the hackathon, and labelling this one too would
+             imply the Manage section below is a peer rather than an addition to
+             it. -->
         <SidebarNavSection {items} {activeId} collapsed={effectiveCollapsed} />
+
+        <!-- Organiser-only, and empty for everyone else — SidebarNavSection drops
+             a section with no items. The heading is what makes the difference
+             legible, so unlike the section above this one needs it.
+
+             No role chip here even though the section is role-gated: the header
+             above already states the viewer's role, and a second "Owner" chip
+             reads as two roles rather than one role stated twice. The tertiary
+             accent does the distinguishing instead. -->
+        <SidebarNavSection
+            label="Manage"
+            items={manageItems}
+            {activeId}
+            collapsed={effectiveCollapsed}
+            accent="tertiary"
+        />
     </nav>
 </aside>

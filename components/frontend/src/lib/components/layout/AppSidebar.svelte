@@ -9,7 +9,6 @@
     import SidebarUserFooter from './SidebarUserFooter.svelte';
     import {
         activeNavId,
-        canManagePages,
         defaultHackathon,
         hackathonRoleBadge,
         hackathonsRoleBadge,
@@ -37,6 +36,13 @@
     interface HackathonPage {
         id: string;
         title: string;
+        /**
+         * Whether participants can see the page. This sidebar's caller passes only
+         * visible pages (see the prop doc below), but `memberNav` badges a hidden
+         * page rather than omitting it and so requires the flag either way — and an
+         * absent one reads as `false`, which would badge every page "Hidden".
+         */
+        visible: boolean;
     }
 
     let {
@@ -71,18 +77,15 @@
     const navId = $derived(urlHackathonId ?? defaultHackathon(myHackathons)?.id);
     const navHackathon = $derived(myHackathons.find((h) => h.id === navId));
 
-    // Sourced from the same `viewerMembership` as `hackathonBadge` below, so
-    // "Manage Pages" and the "Owner" chip can never disagree about the role.
-    const mayManagePages = $derived(
-        canManagePages(navHackathon?.viewerMembership, isGlobalAdmin),
-    );
-
+    // No Manage section here: organiser entries live in `manageNav`, which the
+    // per-hackathon HackathonSidebar renders. This component is currently rendered
+    // by nothing (see the note at the top of the file) and is kept compiling only,
+    // so it deliberately shows the participant spine and no more.
+    //
     // Pages are only loaded for the hackathon the URL names, so when navId comes
     // from the default-hackathon fallback there are none to append.
     const hackathonItems = $derived(
-        navId
-            ? memberNav(navId, navId === urlHackathonId ? hackathonPages : [], mayManagePages)
-            : [],
+        navId ? memberNav(navId, navId === urlHackathonId ? hackathonPages : []) : [],
     );
     const homeItems = $derived(homeNav({ isGlobalAdmin, isHackathonOrganizer }));
     const platformItems = $derived(platformNav({ isGlobalAdmin }));

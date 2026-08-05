@@ -29,16 +29,26 @@ export const load: LayoutServerLoad = async (event) => {
 
   // The sidebar lists this hackathon's content pages. A separate PageService.List
   // rather than reading result.hackathon.pages: List is the authoritative source
-  // for what a viewer may see, filtering `visible: false` server-side, while
-  // hackathon.get hands those to plain members too.
+  // for what a viewer may see, while hackathon.get hands hidden pages to plain
+  // members too.
+  //
+  // `visible` is carried through rather than assumed: List only filters
+  // `visible: false` out for callers *without* `page:write`
+  // (`page_service.go:31`), so an organiser's list mixes hidden pages in with
+  // published ones and the sidebar has to be able to tell them apart. For a
+  // participant every entry here is visible by construction.
   //
   // A failure here degrades the nav to its fixed entries rather than failing this
   // load and blanking the hackathon — the content area is the part that has to
   // report a real error, and hackathon.get above already did if there was one.
-  let hackathonPages: { id: string; title: string }[] = []
+  let hackathonPages: { id: string; title: string; visible: boolean }[] = []
   try {
     const { pages } = await page.list({ hackathonId: event.params.id })
-    hackathonPages = pages.map((p) => ({ id: p.id, title: p.title }))
+    hackathonPages = pages.map((p) => ({
+      id: p.id,
+      title: p.title,
+      visible: p.visible,
+    }))
   } catch (err) {
     event.locals.logger.warn(
       { err },
