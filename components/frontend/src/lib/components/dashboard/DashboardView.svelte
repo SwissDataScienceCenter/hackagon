@@ -1,7 +1,9 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import Plus from 'lucide-svelte/icons/plus';
+    import Pencil from 'lucide-svelte/icons/pencil';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import { canEditHackathon } from '$lib/navigation';
     import { statusLabel, statusBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
 
     interface HackathonMember {
@@ -33,9 +35,17 @@
          * still the backend's to refuse; this only decides whether to offer it.
          */
         canCreate?: boolean;
+        /** Whether the viewer can edit any hackathon regardless of ownership. */
+        isGlobalAdmin?: boolean;
     }
 
-    const { session, myHackathons, otherHackathons, canCreate = false }: Props = $props();
+    const {
+        session,
+        myHackathons,
+        otherHackathons,
+        canCreate = false,
+        isGlobalAdmin = false,
+    }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
     // Decorative thumbnails for hackathons with no image of their own. Each
@@ -117,11 +127,22 @@
                                     gradTo={gradient(i).to}
                                 />
                             </div>
-                            {#if mem}
-                                <span class="mr-4 badge {membershipBadgeVariant(mem.isWaiting)} shrink-0">
-                                    {membershipBadgeLabel(mem.isWaiting, mem.role)}
-                                </span>
-                            {/if}
+                            <div class="mr-4 flex shrink-0 items-center gap-2">
+                                {#if mem}
+                                    <span class="badge {membershipBadgeVariant(mem.isWaiting)}">
+                                        {membershipBadgeLabel(mem.isWaiting, mem.role)}
+                                    </span>
+                                {/if}
+                                {#if canEditHackathon(mem, isGlobalAdmin)}
+                                    <a
+                                        href={resolve(`/my/hackathon/${h.id}/edit`)}
+                                        aria-label="Edit {h.name}"
+                                        class="btn-icon btn-sm preset-tonal-surface"
+                                    >
+                                        <Pencil class="h-4 w-4" />
+                                    </a>
+                                {/if}
+                            </div>
                         </div>
                     {/each}
                 </div>
