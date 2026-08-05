@@ -34,9 +34,20 @@
 
     // The accent marks where you are rather than decorating the monogram, so the
     // header spends no accent and leaves the page's one primary action to own it.
+    //
+    // Two separate flags, because the two entries are two destinations: your own
+    // events and every event. They used to be one flag over one entry that
+    // changed target with your session, which lit "Hackathons" on the landing
+    // page and left the browse page — the searchable list the entry names —
+    // unreachable from the chrome once you signed in.
+    const onDashboard = $derived($page.url.pathname.startsWith('/dashboard'));
     const onHackathons = $derived(
-        $page.url.pathname === '/' || $page.url.pathname.startsWith('/dashboard')
+        $page.url.pathname === '/hackathon' || $page.url.pathname.startsWith('/hackathon/')
     );
+
+    const TAB = 'pb-0.5 text-sm font-medium no-underline hover:text-accent-ink';
+    const TAB_ON = 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]';
+    const TAB_OFF = 'text-ink-2';
 
     // The row vocabulary is SidebarNavSection's, so the two navigations read as
     // one system rather than drifting into separate dialects of the same idea.
@@ -58,70 +69,44 @@
          sm:px-10 md:px-20 inset. At md that inset is 5.6rem, which left the
          wordmark adrift mid-bar rather than anchored to the edge it belongs to. -->
     <div class="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
-        <!-- The two branches differ only in destination, but each has to spell out its
-             own resolve() call: svelte/no-navigation-without-resolve only recognizes a
-             literal one in the attribute, not a derived value. -->
-        {#if session?.user}
-            <a
-                href={resolve('/(app)/dashboard')}
-                class="flex min-w-0 items-center gap-2 no-underline sm:gap-3"
-            >
-                <img
-                    src="/logos/sdsc_white.svg"
-                    alt="SDSC"
-                    class="hidden h-6 shrink-0 dark:block sm:h-7"
-                />
-                <img
-                    src="/logos/sdsc.svg"
-                    alt="SDSC"
-                    class="block h-6 shrink-0 dark:hidden sm:h-7"
-                />
-                <span class="truncate text-section">Hackathons</span>
-            </a>
-        {:else}
-            <a href={resolve('/')} class="flex min-w-0 items-center gap-2 no-underline sm:gap-3">
-                <img
-                    src="/logos/sdsc_white.svg"
-                    alt="SDSC"
-                    class="hidden h-6 shrink-0 dark:block sm:h-7"
-                />
-                <img
-                    src="/logos/sdsc.svg"
-                    alt="SDSC"
-                    class="block h-6 shrink-0 dark:hidden sm:h-7"
-                />
-                <span class="truncate text-section">Hackathons</span>
-            </a>
-        {/if}
+        <!-- The wordmark is the platform instance, so it goes to the platform's
+             own front page — for everyone. It used to send signed-in people to
+             their dashboard instead, which made the landing page unreachable
+             once you had an account: the one control every page carries pointed
+             back into the app you were already in. -->
+        <a href={resolve('/')} class="flex min-w-0 items-center gap-2 no-underline sm:gap-3">
+            <img
+                src="/logos/sdsc_white.svg"
+                alt="SDSC"
+                class="hidden h-6 shrink-0 dark:block sm:h-7"
+            />
+            <img
+                src="/logos/sdsc.svg"
+                alt="SDSC"
+                class="block h-6 shrink-0 dark:hidden sm:h-7"
+            />
+            <span class="truncate text-section">Hackathons</span>
+        </a>
 
         <nav class="hidden items-center gap-6 md:flex">
+            <!-- Your events, only once you have some. First, because it is where
+                 a signed-in person is going nine times out of ten. -->
             {#if session?.user}
                 <a
                     href={resolve('/(app)/dashboard')}
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
-                       {onHackathons
-                        ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
-                        : 'text-ink-2'}"
+                    aria-current={onDashboard ? 'page' : undefined}
+                    class="{TAB} {onDashboard ? TAB_ON : TAB_OFF}"
                 >
-                    Hackathons
-                </a>
-            {:else}
-                <!-- Signed out, "Hackathons" is the public browse page, not the
-                     landing page: the logo is the platform instance and this is
-                     the list of its events. Signed in, it stays the dashboard —
-                     your own events are the ones you came for. -->
-                <a
-                    href="/hackathon"
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
-                       {onHackathons
-                        ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
-                        : 'text-ink-2'}"
-                >
-                    Hackathons
+                    Dashboard
                 </a>
             {/if}
+            <!-- "Hackathons" is the browse page — every event, searchable —
+                 whoever is asking. The label names a list, so it has to reach
+                 the list; when it pointed at the dashboard while signed in, the
+                 same word meant "yours" or "all" depending on your session. -->
+            <a href="/hackathon" aria-current={onHackathons ? 'page' : undefined} class="{TAB} {onHackathons ? TAB_ON : TAB_OFF}">
+                Hackathons
+            </a>
             {#if showPublicLinks}
                 <!-- About is a real SitePage, served by [slug=sitepage]. The
                      "Challenges" entry that used to sit here pointed at "/" —
@@ -217,23 +202,24 @@
             id="navbar-mobile-nav"
             class="flex flex-col gap-0.5 border-t border-line px-4 py-2 md:hidden"
         >
+            <!-- Same entries as the bar above, in the same order: the panel is
+                 the bar at 320px, not a second navigation with its own ideas. -->
             {#if session?.user}
                 <a
                     href={resolve('/(app)/dashboard')}
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
+                    aria-current={onDashboard ? 'page' : undefined}
+                    class="{ROW} {onDashboard ? ROW_ACTIVE : ROW_IDLE}"
                 >
-                    Hackathons
-                </a>
-            {:else}
-                <a
-                    href="/hackathon"
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
-                >
-                    Hackathons
+                    Dashboard
                 </a>
             {/if}
+            <a
+                href="/hackathon"
+                aria-current={onHackathons ? 'page' : undefined}
+                class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
+            >
+                Hackathons
+            </a>
             {#if showPublicLinks}
                 <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
             {/if}
