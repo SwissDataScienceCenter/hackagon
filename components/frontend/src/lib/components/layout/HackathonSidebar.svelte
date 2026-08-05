@@ -6,7 +6,7 @@
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import SidebarNavSection from './SidebarNavSection.svelte';
-    import { activeNavId, hackathonRoleBadge, memberNav } from '$lib/navigation';
+    import { activeNavId, canManagePages, hackathonRoleBadge, memberNav } from '$lib/navigation';
 
     interface HackathonMember {
         role: number;
@@ -45,7 +45,10 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
-    const items = $derived(memberNav(hackathonId, pages));
+    // Sourced from the same `membership`/`isGlobalAdmin` as `badge` below, so
+    // "Manage Pages" and the "Owner" chip can never disagree about the role.
+    const mayManagePages = $derived(canManagePages(membership ?? undefined, isGlobalAdmin));
+    const items = $derived(memberNav(hackathonId, pages, mayManagePages));
     const activeId = $derived(activeNavId($page.url.pathname, items));
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who
