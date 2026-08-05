@@ -39,6 +39,16 @@ export interface NavItem {
   badge?: string
   /** Badge class for `badge`. A lifecycle state, so never `badge-accent`. */
   badgeVariant?: string
+  /**
+   * One line on what the destination is for.
+   *
+   * Optional, and ignored by the sidebar — a 4rem-collapsible rail has no room
+   * for it, and the label is enough when the entry sits under a heading that
+   * already frames it. It exists for callers that render the same entries with
+   * space to explain them, such as the dashboard's Manage platform tiles, so a
+   * destination is described once here rather than restated per surface.
+   */
+  description?: string
 }
 
 /**
@@ -202,6 +212,13 @@ export function memberNav(
  * anyone but admin. An organizer's one permission, `hackathon:create`, is a
  * hackathon action and sits in `homeNav` instead, so an organizer sees no
  * Platform section at all rather than an empty one.
+ *
+ * The dashboard's Manage platform section is what renders this, and it is now
+ * the only way in: the header used to carry a Users link of its own, hard-coded
+ * rather than read from here, and it is gone. Keeping the list here rather than
+ * inline in the view means a settings page added below reaches every surface
+ * that asks — `AppSidebar` still renders it too, though nothing mounts that
+ * component at present.
  */
 export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
   if (!roles.isGlobalAdmin) return []
@@ -212,6 +229,9 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
       label: "Users",
       icon: Users,
       href: resolve("/(app)/manage/users"),
+      description:
+        "Everyone registered on the platform. Grant or revoke the Admin and " +
+        "Hackathon Organizer roles.",
     },
   ]
 }

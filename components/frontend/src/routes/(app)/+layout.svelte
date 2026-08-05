@@ -12,11 +12,7 @@
 </script>
 
 <div class="flex min-h-screen flex-col">
-    <NavBar
-        session={data.session ?? null}
-        showPublicLinks={false}
-        isGlobalAdmin={data.isGlobalAdmin}
-    />
+    <NavBar session={data.session ?? null} showPublicLinks={false} />
     <main class="flex-1">
         {@render children()}
     </main>

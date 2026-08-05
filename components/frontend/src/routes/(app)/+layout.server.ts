@@ -8,10 +8,11 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 // through a gap in PUBLIC_ROUTE_PATTERNS. It also lets page loads below this
 // point rely on event.locals.grpc being set.
 //
-// It makes no RPC of its own. The shell is a top bar showing identity and, for
-// an admin, the platform entry — both already on locals. The hackathon list and
-// page list this used to fetch belonged to the sidebar that lived here; that
-// sidebar now renders under my/hackathon/[id], which loads its own.
+// It makes no RPC of its own. The shell is a top bar showing identity and
+// nothing else — the platform entry it used to carry now lives on the dashboard
+// — and the roles below are already on locals. The hackathon list and page list
+// this used to fetch belonged to the sidebar that lived here; that sidebar now
+// renders under my/hackathon/[id], which loads its own.
 export const load: LayoutServerLoad = async (event) => {
   if (!event.locals.grpc) {
     const returnTo = encodeURIComponent(event.url.pathname + event.url.search)
@@ -23,6 +24,11 @@ export const load: LayoutServerLoad = async (event) => {
 
   return {
     session: event.locals.session,
+    // The raw set as well as the two flags: the flags answer "may they?" and
+    // gate what is offered, while the dashboard shows the roles themselves as
+    // badges and would otherwise have to translate booleans back into a list —
+    // and silently miss any role a later backend adds.
+    globalRoles: roles,
     isGlobalAdmin: roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN),
     isHackathonOrganizer: roles.includes(
       GlobalRole.GLOBAL_ROLE_HACKATHON_ORGANIZER,

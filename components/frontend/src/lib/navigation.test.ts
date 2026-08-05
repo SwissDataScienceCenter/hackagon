@@ -522,4 +522,21 @@ describe("platformNav", () => {
       "platform:users",
     ])
   })
+
+  // The dashboard renders these as tiles that give each entry a line of its own,
+  // so an entry without a description leaves a visibly empty one. The sidebar
+  // ignores the field, which is exactly why nothing else would catch this.
+  it("describes every entry, for the surfaces that show descriptions", () => {
+    for (const item of platformNav({ isGlobalAdmin: true })) {
+      expect(item.description, `${item.id} has no description`).toBeTruthy()
+    }
+  })
+
+  // Every entry points somewhere: the tiles render an hrefless one as a muted,
+  // non-clickable card, which is right as a fallback but wrong as a resting state.
+  it("points every entry at a real route", () => {
+    for (const item of platformNav({ isGlobalAdmin: true })) {
+      expect(item.href, `${item.id} has no href`).toBeTruthy()
+    }
+  })
 })

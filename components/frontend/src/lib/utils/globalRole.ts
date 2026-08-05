@@ -21,3 +21,20 @@ export function globalRoleLabel(r: number): string | undefined {
 export function globalRoleBadgeVariant(r: number): string | undefined {
   return BADGE_VARIANT[r]
 }
+
+/**
+ * The roles worth showing a viewer about themselves, in a fixed order.
+ *
+ * Filtering by `ASSIGNABLE_GLOBAL_ROLES` rather than by `roles` does two things
+ * at once: it drops anything this build has no label for — UNSPECIFIED, or a
+ * role a newer backend grants — and it pins the order, so the badges cannot
+ * reshuffle because casbin returned the same set in a different sequence.
+ *
+ * Deliberately not what the admin user table uses: there, an unrecognized role
+ * is worth surfacing as "Unknown" because the point of the table is auditing
+ * who holds what. Telling someone they hold a role this build cannot name is
+ * just noise.
+ */
+export function displayableGlobalRoles(roles: number[]): number[] {
+  return ASSIGNABLE_GLOBAL_ROLES.filter((r) => roles.includes(r))
+}
