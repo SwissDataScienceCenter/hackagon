@@ -11,6 +11,7 @@
     const hackathonId = $derived(data.hackathonId);
     const teams = $derived(data.teams);
     const unassigned = $derived(data.unassigned);
+    const approvedProjects = $derived(data.approvedProjects);
 
     // Drop target id for the unassigned pool; team ids are used as-is.
     const POOL = 'pool';
@@ -138,6 +139,58 @@
             {form.message}
         </p>
     {/if}
+
+    <section class="flex flex-col gap-3 border border-surface-200-800 bg-surface-100-900 p-3">
+        <h3 class="m-0 text-xs font-semibold uppercase tracking-wide text-surface-500">
+            Approved Projects
+        </h3>
+        {#if approvedProjects.length === 0}
+            <p class="m-0 text-xs text-surface-400">No projects have been approved yet.</p>
+        {:else}
+            <div class="flex flex-col divide-y divide-surface-200-800">
+                {#each approvedProjects as p (p.id)}
+                    <div class="flex flex-wrap items-center justify-between gap-3 py-2">
+                        <div class="flex min-w-0 flex-col gap-0.5">
+                            <span class="truncate text-sm font-semibold text-surface-950-50">
+                                {p.title}
+                            </span>
+                            <span class="text-xs text-surface-500">
+                                {p.teamCount === 1 ? '1 team' : `${p.teamCount} teams`}
+                                &middot;
+                                {#if p.preferredNames.length === 0}
+                                    No preferences yet
+                                {:else}
+                                    Prefers: {p.preferredNames.join(', ')}
+                                {/if}
+                            </span>
+                        </div>
+                        <form
+                            method="POST"
+                            action="?/createTeam"
+                            class="flex shrink-0 items-center gap-2"
+                            use:enhance
+                        >
+                            <input type="hidden" name="projectId" value={p.id} />
+                            <input
+                                type="text"
+                                name="name"
+                                required
+                                minlength="3"
+                                maxlength="255"
+                                placeholder="Team name"
+                                class="h-8 w-40 border border-surface-200-800 bg-surface-50-950 px-2
+                                       text-xs text-surface-950-50 focus:border-primary-500
+                                       focus:outline-none"
+                            />
+                            <button type="submit" class="btn btn-sm preset-tonal-surface">
+                                New Team
+                            </button>
+                        </form>
+                    </div>
+                {/each}
+            </div>
+        {/if}
+    </section>
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <section
