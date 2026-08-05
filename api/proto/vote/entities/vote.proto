@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package vote.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities";
+
+// Vote is a single atomic judgment from one voter on one submission
+// within one category. The vote payload is method-specific.
+message Vote {
+  string id = 1;
+  string category_id = 2;
+  string voter_id = 3;
+  oneof vote {
+    SingleChoiceVote single_choice = 4;
+    RankedVote ranked = 5;
+    PointsVote points = 6;
+  }
+  int64 created_at = 7;
+  int64 modified_at = 8;
+}
+
+message SingleChoiceVote {
+  string submission_id = 1;
+}
+
+message RankedVote {
+  string submission_id = 1;
+  int32 rank = 2;
+}
+
+message PointsVote {
+  string submission_id = 1;
+  int32 points = 2;
+}

@@ -432,6 +432,118 @@
 - [user/user_service.proto](#user_user_service-proto)
     - [UserService](#user-UserService)
   
+- [vote/entities/vote.proto](#vote_entities_vote-proto)
+    - [PointsVote](#vote-entities-PointsVote)
+    - [RankedVote](#vote-entities-RankedVote)
+    - [SingleChoiceVote](#vote-entities-SingleChoiceVote)
+    - [Vote](#vote-entities-Vote)
+  
+- [vote/entities/voter_type.proto](#vote_entities_voter_type-proto)
+    - [VoterType](#vote-entities-VoterType)
+  
+- [vote/entities/voting_method.proto](#vote_entities_voting_method-proto)
+    - [VotingMethod](#vote-entities-VotingMethod)
+  
+- [vote/entities/vote_category.proto](#vote_entities_vote_category-proto)
+    - [VoteCategory](#vote-entities-VoteCategory)
+  
+- [vote/entities/vote_result.proto](#vote_entities_vote_result-proto)
+    - [VoteResult](#vote-entities-VoteResult)
+  
+- [vote/messages/vote_svc/create_category_request.proto](#vote_messages_vote_svc_create_category_request-proto)
+    - [CreateVoteCategoryRequest](#vote-messages-vote_svc-CreateVoteCategoryRequest)
+  
+- [vote/messages/vote_svc/create_category_response.proto](#vote_messages_vote_svc_create_category_response-proto)
+    - [CreateVoteCategoryResponse](#vote-messages-vote_svc-CreateVoteCategoryResponse)
+  
+- [vote/messages/vote_svc/create_result_request.proto](#vote_messages_vote_svc_create_result_request-proto)
+    - [CreateVoteResultRequest](#vote-messages-vote_svc-CreateVoteResultRequest)
+  
+- [vote/messages/vote_svc/create_result_response.proto](#vote_messages_vote_svc_create_result_response-proto)
+    - [CreateVoteResultResponse](#vote-messages-vote_svc-CreateVoteResultResponse)
+  
+- [vote/messages/vote_svc/delete_category_request.proto](#vote_messages_vote_svc_delete_category_request-proto)
+    - [DeleteVoteCategoryRequest](#vote-messages-vote_svc-DeleteVoteCategoryRequest)
+  
+- [vote/messages/vote_svc/delete_category_response.proto](#vote_messages_vote_svc_delete_category_response-proto)
+    - [DeleteVoteCategoryResponse](#vote-messages-vote_svc-DeleteVoteCategoryResponse)
+  
+- [vote/messages/vote_svc/delete_result_request.proto](#vote_messages_vote_svc_delete_result_request-proto)
+    - [DeleteVoteResultRequest](#vote-messages-vote_svc-DeleteVoteResultRequest)
+  
+- [vote/messages/vote_svc/delete_result_response.proto](#vote_messages_vote_svc_delete_result_response-proto)
+    - [DeleteVoteResultResponse](#vote-messages-vote_svc-DeleteVoteResultResponse)
+  
+- [vote/messages/vote_svc/edit_category_request.proto](#vote_messages_vote_svc_edit_category_request-proto)
+    - [EditVoteCategoryRequest](#vote-messages-vote_svc-EditVoteCategoryRequest)
+  
+- [vote/messages/vote_svc/edit_category_response.proto](#vote_messages_vote_svc_edit_category_response-proto)
+    - [EditVoteCategoryResponse](#vote-messages-vote_svc-EditVoteCategoryResponse)
+  
+- [vote/messages/vote_svc/edit_result_request.proto](#vote_messages_vote_svc_edit_result_request-proto)
+    - [EditVoteResultRequest](#vote-messages-vote_svc-EditVoteResultRequest)
+  
+- [vote/messages/vote_svc/edit_result_response.proto](#vote_messages_vote_svc_edit_result_response-proto)
+    - [EditVoteResultResponse](#vote-messages-vote_svc-EditVoteResultResponse)
+  
+- [vote/messages/vote_svc/export_votes_request.proto](#vote_messages_vote_svc_export_votes_request-proto)
+    - [ExportVotesRequest](#vote-messages-vote_svc-ExportVotesRequest)
+  
+    - [ExportFormat](#vote-messages-vote_svc-ExportFormat)
+  
+- [vote/messages/vote_svc/export_results_request.proto](#vote_messages_vote_svc_export_results_request-proto)
+    - [ExportResultsRequest](#vote-messages-vote_svc-ExportResultsRequest)
+  
+- [vote/messages/vote_svc/export_results_response.proto](#vote_messages_vote_svc_export_results_response-proto)
+    - [ExportResultsResponse](#vote-messages-vote_svc-ExportResultsResponse)
+  
+- [vote/messages/vote_svc/export_votes_response.proto](#vote_messages_vote_svc_export_votes_response-proto)
+    - [ExportVotesResponse](#vote-messages-vote_svc-ExportVotesResponse)
+  
+- [vote/messages/vote_svc/get_category_request.proto](#vote_messages_vote_svc_get_category_request-proto)
+    - [GetVoteCategoryRequest](#vote-messages-vote_svc-GetVoteCategoryRequest)
+  
+- [vote/messages/vote_svc/get_category_response.proto](#vote_messages_vote_svc_get_category_response-proto)
+    - [GetVoteCategoryResponse](#vote-messages-vote_svc-GetVoteCategoryResponse)
+  
+- [vote/messages/vote_svc/get_vote_request.proto](#vote_messages_vote_svc_get_vote_request-proto)
+    - [GetVoteRequest](#vote-messages-vote_svc-GetVoteRequest)
+  
+- [vote/messages/vote_svc/get_vote_response.proto](#vote_messages_vote_svc_get_vote_response-proto)
+    - [GetVoteResponse](#vote-messages-vote_svc-GetVoteResponse)
+  
+- [vote/messages/vote_svc/list_categories_request.proto](#vote_messages_vote_svc_list_categories_request-proto)
+    - [ListVoteCategoriesRequest](#vote-messages-vote_svc-ListVoteCategoriesRequest)
+  
+- [vote/messages/vote_svc/list_categories_response.proto](#vote_messages_vote_svc_list_categories_response-proto)
+    - [ListVoteCategoriesResponse](#vote-messages-vote_svc-ListVoteCategoriesResponse)
+  
+- [vote/messages/vote_svc/list_results_request.proto](#vote_messages_vote_svc_list_results_request-proto)
+    - [ListVoteResultsRequest](#vote-messages-vote_svc-ListVoteResultsRequest)
+  
+- [vote/messages/vote_svc/list_results_response.proto](#vote_messages_vote_svc_list_results_response-proto)
+    - [ListVoteResultsResponse](#vote-messages-vote_svc-ListVoteResultsResponse)
+  
+- [vote/messages/vote_svc/list_votes_request.proto](#vote_messages_vote_svc_list_votes_request-proto)
+    - [ListVotesRequest](#vote-messages-vote_svc-ListVotesRequest)
+  
+- [vote/messages/vote_svc/list_votes_response.proto](#vote_messages_vote_svc_list_votes_response-proto)
+    - [ListVotesResponse](#vote-messages-vote_svc-ListVotesResponse)
+  
+- [vote/messages/vote_svc/submit_vote_request.proto](#vote_messages_vote_svc_submit_vote_request-proto)
+    - [PointsSubmission](#vote-messages-vote_svc-PointsSubmission)
+    - [PointsVote](#vote-messages-vote_svc-PointsVote)
+    - [RankedSubmission](#vote-messages-vote_svc-RankedSubmission)
+    - [RankedVote](#vote-messages-vote_svc-RankedVote)
+    - [SingleChoiceVote](#vote-messages-vote_svc-SingleChoiceVote)
+    - [SubmitVoteRequest](#vote-messages-vote_svc-SubmitVoteRequest)
+  
+- [vote/messages/vote_svc/submit_vote_response.proto](#vote_messages_vote_svc_submit_vote_response-proto)
+    - [SubmitVoteResponse](#vote-messages-vote_svc-SubmitVoteResponse)
+  
+- [vote/vote_service.proto](#vote_vote_service-proto)
+    - [VoteService](#vote-VoteService)
+  
 - [Scalar Value Types](#scalar-value-types)
 
 
@@ -4961,6 +5073,1242 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Register | [messages.user_svc.RegisterRequest](#user-messages-user_svc-RegisterRequest) | [messages.user_svc.RegisterResponse](#user-messages-user_svc-RegisterResponse) |  |
 | AddRole | [messages.user_svc.AddRoleRequest](#user-messages-user_svc-AddRoleRequest) | [messages.user_svc.AddRoleResponse](#user-messages-user_svc-AddRoleResponse) |  |
 | RemoveRole | [messages.user_svc.RemoveRoleRequest](#user-messages-user_svc-RemoveRoleRequest) | [messages.user_svc.RemoveRoleResponse](#user-messages-user_svc-RemoveRoleResponse) |  |
+
+ 
+
+
+
+<a name="vote_entities_vote-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/entities/vote.proto
+
+
+
+<a name="vote-entities-PointsVote"></a>
+
+### PointsVote
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+| points | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="vote-entities-RankedVote"></a>
+
+### RankedVote
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+| rank | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="vote-entities-SingleChoiceVote"></a>
+
+### SingleChoiceVote
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="vote-entities-Vote"></a>
+
+### Vote
+Vote is a single atomic judgment from one voter on one submission
+within one category. The vote payload is method-specific.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| category_id | [string](#string) |  |  |
+| voter_id | [string](#string) |  |  |
+| single_choice | [SingleChoiceVote](#vote-entities-SingleChoiceVote) |  |  |
+| ranked | [RankedVote](#vote-entities-RankedVote) |  |  |
+| points | [PointsVote](#vote-entities-PointsVote) |  |  |
+| created_at | [int64](#int64) |  |  |
+| modified_at | [int64](#int64) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_entities_voter_type-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/entities/voter_type.proto
+
+
+ 
+
+
+<a name="vote-entities-VoterType"></a>
+
+### VoterType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| VOTER_TYPE_UNSPECIFIED | 0 |  |
+| VOTER_TYPE_ALL_PARTICIPANTS | 1 |  |
+| VOTER_TYPE_JURY | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_entities_voting_method-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/entities/voting_method.proto
+
+
+ 
+
+
+<a name="vote-entities-VotingMethod"></a>
+
+### VotingMethod
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| VOTING_METHOD_UNSPECIFIED | 0 |  |
+| VOTING_METHOD_SINGLE_CHOICE | 1 |  |
+| VOTING_METHOD_RANKED | 2 |  |
+| VOTING_METHOD_POINTS | 3 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_entities_vote_category-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/entities/vote_category.proto
+
+
+
+<a name="vote-entities-VoteCategory"></a>
+
+### VoteCategory
+VoteCategory represents a voting category within a hackathon, defining
+the criteria and rules for one dimension of evaluation.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| hackathon_id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| voting_method | [VotingMethod](#vote-entities-VotingMethod) |  |  |
+| voter_type | [VoterType](#vote-entities-VoterType) |  |  |
+| max_points | [int32](#int32) | optional |  |
+| jury_members | [user.entities.User](#user-entities-User) | repeated |  |
+| created_at | [int64](#int64) |  |  |
+| modified_at | [int64](#int64) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_entities_vote_result-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/entities/vote_result.proto
+
+
+
+<a name="vote-entities-VoteResult"></a>
+
+### VoteResult
+VoteResult is a placement entry within a vote category.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| category_id | [string](#string) |  |  |
+| submission_id | [string](#string) |  |  |
+| position | [int32](#int32) |  |  |
+| title | [string](#string) | optional |  |
+| created_at | [int64](#int64) |  |  |
+| modified_at | [int64](#int64) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_create_category_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/create_category_request.proto
+
+
+
+<a name="vote-messages-vote_svc-CreateVoteCategoryRequest"></a>
+
+### CreateVoteCategoryRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| voting_method | [vote.entities.VotingMethod](#vote-entities-VotingMethod) |  |  |
+| voter_type | [vote.entities.VoterType](#vote-entities-VoterType) |  |  |
+| max_points | [int32](#int32) | optional |  |
+| jury_member_ids | [string](#string) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_create_category_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/create_category_response.proto
+
+
+
+<a name="vote-messages-vote_svc-CreateVoteCategoryResponse"></a>
+
+### CreateVoteCategoryResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_category | [vote.entities.VoteCategory](#vote-entities-VoteCategory) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_create_result_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/create_result_request.proto
+
+
+
+<a name="vote-messages-vote_svc-CreateVoteResultRequest"></a>
+
+### CreateVoteResultRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| category_id | [string](#string) |  |  |
+| submission_id | [string](#string) |  |  |
+| position | [int32](#int32) |  |  |
+| title | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_create_result_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/create_result_response.proto
+
+
+
+<a name="vote-messages-vote_svc-CreateVoteResultResponse"></a>
+
+### CreateVoteResultResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_result | [vote.entities.VoteResult](#vote-entities-VoteResult) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_delete_category_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/delete_category_request.proto
+
+
+
+<a name="vote-messages-vote_svc-DeleteVoteCategoryRequest"></a>
+
+### DeleteVoteCategoryRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_delete_category_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/delete_category_response.proto
+
+
+
+<a name="vote-messages-vote_svc-DeleteVoteCategoryResponse"></a>
+
+### DeleteVoteCategoryResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_delete_result_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/delete_result_request.proto
+
+
+
+<a name="vote-messages-vote_svc-DeleteVoteResultRequest"></a>
+
+### DeleteVoteResultRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_delete_result_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/delete_result_response.proto
+
+
+
+<a name="vote-messages-vote_svc-DeleteVoteResultResponse"></a>
+
+### DeleteVoteResultResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_edit_category_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/edit_category_request.proto
+
+
+
+<a name="vote-messages-vote_svc-EditVoteCategoryRequest"></a>
+
+### EditVoteCategoryRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) | optional |  |
+| description | [string](#string) | optional |  |
+| voting_method | [vote.entities.VotingMethod](#vote-entities-VotingMethod) | optional |  |
+| voter_type | [vote.entities.VoterType](#vote-entities-VoterType) | optional |  |
+| max_points | [int32](#int32) | optional |  |
+| jury_member_ids | [string](#string) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_edit_category_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/edit_category_response.proto
+
+
+
+<a name="vote-messages-vote_svc-EditVoteCategoryResponse"></a>
+
+### EditVoteCategoryResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_category | [vote.entities.VoteCategory](#vote-entities-VoteCategory) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_edit_result_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/edit_result_request.proto
+
+
+
+<a name="vote-messages-vote_svc-EditVoteResultRequest"></a>
+
+### EditVoteResultRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| submission_id | [string](#string) | optional |  |
+| position | [int32](#int32) | optional |  |
+| title | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_edit_result_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/edit_result_response.proto
+
+
+
+<a name="vote-messages-vote_svc-EditVoteResultResponse"></a>
+
+### EditVoteResultResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_result | [vote.entities.VoteResult](#vote-entities-VoteResult) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_export_votes_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/export_votes_request.proto
+
+
+
+<a name="vote-messages-vote_svc-ExportVotesRequest"></a>
+
+### ExportVotesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| category_id | [string](#string) |  |  |
+| format | [ExportFormat](#vote-messages-vote_svc-ExportFormat) |  |  |
+
+
+
+
+
+ 
+
+
+<a name="vote-messages-vote_svc-ExportFormat"></a>
+
+### ExportFormat
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| EXPORT_FORMAT_UNSPECIFIED | 0 |  |
+| EXPORT_FORMAT_CSV | 1 |  |
+| EXPORT_FORMAT_JSON | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_export_results_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/export_results_request.proto
+
+
+
+<a name="vote-messages-vote_svc-ExportResultsRequest"></a>
+
+### ExportResultsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| category_id | [string](#string) |  |  |
+| format | [ExportFormat](#vote-messages-vote_svc-ExportFormat) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_export_results_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/export_results_response.proto
+
+
+
+<a name="vote-messages-vote_svc-ExportResultsResponse"></a>
+
+### ExportResultsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| data | [bytes](#bytes) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_export_votes_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/export_votes_response.proto
+
+
+
+<a name="vote-messages-vote_svc-ExportVotesResponse"></a>
+
+### ExportVotesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| data | [bytes](#bytes) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_get_category_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/get_category_request.proto
+
+
+
+<a name="vote-messages-vote_svc-GetVoteCategoryRequest"></a>
+
+### GetVoteCategoryRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_get_category_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/get_category_response.proto
+
+
+
+<a name="vote-messages-vote_svc-GetVoteCategoryResponse"></a>
+
+### GetVoteCategoryResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_category | [vote.entities.VoteCategory](#vote-entities-VoteCategory) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_get_vote_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/get_vote_request.proto
+
+
+
+<a name="vote-messages-vote_svc-GetVoteRequest"></a>
+
+### GetVoteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_get_vote_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/get_vote_response.proto
+
+
+
+<a name="vote-messages-vote_svc-GetVoteResponse"></a>
+
+### GetVoteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote | [vote.entities.Vote](#vote-entities-Vote) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_list_categories_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/list_categories_request.proto
+
+
+
+<a name="vote-messages-vote_svc-ListVoteCategoriesRequest"></a>
+
+### ListVoteCategoriesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_list_categories_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/list_categories_response.proto
+
+
+
+<a name="vote-messages-vote_svc-ListVoteCategoriesResponse"></a>
+
+### ListVoteCategoriesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_categories | [vote.entities.VoteCategory](#vote-entities-VoteCategory) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_list_results_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/list_results_request.proto
+
+
+
+<a name="vote-messages-vote_svc-ListVoteResultsRequest"></a>
+
+### ListVoteResultsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| category_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_list_results_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/list_results_response.proto
+
+
+
+<a name="vote-messages-vote_svc-ListVoteResultsResponse"></a>
+
+### ListVoteResultsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| vote_results | [vote.entities.VoteResult](#vote-entities-VoteResult) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_list_votes_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/list_votes_request.proto
+
+
+
+<a name="vote-messages-vote_svc-ListVotesRequest"></a>
+
+### ListVotesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| category_id | [string](#string) | optional |  |
+| voter_id | [string](#string) | optional |  |
+| submission_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_list_votes_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/list_votes_response.proto
+
+
+
+<a name="vote-messages-vote_svc-ListVotesResponse"></a>
+
+### ListVotesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| votes | [vote.entities.Vote](#vote-entities-Vote) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_submit_vote_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/submit_vote_request.proto
+
+
+
+<a name="vote-messages-vote_svc-PointsSubmission"></a>
+
+### PointsSubmission
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+| points | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="vote-messages-vote_svc-PointsVote"></a>
+
+### PointsVote
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submissions | [PointsSubmission](#vote-messages-vote_svc-PointsSubmission) | repeated |  |
+
+
+
+
+
+
+<a name="vote-messages-vote_svc-RankedSubmission"></a>
+
+### RankedSubmission
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+| rank | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="vote-messages-vote_svc-RankedVote"></a>
+
+### RankedVote
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submissions | [RankedSubmission](#vote-messages-vote_svc-RankedSubmission) | repeated |  |
+
+
+
+
+
+
+<a name="vote-messages-vote_svc-SingleChoiceVote"></a>
+
+### SingleChoiceVote
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="vote-messages-vote_svc-SubmitVoteRequest"></a>
+
+### SubmitVoteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| category_id | [string](#string) |  |  |
+| single_choice | [SingleChoiceVote](#vote-messages-vote_svc-SingleChoiceVote) |  |  |
+| ranked | [RankedVote](#vote-messages-vote_svc-RankedVote) |  |  |
+| points | [PointsVote](#vote-messages-vote_svc-PointsVote) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_messages_vote_svc_submit_vote_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/messages/vote_svc/submit_vote_response.proto
+
+
+
+<a name="vote-messages-vote_svc-SubmitVoteResponse"></a>
+
+### SubmitVoteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| votes | [vote.entities.Vote](#vote-entities-Vote) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="vote_vote_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## vote/vote_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="vote-VoteService"></a>
+
+### VoteService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| ListVoteCategories | [messages.vote_svc.ListVoteCategoriesRequest](#vote-messages-vote_svc-ListVoteCategoriesRequest) | [messages.vote_svc.ListVoteCategoriesResponse](#vote-messages-vote_svc-ListVoteCategoriesResponse) | VoteCategory CRUD |
+| GetVoteCategory | [messages.vote_svc.GetVoteCategoryRequest](#vote-messages-vote_svc-GetVoteCategoryRequest) | [messages.vote_svc.GetVoteCategoryResponse](#vote-messages-vote_svc-GetVoteCategoryResponse) |  |
+| CreateVoteCategory | [messages.vote_svc.CreateVoteCategoryRequest](#vote-messages-vote_svc-CreateVoteCategoryRequest) | [messages.vote_svc.CreateVoteCategoryResponse](#vote-messages-vote_svc-CreateVoteCategoryResponse) |  |
+| EditVoteCategory | [messages.vote_svc.EditVoteCategoryRequest](#vote-messages-vote_svc-EditVoteCategoryRequest) | [messages.vote_svc.EditVoteCategoryResponse](#vote-messages-vote_svc-EditVoteCategoryResponse) |  |
+| DeleteVoteCategory | [messages.vote_svc.DeleteVoteCategoryRequest](#vote-messages-vote_svc-DeleteVoteCategoryRequest) | [messages.vote_svc.DeleteVoteCategoryResponse](#vote-messages-vote_svc-DeleteVoteCategoryResponse) |  |
+| SubmitVote | [messages.vote_svc.SubmitVoteRequest](#vote-messages-vote_svc-SubmitVoteRequest) | [messages.vote_svc.SubmitVoteResponse](#vote-messages-vote_svc-SubmitVoteResponse) | Voting |
+| GetVote | [messages.vote_svc.GetVoteRequest](#vote-messages-vote_svc-GetVoteRequest) | [messages.vote_svc.GetVoteResponse](#vote-messages-vote_svc-GetVoteResponse) |  |
+| ListVotes | [messages.vote_svc.ListVotesRequest](#vote-messages-vote_svc-ListVotesRequest) | [messages.vote_svc.ListVotesResponse](#vote-messages-vote_svc-ListVotesResponse) |  |
+| ExportVotes | [messages.vote_svc.ExportVotesRequest](#vote-messages-vote_svc-ExportVotesRequest) | [messages.vote_svc.ExportVotesResponse](#vote-messages-vote_svc-ExportVotesResponse) |  |
+| ListVoteResults | [messages.vote_svc.ListVoteResultsRequest](#vote-messages-vote_svc-ListVoteResultsRequest) | [messages.vote_svc.ListVoteResultsResponse](#vote-messages-vote_svc-ListVoteResultsResponse) | Vote Results |
+| CreateVoteResult | [messages.vote_svc.CreateVoteResultRequest](#vote-messages-vote_svc-CreateVoteResultRequest) | [messages.vote_svc.CreateVoteResultResponse](#vote-messages-vote_svc-CreateVoteResultResponse) |  |
+| EditVoteResult | [messages.vote_svc.EditVoteResultRequest](#vote-messages-vote_svc-EditVoteResultRequest) | [messages.vote_svc.EditVoteResultResponse](#vote-messages-vote_svc-EditVoteResultResponse) |  |
+| DeleteVoteResult | [messages.vote_svc.DeleteVoteResultRequest](#vote-messages-vote_svc-DeleteVoteResultRequest) | [messages.vote_svc.DeleteVoteResultResponse](#vote-messages-vote_svc-DeleteVoteResultResponse) |  |
+| ExportResults | [messages.vote_svc.ExportResultsRequest](#vote-messages-vote_svc-ExportResultsRequest) | [messages.vote_svc.ExportResultsResponse](#vote-messages-vote_svc-ExportResultsResponse) |  |
 
  
 

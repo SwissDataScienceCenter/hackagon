@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package vote.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/entities";
+
+enum VoterType {
+  VOTER_TYPE_UNSPECIFIED = 0;
+  VOTER_TYPE_ALL_PARTICIPANTS = 1;
+  VOTER_TYPE_JURY = 2;
+}

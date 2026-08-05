@@ -107,3 +107,7 @@ func BoolPtr(b bool) *bool {
 func Int32Ptr(i int32) *int32 {
 	return &i
 }
+
+func EnumPtr[T ~int | ~int32 | ~int64](e T) *T {
+	return &e
+}

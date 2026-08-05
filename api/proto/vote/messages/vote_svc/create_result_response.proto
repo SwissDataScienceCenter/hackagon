@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package vote.messages.vote_svc;
+
+import "vote/entities/vote_result.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
+
+message CreateVoteResultResponse {
+  vote.entities.VoteResult vote_result = 1;
+}
