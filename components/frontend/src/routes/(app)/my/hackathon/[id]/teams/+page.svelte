@@ -90,8 +90,6 @@
                     projectDescription={team.projectDescription}
                     imageUrl={team.imageUrl}
                     members={team.members}
-                    isOwn={team.isOwn}
-                    moreInfoHref="#team-{team.id}"
                 />
             {/each}
         {/if}

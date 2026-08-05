@@ -1,7 +1,4 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
-    import { Pencil } from 'lucide-svelte';
-
     type TeamMember = {
         name: string;
         imageUrl?: string;
@@ -13,16 +10,12 @@
         projectDescription,
         imageUrl,
         members,
-        isOwn = false,
-        moreInfoHref = '#',
     }: {
         num: number;
         title: string;
         projectDescription: string;
         imageUrl?: string;
         members: TeamMember[];
-        isOwn?: boolean;
-        moreInfoHref?: string;
     } = $props();
 
     function memberInitials(name: string): string {
@@ -37,8 +30,12 @@
 </script>
 
 <!--
-  ParticipantCard-style row: avatar | text column (title, description, members) | actions.
+  ParticipantCard-style row: avatar | text column (title, description, members).
   Members sit in the text column so they line up with title/description, not under the team avatar.
+
+  No actions column: a team is read-only here. Renaming, deleting and assigning
+  people are organiser actions and live on the manage page; nothing in this view
+  acts on a single team, so there is nowhere for a per-card control to lead.
 -->
 <div
     class="card card-raised box-border w-full px-5 py-4"
@@ -108,20 +105,5 @@
                 {/each}
             </div>
         </div>
-
-        {#if isOwn}
-            <button
-                type="button"
-                class="btn btn-sm btn-ghost"
-                aria-label="Edit team"
-            >
-                <Pencil class="size-4" />
-            </button>
-        {/if}
-
-        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">
-            More Information
-        </a>
     </div>
 </div>
