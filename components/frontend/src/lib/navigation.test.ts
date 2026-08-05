@@ -436,11 +436,12 @@ describe("manageNav", () => {
     ).toEqual([])
   })
 
-  // Order follows the participant entries these extend — All Projects, then
-  // Teams, then Timeline, then the page list — so the two sections read down
-  // the page in the same sequence.
-  it("offers track, team, phase and page management to an owner, in spine order", () => {
+  // Order follows the participant entries these extend — Participants, then All
+  // Projects, then Teams, then Timeline, then the page list — so the two sections
+  // read down the page in the same sequence.
+  it("offers participant, track, team, phase and page management to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
+      "manage:participants",
       "manage:tracks",
       "manage:teams",
       "manage:phase-create",
@@ -448,12 +449,14 @@ describe("manageNav", () => {
     ])
   })
 
-  // Casbin's global escape hatch grants an admin `track:write`, `phase:write`
-  // and `page:write` on any hackathon, joined or not — the condition
-  // mayManageTracks, mayManagePhases and mayManagePages all mirror. The teams
-  // manage route's own load takes the same owner-or-admin pair.
+  // Casbin's global escape hatch grants an admin `hackathon:write`,
+  // `track:write`, `phase:write` and `page:write` on any hackathon, joined or not
+  // — the condition mayManageParticipants, mayManageTracks, mayManagePhases and
+  // mayManagePages all mirror. The teams manage route's own load takes the same
+  // owner-or-admin pair.
   it("offers the same to an admin who never joined", () => {
     expect(manageNav("hack-1", undefined, true).map((i) => i.id)).toEqual([
+      "manage:participants",
       "manage:tracks",
       "manage:teams",
       "manage:phase-create",
@@ -463,6 +466,7 @@ describe("manageNav", () => {
 
   it("links every entry to a route that exists", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.href)).toEqual([
+      "/my/hackathon/hack-1/participants/manage",
       "/my/hackathon/hack-1/tracks",
       "/my/hackathon/hack-1/teams/manage",
       "/my/hackathon/hack-1/timeline/new",
@@ -475,7 +479,7 @@ describe("manageNav", () => {
   it("does not withhold management from a waitlisted owner", () => {
     expect(
       manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(4)
+    ).toHaveLength(5)
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not
@@ -506,6 +510,12 @@ describe("manageNav", () => {
     )
     expect(activeNavId("/my/hackathon/hack-1/teams/manage", items)).toBe(
       "manage:teams",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/participants", items)).toBe(
+      "member:participants",
+    )
+    expect(activeNavId("/my/hackathon/hack-1/participants/manage", items)).toBe(
+      "manage:participants",
     )
 
     // Pages nest the other way round: the Manage entry is the *parent* of the

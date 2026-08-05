@@ -9,6 +9,7 @@ import Users from "lucide-svelte/icons/users"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UsersRound from "lucide-svelte/icons/users-round"
+import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
@@ -308,11 +309,12 @@ const MEMBER = 2
  * explains why they can see it.
  *
  * One gate covers every entry because the backend applies the same one to each:
- * `mayManagePhases`, `mayManagePages` and `mayManageTracks`
- * (`$lib/server/hackathon/capabilities.ts`) and the team management route's own
- * load all reduce to owner-or-admin, and casbin grants the underlying
- * `phase:write` / `page:write` / `track:write` to `Owner` outright and to an
- * admin through the global escape hatch, with no capability gating any of them.
+ * `mayManageParticipants`, `mayManagePhases`, `mayManagePages` and
+ * `mayManageTracks` (`$lib/server/hackathon/capabilities.ts`) and the team
+ * management route's own load all reduce to owner-or-admin, and casbin grants the
+ * underlying `hackathon:write` / `phase:write` / `page:write` / `track:write` to
+ * `Owner` outright and to an admin through the global escape hatch, with no
+ * capability gating any of them.
  * So there is no state where this offers a link that then refuses. Add a
  * per-entry gate the day an entry needs a narrower one, rather than widening
  * this one. `isWaiting` is deliberately not consulted — the backend does not
@@ -339,7 +341,20 @@ export function manageNav(
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
   return [
-    // First, because it extends "All Projects" — the participant entry right
+    // First, because Participants is the first participant entry these extend.
+    // Nested under it, so `activeNavId`'s longest match lights this entry and not
+    // that one while the page is open — the same mechanism Manage Teams and New
+    // Phase rely on below.
+    //
+    // The participant page lists the same people and offers nothing to act on;
+    // Approve and Remove exist only here.
+    {
+      id: "manage:participants",
+      label: "Manage Participants",
+      icon: UserRoundCheck,
+      href: resolve(`/my/hackathon/${hackathonId}/participants/manage`),
+    },
+    // Then, because it extends "All Projects" — the participant entry right
     // before "Teams" — and tracks exist to categorise projects, so the control
     // to define them reads as acting on that list. Shown even when the
     // hackathon has no tracks yet: that is exactly how an owner gets the first
