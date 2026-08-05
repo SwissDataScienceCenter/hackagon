@@ -129,6 +129,28 @@ under it. The UI therefore confirms before submitting ("this cannot be undone").
 - [ ] Public landing page: description-as-markdown hero + ordered Pages as panels (PageService is ready; blocked on F6)
 - [ ] Own-team voting: enforce the stored policy or remove the knob (B7)
 - [ ] Aggregation rule for results (sum vs mean) — decides the winner; admin Finalize exists either way
+- [ ] **Session replay (OpenReplay) — evaluate, do not adopt yet.** Open-source
+      tier is free and self-hosted, but wants its own box: **2 vCPU / 8 GB RAM /
+      50 GB disk minimum**, and the Docker Compose path is documented as
+      *experimental* (Kubernetes/k3s is the supported one) and needs a public
+      domain — a **named** Cloudflare tunnel, not a quick tunnel, whose URL
+      changes on every restart. Recommended sequencing: trial it against a real
+      event (7-day trial or a month managed, ~$199) rather than standing up
+      permanent infrastructure before Hackagon has any production topology of
+      its own. Blockers to settle *before* any tracker ships:
+      - GDPR: replay records real sessions. The registration form collects
+        `diet`, which can reveal religion or health (**Article 9 special
+        category**) — those fields and anything rendering form responses back
+        must be explicitly masked, beyond the default `obscureInputFields`.
+      - Consent: reuse the existing registration-consent mechanism (a `replay`
+        key alongside `conduct`/`photos`) instead of a cookie banner.
+      - Identify users by platform UUID, never by email.
+      - Kill switch for the e2e suite (`replay.enabled: false` in
+        `data/test/config/`) or the tracker fires on every recipe action.
+      Frontend wiring itself is ~half a day: `@openreplay/tracker`, a `replay`
+      block in the config schema, pass it through the root `+layout.server.ts`,
+      and one client-only component mounted in the root layout (dynamic import
+      — the tracker touches `window`, so it must never be pulled in during SSR).
 
 ### Found while fixing (new)
 - [ ] The dev seeder creates participant rows without granting the hackathon
