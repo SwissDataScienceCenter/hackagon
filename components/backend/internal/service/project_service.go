@@ -414,6 +414,58 @@ func (s *ProjectService) SetPreference(
 	return &msgs.SetPreferenceResponse{ProjectId: projectID.String()}, nil
 }
 
+// GetPreference returns the caller's OWN project preferences for a hackathon.
+//
+// ExportPreferences is organiser-only (project:write), so until now a
+// participant had no way to see what they had chosen — the preference was
+// final and invisible, which is a poor combination. This asks for no
+// permission beyond being a participant: it reads nothing but your own choice.
+func (s *ProjectService) GetPreference(
+	ctx context.Context,
+	req *msgs.GetPreferenceRequest,
+) (*msgs.GetPreferenceResponse, error) {
+	uid, _, err := mw.RequireUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	caller, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Scoped to the hackathon: preferences are per event, and a user in three
+	// hackathons must not see all of them merged into one answer.
+	projects, err := s.dbClient.Project.Query().
+		Where(
+			entproject.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+			entproject.HasPreferredByUsersWith(entuser.IDEQ(caller.ID)),
+		).
+		All(ctx)
+	if err != nil {
+		slog.Error("query preferences", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	ids := make([]string, 0, len(projects))
+	for _, pr := range projects {
+		ids = append(ids, pr.ID.String())
+	}
+
+	return &msgs.GetPreferenceResponse{ProjectIds: ids}, nil
+}
+
 func (s *ProjectService) ExportPreferences(
 	ctx context.Context,
 	req *msgs.ExportPreferencesRequest,

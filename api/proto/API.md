@@ -242,6 +242,13 @@
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
   
+- [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
+    - [CapabilityToggle](#hackathon-messages-hackathon_svc-CapabilityToggle)
+    - [SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest)
+  
+- [hackathon/messages/hackathon_svc/set_capabilities_response.proto](#hackathon_messages_hackathon_svc_set_capabilities_response-proto)
+    - [SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse)
+  
 - [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
     - [HackathonService](#hackathon-HackathonService)
   
@@ -370,6 +377,12 @@
   
 - [hackathon/messages/project_svc/export_preferences_response.proto](#hackathon_messages_project_svc_export_preferences_response-proto)
     - [ExportPreferencesResponse](#hackathon-messages-project_svc-ExportPreferencesResponse)
+  
+- [hackathon/messages/project_svc/get_preference_request.proto](#hackathon_messages_project_svc_get_preference_request-proto)
+    - [GetPreferenceRequest](#hackathon-messages-project_svc-GetPreferenceRequest)
+  
+- [hackathon/messages/project_svc/get_preference_response.proto](#hackathon_messages_project_svc_get_preference_response-proto)
+    - [GetPreferenceResponse](#hackathon-messages-project_svc-GetPreferenceResponse)
   
 - [hackathon/messages/project_svc/get_request.proto](#hackathon_messages_project_svc_get_request-proto)
     - [GetRequest](#hackathon-messages-project_svc-GetRequest)
@@ -3440,6 +3453,97 @@ optional, so a bare empty map would be ambiguous.
 
 
 
+<a name="hackathon_messages_hackathon_svc_set_capabilities_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_capabilities_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CapabilityToggle"></a>
+
+### CapabilityToggle
+Named Toggle, not State, because `hackathon.entities.CapabilityState` is
+already an enum here — COMING / OPEN / CLOSED / UNGOVERNED — and a message of
+the same name would be a lie as well as a confusion: this carries a boolean
+intent, not the four-state answer the server computes from it.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| capability | [hackathon.entities.Capability](#hackathon-entities-Capability) |  |  |
+| enabled | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCapabilitiesRequest"></a>
+
+### SetCapabilitiesRequest
+Batch form of EditCapability: an organiser toggling several switches at once
+is one intent, and one call keeps it atomic instead of a burst the UI has to
+sequence and half-undo when one of them fails.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| capabilities | [CapabilityToggle](#hackathon-messages-hackathon_svc-CapabilityToggle) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_capabilities_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_capabilities_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCapabilitiesResponse"></a>
+
+### SetCapabilitiesResponse
+Returns the resulting capabilities in the same shape `Get` reports them, so a
+caller re-renders from the response instead of refetching the hackathon.
+
+`CapabilityStatus`, not the booleans that went in: what the server enforces
+is the four-state answer, including a schedule derived from the linked
+phases, and a toggle is only one input to it. Echoing the request back would
+hide the case where a capability is governed by a phase window and the
+organiser&#39;s switch did not decide it.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| capabilities | [hackathon.entities.CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_hackathon_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3466,6 +3570,7 @@ optional, so a bare empty map would be ambiguous.
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
 | Delete | [messages.hackathon_svc.DeleteRequest](#hackathon-messages-hackathon_svc-DeleteRequest) | [messages.hackathon_svc.DeleteResponse](#hackathon-messages-hackathon_svc-DeleteResponse) |  |
 | EditCapability | [messages.hackathon_svc.EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest) | [messages.hackathon_svc.EditCapabilityResponse](#hackathon-messages-hackathon_svc-EditCapabilityResponse) |  |
+| SetCapabilities | [messages.hackathon_svc.SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest) | [messages.hackathon_svc.SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse) | Batch form of EditCapability: an organiser toggles several at once, so one call is one intent rather than a burst the UI has to sequence. |
 | AdvancePhase | [messages.hackathon_svc.AdvancePhaseRequest](#hackathon-messages-hackathon_svc-AdvancePhaseRequest) | [messages.hackathon_svc.AdvancePhaseResponse](#hackathon-messages-hackathon_svc-AdvancePhaseResponse) |  |
 | EditSettings | [messages.hackathon_svc.EditSettingsRequest](#hackathon-messages-hackathon_svc-EditSettingsRequest) | [messages.hackathon_svc.EditSettingsResponse](#hackathon-messages-hackathon_svc-EditSettingsResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
@@ -4770,6 +4875,68 @@ optional, so a bare empty map would be ambiguous.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | projects | [hackathon.entities.ProjectWithPreferences](#hackathon-entities-ProjectWithPreferences) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_get_preference_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/get_preference_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-GetPreferenceRequest"></a>
+
+### GetPreferenceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_get_preference_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/get_preference_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-GetPreferenceResponse"></a>
+
+### GetPreferenceResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_ids | [string](#string) | repeated |  |
 
 
 
@@ -6305,6 +6472,7 @@ the admin finalizes, and the table stays admin-editable afterwards.
 | Approve | [messages.project_svc.ApproveRequest](#hackathon-messages-project_svc-ApproveRequest) | [messages.project_svc.ApproveResponse](#hackathon-messages-project_svc-ApproveResponse) |  |
 | Disapprove | [messages.project_svc.DisapproveRequest](#hackathon-messages-project_svc-DisapproveRequest) | [messages.project_svc.DisapproveResponse](#hackathon-messages-project_svc-DisapproveResponse) |  |
 | SetPreference | [messages.project_svc.SetPreferenceRequest](#hackathon-messages-project_svc-SetPreferenceRequest) | [messages.project_svc.SetPreferenceResponse](#hackathon-messages-project_svc-SetPreferenceResponse) |  |
+| GetPreference | [messages.project_svc.GetPreferenceRequest](#hackathon-messages-project_svc-GetPreferenceRequest) | [messages.project_svc.GetPreferenceResponse](#hackathon-messages-project_svc-GetPreferenceResponse) | The caller&#39;s OWN preferences. ExportPreferences is organiser-only, so until now a participant had no way to see what they had chosen. |
 | ExportPreferences | [messages.project_svc.ExportPreferencesRequest](#hackathon-messages-project_svc-ExportPreferencesRequest) | [messages.project_svc.ExportPreferencesResponse](#hackathon-messages-project_svc-ExportPreferencesResponse) |  |
 | Edit | [messages.project_svc.EditRequest](#hackathon-messages-project_svc-EditRequest) | [messages.project_svc.EditResponse](#hackathon-messages-project_svc-EditResponse) |  |
 | Delete | [messages.project_svc.DeleteRequest](#hackathon-messages-project_svc-DeleteRequest) | [messages.project_svc.DeleteResponse](#hackathon-messages-project_svc-DeleteResponse) |  |

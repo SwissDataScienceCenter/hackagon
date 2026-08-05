@@ -826,6 +826,161 @@ func (s *HackathonService) EditCapability(
 	}, nil
 }
 
+// SetCapabilities toggles several capabilities in one call.
+//
+// EditCapability is the precise instrument — one capability, optionally
+// relinking its phases. This is the blunt one an organiser reaches for when
+// they flip three switches on a settings screen: one intent, one request, one
+// transaction. Sending three EditCapability calls instead leaves the event
+// half-configured when the second fails, and the UI holding the pieces.
+//
+// It deliberately does NOT touch phase links. `enabled` is the authoritative
+// gate; the schedule is a separate decision made on the capability itself, and
+// a batch toggle that silently unlinked phases would be a trap.
+func (s *HackathonService) SetCapabilities(
+	ctx context.Context,
+	req *msgs.SetCapabilitiesRequest,
+) (*msgs.SetCapabilitiesResponse, error) {
+	uid, _, err := m.RequireUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Resolve every requested capability BEFORE writing anything: a batch with
+	// one unknown name must change nothing, not the prefix before the typo.
+	wanted := make(map[entcapability.Capability]bool, len(req.GetCapabilities()))
+	for _, t := range req.GetCapabilities() {
+		c, ok := CapabilityFromProto(t.GetCapability())
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", t.GetCapability())
+		}
+		entCapability, ok := capabilityToEnt(c)
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", t.GetCapability())
+		}
+		wanted[entCapability] = t.GetEnabled()
+	}
+
+	rows, err := s.dbClient.Capability.Query().
+		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
+		All(ctx)
+	if err != nil {
+		slog.Error("query capabilities", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	present := make(map[entcapability.Capability]*ent.Capability, len(rows))
+	for _, row := range rows {
+		present[row.Capability] = row
+	}
+	for c := range wanted {
+		if _, ok := present[c]; !ok {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s has no %s capability", id, c)
+		}
+	}
+
+	txn, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		slog.Error("start transaction", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't start transaction")
+	}
+	rollback := func(cause error) {
+		if rbErr := txn.Rollback(); rbErr != nil {
+			slog.Error("rollback set capabilities", "err", cause, "rollback", rbErr)
+		}
+	}
+
+	for c, enabled := range wanted {
+		row := present[c]
+		// Already correct: skipping the write keeps modified_at and the modifier
+		// meaningful, so "who last changed this" stays a real answer.
+		if row.Enabled == enabled {
+			continue
+		}
+		if _, err := txn.Capability.UpdateOne(row).
+			SetEnabled(enabled).
+			SetModifier(user).
+			Save(ctx); err != nil {
+			rollback(err)
+			slog.Error("update capability", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't update capabilities")
+		}
+	}
+
+	if err := txn.Commit(); err != nil {
+		slog.Error("commit set capabilities", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update capabilities")
+	}
+
+	return &msgs.SetCapabilitiesResponse{
+		Capabilities: s.capabilityStatuses(ctx, id),
+	}, nil
+}
+
+// capabilityStatuses reports every capability of a hackathon the way Get does.
+// Best-effort: the write already succeeded, so a read failure here costs the
+// caller a refetch rather than an error on work that landed.
+func (s *HackathonService) capabilityStatuses(
+	ctx context.Context,
+	id uuid.UUID,
+) []*ents.CapabilityStatus {
+	rows, err := s.dbClient.Capability.Query().
+		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
+		WithModifier().
+		WithOpenInPhase().
+		WithClosedInPhase().
+		All(ctx)
+	if err != nil {
+		slog.Error("re-query capabilities", "err", err)
+
+		return nil
+	}
+
+	order, err := phaseOrder(ctx, s.dbClient, id)
+	if err != nil {
+		slog.Error("phase order for capability clock", "err", err)
+
+		return nil
+	}
+	hack, err := s.dbClient.Hackathon.Get(ctx, id)
+	if err != nil {
+		slog.Error("query hackathon for capability clock", "err", err)
+
+		return nil
+	}
+
+	clock := newCapabilityClock(order, hack.CurrentPhaseID)
+	now := time.Now()
+	out := make([]*ents.CapabilityStatus, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, capabilityStatusFromEnt(row, clock, now))
+	}
+
+	return out
+}
+
 // AdvancePhase declares which phase a hackathon is now in, and switches its
 // scheduled capabilities to match.
 //

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "hackathon/entities/capability.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// Returns the resulting capabilities in the same shape `Get` reports them, so a
+// caller re-renders from the response instead of refetching the hackathon.
+//
+// `CapabilityStatus`, not the booleans that went in: what the server enforces
+// is the four-state answer, including a schedule derived from the linked
+// phases, and a toggle is only one input to it. Echoing the request back would
+// hide the case where a capability is governed by a phase window and the
+// organiser's switch did not decide it.
+message SetCapabilitiesResponse {
+  repeated hackathon.entities.CapabilityStatus capabilities = 1;
+}

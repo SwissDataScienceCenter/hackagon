@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "hackathon/entities/capability.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// Batch form of EditCapability: an organiser toggling several switches at once
+// is one intent, and one call keeps it atomic instead of a burst the UI has to
+// sequence and half-undo when one of them fails.
+message SetCapabilitiesRequest {
+  string hackathon_id = 1;
+  repeated CapabilityToggle capabilities = 2;
+}
+
+// Named Toggle, not State, because `hackathon.entities.CapabilityState` is
+// already an enum here — COMING / OPEN / CLOSED / UNGOVERNED — and a message of
+// the same name would be a lie as well as a confusion: this carries a boolean
+// intent, not the four-state answer the server computes from it.
+message CapabilityToggle {
+  hackathon.entities.Capability capability = 1;
+  bool enabled = 2;
+}

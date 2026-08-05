@@ -44,8 +44,8 @@ same posture as ours — nothing to defend there.
 | --- | --- | --- |
 | Design tokens, sidebar shell, nav model | **yes** | no |
 | Organiser CRUD for pages/tracks/phases/projects | **yes**, per-entity routes | one `manage` cockpit |
-| Capabilities, current phase, preference read, suggested results | **yes** (4 RPCs) | no |
-| Voting, prizes, config services | no | **yes** (3 services) |
+| Batch capability toggle, preference read, suggested results | **yes** | **ported** (see Phase 1) |
+| Prizes, config, site-page services | no | **yes** (3 services) |
 | Platform CMS (About/Privacy/Terms + `/manage/pages`) | no | **yes** |
 | Invitation links for private events | no | **yes** |
 | Account page, `EditProfile`, `DeleteAccount` | no | **yes** |
@@ -66,18 +66,32 @@ land as one merge.
   that drops later is a regression, not a surprise.
 - Keep `../hackagon-main` as the reference worktree.
 
-### Phase 1 — backend delta first (small)
+### Phase 1 — backend delta first — **DONE**
 
-Their screens call four RPCs we do not serve, so the frontend cannot land
-before these:
+Two of the four candidates landed; the other two were not what they looked like.
 
-- `HackathonService.SetCapabilities`, `HackathonService.SetCurrentPhase`
-- `ProjectService.GetPreference`
-- `SuggestResults`
-
-Port the handlers rather than cherry-picking commits — their service files have
-diverged from ours and a cherry-pick will fight over every neighbour. Regenerate
-proto, keep everything of ours untouched.
+- **`SetCapabilities`** — ported. A batch toggle is genuinely additive next to
+  our single-capability `EditCapability`, and their settings screen sends one
+  request per screenful. Their `CapabilityState` message collided with our
+  `CapabilityState` **enum** (COMING/OPEN/CLOSED/UNGOVERNED) in the same proto
+  package, so ours keeps the name and theirs became `CapabilityToggle` — which
+  is also the truer name: it carries an intent, not the four-state answer the
+  server computes. The response returns `CapabilityStatus`, so a caller sees
+  the state a phase window forced rather than the boolean it sent.
+- **`GetPreference`** — ported, and it closes a standing TODO: `ExportPreferences`
+  is organiser-only, so a participant had no way to see a choice that is final
+  by policy. Reads only the caller's own row, so it needs no permission beyond
+  being signed in.
+- **`SetCurrentPhase`** — **not ported.** It is our `AdvancePhase` under
+  another name: both take an explicit `phase_id`. Theirs writes a separate
+  `HackathonState` table they introduced and ours writes the hackathon row and
+  advances the scheduled capabilities with it — adopting theirs would be a
+  schema migration, not a frontend change. Their screens get a one-line call
+  change instead. Theirs can *clear* the current phase, which ours cannot;
+  worth adding to `AdvancePhase` later.
+- **`SuggestResults`** — deferred, deliberately. It is 103 lines and its
+  aggregation rule (sum vs mean) is an open decision in TODO.md; porting it in
+  passing would settle that question by accident.
 
 **Decide, do not merge:** participant approval and multiple owners exist on both
 sides. Their screens are written against theirs, so theirs wins unless ours has
