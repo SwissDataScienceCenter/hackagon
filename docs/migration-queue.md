@@ -33,10 +33,11 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
 
 ## High value
 
-- [ ] **Browse page** — `routes/(public)/hackathon/**` +
-      `lib/components/hackathon/HackathonCard.svelte`. Main's public surface is
-      the landing page and one event page; the nav's Hackathons entry needs
-      this.
+- [x] **Browse page** — `routes/(public)/hackathon/**` + `HackathonCard`.
+      Reclassed, and the card now takes a `badgeVariant` (their vocabulary)
+      rather than a Skeleton `badgePreset`. Main's nav pointed Hackathons,
+      Challenges and About all at `/`; Hackathons and About now have real
+      destinations and Challenges is gone until it has a backing entity.
 - [x] **SEO** — `Seo.svelte` and the `publicOrigin` derivation are back.
       Still to do: re-add its call sites on the landing and event pages.
 - [x] **List ergonomics** — `lib/components/data/**` + `dataView.ts`
@@ -55,7 +56,9 @@ nowhere else to put these. Main has somewhere else, so each section moves:
 
 - [ ] Windows, capabilities, settings → their existing `…/edit`
 - [ ] Registration + submission form builders → new `…/forms`
-- [ ] Invitation links → new `…/invites`
+- [x] Invitation links → `…/invites`, with a `manage:invites` entry in
+      `navigation.ts`. Copy-link, revoke, and the full URL shown rather than a
+      truncated hint — it is a credential someone has to paste somewhere.
 - [ ] Email templates + `EmailComposer.svelte` → new `…/email`
 - [ ] `EventBranding.svelte` → fold into `…/edit`
 - [ ] Prizes → new `…/prizes`

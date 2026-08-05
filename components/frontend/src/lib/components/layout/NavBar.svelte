@@ -106,8 +106,12 @@
                     Hackathons
                 </a>
             {:else}
+                <!-- Signed out, "Hackathons" is the public browse page, not the
+                     landing page: the logo is the platform instance and this is
+                     the list of its events. Signed in, it stays the dashboard —
+                     your own events are the ones you came for. -->
                 <a
-                    href={resolve('/')}
+                    href="/hackathon"
                     aria-current={onHackathons ? 'page' : undefined}
                     class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
                        {onHackathons
@@ -118,14 +122,13 @@
                 </a>
             {/if}
             {#if showPublicLinks}
+                <!-- About is a real SitePage, served by [slug=sitepage]. The
+                     "Challenges" entry that used to sit here pointed at "/" —
+                     it has no backing entity yet, and a link to nowhere is
+                     worse than a missing one. It comes back the day the
+                     feature does. -->
                 <a
-                    href={resolve('/')}
-                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
-                >
-                    Challenges
-                </a>
-                <a
-                    href={resolve('/')}
+                    href="/about"
                     class="text-sm text-ink-3 no-underline hover:text-accent-ink"
                 >
                     About
@@ -209,7 +212,7 @@
                 </a>
             {:else}
                 <a
-                    href={resolve('/')}
+                    href="/hackathon"
                     aria-current={onHackathons ? 'page' : undefined}
                     class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
                 >
@@ -217,8 +220,7 @@
                 </a>
             {/if}
             {#if showPublicLinks}
-                <a href={resolve('/')} class="{ROW} {ROW_IDLE}">Challenges</a>
-                <a href={resolve('/')} class="{ROW} {ROW_IDLE}">About</a>
+                <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
             {/if}
             {#if session?.user}
                 <button

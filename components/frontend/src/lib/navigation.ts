@@ -18,6 +18,7 @@ import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 import Tag from "lucide-svelte/icons/tag"
+import Link2 from "lucide-svelte/icons/link-2"
 
 /**
  * A single sidebar entry.
@@ -384,6 +385,15 @@ export function manageNav(
       label: "Manage Pages",
       icon: Pencil,
       href: resolve(`/my/hackathon/${hackathonId}/pages`),
+    },
+    // How a private event is shared. Sits with the other organiser tools rather
+    // than on the participants page: a link grants visibility, and approving
+    // whoever follows it is a separate decision made there.
+    {
+      id: "manage:invites",
+      label: "Invitation Links",
+      icon: Link2,
+      href: resolve(`/my/hackathon/${hackathonId}/invites`),
     },
   ]
 }
