@@ -67,3 +67,21 @@ export function mayManagePhases(
 
   return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
 }
+
+/**
+ * Whether to offer page management — create, edit, delete.
+ *
+ * Mirrors the backend exactly, same as `mayManagePhases`: `PageService.Create`/
+ * `Edit`/`Delete` all enforce hackathon-scoped `page:write` (`page_service.go:150`,
+ * `:257`, `:334`), which casbin grants to `Owner` outright and to an admin through
+ * the global escape hatch (`rbac.go:178`). `Member` holds `page:read` only
+ * (`rbac.go:200`), so participants see published pages and none of the controls.
+ */
+export function mayManagePages(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}

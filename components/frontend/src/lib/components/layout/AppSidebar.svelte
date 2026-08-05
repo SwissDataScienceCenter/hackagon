@@ -9,6 +9,7 @@
     import SidebarUserFooter from './SidebarUserFooter.svelte';
     import {
         activeNavId,
+        canManagePages,
         defaultHackathon,
         hackathonRoleBadge,
         hackathonsRoleBadge,
@@ -70,10 +71,18 @@
     const navId = $derived(urlHackathonId ?? defaultHackathon(myHackathons)?.id);
     const navHackathon = $derived(myHackathons.find((h) => h.id === navId));
 
+    // Sourced from the same `viewerMembership` as `hackathonBadge` below, so
+    // "Manage Pages" and the "Owner" chip can never disagree about the role.
+    const mayManagePages = $derived(
+        canManagePages(navHackathon?.viewerMembership, isGlobalAdmin),
+    );
+
     // Pages are only loaded for the hackathon the URL names, so when navId comes
     // from the default-hackathon fallback there are none to append.
     const hackathonItems = $derived(
-        navId ? memberNav(navId, navId === urlHackathonId ? hackathonPages : []) : [],
+        navId
+            ? memberNav(navId, navId === urlHackathonId ? hackathonPages : [], mayManagePages)
+            : [],
     );
     const homeItems = $derived(homeNav({ isGlobalAdmin, isHackathonOrganizer }));
     const platformItems = $derived(platformNav({ isGlobalAdmin }));

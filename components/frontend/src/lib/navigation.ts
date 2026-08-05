@@ -12,6 +12,8 @@ import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import FileText from "lucide-svelte/icons/file-text"
+import House from "lucide-svelte/icons/house"
+import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 
 /**
@@ -86,10 +88,16 @@ export function homeNav(roles: {
  * theirs to change, and the fixed entries above must not move when it does. The
  * caller passes them already filtered and ordered — `PageService.List` does both
  * server-side — so this function never decides what a member may see.
+ *
+ * `canManagePages` adds one more entry, "Manage Pages", right before that list —
+ * the create/edit/delete screens an owner needs and a participant has no use
+ * for. The caller computes it with `canManagePages` below, the component-safe
+ * mirror of `mayManagePages` in `$lib/server/hackathon/capabilities.ts`.
  */
 export function memberNav(
   hackathonId: string,
   pages: HackathonPageRef[] = [],
+  canManagePages = false,
 ): NavItem[] {
   return [
     {
@@ -145,6 +153,18 @@ export function memberNav(
       icon: CalendarClock,
       href: resolve(`/my/hackathon/${hackathonId}/timeline`),
     },
+    // Owner/admin-only, and placed right before the pages it manages rather
+    // than among the fixed entries above — it acts on the list that follows.
+    ...(canManagePages
+      ? [
+          {
+            id: "member:manage-pages",
+            label: "Manage Pages",
+            icon: Pencil,
+            href: resolve(`/my/hackathon/${hackathonId}/pages`),
+          },
+        ]
+      : []),
     // Keyed by page id, never by title: two pages named the same would collide
     // on a title-derived key and take the sidebar down with them.
     ...pages.map((p) => ({
@@ -240,9 +260,10 @@ const MEMBER = 2
 /**
  * Role chip for the hackathon section heading.
  *
- * Owners get no extra nav entries — organizer controls live on the pages they
- * belong to, phases and capabilities on the timeline — so the badge is the only
- * thing in the sidebar distinguishing them, and it must not imply capabilities
+ * Most organizer controls live on the pages they belong to rather than as their
+ * own nav entries — phases and capabilities on the timeline, pages behind
+ * "Manage Pages" (see `canManagePages` below) — so the badge is still most of
+ * what distinguishes an owner in the sidebar, and it must not imply capabilities
  * that are not there. `isWaiting` wins over `role` because a waitlisted user is
  * not yet a member in any useful sense. Global admins can manage any hackathon
  * without joining it, so they get a badge even with no membership row.
@@ -257,6 +278,23 @@ export function hackathonRoleBadge(
   if (membership?.role === MEMBER) return "Member"
 
   return undefined
+}
+
+/**
+ * Whether the sidebar offers "Manage Pages".
+ *
+ * Component-safe mirror of `mayManagePages` in
+ * `$lib/server/hackathon/capabilities.ts` — that module reads generated types
+ * and this one is imported by `AppSidebar`, so the same Owner-or-admin test is
+ * restated here against the raw role number rather than shared.
+ */
+export function canManagePages(
+  membership: ViewerMembership | undefined,
+  isGlobalAdmin: boolean,
+): boolean {
+  if (isGlobalAdmin) return true
+
+  return membership?.role === OWNER
 }
 
 /**

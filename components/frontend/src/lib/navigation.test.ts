@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   activeNavId,
+  canManagePages,
   defaultHackathon,
   hackathonRoleBadge,
   hackathonsRoleBadge,
@@ -244,6 +245,28 @@ describe("homeNav", () => {
   })
 })
 
+describe("canManagePages", () => {
+  it("is true for an owner", () => {
+    expect(canManagePages({ role: ROLE_OWNER, isWaiting: false }, false)).toBe(
+      true,
+    )
+  })
+
+  it("is false for a member", () => {
+    expect(canManagePages({ role: ROLE_MEMBER, isWaiting: false }, false)).toBe(
+      false,
+    )
+  })
+
+  it("is true for a global admin with no membership row", () => {
+    expect(canManagePages(undefined, true)).toBe(true)
+  })
+
+  it("is false with no membership and no admin role", () => {
+    expect(canManagePages(undefined, false)).toBe(false)
+  })
+})
+
 describe("memberNav", () => {
   const ids = (pages: { id: string; title: string }[] = []) =>
     memberNav("hack-1", pages).map((i) => i.id)
@@ -323,6 +346,29 @@ describe("memberNav", () => {
       .map((i) => i.label)
 
     expect(titles).toEqual(["Schedule", "Welcome"])
+  })
+
+  it("omits Manage Pages by default", () => {
+    expect(ids()).not.toContain("member:manage-pages")
+  })
+
+  it("adds Manage Pages, between Timeline and the content pages, when allowed", () => {
+    const items = memberNav("hack-1", [{ id: "p1", title: "Welcome" }], true)
+
+    expect(items.map((i) => i.id)).toEqual([
+      "member:overview",
+      "member:participants",
+      "member:my-projects",
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+      "member:timeline",
+      "member:manage-pages",
+      "member:page:p1",
+    ])
+
+    const manage = items.find((i) => i.id === "member:manage-pages")
+    expect(manage?.href).toBe("/my/hackathon/hack-1/pages")
   })
 })
 
