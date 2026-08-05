@@ -1,5 +1,6 @@
 <script lang="ts">
     import { ArrowRight } from 'lucide-svelte';
+    import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
 
     let {
         teamName,
@@ -12,6 +13,7 @@
         nextActionHref,
         deadline,
         membershipLabel,
+        membershipIsWaiting,
     }: {
         teamName: string;
         teamRole: string;
@@ -36,20 +38,16 @@
         deadline?: string;
         /** "Registered" or "Waitlisted", from the viewer's own membership row. */
         membershipLabel: string;
+        /** Drives the badge colour. Separate from the label so the hue does not
+         *  depend on the wording. */
+        membershipIsWaiting: boolean;
     } = $props();
-
-    // Membership is a state, not a role, so it takes a status hue rather than
-    // the accent — and the distinction is worth colouring: waitlisted means the
-    // viewer is not in yet.
-    const membershipVariant = $derived(
-        membershipLabel.toLowerCase() === 'waitlisted' ? 'badge-warning' : 'badge-success'
-    );
 </script>
 
 <div class="card p-5">
     <div class="mb-4 flex items-center justify-between">
         <h2 class="text-section">Your Participation</h2>
-        <span class="badge {membershipVariant}">
+        <span class="badge {membershipBadgeVariant(membershipIsWaiting)}">
             {membershipLabel}
         </span>
     </div>

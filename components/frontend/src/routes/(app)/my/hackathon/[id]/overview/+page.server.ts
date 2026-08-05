@@ -64,8 +64,10 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     // Waitlisted members reach this page too — the badge should say so rather
-    // than claim they are registered.
+    // than claim they are registered. The flag travels alongside the label so
+    // the badge colour keys off it rather than string-matching the label.
     membershipLabel: myMembership?.isWaiting ? "Waitlisted" : "Registered",
+    membershipIsWaiting: myMembership?.isWaiting ?? false,
     myTeam: myTeam
       ? {
           id: myTeam.id,

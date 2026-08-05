@@ -1,18 +1,13 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
+    import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
 
     const projectCountLabel = $derived(
         data.approvedCount === 1 ? '1 project' : `${data.approvedCount} projects`
-    );
-
-    // Matches ParticipationCard: membership is a state, so it takes a status
-    // hue rather than the accent.
-    const membershipVariant = $derived(
-        data.membershipLabel.toLowerCase() === 'waitlisted' ? 'badge-warning' : 'badge-success'
     );
 
     // Two tones alternating, which is what the track boxes have always looked
@@ -34,6 +29,7 @@
     {#if data.myTeam}
         <ParticipationCard
             membershipLabel={data.membershipLabel}
+            membershipIsWaiting={data.membershipIsWaiting}
             teamName={data.myTeam.name}
             teamRole={data.myTeam.role}
             teamMemberCount={data.myTeam.memberCount}
@@ -45,7 +41,7 @@
         <div class="card p-5">
             <div class="mb-3 flex items-center justify-between">
                 <h2 class="text-section">Your Participation</h2>
-                <span class="badge {membershipVariant}">
+                <span class="badge {membershipBadgeVariant(data.membershipIsWaiting)}">
                     {data.membershipLabel}
                 </span>
             </div>

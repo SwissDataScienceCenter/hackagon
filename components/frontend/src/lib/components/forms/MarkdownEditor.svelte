@@ -64,12 +64,11 @@
         class="field field-area {mode === 'write' ? '' : 'hidden'}"
     ></textarea>
 
-    <!-- The preview takes the same box as the textarea it replaces — `card
-         card-raised` lands on the identical background, hairline and radius —
-         so switching panes does not move the frame. -->
+    <!-- The same box as the textarea it replaces, by construction rather than by
+         coincidence: switching panes must not move the frame, so the preview
+         takes `field field-area` too instead of re-spelling its padding. -->
     <div
-        class="card card-raised px-3 py-2 text-sm text-ink
-               {mode === 'preview' ? '' : 'hidden'}"
+        class="field field-area {mode === 'preview' ? '' : 'hidden'}"
         style="min-height: {rows * 1.5}rem"
     >
         {#if text.trim()}

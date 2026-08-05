@@ -48,7 +48,7 @@
         <form method="POST" action="?/saveCapabilities" class="flex flex-col gap-3">
             <fieldset class="m-0 flex flex-col gap-1 border-0 p-0">
                 <legend class="p-0" id="capabilities-heading">
-                    <span class="text-sm font-bold text-ink">
+                    <span class="text-section">
                         What participants can do
                     </span>
                 </legend>

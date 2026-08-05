@@ -50,9 +50,9 @@
     );
 </script>
 
-<!-- Matches TeamCard: py-4 px-5, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
+<!-- Matches TeamCard: px-5 py-4, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
 <div
-    class="card card-raised box-border flex w-full items-start gap-4 py-4 px-5"
+    class="card card-raised box-border flex w-full items-start gap-4 px-5 py-4"
 >
     <!-- The ordinal leaves the title and becomes a gutter figure, so titles all
          start on one left edge and the numbers align down the list. -->

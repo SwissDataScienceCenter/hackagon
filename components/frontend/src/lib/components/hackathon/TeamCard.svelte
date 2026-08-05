@@ -41,7 +41,7 @@
   Members sit in the text column so they line up with title/description, not under the team avatar.
 -->
 <div
-    class="card card-raised box-border w-full py-4 px-5"
+    class="card card-raised box-border w-full px-5 py-4"
 >
     <div class="flex w-full items-start gap-4">
         {#if imageUrl}

@@ -43,11 +43,11 @@
 </script>
 
 <!--
-  Matches TeamCard: one row, py-4 px-5, gap-4, size-16 avatar, text column gap-1.5,
-  title text-sm font-bold, body text-xs, CTA: btn btn-sm btn-ghost.
+  Matches TeamCard: one row, px-5 py-4, gap-4, size-16 avatar, text column gap-1.5,
+  title text-sm, body text-xs, CTA: btn btn-sm btn-ghost.
 -->
 <div
-    class="card card-raised box-border w-full py-4 px-5"
+    class="card card-raised box-border w-full px-5 py-4"
 >
     <div class="flex w-full items-start gap-4">
         {#if avatarUrl}

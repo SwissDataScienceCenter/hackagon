@@ -26,8 +26,10 @@
         tertiary: 'bg-raised font-medium text-info-ink',
     };
 
+    // Only the tertiary heading departs from `.meta`'s own ink-3; primary would
+    // just restate it.
     const LABEL_CLASS = {
-        primary: 'text-ink-3',
+        primary: '',
         tertiary: 'text-info-ink',
     };
 

@@ -258,7 +258,7 @@
                                                 />
                                                 <button
                                                     type="submit"
-                                                    class="shrink-0 text-ink-3 hover:text-success-500"
+                                                    class="shrink-0 text-ink-3 hover:text-success-ink"
                                                     aria-label="Save name"
                                                     title="Save"
                                                 >
