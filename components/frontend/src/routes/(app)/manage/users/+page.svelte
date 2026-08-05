@@ -1,8 +1,9 @@
 <script lang="ts">
     import { Search } from 'lucide-svelte';
-    import type { PageData } from './$types';
+    import { ASSIGNABLE_GLOBAL_ROLES, globalRoleBadgePreset, globalRoleLabel } from '$lib/utils/globalRole';
+    import type { ActionData, PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 
     let search = $state('');
 
@@ -12,7 +13,10 @@
         data.users.filter((u) => {
             const q = search.trim().toLowerCase();
             if (q === '') return true;
-            return `${u.displayName} ${u.username} ${u.email}`.toLowerCase().includes(q);
+            const roleNames = u.roles.map((r) => globalRoleLabel(r) ?? '').join(' ');
+            return `${u.displayName} ${u.username} ${u.email} ${roleNames}`
+                .toLowerCase()
+                .includes(q);
         })
     );
 
@@ -32,6 +36,13 @@
             .toUpperCase()
             .slice(0, 2);
         return letters || '?';
+    }
+
+    // Every assignable role the user doesn't already hold — what the picker in
+    // Actions offers, since granting a role a user already has is a no-op the
+    // UI shouldn't invite.
+    function missingRoles(roles: number[]): number[] {
+        return ASSIGNABLE_GLOBAL_ROLES.filter((r) => !roles.includes(r));
     }
 </script>
 
@@ -60,6 +71,10 @@
         </div>
     </div>
 
+    {#if form?.message}
+        <p class="m-0 text-xs text-error-500" role="alert">{form.message}</p>
+    {/if}
+
     {#if data.users.length === 0}
         <p class="m-0 py-6 text-center text-sm text-surface-500">No users found.</p>
     {:else if filtered.length === 0}
@@ -75,6 +90,7 @@
                         <th class="px-3 py-2 font-semibold">Display Name</th>
                         <th class="px-3 py-2 font-semibold">Username</th>
                         <th class="px-3 py-2 font-semibold">Email</th>
+                        <th class="px-3 py-2 font-semibold">Roles</th>
                         <th class="px-3 py-2 font-semibold">Joined</th>
                         <th class="px-3 py-2 font-semibold">Actions</th>
                     </tr>
@@ -98,28 +114,115 @@
                             </td>
                             <td class="px-3 py-2 text-surface-500">{user.username}</td>
                             <td class="px-3 py-2 text-surface-500">{user.email || '—'}</td>
+                            <td class="px-3 py-2">
+                                {#if user.roles.length === 0}
+                                    <span class="text-surface-500">—</span>
+                                {:else}
+                                    <div class="flex flex-wrap gap-1">
+                                        {#each user.roles as role (role)}
+                                            <span
+                                                class="badge {globalRoleBadgePreset(role) ??
+                                                    'preset-tonal-surface'} flex items-center
+                                                       gap-1 rounded-none text-[0.625rem]
+                                                       font-semibold uppercase"
+                                            >
+                                                {globalRoleLabel(role) ?? 'Unknown'}
+                                                {#if !(user.id === data.currentUserId && role === 1)}
+                                                    <!-- Own-Admin revoke is hidden, not just
+                                                         disabled: the backend blocks it
+                                                         unconditionally (self-demotion guard
+                                                         in UserService.RemoveRole), so
+                                                         offering it would only ever error. -->
+                                                    <form
+                                                        method="POST"
+                                                        action="?/removeRole"
+                                                        class="contents"
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="userId"
+                                                            value={user.id}
+                                                        />
+                                                        <input
+                                                            type="hidden"
+                                                            name="role"
+                                                            value={role}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            class="text-surface-950-50/70
+                                                                   hover:text-error-500"
+                                                            title="Revoke {globalRoleLabel(
+                                                                role
+                                                            )}"
+                                                        >
+                                                            &times;
+                                                        </button>
+                                                    </form>
+                                                {/if}
+                                            </span>
+                                        {/each}
+                                    </div>
+                                {/if}
+                            </td>
                             <td class="px-3 py-2 text-surface-500">
                                 {user.createdAt
                                     ? new Date(user.createdAt).toLocaleDateString()
                                     : '—'}
                             </td>
                             <td class="px-3 py-2">
-                                <!-- Disabled until the backend can grant a global role.
-                                     UserService.AddRole/RemoveRole have proto contracts and a
-                                     generated client, but no handler in
-                                     internal/service/user_service.go — they return
-                                     UNIMPLEMENTED — and the casbin enforcer has
-                                     AddGlobalRole with no RemoveGlobalRole counterpart.
-                                     Wire this up once both exist. -->
-                                <button
-                                    type="button"
-                                    disabled
-                                    class="btn btn-sm preset-tonal-surface cursor-not-allowed
-                                           opacity-50"
-                                    title="Role assignment is not available yet"
-                                >
-                                    Assign role
-                                </button>
+                                {#if missingRoles(user.roles).length === 0}
+                                    <span class="text-surface-500">—</span>
+                                {:else}
+                                    <form
+                                        method="POST"
+                                        action="?/addRole"
+                                        class="flex items-center gap-1"
+                                    >
+                                        <input type="hidden" name="userId" value={user.id} />
+                                        {#if missingRoles(user.roles).length === 1}
+                                            <input
+                                                type="hidden"
+                                                name="role"
+                                                value={missingRoles(user.roles)[0]}
+                                            />
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm preset-tonal-surface"
+                                            >
+                                                Grant {globalRoleLabel(
+                                                    missingRoles(user.roles)[0]
+                                                )}
+                                            </button>
+                                        {:else}
+                                            <select
+                                                name="role"
+                                                class="h-8 rounded-none border
+                                                       border-surface-200-800 bg-surface-50-950
+                                                       px-2 text-xs text-surface-950-50
+                                                       focus:border-primary-500
+                                                       focus:outline-none"
+                                            >
+                                                {#each missingRoles(user.roles) as role (role)}
+                                                    <!-- Hackathon Organizer (2) is the
+                                                         pre-selected default, not Admin (1):
+                                                         a dropdown that silently grants the
+                                                         most powerful role unless someone
+                                                         changes it is the wrong default. -->
+                                                    <option value={role} selected={role === 2}
+                                                        >{globalRoleLabel(role)}</option
+                                                    >
+                                                {/each}
+                                            </select>
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm preset-tonal-surface"
+                                            >
+                                                Grant
+                                            </button>
+                                        {/if}
+                                    </form>
+                                {/if}
                             </td>
                         </tr>
                     {/each}
