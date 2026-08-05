@@ -7,6 +7,7 @@
     import X from 'lucide-svelte/icons/x';
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
+    import UserCog from 'lucide-svelte/icons/user-cog';
 
     // The header carries identity, theme and sign-out — no administration entry.
     // That moved to the dashboard's Manage platform section, which is the single
@@ -155,6 +156,20 @@
                         {userName}
                     </span>
                 </div>
+                <!-- Your account. It belongs next to sign-out — both are about
+                     you rather than about a hackathon — and this bar is the only
+                     chrome the app shell renders: AppSidebar, where the
+                     SidebarUserFooter version of this link lives, is not mounted
+                     by any route, so without this entry /account exists and
+                     nothing reaches it. -->
+                <a
+                    href="/account"
+                    title="Your account"
+                    aria-label="Your account"
+                    class="btn btn-icon btn-sm btn-quiet hidden md:inline-flex"
+                >
+                    <UserCog class="h-4 w-4" />
+                </a>
                 <!-- Desktop only. Below md it moves into the panel, and the width
                      that frees is what keeps the bar from overflowing at 320px. -->
                 <button
@@ -223,6 +238,10 @@
                 <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
             {/if}
             {#if session?.user}
+                <!-- Below md the account link moves in here with sign-out, for
+                     the same reason sign-out does: the bar has no room for it
+                     at 320px. -->
+                <a href="/account" class="{ROW} {ROW_IDLE}">Your account</a>
                 <button
                     onclick={() => signOut({ callbackUrl: '/' })}
                     class="btn btn-sm btn-quiet mt-1 self-start"
