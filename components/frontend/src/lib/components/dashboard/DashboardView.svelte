@@ -82,25 +82,22 @@
                 <div class="card preset-outlined-surface-200-800 overflow-hidden">
                     {#each myHackathons as h, i (h.id)}
                         {@const mem = h.viewerMembership}
-                        <div class="flex items-center">
-                            <div class="flex-1">
-                                <!-- Member of this one: straight to the member view. -->
-                                <HackathonRow
-                                    href="/my/hackathon/{h.id}/overview"
-                                    name={h.name}
-                                    meta={formatMeta(h)}
-                                    badge={statusLabel(h.status)}
-                                    badgePreset={statusBadgePreset(h.status)}
-                                    gradFrom={gradient(i).from}
-                                    gradTo={gradient(i).to}
-                                />
-                            </div>
-                            {#if mem}
-                                <span class="mr-4 badge {membershipBadgePreset(mem.isWaiting)} shrink-0">
-                                    {membershipBadgeLabel(mem.isWaiting, mem.role)}
-                                </span>
-                            {/if}
-                        </div>
+                        <!-- Member of this one: straight to the member view.
+                             The membership badge goes THROUGH the row so it
+                             groups with the status badge instead of floating
+                             beside a title that wraps to three lines on a
+                             phone. -->
+                        <HackathonRow
+                            href="/my/hackathon/{h.id}/overview"
+                            name={h.name}
+                            meta={formatMeta(h)}
+                            badge={statusLabel(h.status)}
+                            badgePreset={statusBadgePreset(h.status)}
+                            extraBadge={mem ? membershipBadgeLabel(mem.isWaiting, mem.role) : undefined}
+                            extraBadgePreset={mem ? membershipBadgePreset(mem.isWaiting) : undefined}
+                            gradFrom={gradient(i).from}
+                            gradTo={gradient(i).to}
+                        />
                     {/each}
                 </div>
             {/if}
