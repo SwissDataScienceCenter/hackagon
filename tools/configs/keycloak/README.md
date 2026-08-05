@@ -18,7 +18,7 @@ Keycloak runs as a local dev service managed by devenv/process-compose.
 
 ```bash
 # From repo root
-just up       # Start Keycloak (and other services)
+just start    # Start Keycloak (and all other services)
 just down     # Stop all services
 
 # Verify Keycloak is running
@@ -34,9 +34,9 @@ curl http://localhost:8180/realms/hackagon/.well-known/openid-configuration
 
 ## Test Users
 
-All passwords are `aliceandbob`. Run `just seed` from the repo root to populate
-the matching DB rows (hackathons, teams, submissions) for these users — without
-seeding, they can log in but have no associated data.
+All passwords are `aliceandbob`. Run `just db::seed` from the repo root to
+populate the matching DB rows (hackathons, teams, submissions) for these users —
+without seeding, they can log in but have no associated data.
 
 | Username       | Role                              |
 | -------------- | --------------------------------- |
@@ -46,8 +46,11 @@ seeding, they can log in but have no associated data.
 | charles        | waitlisted viewer                 |
 
 ```bash
-# Get an access token for testing
-just get-access-token hackagon-admin aliceandbob
+# Call a gRPC method as one of these users (fetches the token for you)
+just rpc::as alice aliceandbob user.UserService/WhoAmI
+
+# Or get a raw access token — this recipe lives in the process-compose justfile
+cd tools/deploy/process-compose && just get-access-token hackagon-admin aliceandbob
 ```
 
 ## Saving Realm Changes
@@ -55,8 +58,8 @@ just get-access-token hackagon-admin aliceandbob
 After making changes in the Keycloak admin UI:
 
 ```bash
-cd tools/deploy/process-compose
-just save-keycloak    # Exports realm to tools/configs/keycloak/realm-hackagon.json
+# From repo root — exports the realm to tools/configs/keycloak/realm-hackagon.json
+just deploy::save-keycloak
 git add tools/configs/keycloak/realm-hackagon.json
 git commit -m "chore: update keycloak realm config"
 ```

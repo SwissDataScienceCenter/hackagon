@@ -1,7 +1,7 @@
 # Seed Data
 
-`just seed` populates the database with a fixture designed to exercise the UI
-across past / ongoing / upcoming hackathons, public and private visibility,
+`just db::seed` populates the database with a fixture designed to exercise the
+UI across past / ongoing / upcoming hackathons, public and private visibility,
 approved and proposed projects, draft and final submissions, and a waitlisted
 participant. All timestamps are relative to `time.Now()` at seed time, so
 re-seeding keeps the ongoing hackathon ongoing. Each hackathon also gets the
@@ -33,7 +33,7 @@ from config; the other three are hardcoded constants in [main.go](main.go).
 ## Timeline
 
 Illustrative dates below assume a seed run on **2026-04-22**. Actual dates slide
-with when you run `just seed`.
+with when you run `just db::seed`.
 
 ```mermaid
 gantt
