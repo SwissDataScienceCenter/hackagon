@@ -118,9 +118,27 @@ Already adapted: `Hackathon.state.{currentPhaseId,capabilities}` → our flat
 (`enabledCapabilities` now reads the four-state `CapabilityStatus`, where
 "switched on" means OPEN rather than `enabled: true`).
 
-## Tests
+## Tests — triaged, not yet repaired
 
-Not started. The recipe addresses screens by URL and references routes that
+Auth setup passes again: the login helper asserted an avatar **button**, and
+this design renders identity as a `<span>` monogram on purpose ("identity, not
+an action to be drawn toward"), so a role-based locator found nothing even
+though login had succeeded. All four personas sign in.
+
+Smoke failures by file, and what each actually needs:
+
+| Spec | Cause | Fix |
+| --- | --- | --- |
+| `07-account-menu` | The account menu **does not exist** in this design — identity is a monogram, sign-out is a top-bar button, account lives in `SidebarUserFooter` | Rewrite against the new IA, not repair |
+| `02-login` | Nav labels and hrefs differ; sign-out is a button, not a menu item | Re-specify |
+| `03-dashboard` | Structure survived — their dashboard has the same sections and membership badges — only the selectors moved | Selector repair |
+| `04-access-control`, `01-anonymous`, `06-cms-pages`, `05-new-user-funnel` | Smaller, mixed | Case by case |
+
+Run them in slices with `--timeout=15000`: against moved selectors a full run
+spends 60s per failing test and takes over half an hour to tell you what a
+two-minute slice would.
+
+The recipe's own URL remap is still ahead of this. The recipe addresses screens by URL and references routes that
 moved or vanished — `/manage/pages` ×15, `/account` ×8, `/register/` ×3,
 `/hackathon/create` ×3 (now plural), plus `/voting`, `/webinars`, `/photos`,
 `/proposals`. Re-specify, never delete.
