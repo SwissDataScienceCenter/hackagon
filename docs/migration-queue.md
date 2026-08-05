@@ -68,7 +68,8 @@ nowhere else to put these. Main has somewhere else, so each section moves:
       truncated hint — it is a credential someone has to paste somewhere.
 - [ ] Email templates + `EmailComposer.svelte` → new `…/email`
 - [ ] `EventBranding.svelte` → fold into `…/edit`
-- [ ] Prizes → new `…/prizes`
+- [x] Prizes → `…/prizes`, with a `manage:prizes` nav entry. Needed
+      `PrizeService.Get` for the same reason as windows.
 
 ## Keep as routes, add nav entries
 
@@ -95,8 +96,10 @@ nowhere else to put these. Main has somewhere else, so each section moves:
   replaces every field, so a form that cannot prefill makes saving destructive —
   edit one deadline and the others you never saw are blanked. Read permission is
   hackathon `Read`, not `Write`: deadlines are announced to participants.
-- **`GetPrizes` is still missing**, and the prizes screen will hit exactly the
-  same trap when it lands.
+- **`PrizeService.Get` — added**, for exactly the reason predicted: `Set`
+  replaces the whole table, so the prizes screen would have blanked rows the
+  organiser could not see. Also gated on hackathon `Read`: the prize list is
+  what an event advertises, and the awards are the published result.
 
 ## Known adaptation, not yet done
 

@@ -91,6 +91,41 @@ func (s *PrizeService) requireOrganizer(
 
 	return u, nil
 }
+// Get reads the prize table back.
+//
+// Set replaces it wholesale, so a form that cannot prefill makes editing one
+// prize destructive — the same reason GetWindows exists. Read is hackathon
+// Read, not Write: the prize list is what an event advertises to attract
+// entries, and the awards are the published result.
+func (s *PrizeService) Get(
+	ctx context.Context,
+	req *prizeMsgs.GetRequest,
+) (*prizeMsgs.GetResponse, error) {
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
+		return nil, err
+	}
+
+	row, err := s.prizeRowFor(ctx, hackathonID)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		// No table yet is a normal state — an event that has not decided its
+		// prizes, not an error for the UI to translate.
+		return &prizeMsgs.GetResponse{}, nil
+	}
+
+	return &prizeMsgs.GetResponse{
+		Prizes:    prizesFromJSON(row.Prizes),
+		Awards:    prizesFromJSON(row.Awards),
+		Finalized: row.Finalized,
+	}, nil
+}
+
 
 func (s *PrizeService) Set(
 	ctx context.Context,

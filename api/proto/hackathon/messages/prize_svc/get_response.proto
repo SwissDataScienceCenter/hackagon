@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package hackathon.messages.prize_svc;
+
+import "hackathon/entities/prize.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/prize_svc";
+
+// `finalized` is the organiser's last word: votes are advisory here, and once
+// the awards are finalized the table is the record of what was actually given.
+message GetResponse {
+  repeated hackathon.entities.Prize prizes = 1;
+  repeated hackathon.entities.Prize awards = 2;
+  bool finalized = 3;
+}

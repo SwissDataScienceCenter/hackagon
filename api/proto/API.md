@@ -348,6 +348,12 @@
 - [hackathon/messages/prize_svc/finalize_response.proto](#hackathon_messages_prize_svc_finalize_response-proto)
     - [FinalizeResponse](#hackathon-messages-prize_svc-FinalizeResponse)
   
+- [hackathon/messages/prize_svc/get_request.proto](#hackathon_messages_prize_svc_get_request-proto)
+    - [GetRequest](#hackathon-messages-prize_svc-GetRequest)
+  
+- [hackathon/messages/prize_svc/get_response.proto](#hackathon_messages_prize_svc_get_response-proto)
+    - [GetResponse](#hackathon-messages-prize_svc-GetResponse)
+  
 - [hackathon/messages/prize_svc/set_request.proto](#hackathon_messages_prize_svc_set_request-proto)
     - [SetRequest](#hackathon-messages-prize_svc-SetRequest)
   
@@ -4598,6 +4604,71 @@ organiser&#39;s switch did not decide it.
 
 
 
+<a name="hackathon_messages_prize_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-prize_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_prize_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/prize_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-prize_svc-GetResponse"></a>
+
+### GetResponse
+`finalized` is the organiser&#39;s last word: votes are advisory here, and once
+the awards are finalized the table is the record of what was actually given.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| prizes | [hackathon.entities.Prize](#hackathon-entities-Prize) | repeated |  |
+| awards | [hackathon.entities.Prize](#hackathon-entities-Prize) | repeated |  |
+| finalized | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_prize_svc_set_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -6508,6 +6579,7 @@ the admin finalizes, and the table stays admin-editable afterwards.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| Get | [messages.prize_svc.GetRequest](#hackathon-messages-prize_svc-GetRequest) | [messages.prize_svc.GetResponse](#hackathon-messages-prize_svc-GetResponse) | Reads the table back. Set REPLACES it, so without this an organiser editing one prize would blank the rest they cannot see — the same trap GetWindows was added for. |
 | Set | [messages.prize_svc.SetRequest](#hackathon-messages-prize_svc-SetRequest) | [messages.prize_svc.SetResponse](#hackathon-messages-prize_svc-SetResponse) |  |
 | Finalize | [messages.prize_svc.FinalizeRequest](#hackathon-messages-prize_svc-FinalizeRequest) | [messages.prize_svc.FinalizeResponse](#hackathon-messages-prize_svc-FinalizeResponse) |  |
 | Edit | [messages.prize_svc.EditRequest](#hackathon-messages-prize_svc-EditRequest) | [messages.prize_svc.EditResponse](#hackathon-messages-prize_svc-EditResponse) |  |

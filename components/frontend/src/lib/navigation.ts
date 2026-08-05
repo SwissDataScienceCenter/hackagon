@@ -21,6 +21,7 @@ import Tag from "lucide-svelte/icons/tag"
 import Link2 from "lucide-svelte/icons/link-2"
 import ClipboardType from "lucide-svelte/icons/clipboard-type"
 import Timer from "lucide-svelte/icons/timer"
+import Trophy from "lucide-svelte/icons/trophy"
 
 /**
  * A single sidebar entry.
@@ -387,6 +388,14 @@ export function manageNav(
       label: "Manage Pages",
       icon: Pencil,
       href: resolve(`/my/hackathon/${hackathonId}/pages`),
+    },
+    // What the event awards, and the organiser's final word on who won — the
+    // vote is advisory, so recording the result is a decision, not a readout.
+    {
+      id: "manage:prizes",
+      label: "Prizes",
+      icon: Trophy,
+      href: resolve(`/my/hackathon/${hackathonId}/prizes`),
     },
     // The deadlines the backend enforces. Next to the schedule entries above,
     // because a phase and a window are two halves of the same question: what is
