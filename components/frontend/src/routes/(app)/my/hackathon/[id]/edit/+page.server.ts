@@ -87,6 +87,6 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, `/my/hackathon/${event.params.id}/overview`)
+    redirect(303, "/dashboard")
   },
 }
