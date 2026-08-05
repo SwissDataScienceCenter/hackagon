@@ -127,6 +127,27 @@ export function unmetPhaseCapabilities(
 }
 
 /**
+ * Capabilities that are switched on but are not part of this phase's plan.
+ *
+ * The other half of the picture from `unmetPhaseCapabilities`: that one says what
+ * the phase wants and lacks, this one what participants can do beyond it. Extras
+ * are **not** a problem — registration is tagged on no phase yet legitimately
+ * stays open across several — so this is shown as information, never as a warning.
+ *
+ * Sorted, so the order does not wander with whatever order the state arrived in.
+ */
+export function extraEnabledCapabilities(
+  phaseCapabilities: readonly number[],
+  enabled: readonly number[],
+): number[] {
+  const planned = new Set(phaseCapabilities)
+
+  return enabled
+    .filter((c) => CAPABILITY_LABEL[c] !== undefined && !planned.has(c))
+    .sort((a, b) => a - b)
+}
+
+/**
  * What should be enabled after "enable what this phase expects".
  *
  * **Strictly additive: it never switches anything off.** An exact match to the

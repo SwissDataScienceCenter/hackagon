@@ -1,5 +1,6 @@
 import type { Actions, PageServerLoad } from "./$types"
 import {
+  extraEnabledCapabilities,
   resolvePhaseStatus,
   sortPhasesByStart,
   unmetPhaseCapabilities,
@@ -55,7 +56,9 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: hackathon.id,
     phases,
-    currentPhaseId,
+    // Only the name is sent: the page finds the current phase by its resolved
+    // `current` status rather than comparing ids, and the name is needed for the
+    // mismatch warning's prose.
     currentPhaseName: current?.name ?? "",
     mayManage,
     // Everything below is organizer-only: a participant is sent none of it, so
@@ -75,6 +78,15 @@ export const load: PageServerLoad = async (event) => {
     // an organizer is told, because only an organizer can act on it.
     unmet: mayManage
       ? unmetPhaseCapabilities(current?.capabilities ?? [], enabled)
+      : [],
+    // Lets the page tick off which of the current phase's plans are actually live.
+    // Organizer-only, so a participant's tags stay plain — and deliberately used
+    // for the current phase alone: marking a future phase's plan "not enabled"
+    // would read as broken when it is simply not time yet.
+    enabled: mayManage ? enabled : [],
+    // Switched on beyond what this phase planned for. Information, not a problem.
+    alsoEnabled: mayManage
+      ? extraEnabledCapabilities(current?.capabilities ?? [], enabled)
       : [],
   }
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   PHASE_CAPABILITIES,
   capabilityLabel,
+  extraEnabledCapabilities,
   resolvePhaseStatus,
   toDateTimeLocal,
   unmetPhaseCapabilities,
@@ -112,6 +113,45 @@ describe("unmetPhaseCapabilities", () => {
   // An unknown tag cannot be switched on, so calling it missing would be noise.
   it("drops unknown tag values", () => {
     expect(unmetPhaseCapabilities([99, VOTE], [])).toEqual([VOTE])
+  })
+})
+
+describe("extraEnabledCapabilities", () => {
+  const REGISTER = 1
+
+  // The Climate Tech fixture while Judging is current: registration is planned
+  // for no phase, so it shows as "also enabled" rather than as a problem.
+  it("reports what is on but not planned for the phase", () => {
+    expect(extraEnabledCapabilities([VOTE], [REGISTER, PROPOSE, VOTE])).toEqual(
+      [REGISTER, PROPOSE],
+    )
+  })
+
+  it("is empty when everything on was planned", () => {
+    expect(extraEnabledCapabilities([VOTE, PROPOSE], [VOTE])).toEqual([])
+  })
+
+  it("is empty when nothing is enabled", () => {
+    expect(extraEnabledCapabilities([VOTE], [])).toEqual([])
+  })
+
+  it("lists everything enabled for an untagged phase", () => {
+    expect(extraEnabledCapabilities([], [PROPOSE, VOTE])).toEqual([
+      PROPOSE,
+      VOTE,
+    ])
+  })
+
+  it("sorts, so the order does not follow however the state arrived", () => {
+    expect(extraEnabledCapabilities([], [VOTE, REGISTER, PROPOSE])).toEqual([
+      REGISTER,
+      PROPOSE,
+      VOTE,
+    ])
+  })
+
+  it("drops unknown values", () => {
+    expect(extraEnabledCapabilities([], [99, VOTE])).toEqual([VOTE])
   })
 })
 

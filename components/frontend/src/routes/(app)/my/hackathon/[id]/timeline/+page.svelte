@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { Check, FileText, Pencil, Plus } from 'lucide-svelte';
+    import { Check, FileText, Pencil, Plus, X } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import RightNowPanel from '$lib/components/hackathon/RightNowPanel.svelte';
+    import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
     import { capabilityLabel } from '$lib/utils/phase';
     import type { ActionData, PageData } from './$types';
 
@@ -32,15 +32,33 @@
         upcoming: 'preset-tonal-surface',
         current: 'preset-filled-primary-500',
     } as const;
-
-    const currentPhase = $derived(data.phases.find((p) => p.id === data.currentPhaseId));
 </script>
 
 <!-- Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects). -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    <h2 class="m-0 text-lg font-bold text-surface-950-50">Timeline</h2>
+
+    <!-- Organizer-only, and above the phases: what participants may do is
+         hackathon-wide, so it is not one of the phases and does not sit among
+         them. The loader sends a participant none of the data it needs. -->
+    {#if data.mayManage}
+        <CapabilitiesPanel
+            currentPhaseName={data.currentPhaseName}
+            hasState={data.hasState}
+            capabilities={data.capabilities}
+            unmet={data.unmet}
+            message={form?.message}
+            saved={form?.saved ?? false}
+        />
+    {/if}
+
+    <!-- Every phase action lives in this section — add, make current, clear, edit
+         — so there is one place to act on a phase and one place to act on the
+         hackathon. The heading is what keeps the list labelled now that something
+         else sits above it. -->
     <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-lg font-bold text-surface-950-50">Timeline</h2>
+        <div class="flex min-w-0 flex-col gap-0.5">
+            <h3 class="m-0 text-sm font-bold text-surface-950-50">Phases</h3>
             <span class="text-xs text-surface-500">
                 {data.phases.length === 1 ? '1 phase' : `${data.phases.length} phases`}
             </span>
@@ -55,24 +73,6 @@
             </a>
         {/if}
     </div>
-
-    <!-- Organizer-only, and first on the page: it is the only part that answers
-         what is true this minute, and every organizer action starts here. The
-         loader sends a participant none of the data it needs. -->
-    {#if data.mayManage}
-        <RightNowPanel
-            currentPhaseName={data.currentPhaseName}
-            currentPhaseRange={currentPhase
-                ? formatRange(currentPhase.startsAt, currentPhase.endsAt)
-                : ''}
-            hasCurrentPhase={data.currentPhaseId !== ''}
-            hasState={data.hasState}
-            capabilities={data.capabilities}
-            unmet={data.unmet}
-            message={form?.message}
-            saved={form?.saved ?? false}
-        />
-    {/if}
 
     {#if data.phases.length === 0}
         <p class="m-0 py-6 text-center text-sm text-surface-500">
@@ -122,28 +122,74 @@
                             </p>
                         {/if}
 
-                        <!-- What the phase is *for* — a plan, not permissions. Dimmed
-                             on purpose: it is reference information, and the switches
-                             in Right now are the ones that decide anything. The
-                             current phase carries the same tags undimmed, since that
-                             is the row the warning above refers to. -->
+                        <!-- What the phase is *planned* for — not permissions. Dimmed
+                             on every phase but the current one, because it is
+                             reference information; the switches above are what decide
+                             anything.
+
+                             On the current phase only, each plan is ticked off
+                             against what is actually switched on: green for live,
+                             warning for not yet. Doing that on a future phase would
+                             flag "vote not enabled" as a problem when it is simply
+                             not time yet. -->
                         {#if phase.capabilities.length > 0}
                             <div
                                 class="flex flex-wrap items-baseline gap-1 pt-0.5
                                        {phase.status === 'current' ? '' : 'opacity-60'}"
                             >
                                 <span class="text-[0.625rem] text-surface-500">
-                                    For this phase:
+                                    Planned for this phase:
                                 </span>
                                 {#each phase.capabilities as capability (capability)}
-                                    <span class="badge preset-tonal-surface text-[0.625rem]">
+                                    {@const live =
+                                        phase.status === 'current' &&
+                                        data.enabled.includes(capability)}
+                                    {@const pending =
+                                        phase.status === 'current' &&
+                                        !data.enabled.includes(capability)}
+                                    <!-- Icon as well as colour: colour alone is not a
+                                         signal for anyone who cannot distinguish it. -->
+                                    <span
+                                        class="badge text-[0.625rem] {live
+                                            ? 'preset-tonal-success'
+                                            : pending
+                                              ? 'preset-tonal-warning'
+                                              : 'preset-tonal-surface'}"
+                                    >
+                                        {#if live}
+                                            <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
+                                        {:else if pending}
+                                            <X class="h-3 w-3 shrink-0" aria-hidden="true" />
+                                        {/if}
+                                        {capabilityLabel(capability) ?? 'Unknown'}
+                                        {#if live}
+                                            <span class="sr-only"> — enabled</span>
+                                        {:else if pending}
+                                            <span class="sr-only"> — not enabled yet</span>
+                                        {/if}
+                                    </span>
+                                {/each}
+                            </div>
+                        {/if}
+
+                        <!-- Switched on beyond this phase's plan. Only meaningful for
+                             the current phase, and never a warning: registration is
+                             planned for no phase yet legitimately spans several. -->
+                        {#if phase.status === 'current' && data.alsoEnabled.length > 0}
+                            <div class="flex flex-wrap items-baseline gap-1">
+                                <span class="text-[0.625rem] text-surface-500">
+                                    Also enabled:
+                                </span>
+                                {#each data.alsoEnabled as capability (capability)}
+                                    <span class="badge preset-tonal-success text-[0.625rem]">
+                                        <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
                                         {capabilityLabel(capability) ?? 'Unknown'}
                                     </span>
                                 {/each}
                             </div>
                         {/if}
 
-                        {#if phase.pageId || (data.mayManage && phase.status !== 'current')}
+                        {#if phase.pageId || data.mayManage}
                             <div class="flex flex-wrap items-center gap-3 pt-1">
                                 {#if phase.pageId}
                                     <a
@@ -157,19 +203,33 @@
                                         Read more
                                     </a>
                                 {/if}
-                                <!-- Declaring a phase current is a write, so a form
-                                     rather than a link. It moves the pointer only;
-                                     what participants may do is unchanged. -->
-                                {#if data.mayManage && phase.status !== 'current'}
-                                    <form method="POST" action="?/setCurrent">
-                                        <input type="hidden" name="phaseId" value={phase.id} />
-                                        <button
-                                            type="submit"
-                                            class="btn btn-sm preset-tonal-surface text-xs"
-                                        >
-                                            Make current<span class="sr-only"> — {phase.name}</span>
-                                        </button>
-                                    </form>
+                                <!-- Both are writes, so forms rather than links, and
+                                     both move the pointer only — what participants
+                                     may do is unchanged either way. Clearing sends no
+                                     phaseId, which the action reads as "clear". -->
+                                {#if data.mayManage}
+                                    {#if phase.status === 'current'}
+                                        <form method="POST" action="?/setCurrent">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm preset-tonal-surface text-xs"
+                                            >
+                                                Clear current phase
+                                            </button>
+                                        </form>
+                                    {:else}
+                                        <form method="POST" action="?/setCurrent">
+                                            <input type="hidden" name="phaseId" value={phase.id} />
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm preset-tonal-surface text-xs"
+                                            >
+                                                Make current<span class="sr-only">
+                                                    — {phase.name}</span
+                                                >
+                                            </button>
+                                        </form>
+                                    {/if}
                                 {/if}
                             </div>
                         {/if}
