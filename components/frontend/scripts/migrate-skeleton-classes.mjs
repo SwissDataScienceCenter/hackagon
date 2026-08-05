@@ -2,12 +2,16 @@
 /**
  * Rewrites Skeleton v3 classes to Hackagon theme classes.
  *
- * This ran once to migrate the app off Skeleton. It is kept because branches
- * written before the migration still carry Skeleton classes, and re-running it
- * on those files is far more reliable than hand-editing them.
+ * This ran once to migrate the app off Skeleton. It is kept only because
+ * branches cut before that migration still carry Skeleton classes, and
+ * re-running it on those files is far more reliable than hand-editing them.
+ * Delete it once no such branch is left.
  *
- *   node .claude/skills/frontend-theme/migrate-skeleton-classes.mjs [paths...]
- *   node .claude/skills/frontend-theme/migrate-skeleton-classes.mjs --dry src
+ * This is a migration tool, not documentation of the theme. The theme itself is
+ * defined in src/themes/hackagon.css and explained by the frontend-theme skill.
+ *
+ *   node scripts/migrate-skeleton-classes.mjs [paths...]
+ *   node scripts/migrate-skeleton-classes.mjs --dry src
  *
  * Defaults to `src`. Always read the resulting diff: the `preset-*` classes are
  * context-dependent (the same class is a button here and a badge there), and the

@@ -1,17 +1,30 @@
 # Frontend
 
-A SvelteKit-based frontend for the Hackagon platform, using Skeleton UI and
-Keycloak authentication.
+A SvelteKit-based frontend for the Hackagon platform, using Keycloak
+authentication and its own Tailwind-based theme layer.
 
 ## Overview
 
-| Technology      | Purpose                               |
-| --------------- | ------------------------------------- |
-| SvelteKit       | Full-stack web framework              |
-| Skeleton v3     | UI component library (Tailwind-based) |
-| @auth/sveltekit | Authentication via Keycloak OIDC      |
-| pnpm            | Package manager                       |
-| Vite            | Build tool                            |
+| Technology      | Purpose                                               |
+| --------------- | ----------------------------------------------------- |
+| SvelteKit       | Full-stack web framework                              |
+| Tailwind v4     | Utilities over the theme in `src/themes/hackagon.css` |
+| @auth/sveltekit | Authentication via Keycloak OIDC                      |
+| pnpm            | Package manager                                       |
+| Vite            | Build tool                                            |
+
+## Theme
+
+The visual system is defined in `src/themes/hackagon.css`: semantic colour
+tokens that flip with `data-mode`, the mono/sans type roles, and the
+`.btn`/`.badge`/`.card`/`.field`/`.chip` component classes. There is no UI
+framework underneath it. See the `frontend-theme` skill for how to use it and
+the reasoning behind it.
+
+`scripts/migrate-skeleton-classes.mjs` rewrites the Skeleton classes this app
+used before that theme existed. It is only needed on branches cut before the
+migration; run `--dry` first and read the diff, since `preset-*` classes are
+context-dependent. Delete the script once no such branch is left.
 
 ## Quick Start
 
