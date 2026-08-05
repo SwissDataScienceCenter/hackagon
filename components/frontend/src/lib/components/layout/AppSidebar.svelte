@@ -243,16 +243,20 @@
         {/if}
     </nav>
 
-    <!-- The way back out to all of them, so it stays put whether or not one is
-         open. An organiser's Create Hackathon sits here rather than under
-         Platform — it acts on hackathons, which is what this section is. -->
-    <SidebarNavSection
-        label="Hackathons"
-        badge={homeBadge}
-        items={homeItems}
-        {activeId}
-        collapsed={effectiveCollapsed}
-    />
+    <!-- Actions on the whole collection, so they stay put whether or not one
+         hackathon is open. An organiser's Create Hackathon sits here rather than
+         under Platform — it acts on hackathons, which is what this section is.
+         Empty for a plain user, and then absent rather than a heading with
+         nothing under it. -->
+    {#if homeItems.length > 0}
+        <SidebarNavSection
+            label="Hackathons"
+            badge={homeBadge}
+            items={homeItems}
+            {activeId}
+            collapsed={effectiveCollapsed}
+        />
+    {/if}
 
     <!-- Admin-only: platformNav is empty for everyone else, so the section is
          absent rather than a heading with nothing under it. -->

@@ -12,7 +12,6 @@ import UsersRound from "lucide-svelte/icons/users-round"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import FileText from "lucide-svelte/icons/file-text"
-import House from "lucide-svelte/icons/house"
 import Plus from "lucide-svelte/icons/plus"
 
 /**
@@ -43,31 +42,25 @@ export interface HackathonPageRef {
 }
 
 /**
- * The participant's home — the hackathons they are in, the ones they could join,
- * and starting a new one.
+ * Actions on the collection of hackathons rather than on any one of them.
  *
- * Always present, including inside a hackathon, so leaving one does not mean
- * hunting for the logo. Not scoped to a hackathon, hence its own section rather
- * than a `memberNav` entry.
+ * Not scoped to a hackathon, hence its own section rather than a `memberNav`
+ * entry. There is deliberately no "My Hackathons" link here: the wordmark in
+ * NavBar already goes to the dashboard from every page, and a second control to
+ * the same place is one too many.
  *
  * Creating a hackathon lives here rather than under Platform: it acts on the
  * collection of hackathons this section is about, not on the platform's
  * accounts and settings. The entry follows the backend's own permission —
  * `hackathon:create`, held by organizers and, via the admin escape hatch, by
- * admins — so it never offers a link that lands on a 403.
+ * admins — so it never offers a link that lands on a 403. Everyone else gets an
+ * empty list, so the caller must be prepared to render no section at all.
  */
 export function homeNav(roles: {
   isGlobalAdmin: boolean
   isHackathonOrganizer: boolean
 }): NavItem[] {
-  const items: NavItem[] = [
-    {
-      id: "home:dashboard",
-      label: "My Hackathons",
-      icon: House,
-      href: resolve("/(app)/dashboard"),
-    },
-  ]
+  const items: NavItem[] = []
 
   if (roles.isGlobalAdmin || roles.isHackathonOrganizer) {
     items.push({
