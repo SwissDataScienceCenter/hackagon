@@ -204,10 +204,48 @@ describe("manageNav", () => {
     },
   )
 
+  // The persistent half of the organiser's state signal: the banner says what is
+  // wrong, this says there is something to look at even when the banner is off
+  // screen. It marks Manage Hackathon because that is the page holding the
+  // switches. Off by default so no caller gets it by accident.
+  describe("needsAttention", () => {
+    const entry = (items: NavItem[]) =>
+      items.find((i) => i.id === "manage:hackathon")
+
+    it("leaves Manage Hackathon unbadged by default", () => {
+      expect(entry(manageNav("hack-1", owner, false))?.badge).toBeUndefined()
+    })
+
+    it("badges Manage Hackathon, and nothing else, when set", () => {
+      const items = manageNav("hack-1", owner, false, true)
+      expect(entry(items)).toMatchObject({
+        badge: "!",
+        badgeVariant: "badge-warning",
+      })
+      expect(
+        items.filter((i) => i.badge !== undefined).map((i) => i.id),
+      ).toEqual(["manage:hackathon"])
+    })
+
+    // The badge rides on a section a participant never receives, so a caller
+    // passing it for the wrong viewer still shows them nothing.
+    it("does not give a participant the section, badge or not", () => {
+      expect(
+        manageNav(
+          "hack-1",
+          { role: ROLE_MEMBER, isWaiting: false },
+          false,
+          true,
+        ),
+      ).toEqual([])
+    })
+  })
+
   // Order follows the participant entries these extend, so the two sections read
   // down the page in the same sequence.
   it("follows the order of the participant entries it extends", () => {
     expectOrder(manageNav("hack-1", owner, false), [
+      "manage:hackathon",
       "manage:participants",
       "manage:projects",
       "manage:tracks",

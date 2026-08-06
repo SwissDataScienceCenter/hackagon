@@ -1,8 +1,10 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
+    import OrganizerStateAlert from '$lib/components/hackathon/OrganizerStateAlert.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import HackathonSidebar from '$lib/components/layout/HackathonSidebar.svelte';
+    import { stateAlerts } from '$lib/utils/hackathonState';
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
@@ -64,6 +66,19 @@
     // express a route whose final segment is a parameter — /pages/[pageId] ends in
     // a uuid, so a segment blocklist silently let the hero back in there.
     const showHero = $derived($page.route.id?.endsWith('/overview') ?? false);
+
+    // Empty for anyone who cannot fix what it reports, which is what keeps the
+    // bar off a participant's screen — they would read a problem they have no
+    // control over. Also empty, for everyone, when there is nothing wrong.
+    const alerts = $derived(
+        data.hackathonState.canManage
+            ? stateAlerts({
+                  hasState: data.hackathonState.hasState,
+                  currentPhaseName: data.hackathonState.currentPhase?.name ?? '',
+                  unmet: data.hackathonState.unmet,
+              })
+            : [],
+    );
 </script>
 
 <div class="flex flex-col md:flex-row">
@@ -75,11 +90,17 @@
         isGlobalAdmin={data.isGlobalAdmin}
         votingEnabled={data.votingEnabled}
         resultsVisible={data.resultsVisible}
+        stateNeedsAttention={alerts.length > 0}
     />
 
     <!-- min-w-0 so a wide child (a table, a code block) shrinks inside the column
          instead of pushing the sidebar off screen. -->
     <div class="min-w-0 flex-1">
+        <!-- Above the hero and outside `showHero`: this follows an organiser
+             across every page in the hackathon, because the whole failure mode is
+             not knowing to go and look. -->
+        <OrganizerStateAlert hackathonId={hackathon.id} {alerts} />
+
         {#if showHero}
             <!--
               TODO(backend: hackathon-venue-capacity): `venue` stays empty and
