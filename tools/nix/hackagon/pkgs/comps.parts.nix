@@ -22,6 +22,7 @@
         # The result is `{ compName : { pkg-a: derivation-a, pkgs-b: ...}, ...}`
         comp-packages = cnLib.component.loadPackages {
           inherit pkgs cnLib;
+          inherit (cn.build) pinned;
         };
         comp-pkgs-flattened = cnLib.common.attrset.flattenDrvs comp-packages;
       in

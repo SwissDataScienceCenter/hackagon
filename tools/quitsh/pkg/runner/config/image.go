@@ -75,7 +75,7 @@ type (
 
 // SetDefaults implements the `defaults.Setter` interface.
 func (s *ImageSettingsPush) SetDefaults() {
-	s.RegistryDomain, s.RegistryBasePathFmt = "ghcr.github.io", "swissdatasciencecenter/hackagon/nix-%s"
+	s.RegistryDomain, s.RegistryBasePathFmt = "ghcr.io", "swissdatasciencecenter/hackagon/%s"
 
 	s.UseHTTPS = true
 }
