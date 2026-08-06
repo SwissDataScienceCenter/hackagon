@@ -15,7 +15,7 @@ import {
   type PersonaKey,
 } from "../personas.js"
 import { rpcAnonymous, rpcAsUser, ensureRegistered } from "./api.js"
-import { implemented } from "./capabilities.js"
+import { implemented, probed } from "./capabilities.js"
 import { anonymousContext, contextFor, loginViaKeycloak } from "./login.js"
 import { content, dashboardRow, dashboardSection, homeRow } from "./ui.js"
 import { SKILL_DIR } from "./state.js"
@@ -443,6 +443,17 @@ async function actorContext(
 
 async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
   const gates = a.gate ? ([] as string[]).concat(a.gate) : a.method ? [a.method] : []
+  // A gate nobody probed is a hole in scripts/probe.sh, not a backend that has
+  // not caught up — and it self-skips forever while the suite reports green.
+  // Fail on it instead: the whole point of gating is that an action WAKES UP
+  // when its RPC lands, which one absent from METHODS never does.
+  const unprobed = gates.filter((g) => !probed(g))
+  if (unprobed.length > 0) {
+    throw new Error(
+      `[${a.id}] gate(s) not in scripts/probe.sh METHODS: ${unprobed.join(", ")}. ` +
+        `Add them there, or this action skips forever and never reports it.`,
+    )
+  }
   const missing = gates.filter((g) => !implemented(g))
   if (missing.length > 0) {
     skipAction(test, a, a.todo ?? `backend does not implement yet: ${missing.join(", ")}`)

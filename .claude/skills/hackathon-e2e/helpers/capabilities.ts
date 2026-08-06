@@ -36,6 +36,19 @@ export function implemented(method: string): boolean {
 }
 
 /**
+ * Was this method probed at all?
+ *
+ * `implemented()` cannot tell "the backend returned Unimplemented" from "no
+ * one ever asked" — both are falsy — so a recipe action naming a method that
+ * is missing from probe.sh's METHODS list skips forever and reports green.
+ * Six actions did exactly that on first run. Callers use this to fail loudly
+ * on the second case, which is a gap in the probe list and not in the backend.
+ */
+export function probed(method: string): boolean {
+  return method in (load().methods ?? {})
+}
+
+/**
  * Call as the first line of a journey test. Skips the test (with an
  * actionable message) when the backend does not implement the given RPCs yet.
  * When a gate opens, the placeholder body below it will fail loudly — that is

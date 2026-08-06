@@ -42,6 +42,8 @@ METHODS=(
   hackathon.HackathonService/Join
   hackathon.HackathonService/ApproveParticipant
   hackathon.HackathonService/RemoveParticipant
+  hackathon.HackathonService/AddOwner
+  hackathon.HackathonService/RemoveOwner
   hackathon.PageService/Create
   hackathon.PageService/Delete
   hackathon.PhaseService/Create

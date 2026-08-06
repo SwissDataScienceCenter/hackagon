@@ -4,31 +4,6 @@ Self-contained Claude Code skills for testing the full Hackagon hackathon
 lifecycle. Everything lives under `skills/`; nothing outside this folder is
 required beyond the repo itself (Nix dev shell via `just`).
 
-## Commit attribution
-
-Commits and PRs here carry **no Claude attribution trailer** — no
-`Co-Authored-By: Claude`, no "generated with" footer. The work is reviewed and
-owned by whoever pushes it, and a trailer on some commits but not others makes
-`git log` harder to read for no gain.
-
-This is a per-person setting, deliberately NOT committed: it lives in your own
-`.claude/settings.local.json` (gitignored) or your user-level
-`~/.claude/settings.json`, not in a shared `.claude/settings.json`. Anyone
-working in this repo who wants the same behaviour:
-
-```json
-{
-  "attribution": { "commit": "", "pr": "" },
-  "includeCoAuthoredBy": false
-}
-```
-
-Keeping it personal rather than project-wide is the point: it is a preference
-about how a person works, so it should not arrive as a surprise in someone
-else's clone. `.claude/settings.json` is ignored for that reason — take the
-line out of `.claude/.gitignore` the day there is a setting the whole team
-genuinely needs.
-
 ## Skills
 
 | Skill | What it does |
@@ -69,6 +44,69 @@ that a recipe action *pins* will turn the suite red on purpose — that is the
 mechanism working. Re-specify the action, do not delete it: `act2.flow.alice.users`
 asserted the `/manage/users` 500 until F3 was fixed, and its own `todo` said to
 flip it to 403.
+
+## Status (2026-08-06) — bringing `origin/main` in
+
+`docs/review-main-2026-08-06.md` is the read: 183 commits, 746 files, reviewed
+from code on both sides. **The merge is not additive everywhere** — main
+DELETED the `Capability` entity our branch is built on and replaced it with
+flat `HackathonState` booleans enforced through casbin policy. The two
+enforcement paths cannot both run, so ours is kept and none of that is ported.
+Everywhere else additive holds, and all seven items in the review's order of
+work are on `sketch/06-08-26`: journey **277 passed / 0 failed / 0 skipped**
+(274 recipe actions, six of them new), smoke **77 passed / 0 skipped**,
+`svelte-check` 0 errors, plus the tunnel login proof.
+
+**Reviewing main mostly found bugs in OURS.** Five of the seven were defects
+the comparison exposed rather than features main had: `/manage/users` shipped
+calling `AddRole`/`RemoveRole` while both were `Unimplemented`, so promoting
+anyone 500'd; "Clear current phase" submitted no id into a UUID parse; the
+`VOTE` and `VIEW_RESULTS` capabilities were seeded and toggleable with **no
+handler reading them**; `EditSubmission` checked the window but not the
+capability; "★ Preferred" called an organizer-only RPC without the argument it
+requires, so it always failed.
+
+Two things ported as genuine additions: `SuggestResults` (single-choice tally
+only — ranked/points would force the `Vote` unique index from
+`(category, voter)` to `(category, voter, submission)` and destroy the
+one-ballot-per-category invariant) and the "what can I do now" surfaces
+(`CurrentStateCard`, `OrganizerStateAlert`, the `/manage` landing page).
+`AddOwner`/`RemoveOwner` — the last B15 stub pair — went in as a casbin role
+write with no schema change, because ownership is a casbin fact here while main
+stores it twice and syncs by hand.
+
+**Same test trap, third time.** A locator that contains the thing it asserts
+about passes for the wrong reason: `12-roles` checked the row, which holds a
+`<select>` whose options are named after the roles; `13-owners` checked the
+card, which holds a button named "Make organizer". Assert on the element that
+states the fact — the badge, the role line — never the container.
+
+**Three ways a test reported green while proving nothing**, all found in this
+pass and all now impossible-by-construction rather than fixed case by case:
+
+- **A gate nobody probed.** `implemented()` cannot tell "the backend returned
+  Unimplemented" from "no one ever asked" — both are falsy — so the six new
+  `act5.owner.*` actions, whose RPCs were missing from `probe.sh`'s `METHODS`,
+  self-skipped and would have done so forever. `runRpc` now THROWS on a gate
+  absent from the probe list: gating exists so an action wakes up when its RPC
+  lands, and one that is never probed never wakes.
+- **A `test.skip` on the only path.** `12-roles`'s self-demotion test clicked a
+  revoke control and skipped when none rendered — but own-Admin revoke is
+  deliberately hidden, so skipping was every run. It asserts the absence now,
+  and grants a role to someone else to prove the control did not vanish for
+  everybody.
+- **`recipe-player.html` showed 10 actions of 274.** An inline `<script>` block
+  ends at the first literal `</script>`, even inside a JSON string — and
+  `act0.about.xss` pastes a script tag on purpose. The splice escapes it as
+  `<\/script>`, which JSON parses back to the same character.
+
+Re-splicing the player after a recipe edit is required, not cosmetic; the
+escape is part of the splice.
+
+**Cast differs between suites.** In the smoke fixture alice OWNS h1; in the
+journey `hackagon-admin` creates the hackathon and alice joins it and votes in
+act 7 (organizers may not vote). A recipe action written with the smoke cast in
+mind gets `PermissionDenied` from the right code for the wrong reason.
 
 ## Status (2026-08-06) — design migration
 
@@ -166,7 +204,8 @@ validation, and `UserService.DeleteAccount`. **API-to-UI coverage: 57 of 64
 RPCs have a frontend caller.** The other seven are four proto-only stubs
 returning `Unimplemented` (audit B15: AddRole/RemoveRole,
 AddOwner/RemoveOwner) and three readers whose `List*` equivalents already
-drive the UI.
+drive the UI. *(All four B15 stubs are implemented and called as of
+2026-08-06 — see the main-merge section below.)*
 
 **Editable personal data (2026-08-05).** Two things people could not change
 about themselves, both now `act2.form.*` / `act8.profile.*` in the recipe:

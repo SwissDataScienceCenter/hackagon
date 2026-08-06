@@ -7,6 +7,10 @@ SKILL_DIR="$(dirname "$HERE")"
 ROOT_DIR="$(cd "$SKILL_DIR/../../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/.devcontainer/docker-compose.yml"
 SERVICE="dev"
+# The S3-compatible object store (see .devcontainer/README.md). A sibling of
+# `dev`, deliberately not a dependency of it: `dev` is only healthy once someone
+# runs `just up`, so gating anything on its health deadlocks.
+STORAGE_SERVICE="rustfs"
 CONTAINER_USER="vscode"
 WORKDIR="/workspaces/hackagon"
 
