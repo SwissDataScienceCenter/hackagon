@@ -61,14 +61,17 @@ export const load: LayoutServerLoad = async (event) => {
   // Resolved here rather than in the sidebar because `enabledCapabilities` reads
   // generated types and is server-only. It decides whether the participant
   // Voting entry is in the nav at all — see `memberNav`.
-  const votingEnabled = enabledCapabilities(result.hackathon.state).includes(
-    Capability.CAPABILITY_VOTE,
-  )
+  const caps = enabledCapabilities(result.hackathon.state)
+  const votingEnabled = caps.includes(Capability.CAPABILITY_VOTE)
+  // Its own switch, not implied by voting — an organiser closes voting, checks
+  // the tally, then publishes.
+  const resultsVisible = caps.includes(Capability.CAPABILITY_VIEW_RESULTS)
 
   return {
     hackathon: result.hackathon,
     myMembership,
     hackathonPages,
     votingEnabled,
+    resultsVisible,
   }
 }

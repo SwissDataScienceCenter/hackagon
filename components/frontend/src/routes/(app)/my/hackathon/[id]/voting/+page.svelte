@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import { resolve } from '$app/paths';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -75,6 +76,21 @@
                 : 'No team has filed a final submission yet, so there is nothing to vote on.'}
         </p>
     {:else}
+        <!-- The ballot lists a project and a team, which is not enough to judge
+             on. Teams is where each entry is actually shown — TeamCard renders
+             the team's final submission — so that is where someone deciding how
+             to vote needs to be able to get to, and back from. -->
+        <p class="m-0 text-xs text-ink-3">
+            Want to look before you vote?
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
+                class="font-semibold text-accent-ink no-underline hover:underline"
+            >
+                Browse the teams
+            </a>
+            to see each project and what it submitted.
+        </p>
+
         {#each ballots as ballot (ballot.category.id)}
             <section class="card card-raised box-border w-full px-5 py-4">
                 <form method="POST" action="?/vote" use:enhance class="flex flex-col gap-4">

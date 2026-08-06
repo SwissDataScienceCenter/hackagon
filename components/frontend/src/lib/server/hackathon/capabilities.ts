@@ -262,3 +262,52 @@ export function mayVote(
 
   return capabilityEnabled && membership !== undefined && !membership.isWaiting
 }
+
+/**
+ * Whether to show published results to a participant.
+ *
+ * Gated on `CAPABILITY_VIEW_RESULTS`, which is what writes `member →
+ * vote_result:read` (`hackathon_service.go:712`) — the row `ListVoteResults`
+ * checks (`vote_service.go:984`). Verified live in the seeded "Internal Product
+ * Sprint": `alice`, a plain member, reads the results there and is refused
+ * `CreateVoteResult`.
+ *
+ * Deliberately a *separate* switch from `CAPABILITY_VOTE`, because the backend
+ * makes it one. An organizer can close voting and keep results hidden while they
+ * check the tally, then publish — or, less usefully but legally, publish results
+ * while voting is still open. Folding the two together here would take that
+ * sequencing away.
+ */
+export function mayViewResults(
+  membership: HackathonMember | undefined,
+  capabilityEnabled: boolean,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return capabilityEnabled && membership !== undefined && !membership.isWaiting
+}
+
+/**
+ * Whether to offer publishing results — suggest a tally, edit a placement,
+ * delete one.
+ *
+ * Mirrors the backend exactly, same as `mayManageVoteCategories`:
+ * `CreateVoteResult` enforces `vote_result:create` and `EditVoteResult`/
+ * `DeleteVoteResult`/`SuggestResults` enforce `vote_result:write`, all granted
+ * to `Owner` outright (`rbac.go:224-226`) and to an admin through the global
+ * escape hatch.
+ *
+ * Not gated on `CAPABILITY_VIEW_RESULTS`: that capability is what lets
+ * *participants* read results, and an organizer has to be able to produce a
+ * tally before deciding whether to publish it. Gating here would mean results
+ * could only be prepared after they were already visible.
+ */
+export function mayPublishResults(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}

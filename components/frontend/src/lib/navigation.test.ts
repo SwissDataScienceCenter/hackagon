@@ -321,6 +321,39 @@ describe("memberNav", () => {
     ])
   })
 
+  // Two capabilities, two switches — the backend keeps CAPABILITY_VOTE and
+  // CAPABILITY_VIEW_RESULTS separate so an organiser can close voting, check the
+  // tally, then publish. Each of the four combinations has to be expressible.
+  it("gates Results on its own capability, independently of Voting", () => {
+    expect(
+      memberNav("hack-1", [], false, false).map((i) => i.id),
+    ).not.toContain("member:results")
+
+    // Voting closed, results published — the state right after a hackathon ends.
+    const published = memberNav("hack-1", [], false, true).map((i) => i.id)
+    expect(published).toContain("member:results")
+    expect(published).not.toContain("member:voting")
+
+    // Voting open, results withheld — the state while judging is under way.
+    const judging = memberNav("hack-1", [], true, false).map((i) => i.id)
+    expect(judging).toContain("member:voting")
+    expect(judging).not.toContain("member:results")
+  })
+
+  it("places Results after Voting and before Timeline", () => {
+    expect(memberNav("hack-1", [], true, true).map((i) => i.id)).toEqual([
+      "member:overview",
+      "member:participants",
+      "member:my-projects",
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+      "member:voting",
+      "member:results",
+      "member:timeline",
+    ])
+  })
+
   // Manage Voting is the organiser's way in and is *not* gated the same way:
   // categories have to exist before voting opens, so gating the setup screen on
   // the capability would surface it only once it was too late to use.

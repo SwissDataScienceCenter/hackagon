@@ -21,6 +21,7 @@ import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 import Tag from "lucide-svelte/icons/tag"
 import Vote from "lucide-svelte/icons/vote"
+import Trophy from "lucide-svelte/icons/trophy"
 
 /**
  * A single sidebar entry.
@@ -133,6 +134,7 @@ export function memberNav(
   hackathonId: string,
   pages: HackathonPageRef[] = [],
   votingEnabled = false,
+  resultsVisible = false,
 ): NavItem[] {
   return [
     {
@@ -200,6 +202,22 @@ export function memberNav(
             label: "Voting",
             icon: Vote,
             href: resolve(`/my/hackathon/${hackathonId}/voting`),
+          },
+        ]
+      : []),
+    // After Voting, and gated on its own capability rather than on that one.
+    // `CAPABILITY_VIEW_RESULTS` is what grants `member → vote_result:read`, and
+    // the backend keeps it separate from `CAPABILITY_VOTE` deliberately: an
+    // organiser closes voting, checks the tally, then publishes. Folding the two
+    // together here would either leak an empty page during voting or hide the
+    // results after it.
+    ...(resultsVisible
+      ? [
+          {
+            id: "member:results",
+            label: "Results",
+            icon: Trophy,
+            href: resolve(`/my/hackathon/${hackathonId}/results`),
           },
         ]
       : []),

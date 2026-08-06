@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Pencil, Plus, Trash2 } from 'lucide-svelte';
+    import { Pencil, Plus, Trash2, Trophy } from 'lucide-svelte';
     import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
     import type { ActionData, PageData } from './$types';
@@ -80,6 +80,16 @@
                             {/if}
 
                             <div class="ml-auto flex items-center gap-3">
+                                <a
+                                    href={resolve(
+                                        `/my/hackathon/${data.hackathonId}/voting/manage/${category.id}/results`
+                                    )}
+                                    class="text-xs font-semibold text-accent-ink
+                                           no-underline hover:underline"
+                                >
+                                    <Trophy class="inline h-3 w-3 shrink-0" aria-hidden="true" />
+                                    Results<span class="sr-only"> for {category.name}</span>
+                                </a>
                                 <a
                                     href={resolve(
                                         `/my/hackathon/${data.hackathonId}/voting/manage/${category.id}/edit`

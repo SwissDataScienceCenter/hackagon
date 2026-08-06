@@ -4,8 +4,7 @@ import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capabi
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayVote } from "$lib/server/hackathon/capabilities"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
-import { categoryView } from "$lib/server/hackathon/voting"
-import { submissionVersions } from "$lib/server/hackathon/submissions"
+import { ballotSubmissions, categoryView } from "$lib/server/hackathon/voting"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -27,6 +26,7 @@ export const load: PageServerLoad = async (event) => {
   // and after it opens. The page says so and offers nothing.
   if (!canVote) {
     return {
+      hackathonId: hackathon.id,
       votingEnabled,
       canVote: false,
       categories: [],
@@ -39,37 +39,12 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: event.params.id,
   })
 
-  const { teams } = await team.list({ hackathonId: event.params.id })
-  const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
-
-  // What people vote on is a *submission*, not a project or a team — so a team
-  // that never finalized anything simply isn't on the ballot. `latestFinal`
-  // rather than `latest`: a draft filed after finalizing is not the entry, and
-  // the submissions page draws the same distinction for the same reason.
-  const submissions = (
-    await Promise.all(
-      teams.map(async (t) => {
-        const { submissions: subs } = await team.listSubmissions({
-          teamId: t.id,
-        })
-        const { latestFinal } = submissionVersions(subs, new Map())
-        if (!latestFinal) return null
-
-        return {
-          id: latestFinal.id,
-          teamId: t.id,
-          teamName: t.name,
-          projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
-          result: latestFinal.result,
-          // SubmitVote refuses a vote on a submission by a team you are on
-          // (`vote_service.go:588`). Resolved per submission here so the booth
-          // can disable exactly those options and say why, rather than letting
-          // someone pick one and take a PermissionDenied for it.
-          isOwnTeam: t.members.some((m) => m.id === platformUserId),
-        }
-      }),
-    )
-  ).filter((s) => s !== null)
+  const submissions = await ballotSubmissions(
+    team,
+    event.params.id,
+    new Map(hackathon.projects.map((p) => [p.id, p.title])),
+    platformUserId,
+  )
 
   // Only what this viewer may actually cast. A jury category refuses anyone off
   // its roster, and a ranked category has no control in the booth — both are
@@ -121,7 +96,14 @@ export const load: PageServerLoad = async (event) => {
     }
   }
 
-  return { votingEnabled, canVote: true, categories, submissions, myVotes }
+  return {
+    hackathonId: hackathon.id,
+    votingEnabled,
+    canVote: true,
+    categories,
+    submissions,
+    myVotes,
+  }
 }
 
 export const actions: Actions = {
