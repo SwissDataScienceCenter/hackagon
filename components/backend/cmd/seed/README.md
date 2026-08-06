@@ -24,11 +24,11 @@ from config; the other three are hardcoded constants in [main.go](main.go).
 
 ## Hackathons at a glance
 
-| #   | Name                         | Visibility | Timing   | Span (days from seed)  | Creator        | Teams | Submissions         |
-| --- | ---------------------------- | ---------- | -------- | ---------------------- | -------------- | ----- | ------------------- |
-| H1  | AI Innovation Challenge 2026 | public     | upcoming | `+19` to `+21`         | alice          | 2     | Alpha: draft, final |
-| H2  | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`           | hackagon-admin | 1     | Gamma: final        |
-| H3  | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | hackagon-admin | 1     | Delta: draft, final |
+| #   | Name                         | Visibility | Timing   | Span (days from seed)  | Creator        | Teams | Submissions                         |
+| --- | ---------------------------- | ---------- | -------- | ---------------------- | -------------- | ----- | ----------------------------------- |
+| H1  | AI Innovation Challenge 2026 | public     | upcoming | `+19` to `+21`         | alice          | 2     | Alpha: draft, final                 |
+| H2  | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`           | hackagon-admin | 1     | Gamma: final                        |
+| H3  | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | hackagon-admin | 2     | Delta: draft, final; Epsilon: final |
 
 ## Timeline
 
@@ -66,13 +66,20 @@ ever reads the casbin policy — see `seedCapabilities` in [main.go](main.go).
 | Propose projects    | ✅          | ✅         | —       |
 | Team preferences    | ✅          | ✅         | —       |
 | Project submissions | ✅          | ✅         | —       |
-| Vote                | —           | —          | —       |
+| Vote                | —           | —          | ✅      |
 | View results        | —           | —          | ✅      |
 
 Chosen to match each hackathon's phase: H1 is taking sign-ups and proposals, H2
 is running, H3 is over. Registration is off for H2 because it started two days
-ago — **H1 is where joining is testable**. Voting is off everywhere, since there
-are no `Vote` tables yet.
+ago — **H1 is where joining is testable**. Voting is on in H3 only, which is
+where it belongs — you vote once the building has stopped. **H3 is therefore the
+only place voting is testable.**
+
+`vote` writes two casbin rows, not one: `Vote:Create` and `VoteCategory:Read`.
+The second is the one that looks redundant and is not — `ListVoteCategories`,
+`GetVoteCategory` and `SubmitVote` all check `VoteCategory:Read` before anything
+else, so a member without it cannot see what there is to vote on and
+`SubmitVote` refuses before `Vote:Create` is ever consulted.
 
 **Preferences: test in H1 or H2.** H2 is the clearest case — `hackagon-admin`
 owns it, `alice` and `bob` are both confirmed members.
@@ -131,12 +138,36 @@ tagging one would misdescribe the fixture.
 
 ## User involvement
 
-| User           | H1 AI Innovation                             | H2 Climate Tech                   | H3 Internal Sprint                |
-| -------------- | -------------------------------------------- | --------------------------------- | --------------------------------- |
-| hackagon-admin | member of Team Alpha                         | **creator**; member of Team Gamma | **creator**; member of Team Delta |
-| alice          | **creator**; member of Team Alpha, Team Beta | participant                       | member of Team Delta              |
-| bob            | participant                                  | member of Team Gamma              | —                                 |
-| charles        | _waitlisted_                                 | —                                 | —                                 |
+| User           | H1 AI Innovation                                             | H2 Climate Tech                   | H3 Internal Sprint                  |
+| -------------- | ------------------------------------------------------------ | --------------------------------- | ----------------------------------- |
+| hackagon-admin | member of Team Alpha                                         | **creator**; member of Team Gamma | **creator**; member of Team Epsilon |
+| alice          | **creator** and participant; member of Team Alpha, Team Beta | participant                       | member of Team Delta                |
+| bob            | participant                                                  | member of Team Gamma              | —                                   |
+| charles        | _waitlisted_                                                 | —                                 | —                                   |
+
+### Ownership is stored twice
+
+Every hackathon writes its creator into **both** stores, exactly as
+`HackathonService.Create` does:
+
+| Store                    | Written by         | Read by                                                  |
+| ------------------------ | ------------------ | -------------------------------------------------------- |
+| casbin `owner` role      | `enf.AddRole`      | the enforcer; the `Owner` badge in the participants list |
+| `owners` edge on the row | `.AddOwners(user)` | `RemoveOwner`, to refuse removing the **last** owner     |
+
+Write only the casbin half and the two disagree in a way that is annoying to
+debug: the UI labels the person `Owner`, but `RemoveOwner` counts the edge,
+finds nobody there, and refuses to remove anyone else with
+`cannot remove the last owner of a hackathon`. Add an owner through the UI and
+only _they_ land in the edge — so the newest owner is the one the backend treats
+as the last.
+
+**Alice holds two casbin roles in H1, `Owner` and `Member`, and needs both.**
+The model has no role inheritance, so `Owner` does not imply `Member`, while
+every capability `seedCapabilities` grants is granted to `Member`. With `Owner`
+alone she can administer H1 but cannot vote, propose or set a preference in it —
+an assignment that looks half-finished rather than deliberate. Creators of H2
+and H3 are owners only, which is the contrasting case worth keeping.
 
 ## H1 — AI Innovation Challenge 2026
 
@@ -204,8 +235,27 @@ Tracks: **Developer Tools**, **Data Platform**
 | DevTools | Test Coverage Dashboard  | proposed | alice       |
 | Data     | Data Pipeline Visualizer | approved | alice       |
 
-| Team       | Project            | Members               | Submissions                                             |
-| ---------- | ------------------ | --------------------- | ------------------------------------------------------- |
-| Team Delta | CLI Code Generator | hackagon-admin, alice | v1 draft; v2 final → `github.com/internal/cli-code-gen` |
+| Team         | Project                  | Members        | Submissions                                             |
+| ------------ | ------------------------ | -------------- | ------------------------------------------------------- |
+| Team Delta   | CLI Code Generator       | alice          | v1 draft; v2 final → `github.com/internal/cli-code-gen` |
+| Team Epsilon | Data Pipeline Visualizer | hackagon-admin | v1 final → `github.com/internal/data-pipeline-viz`      |
 
 Pages: `Overview`, `Technical Specs`, `Timeline` (all visible).
+
+### Voting
+
+H3 is the only hackathon with voting on, so it is the only place the voting UI
+can be exercised. One category, `Best Project` — single choice, all participants
+— with two votes already cast and a two-way tie for first place recorded as
+results.
+
+**The one-member-per-team split above is what makes voting work at all.**
+`SubmitVote` refuses a vote on a submission by a team you belong to, so a
+participant who is on every team cannot vote on anything. With alice on Delta
+and admin on Epsilon, each can vote for the other, and the two seeded votes are
+exactly that. Put both people back on both teams and H3 goes back to having
+voting enabled and nothing votable in it.
+
+Votes and results here are written straight through ent, not through
+`SubmitVote`, so no handler validates them — the cross-team property has to be
+kept true by hand if you add more.
