@@ -216,11 +216,63 @@ list_bucket() { # <bucket> [prefix]
     grep -o '<Key>[^<]*</Key>' "$body" | sed -e 's/<[^>]*>//g' || true
 }
 
+# Public-read on the imagery prefixes, private everywhere else.
+#
+# Decided in docs/storage.md: event logos, gallery photos and avatars already
+# render on pages that need no login, so serving them from a public prefix gives
+# stable URLs that never expire and can be cached — which is also what lets them
+# sit in the existing `logo` / `avatar_url` columns with no schema change.
+#
+# Everything NOT listed here (team submissions, exports) stays private and is
+# reached through short-lived presigned GETs, minted only after casbin has
+# approved the read. Verify both halves with --selftest.
+put_public_policy() {
+    local bucket="$1" body policy status
+    body="$(tmpfile)"
+    policy="$(tmpfile)"
+
+    cat >"$policy" <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadEventImagery",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": [
+        "arn:aws:s3:::${bucket}/hackathons/*",
+        "arn:aws:s3:::${bucket}/users/*"
+      ]
+    }
+  ]
+}
+POLICY
+
+    # Query goes in its own argument: SigV4 signs the canonical query
+    # string separately from the path, so folding "?policy=" into the path
+    # signs a URI that does not exist and rustfs answers InvalidBucketName.
+    status="$(s3_request PUT "/${bucket}" "policy=" "$policy" "$body")"
+    case "$status" in
+    200 | 204)
+        echo "  policy   ${bucket} (public: hackathons/*, users/*)"
+        ;;
+    *)
+        echo "  FAILED   ${bucket} policy (HTTP ${status})" >&2
+        sed 's/^/           /' "$body" >&2
+        return 1
+        ;;
+    esac
+}
+
 cmd_init() {
     echo "==> Object store ${ENDPOINT}"
     wait_ready
     echo "==> Buckets:"
-    for bucket in $BUCKETS; do create_bucket "$bucket"; done
+    for bucket in $BUCKETS; do
+        create_bucket "$bucket"
+        put_public_policy "$bucket"
+    done
     echo "Done. Endpoint ${ENDPOINT}, buckets: ${BUCKETS}"
 }
 
@@ -236,6 +288,46 @@ cmd_status() {
 # Round-trip proof: PUT an object, GET it back, compare BYTES (not just the
 # status code), list the bucket, then delete. Being up is not the same as
 # being an object store.
+# Proves the POLICY, not just the plumbing: an object under a public prefix must
+# be readable with no credentials at all, and one under a private prefix must
+# not be. Getting this backwards is silent — everything keeps working for
+# signed callers while the private half is world-readable — so it is asserted
+# rather than assumed.
+check_public_policy() {
+    local bucket="$1" pub priv pub_code priv_code
+    pub="hackathons/_selftest/public-probe.txt"
+    priv="teams/_selftest/private-probe.txt"
+
+    echo "==> Policy: unsigned reads"
+
+    # Real files, not process substitution: the payload is read TWICE — once to
+    # hash it for the signature, once by curl to send it — and a pipe is empty
+    # the second time, which uploads nothing and then 404s on read.
+    local pub_body priv_body
+    pub_body="$(tmpfile)"
+    priv_body="$(tmpfile)"
+    printf 'public
+' >"$pub_body"
+    printf 'private
+' >"$priv_body"
+
+    s3_request PUT "/${bucket}/${pub}" "" "$pub_body" /dev/null >/dev/null
+    s3_request PUT "/${bucket}/${priv}" "" "$priv_body" /dev/null >/dev/null
+
+    pub_code="$(curl -s -o /dev/null -w '%{http_code}' "${ENDPOINT}/${bucket}/${pub}")"
+    priv_code="$(curl -s -o /dev/null -w '%{http_code}' "${ENDPOINT}/${bucket}/${priv}")"
+
+    s3_request DELETE "/${bucket}/${pub}" "" "" /dev/null >/dev/null
+    s3_request DELETE "/${bucket}/${priv}" "" "" /dev/null >/dev/null
+
+    echo "  hackathons/* unsigned -> ${pub_code} (want 200)"
+    echo "  teams/*      unsigned -> ${priv_code} (want 403)"
+    if [ "$pub_code" != "200" ] || [ "$priv_code" = "200" ]; then
+        echo "FAIL — the public/private split is not what docs/storage.md says" >&2
+        return 1
+    fi
+}
+
 cmd_selftest() {
     cmd_init
     local bucket key src dst status
@@ -279,6 +371,8 @@ cmd_selftest() {
     echo "  HTTP ${status}"
 
     echo
+    check_public_policy "$bucket"
+
     echo "PASS — ${ENDPOINT} round-trips objects over S3 SigV4."
 }
 
