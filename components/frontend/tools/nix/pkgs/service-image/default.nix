@@ -3,6 +3,7 @@
   cacert,
   service,
   pinned,
+  cnLib,
   ...
 }:
 dockerTools.buildLayeredImage {
@@ -10,6 +11,7 @@ dockerTools.buildLayeredImage {
   tag = service.version;
 
   contents = [
+    cnLib.image.etcGroupAndPasswd
     cacert
     service
   ];
