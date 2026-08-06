@@ -7,9 +7,18 @@ import { HackathonStatus } from "$lib/server/grpc/generated/hackathon/entities/h
 const AWARD_EVENTS = 4
 
 export const load: PageServerLoad = async (event) => {
-  const result = await publicHackathonClient.list({
-    visibilityFilter: Visibility.VISIBILITY_PUBLIC,
-  })
+  // A backend outage must cost the LIST, not the page.
+  //
+  // This awaited bare, so any unreachable backend turned the platform's front
+  // page into a 500 — measured at 98 of 356 samples during one e2e run, which
+  // wipes and reboots Postgres and the backend by design. The rest of the page
+  // is static marketing copy that needs no backend at all, and "no events to
+  // show" is a truthful, calm thing to render; a stack trace is not.
+  //
+  // The awards block below already degrades this way. Now the list does too.
+  const result = await publicHackathonClient
+    .list({ visibilityFilter: Visibility.VISIBILITY_PUBLIC })
+    .catch(() => ({ hackathons: [] }))
 
   // Winners, from the events that actually finished and recorded them.
   //
