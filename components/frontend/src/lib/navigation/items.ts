@@ -28,6 +28,7 @@ import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
 import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
+import SlidersHorizontal from "lucide-svelte/icons/sliders-horizontal"
 import Tag from "lucide-svelte/icons/tag"
 import Vote from "lucide-svelte/icons/vote"
 import Trophy from "lucide-svelte/icons/trophy"
@@ -256,18 +257,43 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * Entries follow the order of the participant entries they extend, and most are
  * nested under that entry's route (`/teams/manage` under `/teams`) so
  * `activeNavId`'s longest match lights the Manage entry while its page is open.
- * Two are not: Manage Tracks has no participant counterpart, and Manage Pages is
- * the *parent* of the individual `/pages/<id>` routes, so opening a page lights
- * that page rather than it.
+ * Three are not: Manage Hackathon is the organiser's counterpart to Overview
+ * rather than a child of it, Manage Tracks has no participant counterpart, and
+ * Manage Pages is the *parent* of the individual `/pages/<id>` routes, so opening
+ * a page lights that page rather than it.
+ *
+ * `needsAttention` badges Manage Hackathon when the configuration is in a state
+ * participants are blocked by — see `stateAlerts`. It marks that entry because
+ * that is the page holding the switches that fix it. A bare "!" rather than a
+ * count: the alerts are problems, the capabilities inside one are not, and a
+ * number would silently mean whichever of the two the reader assumed. The banner
+ * alongside it carries the detail.
  */
 export function manageNav(
   hackathonId: string,
   membership: ViewerMembership | undefined,
   isGlobalAdmin: boolean,
+  needsAttention = false,
 ): NavItem[] {
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
   return [
+    // First, and the organiser's counterpart to the member Overview above: what
+    // participants may do, which phase is current, and the way in to everything
+    // below. Deliberately not nested under `/overview` — that page stays the
+    // member's, and an organiser reading it sees what a participant sees.
+    {
+      id: "manage:hackathon",
+      label: "Manage Hackathon",
+      icon: SlidersHorizontal,
+      href: resolve(`/my/hackathon/${hackathonId}/manage`),
+      description:
+        "What participants can do right now, and which phase the hackathon " +
+        "is in.",
+      ...(needsAttention
+        ? { badge: "!", badgeVariant: "badge-warning" as const }
+        : {}),
+    },
     // The participant page lists the same people and offers nothing to act on;
     // Approve and Remove exist only here.
     {

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import CurrentStateCard from '$lib/components/hackathon/CurrentStateCard.svelte';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import { membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import type { PageData } from './$types';
@@ -26,6 +27,26 @@
   whole of a wide viewport is unreadable.
 -->
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8 sm:px-10">
+    <!-- First on the page: what a participant came to find out is whether they can
+         act right now, and until this card existed the only way to learn it was to
+         try something and be refused. `hackathonState` comes from the hackathon
+         layout, so the card, the organiser bar and the sidebar badge all read one
+         derivation.
+
+         This is the *member* overview and stays participant-shaped for everyone.
+         An organiser reading it sees exactly what a participant sees, in the third
+         person; their own controls live on Manage Hackathon. -->
+    <CurrentStateCard
+        hackathonId={data.hackathon.id}
+        organiserVoice={data.hackathonState.canManage}
+        isWaiting={data.membershipIsWaiting}
+        hasState={data.hackathonState.hasState}
+        declared={data.hackathonState.declared}
+        currentPhase={data.hackathonState.currentPhase}
+        nextPhase={data.hackathonState.nextPhase}
+        enabled={data.hackathonState.enabled}
+    />
+
     {#if data.myTeam}
         <ParticipationCard
             membershipLabel={data.membershipLabel}
