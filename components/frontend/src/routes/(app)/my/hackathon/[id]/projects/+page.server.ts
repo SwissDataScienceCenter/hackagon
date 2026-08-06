@@ -199,21 +199,10 @@ export const actions: Actions = {
     return { preferredId: projectId }
   },
 
-  unprefer: async (event) => {
-    const { project } = requireGrpc(event.locals.grpc)
-
-    const projectId = projectIdFrom(await event.request.formData())
-    if (!projectId) return fail(400, { message: "No project was given" })
-
-    try {
-      await project.removePreference({ projectId })
-    } catch (e) {
-      return failFor(
-        e,
-        "You can't change project preferences in this hackathon",
-      )
-    }
-
-    return { unpreferredId: projectId }
-  },
+  // No `unprefer` action, deliberately. RemovePreference is organiser-only
+  // here — it takes the user_id of the person whose preference is being
+  // withdrawn and requires project:write — so a member-facing version could
+  // only ever answer INVALID_ARGUMENT. There was one, wired to a button that
+  // always failed. An organiser-facing caller belongs on the team-matching
+  // page, next to where the preferences are read.
 }

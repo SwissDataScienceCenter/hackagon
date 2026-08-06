@@ -56,8 +56,9 @@
                      role and casbin has no inheritance, so an owner holds none of
                      them and is refused the very actions they switch on here. -->
                 <p class="m-0 text-xs text-ink-3">
-                    Applies to the whole hackathon. Moving between phases never changes
-                    these — they are always explicit.
+                    Applies to the whole hackathon. A capability that names the phase it opens
+                    in moves WITH the timeline: advancing to that phase switches it on
+                    here. Ones with no phase linked change only when you change them.
                 </p>
                 <div class="grid gap-2 pt-2 sm:grid-cols-2">
                     {#each capabilities as capability (capability.value)}

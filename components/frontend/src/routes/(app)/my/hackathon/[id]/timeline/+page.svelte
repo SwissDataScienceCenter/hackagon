@@ -211,9 +211,11 @@
                                     </a>
                                 {/if}
                                 <!-- Both are writes, so forms rather than links, and
-                                     both move the pointer only — what participants
-                                     may do is unchanged either way. Clearing sends no
-                                     phaseId, which the action reads as "clear". -->
+                                     advancing also applies the capabilities
+                                     scheduled for this phase — one that names it as its
+                                     opening phase switches on, one whose closing phase has
+                                     passed switches off. Unlinked capabilities are left
+                                     alone. Clearing sends no phaseId. -->
                                 {#if data.mayManage}
                                     {#if phase.status === 'current'}
                                         <form method="POST" action="?/setCurrent">

@@ -109,12 +109,20 @@
                         {/if}
                         {#if data.mayPrefer && !project.isPending}
                             {#if project.isPreferred}
-                                <form method="POST" action="?/unprefer">
-                                    <input type="hidden" name="projectId" value={project.id} />
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        &starf; Preferred
-                                    </button>
-                                </form>
+                                <!-- A badge, not a button. A preference is final on this
+                                     platform: team formation reads these choices, so an
+                                     unset would move the ground under an allocation in
+                                     progress. This WAS a button posting ?/unprefer, which
+                                     could only ever fail — RemovePreference is
+                                     organiser-only and needs a user_id the page never
+                                     sent. An organiser undoes it from the team-matching
+                                     side. -->
+                                <span
+                                    class="badge badge-success"
+                                    title="Preferences are final — ask an organiser if this was a mistake."
+                                >
+                                    &starf; Preferred
+                                </span>
                             {:else}
                                 <form method="POST" action="?/prefer">
                                     <input type="hidden" name="projectId" value={project.id} />

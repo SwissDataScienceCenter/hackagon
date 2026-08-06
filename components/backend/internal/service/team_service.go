@@ -843,6 +843,17 @@ func (s *TeamService) EditSubmission(
 	if err := requireWindowOpen(ctx, s.dbClient, hackathonID, windowSubmissions, time.Now()); err != nil {
 		return nil, err
 	}
+	// The CAPABILITY too, not only the window. CreateSubmission and
+	// FinalizeSubmission both check it and this one did not, so with project
+	// submissions switched off a direct POST could still edit a draft's result.
+	// The UI hides the form, which is exactly what makes a gap like this look
+	// closed from the outside.
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer,
+		hackathonID, capability.CreateProjectSubmissions,
+	); err != nil {
+		return nil, err
+	}
 
 	u, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(sub)).Only(ctx)
 	if err != nil {

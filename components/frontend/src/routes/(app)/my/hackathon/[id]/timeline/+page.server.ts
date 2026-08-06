@@ -144,10 +144,16 @@ export const actions: Actions = {
   // `SetCurrentPhase` reads an empty string as "clear", which is why the clear
   // form simply omits the field.
   //
-  // Deliberately does *not* touch capabilities. Moving between phases changes
-  // what the timeline says, never what participants may do — that stays an
-  // explicit act on the switches, or one click on "enable what this phase
-  // expects".
+  // DOES apply capabilities, by design on this branch: a capability names the
+  // phase it opens in (`open_in_phase_id`), and AdvancePhase switches exactly
+  // those — closing any whose closing phase has passed — in the transaction
+  // that moves the pointer. Capabilities with no phase linked are untouched and
+  // stay an explicit act on the switches.
+  //
+  // This comment claimed the opposite until now, inherited from a design where
+  // phases really were inert. Three other surfaces said the same thing; an
+  // organiser was told the switches would not move, pressed "Make current",
+  // and watched them move.
   setCurrent: async (event) => {
     const { hackathon } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()

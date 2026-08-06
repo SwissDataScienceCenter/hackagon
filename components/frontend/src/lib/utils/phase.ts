@@ -77,11 +77,12 @@ export function sortPhasesByStart<T extends { startsAt?: Date | undefined }>(
  * enum numbers are contract-stable, and the server still validates what comes
  * back (`defined_only`).
  *
- * **These are labels, not switches.** `Phase.capabilities` is informational —
- * `db/schema/phase.go:47` says so outright, and advancing to a phase grants
- * nobody anything. What a participant may actually do comes from
- * `HackathonState` plus its casbin rows, which only
- * `HackathonService.SetCapabilities` writes. Settled deliberately; see
+ * **A phase label describes the schedule; the schedule is also applied.** On this
+ * branch a capability names the phase it opens in (`open_in_phase_id`), and
+ * `AdvancePhase` switches exactly those on — closing the ones whose closing phase
+ * has passed — in the transaction that moves the pointer. Capabilities with no
+ * phase linked change only when someone sets them. (This said the opposite until
+ * now, inherited from a design where phases really were inert.) Settled deliberately; see
  * `mydocs/docs/backend-tickets/project-preferences-capability.md`.
  */
 const CAPABILITY_LABEL: Partial<Record<number, string>> = {
