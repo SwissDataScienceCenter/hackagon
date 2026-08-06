@@ -572,7 +572,7 @@ func (s *HackathonService) Edit(
 	return &msgs.EditResponse{Hackathon: entry}, nil
 }
 
-func (s *HackathonService) SetCapabilities(
+func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long because of the switch
 	ctx context.Context,
 	req *msgs.SetCapabilitiesRequest,
 ) (*msgs.SetCapabilitiesResponse, error) {
@@ -673,7 +673,16 @@ func (s *HackathonService) SetCapabilities(
 					opts:   nil,
 				},
 			)
-			continue
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.Submission,
+					perm:   mw.Read,
+					opts:   nil,
+				},
+			)
 		case ents.Capability_CAPABILITY_PROPOSE_PROJECTS:
 			update = update.SetProposeProjectsEnabled(enabled)
 			policyChanges = append(
