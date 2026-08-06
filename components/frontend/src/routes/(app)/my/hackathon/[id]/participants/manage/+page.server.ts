@@ -10,6 +10,7 @@ export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // participant with their casbin role and waitlist flag.
   const { hackathon, myMembership, isGlobalAdmin } = await event.parent()
+  const myUserId = myMembership?.user?.id
 
   // Frontend-only gate, same shape as the tracks and teams manage routes: the
   // two RPCs below enforce it for real, this only decides whether the page
@@ -31,6 +32,9 @@ export const load: PageServerLoad = async (event) => {
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
       isWaiting: m.isWaiting,
       isOwner: m.role === HackathonRole.HACKATHON_ROLE_OWNER,
+      // Demoting yourself would take away the `hackathon:write` this very page
+      // needs, so the row for the viewer never offers it.
+      isMe: myUserId !== undefined && m.user!.id === myUserId,
     }))
 
   return { participants }
@@ -43,6 +47,11 @@ function failFor(e: unknown, denied: string) {
   }
   if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
     return fail(404, { message: "That participant no longer exists" })
+  }
+  // RemoveOwner refuses the last owner rather than leaving the hackathon with
+  // nobody holding `hackathon:write` (`hackathon_service.go:1007`).
+  if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION) {
+    return fail(409, { message: e.details || "That change isn't allowed" })
   }
   throw e
 }
@@ -87,6 +96,38 @@ export const actions: Actions = {
       })
     } catch (e) {
       return failFor(e, "You don't have permission to remove participants here")
+    }
+
+    return {}
+  },
+
+  // AddOwner grants the casbin Owner role on top of the Member row rather than
+  // replacing it, so a promoted participant keeps every member-level policy.
+  promote: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const userId = userIdFrom(await event.request.formData())
+    if (!userId) return fail(400, { message: "No participant was given" })
+
+    try {
+      await hackathon.addOwner({ hackathonId: event.params.id, userId })
+    } catch (e) {
+      return failFor(e, "You don't have permission to add owners here")
+    }
+
+    return {}
+  },
+
+  demote: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const userId = userIdFrom(await event.request.formData())
+    if (!userId) return fail(400, { message: "No participant was given" })
+
+    try {
+      await hackathon.removeOwner({ hackathonId: event.params.id, userId })
+    } catch (e) {
+      return failFor(e, "You don't have permission to remove owners here")
     }
 
     return {}
