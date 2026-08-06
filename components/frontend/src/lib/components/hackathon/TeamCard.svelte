@@ -64,8 +64,14 @@
 
         <div class="flex min-w-0 flex-1 flex-col gap-3">
             <div class="flex flex-col gap-1.5">
-                <h3 class="m-0 text-sm leading-snug text-ink">
-                    {num}. {title}
+                <h3 class="m-0 flex items-baseline gap-1.5 text-sm leading-snug text-ink">
+                    <!-- The index is a position in this list, not part of the
+                         team's name: interleaved in one text node it comes along
+                         when the name is copied, and nothing can address the name
+                         on its own. `tnum` keeps the numbers from wandering as
+                         the list scrolls. -->
+                    <span class="tnum shrink-0 text-ink-3">{num}.</span>
+                    <span class="min-w-0">{title}</span>
                 </h3>
                 <div class="block w-2/3 min-w-0">
                     <p class="m-0 text-xs leading-snug text-ink-2">
