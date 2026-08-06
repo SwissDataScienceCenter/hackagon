@@ -274,7 +274,11 @@
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
     <h2 class="text-title">Trusted by Swiss research institutions</h2>
-    <div class="flex items-center gap-12">
+    <!-- Wraps, and the gap narrows on a phone: six fixed 3.5rem tiles at
+         gap-12 are 518px wide, which pushed the whole PAGE into a horizontal
+         scroll at 390px — the platform's front page, on the device most people
+         open a link on. -->
+    <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-12">
         {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
             <div class="flex flex-col items-center gap-2">
                 <div class="flex h-14 w-14 items-center justify-center rounded-card border border-line"></div>

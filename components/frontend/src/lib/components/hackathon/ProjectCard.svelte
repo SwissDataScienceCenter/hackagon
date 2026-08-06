@@ -51,8 +51,12 @@
 </script>
 
 <!-- Matches TeamCard: px-5 py-4, row gap-4, size-16 media, gap-1.5, title/ body scale, CTA. -->
+<!-- Wraps below sm: at 390px the avatar, the text column and the action row
+     do not fit on one line, and the actions were pushing the page into a
+     horizontal scroll. Above sm it is the same single row as before. -->
 <div
-    class="card card-raised box-border flex w-full items-start gap-4 px-5 py-4"
+    class="card card-raised box-border flex w-full flex-wrap items-start gap-4 px-5 py-4
+           sm:flex-nowrap"
 >
     <!-- The ordinal leaves the title and becomes a gutter figure, so titles all
          start on one left edge and the numbers align down the list. -->
@@ -120,7 +124,7 @@
         {/if}
     </div>
 
-    <div class="flex shrink-0 items-center gap-2">
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
         {@render actions?.()}
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
         <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">
