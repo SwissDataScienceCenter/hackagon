@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { NavItem } from '$lib/navigation';
+    import type { NavItem } from '$lib/navigation/items';
 
     let {
         label,

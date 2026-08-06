@@ -6,7 +6,9 @@
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import SidebarNavSection from './SidebarNavSection.svelte';
-    import { activeNavId, hackathonRoleBadge, manageNav, memberNav } from '$lib/navigation';
+    import { manageNav, memberNav } from '$lib/navigation/items';
+    import { activeNavId } from '$lib/navigation/active';
+    import { hackathonRoleBadge } from '$lib/utils/hackathonRole';
 
     interface HackathonMember {
         role: number;

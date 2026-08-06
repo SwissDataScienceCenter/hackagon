@@ -36,14 +36,6 @@ export function visibilityBadgeVariant(v: number): string | undefined {
   return VISIBILITY_VARIANT[v]
 }
 
-// HackathonRole numeric values: UNSPECIFIED=0, OWNER=1, MEMBER=2
-// is_waiting takes precedence over role for display purposes.
-export function membershipBadgeLabel(isWaiting: boolean, role: number): string {
-  if (isWaiting) return "Waitlisted"
-  if (role === 1) return "Owner"
-  return "Member"
-}
-
-export function membershipBadgeVariant(isWaiting: boolean): string {
-  return isWaiting ? "badge-warning" : "badge-success"
-}
+// The membership chip helpers that used to sit here live in hackathonRole.ts,
+// beside the other rules that read a viewer's role in a hackathon. This file is
+// about the hackathon's own status and visibility.

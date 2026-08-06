@@ -1,6 +1,6 @@
 <script lang="ts">
     import { ArrowRight } from 'lucide-svelte';
-    import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { membershipBadgeVariant } from '$lib/utils/hackathonRole';
 
     let {
         teamName,

@@ -4,6 +4,7 @@ import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/tea
 import { submissionVersions } from "./submissions"
 import { VotingMethod } from "$lib/server/grpc/generated/vote/entities/voting_method"
 import { VoterType } from "$lib/server/grpc/generated/vote/entities/voter_type"
+import { ClientError, Status } from "nice-grpc-common"
 
 /**
  * Server-only: reads generated types, so it must never be imported by a
@@ -93,6 +94,9 @@ export interface BallotSubmission {
  *
  * Shared by the booth, the organizer's results screen and the public results
  * page so the three cannot disagree about what was entered.
+ *
+ * Returns only the teams whose submissions the viewer may actually read, which
+ * for a participant is just their own — see the per-team catch below.
  */
 export async function ballotSubmissions(
   team: TeamServiceClient,
@@ -104,7 +108,34 @@ export async function ballotSubmissions(
 
   const entries = await Promise.all(
     teams.map(async (t) => {
-      const { submissions } = await team.listSubmissions({ teamId: t.id })
+      // TODO(backend: submission-cross-team-read) — drop this catch once a
+      // member can read every team's final submission while voting or results
+      // are on.
+      //
+      // `ListSubmissions` takes `submission:read` scoped to the team
+      // (`team_service.go:560`), and the only unscoped grant goes to `Owner`.
+      // No capability widens it: CAPABILITY_VOTE grants a member `vote:create`
+      // and `vote_category:read`, CAPABILITY_VIEW_RESULTS grants
+      // `vote_result:read`, and neither adds `submission:read`
+      // (`hackathon_service.go:653,713`). So a participant is refused for every
+      // team but their own, and awaiting these unguarded took the whole page
+      // down with a 500 rather than losing one row.
+      //
+      // Skipping the team degrades rather than crashes: `resultView` already
+      // renders an unresolvable placement as "Unknown submission", so the
+      // podium still shows its positions. The booth is the surface that stays
+      // unusable until the backend lands — the one submission a participant can
+      // resolve is their own, which is also the one they may not vote for.
+      let submissions
+      try {
+        ;({ submissions } = await team.listSubmissions({ teamId: t.id }))
+      } catch (e) {
+        if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+          return null
+        }
+        throw e
+      }
+
       const { latestFinal } = submissionVersions(submissions, new Map())
       if (!latestFinal) return null
 

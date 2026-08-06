@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types"
-import { membershipBadgeLabel } from "$lib/utils/hackathonStatus"
+import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 
 // No owner/admin check here: the way into participant management is the
 // sidebar's Manage section, which gates itself on the same subjects (see

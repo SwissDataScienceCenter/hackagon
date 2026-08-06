@@ -1,7 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
-    import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();

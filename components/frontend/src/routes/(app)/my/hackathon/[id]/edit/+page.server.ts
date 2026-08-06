@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
-import { canEditHackathon } from "$lib/navigation"
+import { canEditHackathon } from "$lib/utils/hackathonRole"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
