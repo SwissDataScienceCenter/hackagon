@@ -13,6 +13,11 @@
         /** Page name. Omitted on the landing page, which is just the site. */
         title = '',
         description = 'One place for the whole hackathon — call for projects, teams, submissions and the final vote.',
+        // JPEG on purpose, unlike every other image here. This one is not
+        // fetched by a browser — it is fetched by link-preview scrapers
+        // (Slack, LinkedIn, WhatsApp), whose WebP support is broad but not
+        // universal, and a card that fails to render costs more than the 30 KB
+        // WebP would have saved on a request no visitor ever makes.
         image = '/og-default.jpg',
         /** Only meaningful for the default image; a custom one should pass its own. */
         imageWidth = 1200,

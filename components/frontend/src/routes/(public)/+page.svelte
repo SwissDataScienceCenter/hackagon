@@ -59,15 +59,15 @@
         { name: 'SDSC', src: '/logos/sdsc.svg', darkSrc: '/logos/sdsc_white.svg' },
         { name: 'ETH Zurich', src: '/images/logos/eth-zurich.svg', invert: true },
         { name: 'EPFL', src: '/images/logos/epfl.svg', invert: true },
-        { name: 'Durham University', src: '/images/logos/durham.png' },
+        { name: 'Durham University', src: '/images/logos/durham.webp' },
     ];
 
     let carouselIndex = $state(0);
     const carouselSlides = [
-        { src: '/images/hackathon-ord-2024/ambiance/ambiance_1.jpg', caption: 'ORD Hackathon 2024 — Opening ceremony' },
-        { src: '/images/hackathon-ord-2024/teams/teams_1.jpg', caption: 'ORD Hackathon 2024 — Team collaboration' },
-        { src: '/images/hackathon-ord-2024/ambiance/ambiance_3.jpg', caption: 'ORD Hackathon 2024 — Working sessions' },
-        { src: '/images/hackathon-ord-2024/winners/winners_1.jpg', caption: 'ORD Hackathon 2024 — Award ceremony' },
+        { src: '/images/hackathon-ord-2024/ambiance/ambiance_1.webp', caption: 'ORD Hackathon 2024 — Opening ceremony' },
+        { src: '/images/hackathon-ord-2024/teams/teams_1.webp', caption: 'ORD Hackathon 2024 — Team collaboration' },
+        { src: '/images/hackathon-ord-2024/ambiance/ambiance_3.webp', caption: 'ORD Hackathon 2024 — Working sessions' },
+        { src: '/images/hackathon-ord-2024/winners/winners_1.webp', caption: 'ORD Hackathon 2024 — Award ceremony' },
     ];
 
     function nextSlide() {
@@ -95,7 +95,7 @@
            px-4 pt-8 pb-12 text-center sm:px-10 md:px-20"
 >
     <img
-        src="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
+        src="/images/hackathon-ord-2024/ambiance/ambiance_1.webp"
         alt=""
         class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40 dark:opacity-25"
     />
