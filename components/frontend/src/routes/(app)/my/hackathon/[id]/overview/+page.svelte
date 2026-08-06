@@ -2,6 +2,7 @@
     import { resolve } from '$app/paths';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import CurrentStateCard from '$lib/components/hackathon/CurrentStateCard.svelte';
     import { membershipBadgeVariant } from '$lib/utils/hackathonStatus';
     import type { PageData } from './$types';
 
@@ -27,6 +28,16 @@
   whole of a wide viewport is unreadable.
 -->
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8 sm:px-10">
+    <!-- First, deliberately. The overview described the event — dates, team,
+         about — and never answered the question a participant actually arrives
+         with: is the thing I want to do open yet. Capability state existed and
+         was rendered nowhere they could see it. -->
+    <CurrentStateCard
+        hackathonId={data.hackathon.id}
+        capabilities={data.hackathon.capabilities ?? []}
+        currentPhaseName={data.currentPhaseName ?? ''}
+    />
+
     {#if data.myTeam}
         <ParticipationCard
             membershipLabel={data.membershipLabel}

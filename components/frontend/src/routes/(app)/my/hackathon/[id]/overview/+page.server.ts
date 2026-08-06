@@ -62,7 +62,14 @@ export const load: PageServerLoad = async (event) => {
     ? hackathon.tracks.find((t) => t.id === project.trackId)
     : undefined
 
+  // The current phase's NAME. The entity carries `currentPhaseId` and the
+  // phases themselves, so this is a lookup rather than another round trip —
+  // and an id is not a thing to show a person.
+  const currentPhaseName =
+    hackathon.phases?.find((p) => p.id === hackathon.currentPhaseId)?.name ?? ""
+
   return {
+    currentPhaseName,
     // Waitlisted members reach this page too — the badge should say so rather
     // than claim they are registered. The flag travels alongside the label so
     // the badge colour keys off it rather than string-matching the label.
