@@ -40,9 +40,11 @@ utilities → the `--hk-*` tokens (`bg-canvas` `bg-surface` `bg-raised`
       destinations and Challenges is gone until it has a backing entity.
 - [x] **SEO** — `Seo.svelte` and the `publicOrigin` derivation are back.
       Still to do: re-add its call sites on the landing and event pages.
-- [x] **List ergonomics** — `lib/components/data/**` + `dataView.ts`
-      recovered and reclassed; the pages CMS uses them. Still to do: apply to
-      main's participants and users pages, which have a bare search box.
+- [x] **List ergonomics** — `lib/components/data/**` + `dataView.ts` recovered
+      and reclassed. Every management list uses them now: platform pages, the
+      browse page, `/manage/users` (role filter, table by default) and the
+      participants roster (status filter, confirmed and waitlisted as ONE list
+      with the split as a column — two tables would sort each half separately).
 - [x] **Markdown sanitiser tests** — restored, and the renderer with them.
       Their `MarkdownContent` did NOT supersede ours: it kept DOMPurify's
       DEFAULT allowlist (forms, svg, math survive it), where
@@ -157,8 +159,26 @@ Smoke failures by file, and what each actually needs:
 | `03-dashboard` | Structure survived; the membership badge moved OUTSIDE the row link, so rows are reached as the link's grandparent now | ✅ repaired (16/16) |
 | `04-access-control`, `01-anonymous`, `06-cms-pages`, `05-new-user-funnel` | Nothing structural — both "failures" were 20s timeouts under a dev server recompiling mid-run | ✅ pass at `--timeout=60000` |
 
-Whole smoke suite green. Frontend units 154/154, including the 23 restored
-markdown cases and four new ones for the conditional media entries.
+**All suites green.** Journey **271/271**, smoke **69/69**, mobile **16/16**,
+frontend units **154/154**, `svelte-check` 0 errors.
+
+The journey took nine runs to get there, one failure per run — the story is
+`mode: "serial"`, so a failure skips the tail. Worth the wall-clock: it found
+more product bugs than reading the diff did, because it drives the app the way
+a person does. Submissions listing only your own team, a Photos tab whose page
+had not been published yet, the landing hero's 404, a Join button that
+swallowed every refusal — none of those look wrong in a diff.
+
+Two assertion traps worth remembering, both the same shape: collapsed
+`<details>` (earlier submission versions) and the collapsible sidebar keep
+copies of the exact strings being asserted OFF-SCREEN, so `.first()` lands on a
+hidden node. `helpers/recipe.ts` has a `visibleText` helper now — "the page
+shows X" has to mean someone can see it.
+
+And when an assertion fails on text you can see in the screenshot, do not
+theorise: an accessibility tree merges adjacent text and cannot answer "is this
+string its own element", which is exactly what an exact-text assertion turns
+on. Print `main.innerText()` on failure and the answer arrives in one run.
 
 Run them in slices with `--timeout=15000`: against moved selectors a full run
 spends 60s per failing test and takes over half an hour to tell you what a
