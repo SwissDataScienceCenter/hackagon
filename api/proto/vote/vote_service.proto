@@ -14,6 +14,8 @@ import "vote/messages/vote_svc/edit_category_request.proto";
 import "vote/messages/vote_svc/edit_category_response.proto";
 import "vote/messages/vote_svc/edit_result_request.proto";
 import "vote/messages/vote_svc/edit_result_response.proto";
+import "vote/messages/vote_svc/suggest_results_request.proto";
+import "vote/messages/vote_svc/suggest_results_response.proto";
 import "vote/messages/vote_svc/export_results_request.proto";
 import "vote/messages/vote_svc/export_results_response.proto";
 import "vote/messages/vote_svc/export_votes_request.proto";
@@ -52,5 +54,9 @@ service VoteService {
   rpc CreateVoteResult(vote.messages.vote_svc.CreateVoteResultRequest) returns (vote.messages.vote_svc.CreateVoteResultResponse);
   rpc EditVoteResult(vote.messages.vote_svc.EditVoteResultRequest) returns (vote.messages.vote_svc.EditVoteResultResponse);
   rpc DeleteVoteResult(vote.messages.vote_svc.DeleteVoteResultRequest) returns (vote.messages.vote_svc.DeleteVoteResultResponse);
+  // Computes the tally and writes it as results for the organizer to review.
+  // Advisory by design — see SuggestResultsRequest, and PrizeService for what
+  // actually freezes an award.
+  rpc SuggestResults(vote.messages.vote_svc.SuggestResultsRequest) returns (vote.messages.vote_svc.SuggestResultsResponse);
   rpc ExportResults(vote.messages.vote_svc.ExportResultsRequest) returns (vote.messages.vote_svc.ExportResultsResponse);
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"log/slog"
+	"sort"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -945,6 +946,160 @@ func (s *VoteService) DeleteVoteResult(
 }
 
 // ExportResults serializes a category's placements (organizer/admin only).
+// SuggestResults computes the tally for a category and writes it as results.
+//
+// SUGGEST, not decide: the vote is advisory here and PrizeService.Finalize is
+// what freezes an award, so this fills the table an organizer reviews. Before
+// it existed the count lived nowhere — placements were typed in by hand from an
+// export, which is the easiest possible place to get "who won" quietly wrong.
+//
+// Only single choice is tallied, because only single-choice ballots can be
+// cast: SubmitVote refuses ranked and points outright. When those land, this is
+// where their scoring goes.
+func (s *VoteService) SuggestResults(
+	ctx context.Context,
+	req *voteMsgs.SuggestResultsRequest,
+) (*voteMsgs.SuggestResultsResponse, error) {
+	if _, _, err := m.RequireUser(ctx); err != nil {
+		return nil, err
+	}
+
+	categoryID, err := uuid.Parse(req.GetCategoryId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
+	}
+
+	c, err := s.categoryWithHackathon(ctx, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	// Same gate as writing a result by hand — this writes the same rows.
+	if err := s.enforcer.RequirePermission(
+		ctx, c.Edges.Hackathon.ID.String(), m.Hackathon, m.Write,
+	); err != nil {
+		return nil, err
+	}
+
+	existing, err := s.dbClient.VoteResult.Query().
+		Where(entvoteresult.HasVoteCategoryWith(entvotecategory.IDEQ(categoryID))).
+		All(ctx)
+	if err != nil {
+		slog.Error("query vote results", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	// A recount that silently replaces a published placement is how a
+	// correction becomes an accusation. Make the caller say they mean it.
+	if len(existing) > 0 && !req.GetForce() {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"this category already has %d recorded result(s) — pass force to recompute",
+			len(existing),
+		)
+	}
+
+	votes, err := s.dbClient.Vote.Query().
+		Where(entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID))).
+		WithSubmission().
+		All(ctx)
+	if err != nil {
+		slog.Error("query votes", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	counts := map[uuid.UUID]int{}
+	for _, v := range votes {
+		for _, sub := range v.Edges.Submission {
+			counts[sub.ID]++
+		}
+	}
+	if len(counts) == 0 {
+		return nil, status.Error(
+			codes.FailedPrecondition,
+			"no ballots have been cast in this category",
+		)
+	}
+
+	type tally struct {
+		submissionID uuid.UUID
+		count        int
+	}
+	ordered := make([]tally, 0, len(counts))
+	for id, n := range counts {
+		ordered = append(ordered, tally{submissionID: id, count: n})
+	}
+	// Highest first; the id breaks ties so two runs of the same ballots cannot
+	// disagree about the order rows are written in.
+	sort.Slice(ordered, func(i, j int) bool {
+		if ordered[i].count != ordered[j].count {
+			return ordered[i].count > ordered[j].count
+		}
+
+		return ordered[i].submissionID.String() < ordered[j].submissionID.String()
+	})
+
+	txn, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		slog.Error("start transaction", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't start transaction")
+	}
+
+	if len(existing) > 0 {
+		ids := make([]uuid.UUID, 0, len(existing))
+		for _, r := range existing {
+			ids = append(ids, r.ID)
+		}
+		if _, err := txn.VoteResult.Delete().
+			Where(entvoteresult.IDIn(ids...)).
+			Exec(ctx); err != nil {
+			_ = txn.Rollback()
+			slog.Error("delete previous results", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't replace previous results")
+		}
+	}
+
+	// Ties SHARE a position: two submissions on the same count are both second,
+	// and the organizer decides what to do about it rather than the tally
+	// inventing an order it cannot justify.
+	position := 0
+	previous := -1
+	written := make([]*ent.VoteResult, 0, len(ordered))
+	for i, t := range ordered {
+		if t.count != previous {
+			position = i + 1
+			previous = t.count
+		}
+		row, err := txn.VoteResult.Create().
+			SetVoteCategoryID(categoryID).
+			SetSubmissionID(t.submissionID).
+			SetPosition(position).
+			Save(ctx)
+		if err != nil {
+			_ = txn.Rollback()
+			slog.Error("write suggested result", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't write results")
+		}
+		written = append(written, row)
+	}
+
+	if err := txn.Commit(); err != nil {
+		slog.Error("commit results", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't commit results")
+	}
+
+	out := make([]*voteEnts.VoteResult, 0, len(written))
+	for _, r := range written {
+		out = append(out, voteResultEntryFromEnt(r))
+	}
+
+	return &voteMsgs.SuggestResultsResponse{Results: out}, nil
+}
+
 func (s *VoteService) ExportResults(
 	ctx context.Context,
 	req *voteMsgs.ExportResultsRequest,

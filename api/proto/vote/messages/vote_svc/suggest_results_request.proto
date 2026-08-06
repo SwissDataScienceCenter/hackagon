@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package vote.messages.vote_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
+
+// Computes the tally for one category and writes it as VoteResult rows.
+//
+// SUGGEST, not decide. The vote is advisory on this platform: an organizer
+// reviews the count and records who actually won, and PrizeService.Finalize is
+// what freezes that. A jury that cannot overrule its own count is not a jury.
+// So this fills the results table for review — it never writes prizes.
+//
+// Without it the count existed nowhere: placements had to be typed in by hand
+// from an export, which is both tedious and the easiest possible place to make
+// an unnoticed mistake about who won.
+message SuggestResultsRequest {
+  string category_id = 1 [(buf.validate.field).string.uuid = true];
+  // Recompute over existing results.
+  //
+  // Refused without it when results are already present, because a recount that
+  // silently replaces a published placement is how a correction becomes an
+  // accusation. The caller has to say they mean it.
+  bool force = 2;
+}
