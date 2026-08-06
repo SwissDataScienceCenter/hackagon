@@ -174,8 +174,22 @@
                                                             title="Revoke {globalRoleLabel(
                                                                 role
                                                             )}"
+                                                            aria-label="Revoke {globalRoleLabel(
+                                                                role
+                                                            )}"
                                                         >
-                                                            &times;
+                                                            <!-- The glyph is the
+                                                                 whole button, so
+                                                                 without an
+                                                                 aria-label its
+                                                                 accessible name is
+                                                                 "×" — a screen
+                                                                 reader announces
+                                                                 "multiplication
+                                                                 sign". `title` is a
+                                                                 tooltip, not a name.
+                                                                 -->
+                                                            <span aria-hidden="true">&times;</span>
                                                         </button>
                                                     </form>
                                                 {/if}
