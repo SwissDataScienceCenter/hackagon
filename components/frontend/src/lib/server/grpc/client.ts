@@ -48,6 +48,16 @@ export const publicPrizeClient = createClientFactory().create(
   channel,
 )
 
+// Unauthenticated page client: a PUBLIC event's own pages — the call for
+// projects, the code of conduct, the winners announcement, the wrap-up post —
+// are public content, and PageService.List says so explicitly (it falls back to
+// visibility when the permission check fails). This is what puts them on the
+// public event page, where the announcements are actually read.
+export const publicPageClient = createClientFactory().create(
+  PageServiceDefinition,
+  channel,
+)
+
 // Unauthenticated site-page client: published platform pages are readable by
 // everyone, and the footer links to them from pages a visitor sees before they
 // have an account.

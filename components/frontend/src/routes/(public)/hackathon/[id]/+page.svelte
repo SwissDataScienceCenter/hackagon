@@ -58,6 +58,18 @@
         <MarkdownSection content={h.description} />
     {/if}
 
+    <!-- The event's own pages, in the order its organisers put them. After the
+         event this page IS the archive — the winners announcement and the
+         wrap-up post live here, and they are the reason anyone follows a link
+         to a finished hackathon. Headings are the page titles, so linking
+         straight to "Photos & Winners" reads correctly. -->
+    {#each data.pages as p (p.id)}
+        <section class="px-4 pt-4 sm:px-10 md:px-20">
+            <h2 class="m-0 text-title text-ink">{p.title}</h2>
+        </section>
+        <MarkdownSection content={p.content} />
+    {/each}
+
     <section class="flex flex-col items-center gap-4 px-4 py-12 sm:px-10 md:px-20">
         {#if form?.message}
             <p class="m-0 text-sm text-danger-ink" role="alert">{form.message}</p>

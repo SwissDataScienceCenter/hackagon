@@ -1,7 +1,11 @@
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 import type { Actions, PageServerLoad } from "./$types"
-import { publicHackathonClient, requireGrpc } from "$lib/server/grpc/client"
+import {
+  publicHackathonClient,
+  publicPageClient,
+  requireGrpc,
+} from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 
 // The public face of one event.
@@ -44,7 +48,21 @@ export const load: PageServerLoad = async (event) => {
   const hackathon = hackathons.find((h) => h.id === event.params.id)
   if (!hackathon) error(404, "Hackathon not found")
 
-  return { session, hackathon }
+  // The event's own published pages — the call for projects, the code of
+  // conduct, the winners announcement, the wrap-up post. This is where they are
+  // actually read: after the event, the public page IS the archive, and the
+  // rewrite that replaced the static mock left it with a description and
+  // nothing else.
+  //
+  // The backend decides what a caller may see (List falls back to visibility
+  // for a public event, and hides drafts from anyone without page:write), so a
+  // failure here costs the section rather than the page.
+  const pages = await publicPageClient
+    .list({ hackathonId: event.params.id })
+    .then((r) => r.pages.map((p) => ({ id: p.id, title: p.title, content: p.content })))
+    .catch(() => [])
+
+  return { session, hackathon, pages }
 }
 
 export const actions: Actions = {
