@@ -67,13 +67,13 @@ stdenv.mkDerivation (
       QUITSH_TOOLCHAINS = "build-node-pnpm";
     };
 
-    nativeBuildInputs = [
+    nativeBuildInputs = ([
       git
       nodejs
       pnpm
       pnpmConfigHook
       makeShellWrapper
-    ];
+    ]);
 
     buildPhase = ''
       # Make a Git repo just for the sake of the tooling.
@@ -102,10 +102,6 @@ stdenv.mkDerivation (
         --add-flags "$out/share/${target}"
     '';
 
-    # Vendored pnpm deps (fixed-output derivation). Only set when vendorHash is non-null.
-    pnpmRoot = compDirRel;
-  }
-  // (lib.optionalAttrs (vendorHash != null) {
     pnpmDeps = fetchPnpmDeps {
       fetcherVersion = 3;
       inherit pnpm;
@@ -113,5 +109,6 @@ stdenv.mkDerivation (
       sourceRoot = "${finalAttrs.src.name}/${compDirRel}";
       hash = vendorHash;
     };
-  })
+    pnpmRoot = compDirRel;
+  }
 )
