@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hackagon-keycloak-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  01-create-keycloak-db.sql: |
+    CREATE USER keycloak WITH PASSWORD '{{ .Values.keycloak.database.external.password | required "keycloak.database.external.password is required" }}';
+    CREATE DATABASE keycloak OWNER keycloak;
+    GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
+    CREATE USER hackagon WITH PASSWORD '{{ .Values.backend.config.database.postgresPassword | required "backend.config.database.postgresPassword" }}';
+    CREATE DATABASE hackagon OWNER hackagon;
+    GRANT ALL PRIVILEGES ON DATABASE hackagon TO hackagon;

@@ -32,6 +32,7 @@ _: {
     "*/api/openapi*" # this are symlinks, which prettier cannot deal with
     ".golangci.yaml" # this is a symlink, which prettier cannot deal with
     ".yamllint.yaml" # this is a symlink, which prettier cannot deal with
+    "helm-chart/*" # helm charts are not real yaml, they are go templates
   ];
 
   programs.ruff-format.enable = true;

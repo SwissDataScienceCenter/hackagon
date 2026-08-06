@@ -1,161 +1,192 @@
-# Default values for helm-chart.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# -- Base domain for all external services
+baseDomain: "example.com"
 
-# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
-replicaCount: 1
+# -- Keycloak realm JSON (pass via --set-file: --set-file realmJson=@./tools/configs/keycloak/realm-hackagon.json)
+# realmJson: ""
 
-# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
-image:
-  repository: nginx
-  # This sets the pull policy for images.
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+# ============================================================
+# Frontend
+# ============================================================
+frontend:
+  image:
+    repository: ghcr.io/swissdatasciencecenter/hackagon/temporary/frontend-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
 
-# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-imagePullSecrets: []
-# This is to override the chart name.
-nameOverride: ""
-fullnameOverride: ""
+  replicaCount: 1
+  annotations:
+    nginx.ingress.kubernetes.io/client-header-buffer-size: 16k
+    nginx.ingress.kubernetes.io/large-client-header-buffers: 4 16k
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
+    nginx.ingress.kubernetes.io/proxy-buffers: 8 16k
+    nginx.ingress.kubernetes.io/proxy_busy_buffers_size: 32k
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
-# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Automatically mount a ServiceAccount's API credentials?
-  automount: true
-  # Annotations to add to the service account
+  # -- Frontend config.yaml content (non-sensitive settings)
+  config:
+    log:
+      forceDevLog: false
+    backend:
+      hostname: hackagon-backend
+      port: 3000
+    cookies:
+      useSecure: true
+    oidc:
+      clientId: hackagon-frontend
+      issuer: "https://auth.{baseDomain}/realms/hackagon"
+      audience: hackagon-backend
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  ingress:
+    enabled: true
+    ingressClass: "webapprouting.kubernetes.azure.com"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+    hosts:
+      - host: "app.{baseDomain}"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "{releaseName}-frontend-tls"
+        hosts:
+          - "app.{baseDomain}"
+
+# ============================================================
+# Backend
+# ============================================================
+backend:
+  image:
+    repository: ghcr.io/swissdatasciencecenter/hackagon/temporary/backend-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
   annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
 
-# This is for setting Kubernetes Annotations to a Pod.
-# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-podAnnotations: {}
-# This is for setting Kubernetes Labels to a Pod.
-# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-podLabels: {}
+  # -- Backend config.yaml content
+  config:
+    server:
+      port: "3000"
+      adminemail: "admin@{baseDomain}"
+      adminkeycloakid: ""
+    database:
+      driver: postgres
+      host: "" # Auto-generated from release name in template
+      port: 5432
+      dbname: hackagon
+      user: hackagon
+      postgresPassword: ""
+    oidc:
+      jwksurl: "https://auth.{baseDomain}/realms/hackagon/protocol/openid-connect/certs"
+      issuerurl: "https://auth.{baseDomain}/realms/hackagon"
+      algorithm: RS256
+    logging:
+      level: info
 
-podSecurityContext: {}
-  # fsGroup: 2000
+  service:
+    type: ClusterIP
+    port: 3000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+# ============================================================
+# Keycloak (helmforge)
+# ============================================================
+keycloak:
+  enabled: true
+  replicaCount: 1
 
-# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
-service:
-  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-  type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
+  # -- Production mode requires hostname and database
+  mode: production
 
-# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
-ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+  # -- Hostname for Keycloak (public admin UI)
+  hostname:
+    hostname: "" # e.g. "https://auth.{baseDomain}"
 
-# -- Expose the service via gateway-api HTTPRoute
-# Requires Gateway API resources and suitable controller installed within the cluster
-# (see: https://gateway-api.sigs.k8s.io/guides/)
-httpRoute:
-  # HTTPRoute enabled.
-  enabled: false
-  # HTTPRoute annotations.
-  annotations: {}
-  # Which Gateways this Route is attached to.
-  parentRefs:
-  - name: gateway
-    sectionName: http
-    # namespace: default
-  # Hostnames matching HTTP header.
-  hostnames:
-  - chart-example.local
-  # List of rules and filters applied.
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /headers
-  #   filters:
-  #   - type: RequestHeaderModifier
-  #     requestHeaderModifier:
-  #       set:
-  #       - name: My-Overwrite-Header
-  #         value: this-is-the-only-value
-  #       remove:
-  #       - User-Agent
-  # - matches:
-  #   - path:
-  #       type: PathPrefix
-  #       value: /echo
-  #     headers:
-  #     - name: version
-  #       value: v2
+  # -- Admin credentials (password from realm JSON, but username needed)
+  admin:
+    username: hackagon-admin
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+  # -- External database (reuse the same postgres instance)
+  database:
+    external:
+      vendor: postgres
+      host: "" # Required: set to <release>-postgresql (e.g. "hackagon-postgresql")
+      port: 5432
+      database: keycloak
+      user: keycloak
+      password: ""
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-livenessProbe:
-  httpGet:
-    path: /
-    port: http
-readinessProbe:
-  httpGet:
-    path: /
-    port: http
+  # -- Realm import from ConfigMap
+  realmImport:
+    enabled: true
+    existingConfigMap: hackagon-realm
 
-# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  # -- Persistence (for Keycloak data, not DB)
+  persistence:
+    enabled: true
+    size: 10Gi
 
-# Additional volumes on the output Deployment definition.
-volumes: []
-# - name: foo
-#   secret:
-#     secretName: mysecret
-#     optional: false
+  # -- Resources
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
-# Additional volumeMounts on the output Deployment definition.
-volumeMounts: []
-# - name: foo
-#   mountPath: "/etc/foo"
-#   readOnly: true
+  # -- Proxy configuration (behind reverse proxy)
+  proxy:
+    headers: xforwarded
 
-nodeSelector: {}
+  # -- Ingress for Keycloak (managed by parent chart)
+  ingress:
+    enabled: false
 
-tolerations: []
+# ============================================================
+# PostgreSQL (bitnami) — two databases, two users
+# ============================================================
+postgresql:
+  enabled: true
+  auth:
+    username: postgres
+    database: postgres
+    postgresPassword: ""
 
-affinity: {}
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    initdb:
+      scriptsConfigMap: hackagon-keycloak-init
+
+# ============================================================
+# Frontend OIDC secrets
+# ============================================================
+frontendSecrets:
+  clientSecret: ""
+  authSecret: ""

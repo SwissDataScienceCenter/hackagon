@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hackagon.fullname" . }}-backend-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: {{ .Values.backend.config.server.port | quote }}
+      adminemail: {{ .Values.backend.config.server.adminemail | replace "{baseDomain}" .Values.baseDomain | quote }}
+      adminkeycloakid: {{ .Values.backend.config.server.adminkeycloakid | quote }}
+    database:
+      driver: {{ .Values.backend.config.database.driver | quote }}
+      host: {{ include "hackagon.postgresqlServiceName" . | quote }}
+      port: {{ .Values.backend.config.database.port }}
+      dbname: {{ .Values.backend.config.database.dbname | quote }}
+      user: {{ .Values.backend.config.database.user | quote }}
+      password: {{ .Values.backend.config.database.postgresPassword | required "postgresql.auth.postgresPassword is required" | quote }}
+    oidc:
+      jwksurl: {{ .Values.backend.config.oidc.jwksurl | replace "{baseDomain}" .Values.baseDomain | quote }}
+      issuerurl: {{ .Values.backend.config.oidc.issuerurl | replace "{baseDomain}" .Values.baseDomain | quote }}
+      algorithm: {{ .Values.backend.config.oidc.algorithm | quote }}
+    logging:
+      level: {{ .Values.backend.config.logging.level | quote }}

@@ -1,0 +1,19 @@
+Hackagon has been deployed!
+
+Frontend:  https://{{ .Values.baseDomain }}
+Keycloak:  https://auth.{{ .Values.baseDomain }}
+
+To get the generated frontend OIDC secrets, run:
+
+  kubectl get secret {{ include "hackagon.fullname" . }}-frontend-secrets \
+    -n {{ .Release.Namespace }} -o jsonpath='{.data.secrets\.yaml}' | base64 -d
+
+Passwords are set in your values files. Retrieve them with:
+
+  # Platform (hackagon) user password
+  kubectl get secret {{ include "hackagon.fullname" . }}-postgresql \
+    -n {{ .Release.Namespace }} -o jsonpath='{.data.postgres-password}' | base64 -d
+
+Check the status of your release:
+
+  helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
