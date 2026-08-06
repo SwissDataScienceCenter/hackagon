@@ -6,12 +6,11 @@
   ...
 }:
 let
-
   cnFilesets = cnLib.fileset;
   cnComponents = cnLib.component;
-  compName = "backend";
+  compName = "frontend";
 in
-cnLib.build.buildGoModule {
+cnLib.build.buildNodePackage {
   inherit compName buildType environmentType;
   pname = compName;
   version = cnComponents.readVersion compName;
@@ -21,7 +20,7 @@ cnLib.build.buildGoModule {
   ];
 
   target = "service";
-  vendorHash = "sha256-SesBLYLmjMYE+yaYOpJggdu7DEoh/rMeLuKBgiWp99k=";
+  vendorHash = null; # Will be set by `just quitsh nix fix-hash`
 
   meta = {
     description = compName;

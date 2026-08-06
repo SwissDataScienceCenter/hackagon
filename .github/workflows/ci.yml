@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"]
 
 # Cancel in-progress runs on the same branch/PR to avoid wasted minutes.
 concurrency:
@@ -74,3 +75,64 @@ jobs:
         run: |
           just ci::run just deploy::up
           just ci::run just db::seed
+
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # needs: [ci]
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: cachix/install-nix-action@ba0dd844c9180cbf77aa72a116d6fbc515d0e87b # v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc # v15
+        with:
+          name: hackagon
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Install bootstrap tools
+        run: nix profile install --accept-flake-config ./tools/nix#bootstrap
+
+      # - name: Generate proto + DB schema
+      #   run: |
+      #     just ci::run just codegen::proto
+      #     just ci::run just codegen::db-schema
+
+      - name: Build images (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          # Build images for PR verification (no push).
+          # Images are tagged with commit SHA for local inspection.
+          just nix::develop ci quitsh image \
+            --components backend frontend
+
+      - name: Build and push images (main/tag)
+        if: github.event_name == 'push'
+        env:
+          GH_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Determine if this is a tag push or branch push
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Tagged release: use release tag + latest
+            just nix::develop ci quitsh image \
+              --components backend frontend \
+              --push \
+              --use-release-tag \
+              --add-latest-tag \
+              --registry-type release \
+              --credential-user-env GH_USERNAME \
+              --credential-token-env GHCR_TOKEN
+          else
+            # Branch push: use commit SHA + latest
+            just nix::develop ci quitsh image \
+              --components backend frontend \
+              --push \
+              --add-latest-tag \
+              --credential-user-env GH_USERNAME \
+              --credential-token-env GHCR_TOKEN
+          fi

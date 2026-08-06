@@ -44,6 +44,13 @@
             inherit (pkgsPinned) go;
             libComponent = cn.lib.component;
           };
+
+          # Generate the Node.js (pnpm) build-support function.
+          buildNodePackage = pkgs.callPackage cn.lib.build.createBuildNodePackage {
+            inherit (cn.pkgs) quitsh;
+            inherit (pkgsPinned) nodejs pnpm;
+            libComponent = cn.lib.component;
+          };
         };
       };
     };
