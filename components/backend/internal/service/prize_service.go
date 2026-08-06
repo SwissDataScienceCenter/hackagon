@@ -105,8 +105,26 @@ func (s *PrizeService) Get(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
-		return nil, err
+	// A PUBLIC event's prizes and awards are published facts: the prize list is
+	// what it advertises to attract entrants, and the awards are the result it
+	// announces. So visibility decides first, and only a private event falls
+	// back to the membership gate — otherwise the platform's own "who won"
+	// surfaces would be visible to everyone except the public they are for.
+	public, err := s.dbClient.Hackathon.Query().
+		Where(
+			enthackathon.IDEQ(hackathonID),
+			enthackathon.VisibilityEQ(enthackathon.VisibilityPublic),
+		).
+		Exist(ctx)
+	if err != nil {
+		slog.Error("query hackathon visibility", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if !public {
+		if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
+			return nil, err
+		}
 	}
 
 	row, err := s.prizeRowFor(ctx, hackathonID)

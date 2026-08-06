@@ -158,33 +158,42 @@
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-title">Award-winning projects</h2>
-        <a href={resolve('/')} class="text-sm text-accent-ink no-underline">See all →</a>
+        <a href="/hackathon" class="text-sm text-accent-ink no-underline">See all →</a>
     </div>
 
-    <div class="mt-6 grid grid-cols-3 gap-4">
-        {#each [
-            { hackathon: 'ORD Hackathon 2025', project: 'AutoORD: Automated\nResearch Data Pipelines', team: 'by Team DataFlow', summary: 'Automated pipeline for converting raw research data into FAIR-compliant open datasets.' },
-            { hackathon: 'GenAI Hackathon 2025', project: 'GenomeLens', team: 'by BioViz Crew', summary: 'Interactive visualization of genomic variants powered by generative models.' },
-            { hackathon: 'Climate Data 2025', project: 'ClimateQA', team: 'by Green Bytes', summary: 'RAG-based Q&A trained on Swiss climate data, making decades of measurements queryable.' },
-        ] as card, i (i)}
-            <div class="card overflow-hidden">
-                <div
-                    class="flex h-10 items-center justify-between border-b border-line px-4"
-                >
-                    <div class="flex items-center gap-1.5 text-warning-ink">
-                        <Trophy class="h-3.5 w-3.5" />
-                        <span class="text-xs font-bold">1st Place</span>
+    <!-- Real awards from events that finished and finalised them. This was
+         three hard-coded cards — invented projects credited to invented teams,
+         each labelled "1st Place" — on the platform's own front page. A
+         fabricated record of who won is worse than an empty section, so when
+         nothing has been awarded yet the section says so. -->
+    {#if data.awards.length === 0}
+        <p class="mt-6 m-0 text-sm text-ink-3">
+            No results yet — the first winners appear here once an event finalises its
+            awards.
+        </p>
+    {:else}
+        <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {#each data.awards as award (award.hackathonId + award.rank + award.title)}
+                <a href="/hackathon/{award.hackathonId}" class="card overflow-hidden no-underline">
+                    <div class="flex h-10 items-center justify-between border-b border-line px-4">
+                        <div class="flex items-center gap-1.5 text-warning-ink">
+                            <Trophy class="h-3.5 w-3.5" />
+                            <!-- The organiser's own rank, not a hard-coded "1st
+                                 Place": joint seconds are allowed and sort
+                                 together. -->
+                            <span class="tnum text-xs font-bold">#{award.rank}</span>
+                        </div>
+                        <span class="text-xs text-ink-3">{award.hackathonName}</span>
                     </div>
-                    <span class="text-xs text-ink-3">{card.hackathon}</span>
-                </div>
-                <div class="flex flex-col gap-2 p-4">
-                    <p class="text-sm font-semibold leading-tight whitespace-pre-line">{card.project}</p>
-                    <span class="text-xs text-accent-ink">{card.team}</span>
-                    <p class="text-xs leading-snug text-ink-3">{card.summary}</p>
-                </div>
-            </div>
-        {/each}
-    </div>
+                    <div class="flex flex-col gap-2 p-4">
+                        <p class="m-0 text-sm font-semibold leading-tight text-ink">
+                            {award.title}
+                        </p>
+                    </div>
+                </a>
+            {/each}
+        </div>
+    {/if}
 </section>
 
 <!-- Event Showcase Carousel -->

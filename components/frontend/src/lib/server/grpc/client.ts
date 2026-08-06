@@ -38,6 +38,16 @@ export const publicHackathonClient = createClientFactory().create(
   channel,
 )
 
+// Unauthenticated prize client: a PUBLIC event's prize list is what it
+// advertises and its awards are the result it announces, so PrizeService.Get
+// checks visibility before it checks membership. The landing page's
+// award-winning-projects section is built from this — it used to be three
+// invented projects credited to invented teams.
+export const publicPrizeClient = createClientFactory().create(
+  PrizeServiceDefinition,
+  channel,
+)
+
 // Unauthenticated site-page client: published platform pages are readable by
 // everyone, and the footer links to them from pages a visitor sees before they
 // have an account.
