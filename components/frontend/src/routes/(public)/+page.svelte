@@ -16,6 +16,7 @@
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
     import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
     import { defaultHackathon } from '$lib/navigation';
+    import Seo from '$lib/components/layout/Seo.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -66,6 +67,17 @@
         carouselIndex = (carouselIndex - 1 + carouselSlides.length) % carouselSlides.length;
     }
 </script>
+
+<!-- The landing page had no Seo at all — the one URL people actually paste into
+     Slack was the only public page with no card, no description and no title
+     beyond the app shell's. Description names the current event when there is
+     one, because "what is on right now" is what a link preview should answer. -->
+<Seo
+    description={featured
+        ? `${featured.name} — ${statusLabel(featured.status) ?? 'on'} at the SDSC hackathon platform. Propose projects, form teams, build together.`
+        : 'One place for the whole hackathon — call for projects, teams, submissions and the final vote.'}
+/>
+
 
 <!-- Hero (full-bleed width) -->
 <section

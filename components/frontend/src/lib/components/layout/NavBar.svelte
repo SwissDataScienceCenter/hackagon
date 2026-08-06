@@ -17,14 +17,8 @@
     // as much as on a desktop, since the mobile panel drops the entry too.
     let {
         session,
-        showPublicLinks = true,
     }: {
         session: Omit<Session, 'accessToken'> | null;
-        /**
-         * Marketing links (Challenges, About). Off inside the app shell, where the
-         * header is chrome for a signed-in workspace rather than a landing page.
-         */
-        showPublicLinks?: boolean;
     } = $props();
 
     let mobileOpen = $state(false);
@@ -115,19 +109,17 @@
             <a href="/hackathon" aria-current={onHackathons ? 'page' : undefined} class="{TAB} {onHackathons ? TAB_ON : TAB_OFF}">
                 Hackathons
             </a>
-            {#if showPublicLinks}
-                <!-- About is a real SitePage, served by [slug=sitepage]. The
-                     "Challenges" entry that used to sit here pointed at "/" —
-                     it has no backing entity yet, and a link to nowhere is
-                     worse than a missing one. It comes back the day the
-                     feature does. -->
-                <a
-                    href="/about"
-                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
-                >
-                    About
-                </a>
-            {/if}
+            <!-- Always here, signed in or out. It used to be hidden inside the
+                 app shell as a "marketing link", which made the nav change
+                 shape the moment you reached the dashboard: three entries on
+                 the way in, two once you arrived. A navigation you cannot point
+                 at is worse than one carrying an entry you rarely need.
+
+                 About is a real SitePage, served by [slug=sitepage]. The
+                 "Challenges" entry that used to sit beside it pointed at "/" —
+                 no backing entity yet, and a link to nowhere is worse than a
+                 missing one. It comes back the day the feature does. -->
+            <a href="/about" class="{TAB} {TAB_OFF}">About</a>
         </nav>
 
         <div class="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -228,9 +220,7 @@
             >
                 Hackathons
             </a>
-            {#if showPublicLinks}
-                <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
-            {/if}
+            <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
             {#if session?.user}
                 <!-- Below md the account link moves in here with sign-out, for
                      the same reason sign-out does: the bar has no room for it
