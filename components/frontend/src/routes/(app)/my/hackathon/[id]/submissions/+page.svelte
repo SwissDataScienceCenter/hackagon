@@ -60,7 +60,7 @@
 
     {#if data.groups.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">
-            You are not on a team yet, so there is nothing to submit.
+            No teams have been formed yet, so there is nothing to submit.
         </p>
     {:else}
         {#each data.groups as group (group.teamId)}
@@ -68,9 +68,17 @@
                 class="card card-raised box-border w-full px-5 py-4"
             >
                 <div class="flex flex-col gap-1.5">
-                    <h3 class="m-0 text-sm leading-snug text-ink">
-                        {group.teamName}
-                    </h3>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="m-0 text-sm leading-snug text-ink">
+                            {group.teamName}
+                        </h3>
+                        <!-- The page lists every team — members read all
+                             submissions hackathon-wide — so yours has to be
+                             findable among them. -->
+                        {#if group.isMine}
+                            <span class="badge badge-accent">Your team</span>
+                        {/if}
+                    </div>
                     <span class="text-xs text-ink-3">{group.projectTitle}</span>
                 </div>
 
@@ -78,7 +86,7 @@
                     <p class="mt-3 mb-0 text-xs text-ink-3">
                         No submission yet.
                     </p>
-                    {#if gate.open}
+                    {#if gate.open && group.isMine}
                         <div class="mt-3">
                             <button
                                 class="btn btn-sm btn-accent"
@@ -110,7 +118,7 @@
                             </p>
                         {/if}
 
-                        {#if group.latest.status !== FINAL && gate.open}
+                        {#if group.latest.status !== FINAL && gate.open && group.isMine}
                             <!-- Editing changes THIS version's description in
                                  place; the structured answers are fixed at
                                  create, and a new version is how you change
@@ -223,7 +231,7 @@
                     {/if}
                 {/if}
 
-                {#if composing === group.teamId}
+                {#if composing === group.teamId && group.isMine}
                     <!-- Every submission is a NEW VERSION: the backend numbers
                          them and keeps the earlier ones, so this is never an
                          overwrite even when it replaces what counts. -->

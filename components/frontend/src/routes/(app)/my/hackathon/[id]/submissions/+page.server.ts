@@ -109,21 +109,29 @@ export const load: PageServerLoad = async (event) => {
 
   const { teams } = await team.list({ hackathonId: event.params.id })
 
-  // Every team the viewer is on, not just the first — nothing stops a
-  // participant from being assigned to more than one team in one hackathon, and
-  // each carries its own submissions.
-  const myTeams = teams.filter((t) =>
-    t.members.some((m) => m.id === platformUserId),
-  )
-
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
 
+  // EVERY team's submissions, not only the viewer's own.
+  //
+  // A pinned policy: members read all submissions hackathon-wide. The whole
+  // room watching what the room built is most of what this page is for on the
+  // final day, and the vote is cast on exactly these. Narrowing it to your own
+  // teams — which is how it arrived in the design swap — leaves a participant
+  // on one team seeing one card.
+  //
+  // What stays scoped is WRITING: `isMine` gates the controls, and the backend
+  // enforces it with a team-scoped casbin domain regardless.
   const groups = await Promise.all(
-    myTeams.map(async (t) => {
+    teams.map(async (t) => {
       // ListSubmissions rather than the submissions nested in `team.list`: the
       // nested ones carry no ordering guarantee, and "which version counts"
       // depends entirely on order.
-      const { submissions } = await team.listSubmissions({ teamId: t.id })
+      //
+      // One team denying must cost that team's card, not the page: a policy
+      // change could make a single team unreadable.
+      const { submissions } = await team
+        .listSubmissions({ teamId: t.id })
+        .catch(() => ({ submissions: [] }))
 
       const byVersion = [...submissions].sort((a, b) => a.version - b.version)
       const views = byVersion.map((s) => ({
@@ -140,6 +148,7 @@ export const load: PageServerLoad = async (event) => {
         teamName: t.name,
         projectId: t.projectId,
         projectTitle: projectTitles.get(t.projectId) ?? "Unknown project",
+        isMine: t.members.some((m) => m.id === platformUserId),
         // Highest version is the one that counts; null when the team has none.
         latest: views.length > 0 ? views[views.length - 1]! : null,
         // Superseded versions, newest first.
