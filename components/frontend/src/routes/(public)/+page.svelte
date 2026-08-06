@@ -15,9 +15,19 @@
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
     import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { defaultHackathon } from '$lib/navigation';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
+
+    // The event to put in front of a stranger: happening now, else starting
+    // soonest, else finished most recently — the same ranking the nav uses, so
+    // the platform never disagrees with itself about which event is current.
+    //
+    // The hero used to name "ORD Hackathon 2026 — Registration open" and link
+    // at /hackathon/ord-2026, which is not an id: the front page's primary
+    // action was a 404, and its badge announced an event that may not exist.
+    const featured = $derived(defaultHackathon(data.hackathons));
 
     // See DashboardView for why these are token-derived rather than palette steps.
     const GRADIENTS = [
@@ -70,10 +80,12 @@
     <div class="pointer-events-none absolute inset-0 bg-canvas/65"></div>
 
     <div class="relative z-10 flex flex-col items-center gap-6">
-        <span class="badge badge-outline-accent">
-            <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
-            <span>ORD Hackathon 2026 — Registration open</span>
-        </span>
+        {#if featured}
+            <span class="badge badge-outline-accent">
+                <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+                <span>{featured.name} — {statusLabel(featured.status) ?? 'Hackathon'}</span>
+            </span>
+        {/if}
 
         <h1 class="max-w-2xl text-5xl font-bold leading-tight">
             SDSC Hackathon Platform
@@ -85,13 +97,14 @@
         </p>
 
         <div class="flex items-center gap-3">
-            <a
-                href={resolve('/hackathon/ord-2026')}
-                class="btn btn-solid no-underline"
-            >
-                Get Started
-            </a>
-            <a href="#trending" class="btn btn-outline no-underline">
+            {#if featured}
+                <a href="/hackathon/{featured.id}" class="btn btn-solid no-underline">
+                    Get Started
+                </a>
+            {/if}
+            <!-- The browse page, not an anchor to the section below: "browse"
+                 means every event, and the section here is a three-row teaser. -->
+            <a href="/hackathon" class="btn btn-outline no-underline">
                 Browse Hackathons
                 <ArrowRight class="h-3.5 w-3.5 opacity-60" />
             </a>
@@ -262,11 +275,15 @@
     </div>
 </section>
 
+<!-- Points at About, not at "/" — the button used to link to the page it is
+     on, which is a dead affordance dressed as the page's final call to action.
+     About is a real SitePage and carries who to talk to; a Contact route can
+     take this over the day one exists. -->
 <CtaSection
     heading="Want to host your own hackathon?"
     subtitle="SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it."
-    buttonLabel="Contact Us"
-    buttonHref={resolve('/')}
+    buttonLabel="About the platform"
+    buttonHref="/about"
 />
 
 </div>
