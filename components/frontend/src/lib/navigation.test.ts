@@ -478,6 +478,7 @@ describe("manageNav", () => {
   // the page in the same sequence.
   it("offers every organiser destination to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
+      "manage:hackathon",
       "manage:tracks",
       "manage:teams",
       "manage:phase-create",
@@ -496,6 +497,7 @@ describe("manageNav", () => {
   // manage route's own load takes the same owner-or-admin pair.
   it("offers the same to an admin who never joined", () => {
     expect(manageNav("hack-1", undefined, true).map((i) => i.id)).toEqual([
+      "manage:hackathon",
       "manage:tracks",
       "manage:teams",
       "manage:phase-create",
@@ -510,6 +512,7 @@ describe("manageNav", () => {
 
   it("links every entry to a route that exists", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.href)).toEqual([
+      "/my/hackathon/hack-1/manage",
       "/my/hackathon/hack-1/tracks",
       "/my/hackathon/hack-1/teams/manage",
       "/my/hackathon/hack-1/timeline/new",
@@ -527,7 +530,7 @@ describe("manageNav", () => {
   it("does not withhold management from a waitlisted owner", () => {
     expect(
       manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(9)
+    ).toHaveLength(10)
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not

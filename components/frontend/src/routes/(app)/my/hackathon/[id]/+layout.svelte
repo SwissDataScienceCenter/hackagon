@@ -3,6 +3,8 @@
     import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import HackathonSidebar from '$lib/components/layout/HackathonSidebar.svelte';
+    import OrganizerStateAlert from '$lib/components/hackathon/OrganizerStateAlert.svelte';
+    import { canEditHackathon } from '$lib/navigation';
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
@@ -84,6 +86,17 @@
               then shows the member count with no denominator and no location line.
               Nothing to change here once the fields land beyond passing them through.
             -->
+            <!-- Above the hero and on EVERY page of the event, because the
+                 mismatch it reports is discovered by a participant hitting a
+                 wall — so it has to be visible wherever the organiser happens
+                 to be working, not only on the timeline. -->
+            <OrganizerStateAlert
+                hackathonId={data.hackathon.id}
+                capabilities={data.hackathon.capabilities ?? []}
+                currentPhaseId={data.hackathon.currentPhaseId}
+                canManage={canEditHackathon(data.myMembership ?? undefined, data.isGlobalAdmin)}
+            />
+
             <HeroCompact
                 {title}
                 {dates}

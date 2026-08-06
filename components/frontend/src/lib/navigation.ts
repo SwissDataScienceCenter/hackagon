@@ -23,6 +23,7 @@ import Link2 from "lucide-svelte/icons/link-2"
 import ClipboardType from "lucide-svelte/icons/clipboard-type"
 import Timer from "lucide-svelte/icons/timer"
 import Trophy from "lucide-svelte/icons/trophy"
+import SlidersHorizontal from "lucide-svelte/icons/sliders-horizontal"
 import Vote from "lucide-svelte/icons/vote"
 import Presentation from "lucide-svelte/icons/presentation"
 import Images from "lucide-svelte/icons/images"
@@ -395,6 +396,19 @@ export function manageNav(
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
   return [
+    // First in the section, and the only entry that is not a single task: it is
+    // the page that names all the others, plus the capability switches an
+    // organiser touches most during an event. Without it every organiser
+    // destination is reachable only from the sidebar.
+    {
+      id: "manage:hackathon",
+      label: "Manage Hackathon",
+      icon: SlidersHorizontal,
+      href: resolve(`/my/hackathon/${hackathonId}/manage`),
+      description:
+        "What participants can do right now, and every setting for this event " +
+        "in one place.",
+    },
     // First, because it extends "All Projects" — the participant entry right
     // before "Teams" — and tracks exist to categorise projects, so the control
     // to define them reads as acting on that list. Shown even when the
