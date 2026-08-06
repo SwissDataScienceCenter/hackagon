@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite"
 import { sveltekit } from "@sveltejs/kit/vite"
+import { svelteTesting } from "@testing-library/svelte/vite"
 import { defineConfig } from "vite"
 import path from "path"
 
@@ -10,7 +11,14 @@ const coverageDir = path.join(
 )
 
 export default defineConfig({
-  plugins: [tailwindcss(), sveltekit()],
+  // svelteTesting puts `browser` ahead of `node` in resolve.conditions, so a
+  // component test mounts Svelte's client build instead of its SSR build, which
+  // has no `mount()` and fails with lifecycle_function_unavailable. It no-ops
+  // unless process.env.VITEST is set, so dev and build are untouched.
+  //
+  // Its auto-cleanup half is skipped here because `test.globals` is on, so
+  // src/setup-tests.ts registers that itself.
+  plugins: [tailwindcss(), sveltekit(), svelteTesting({ autoCleanup: false })],
 
   // configuration for Vitest
   server: {
