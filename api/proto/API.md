@@ -2534,7 +2534,11 @@ discretionary/special prize (e.g. Community Choice).
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
-| phase_id | [string](#string) |  | The phase the hackathon is now in. Must belong to this hackathon. |
+| phase_id | [string](#string) |  | The phase the hackathon is now in. Must belong to this hackathon.
+
+EMPTY means &#34;no current phase&#34; — the organizer is clearing the pointer, and the timeline goes back to being read from dates alone. A plain `uuid = true` rule rejected that before the handler ever saw it, which is why the &#34;Clear current phase&#34; button could never succeed: it sends no phase_id by design.
+
+Clearing deliberately does NOT touch capabilities. Advancing applies the ones scheduled for the target phase; with no target there is nothing to apply, and silently switching things off because someone cleared a label would be the opposite of what they asked for. |
 
 
 

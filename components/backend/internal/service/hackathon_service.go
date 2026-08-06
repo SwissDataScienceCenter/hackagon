@@ -991,6 +991,7 @@ func (s *HackathonService) capabilityStatuses(
 //
 // Capabilities with no opening phase are left exactly as they are. That is what
 // keeps voting, which opens abruptly and by hand, immune to advancing.
+
 func (s *HackathonService) AdvancePhase(
 	ctx context.Context,
 	req *msgs.AdvancePhaseRequest,
@@ -1004,17 +1005,27 @@ func (s *HackathonService) AdvancePhase(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-	phaseID, err := uuid.Parse(req.GetPhaseId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid phase_id: %v", err)
+	// Empty means "clear the current phase" — see the proto. Handled before the
+	// UUID parse, which is where this used to fail: the Clear button sends no
+	// phase_id, so every press answered InvalidArgument.
+	clearing := req.GetPhaseId() == ""
+
+	var phaseID uuid.UUID
+	if !clearing {
+		phaseID, err = uuid.Parse(req.GetPhaseId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid phase_id: %v", err)
+		}
 	}
 
 	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
 		return nil, err
 	}
 
-	if err := phaseInHackathon(ctx, s.dbClient, id, phaseID); err != nil {
-		return nil, err
+	if !clearing {
+		if err := phaseInHackathon(ctx, s.dbClient, id, phaseID); err != nil {
+			return nil, err
+		}
 	}
 
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
@@ -1031,9 +1042,13 @@ func (s *HackathonService) AdvancePhase(
 	if err != nil {
 		return nil, err
 	}
-	target, ok := order[phaseID]
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "phase %s not found", req.GetPhaseId())
+	var target int
+	if !clearing {
+		pos, ok := order[phaseID]
+		if !ok {
+			return nil, status.Errorf(codes.NotFound, "phase %s not found", req.GetPhaseId())
+		}
+		target = pos
 	}
 
 	rows, err := s.dbClient.Capability.Query().
@@ -1048,7 +1063,14 @@ func (s *HackathonService) AdvancePhase(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	desired := capability.Advance(advanceRows(rows, order), target)
+	// Nothing to apply when clearing: advancing switches on the capabilities
+	// scheduled for the target phase, and with no target there is no schedule.
+	// Switching things off because someone cleared a label would be the opposite
+	// of what they asked for.
+	var desired map[capability.Capability]bool
+	if !clearing {
+		desired = capability.Advance(advanceRows(rows, order), target)
+	}
 
 	txn, err := s.dbClient.Tx(ctx)
 	if err != nil {
@@ -1080,8 +1102,16 @@ func (s *HackathonService) AdvancePhase(
 		}
 	}
 
-	if _, err := txn.Hackathon.UpdateOneID(id).
-		SetCurrentPhaseID(phaseID).
+	// ent's SetNillableX(nil) means "leave unchanged", NOT "set null" — the
+	// pointer stayed put and the clear looked like it worked because the RPC
+	// answered {}. Clearing has to say so explicitly.
+	upd := txn.Hackathon.UpdateOneID(id)
+	if clearing {
+		upd = upd.ClearCurrentPhase()
+	} else {
+		upd = upd.SetCurrentPhaseID(phaseID)
+	}
+	if _, err := upd.
 		SetModifier(user).
 		Save(ctx); err != nil {
 		rollback(err)
@@ -1112,8 +1142,16 @@ func (s *HackathonService) AdvancePhase(
 	// consistent with the move rather than with the old dates.
 	clock := newCapabilityClock(order, &phaseID)
 
+	// Empty when clearing, not the zero UUID: a client reading
+	// "00000000-0000-0000-0000-000000000000" sees a current phase that points at
+	// nothing, which is worse than seeing none.
+	currentPhase := ""
+	if !clearing {
+		currentPhase = phaseID.String()
+	}
+
 	return &msgs.AdvancePhaseResponse{
-		CurrentPhaseId: phaseID.String(),
+		CurrentPhaseId: currentPhase,
 		Capabilities:   capabilityStatusesFromEnt(updated, clock, time.Now()),
 	}, nil
 }

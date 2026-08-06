@@ -9,5 +9,19 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 message AdvancePhaseRequest {
   string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
   // The phase the hackathon is now in. Must belong to this hackathon.
-  string phase_id = 2 [(buf.validate.field).string.uuid = true];
+  //
+  // EMPTY means "no current phase" — the organizer is clearing the pointer, and
+  // the timeline goes back to being read from dates alone. A plain `uuid = true`
+  // rule rejected that before the handler ever saw it, which is why the "Clear
+  // current phase" button could never succeed: it sends no phase_id by design.
+  //
+  // Clearing deliberately does NOT touch capabilities. Advancing applies the
+  // ones scheduled for the target phase; with no target there is nothing to
+  // apply, and silently switching things off because someone cleared a label
+  // would be the opposite of what they asked for.
+  string phase_id = 2 [(buf.validate.field).cel = {
+    id: "phase_id.uuid_or_empty"
+    message: "phase_id must be a UUID, or empty to clear the current phase"
+    expression: "this == '' || this.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  }];
 }
