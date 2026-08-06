@@ -5,6 +5,7 @@
         submissionStatusLabel,
         submissionStatusBadgeVariant,
     } from '$lib/utils/submissionStatus';
+    import { isHttpUrl } from '$lib/utils/url';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -23,18 +24,6 @@
             hour: 'numeric',
             minute: '2-digit',
         });
-    }
-
-    // `result` is free text (the schema says "e.g. a URL", but nothing enforces
-    // it) — only linkify it when it actually parses as http(s), so a team that
-    // wrote a plain description doesn't get a dead link.
-    function isHttpUrl(value: string): boolean {
-        try {
-            const u = new URL(value);
-            return u.protocol === 'http:' || u.protocol === 'https:';
-        } catch {
-            return false;
-        }
     }
 </script>
 

@@ -91,7 +91,7 @@
                     imageUrl={team.imageUrl}
                     members={team.members}
                     isOwn={team.isOwn}
-                    moreInfoHref="#team-{team.id}"
+                    entry={team.entry}
                 />
             {/each}
         {/if}
