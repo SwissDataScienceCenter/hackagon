@@ -321,6 +321,33 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
+    // Opening and closing the ballot.
+    //
+    // `settings.votingEnabled` gates every SubmitVote and defaults to FALSE, and
+    // nothing in the UI could set it: the vote — the act the whole event builds
+    // to — was openable only over grpcurl. HackathonService.EditSettings is the
+    // RPC that does it and had no caller anywhere.
+    //
+    // Deliberately does not touch `registrationsEnabled`, the other field on
+    // that request: it is enforced nowhere (audit B3, two contradictory
+    // registration gates) and the `register` capability governs instead.
+    // Offering a switch that does nothing is worse than offering none.
+    setVotingOpen: async (event) => {
+        const { hackathon } = requireGrpc(event.locals.grpc)
+        const form = await event.request.formData()
+
+        try {
+            await hackathon.editSettings({
+                hackathonId: event.params.id,
+                votingEnabled: form.get("votingEnabled") === "on",
+            })
+        } catch (e) {
+            return formError(e)
+        }
+
+        return ok({ done: form.get("votingEnabled") === "on" ? "Voting is open." : "Voting is closed." })
+    },
+
     // The rules of the vote. Until this existed the policy was write-only in
     // both directions: nothing set it, and SubmitVote ignored what was there.
     setPolicy: async (event) => {

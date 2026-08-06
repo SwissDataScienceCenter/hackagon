@@ -92,6 +92,35 @@
                 </span>
             </p>
 
+            <!-- The ballot's on/off switch. It gates every SubmitVote and
+                 defaults to closed, and until now nothing in the UI could open
+                 it: the vote was startable only over grpcurl. -->
+            <form
+                method="POST"
+                action="?/setVotingOpen"
+                use:enhance
+                class="card flex flex-wrap items-center justify-between gap-3 p-4"
+            >
+                <div>
+                    <h2 class="m-0 text-xl font-bold">
+                        {data.votingOpen ? 'Voting is open' : 'Voting is closed'}
+                    </h2>
+                    <p class="m-0 text-meta text-ink-3">
+                        {data.votingOpen
+                            ? 'Ballots are being accepted. Close it when the room has voted.'
+                            : 'Ballots are refused until you open it. Categories and rules can be set up first.'}
+                    </p>
+                </div>
+                <!-- A button that posts the opposite state, not a toggle that
+                     fires on change: opening the vote is a decision, and a
+                     switch that looks flipped before the server agreed is how
+                     you come to believe the ballot is open when it is not. -->
+                <input type="hidden" name="votingEnabled" value={data.votingOpen ? 'off' : 'on'} />
+                <button type="submit" class="btn {data.votingOpen ? '' : 'btn-accent'}">
+                    {data.votingOpen ? 'Close voting' : 'Open voting'}
+                </button>
+            </form>
+
             <!-- The rules of the vote. They were stored and never read on the
                  server, and never written from anywhere at all — an event could
                  not state its own rules. Prefilled, because SetVotingPolicy
