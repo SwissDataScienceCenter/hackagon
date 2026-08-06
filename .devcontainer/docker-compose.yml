@@ -82,6 +82,87 @@ services:
     #       memory: "${HACKAGON_DEV_MEMORY:-}"
 
   # ---------------------------------------------------------------------
+  # Development object store — RustFS, an S3-compatible server written in
+  # Rust. Gives the platform somewhere to PUT uploaded files locally instead
+  # of only accepting links (infrastructure.md gap I4).
+  #
+  #   docker compose -f .devcontainer/docker-compose.yml up -d rustfs
+  #   bash .devcontainer/rustfs-init.sh            # create the bucket
+  #   bash .devcontainer/rustfs-init.sh --selftest # prove S3 PUT/GET/list
+  #
+  # NOT in a profile: unlike postgres/keycloak there is no devenv copy of this
+  # to fight over ports with, so it is safe as a default service. It is also a
+  # SIBLING of `dev` with no `depends_on` in either direction — adding one
+  # would change `dev`'s compose config, and that recreates the container,
+  # killing the process-compose stack running inside it.
+  #
+  # `dev` reaches it as `rustfs:9000` over the compose network (that is what
+  # the backend's `storage.endpoint` points at); the published port is for the
+  # host — a browser, or an S3 client run outside the container.
+  rustfs:
+    # Pinned, never `latest`: RustFS is pre-1.0 and the S3 surface still moves
+    # between betas. Multi-arch (amd64 + arm64), so Apple Silicon works too.
+    image: ${HACKAGON_RUSTFS_IMAGE:-rustfs/rustfs:1.0.0-beta.12}
+    restart: unless-stopped
+    # The image entrypoint appends $RUSTFS_VOLUMES, so no data path here.
+    command: ["server", "--console-enable"]
+    environment:
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_VOLUMES: /data
+      # DEV-ONLY CREDENTIALS. Committed on purpose, exactly like the postgres
+      # and keycloak passwords above: they exist so a fresh checkout works
+      # with zero setup, and they are worthless because nothing but a laptop
+      # ever serves on this port. A deployment MUST override them from a
+      # secret store — see the README's "real deployment" note.
+      RUSTFS_ACCESS_KEY: ${HACKAGON_RUSTFS_ACCESS_KEY:-hackagon-dev}
+      RUSTFS_SECRET_KEY: ${HACKAGON_RUSTFS_SECRET_KEY:-hackagon-dev-secret}
+      RUSTFS_REGION: ${HACKAGON_RUSTFS_REGION:-us-east-1}
+      # Empty => log to stdout, i.e. `docker compose logs rustfs`. The image
+      # default (/logs) writes files into the container's writable layer,
+      # which no one ever reads and which vanishes on recreate.
+      RUSTFS_OBS_LOG_DIRECTORY: ""
+      RUSTFS_OBS_LOGGER_LEVEL: ${HACKAGON_RUSTFS_LOG_LEVEL:-warn}
+      RUSTFS_OBS_ENVIRONMENT: development
+    ports:
+      # 9000 = S3 API. 9001 = web console, served at the SUBPATH
+      # http://localhost:9001/rustfs/console/ — the console port's `/` is
+      # still the S3 router and answers 403, which looks broken but is not.
+      - "${HACKAGON_RUSTFS_PORT:-9000}:9000"
+      - "${HACKAGON_RUSTFS_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      # Named volume, NOT a bind mount into the workspace: the workspace mount
+      # is 9p on Windows / virtiofs on macOS and object stores are exactly the
+      # small-file-IO workload that pathologises there (see the node_modules
+      # measurements on the `dev` service). This is also why resetting the
+      # store is `docker volume rm`, not `rm -rf`.
+      - rustfs-data:/data
+    healthcheck:
+      # Unauthenticated GET / on the S3 endpoint: rustfs answers 403
+      # AccessDenied, which proves the S3 router is up and the bucket is
+      # private. Deliberately no `-f` — a 403 is the expected answer here, so
+      # only a connection failure may fail the check.
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sS",
+          "-o",
+          "/dev/null",
+          "--max-time",
+          "5",
+          "http://127.0.0.1:9000/",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: ${HACKAGON_RUSTFS_MEMORY:-512m}
+
+  # ---------------------------------------------------------------------
   # Optional: run Postgres and Keycloak as their own containers instead of
   # as processes inside `dev` (where devenv/process-compose owns them).
   #
@@ -234,6 +315,11 @@ volumes:
   frontend-node-modules:
   frontend-svelte-kit:
   pnpm-store:
+  # Object-store data. A volume rather than a workspace bind mount for the
+  # same small-file-IO reason as the caches above; reset it with
+  # `docker compose -f .devcontainer/docker-compose.yml down rustfs` +
+  # `docker volume rm <project>_rustfs-data`.
+  rustfs-data:
   # Only used by the optional "services" profile; harmless otherwise.
   postgres-data:
   keycloak-data:

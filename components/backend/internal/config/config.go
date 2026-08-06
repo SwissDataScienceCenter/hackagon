@@ -18,6 +18,7 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	Oidc     OidcConfig     `yaml:"oidc"`
+	Storage  StorageConfig  `yaml:"storage"`
 	Logging  LoggingConfig  `yaml:"logging"`
 }
 
@@ -44,6 +45,32 @@ type OidcConfig struct {
 	JwksUrl   string `yaml:"jwksurl"`
 	IssuerUrl string `yaml:"issuerurl"`
 	Algorithm string `yaml:"algorithm"`
+}
+
+// StorageConfig addresses the S3-compatible object store that holds uploaded
+// files. In development that is the `rustfs` container from
+// .devcontainer/docker-compose.yml; in a deployment it is S3/MinIO/whatever
+// speaks the same API, with the keys injected from a secret store rather than
+// read out of this file.
+type StorageConfig struct {
+	// Endpoint is the S3 base URL. Defaults to the compose service name
+	// because the dev container reaches rustfs over the compose network —
+	// localhost:9000 is NOT an option there, Keycloak's management port
+	// already owns 9000 inside that container. Native (non-container) setups
+	// override with HACKAGON_STORAGE_ENDPOINT=http://localhost:9000.
+	Endpoint string `yaml:"endpoint"`
+	Region   string `yaml:"region"`
+	Bucket   string `yaml:"bucket"`
+	// DEV-ONLY defaults, mirroring the database password above: they match the
+	// committed compose defaults so a fresh checkout works unconfigured.
+	// Deployments override every field via HACKAGON_STORAGE_* env vars.
+	AccessKey string `yaml:"accesskey"`
+	SecretKey string `yaml:"secretkey"`
+	// UsePathStyle keeps requests as endpoint/bucket/key. rustfs only supports
+	// virtual-hosted style (bucket.host/key) when RUSTFS_SERVER_DOMAINS is
+	// set, which the dev service deliberately does not set — there is no
+	// wildcard DNS for *.rustfs on the compose network.
+	UsePathStyle bool `yaml:"usepathstyle"`
 }
 
 func (c *Config) ConnectionStr() string {
@@ -90,6 +117,14 @@ func Load(configDir string) (*Config, error) {
 			"jwksurl":   "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs",
 			"issuerurl": "http://localhost:8180/realms/hackagon",
 			"algorithm": "RS256",
+		},
+		"storage": map[string]interface{}{
+			"endpoint":     "http://rustfs:9000",
+			"region":       "us-east-1",
+			"bucket":       "hackagon-dev",
+			"accesskey":    "hackagon-dev",
+			"secretkey":    "hackagon-dev-secret",
+			"usepathstyle": true,
 		},
 		"logging": map[string]interface{}{
 			"level": "info",

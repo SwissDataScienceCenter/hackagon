@@ -13,5 +13,24 @@ oidc:
   jwksurl: "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs"
   issuerurl: "http://localhost:8180/realms/hackagon"
   algorithm: "RS256"
+# S3-compatible object store for uploaded files: the `rustfs` container from
+# .devcontainer/docker-compose.yml. Start it and create the bucket with
+#   docker compose -f .devcontainer/docker-compose.yml up -d rustfs
+#   bash .devcontainer/rustfs-init.sh
+# Addressed by compose service name, not localhost like the other services:
+# inside the dev container port 9000 is already Keycloak's management port,
+# so there is nothing to bridge onto. Running the backend natively (no
+# devcontainer)? Override with HACKAGON_STORAGE_ENDPOINT=http://localhost:9000.
+#
+# The credentials below are DEV-ONLY and worthless — same status as the
+# postgres password above. A deployment supplies them from a secret store via
+# HACKAGON_STORAGE_ACCESSKEY / HACKAGON_STORAGE_SECRETKEY.
+storage:
+  endpoint: "http://rustfs:9000"
+  region: "us-east-1"
+  bucket: "hackagon-dev"
+  accesskey: "hackagon-dev"
+  secretkey: "hackagon-dev-secret"
+  usepathstyle: true
 logging:
   level: info

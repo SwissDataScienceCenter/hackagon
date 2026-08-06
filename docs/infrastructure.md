@@ -9,9 +9,11 @@ nodes from the table below, then run the load profiles at the end.
 
 ## Today — single-host dev stack
 
-Everything runs in one process-compose supervisor, on one machine (or one
-devcontainer). No replicas, no load balancer, no cache, no queue, no object
-storage.
+The application runs in one process-compose supervisor, on one machine (or one
+devcontainer). No replicas, no load balancer, no cache, no queue. Object
+storage does exist now, but only as a dev container (`rustfs`, S3-compatible)
+that nothing in the app reads yet — the storage layer is provisioned and
+proven, the upload path is not built.
 
 ```mermaid
 flowchart LR
@@ -29,6 +31,7 @@ flowchart LR
 | Go gRPC backend | 3000 | stateless *except* the in-memory casbin policy |
 | Keycloak | 8180 | realm imported from `tools/configs/keycloak/realm-hackagon.json`; **H2 dev-file storage** |
 | Postgres | 5432 | app data + the casbin policy table |
+| RustFS (object store) | 9000 (S3), 9001 (console) | own container, not process-compose; bucket `hackagon-dev`; dev-only credentials |
 
 ## Target — what production needs (and what to simulate)
 
@@ -40,7 +43,7 @@ missing node) in the paperdraw model:
 | I1 | **casbin policy is loaded once at startup and never reloads** (already causing the seed-then-restart workaround in the e2e suite) | With 2+ backend replicas, a role granted on replica A is invisible to replica B until restart. Needs a policy watcher (Redis/Postgres LISTEN) or a single-writer/sticky arrangement. **This is the blocker for horizontal scaling.** |
 | I2 | Keycloak on H2 dev-file | Keycloak with its own Postgres (or managed OIDC) |
 | I3 | Frontend hard-codes `localhost:3000` (`TODO.md` F7) | Backend address from config → frontend and backend deployable separately |
-| I4 | No object storage, no queue | Blob store for media uploads; queue for the notification service — both deferred features from `roadmap.md` |
+| I4 | No queue. Object storage exists **in dev only**: an S3-compatible RustFS container (`rustfs`, see `.devcontainer/README.md`), single drive, zero parity, plaintext HTTP, credentials as literals | A managed bucket (S3 or MinIO/RustFS run properly): TLS, credentials from a secret store or workload identity, private bucket + presigned URLs, versioning and lifecycle rules, cross-AZ durability. Queue for the notification service is still absent — a deferred feature from `roadmap.md` |
 
 ### paperdraw build sheet
 

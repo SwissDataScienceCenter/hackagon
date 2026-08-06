@@ -177,6 +177,25 @@ printf 'oidc:\n  clientSecret: "%s"\n  authSecret: "%s"\n' \
 `components/frontend/data/test/config/secrets.yaml.example` shows the shape.
 Native-Nix users who never ran `post-create.sh` must create it by hand.
 
+## Object store (optional today)
+
+Uploaded files get an S3-compatible home in development: the `rustfs`
+container, endpoint `http://rustfs:9000` from inside the devcontainer
+(`http://localhost:9000` from the host), bucket `hackagon-dev`, dev-only keys
+`hackagon-dev` / `hackagon-dev-secret`. It is configured under `storage:` in
+`components/backend/data/test/config/config.yaml`, but **no handler reads it
+yet** — the store is provisioned, the upload path is not built, so skipping
+this changes nothing about the running app today.
+
+```bash
+docker compose -f .devcontainer/docker-compose.yml up -d rustfs
+bash .devcontainer/rustfs-init.sh             # create the bucket (idempotent)
+bash .devcontainer/rustfs-init.sh --selftest   # PUT/GET/compare/list proof
+```
+
+Full reference — reset, console URL, deployment differences — in
+`.devcontainer/README.md`.
+
 ## Gotchas
 
 - **Casbin does not reload after external seeding.** `NewRBACEnforcer`
