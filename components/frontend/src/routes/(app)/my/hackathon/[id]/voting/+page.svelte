@@ -77,23 +77,32 @@
         </p>
     {:else}
         <!-- The ballot lists a project and a team, which is not enough to judge
-             on. Teams is where each entry is actually shown — TeamCard renders
-             the team's final submission — so that is where someone deciding how
-             to vote needs to be able to get to, and back from. -->
+             on, so every entry links to its own page — that is where the
+             submission itself is shown. There is no all-submissions list to send
+             people to any more; the per-entry link replaced it, so the way to
+             inspect an entry is from the row you are about to vote for. -->
         <p class="m-0 text-xs text-ink-3">
-            Want to look before you vote?
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/teams`)}
-                class="font-semibold text-accent-ink no-underline hover:underline"
-            >
-                Browse the teams
-            </a>
-            to see each project and what it submitted.
+            Want to look before you vote? Open an entry to see the project and what
+            it submitted.
         </p>
 
         {#each ballots as ballot (ballot.category.id)}
             <section class="card card-raised box-border w-full px-5 py-4">
-                <form method="POST" action="?/vote" use:enhance class="flex flex-col gap-4">
+                <!-- reset: false, because the default enhance callback resets the
+                     <form> on success — unchecking the radios and blanking the
+                     point fields directly in the DOM. form.reset() fires no
+                     change event, so the bindings still hold what was cast and
+                     never repaint it: the vote is stored but the ballot looks
+                     empty. The invalidation still runs, so `data.myVotes`
+                     refreshes and the button flips to "Change my vote". -->
+                <form
+                    method="POST"
+                    action="?/vote"
+                    use:enhance={() =>
+                        ({ update }) =>
+                            update({ reset: false })}
+                    class="flex flex-col gap-4"
+                >
                     <input type="hidden" name="categoryId" value={ballot.category.id} />
                     <input type="hidden" name="method" value={ballot.category.method} />
 
@@ -123,6 +132,22 @@
                                 ? ' — over budget'
                                 : ''}
                         </p>
+
+                        <!-- TODO(backend: vote-points-immutable) — delete this
+                             once a points vote can be changed. `SubmitVote`
+                             returns an existing (category, voter, submission)
+                             vote untouched (`vote_service.go:598-607`) and there
+                             is no EditVote or DeleteVote, so re-scoring an entry
+                             is silently ignored. Said out loud rather than left
+                             for someone to discover: the alternative is a button
+                             that reports success and changes nothing. -->
+                        {#if alreadyVoted(ballot.category.id)}
+                            <p class="m-0 text-xs text-warning-ink">
+                                Points you have already given cannot be changed or taken
+                                back yet — only entries you have not scored will be
+                                recorded.
+                            </p>
+                        {/if}
                     {/if}
 
                     <ul class="m-0 flex list-none flex-col gap-2 p-0">
@@ -176,6 +201,23 @@
                                         </span>
                                     </label>
                                 {/if}
+
+                                <!-- Outside the label on purpose: a link inside
+                                     one is activated by the label's own click
+                                     handling, so tapping it would also pick the
+                                     radio. Note it navigates away — a ballot
+                                     opens seeded from votes already cast, so
+                                     points typed but not yet submitted are lost.
+                                     Submit first, then look. -->
+                                <a
+                                    href={resolve(
+                                        `/my/hackathon/${data.hackathonId}/teams/${entry.submission.teamId}`
+                                    )}
+                                    class="shrink-0 whitespace-nowrap pt-1 text-xs font-semibold
+                                           text-accent-ink no-underline hover:underline"
+                                >
+                                    View entry
+                                </a>
                             </li>
                         {/each}
                     </ul>

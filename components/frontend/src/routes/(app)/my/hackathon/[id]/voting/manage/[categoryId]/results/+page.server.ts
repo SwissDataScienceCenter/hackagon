@@ -9,6 +9,7 @@ import {
   categoryView,
   resultView,
   sortResults,
+  submissionLookup,
 } from "$lib/server/hackathon/voting"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -41,12 +42,7 @@ export const load: PageServerLoad = async (event) => {
     event.params.id,
     new Map(hackathon.projects.map((p) => [p.id, p.title])),
   )
-  const byId = new Map(
-    submissions.map((s) => [
-      s.id,
-      { projectTitle: s.projectTitle, teamName: s.teamName },
-    ]),
-  )
+  const byId = submissionLookup(submissions)
 
   const [{ voteResults }, { votes }] = await Promise.all([
     vote.listVoteResults({ categoryId: event.params.categoryId }),

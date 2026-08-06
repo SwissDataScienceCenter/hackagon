@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import { ordinal, placementMedal } from '$lib/utils/voting';
     import type { PageData } from './$types';
 
@@ -24,12 +25,14 @@
                 ? 'You need to be a confirmed participant of this hackathon to see the results.'
                 : 'Results have not been published yet.'}
         </p>
-    {:else if data.categories.length === 0}
-        <p class="m-0 py-6 text-center text-sm text-ink-3">
-            Nothing has been placed yet. Results appear here once the organizers
-            publish them.
-        </p>
     {:else}
+        {#if data.categories.length === 0}
+            <p class="m-0 py-6 text-center text-sm text-ink-3">
+                Nothing has been placed yet. Results appear here once the organizers
+                publish them.
+            </p>
+        {/if}
+
         {#each data.categories as category (category.id)}
             <section class="flex flex-col gap-3">
                 <div class="flex flex-wrap items-center gap-2">
@@ -59,7 +62,24 @@
                                     {ordinal(result.position)}
                                 </span>
 
-                                <span class="text-sm text-ink">{result.projectTitle}</span>
+                                <!-- Linked to the team that filed the entry, which
+                                     is where the submission itself is shown. Plain
+                                     text when the submission could not be resolved
+                                     — that row reads "Unknown submission" and there
+                                     is no team to send anyone to. -->
+                                {#if result.teamId}
+                                    <a
+                                        href={resolve(
+                                            `/my/hackathon/${data.hackathonId}/teams/${result.teamId}`
+                                        )}
+                                        class="text-sm font-semibold text-accent-ink no-underline
+                                               hover:underline"
+                                    >
+                                        {result.projectTitle}
+                                    </a>
+                                {:else}
+                                    <span class="text-sm text-ink">{result.projectTitle}</span>
+                                {/if}
 
                                 {#if result.teamName}
                                     <span class="text-xs text-ink-3">{result.teamName}</span>
@@ -74,5 +94,46 @@
                 </ol>
             </section>
         {/each}
+
+        <!-- Every entry, placed or not — the way to reach a team's page when it
+             won nothing, or when voting is closed and the ballot is gone. Kept
+             below the podiums: the placements are what the page is for, this is
+             the directory underneath them. Shown even with nothing placed yet,
+             which is exactly when browsing what was entered is all there is to
+             do. -->
+        {#if data.entries.length > 0}
+            <section class="flex flex-col gap-3">
+                <div class="flex min-w-0 flex-col gap-0.5">
+                    <h3 class="m-0 text-sm font-semibold text-ink">All entries</h3>
+                    <span class="text-xs text-ink-3">
+                        {data.entries.length === 1
+                            ? '1 team entered'
+                            : `${data.entries.length} teams entered`}
+                    </span>
+                </div>
+
+                <ul class="m-0 flex list-none flex-col gap-2 p-0">
+                    {#each data.entries as entry (entry.id)}
+                        <li class="card card-raised box-border w-full px-5 py-4">
+                            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                <a
+                                    href={resolve(
+                                        `/my/hackathon/${data.hackathonId}/teams/${entry.teamId}`
+                                    )}
+                                    class="text-sm font-semibold text-accent-ink no-underline
+                                           hover:underline"
+                                >
+                                    {entry.projectTitle}
+                                </a>
+                                <span class="text-xs text-ink-3">{entry.teamName}</span>
+                                {#if entry.isOwnTeam}
+                                    <span class="badge badge-neutral">Your team</span>
+                                {/if}
+                            </div>
+                        </li>
+                    {/each}
+                </ul>
+            </section>
+        {/if}
     {/if}
 </div>
