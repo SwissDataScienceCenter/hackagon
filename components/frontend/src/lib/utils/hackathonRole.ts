@@ -60,6 +60,36 @@ export function canEditHackathon(
 }
 
 /**
+ * Whether the viewer may open a hackathon's member view at all — the backend's
+ * `hackathon:read`, which `/my/hackathon/[id]`'s layout needs before it can
+ * render anything.
+ *
+ * Casbin grants that row to `owner` and `member` within one hackathon
+ * (`rbac.go:176`, `:198`) and to a global admin through the escape hatch. Two
+ * things it pointedly does *not* do:
+ *
+ *  - **grant it on visibility.** `AllowPublicHackathonAccess` exists and is
+ *    never called, so a public hackathon is no more readable to a non-member
+ *    than a private one — see `TODO(backend: public-hackathon-read)`.
+ *  - **grant it on joining.** `Join` writes only the Participant row; the
+ *    `member` role arrives with `ApproveParticipant`
+ *    (`hackathon_service.go:373`). So a waitlisted user is listed as connected
+ *    to the hackathon and still cannot read it.
+ *
+ * Which is what makes this the rule for whether a dashboard row is a link at
+ * all: without it every "Other hackathons" row, and every row you have only
+ * just joined, navigates straight into a 403.
+ */
+export function canOpenHackathon(
+  membership: ViewerMembership | undefined,
+  isGlobalAdmin: boolean,
+): boolean {
+  if (isGlobalAdmin) return true
+
+  return membership !== undefined && !membership.isWaiting
+}
+
+/**
  * Membership chip for a hackathon *row* — the dashboard's list and the `[id]`
  * layout hero.
  *

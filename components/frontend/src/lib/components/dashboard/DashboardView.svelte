@@ -7,8 +7,13 @@
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { platformNav, type NavItem } from '$lib/navigation/items';
-    import { canEditHackathon, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
-    import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import {
+        canEditHackathon,
+        canOpenHackathon,
+        membershipBadgeLabel,
+        membershipBadgeVariant,
+    } from '$lib/utils/hackathonRole';
+    import { isFinished, statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
     import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
 
     interface HackathonMember {
@@ -56,6 +61,12 @@
          * the backend, so an empty array costs a viewer nothing but the badges.
          */
         globalRoles?: number[];
+        /**
+         * The `join` action's result, when it refused. Rendered rather than
+         * swallowed: a denied join is otherwise completely silent, since the
+         * page does not navigate and the list comes back unchanged.
+         */
+        form?: { message?: string; closed?: boolean } | null;
     }
 
     const {
@@ -65,6 +76,7 @@
         canCreate = false,
         isGlobalAdmin = false,
         globalRoles = [],
+        form = null,
     }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
@@ -104,6 +116,20 @@
     }
 
     const joiningIds = new SvelteSet<string>();
+
+    /**
+     * Hackathons whose Join the backend has already refused this visit.
+     *
+     * Only one of the two refusals is knowable up front — a finished hackathon,
+     * which `Join` rejects on its dates. Registration being switched off is the
+     * common case and is invisible from here until it has been tried once; see
+     * `TODO(backend: list-registration-state)` in the page's load. This set is
+     * what remembers the answer for the rest of the visit.
+     *
+     * A set rather than reading `form`, which only holds the most recent
+     * refusal: press two closed hackathons in turn and both should stay retired.
+     */
+    const refusedIds = new SvelteSet<string>();
 </script>
 
 <!-- Welcome Banner. Creating a hackathon rides here rather than beside "Your
@@ -169,9 +195,16 @@
                         {@const mem = h.viewerMembership}
                         <div class="flex items-center">
                             <div class="flex-1">
-                                <!-- Member of this one: straight to the member view. -->
+                                <!-- Confirmed here: straight to the member view.
+                                     Waitlisted, and the row is not a link — joining
+                                     writes the participant row but not the casbin
+                                     `member` role, so the member view would answer
+                                     403 until an organiser approves you. The
+                                     Waitlisted badge beside it says why. -->
                                 <HackathonRow
-                                    href="/my/hackathon/{h.id}/overview"
+                                    href={canOpenHackathon(mem, isGlobalAdmin)
+                                        ? `/my/hackathon/${h.id}/overview`
+                                        : undefined}
                                     name={h.name}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
@@ -206,6 +239,20 @@
         <section class="flex flex-col gap-4">
             <h2 class="text-section">Other hackathons</h2>
 
+            <!-- The one place a refused join is reported. Above the list rather
+                 than beside the row it came from: a hackathon deleted under you
+                 leaves no row to annotate, and the two refusals that do have a
+                 row want a sentence as well as the label they get.
+
+                 Deliberately not `text-danger-ink`, unlike the form errors
+                 elsewhere in the app. Nothing went wrong here — registration
+                 being closed is a fact about the hackathon, and the row states
+                 it calmly a few inches away. `status` over `alert` for the same
+                 reason: worth announcing, not worth interrupting for. -->
+            {#if form?.message}
+                <p role="status" class="text-sm text-ink-2">{form.message}</p>
+            {/if}
+
             {#if otherHackathons.length === 0}
                 <p class="text-sm text-ink-3">No other hackathons available.</p>
             {:else}
@@ -213,9 +260,11 @@
                     {#each otherHackathons as h, i (h.id)}
                         <div class="flex items-center border-b border-line last:border-0">
                             <div class="flex-1">
-                                <!-- Not a member: the public page is the only view open to us. -->
+                                <!-- No href: a non-member holds no `hackathon:read`
+                                     on this hackathon whatever its visibility, so
+                                     every view of it — member or public — answers
+                                     403. Joining is the only thing offered here. -->
                                 <HackathonRow
-                                    href="/hackathon/{h.id}"
                                     name={h.name}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
@@ -224,26 +273,48 @@
                                     gradTo={gradient(i).to}
                                 />
                             </div>
-                            <form
-                                method="POST"
-                                action="?/join"
-                                use:enhance={() => {
-                                    joiningIds.add(h.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        joiningIds.delete(h.id);
-                                    };
-                                }}
-                            >
-                                <input type="hidden" name="hackathonId" value={h.id} />
-                                <button
-                                    type="submit"
-                                    disabled={joiningIds.has(h.id)}
-                                    class="mr-4 btn btn-sm btn-accent shrink-0"
+                            <!-- A finished hackathon gets no button and no label:
+                                 the row's own "Finished" badge is already the
+                                 reason there is no Join, and a second note beside
+                                 it would just say it twice. A refusal on a
+                                 hackathon still running has nothing explaining it,
+                                 so that one gets the label — plain text rather
+                                 than a badge, being the absence of an action
+                                 rather than a state of its own. -->
+                            {#if refusedIds.has(h.id)}
+                                <span class="mr-4 shrink-0 text-xs text-ink-3">
+                                    Registration closed
+                                </span>
+                            {:else if !isFinished(h.status)}
+                                <form
+                                    method="POST"
+                                    action="?/join"
+                                    use:enhance={() => {
+                                        joiningIds.add(h.id);
+                                        return async ({ result, update }) => {
+                                            // Retire the button on a refusal the
+                                            // backend has settled — pressing it
+                                            // again would only repeat the answer.
+                                            if (
+                                                result.type === 'failure' &&
+                                                result.data?.closed
+                                            )
+                                                refusedIds.add(h.id);
+                                            await update();
+                                            joiningIds.delete(h.id);
+                                        };
+                                    }}
                                 >
-                                    {joiningIds.has(h.id) ? 'Joining…' : 'Join'}
-                                </button>
-                            </form>
+                                    <input type="hidden" name="hackathonId" value={h.id} />
+                                    <button
+                                        type="submit"
+                                        disabled={joiningIds.has(h.id)}
+                                        class="mr-4 btn btn-sm btn-accent shrink-0"
+                                    >
+                                        {joiningIds.has(h.id) ? 'Joining…' : 'Join'}
+                                    </button>
+                                </form>
+                            {/if}
                         </div>
                     {/each}
                 </div>
