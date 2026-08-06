@@ -20,6 +20,7 @@ import (
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	entvoteresult "github.com/swissdatasciencecenter/hackagon/components/backend/ent/voteresult"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
@@ -452,6 +453,14 @@ func (s *VoteService) SubmitVote(
 	if settings == nil || !settings.VotingEnabled {
 		return nil, status.Error(codes.FailedPrecondition, "voting is closed")
 	}
+	// And the VOTE capability. It was declared, seeded and rendered as a switch
+	// in the organiser panel while no handler read it — flipping it changed
+	// nothing, which is worse than not offering it. The settings flag stays:
+	// it is the event-wide "voting is running" state, where the capability is
+	// the schedulable one that a phase can open.
+	if err := requireCapability(ctx, s.dbClient, s.enforcer, hackathonID, capability.Vote); err != nil {
+		return nil, err
+	}
 
 	voter, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {
@@ -769,14 +778,30 @@ func (s *VoteService) ListVoteResults(
 	ctx context.Context,
 	req *voteMsgs.ListVoteResultsRequest,
 ) (*voteMsgs.ListVoteResultsResponse, error) {
-	// Results are the published outcome — readable by any signed-in user.
-	// TODO: casbin check once member-read rules for votes exist.
+	// Results are the published outcome — readable by any signed-in user ONCE
+	// the organiser has published them. VIEW_RESULTS is that switch, and like
+	// VOTE it was declared and toggleable while nothing read it, so placements
+	// were visible the moment they were recorded whatever the panel said.
+	//
+	// requireCapability lets organisers through regardless, which is what makes
+	// reviewing a tally before publishing it possible.
 	if _, _, err := m.RequireSubject(ctx); err != nil {
 		return nil, err
 	}
 	categoryID, err := uuid.Parse(req.GetCategoryId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
+	}
+
+	c, err := s.categoryWithHackathon(ctx, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireCapability(
+		ctx, s.dbClient, s.enforcer,
+		c.Edges.Hackathon.ID, capability.ViewResults,
+	); err != nil {
+		return nil, err
 	}
 	results, err := s.dbClient.VoteResult.Query().
 		Where(entvoteresult.HasVoteCategoryWith(entvotecategory.IDEQ(categoryID))).
