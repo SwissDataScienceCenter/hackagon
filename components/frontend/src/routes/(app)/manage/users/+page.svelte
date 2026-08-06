@@ -1,16 +1,37 @@
 <script lang="ts">
-    import { Search } from 'lucide-svelte';
+    import DataToolbar from '$lib/components/data/DataToolbar.svelte';
     import { ASSIGNABLE_GLOBAL_ROLES, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
+    import type { FilterDef, ViewMode } from '$lib/utils/dataView';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     let search = $state('');
+    // Table by default here, unlike the other lists: this one is read as a
+    // register — who exists, which roles they hold — and a register is a table.
+    let view = $state<ViewMode>('table');
+    let filterValues = $state<Record<string, string>>({});
+
+    // Values are the numeric GlobalRole, as strings: the filter is compared
+    // against `roles`, which is what the backend sends.
+    const FILTERS: FilterDef[] = [
+        {
+            id: 'role',
+            label: 'Role',
+            options: ASSIGNABLE_GLOBAL_ROLES.map((r) => ({
+                value: String(r),
+                label: globalRoleLabel(r) ?? String(r),
+            })),
+        },
+    ];
 
     // Matches every column the table actually shows, so a row the user can read
     // on screen is never filtered out by a term visible in it.
     const filtered = $derived(
         data.users.filter((u) => {
+            const role = filterValues.role;
+            if (role && !u.roles.includes(Number(role))) return false;
+
             const q = search.trim().toLowerCase();
             if (q === '') return true;
             const roleNames = u.roles.map((r) => globalRoleLabel(r) ?? '').join(' ');
@@ -52,22 +73,23 @@
             <h1 class="m-0 text-title text-ink">Users</h1>
             <p class="m-0 text-xs text-ink-3">{countLabel} registered on the platform</p>
         </div>
-        <div class="relative w-full sm:w-72">
-            <Search
-                class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2
-                       text-ink-3"
-                aria-hidden="true"
-            />
-            <label class="sr-only" for="user-search">Search users</label>
-            <input
-                id="user-search"
-                type="search"
-                bind:value={search}
-                placeholder="Name, username or email…"
-                class="field pl-9 pr-3"
-            />
-        </div>
     </div>
+
+    <!-- The shared toolbar, as on /manage/pages and the browse page: one search
+         box, dropdown filters, and a cards/table toggle remembered per list. The
+         page shipped with a bare search input and no way to narrow by role or
+         to read the register as anything but a table. -->
+    <DataToolbar
+        bind:search
+        bind:view
+        bind:filterValues
+        viewKey="manage-users"
+        filters={FILTERS}
+        placeholder="Name, username or email…"
+        summary={countLabel}
+        shown={filtered.length}
+        total={data.users.length}
+    />
 
     {#if form?.message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
@@ -77,7 +99,7 @@
         <p class="m-0 py-6 text-center text-sm text-ink-3">No users found.</p>
     {:else if filtered.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">No users match “{search}”.</p>
-    {:else}
+    {:else if view === 'table'}
         <div class="w-full overflow-x-auto rounded-card border border-line">
             <table class="w-full min-w-[720px] border-collapse text-left text-xs">
                 <thead>
@@ -216,6 +238,36 @@
                     {/each}
                 </tbody>
             </table>
+        </div>
+    {:else}
+        <!-- Cards: the same register at 320px, where a seven-column table is a
+             horizontal scroll. Role granting stays in the table view — it is a
+             row action, and a card is for reading. -->
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {#each filtered as user (user.id)}
+                <div class="card flex items-start gap-3 p-4">
+                    <div
+                        class="flex size-9 shrink-0 items-center justify-center rounded-full
+                               border border-line bg-raised text-xs font-bold text-ink"
+                        aria-hidden="true"
+                    >
+                        {initials(user.displayName, user.username)}
+                    </div>
+                    <div class="flex min-w-0 flex-col gap-1">
+                        <span class="truncate text-sm font-semibold text-ink">
+                            {user.displayName || user.username}
+                        </span>
+                        <span class="truncate text-xs text-ink-3">{user.email}</span>
+                        <div class="flex flex-wrap gap-1">
+                            {#each user.roles as role (role)}
+                                <span class="badge {globalRoleBadgeVariant(role) ?? 'badge-neutral'}">
+                                    {globalRoleLabel(role)}
+                                </span>
+                            {/each}
+                        </div>
+                    </div>
+                </div>
+            {/each}
         </div>
     {/if}
 </div>

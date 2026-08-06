@@ -1,14 +1,32 @@
 <script lang="ts">
-    import { Search } from 'lucide-svelte';
     import { enhance } from '$app/forms';
     import { SvelteSet } from 'svelte/reactivity';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
+    import DataToolbar from '$lib/components/data/DataToolbar.svelte';
+    import type { FilterDef, ViewMode } from '$lib/utils/dataView';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
 
     let search = $state('');
+    let view = $state<ViewMode>('cards');
+    let filterValues = $state<Record<string, string>>({});
     const pendingIds = new SvelteSet<string>();
+
+    // Confirmed and waitlisted are ONE list with a status filter, not two
+    // sections: an organiser working the waitlist wants to narrow to it, and a
+    // participant reading the roster wants everyone. Two lists could not be
+    // sorted or searched as one.
+    const FILTERS: FilterDef[] = [
+        {
+            id: 'status',
+            label: 'Status',
+            options: [
+                { value: 'confirmed', label: 'Confirmed' },
+                { value: 'waitlisted', label: 'Waitlisted' },
+            ],
+        },
+    ];
 
     // TODO(backend: user-profile-fields): search covers name and role only.
     // Affiliation and skills were the other two axes, and User carries neither,
@@ -16,10 +34,18 @@
     // fields land.
     const filtered = $derived(
         data.participants.filter((p) => {
+            const status = filterValues.status;
+            if (status === 'confirmed' && p.isWaiting) return false;
+            if (status === 'waitlisted' && !p.isWaiting) return false;
+
             const q = search.trim().toLowerCase();
             if (q === '') return true;
             return `${p.name} ${p.roleLabel}`.toLowerCase().includes(q);
         })
+    );
+
+    const confirmedCount = $derived(
+        data.participants.filter((p) => !p.isWaiting).length
     );
 
     const countLabel = $derived(
@@ -33,25 +59,21 @@
             <h2 class="m-0 text-title text-ink">All Participants</h2>
             <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
-        <div
-            class="flex w-full flex-col gap-2 sm:w-auto sm:min-w-0 sm:flex-row sm:items-center
-                   sm:justify-end"
-        >
-            <div class="relative w-full sm:w-72">
-                <Search
-                    class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5
-                           -translate-y-1/2 text-ink-3"
-                    aria-hidden="true"
-                />
-                <input
-                    type="search"
-                    bind:value={search}
-                    placeholder="Search participants by name, role…"
-                    class="field pl-9 pr-3"
-                />
-            </div>
-        </div>
     </div>
+
+    <!-- The shared toolbar, as on the other management lists: search, a status
+         filter, and a cards/table toggle remembered per list. -->
+    <DataToolbar
+        bind:search
+        bind:view
+        bind:filterValues
+        viewKey="participants"
+        filters={FILTERS}
+        placeholder="Search participants by name, role…"
+        summary="{confirmedCount} confirmed of {data.participants.length}"
+        shown={filtered.length}
+        total={data.participants.length}
+    />
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.participants.length === 0}
@@ -62,6 +84,70 @@
             <p class="m-0 py-6 text-center text-sm text-ink-3">
                 No participants match your search.
             </p>
+        {:else if view === 'table'}
+            <!-- One table, status as a column — not two tables split by state,
+                 which would sort each half separately and sort nothing overall. -->
+            <div class="w-full overflow-x-auto rounded-card border border-line">
+                <table class="w-full min-w-[560px] border-collapse text-left text-xs">
+                    <caption class="sr-only">Participants</caption>
+                    <thead>
+                        <tr class="border-b border-line bg-raised text-ink-3">
+                            <th class="px-3 py-2 font-semibold">Name</th>
+                            <th class="px-3 py-2 font-semibold">Role</th>
+                            <th class="px-3 py-2 font-semibold">Status</th>
+                            {#if data.mayManage}
+                                <th class="px-3 py-2 font-semibold">Actions</th>
+                            {/if}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each filtered as participant (participant.id)}
+                            <tr class="border-b border-line last:border-0">
+                                <td class="px-3 py-2 font-medium text-ink">{participant.name}</td>
+                                <td class="px-3 py-2 text-ink-2">{participant.roleLabel}</td>
+                                <td class="px-3 py-2">
+                                    <span
+                                        class="badge {participant.isWaiting
+                                            ? 'badge-warning'
+                                            : 'badge-success'}"
+                                    >
+                                        {participant.isWaiting ? 'Waitlisted' : 'Confirmed'}
+                                    </span>
+                                </td>
+                                {#if data.mayManage}
+                                    <td class="px-3 py-2">
+                                        <div class="flex flex-wrap gap-1">
+                                            {#if participant.isWaiting}
+                                                <form method="POST" action="?/approve" use:enhance>
+                                                    <input
+                                                        type="hidden"
+                                                        name="userId"
+                                                        value={participant.id}
+                                                    />
+                                                    <button type="submit" class="btn btn-sm btn-accent">
+                                                        Approve
+                                                    </button>
+                                                </form>
+                                            {:else if !participant.isOwner}
+                                                <form method="POST" action="?/remove" use:enhance>
+                                                    <input
+                                                        type="hidden"
+                                                        name="userId"
+                                                        value={participant.id}
+                                                    />
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        Remove
+                                                    </button>
+                                                </form>
+                                            {/if}
+                                        </div>
+                                    </td>
+                                {/if}
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
+            </div>
         {:else}
             {#each filtered as participant (participant.id)}
                 <ParticipantCard
