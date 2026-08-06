@@ -117,7 +117,14 @@ func seedCapabilities(
 		// you would rather the seed mirror the handler exactly.
 		{caps.teamPreferences, "team preferences (owner)", &owner, middleware.Project, middleware.Join, nil},
 		{caps.projectSubmissions, "project submissions", &member, middleware.Submission, middleware.Create, []middleware.EnforceOption{middleware.WithTeam("*")}},
+		// Two rows, because SetCapabilities writes two. Vote:Create is the one
+		// that sounds sufficient and is not: every category-facing handler —
+		// ListVoteCategories, GetVoteCategory and SubmitVote itself — checks
+		// VoteCategory:Read first, so without it a member cannot even see what
+		// there is to vote on, and SubmitVote refuses before it looks at
+		// Vote:Create at all.
 		{caps.vote, "vote", &member, middleware.Vote, middleware.Create, nil},
+		{caps.vote, "vote categories", &member, middleware.VoteCategory, middleware.Read, nil},
 		{caps.viewResults, "view results", &member, middleware.VoteResult, middleware.Read, nil},
 	} {
 		if !p.on {
@@ -353,6 +360,14 @@ func seedH1(
 		SetEndsAt(now.AddDate(0, 0, 21)).
 		SetCreator(alice).
 		SetModifier(alice).
+		// Ownership is stored twice and both halves have to be written. The
+		// casbin `owner` role (granted further down) is what the enforcer reads
+		// and what the participants list labels people by; this `owners` edge is
+		// what RemoveOwner counts when it refuses to remove the last owner.
+		// HackathonService.Create writes creator, casbin role and this edge, so
+		// a seeded hackathon that skips it looks owned in the UI while the
+		// backend believes it has no owners at all.
+		AddOwners(alice).
 		Save(ctx)
 	if err != nil {
 		return err
@@ -602,7 +617,14 @@ func seedH1(
 		id   string
 		role middleware.Role
 	}{
+		// Alice owns this hackathon and also takes part in it. Both rows are
+		// needed, not one: the casbin model has no role inheritance, so Owner
+		// does not imply Member, and every capability seedCapabilities grants
+		// above is granted to Member. Owner alone leaves her able to administer
+		// the hackathon but unable to vote, propose or set a preference in it —
+		// which reads as a broken role assignment rather than a deliberate one.
 		{alice.KeycloakID, middleware.Owner},
+		{alice.KeycloakID, middleware.Member},
 		{admin.KeycloakID, middleware.Member},
 		{bob.KeycloakID, middleware.Member},
 	} {
@@ -653,6 +675,8 @@ func seedH2(
 		SetEndsAt(now.AddDate(0, 0, 2)).
 		SetCreator(admin).
 		SetModifier(admin).
+		// See H1 — the `owners` edge is the half RemoveOwner counts.
+		AddOwners(admin).
 		Save(ctx)
 	if err != nil {
 		return err
@@ -875,6 +899,8 @@ func seedH3(
 		SetEndsAt(now.AddDate(0, -1, -18)).
 		SetCreator(admin).
 		SetModifier(admin).
+		// See H1 — the `owners` edge is the half RemoveOwner counts.
+		AddOwners(admin).
 		Save(ctx)
 	if err != nil {
 		return err
@@ -1024,7 +1050,14 @@ func seedH3(
 	if err != nil {
 		return fmt.Errorf("team Delta: %w", err)
 	}
-	for _, u := range []*ent.User{admin, alice} {
+	// One member each, and deliberately not the same person as Team Epsilon.
+	// SubmitVote refuses a vote on a submission by a team you belong to
+	// (vote_service.go, submitSingleVote), so putting both participants in both
+	// teams — which is what this fixture used to do — leaves H3 with voting
+	// enabled and nobody able to cast a single vote, in the one hackathon where
+	// voting is testable at all. Split one apiece and each can vote for the
+	// other, which is also what the two seeded votes below record.
+	for _, u := range []*ent.User{alice} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamDelta).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Delta member %s: %w", u.Username, err)
 		}
@@ -1038,8 +1071,9 @@ func seedH3(
 		SetStatus(submission.StatusDraft).
 		SetTeam(teamDelta).
 		SetProject(projCLI).
-		SetCreator(admin).
-		SetModifier(admin).
+		// alice, because she is the one on Team Delta now.
+		SetCreator(alice).
+		SetModifier(alice).
 		Save(ctx); err != nil {
 		return fmt.Errorf("submission Delta v1: %w", err)
 	}
@@ -1050,8 +1084,8 @@ func seedH3(
 		SetResult(result).
 		SetTeam(teamDelta).
 		SetProject(projCLI).
-		SetCreator(admin).
-		SetModifier(admin).
+		SetCreator(alice).
+		SetModifier(alice).
 		Save(ctx); err != nil {
 		return fmt.Errorf("submission Delta v2: %w", err)
 	}
@@ -1067,7 +1101,8 @@ func seedH3(
 	if err != nil {
 		return fmt.Errorf("team Epsilon: %w", err)
 	}
-	for _, u := range []*ent.User{admin, alice} {
+	// admin, not alice — see Team Delta above.
+	for _, u := range []*ent.User{admin} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamEpsilon).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Epsilon member %s: %w", u.Username, err)
 		}
@@ -1100,7 +1135,10 @@ func seedH3(
 		return fmt.Errorf("vote category Best Project: %w", err)
 	}
 
-	// admin votes for CLI Code Generator, alice votes for Data Pipeline Visualizer
+	// admin votes for CLI Code Generator, alice votes for Data Pipeline
+	// Visualizer — each for the team they are *not* on, which is the only kind
+	// of vote SubmitVote would accept. Written through ent rather than the
+	// handler, so nothing enforces that here; keep it true by hand.
 	subDelta, err := db.Submission.Query().
 		Where(submission.HasTeamWith(team.IDEQ(teamDelta.ID))).
 		Order(ent.Desc(submission.FieldVersion)).
