@@ -2,104 +2,17 @@ import { describe, it, expect } from "vitest"
 import {
   activeNavId,
   canEditHackathon,
-  defaultHackathon,
   hackathonRoleBadge,
-  hackathonsRoleBadge,
-  homeNav,
   manageNav,
   memberNav,
   platformNav,
-  platformRoleBadge,
   type NavItem,
 } from "./navigation"
-
-// HackathonStatus numeric values.
-const PENDING = 1
-const ACTIVE = 2
-const FINISHED = 3
 
 // HackathonRole numeric values.
 const ROLE_UNSPECIFIED = 0
 const ROLE_OWNER = 1
 const ROLE_MEMBER = 2
-
-function h(id: string, status: number, startsAt?: string) {
-  return { id, status, startsAt: startsAt ? new Date(startsAt) : undefined }
-}
-
-describe("defaultHackathon", () => {
-  it("prefers one that is happening now", () => {
-    const active = h("b", ACTIVE, "2026-07-01")
-    const picked = defaultHackathon([
-      h("a", PENDING, "2026-06-01"),
-      active,
-      h("c", FINISHED, "2026-08-01"),
-    ])
-
-    expect(picked).toBe(active)
-  })
-
-  it("falls back to the soonest upcoming one", () => {
-    const soonest = h("b", PENDING, "2026-07-01")
-    const picked = defaultHackathon([
-      h("a", PENDING, "2026-09-01"),
-      soonest,
-      h("c", FINISHED, "2026-01-01"),
-    ])
-
-    expect(picked).toBe(soonest)
-  })
-
-  it("falls back to the most recently finished one", () => {
-    // Finished hackathons read newest-first, the opposite of upcoming ones.
-    const newest = h("b", FINISHED, "2026-06-01")
-    const picked = defaultHackathon([
-      h("a", FINISHED, "2025-01-01"),
-      newest,
-      h("c", FINISHED, "2026-02-01"),
-    ])
-
-    expect(picked).toBe(newest)
-  })
-
-  it("sorts undated hackathons after dated ones in the same group", () => {
-    const dated = h("b", PENDING, "2026-09-01")
-    const picked = defaultHackathon([h("a", PENDING), dated])
-
-    expect(picked).toBe(dated)
-  })
-
-  it("still returns an undated hackathon when it is the only candidate", () => {
-    const only = h("a", PENDING)
-
-    expect(defaultHackathon([only])).toBe(only)
-  })
-
-  it("ranks an unrecognized status last", () => {
-    const real = h("b", FINISHED, "2020-01-01")
-    const picked = defaultHackathon([h("a", 0, "2026-09-01"), real])
-
-    expect(picked).toBe(real)
-  })
-
-  it("breaks ties by id so the order cannot drift between renders", () => {
-    const first = defaultHackathon([
-      h("b", ACTIVE, "2026-07-01"),
-      h("a", ACTIVE, "2026-07-01"),
-    ])
-    const second = defaultHackathon([
-      h("a", ACTIVE, "2026-07-01"),
-      h("b", ACTIVE, "2026-07-01"),
-    ])
-
-    expect(first?.id).toBe("a")
-    expect(second?.id).toBe("a")
-  })
-
-  it("returns undefined when there is nothing to pick", () => {
-    expect(defaultHackathon([])).toBeUndefined()
-  })
-})
 
 describe("activeNavId", () => {
   // The icon is irrelevant to matching, and constructing a real Svelte
@@ -221,58 +134,6 @@ describe("canEditHackathon", () => {
 
   it("refuses someone with no relationship to the hackathon", () => {
     expect(canEditHackathon(undefined, false)).toBe(false)
-  })
-})
-
-describe("hackathonsRoleBadge", () => {
-  it("labels an organiser", () => {
-    expect(hackathonsRoleBadge({ isHackathonOrganizer: true })).toBe(
-      "Organiser",
-    )
-  })
-
-  it("has no badge for someone without the role", () => {
-    expect(hackathonsRoleBadge({ isHackathonOrganizer: false })).toBeUndefined()
-  })
-})
-
-describe("platformRoleBadge", () => {
-  it("labels an admin", () => {
-    expect(platformRoleBadge({ isGlobalAdmin: true })).toBe("Admin")
-  })
-
-  it("has no badge for a plain user", () => {
-    expect(platformRoleBadge({ isGlobalAdmin: false })).toBeUndefined()
-  })
-})
-
-describe("homeNav", () => {
-  const ids = (roles: {
-    isGlobalAdmin: boolean
-    isHackathonOrganizer: boolean
-  }) => homeNav(roles).map((i) => i.id)
-
-  // Nothing here acts on the collection for a plain user, and the dashboard is
-  // the wordmark's job — so the section has no entries at all and the caller
-  // must not render a heading over them.
-  it("is empty for a plain user", () => {
-    expect(ids({ isGlobalAdmin: false, isHackathonOrganizer: false })).toEqual(
-      [],
-    )
-  })
-
-  it("offers hackathon creation to an organiser", () => {
-    expect(ids({ isGlobalAdmin: false, isHackathonOrganizer: true })).toContain(
-      "home:hackathon-create",
-    )
-  })
-
-  // The admin escape hatch in the casbin matcher passes hackathon:create, so
-  // withholding the entry from an admin would hide something they can do.
-  it("offers hackathon creation to an admin", () => {
-    expect(ids({ isGlobalAdmin: true, isHackathonOrganizer: false })).toContain(
-      "home:hackathon-create",
-    )
   })
 })
 

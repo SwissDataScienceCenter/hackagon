@@ -18,7 +18,6 @@ import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
 import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
-import Plus from "lucide-svelte/icons/plus"
 import Tag from "lucide-svelte/icons/tag"
 import Vote from "lucide-svelte/icons/vote"
 import Trophy from "lucide-svelte/icons/trophy"
@@ -77,39 +76,6 @@ export interface HackathonPageRef {
    * makes every caller state it.
    */
   visible: boolean
-}
-
-/**
- * Actions on the collection of hackathons rather than on any one of them.
- *
- * Not scoped to a hackathon, hence its own section rather than a `memberNav`
- * entry. There is deliberately no "My Hackathons" link here: the wordmark in
- * NavBar already goes to the dashboard from every page, and a second control to
- * the same place is one too many.
- *
- * Creating a hackathon lives here rather than under Platform: it acts on the
- * collection of hackathons this section is about, not on the platform's
- * accounts and settings. The entry follows the backend's own permission —
- * `hackathon:create`, held by organizers and, via the admin escape hatch, by
- * admins — so it never offers a link that lands on a 403. Everyone else gets an
- * empty list, so the caller must be prepared to render no section at all.
- */
-export function homeNav(roles: {
-  isGlobalAdmin: boolean
-  isHackathonOrganizer: boolean
-}): NavItem[] {
-  const items: NavItem[] = []
-
-  if (roles.isGlobalAdmin || roles.isHackathonOrganizer) {
-    items.push({
-      id: "home:hackathon-create",
-      label: "Create Hackathon",
-      icon: Plus,
-      href: resolve("/(app)/hackathons/create"),
-    })
-  }
-
-  return items
 }
 
 /**
@@ -255,15 +221,14 @@ export function memberNav(
  *
  * Admin-only, and therefore the whole section is: `UserService.List` denies
  * anyone but admin. An organizer's one permission, `hackathon:create`, is a
- * hackathon action and sits in `homeNav` instead, so an organizer sees no
- * Platform section at all rather than an empty one.
+ * hackathon action, so an organizer sees no Platform section at all rather than
+ * an empty one.
  *
- * The dashboard's Manage platform section is what renders this, and it is now
- * the only way in: the header used to carry a Users link of its own, hard-coded
- * rather than read from here, and it is gone. Keeping the list here rather than
- * inline in the view means a settings page added below reaches every surface
- * that asks — `AppSidebar` still renders it too, though nothing mounts that
- * component at present.
+ * The dashboard's Manage platform section is the only thing that renders this,
+ * and the only way in: the header used to carry a Users link of its own,
+ * hard-coded rather than read from here, and it is gone. Kept a list here rather
+ * than inlined in that view so a settings page added below reaches any further
+ * surface that asks for one, and is described once rather than per surface.
  */
 export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
   if (!roles.isGlobalAdmin) return []
@@ -279,56 +244,6 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
         "Hackathon Organizer roles.",
     },
   ]
-}
-
-/** Minimum a hackathon needs for `defaultHackathon` to rank it. */
-export interface RankableHackathon {
-  id: string
-  /** HackathonStatus: PENDING=1, ACTIVE=2, FINISHED=3. */
-  status: number
-  startsAt?: Date
-}
-
-// Lower sorts first. Anything unrecognized, including UNSPECIFIED, goes last
-// rather than being treated as one of the real states.
-const STATUS_RANK: Partial<Record<number, number>> = { 2: 0, 1: 1, 3: 2 }
-const FINISHED = 3
-
-/**
- * Which hackathon to show in the nav when the URL names none.
- *
- * "The one you most likely want": happening now, else starting soonest, else
- * finished most recently. Undated hackathons sort last within their group, and
- * the id breaks ties so the sidebar cannot reorder itself between renders.
- *
- * Deliberately not "most recently visited" — that needs client storage and would
- * disagree between devices. This is derivable from data the sidebar already has.
- */
-export function defaultHackathon<T extends RankableHackathon>(
-  hackathons: T[],
-): T | undefined {
-  const byPreference = [...hackathons].sort((a, b) => {
-    const rank = (h: T) => STATUS_RANK[h.status] ?? 3
-    if (rank(a) !== rank(b)) return rank(a) - rank(b)
-
-    // Undated last, whichever direction the group sorts in.
-    if (!a.startsAt || !b.startsAt) {
-      if (a.startsAt) return -1
-      if (b.startsAt) return 1
-
-      return a.id < b.id ? -1 : 1
-    }
-
-    const diff = a.startsAt.getTime() - b.startsAt.getTime()
-    if (diff !== 0) {
-      // Finished hackathons read newest-first; upcoming ones soonest-first.
-      return a.status === FINISHED ? -diff : diff
-    }
-
-    return a.id < b.id ? -1 : 1
-  })
-
-  return byPreference[0]
 }
 
 /** The viewer's relationship to one hackathon, as `HackathonMember` reports it. */
@@ -506,31 +421,6 @@ export function canEditHackathon(
   if (isGlobalAdmin) return true
 
   return membership?.role === OWNER && !membership.isWaiting
-}
-
-/**
- * Role chip for the Hackathons section heading.
- *
- * Names the global role that puts Create Hackathon there. An admin gets no chip
- * here — theirs is on the Platform section, and the two chips read as two roles
- * rather than one role stated twice.
- */
-export function hackathonsRoleBadge(roles: {
-  isHackathonOrganizer: boolean
-}): string | undefined {
-  return roles.isHackathonOrganizer ? "Organiser" : undefined
-}
-
-/**
- * Role chip for the Platform section heading.
- *
- * The section only renders for an admin — `platformNav` is empty for everyone
- * else — so this is the only role it can name.
- */
-export function platformRoleBadge(roles: {
-  isGlobalAdmin: boolean
-}): string | undefined {
-  return roles.isGlobalAdmin ? "Admin" : undefined
 }
 
 /**
