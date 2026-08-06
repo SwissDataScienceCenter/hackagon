@@ -30,6 +30,7 @@
         isGlobalAdmin,
         votingEnabled = false,
         resultsVisible = false,
+        stateNeedsAttention = false,
     }: {
         hackathonId: string;
         hackathonName: string;
@@ -53,6 +54,13 @@
          * the two capabilities separate — see `memberNav`.
          */
         resultsVisible?: boolean;
+        /**
+         * Badges the Manage Hackathon entry — the page the capability switches
+         * live on. Organiser-only by construction, since the whole Manage
+         * section is, and the caller passes false for anyone who could not act
+         * on it anyway.
+         */
+        stateNeedsAttention?: boolean;
     } = $props();
 
     let collapsed = $state(false);
@@ -63,10 +71,14 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
-    const items = $derived(memberNav(hackathonId, pages, votingEnabled, resultsVisible));
+    const items = $derived(
+        memberNav(hackathonId, pages, votingEnabled, resultsVisible),
+    );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
     // section and the "Owner" chip can never disagree about the role.
-    const manageItems = $derived(manageNav(hackathonId, membership ?? undefined, isGlobalAdmin));
+    const manageItems = $derived(
+        manageNav(hackathonId, membership ?? undefined, isGlobalAdmin, stateNeedsAttention),
+    );
 
     // One call across both sections, per activeNavId's contract: computing it per
     // section let each highlight its own best match, so two could light at once.
@@ -209,20 +221,26 @@
              it. -->
         <SidebarNavSection {items} {activeId} collapsed={effectiveCollapsed} />
 
-        <!-- Organiser-only, and empty for everyone else — SidebarNavSection drops
-             a section with no items. The heading is what makes the difference
-             legible, so unlike the section above this one needs it.
+        <!-- Organiser-only. The heading is what makes the difference legible, so
+             unlike the section above this one needs it.
 
-             No role chip here even though the section is role-gated: the header
-             above already states the viewer's role, and a second "Owner" chip
-             reads as two roles rather than one role stated twice. The tertiary
-             accent does the distinguishing instead. -->
-        <SidebarNavSection
-            label="Manage"
-            items={manageItems}
-            {activeId}
-            collapsed={effectiveCollapsed}
-            accent="tertiary"
-        />
+             Guarded here rather than left to SidebarNavSection, which keeps a
+             labelled empty section on purpose so a role chip has somewhere to
+             sit. This section passes no chip, so for a member that rule left a
+             bare "Manage" heading over nothing.
+
+             No role chip even though the section is role-gated: the header above
+             already states the viewer's role, and a second "Owner" chip reads as
+             two roles rather than one role stated twice. The tertiary accent does
+             the distinguishing instead. -->
+        {#if manageItems.length > 0}
+            <SidebarNavSection
+                label="Manage"
+                items={manageItems}
+                {activeId}
+                collapsed={effectiveCollapsed}
+                accent="tertiary"
+            />
+        {/if}
     </nav>
 </aside>

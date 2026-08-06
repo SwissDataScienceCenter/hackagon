@@ -67,6 +67,83 @@ export function sortPhasesByStart<T extends { startsAt?: Date | undefined }>(
 }
 
 /**
+ * One phase's dates as a line of prose.
+ *
+ * Shared by the participant timeline, the manage timeline and the overview's
+ * state card, which is what stops a third copy appearing: all three had the same
+ * function inline before the card needed a fourth.
+ *
+ * Both dates are optional in the schema, and the CEL rule only forbids one
+ * *without* the other on write — rows predating it can still carry either alone,
+ * so all four combinations are handled.
+ */
+export function formatPhaseRange(
+  startsAt: Date | undefined,
+  endsAt: Date | undefined,
+): string {
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  if (!startsAt && !endsAt) return "No dates set"
+  if (!startsAt) return `Until ${fmt(endsAt as Date)}`
+  if (!endsAt) return `From ${fmt(startsAt)}`
+
+  return `${fmt(startsAt)} – ${fmt(endsAt)}`
+}
+
+/**
+ * Where the hackathon is now and what comes after it.
+ *
+ * `declared` is the difference between the two ways "now" can be decided, and
+ * the card renders it differently: an organizer's `SetCurrentPhase` pointer, or
+ * — with no pointer set — whichever phase's own dates are running. Same
+ * precedence `resolvePhaseStatus` applies, so the state card and the timeline
+ * can never name different phases as the live one.
+ *
+ * `next` is the phase after `current` in date order, whether or not its dates
+ * have started: with a declaration in play a later phase can already be running
+ * by the clock, and calling it "next" is still what an organizer means. With no
+ * current phase at all the first phase that has not ended is the next one.
+ *
+ * A `currentPhaseId` naming a phase that is not in the list resolves to no
+ * current phase rather than falling back to the dates — the pointer says the
+ * organizer has decided, and quietly answering with a different phase would be
+ * worse than answering with none.
+ */
+export function currentAndNextPhase<
+  T extends {
+    id: string
+    startsAt?: Date | undefined
+    endsAt?: Date | undefined
+  },
+>(
+  phases: readonly T[],
+  currentPhaseId: string | undefined,
+): { current?: T; next?: T; declared: boolean } {
+  const sorted = sortPhasesByStart(phases)
+  const declared = Boolean(currentPhaseId)
+
+  const index = currentPhaseId
+    ? sorted.findIndex((p) => p.id === currentPhaseId)
+    : sorted.findIndex((p) => phaseStatus(p.startsAt, p.endsAt) === "active")
+
+  if (index === -1) {
+    return {
+      current: undefined,
+      next: sorted.find(
+        (p) => phaseStatus(p.startsAt, p.endsAt) !== "completed",
+      ),
+      declared,
+    }
+  }
+
+  return { current: sorted[index], next: sorted[index + 1], declared }
+}
+
+/**
  * The six capabilities a phase can be tagged with — Capability: REGISTER=1,
  * PROPOSE_PROJECTS=2, SET_TEAM_PREFERENCES=3, CREATE_PROJECT_SUBMISSIONS=4,
  * VOTE=5, VIEW_RESULTS=6.

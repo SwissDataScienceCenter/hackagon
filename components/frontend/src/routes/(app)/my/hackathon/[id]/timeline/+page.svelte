@@ -1,19 +1,10 @@
 <script lang="ts">
     import { Check, FileText } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import { capabilityLabel } from '$lib/utils/phase';
+    import { capabilityLabel, formatPhaseRange } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
-
-    function formatRange(startsAt: Date | undefined, endsAt: Date | undefined): string {
-        const fmt = (d: Date) =>
-            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        if (!startsAt && !endsAt) return 'No dates set';
-        if (!startsAt) return `Until ${fmt(endsAt!)}`;
-        if (!endsAt) return `From ${fmt(startsAt)}`;
-        return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-    }
 
     // 'current' is the organizer's declaration, 'active' is derived from dates.
     // They never appear on the same timeline: once a phase is declared current,
@@ -73,7 +64,7 @@
                             </span>
                         </div>
                         <span class="text-xs text-accent-ink">
-                            {formatRange(phase.startsAt, phase.endsAt)}
+                            {formatPhaseRange(phase.startsAt, phase.endsAt)}
                         </span>
                         {#if phase.description}
                             <p class="m-0 text-xs leading-snug text-ink-2">

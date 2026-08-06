@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest"
 import {
   PHASE_CAPABILITIES,
   capabilityLabel,
+  currentAndNextPhase,
   extraEnabledCapabilities,
+  formatPhaseRange,
   resolvePhaseStatus,
   toDateTimeLocal,
   unmetPhaseCapabilities,
@@ -229,5 +231,78 @@ describe("toDateTimeLocal", () => {
 
   it("is empty for no date, so the input renders blank", () => {
     expect(toDateTimeLocal(undefined)).toBe("")
+  })
+})
+
+describe("formatPhaseRange", () => {
+  it("names both bounds when both are set", () => {
+    expect(
+      formatPhaseRange(
+        new Date("2026-08-20T09:00"),
+        new Date("2026-08-25T18:00"),
+      ),
+    ).toBe("Aug 20, 2026 – Aug 25, 2026")
+  })
+
+  // Both-or-neither is enforced on write by a CEL rule, but rows predating it can
+  // still carry one alone, so neither half may render as "Invalid Date".
+  it("handles one bound alone", () => {
+    expect(formatPhaseRange(new Date("2026-08-20T09:00"), undefined)).toBe(
+      "From Aug 20, 2026",
+    )
+    expect(formatPhaseRange(undefined, new Date("2026-08-25T18:00"))).toBe(
+      "Until Aug 25, 2026",
+    )
+  })
+
+  it("says so when a phase has no dates at all", () => {
+    expect(formatPhaseRange(undefined, undefined)).toBe("No dates set")
+  })
+})
+
+describe("currentAndNextPhase", () => {
+  const a = { id: "a", startsAt: older, endsAt: past }
+  const b = { id: "b", startsAt: past, endsAt: future }
+  const c = { id: "c", startsAt: future, endsAt: later }
+
+  it("falls back to the dates when nothing is declared", () => {
+    const { current, next, declared } = currentAndNextPhase(
+      [c, a, b],
+      undefined,
+    )
+    expect(current?.id).toBe("b")
+    expect(next?.id).toBe("c")
+    expect(declared).toBe(false)
+  })
+
+  // The declaration wins over the clock, same precedence resolvePhaseStatus
+  // applies — so a phase whose dates have not started can still be current.
+  it("prefers a declaration over the running phase", () => {
+    const { current, next, declared } = currentAndNextPhase([a, b, c], "c")
+    expect(current?.id).toBe("c")
+    expect(next).toBeUndefined()
+    expect(declared).toBe(true)
+  })
+
+  // Answering with a different phase would be worse than answering with none:
+  // the pointer says the organizer has decided, whatever the dates say.
+  it("does not fall back to the dates when the declared phase is missing", () => {
+    const { current, declared } = currentAndNextPhase([a, b], "gone")
+    expect(current).toBeUndefined()
+    expect(declared).toBe(true)
+  })
+
+  it("offers the first unfinished phase as next when nothing is running", () => {
+    const { current, next } = currentAndNextPhase([a, c], undefined)
+    expect(current).toBeUndefined()
+    expect(next?.id).toBe("c")
+  })
+
+  it("has neither for a hackathon with no phases", () => {
+    expect(currentAndNextPhase([], undefined)).toEqual({
+      current: undefined,
+      next: undefined,
+      declared: false,
+    })
   })
 })

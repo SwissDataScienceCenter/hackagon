@@ -59,6 +59,11 @@
                     Applies to the whole hackathon. Moving between phases never changes
                     these — they are always explicit.
                 </p>
+                <!-- Switches only. A per-capability link to the screen that
+                     handles its consequences was tried and dropped: the Manage
+                     tiles below this panel already reach all of them, and a
+                     second copy beside every checkbox turned a compact grid of
+                     six into a wall of arrows. -->
                 <div class="grid gap-2 pt-2 sm:grid-cols-2">
                     {#each capabilities as capability (capability.value)}
                         <label class="flex items-center gap-2 text-xs text-ink">

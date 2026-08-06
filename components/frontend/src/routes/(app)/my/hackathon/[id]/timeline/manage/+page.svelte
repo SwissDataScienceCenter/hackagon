@@ -1,20 +1,10 @@
 <script lang="ts">
-    import { Check, FileText, Pencil, Plus, X } from 'lucide-svelte';
+    import { Check, FileText, Pencil, Plus, Settings2, X } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
-    import { capabilityLabel } from '$lib/utils/phase';
-    import type { ActionData, PageData } from './$types';
+    import { capabilityLabel, formatPhaseRange } from '$lib/utils/phase';
+    import type { PageData } from './$types';
 
-    let { data, form }: { data: PageData; form: ActionData } = $props();
-
-    function formatRange(startsAt: Date | undefined, endsAt: Date | undefined): string {
-        const fmt = (d: Date) =>
-            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        if (!startsAt && !endsAt) return 'No dates set';
-        if (!startsAt) return `Until ${fmt(endsAt!)}`;
-        if (!endsAt) return `From ${fmt(startsAt)}`;
-        return `${fmt(startsAt)} – ${fmt(endsAt)}`;
-    }
+    let { data }: { data: PageData } = $props();
 
     // 'current' is the organizer's declaration, 'active' is derived from dates.
     // They never appear on the same timeline: once a phase is declared current,
@@ -38,27 +28,21 @@
 </script>
 
 <!--
-  The organiser's half of the timeline: everything that acts on a phase or on the
-  hackathon's capabilities. The participant timeline at ../timeline lists the same
-  phases with nothing to act on. Reached from the sidebar's Manage section (see
-  $lib/navigation's manageNav) — there is no separate create-phase entry, the
-  "Add phase" button below is the way in.
+  The organiser's half of the timeline: everything that acts on a phase. The
+  participant timeline at ../timeline lists the same phases with nothing to act
+  on. Reached from the sidebar's Manage section (see $lib/navigation's manageNav)
+  — there is no separate create-phase entry, the "Add phase" button below is the
+  way in.
+
+  The capability switches used to sit at the top of this page and now live on
+  Manage Hackathon, the organiser's overview. This page keeps the *phases*, and
+  each phase row still ticks its plan off against what is switched on — read
+  here, change there, with the link below as the one way across.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <h2 class="m-0 text-title text-ink">Manage Timeline</h2>
-
-    <!-- Above the phases: what participants may do is hackathon-wide, so it is
-         not one of the phases and does not sit among them. -->
-    <CapabilitiesPanel
-        currentPhaseName={data.currentPhaseName}
-        hasState={data.hasState}
-        capabilities={data.capabilities}
-        unmet={data.unmet}
-        message={form?.message}
-        saved={form?.saved ?? false}
-    />
 
     <!-- Every phase action lives in this section — add, make current, clear, edit
          — so there is one place to act on a phase and one place to act on the
@@ -71,13 +55,24 @@
                 {data.phases.length === 1 ? '1 phase' : `${data.phases.length} phases`}
             </span>
         </div>
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage/new`)}
-            class="btn btn-sm btn-solid no-underline"
-        >
-            <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
-            Add phase
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Outline, not solid: "Add phase" is the one action this page is
+                 for, and the switches this leads to belong to another page. -->
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
+                class="btn btn-sm btn-outline no-underline"
+            >
+                <Settings2 class="h-3 w-3 shrink-0" aria-hidden="true" />
+                What participants can do
+            </a>
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage/new`)}
+                class="btn btn-sm btn-solid no-underline"
+            >
+                <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
+                Add phase
+            </a>
+        </div>
     </div>
 
     {#if data.phases.length === 0}
@@ -111,7 +106,7 @@
                             </a>
                         </div>
                         <span class="text-xs text-accent-ink">
-                            {formatRange(phase.startsAt, phase.endsAt)}
+                            {formatPhaseRange(phase.startsAt, phase.endsAt)}
                         </span>
                         {#if phase.description}
                             <p class="m-0 text-xs leading-snug text-ink-2">
