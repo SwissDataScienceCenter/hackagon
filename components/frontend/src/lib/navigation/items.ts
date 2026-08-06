@@ -19,7 +19,6 @@ import Users from "lucide-svelte/icons/users"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardCheck from "lucide-svelte/icons/clipboard-check"
 import ClipboardList from "lucide-svelte/icons/clipboard-list"
-import UsersRound from "lucide-svelte/icons/users-round"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
@@ -145,12 +144,11 @@ export function memberNav(
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
-    {
-      id: "member:teams",
-      label: "Teams",
-      icon: UsersRound,
-      href: resolve(`/my/hackathon/${hackathonId}/teams`),
-    },
+    // No Teams entry. There is no team *list* page any more — a team has a detail
+    // page (`teams/<teamId>`), reached from the ballot, where the entry a voter is
+    // judging is actually shown. A sidebar entry needs a list to point at, and
+    // listing every team was only ever a way to browse entries, which is now the
+    // ballot's job. Team management still has its own entry under Manage.
     {
       id: "member:submissions",
       label: "Submissions",

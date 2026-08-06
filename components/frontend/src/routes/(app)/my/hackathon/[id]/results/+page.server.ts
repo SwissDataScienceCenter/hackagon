@@ -9,6 +9,7 @@ import {
   categoryView,
   resultView,
   sortResults,
+  submissionLookup,
 } from "$lib/server/hackathon/voting"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -26,25 +27,22 @@ export const load: PageServerLoad = async (event) => {
   // Not a 403, same reasoning as the booth: results being unpublished is a
   // normal state of a hackathon, not a permission the viewer got wrong.
   if (!mayViewResults(myMembership ?? undefined, resultsVisible, isAdmin)) {
-    return { resultsVisible, canView: false, categories: [] }
+    return {
+      hackathonId: event.params.id,
+      resultsVisible,
+      canView: false,
+      categories: [],
+      entries: [],
+    }
   }
 
-  // TODO(backend: submission-cross-team-read) — a participant may only read
-  // their own team's submissions, so this resolves one podium row and the rest
-  // render as "Unknown submission". Full labels once members can read every
-  // final submission while results are on; no change needed here when it lands.
   const submissions = await ballotSubmissions(
     team,
     event.params.id,
     new Map(hackathon.projects.map((p) => [p.id, p.title])),
     event.locals.platformUser?.id,
   )
-  const byId = new Map(
-    submissions.map((s) => [
-      s.id,
-      { projectTitle: s.projectTitle, teamName: s.teamName },
-    ]),
-  )
+  const byId = submissionLookup(submissions)
 
   // Every category, including ranked ones the booth cannot cast a vote for —
   // results are results however they were produced, and a category tallied
@@ -81,10 +79,23 @@ export const load: PageServerLoad = async (event) => {
   )
 
   return {
+    hackathonId: event.params.id,
     resultsVisible,
     canView: true,
     // A category nobody has placed anything in has no podium to show, and a
     // page listing three empty headings reads as broken rather than pending.
     categories: categories.filter((c) => c.results.length > 0),
+    // Every team's entry, placed or not, each linking to its own page. This is
+    // the directory the deleted all-submissions list used to be: the ballot only
+    // ever showed entries you may vote for, and only while voting was open, so
+    // without this a team that placed nowhere — or the viewer's own team — has no
+    // page anyone can reach. Placed entries appear here too rather than being
+    // filtered out: a placement is per category, and hiding a team from the
+    // directory because it won something else reads as an omission.
+    //
+    // Sorted by project title, since there is no placement to order these by.
+    entries: [...submissions].sort((a, b) =>
+      a.projectTitle.localeCompare(b.projectTitle),
+    ),
   }
 }

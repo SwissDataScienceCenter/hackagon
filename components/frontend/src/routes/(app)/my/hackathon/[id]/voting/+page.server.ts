@@ -39,12 +39,10 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: event.params.id,
   })
 
-  // TODO(backend: submission-cross-team-read) — this is the surface the gap
-  // actually breaks. A participant may only read their own team's submissions,
-  // and `SubmitVote` refuses a vote on your own team, so the ballot comes back
-  // empty and the booth is unusable for them. It fills in on its own once
-  // members can read every final submission while voting is on; no change
-  // needed here. An owner sees the full ballot today.
+  // Every team's final entry, the viewer's own included — the page drops that one
+  // from the ballot itself, since `SubmitVote` refuses a vote on your own team.
+  // `ballotSubmissions` reads these through `TeamService.Get`; see the TODO there
+  // for why that RPC and not `ListSubmissions`.
   const submissions = await ballotSubmissions(
     team,
     event.params.id,
@@ -135,6 +133,13 @@ export const actions: Actions = {
         // constrained `gt = 0`, so a submission left blank would fail
         // validation for the whole ballot instead of simply not being voted
         // for.
+        //
+        // TODO(backend: vote-points-immutable): dropping is also all that *can*
+        // be done — there is no EditVote or DeleteVote, and `SubmitVote` returns
+        // an existing (category, voter, submission) vote untouched
+        // (`vote_service.go:598-607`). So blanking an entry does not withdraw
+        // its points, and re-scoring one is silently ignored. The page warns
+        // about that above a points ballot until this lands.
         const submissions = form
           .getAll("submissionId")
           .filter((id): id is string => typeof id === "string")

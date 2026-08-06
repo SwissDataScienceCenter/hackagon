@@ -108,29 +108,42 @@ export async function ballotSubmissions(
 
   const entries = await Promise.all(
     teams.map(async (t) => {
-      // TODO(backend: submission-cross-team-read) — drop this catch once a
-      // member can read every team's final submission while voting or results
-      // are on.
+      // TODO(backend: submission-cross-team-read) — replace this with the
+      // hackathon-wide, finals-only read once it exists, and drop the catch.
       //
-      // `ListSubmissions` takes `submission:read` scoped to the team
-      // (`team_service.go:560`), and the only unscoped grant goes to `Owner`.
-      // No capability widens it: CAPABILITY_VOTE grants a member `vote:create`
-      // and `vote_category:read`, CAPABILITY_VIEW_RESULTS grants
-      // `vote_result:read`, and neither adds `submission:read`
-      // (`hackathon_service.go:653,713`). So a participant is refused for every
-      // team but their own, and awaiting these unguarded took the whole page
-      // down with a 500 rather than losing one row.
+      // `Get`, not `ListSubmissions`. `ListSubmissions` takes `submission:read`
+      // scoped to the team (`team_service.go:560`) and the only unscoped grant
+      // goes to `Owner`; no capability widens it — CAPABILITY_VOTE grants a
+      // member `vote:create` and `vote_category:read`, CAPABILITY_VIEW_RESULTS
+      // grants `vote_result:read`, and neither adds `submission:read`
+      // (`hackathon_service.go:653,713`). So it refused a participant for every
+      // team but their own, which left the ballot empty: the single entry they
+      // could resolve was their own team's, and that is the one entry
+      // `SubmitVote` refuses (`vote_service.go:588`).
       //
-      // Skipping the team degrades rather than crashes: `resultView` already
-      // renders an unresolvable placement as "Unknown submission", so the
-      // podium still shows its positions. The booth is the surface that stays
-      // unusable until the backend lands — the one submission a participant can
-      // resolve is their own, which is also the one they may not vote for.
+      // `Get` eager-loads a team's submissions and gates only on
+      // hackathon-scoped `hackathon:read` (`team_service.go:91-121`), so it is
+      // the one read that hands a participant another team's entry. Nothing
+      // extra reaches the browser: `submissionVersions` keeps `latestFinal` and
+      // this function returns only that, so the drafts `Get` over-shares are
+      // dropped server-side — the same containment the team detail page relies
+      // on.
+      //
+      // The catch stays as a guard rather than a workaround: if the fix lands as
+      // "`Get` now enforces `submission:read`" without a member-wide policy,
+      // every call here starts refusing, and an unguarded await would take the
+      // page down with a 500 instead of losing one row. Skipping a team degrades
+      // — `resultView` renders an unresolvable placement as "Unknown
+      // submission", and a ballot missing one entry is still a ballot.
       let submissions
       try {
-        ;({ submissions } = await team.listSubmissions({ teamId: t.id }))
+        const { team: full } = await team.get({ teamId: t.id })
+        submissions = full?.submissions ?? []
       } catch (e) {
-        if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+        if (
+          e instanceof ClientError &&
+          (e.code === Status.PERMISSION_DENIED || e.code === Status.NOT_FOUND)
+        ) {
           return null
         }
         throw e
@@ -167,6 +180,40 @@ export interface ResultView {
   /** Resolved from the hackathon's teams; a fallback when the entry is gone. */
   projectTitle: string
   teamName: string
+  /**
+   * The team that filed the entry, so a placement can link to it — undefined when
+   * the submission could not be resolved, which is also when there is no name to
+   * show. A row with no `teamId` renders as plain text rather than a link to
+   * nowhere.
+   */
+  teamId: string | undefined
+}
+
+/** What a placement is joined against. Built once, by `submissionLookup`. */
+export interface SubmissionRef {
+  projectTitle: string
+  teamName: string
+  teamId: string
+}
+
+/**
+ * Index the hackathon's entries by submission id, which is what a `VoteResult`
+ * names.
+ *
+ * Shared by the participant results page and the organizer's per-category screen
+ * so the two cannot disagree about what a placement is *of* — they were building
+ * the same map by hand, and only one of them gained `teamId` when placements
+ * started linking to teams.
+ */
+export function submissionLookup(
+  submissions: BallotSubmission[],
+): Map<string, SubmissionRef> {
+  return new Map(
+    submissions.map((s) => [
+      s.id,
+      { projectTitle: s.projectTitle, teamName: s.teamName, teamId: s.teamId },
+    ]),
+  )
 }
 
 /**
@@ -188,7 +235,7 @@ export function sortResults<
 
 export function resultView(
   r: VoteResult,
-  submissions: Map<string, { projectTitle: string; teamName: string }>,
+  submissions: Map<string, SubmissionRef>,
 ): ResultView {
   const sub = submissions.get(r.submissionId)
 
@@ -202,6 +249,7 @@ export function resultView(
     // otherwise render as a blank row.
     projectTitle: sub?.projectTitle ?? "Unknown submission",
     teamName: sub?.teamName ?? "",
+    teamId: sub?.teamId,
   }
 }
 

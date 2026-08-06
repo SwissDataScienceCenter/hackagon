@@ -12,7 +12,7 @@ const OTHER_TEAM = "team-epsilon"
 
 const denied = () =>
   new ClientError(
-    "/hackathon.TeamService/ListSubmissions",
+    "/hackathon.TeamService/Get",
     Status.PERMISSION_DENIED,
     "permission denied",
   )
@@ -20,10 +20,12 @@ const denied = () =>
 /**
  * A TeamServiceClient stubbed down to the two calls `ballotSubmissions` makes.
  *
- * `listSubmissions` is keyed by team so a test can make one team readable and
- * another refused, which is exactly the state a participant is in: casbin grants
- * `submission:read` scoped to the teams they are on
- * (`rbac.go:216`), and no capability widens it.
+ * `get`, not `listSubmissions`: the latter is scoped to the teams the viewer is
+ * on (`rbac.go:216`) and no capability widens it, which left a participant with a
+ * one-row ballot they were not allowed to vote in. `Get` gates on hackathon-wide
+ * `hackathon:read` instead. Still keyed by team, because the refusal path has to
+ * keep working — see the TODO in `voting.ts` for why the catch outlives the
+ * switch.
  */
 const client = (
   perTeam: Record<string, "ok" | "denied" | "boom">,
@@ -37,29 +39,35 @@ const client = (
         members: id === OWN_TEAM ? [{ id: ALICE }] : [{ id: "user-someone" }],
       })),
     }),
-    listSubmissions: async ({ teamId }: { teamId: string }) => {
+    get: async ({ teamId }: { teamId: string }) => {
       if (perTeam[teamId] === "denied") throw denied()
       if (perTeam[teamId] === "boom")
         throw new ClientError(
-          "/hackathon.TeamService/ListSubmissions",
+          "/hackathon.TeamService/Get",
           Status.INTERNAL,
           "boom",
         )
 
       return {
-        submissions: [
-          {
-            id: `sub-of-${teamId}`,
-            version: 1,
-            status: FINAL,
-            result: `result-of-${teamId}`,
-            createdAt: new Date("2026-08-01T10:00:00Z"),
-            modifiedAt: new Date("2026-08-01T10:00:00Z"),
-            teamId,
-            projectId: `project-of-${teamId}`,
-            creatorId: ALICE,
-          },
-        ],
+        team: {
+          id: teamId,
+          name: teamId,
+          projectId: `project-of-${teamId}`,
+          members: [],
+          submissions: [
+            {
+              id: `sub-of-${teamId}`,
+              version: 1,
+              status: FINAL,
+              result: `result-of-${teamId}`,
+              createdAt: new Date("2026-08-01T10:00:00Z"),
+              modifiedAt: new Date("2026-08-01T10:00:00Z"),
+              teamId,
+              projectId: `project-of-${teamId}`,
+              creatorId: ALICE,
+            },
+          ],
+        },
       }
     },
   }) as unknown as TeamServiceClient
@@ -83,9 +91,10 @@ describe("ballotSubmissions", () => {
     expect(got.find((s) => s.teamId === OTHER_TEAM)?.isOwnTeam).toBe(false)
   })
 
-  // The participant case, and the one that used to 500 the whole results page:
-  // `ListSubmissions` refuses every team the viewer is not on, and awaiting
-  // those unguarded rejected the enclosing Promise.all.
+  // The one that used to 500 the whole results page: awaiting a refusal
+  // unguarded rejected the enclosing Promise.all. No longer the participant case
+  // — `Get` is readable hackathon-wide — but the guard has to survive the day
+  // `Get` starts enforcing `submission:read`.
   // TODO(backend: submission-cross-team-read) — delete with the catch it covers.
   it("skips a team whose submissions the viewer may not read, rather than throwing", async () => {
     const got = await ballotSubmissions(

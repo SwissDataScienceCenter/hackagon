@@ -40,10 +40,19 @@ describe("memberNav", () => {
       "member:participants",
       "member:my-projects",
       "member:projects",
-      "member:teams",
       "member:submissions",
       "member:timeline",
     ])
+  })
+
+  // No team list to point at: `teams/<teamId>` is entered from the ballot, which
+  // is where a voter needs the entry a team filed. Asserted rather than left
+  // implicit, because the entry existed and an unnoticed revival would put a
+  // sidebar link on a route that no longer serves a list.
+  it("offers no Teams entry, since only a team detail route remains", () => {
+    expect(idsOf(memberNav("hack-1", [], true, true))).not.toContain(
+      "member:teams",
+    )
   })
 
   // The only entries gated on anything. CAPABILITY_VOTE grants
@@ -309,7 +318,6 @@ describe("manageNav", () => {
     const cases = [
       ["/my/hackathon/hack-1/participants", "member:participants"],
       ["/my/hackathon/hack-1/participants/manage", "manage:participants"],
-      ["/my/hackathon/hack-1/teams", "member:teams"],
       ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
       ["/my/hackathon/hack-1/timeline", "member:timeline"],
       ["/my/hackathon/hack-1/timeline/manage", "manage:timeline"],
@@ -336,6 +344,12 @@ describe("manageNav", () => {
     for (const [path, expected] of cases) {
       expect(activeNavId(path, items), path).toBe(expected)
     }
+
+    // A team's detail route lights nothing: it is entered from the ballot, and
+    // there is no participant Teams entry for it to light. Manage Teams must not
+    // pick it up either — it nests under `/teams/manage`, and a voter reading an
+    // entry is not managing anything.
+    expect(activeNavId("/my/hackathon/hack-1/teams/t1", items)).toBeUndefined()
   })
 })
 
