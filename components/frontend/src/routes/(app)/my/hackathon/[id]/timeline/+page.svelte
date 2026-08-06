@@ -93,9 +93,14 @@
                 >
                     <div class="flex flex-col gap-1.5">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="m-0 text-sm leading-snug text-ink">
+                            <!-- h4, not h3: these sit UNDER the "Phases" heading
+                                 of the section that lists them, and rendering
+                                 them at the same level made the outline flat —
+                                 a screen reader could not tell the list from its
+                                 own heading. -->
+                            <h4 class="m-0 text-sm leading-snug text-ink">
                                 {phase.name}
-                            </h3>
+                            </h4>
                             <span class="badge {STATUS_VARIANT[phase.status]}">
                                 {#if phase.status === 'completed'}
                                     <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
