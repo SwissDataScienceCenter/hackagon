@@ -2,9 +2,10 @@ import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 import type { Actions, PageServerLoad } from "./$types"
 import {
+  createAuthorizedGrpc,
   publicHackathonClient,
   publicPageClient,
-  requireGrpc,
+  type AuthorizedGrpc,
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 
@@ -26,15 +27,35 @@ import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibi
 // description, dates, logo, status — and the backend filters out events the
 // caller may not see.
 
+/**
+ * An authorized client for a public route, or undefined when nobody is signed
+ * in. Public routes never get `locals.grpc`; the session still carries the
+ * token, so the client is cheap to make on the spot.
+ */
+function authorizedFor(session: unknown): AuthorizedGrpc | undefined {
+  // `Session` does not declare accessToken — it is added by the jwt callback in
+  // auth.ts and read the same way hooks.server.ts reads it.
+  const token = (session as { accessToken?: string } | null)?.accessToken
+
+  return token ? createAuthorizedGrpc(token) : undefined
+}
+
 export const load: PageServerLoad = async (event) => {
   const session = await event.locals.auth()
 
   // Signed in, we ask AS them: the entry then carries `viewerMembership`, which
   // is what decides whether the call to action is "join" or "open your view".
   // A private event they belong to is also only visible on that call.
-  const authed = session?.user ? event.locals.grpc : undefined
+  //
+  // The client is built HERE from the session's token rather than taken from
+  // `event.locals.grpc`, which hooks.server.ts creates only for PROTECTED
+  // routes. This page is public, so on a signed-in visit locals.grpc is
+  // undefined and reaching for it threw — a 500 for exactly the person who
+  // followed a link to an event while logged in, and invisible to every
+  // anonymous check.
+  const authed = authorizedFor(session)
   const hackathons = authed
-    ? (await requireGrpc(authed).hackathon.list({})).hackathons
+    ? (await authed.hackathon.list({})).hackathons
     : (
         await publicHackathonClient.list({
           visibilityFilter: Visibility.VISIBILITY_PUBLIC,
@@ -70,7 +91,12 @@ export const actions: Actions = {
   // joining from the event's own page is the path someone following a link
   // takes, and until now there was none.
   join: async (event) => {
-    const { hackathon: client } = requireGrpc(event.locals.grpc)
+    // Same reason as the load: this is a public route, so there is no
+    // locals.grpc even when the caller is signed in.
+    const session = await event.locals.auth()
+    const authed = authorizedFor(session)
+    if (!authed) return fail(401, { message: "Please sign in to join." })
+    const client = authed.hackathon
 
     // Read the form BEFORE joining: the answer is the same afterwards, and a
     // failed join then costs one call rather than two.

@@ -52,6 +52,16 @@
         return GRADIENTS[i % GRADIENTS.length]!;
     }
 
+    // Only organisations with a logo in static/images/logos. A "trusted by"
+    // row is a claim about the organisations named in it, so it lists the ones
+    // we can actually show rather than a placeholder grid of empty boxes.
+    const ORGS = [
+        { name: 'SDSC', src: '/logos/sdsc.svg', darkSrc: '/logos/sdsc_white.svg' },
+        { name: 'ETH Zurich', src: '/images/logos/eth-zurich.svg', invert: true },
+        { name: 'EPFL', src: '/images/logos/epfl.svg', invert: true },
+        { name: 'Durham University', src: '/images/logos/durham.png' },
+    ];
+
     let carouselIndex = $state(0);
     const carouselSlides = [
         { src: '/images/hackathon-ord-2024/ambiance/ambiance_1.jpg', caption: 'ORD Hackathon 2024 — Opening ceremony' },
@@ -286,15 +296,39 @@
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
     <h2 class="text-title">Trusted by Swiss research institutions</h2>
-    <!-- Wraps, and the gap narrows on a phone: six fixed 3.5rem tiles at
-         gap-12 are 518px wide, which pushed the whole PAGE into a horizontal
-         scroll at 390px — the platform's front page, on the device most people
-         open a link on. -->
-    <div class="flex flex-wrap items-center justify-center gap-6 sm:gap-12">
-        {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
-            <div class="flex flex-col items-center gap-2">
-                <div class="flex h-14 w-14 items-center justify-center rounded-card border border-line"></div>
-                <span class="text-xs font-medium text-ink-3">{name}</span>
+    <!-- Real logos, and only the ones we HAVE. This rendered six empty 3.5rem
+         boxes — a placeholder grid that reads as six broken images — under
+         names including two institutions with no asset in the repo at all.
+         Naming an organisation under "trusted by" is a claim about them, so the
+         list is the set we can actually show.
+
+         Every logo sits in the same 7rem x 2rem box with object-contain, so a
+         wide wordmark and a square mark carry the same visual weight instead of
+         the widest file dominating the row. The mono marks are inverted in
+         light mode, which is how the footer already draws them. -->
+    <div class="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+        {#each ORGS as org (org.name)}
+            <div class="flex h-8 w-28 items-center justify-center">
+                {#if org.darkSrc}
+                    <img
+                        src={org.src}
+                        alt={org.name}
+                        class="block max-h-full max-w-full object-contain dark:hidden"
+                    />
+                    <img
+                        src={org.darkSrc}
+                        alt={org.name}
+                        class="hidden max-h-full max-w-full object-contain dark:block"
+                    />
+                {:else}
+                    <img
+                        src={org.src}
+                        alt={org.name}
+                        class="max-h-full max-w-full object-contain {org.invert
+                            ? 'invert dark:invert-0'
+                            : ''}"
+                    />
+                {/if}
             </div>
         {/each}
     </div>

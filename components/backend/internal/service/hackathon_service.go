@@ -1221,6 +1221,38 @@ func (s *HackathonService) List(
 				pq.Where(entparticipant.UserIDEQ(uid)).WithUser()
 			})
 	}
+
+	// `viewer_membership` means the CALLER's relationship to each hackathon, so
+	// it is resolved for any authenticated caller — not only when participant_id
+	// happens to be passed, which is a FILTER and narrows the list to their own
+	// events. Without this the public event page (built from an unfiltered List,
+	// because Get is the member view) could never tell a member from a stranger,
+	// and offered "Join" to people already in.
+	//
+	// One extra lookup for the caller and one eager load, both skipped for
+	// anonymous callers and when participant_id already did the work.
+	if participantUID == nil {
+		if uid, _, err := m.RequireSubject(ctx); err == nil && uid != m.AnonSubject {
+			viewer, err := s.dbClient.User.Query().
+				Where(entuser.KeycloakIDEQ(uid)).
+				Only(ctx)
+			switch {
+			case err == nil:
+				participantUID = &viewer.ID
+				q = q.WithParticipants(func(pq *ent.ParticipantQuery) {
+					pq.Where(entparticipant.UserIDEQ(viewer.ID)).WithUser()
+				})
+			case ent.IsNotFound(err):
+				// Authenticated in Keycloak but never registered here — a real
+				// state during the first request of a new account, and simply
+				// means no membership anywhere.
+			default:
+				slog.Error("query viewer for viewer_membership", "err", err)
+
+				return nil, status.Error(codes.Internal, "couldn't query database")
+			}
+		}
+	}
 	// Capabilities and phases, so a list can gate its own buttons instead of
 	// firing a mutation to discover it is closed.
 	//
