@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Plus } from 'lucide-svelte';
+    import { Download, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
@@ -21,13 +21,30 @@
             <h2 class="m-0 text-title text-ink">Proposals</h2>
             <span class="text-xs text-ink-3">{countLabel} awaiting review</span>
         </div>
-        <a
-            href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals/propose`)}
-            class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
-        >
-            <Plus class="h-3.5 w-3.5 shrink-0" />
-            Propose a Project
-        </a>
+        <div class="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            {#if data.mayExport}
+                <!-- Who wants to work on what, as a file team formation can be
+                     sorted from. A plain link, not a form: it is a GET that
+                     returns a CSV, and the browser's own download handles it.
+                     The endpoint had no link at all — it existed and nothing
+                     reached it. -->
+                <a
+                    href="/my/hackathon/{data.hackathonId}/projects/proposals/export"
+                    class="btn w-full shrink-0 no-underline sm:w-auto"
+                    data-sveltekit-reload
+                >
+                    <Download class="h-3.5 w-3.5 shrink-0" />
+                    Export preferences
+                </a>
+            {/if}
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals/propose`)}
+                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
+            >
+                <Plus class="h-3.5 w-3.5 shrink-0" />
+                Propose a Project
+            </a>
+        </div>
     </div>
 
     <!-- No pagination: this list is one person's own proposals, and a member

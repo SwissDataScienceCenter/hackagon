@@ -1,11 +1,13 @@
 import type { PageServerLoad } from "./$types"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // project, at every status, each carrying `creatorId`. Same source the All
   // Projects page reads — this one just filters differently.
-  const { hackathon } = await event.parent()
+  const { hackathon, myMembership } = await event.parent()
   const myId = event.locals.platformUser?.id
 
   const authored = hackathon.projects.filter(
@@ -63,5 +65,15 @@ export const load: PageServerLoad = async (event) => {
     // "everything you proposed was approved and has moved on". Without it the
     // page tells the second author they have not proposed a project.
     approvedCount: authored.length - pending.length,
+    // The preferences export is organiser-only (ExportPreferences is
+    // Project.Write). Offering the link to everyone would hand most of the room
+    // a 403; the endpoint refuses regardless, this only decides who is told it
+    // exists. Same owner-or-admin gate the other organiser tools use.
+    mayExport: mayManagePhases(
+      myMembership ?? undefined,
+      (event.locals.platformUser?.roles ?? []).includes(
+        GlobalRole.GLOBAL_ROLE_ADMIN,
+      ),
+    ),
   }
 }
