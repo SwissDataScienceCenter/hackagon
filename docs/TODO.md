@@ -63,7 +63,16 @@ found; the checklist is the live status.
       needs the deep tree — tracks, pages, the project list.
 - [x] F2 — real Join button: `?/join` form action on the dashboard calling
       `HackathonService.Join`, backend verdicts translated to messages
-- [ ] B3 — pick ONE registration gate (capability vs setting) and delete the loser (#78/#87)
+- [x] B3 — DECIDED: the `register` **capability** governs; `settings.registrations_enabled`
+      is vestigial and is deliberately not enforced and not exposed in the UI.
+      Reasons, in order: the capability is the gate that is actually enforced and
+      it is phase-aware, which is the schedule organisers already maintain; the
+      setting defaults to FALSE, so enforcing it would make every existing
+      hackathon unjoinable for no gain; and "registration is closed" is already
+      expressible by closing the capability window. The proto field stays until
+      there is a reason to make a breaking change — nothing reads it. The voting
+      page wires up `EditSettings` for `voting_enabled` ONLY, with a comment
+      saying why its neighbour is left alone.
 - [ ] B4 — persist phase dates on create
 - [x] B5 — casbin write errors no longer swallowed in team membership ops.
       NOTE: the two stores cannot share a transaction (casbin writes on its own
@@ -71,6 +80,12 @@ found; the checklist is the live status.
       used instead, ordered so a partial failure is always inert-not-privileged
 - [x] B8 — added the missing casbin check to `SetPreference` (`project`/`read`,
       chosen so waitlisted participants may still mark preferences)
+- [x] B7 — `SubmitVote` reads the stored voting policy instead of hard-coding
+      it: `organizerVoting` was a constant and `ownTeamVoting` was enforced
+      nowhere. Both default to the previous behaviour (organisers do not vote,
+      own-team voting allowed), so an event with no policy is unaffected, and
+      the policy now has a UI (voting page) and a read path (on the hackathon
+      entity, because these are the rules the voters are bound by).
 - [x] B9 — `Join` now requires a live invitation link for private hackathons,
       checked BEFORE any state check so a guessed UUID cannot confirm that a
       private event exists or what state it is in. See `HackathonInvite`.
