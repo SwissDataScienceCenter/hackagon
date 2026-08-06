@@ -29,6 +29,10 @@ export const load: PageServerLoad = async (event) => {
     return { resultsVisible, canView: false, categories: [] }
   }
 
+  // TODO(backend: submission-cross-team-read) — a participant may only read
+  // their own team's submissions, so this resolves one podium row and the rest
+  // render as "Unknown submission". Full labels once members can read every
+  // final submission while results are on; no change needed here when it lands.
   const submissions = await ballotSubmissions(
     team,
     event.params.id,

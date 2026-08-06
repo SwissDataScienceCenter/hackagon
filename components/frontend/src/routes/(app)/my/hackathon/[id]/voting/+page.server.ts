@@ -39,6 +39,12 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: event.params.id,
   })
 
+  // TODO(backend: submission-cross-team-read) — this is the surface the gap
+  // actually breaks. A participant may only read their own team's submissions,
+  // and `SubmitVote` refuses a vote on your own team, so the ballot comes back
+  // empty and the booth is unusable for them. It fills in on its own once
+  // members can read every final submission while voting is on; no change
+  // needed here. An owner sees the full ballot today.
   const submissions = await ballotSubmissions(
     team,
     event.params.id,
