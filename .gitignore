@@ -32,8 +32,3 @@ result
 .env.yaml
 ## ============================================================================
 
-# Generated files
-components/backend/internal/proto
-components/backend/ent/*
-components/frontend/src/lib/server/grpc/*.proto
-components/frontend/src/lib/server/grpc/generated
