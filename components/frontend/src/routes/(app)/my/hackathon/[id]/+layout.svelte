@@ -72,6 +72,8 @@
         pages={data.hackathonPages}
         membership={data.myMembership}
         isGlobalAdmin={data.isGlobalAdmin}
+        votingEnabled={data.votingEnabled}
+        resultsVisible={data.resultsVisible}
     />
 
     <!-- min-w-0 so a wide child (a table, a code block) shrinks inside the column

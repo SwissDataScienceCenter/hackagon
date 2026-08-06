@@ -26,6 +26,8 @@
         pages,
         membership,
         isGlobalAdmin,
+        votingEnabled = false,
+        resultsVisible = false,
     }: {
         hackathonId: string;
         hackathonName: string;
@@ -37,6 +39,18 @@
         /** The viewer's own membership row, absent for an admin who never joined. */
         membership: HackathonMember | null;
         isGlobalAdmin: boolean;
+        /**
+         * Whether `CAPABILITY_VOTE` is on. The participant Voting entry appears
+         * only then — see `memberNav`. The organiser's Manage Voting entry is
+         * unaffected.
+         */
+        votingEnabled?: boolean;
+        /**
+         * Whether `CAPABILITY_VIEW_RESULTS` is on. Gates the Results entry, and
+         * is a separate switch from `votingEnabled` because the backend keeps
+         * the two capabilities separate — see `memberNav`.
+         */
+        resultsVisible?: boolean;
     } = $props();
 
     let collapsed = $state(false);
@@ -47,7 +61,7 @@
     // viewport the drawer must always render fully expanded regardless of it.
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
-    const items = $derived(memberNav(hackathonId, pages));
+    const items = $derived(memberNav(hackathonId, pages, votingEnabled, resultsVisible));
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
     // section and the "Owner" chip can never disagree about the role.
     const manageItems = $derived(manageNav(hackathonId, membership ?? undefined, isGlobalAdmin));

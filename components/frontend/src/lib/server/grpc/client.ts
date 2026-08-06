@@ -7,6 +7,7 @@ import { PageServiceDefinition } from "./generated/hackathon/page_service"
 import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
 import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import { TrackServiceDefinition } from "./generated/hackathon/track_service"
+import { VoteServiceDefinition } from "./generated/vote/vote_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
@@ -15,6 +16,7 @@ import type { PageServiceClient } from "./generated/hackathon/page_service"
 import type { ProjectServiceClient } from "./generated/hackathon/project_service"
 import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 import type { TrackServiceClient } from "./generated/hackathon/track_service"
+import type { VoteServiceClient } from "./generated/vote/vote_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -58,6 +60,12 @@ export interface AuthorizedGrpc {
   // `phase`: the edit form re-reads the single track rather than trusting the
   // layout's cached tree.
   track: TrackServiceClient
+  // Voting is the one feature `hackathon.get` knows nothing about — it returns
+  // no categories, no votes and no results — so every read path here goes
+  // through this client, not just the writes. `vote` is also its own proto
+  // package (`vote.VoteService`, not `hackathon.*`), hence the different
+  // generated path.
+  vote: VoteServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -80,6 +88,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     project: factory.create(ProjectServiceDefinition, channel),
     phase: factory.create(PhaseServiceDefinition, channel),
     track: factory.create(TrackServiceDefinition, channel),
+    vote: factory.create(VoteServiceDefinition, channel),
   }
 }
 
