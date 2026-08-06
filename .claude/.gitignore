@@ -1,0 +1,25 @@
+# Regenerated per run, or machine-specific — never shared.
+#
+# The suites rebuild all three: .state holds Playwright storage states (which
+# carry live Keycloak access tokens) plus the capability probe, .artifacts holds
+# reports, screenshots, videos and traces, and node_modules comes from
+# `pnpm install`.
+*/node_modules/
+*/.state/
+*/.artifacts/
+*/out/
+scheduled_tasks.lock
+
+# OpenReplay's vendored stack generates its own secrets on first run — JWT
+# signing keys, S3 credentials, Postgres passwords. Recreate them locally with
+# scripts/fetch-upstream.sh + scripts/up.sh rather than committing them.
+skills/openreplay-stack/vendor/*.env
+skills/openreplay-stack/vendor/docker-envs/
+
+# Personal, not project policy. Attribution preferences and permission grants
+# differ per person, and a shared settings.json applies one developer's choices
+# to everyone's clone. See "Commit attribution" in CLAUDE.md for the settings
+# this project's authors use. Remove this line if a genuinely team-wide setting
+# ever needs committing.
+settings.json
+settings.local.json

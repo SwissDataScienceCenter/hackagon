@@ -1,0 +1,4 @@
+# Upstream sources are fetched, not vendored into git (pinned + SHA-recorded
+# by scripts/fetch-upstream.sh, so a fetch is reproducible).
+vendor/
+.state/

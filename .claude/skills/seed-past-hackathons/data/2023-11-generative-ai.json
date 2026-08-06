@@ -1,0 +1,102 @@
+{
+  "slug": "sdsc-genai-2023",
+  "name": "SDSC Hackathon: Generative AI",
+  "edition": "2023",
+  "platformRef": {
+    "system": "sdsc-hackathons.ch (FlutterFlow + Firestore, project sdschacks)",
+    "collection": "hackathons",
+    "documentId": "DHepetK0DLQ6cRMVcvPb",
+    "archived": true,
+    "url": "https://sdsc-hackathons.ch/welcome?hackathonId=DHepetK0DLQ6cRMVcvPb"
+  },
+  "votingCategories": [
+    { "title": "Impact potential", "numberOfWinners": 1 },
+    { "title": "Technically gorgeous", "numberOfWinners": 1 },
+    { "title": "Bold moonshot", "numberOfWinners": 1 }
+  ],
+  "capacity": {
+    "total": 80,
+    "perSector": 20,
+    "sectors": ["academia", "private", "public", "SDSC"]
+  },
+  "compute": [
+    "Azure ML Studio (Microsoft vouchers)",
+    "RunAI cluster on Switch (managed by SDSC)",
+    "Google Colab",
+    "Renku"
+  ],
+  "preEventTimeline": [
+    { "order": 1, "process": "Registration", "when": "Anytime, until 80 spots taken — register, validate email, await confirmation" },
+    { "order": 2, "process": "Propose a project", "when": "Until 6 November, noon — organizers validate proposals" },
+    { "order": 3, "process": "Project preferences", "when": "8–14 November — select 3 preferred projects; organizers form teams" },
+    { "order": 4, "process": "Preparation", "when": "2nd half of November — Microsoft/SDSC webinars, dataset preparation" }
+  ],
+  "visibility": "VISIBILITY_PUBLIC",
+  "startsAt": "2023-11-30T08:00:00+01:00",
+  "endsAt": "2023-12-01T20:00:00+01:00",
+  "venue": "ETH Zurich, Andreasturm, Zurich Oerlikon",
+  "organizers": ["Swiss Data Science Center (SDSC)"],
+  "partners": ["Microsoft — free Azure resources and training webinars"],
+  "logo": "",
+  "description": "Two days bringing together professionals from academia, the private sector and public organizations to explore generative AI tools and technologies. Teams develop proof-of-concepts using GenAI techniques, applied to real-world challenges. Free participation, registration mandatory. Hosted by SDSC at ETH Zurich, Andreasturm, Zurich Oerlikon.",
+  "goals": [
+    "DEVELOP simple PoCs using Generative AI technologies",
+    "APPLY to real-world challenges arising in the private, public and academic sectors",
+    "SHARE code, knowledge, best practices, ideas for use cases",
+    "CONNECT with other data science professionals"
+  ],
+  "keynote": {
+    "speaker": "Dr. Yannic Kilcher",
+    "role": "CTO & Co-founder, DeepJudge"
+  },
+  "team": [
+    { "name": "Valerio Rossetti", "role": "Principal Data Scientist" },
+    { "name": "Sean Murphy", "role": "Sr. Systems Engineer" },
+    { "name": "Luis Salamanca", "role": "Lead Data Scientist" },
+    { "name": "Carlos Vivar Ríos", "role": "Senior Open Research Data Engineer" }
+  ],
+  "tracks": [],
+  "phases": [
+    { "name": "Check-in", "description": "Registration desk opens.", "startsAt": "2023-11-30T08:00:00+01:00", "endsAt": "2023-11-30T09:00:00+01:00" },
+    { "name": "Keynote", "description": "Opening keynote by Dr. Yannic Kilcher (DeepJudge).", "startsAt": "2023-11-30T09:00:00+01:00", "endsAt": "2023-11-30T10:00:00+01:00" },
+    { "name": "Group work — day 1", "description": "Team formation and PoC development (break for lunch 13:00–14:00).", "startsAt": "2023-11-30T10:00:00+01:00", "endsAt": "2023-11-30T18:00:00+01:00" },
+    { "name": "Apéro — day 1", "description": "Evening networking.", "startsAt": "2023-11-30T18:00:00+01:00", "endsAt": "2023-11-30T20:00:00+01:00" },
+    { "name": "Group work — day 2", "description": "Continued development through to the submission deadline (lunch 13:00–14:00).", "startsAt": "2023-12-01T08:00:00+01:00", "endsAt": "2023-12-01T15:00:00+01:00" },
+    { "name": "Presentations & voting", "description": "Project presentations followed by participant voting.", "startsAt": "2023-12-01T15:30:00+01:00", "endsAt": "2023-12-01T18:00:00+01:00" },
+    { "name": "Awards apéro", "description": "Results and closing apéro.", "startsAt": "2023-12-01T18:00:00+01:00", "endsAt": "2023-12-01T20:00:00+01:00" }
+  ],
+  "pages": [
+    {
+      "title": "About",
+      "visible": true,
+      "order": 1,
+      "content": "## SDSC Hackathon: Generative AI\n\nTwo days at **ETH Zurich, Andreasturm** (Zurich Oerlikon), 30 November – 1 December 2023.\n\nProfessionals from academia, the private sector and public organizations came together to explore generative AI tools and technologies, building proof-of-concepts against real-world challenges.\n\n### Goals\n\n- **Develop** simple PoCs using Generative AI technologies\n- **Apply** them to real-world challenges in the private, public and academic sectors\n- **Share** code, knowledge, best practices and use-case ideas\n- **Connect** with other data science professionals\n\nParticipation was free; registration was mandatory."
+    },
+    {
+      "title": "Programme",
+      "visible": true,
+      "order": 2,
+      "content": "## Day 1 — Thursday 30 November 2023\n\n| Time | Session |\n| --- | --- |\n| 08:00–09:00 | Check-in |\n| 09:00–10:00 | Keynote — Dr. Yannic Kilcher (CTO & Co-founder, DeepJudge) |\n| 10:00–13:00 | Group work |\n| 13:00–14:00 | Lunch |\n| 14:00–18:00 | Group work |\n| 18:00–20:00 | Apéro |\n\n## Day 2 — Friday 1 December 2023\n\n| Time | Session |\n| --- | --- |\n| 08:00–13:00 | Group work |\n| 13:00–14:00 | Lunch |\n| 14:00–15:00 | Group work |\n| 15:30–18:00 | Project presentations & voting |\n| 18:00–20:00 | Apéro |"
+    },
+    {
+      "title": "Organizers & partners",
+      "visible": true,
+      "order": 3,
+      "content": "Organized by the **Swiss Data Science Center**.\n\n### SDSC team\n\n- Valerio Rossetti — Principal Data Scientist\n- Sean Murphy — Sr. Systems Engineer\n- Luis Salamanca — Lead Data Scientist\n- Carlos Vivar Ríos — Senior Open Research Data Engineer\n\n### Supporting partner\n\n**Microsoft** — free Azure resources and training webinars for participants."
+    }
+  ],
+  "media": {
+    "images": [
+      { "file": "event.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/64dddef6af87ca4d1450fa7a_SDSC-Hackathon_Richemont2023_1.JPG", "caption": "SDSC Hackathon 2023 — event photo", "category": "ambiance", "credit": "SDSC event page" },
+      { "file": "keynote-yannic-kilcher.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/65142ae0b7664864dac6914e_YannicKilcher.jpeg", "caption": "Keynote — Dr. Yannic Kilcher (CTO & Co-founder, DeepJudge)", "category": "speaker", "credit": "SDSC event page" },
+      { "file": "partner-microsoft.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/65142b3f28f6b5905514d79f_logo-microsoft-scaled.jpeg", "caption": "Supporting partner — Microsoft", "category": "logo", "credit": "SDSC event page" }
+    ],
+    "note": "Pulled from the SDSC event page for this edition. The event photo is captioned 'Richemont2023' on the CDN — SDSC's own event photography."
+  },
+  "stats": {},
+  "source": {
+    "urls": ["https://www.datascience.ch/event/hackathon-2023", "https://sdsc-hackathons.ch/"],
+    "retrieved": "2026-08-05",
+    "note": "Programme, venue, keynote, team and partner verified from the SDSC event page. Team/project counts and winners were not published there — left empty rather than invented."
+  }
+}

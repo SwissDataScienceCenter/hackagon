@@ -1,0 +1,24 @@
+# Overlay merged on top of the vendored upstream compose:
+#   docker compose -f vendor/docker-compose.yaml -f compose.tunnel.yaml …
+#
+# OpenReplay already ships Caddy as its ingress, so we add exactly one thing:
+# a Cloudflare quick tunnel pointing at it. TLS is terminated at Cloudflare's
+# edge, so Caddy must serve plain HTTP — up.sh sets CADDY_DOMAIN=:80, which
+# makes Caddy listen on 80 for any Host and skip ACME entirely (a
+# trycloudflare hostname could never pass an HTTP-01 challenge here).
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: openreplay-tunnel
+    restart: unless-stopped
+    # --no-autoupdate: the container is disposable; an in-place update would
+    # restart the process and silently mint a NEW public URL.
+    command: tunnel --no-autoupdate --url http://caddy:80
+    depends_on:
+      - caddy
+
+  # Host ports are pointless when the tunnel is the entrypoint, and 80/443 are
+  # the two most likely to collide with something already running. Publish
+  # nothing by default; set OPENREPLAY_PUBLISH_PORTS=1 to get them back.
+  caddy:
+    ports: !override []

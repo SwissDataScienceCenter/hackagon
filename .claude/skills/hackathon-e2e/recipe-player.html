@@ -1,0 +1,1409 @@
+<title>Hackathon Lifecycle Player</title>
+<style>
+/* kill the browser's default body margin — no white frame around the app */
+html, body { margin: 0; padding: 0; background: #0d0d0d; }
+/* ── Hackathon Lifecycle Player ─ a mission-control replay of recipe.jsonl.
+   Deliberately single-theme (dark ops room): the animated action beams are the
+   visual thesis and are designed against the validated dark surface. */
+.hlp {
+  /* chrome & ink (dataviz reference palette, dark column) */
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --panel: #201f1e;
+  --line: #2c2c2a;
+  --line-strong: #383835;
+  --ink: #ffffff;
+  --ink2: #c3c2b7;
+  --muted: #898781;
+  /* action kinds = categorical slots (validated dark steps) */
+  --k-create: #3987e5;  /* slot 1 blue    — create / build / propose */
+  --k-remove: #d95926;  /* slot 2 orange  — remove / delete */
+  --k-edit:   #199e70;  /* slot 3 aqua    — edit / finalize / prefs */
+  --k-join:   #c98500;  /* slot 4 yellow  — join / registration */
+  --k-approve:#008300;  /* slot 6 green   — approve */
+  --k-vote:   #9085e9;  /* slot 7 violet  — voting */
+  --k-check:  #898781;  /* neutral        — reads, browsing, checks */
+  /* status (reserved, icon+label always) */
+  --st-good: #0ca30c;
+  --st-warn: #fab219;
+  --st-crit: #d03b3b;
+  --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", monospace;
+  --sans: system-ui, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  /* lock to the viewport: the stage flexes to the available height,
+     the rail scrolls internally — no page scroll on desktop */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.hlp * { box-sizing: border-box; margin: 0; }
+.hlp button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+.hlp button:focus-visible, .hlp select:focus-visible, .hlp .scrub:focus-visible {
+  outline: 2px solid var(--k-create); outline-offset: 2px;
+}
+
+/* ── header ─────────────────────────────────────────────────────────── */
+.hlp header {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 18px; border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.hlp .brand { display: flex; flex-direction: column; gap: 2px; }
+.hlp .brand h1 {
+  font: 700 15px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.hlp .brand small { font: 400 11px/1.3 var(--sans); color: var(--muted); }
+.hlp .phase {
+  margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.hlp .phase .act {
+  font: 600 12px/1 var(--mono); letter-spacing: .06em;
+  padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 3px;
+  color: var(--ink2); white-space: nowrap;
+}
+.hlp .phase .act b { color: var(--ink); }
+.hlp .chip {
+  font: 600 11px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase;
+  padding: 5px 9px; border-radius: 999px; white-space: nowrap;
+  border: 1px solid var(--line-strong); color: var(--muted);
+}
+.hlp .chip.upcoming { color: var(--st-warn); border-color: color-mix(in srgb, var(--st-warn) 45%, transparent); }
+.hlp .chip.active   { color: var(--st-good); border-color: color-mix(in srgb, var(--st-good) 55%, transparent); }
+.hlp .chip.finished { color: var(--ink2); }
+.hlp .chip.unlisted { color: var(--st-crit); border-color: color-mix(in srgb, var(--st-crit) 45%, transparent); }
+.hlp .chip.hidden { display: none; }
+
+
+/* ── main: stage + rail ─────────────────────────────────────────────── */
+.hlp .main { display: flex; flex: 1; min-height: 0; }
+.hlp .stage-wrap { position: relative; flex: 1; min-width: 0; min-height: 0; background: var(--bg); }
+.hlp svg { display: block; width: 100%; height: 100%; }
+.hlp .shot-label { font: 500 10.5px var(--sans); fill: var(--ink); }
+
+.hlp .caption {
+  position: absolute; left: 12px; right: 12px; bottom: 10px;
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border: 1px solid var(--line); border-radius: 4px;
+  border-left: 3px solid var(--line-strong);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(2px);
+}
+.hlp .caption .cid { font: 600 11px/1 var(--mono); color: var(--muted); white-space: nowrap; }
+.hlp .caption .ctitle { font: 400 14.5px/1.35 var(--sans); color: var(--ink); flex: 1 1 260px; }
+.hlp .caption .ckind {
+  font: 700 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 3px; white-space: nowrap;
+}
+.hlp .caption .cflag { font: 700 10px/1 var(--mono); letter-spacing: .08em; white-space: nowrap; }
+
+/* stage svg pieces (classes used from JS) */
+.hlp .node-label { font: 500 10px var(--mono); fill: var(--ink2); }
+.hlp .node-sub   { font: 400 9px  var(--mono); fill: var(--muted); }
+.hlp .entity-label { font: 600 10.5px var(--mono); fill: var(--ink2); letter-spacing: .04em; }
+.hlp .hex-name { font: 700 12.5px var(--mono); fill: var(--ink); letter-spacing: .03em; }
+.hlp .sec-count { font: 700 11.5px var(--mono); fill: var(--ink); font-variant-numeric: tabular-nums; }
+.hlp .col-head { font: 700 9.5px var(--mono); fill: var(--ink2); letter-spacing: .14em; }
+
+/* ── right rail ─────────────────────────────────────────────────────── */
+.hlp .rail {
+  width: 308px; flex: none; border-left: 1px solid var(--line);
+  background: var(--surface); display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.hlp .rail section { padding: 12px 14px; border-bottom: 1px solid var(--line); flex: none; }
+/* the log takes all remaining rail height and scrolls internally */
+.hlp .rail section.logsec {
+  flex: 1; min-height: 160px; display: flex; flex-direction: column;
+  overflow: hidden; border-bottom: none;
+}
+.hlp .rail h2 {
+  font: 700 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 9px;
+}
+.hlp .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hlp .stat { border: 1px solid var(--line); border-radius: 4px; padding: 7px 8px; }
+.hlp .stat b { display: block; font: 700 17px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.hlp .stat span { font: 500 9px/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.hlp .stat.denied b { color: var(--st-crit); }
+.hlp .stat.planned b { color: var(--k-vote); }
+
+.hlp .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.hlp .legend span { display: inline-flex; align-items: center; gap: 6px; font: 400 11px var(--sans); color: var(--ink2); }
+.hlp .legend i { width: 14px; height: 3px; border-radius: 2px; }
+.hlp .legend .ghost i { background: repeating-linear-gradient(90deg, var(--k-vote) 0 3px, transparent 3px 6px); }
+.hlp .legend .denied i { background: var(--st-crit); }
+
+.hlp .roster { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+.hlp .person { display: flex; align-items: center; gap: 7px; padding: 2px 0; min-width: 0; }
+.hlp .person .av {
+  width: 17px; height: 17px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  font: 700 8.5px var(--mono); color: var(--bg);
+  background: var(--muted);
+}
+.hlp .person .nm { font: 400 11px var(--sans); color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hlp .person .bd {
+  margin-left: auto; font: 700 8.5px var(--mono); letter-spacing: .04em;
+  padding: 2px 5px; border-radius: 999px; white-space: nowrap;
+}
+.hlp .bd.none   { color: var(--muted); border: 1px solid var(--line-strong); }
+.hlp .bd.wait   { color: var(--bg); background: var(--st-warn); }
+.hlp .bd.member { color: #fff; background: var(--st-good); }
+.hlp .bd.left   { color: var(--st-crit); border: 1px solid var(--st-crit); text-decoration: line-through; }
+.hlp .bd.gone   { color: var(--muted); border: 1px dashed var(--muted); text-decoration: line-through; }
+.hlp .bd.admin  { color: #fff; background: var(--k-create); }
+
+.hlp .log {
+  list-style: none; display: flex; flex-direction: column; gap: 5px;
+  flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px;
+  overscroll-behavior: contain;
+}
+.hlp .log li { display: flex; gap: 7px; align-items: baseline; font: 400 10.5px var(--mono); color: var(--ink2); }
+.hlp .log li i { width: 7px; height: 7px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.hlp .log li.denied { color: var(--st-crit); }
+.hlp .log li.planned { color: var(--muted); font-style: italic; }
+.hlp .log li .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── item modal ─────────────────────────────────────────────────────── */
+.hlp .modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; }
+.hlp .modal[hidden] { display: none; }
+.hlp .mback { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+.hlp .mcard {
+  position: relative; width: min(600px, calc(100vw - 32px));
+  max-height: min(74vh, 580px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 11px;
+}
+.hlp .mcard header { border: none; padding: 0; background: none; gap: 10px; }
+.hlp .mcard h3 { font: 700 14px var(--mono); letter-spacing: .04em; flex: 1; min-width: 0; }
+.hlp .mdesc { font: 400 12.5px/1.55 var(--sans); color: var(--ink2); max-width: 64ch; }
+/* single scrolling column: history first, then what comes next */
+.hlp .mcols { display: flex; flex-direction: column; gap: 16px; }
+.hlp .mcols h4 { font: 700 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+.hlp .mlist { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.hlp .mlist li { display: flex; gap: 7px; font: 400 10.5px/1.45 var(--mono); color: var(--ink2); align-items: baseline; }
+.hlp .mlist li i { width: 6px; height: 6px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.hlp .mlist li.denied { color: var(--st-crit); }
+.hlp .mlist li.planned { font-style: italic; color: var(--muted); }
+.hlp .mlist li.empty { color: var(--muted); font-style: italic; }
+
+/* ── transport ──────────────────────────────────────────────────────── */
+.hlp .transport {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 18px 14px; border-top: 1px solid var(--line); background: var(--surface);
+}
+.hlp .tbtn {
+  width: 34px; height: 30px; display: grid; place-items: center;
+  border: 1px solid var(--line-strong); border-radius: 4px; color: var(--ink);
+  font-size: 13px;
+}
+.hlp .tbtn:hover { border-color: var(--muted); }
+.hlp .tbtn.play { width: 46px; background: var(--k-create); border-color: var(--k-create); color: #fff; font-weight: 700; }
+.hlp select {
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px;
+  color: var(--ink); font: 600 11px var(--mono); padding: 6px 6px;
+}
+.hlp .counter { font: 600 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink2); white-space: nowrap; }
+.hlp .scrubwrap { flex: 1 1 260px; min-width: 220px; }
+.hlp .scrub {
+  position: relative; height: 20px; display: flex; gap: 2px; cursor: grab;
+  border-radius: 3px; touch-action: none;
+}
+.hlp .scrub:active { cursor: grabbing; }
+.hlp .seg { position: relative; background: var(--panel); border-radius: 2px; overflow: hidden; min-width: 8px; }
+.hlp .seg .tick { position: absolute; top: 0; bottom: 0; }
+.hlp .seg .tick.red { background: color-mix(in srgb, var(--st-crit) 50%, var(--panel)); }
+.hlp .seg .tick.yel { background: color-mix(in srgb, var(--st-warn) 42%, var(--panel)); }
+.hlp .seg .tick.blue { background: color-mix(in srgb, var(--k-create) 42%, var(--panel)); }
+/* the advancing playhead: a bright bar sweeping left → right over the map */
+.hlp .scrub .elapsed {
+  position: absolute; top: -1px; bottom: -1px; left: 0; width: 0;
+  background: rgba(255,255,255,.10); pointer-events: none; z-index: 2;
+}
+.hlp .scrub .playhead {
+  position: absolute; top: -4px; bottom: -4px; width: 2.5px; border-radius: 2px;
+  background: var(--ink); box-shadow: 0 0 6px rgba(255,255,255,.5);
+  pointer-events: none; z-index: 3; transition: left .15s linear;
+}
+/* phase names sit directly under the timeline, aligned with their segments */
+.hlp .acts { display: flex; gap: 2px; margin-top: 4px; }
+.hlp .acts button {
+  font: 500 9px/1.3 var(--mono); letter-spacing: .03em; color: var(--muted);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  text-align: left; min-width: 8px; padding: 3px 6px;
+  border: 1px solid transparent; border-radius: 3px;
+}
+.hlp .acts button b { color: var(--ink2); font-weight: 700; margin-right: 4px; }
+.hlp .acts button:hover { border-color: var(--line-strong); }
+.hlp .acts button.done { opacity: .5; }
+.hlp .acts button.done b::after { content: " ✓"; color: var(--st-good); }
+.hlp .acts button.cur {
+  border-color: var(--k-create); color: var(--ink2);
+  background: color-mix(in srgb, var(--k-create) 14%, transparent);
+}
+.hlp .acts button.cur b { color: var(--ink); }
+
+/* narrow screens: stack and let the page scroll naturally */
+@media (max-width: 900px) {
+  .hlp { height: auto; min-height: 100dvh; overflow: auto; }
+  .hlp .main { flex-direction: column; }
+  .hlp .rail { width: 100%; border-left: none; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; }
+  .hlp .rail section { flex: 1 1 260px; border-right: 1px solid var(--line); }
+  .hlp .rail section.logsec { flex: 1 1 100%; max-height: 320px; }
+  .hlp svg { min-height: 62dvh; }
+}
+/* very short viewports: don't crush the stage — fall back to page scroll */
+@media (max-height: 540px) and (min-width: 901px) {
+  .hlp { height: auto; overflow: auto; }
+  .hlp svg { min-height: 430px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hlp * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="hlp">
+  <header>
+    <div class="brand">
+      <h1>Hackathon Lifecycle Player</h1>
+      <small>replaying <span style="font-family:var(--mono)">recipe.jsonl</span> — every action of one full hackathon, T-4 months → T+1 week</small>
+    </div>
+    <div class="phase">
+      <span class="act" id="phaseLabel"><b>ACT —</b> press play</span>
+      <span class="chip hidden" id="statusChip">—</span>
+      <span class="chip hidden unlisted" id="unlistedChip">unlisted</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="stage-wrap">
+      <svg id="stage" viewBox="0 0 960 680" role="img" aria-label="Animated map of hackathon actors and actions"></svg>
+      <div class="caption" id="caption">
+        <span class="cid" id="capId">—</span>
+        <span class="ctitle" id="capTitle">Press ▶ to replay the full hackathon: publication, a 13-person registration wave, approvals and dropouts, event days, voting, and the archive.</span>
+        <span class="ckind" id="capKind" style="display:none"></span>
+        <span class="cflag" id="capFlag"></span>
+      </div>
+    </div>
+
+    <aside class="rail">
+      <section>
+        <h2>Progress</h2>
+        <div class="stats">
+          <div class="stat"><b id="stPlayed">0</b><span>played</span></div>
+          <div class="stat denied"><b id="stDenied">0</b><span>denied ✕</span></div>
+          <div class="stat planned"><b id="stPlanned">0</b><span>planned ◌</span></div>
+        </div>
+      </section>
+      <section>
+        <h2>Action kinds</h2>
+        <div class="legend">
+          <span><i style="background:var(--k-create)"></i>create / propose</span>
+          <span><i style="background:var(--k-join)"></i>register</span>
+          <span><i style="background:var(--k-approve)"></i>approve</span>
+          <span><i style="background:var(--k-edit)"></i>edit</span>
+          <span><i style="background:var(--k-remove)"></i>remove / delete</span>
+          <span><i style="background:var(--k-vote)"></i>vote</span>
+          <span><i style="background:var(--k-check)"></i>browse / check</span>
+          <span class="denied"><i></i>denied ✕</span>
+          <span class="ghost"><i></i>planned (skips today)</span>
+          <span><i style="background:var(--k-create)"></i>timeline tick: covered today (backend + frontend)</span>
+          <span><i style="background:var(--st-warn)"></i>timeline tick: frontend missing (API-driven)</span>
+          <span><i style="background:var(--st-crit)"></i>timeline tick: backend RPC missing</span>
+        </div>
+      </section>
+      <section>
+        <h2>Roster</h2>
+        <div class="roster" id="roster"></div>
+      </section>
+      <section class="logsec">
+        <h2>Event log</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="transport">
+    <button class="tbtn" id="btnRestart" title="Restart (R)">⏮</button>
+    <button class="tbtn" id="btnBack" title="Step back (←)">‹</button>
+    <button class="tbtn play" id="btnPlay" title="Play / pause (Space)">▶</button>
+    <button class="tbtn" id="btnFwd" title="Step forward (→)">›</button>
+    <select id="speed" title="Playback speed">
+      <option value="0.5">0.5×</option>
+      <option value="1" selected>1×</option>
+      <option value="2">2×</option>
+      <option value="4">4×</option>
+    </select>
+    <span class="counter" id="counter">0 / 0</span>
+    <div class="scrubwrap">
+      <div class="scrub" id="scrub" tabindex="0" aria-label="Timeline scrubber"></div>
+      <div class="acts" id="actLabels"></div>
+    </div>
+  </footer>
+
+  <div class="modal" id="modal" hidden>
+    <div class="mback" id="mback"></div>
+    <div class="mcard" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <header>
+        <h3 id="mTitle"></h3>
+        <span id="mStatus" class="bd none"></span>
+        <button class="tbtn" id="mClose" title="Close (Esc)">✕</button>
+      </header>
+      <p class="mdesc" id="mDesc"></p>
+      <div class="mcols">
+        <div><h4>What happened</h4><ul class="mlist" id="mHist"></ul></div>
+        <div><h4>What comes next</h4><ul class="mlist" id="mNext"></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="recipe-data" type="application/jsonl">
+{"comment":"â•â•â•â•â•â•â•â• HACKAGON FULL-LIFECYCLE RECIPE â•â•â•â•â•â•â•â• One action per line, executed strictly in order by tests/journey/recipe.spec.ts (helpers/recipe.ts). Lines with a 'todo' are placeholders: they SKIP while their 'method' probes as unimplemented and start running the moment the backend lands it â€” keep the action, never delete it. Placeholders whose params reference protos that do not exist yet carry the guessed field names in-line; align them when the proto lands. Template tokens: {{hackathonId}} {{var:NAME}} {{userId:USERNAME}} {{now+Nd}}/{{now-Nd}} {{logoDataUri}}."}
+{"comment":"── ACT 0 — platform setup: the site itself, before any hackathon exists ────────"}
+{"id":"act0.about.absent","priority":"P1","implement":true,"outcome":"The About page 404s on a fresh platform - nothing has been published yet.","act":0,"t":"T-4mo","title":"the platform starts blank: the footer About link leads nowhere yet","actor":"anonymous","action":"ui.flow","steps":[{"goto":"/about","status":404}]}
+{"id":"act0.about.create","priority":"P1","implement":true,"outcome":"Succeeds; the About page exists as a draft.","act":0,"t":"T-4mo","title":"PLATFORM: admin writes the About page (draft first)","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Create","params":{"slug":"about","title":"About Hackagon","content":"## What this is\\n\\nHackagon is the hackathon platform built by the **Swiss Data Science Center**.\\n","visible":false,"order":1},"expect":{"ok":true},"save":{"aboutPageId":"id"}}
+{"id":"act0.about.draft.hidden","priority":"P1","implement":true,"outcome":"Still 404 for visitors: an unpublished page is indistinguishable from a missing one.","act":0,"t":"T-4mo","title":"the draft stays invisible to the public","actor":"anonymous","action":"ui.flow","steps":[{"goto":"/about","status":404}]}
+{"id":"act0.about.rogue","priority":"P1","implement":true,"outcome":"PermissionDenied - only platform admins write site pages.","act":0,"t":"T-4mo","title":"DENIED: alice (an organizer, not a platform admin) tries to edit the About page","actor":"alice","action":"rpc","method":"site.SitePageService/Edit","params":{"slug":"about","title":"Alice was here"},"expect":{"error":"PermissionDenied"}}
+{"id":"act0.about.anon","priority":"P1","implement":true,"outcome":"Unauthenticated - anonymous callers cannot write site pages.","act":0,"t":"T-4mo","title":"DENIED: an anonymous caller tries to create a site page","actor":"anonymous","action":"rpc","method":"site.SitePageService/Create","params":{"slug":"pirate","title":"Pirate page","content":"nope"},"expect":{"error":"Unauthenticated"}}
+{"id":"act0.about.publish","priority":"P1","implement":true,"outcome":"Succeeds; the About page goes live.","act":0,"t":"T-4mo","title":"PLATFORM: admin publishes the About page","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Edit","params":{"slug":"about","visible":true},"expect":{"ok":true}}
+{"id":"act0.about.live","priority":"P1","implement":true,"outcome":"The About page is now readable by anyone, headline included.","act":0,"t":"T-4mo","title":"anyone can now read About from the footer link","actor":"anonymous","action":"ui.flow","steps":[{"goto":"/about"},{"expectText":"About Hackagon"},{"expectText":"Swiss Data Science Center"}]}
+{"id":"act0.about.xss","priority":"P1","implement":true,"outcome":"Succeeds; the markdown is stored verbatim - sanitizing is the renderer's job, not the database's.","act":0,"t":"T-4mo","title":"SECURITY: admin pastes markdown containing a script tag and an onerror handler","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Edit","params":{"slug":"about","content":"## About\n\nHackagon is built by the Swiss Data Science Center.\n\n<script>window.__pwned = true</script>\n\n<img src=x onerror=\"window.__pwned = true\">\n"},"expect":{"ok":true}}
+{"id":"act0.about.sanitized","priority":"P1","implement":true,"outcome":"The page renders its text, and neither the script tag nor the onerror handler executes.","act":0,"t":"T-4mo","title":"SECURITY: the script never runs - the markdown pipeline sanitizes it","actor":"anonymous","action":"ui.assert","assert":"sitePageSanitized","params":{"slug":"about","textContains":"Swiss Data Science Center"}}
+{"id":"act0.privacy.create","priority":"P1","implement":true,"outcome":"Succeeds; the Privacy page is published.","act":0,"t":"T-4mo","title":"PLATFORM: admin publishes the Privacy page","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Create","params":{"slug":"privacy","title":"Privacy","content":"## What we store\\n\\nAccount details from the login provider, and what you do on the platform.\\n","visible":true,"order":2},"expect":{"ok":true}}
+{"id":"act0.terms.create","priority":"P1","implement":true,"outcome":"Succeeds; the Terms page is published.","act":0,"t":"T-4mo","title":"PLATFORM: admin publishes the Terms page","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Create","params":{"slug":"terms","title":"Terms of use","content":"## Taking part\\n\\nFollow the rules and the code of conduct of each event.\\n","visible":true,"order":3},"expect":{"ok":true}}
+{"id":"act0.slug.dupe","priority":"P1","implement":true,"outcome":"AlreadyExists - slugs are unique because they are URLs.","act":0,"t":"T-4mo","title":"DENIED: admin re-uses an existing slug","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Create","params":{"slug":"about","title":"About (again)","content":"duplicate"},"expect":{"error":"AlreadyExists"}}
+{"id":"act0.slug.invalid","priority":"P1","implement":true,"outcome":"InvalidArgument - slugs must be lowercase kebab-case, they go straight into a URL.","act":0,"t":"T-4mo","title":"DENIED: admin tries a slug with spaces and capitals","actor":"hackagon-admin","action":"rpc","method":"site.SitePageService/Create","params":{"slug":"Code Of Conduct","title":"Code of conduct","content":"be nice"},"expect":{"error":"InvalidArgument"}}
+{"id":"act0.footer.links","priority":"P1","implement":true,"outcome":"All three footer links resolve to real published pages.","act":0,"t":"T-4mo","title":"the footer links (About, Privacy, Terms) all lead somewhere real","actor":"anonymous","action":"ui.flow","steps":[{"goto":"/privacy"},{"expectText":"What we store"},{"goto":"/terms"},{"expectText":"Taking part"}]}
+{"id":"act0.ghost","priority":"P1","implement":true,"outcome":"NotFound - a slug nobody published does not resolve.","act":0,"t":"T-4mo","title":"a slug that was never created stays a 404","actor":"anonymous","action":"rpc","method":"site.SitePageService/Get","params":{"slug":"does-not-exist"},"expect":{"error":"NotFound"}}
+{"comment":"â”€â”€ ACT 1 â€” T-4 months: PUBLICATION & ANNOUNCEMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€"}
+{"id":"act1.guard","priority":"P1","implement":true,"outcome":"The public site shows no trace of the journey event (fresh database).","act":1,"t":"T-4mo","title":"the world starts empty (from-scratch guard)","action":"ui.assert","assert":"worldEmpty","params":{"name":"SDSC Open Research Data Hackathon 2027"}}
+{"id":"act1.publish","priority":"P1","implement":true,"outcome":"Succeeds. Returns hackathonId for later steps.","act":1,"t":"T-4mo","title":"admin publishes the hackathon (page goes live, theme/dates/capacity announced)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Create","params":{"name":"SDSC Open Research Data Hackathon 2027","description":"Two days of building open, reproducible research-data tooling with the Swiss scientific community â€” hosted by SDSC at EPFL, Lausanne. Tracks: Data Science and Research Data Infrastructure. Participation is free; registration is mandatory. Max capacity: 8 participants (pilot edition). Waitlisted registrations are confirmed by the organizers as spots open up. Call for project proposals opens today.","visibility":"VISIBILITY_PUBLIC","logo":"{{logoDataUri}}","startsAt":"{{now+120d}}","endsAt":"{{now+122d}}"},"save":{"hackathonId":"hackathonId"},"expect":{"ok":true}}
+{"id":"act1.roundtrip","priority":"P1","implement":true,"outcome":"Succeeds; the stored logo (and name/description) round-trips byte-for-byte.","act":1,"t":"T-4mo","title":"the announcement round-trips intact, including the generated PNG logo","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"logoRoundTrip","checkArgs":{"nameContains":"Open Research Data","descriptionContains":"Max capacity"}}}
+{"id":"act1.config.regform","priority":"P2","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"CONFIG: admin defines the custom registration form (fields + consents)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetRegistrationForm","params":{"hackathonId":"{{hackathonId}}","fields":[{"key":"affiliation","label":"Affiliation","type":"text","required":true},{"key":"skills","label":"Skills","type":"tags","required":false},{"key":"diet","label":"Dietary requirements","type":"text","required":false},{"key":"avatar","label":"Profile picture (link)","type":"url","required":false}],"consents":[{"key":"conduct","label":"I accept the Code of Conduct","required":true},{"key":"photos","label":"I consent to event photography","required":false}]},"expect":{"ok":true}}
+{"id":"act1.config.subform","priority":"P2","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"CONFIG: admin defines the submission form (repo required, demo, slides, size limits)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetSubmissionForm","params":{"hackathonId":"{{hackathonId}}","fields":[{"key":"repo","label":"Repository URL","type":"url","required":true},{"key":"demo","label":"Live demo URL","type":"url","required":false},{"key":"slides","label":"Slides (PDF) â€” upload or link","type":"file-or-url","maxMb":20},{"key":"summary","label":"One-paragraph summary","type":"text","required":true}]},"expect":{"ok":true}}
+{"id":"act1.config.voting","priority":"P2","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"CONFIG: admin sets the voting mechanism and tie-breaking","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetVotingPolicy","params":{"hackathonId":"{{hackathonId}}","mechanism":"points","scale":{"min":1,"max":5},"oneBallotPer":"member-category-submission","ownTeamVoting":true,"organizerVoting":false,"tieBreak":["highest-impact-category","earliest-final-submission"]},"expect":{"ok":true}}
+{"id":"act1.config.emails","priority":"P3","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"CONFIG: admin sets the email templates (confirmation, assignment, deadlines, results)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetEmailTemplates","params":{"hackathonId":"{{hackathonId}}","templates":{"registrationConfirmed":"You are on the list for {event} â€” you will hear from us when a spot opens.","teamAssigned":"Welcome to {team}! Your project: {project}.","deadlineReminder":"{window} closes in 48h.","results":"The winners are out â€” see the results page."}},"expect":{"ok":true}}
+{"id":"act1.config.branding","priority":"P3","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"CONFIG: admin sets the event branding (colors + visuals; logo already set at creation)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetBranding","params":{"hackathonId":"{{hackathonId}}","primaryColor":"#0A7ACC","accentColor":"#F5B83D","bannerText":"Open Research Data Hackathon 2027"},"expect":{"ok":true}}
+{"id":"act1.config.windows","priority":"P2","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"CONFIG: admin sets the time windows (registration, proposals, preferences, submissions)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}","registrationOpens":"{{now+7d}}","registrationCloses":"{{now+113d}}","proposalsClose":"{{now+60d}}","preferencesClose":"{{now+80d}}","submissionsClose":"{{now+123d}}","latePolicy":"reject-without-override"},"expect":{"ok":true}}
+{"id":"act1.window.early","priority":"P2","implement":true,"outcome":"Rejected with FailedPrecondition - no state change.","act":1,"t":"T-4mo","title":"ENFORCEMENT: bob tries to register before the registration window opens â€” bounced","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Join","gate":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}"},"expect":{"error":"FailedPrecondition"}}
+{"id":"act1.prizes","priority":"P3","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"PRIZES: admin defines the prize table (the admin has the final voice on prizes)","actor":"hackagon-admin","action":"rpc","method":"hackathon.PrizeService/Set","params":{"hackathonId":"{{hackathonId}}","prizes":[{"rank":1,"title":"1st â€” CHF 5000 + SDSC mentoring"},{"rank":2,"title":"2nd â€” CHF 2000"},{"rank":0,"title":"Community Choice (discretionary, admin-awarded)"}]},"expect":{"ok":true}}
+{"id":"act1.admin.whoami","priority":"P1","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"MEANWHILE admin verifies their platform identity","actor":"hackagon-admin","action":"rpc","method":"user.UserService/WhoAmI","params":{},"expect":{"ok":true}}
+{"id":"act1.admin.users","priority":"P1","implement":true,"outcome":"Succeeds; the platform user list has at least 4 accounts.","act":1,"t":"T-4mo","title":"MEANWHILE admin reviews the platform user list (principals registered)","actor":"hackagon-admin","action":"rpc","method":"user.UserService/List","params":{},"expect":{"ok":true,"check":"usersCount","checkArgs":{"atLeast":4}}}
+{"id":"act1.public","priority":"P1","implement":true,"outcome":"The public home lists 'SDSC Open Research Data Hackathon 2027' with the 'Upcoming' badge.","act":1,"t":"T-4mo","title":"anonymous visitors see the event listed as Upcoming","action":"ui.assert","assert":"homeStatus","params":{"name":"SDSC Open Research Data Hackathon 2027","status":"Upcoming"}}
+{"id":"act1.typo","priority":"P1","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"admin publishes a typo in the nameâ€¦","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","name":"SDSC Open Reserach Data Hackathon 2027"},"expect":{"ok":true}}
+{"id":"act1.typo.check","priority":"P1","implement":true,"outcome":"Succeeds; name is exactly 'SDSC Open Reserach Data Hackathon 2027'.","act":1,"t":"T-4mo","title":"â€¦the typo is liveâ€¦","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"hackathonField","checkArgs":{"nameEquals":"SDSC Open Reserach Data Hackathon 2027"}}}
+{"id":"act1.typo.fix","priority":"P1","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"â€¦admin notices and fixes the name","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","name":"SDSC Open Research Data Hackathon 2027"},"expect":{"ok":true}}
+{"id":"act1.typo.fixed","priority":"P1","implement":true,"outcome":"Succeeds; name is exactly 'SDSC Open Research Data Hackathon 2027'.","act":1,"t":"T-4mo","title":"the corrected name is live","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"hackathonField","checkArgs":{"nameEquals":"SDSC Open Research Data Hackathon 2027"}}}
+{"id":"act1.reschedule","priority":"P1","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"admin reschedules the event by two days (venue availability)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","startsAt":"{{now+122d}}","endsAt":"{{now+124d}}"},"expect":{"ok":true}}
+{"id":"act1.venue","priority":"P1","implement":true,"outcome":"Succeeds.","act":1,"t":"T-4mo","title":"admin updates the venue in the announcement","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","description":"Two days of building open, reproducible research-data tooling with the Swiss scientific community â€” hosted by SDSC at the SwissTech Convention Center, EPFL, Lausanne. Tracks: Data Science and Research Data Infrastructure. Participation is free; registration is mandatory. Max capacity: 8 participants (pilot edition). Waitlisted registrations are confirmed by the organizers as spots open up. Call for project proposals opens today."},"expect":{"ok":true}}
+{"id":"act1.venue.check","priority":"P1","implement":true,"outcome":"Succeeds; description contains 'SwissTech'.","act":1,"t":"T-4mo","title":"the venue change is live","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"hackathonField","checkArgs":{"descriptionContains":"SwissTech"}}}
+{"id":"act1.edit.rogue","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":1,"t":"T-4mo","title":"a regular user cannot edit the event","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","name":"Bob's Hackathon Now"},"expect":{"error":"PermissionDenied"}}
+{"id":"act1.draft.create","priority":"P1","implement":true,"outcome":"Succeeds. Returns draftId for later steps.","act":1,"t":"T-4mo","title":"MEANWHILE admin drafts a second, private event for next winter","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Create","params":{"name":"SDSC Winter School Sprint (draft)","description":"Internal draft â€” do not announce yet.","visibility":"VISIBILITY_PRIVATE","startsAt":"{{now+300d}}","endsAt":"{{now+302d}}"},"save":{"draftId":"hackathonId"},"expect":{"ok":true}}
+{"id":"act1.draft.hidden","priority":"P1","implement":true,"outcome":"'SDSC Winter School Sprint (draft)' is invisible on the public home.","act":1,"t":"T-4mo","title":"the private draft is invisible to the public","action":"ui.assert","assert":"homeAbsent","params":{"name":"SDSC Winter School Sprint (draft)"}}
+{"id":"act1.draft.api","priority":"P1","implement":true,"outcome":"Succeeds; 'SDSC Winter School Sprint (draft)' is absent from the list.","act":1,"t":"T-4mo","title":"an anonymous crawler asking for private events gets nothing","actor":"anonymous","action":"rpc","method":"hackathon.HackathonService/List","params":{"visibilityFilter":"VISIBILITY_PRIVATE"},"expect":{"ok":true,"check":"listLacksName","checkArgs":{"name":"SDSC Winter School Sprint (draft)"}}}
+{"id":"act1.joinable","priority":"P1","implement":true,"outcome":"The dashboard lists 'SDSC Open Research Data Hackathon 2027' under Other hackathons with a Join action.","act":1,"t":"T-4mo","title":"future participants see it as joinable on their dashboard","actor":"bob","action":"ui.assert","assert":"dashboardOthersShows","params":{"name":"SDSC Open Research Data Hackathon 2027"}}
+{"id":"act1.rogue","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":1,"t":"T-4mo","title":"a regular user cannot publish a hackathon","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Create","params":{"name":"Bob's Rogue Hackathon","visibility":"VISIBILITY_PUBLIC"},"expect":{"error":"PermissionDenied"}}
+{"id":"act1.flow.anon","priority":"P1","implement":true,"outcome":"The 7-step browsing chain completes, ending showing the 'SDSC Hackathon Platform' heading.","act":1,"t":"T-4mo","title":"anonymous browse chain: home â†’ hackathon detail â†’ back home","action":"ui.flow","steps":[{"goto":"/"},{"expectHeading":"SDSC Hackathon Platform"},{"expectText":"SDSC Open Research Data Hackathon 2027"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/hackathon/"},{"back":true},{"expectHeading":"SDSC Hackathon Platform"}]}
+{"id":"act1.flow.bob","priority":"P1","implement":true,"outcome":"The chain completes: a signed-in non-member sees the events public page instead of a 403 dead end.","act":1,"t":"T-4mo","title":"signed-in non-member chain: fresh login -> dashboard -> click event -> public event page","actor":"bob","action":"ui.flow","fresh":true,"steps":[{"login":true},{"expectUrl":"/dashboard$"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectText":"SDSC Open Research Data Hackathon 2027"}]}
+{"id":"act1.flow.abandon","priority":"P1","implement":true,"outcome":"The 7-step browsing chain completes, ending showing 'Log in'.","act":1,"t":"T-4mo","title":"ABANDONED FORM: a visitor starts logging in, types a username, then walks away","action":"ui.flow","steps":[{"goto":"/"},{"clickButton":"Log in"},{"expectUrl":"8180"},{"fill":{"selector":"#username","value":"maybe-later"}},{"back":true},{"expectUrl":"localhost:8081"},{"expectText":"Log in"}]}
+{"id":"act1.flow.wrongpw","priority":"P1","implement":true,"outcome":"The 11-step browsing chain completes, ending at a URL matching '/dashboard$'.","act":1,"t":"T-4mo","title":"RECOVERY CHAIN: charles fumbles his password, sees the Keycloak error, retries and gets in","actor":"charles","action":"ui.flow","fresh":true,"steps":[{"goto":"/"},{"clickButton":"Log in"},{"expectUrl":"8180"},{"fill":{"selector":"#username","value":"charles"}},{"clickSelector":"#kc-login"},{"fill":{"selector":"#password","value":"wrong-password"}},{"clickSelector":"#kc-login"},{"expectText":"Invalid"},{"fill":{"selector":"#password","value":"aliceandbob"}},{"clickSelector":"#kc-login"},{"expectUrl":"/dashboard$"}]}
+{"id":"act1.flow.joinstub","priority":"P1","implement":true,"outcome":"Join is real now but registration has not opened: the click yields the friendly window-closed banner and charles stays a non-member.","act":1,"t":"T-4mo","title":"EARLY BIRD: charles clicks the real dashboard Join button before registration opens - polite window-closed error","actor":"charles","action":"ui.flow","steps":[{"goto":"/dashboard"},{"expectText":"SDSC Open Research Data Hackathon 2027"},{"clickButton":"Join"},{"expectText":"Registration is not open"}]}
+{"id":"act1.page.welcome","priority":"P1","implement":true,"outcome":"Succeeds. Returns pageWelcome for later steps. [Skips until the gated capability lands.]","act":1,"t":"T-4mo","title":"organizer publishes the Welcome page","actor":"hackagon-admin","action":"rpc","method":"hackathon.PageService/Create","params":{"hackathonId":"{{hackathonId}}","title":"Welcome","content":"Welcome to the SDSC Open Research Data Hackathon 2027! Venue: EPFL, Lausanne. Doors open 08:30.","visible":true},"save":{"pageWelcome":"pageId"},"expect":{"ok":true},"todo":"TODO: runs automatically once PageService.Create lands â€” verify field names (title/content/visible) against the final proto."}
+{"id":"act1.page.conduct","priority":"P1","implement":true,"outcome":"Succeeds. [Skips until the gated capability lands.]","act":1,"t":"T-4mo","title":"organizer publishes the Code of Conduct page","actor":"hackagon-admin","action":"rpc","method":"hackathon.PageService/Create","params":{"hackathonId":"{{hackathonId}}","title":"Code of Conduct","content":"Be excellent to each other. Harassment-free event; report issues to the organizers on site or via conduct@sdsc.example.","visible":true},"expect":{"ok":true},"todo":"TODO: runs once PageService.Create lands."}
+{"id":"act1.track.ds","priority":"P1","implement":true,"outcome":"Succeeds. Returns trackDS for later steps. [Skips until the gated capability lands.]","act":1,"t":"T-4mo","title":"organizer creates the Data Science track","actor":"hackagon-admin","action":"rpc","method":"hackathon.TrackService/Create","params":{"hackathonId":"{{hackathonId}}","name":"Data Science","description":"ML, statistics and analytics on open research data."},"save":{"trackDS":"trackId"},"expect":{"ok":true},"todo":"TODO: TrackService.Create has no proto yet (priority item 5) â€” action kept as placeholder; align fields when the proto lands."}
+{"id":"act1.track.rdi","priority":"P1","implement":true,"outcome":"Succeeds. Returns trackRDI for later steps. [Skips until the gated capability lands.]","act":1,"t":"T-4mo","title":"organizer creates the Research Data Infrastructure track","actor":"hackagon-admin","action":"rpc","method":"hackathon.TrackService/Create","params":{"hackathonId":"{{hackathonId}}","name":"Research Data Infrastructure","description":"FAIR pipelines, metadata, repositories and reproducibility tooling."},"save":{"trackRDI":"trackId"},"expect":{"ok":true},"todo":"TODO: TrackService.Create has no proto yet â€” placeholder."}
+{"comment":"â”€â”€ ACT 2 â€” T-3 months: REGISTRATION OPENS (13 sign-ups vs capacity 8) â”€â”€"}
+{"id":"act2.window.open","priority":"P2","implement":true,"outcome":"Succeeds - registration is open; the wave can sign up.","act":2,"t":"T-3mo","title":"T-3 months: the announcement goes out - admin opens registration","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}","registrationOpens":"{{now-1d}}"},"expect":{"ok":true}}
+{"id":"act2.join.alice","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"alice registers (waitlisted)","actor":"alice","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.bob","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"bob registers (waitlisted)","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.charles","priority":"P1","implement":true,"outcome":"charles joins through the real dashboard Join button and lands on the waitlist.","act":2,"t":"T-3mo","title":"charles registers via the dashboard Join button (waitlisted)","actor":"charles","action":"ui.flow","steps":[{"goto":"/dashboard"},{"clickButton":"Join"},{"expectText":"Waitlisted"}]}
+{"id":"act2.join.dana","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Dana Moser (ETH) registers","actor":"dana.moser","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.erik","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Erik Lindqvist (EPFL) registers","actor":"erik.lindqvist","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.fatima","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Fatima Khoury (SDSC) registers","actor":"fatima.khoury","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.giulia","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Giulia Ricci (Bern) registers","actor":"giulia.ricci","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.midway","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 7 on the list, 0 approved, 7 waitlisted.","act":2,"t":"T-3mo","title":"MEANWHILE admin watches registrations come in: 7 so far, all waitlisted (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":8,"approved":1,"waiting":7}}}
+{"id":"act2.pause","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"MEANWHILE admin briefly unlists the event for maintenance (visibility â†’ private)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","visibility":"VISIBILITY_PRIVATE"},"expect":{"ok":true}}
+{"id":"act2.pause.ui","priority":"P1","implement":true,"outcome":"'SDSC Open Research Data Hackathon 2027' is invisible on the public home.","act":2,"t":"T-3mo","title":"while unlisted, anonymous visitors no longer see the event","action":"ui.assert","assert":"homeAbsent","params":{"name":"SDSC Open Research Data Hackathon 2027"}}
+{"id":"act2.pause.api","priority":"P1","implement":true,"outcome":"Succeeds; 'SDSC Open Research Data Hackathon 2027' is absent from the list.","act":2,"t":"T-3mo","title":"while unlisted, the public list API omits it too","actor":"anonymous","action":"rpc","method":"hackathon.HackathonService/List","params":{"visibilityFilter":"VISIBILITY_PUBLIC"},"expect":{"ok":true,"check":"listLacksName","checkArgs":{"name":"SDSC Open Research Data Hackathon 2027"}}}
+{"id":"act2.resume","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"admin relists the event (visibility â†’ public)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","visibility":"VISIBILITY_PUBLIC"},"expect":{"ok":true}}
+{"id":"act2.resume.ui","priority":"P1","implement":true,"outcome":"The public home lists 'SDSC Open Research Data Hackathon 2027' with the 'Upcoming' badge.","act":2,"t":"T-3mo","title":"back online: the event is publicly listed again","action":"ui.assert","assert":"homeStatus","params":{"name":"SDSC Open Research Data Hackathon 2027","status":"Upcoming"}}
+{"id":"act2.join.hiro","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Hiro Tanaka (ETH) registers","actor":"hiro.tanaka","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.ines","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Ines Duarte (EPFL) registers","actor":"ines.duarte","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.jonas","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Jonas Weber (UZH) registers","actor":"jonas.weber","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.katya","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Katya Volkova (SDSC) registers","actor":"katya.volkova","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.liam","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Liam O'Brien (Bern) registers","actor":"liam.obrien","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.join.mei","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"Mei Chen (ETH) registers","actor":"mei.chen","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.form.alice","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: alice fills the registration form (schema defined by the admin in act 1)","actor":"alice","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"SDSC","skills":["go","grpc","facilitation"],"diet":"none","avatar":"https://pics.example.org/alice-wonderland.jpg"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.bob","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: bob fills the form (vegetarian)","actor":"bob","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"SDSC","skills":["svelte","typescript","data-viz"],"diet":"vegetarian","avatar":"https://pics.example.org/bob-henderson.jpg"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.charles","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: charles fills the form (ever hopeful)","actor":"charles","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"Univ. of Zurich","skills":["r","statistics"],"diet":"none"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.dana","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: Dana fills the form (skips the optional diet field)","actor":"dana.moser","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"ETH Zurich","skills":["python","ml","nlp"],"avatar":"https://pics.example.org/dana-moser.jpg"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.erik","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: Erik fills the form","actor":"erik.lindqvist","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"EPFL","skills":["rust","systems"],"diet":"none"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.giulia","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: Giulia declines photo consent â€” the optional consent must be honored","actor":"giulia.ricci","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"Univ. of Bern","skills":["bioinformatics","genomics"],"diet":"halal"},"consents":{"conduct":true,"photos":false}},"expect":{"ok":true}}
+{"id":"act2.form.hiro","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: Hiro fills the form (he will still no-show)","actor":"hiro.tanaka","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"ETH Zurich","skills":["computer-vision","pytorch"],"diet":"none"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.katya","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: waitlisted Katya fills the form too (forms are independent of approval)","actor":"katya.volkova","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"SDSC","skills":["data-eng","spark"],"diet":"vegan"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.mei","priority":"P2","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"FORMS: Mei fills the form","actor":"mei.chen","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"ETH Zurich","skills":["javascript","react"],"diet":"vegetarian"},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act2.form.missing","priority":"P2","implement":true,"outcome":"Rejected with InvalidArgument - no state change.","act":2,"t":"T-3mo","title":"VALIDATION: Liam omits the required Code-of-Conduct consent â€” rejected","actor":"liam.obrien","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"Univ. of Bern","skills":["devops"]},"consents":{"photos":true}},"expect":{"error":"InvalidArgument"}}
+{"id":"act2.form.unknown","priority":"P2","implement":true,"outcome":"Rejected with InvalidArgument - no state change.","act":2,"t":"T-3mo","title":"VALIDATION: Jonas submits a field the admin never defined (tshirtSize) â€” rejected","actor":"jonas.weber","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","responses":{"affiliation":"Univ. of Zurich","skills":["nlp"],"tshirtSize":"XL"},"consents":{"conduct":true}},"expect":{"error":"InvalidArgument"}}
+{"id":"act2.idempotent","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"registering twice is idempotent","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act2.anonymous","priority":"P1","implement":true,"outcome":"Rejected with Unauthenticated - no state change.","act":2,"t":"T-3mo","title":"anonymous visitors cannot register","actor":"anonymous","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"error":"Unauthenticated"}}
+{"id":"act2.roster","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 13 on the list, 0 approved, 13 waitlisted.","act":2,"t":"T-3mo","title":"authoritative roster: 13 registrations, all waitlisted (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":14,"approved":1,"waiting":13}}}
+{"id":"act2.users.grown","priority":"P1","implement":true,"outcome":"Succeeds; the platform user list has at least 14 accounts.","act":2,"t":"T-3mo","title":"MEANWHILE admin sees the platform grew to 14 accounts (extras self-registered)","actor":"hackagon-admin","action":"rpc","method":"user.UserService/List","params":{},"expect":{"ok":true,"check":"usersCount","checkArgs":{"atLeast":14}}}
+{"id":"act2.flow.admin.users","priority":"P1","implement":true,"outcome":"The 5-step browsing chain completes, ending showing 'Mei Chen'.","act":2,"t":"T-3mo","title":"MEANWHILE admin chain: dashboard â†’ user management â†’ sees the new registrants","actor":"hackagon-admin","action":"ui.flow","steps":[{"goto":"/dashboard"},{"goto":"/manage/users"},{"expectHeading":"Users"},{"expectText":"Dana Moser"},{"expectText":"Mei Chen"}]}
+{"id":"act2.users.rogue","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":2,"t":"T-3mo","title":"a regular user cannot list platform users","actor":"bob","action":"rpc","method":"user.UserService/List","params":{},"expect":{"error":"PermissionDenied"}}
+{"id":"act2.flow.alice.users","priority":"P1","implement":true,"outcome":"The 1-step browsing chain completes, ending with HTTP 403 - the permission denial is translated, not leaked as a 500.","act":2,"t":"T-3mo","title":"a non-admin opening user management is politely refused (403)","actor":"alice","action":"ui.flow","steps":[{"goto":"/manage/users","status":403}]}
+{"id":"act2.join.badid","priority":"P1","implement":true,"outcome":"Rejected with InvalidArgument - no state change.","act":2,"t":"T-3mo","title":"a broken client sends a malformed join request","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"not-a-uuid"},"expect":{"error":"InvalidArgument"}}
+{"id":"act2.join.ghost","priority":"P1","implement":true,"outcome":"Rejected with NotFound - no state change.","act":2,"t":"T-3mo","title":"joining a non-existent hackathon fails cleanly","actor":"bob","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"00000000-0000-0000-0000-000000000000"},"expect":{"error":"NotFound"}}
+{"id":"act2.whoami.bob","priority":"P1","implement":true,"outcome":"Succeeds.","act":2,"t":"T-3mo","title":"bob's platform account is live (WhoAmI)","actor":"bob","action":"rpc","method":"user.UserService/WhoAmI","params":{},"expect":{"ok":true}}
+{"id":"act2.ui.waitlisted","priority":"P1","implement":true,"outcome":"The dashboard shows 'SDSC Open Research Data Hackathon 2027' with the 'Waitlisted' membership badge.","act":2,"t":"T-3mo","title":"bob's dashboard shows the event as Waitlisted","actor":"bob","action":"ui.assert","assert":"dashboardBadge","params":{"name":"SDSC Open Research Data Hackathon 2027","badge":"Waitlisted"}}
+{"id":"act2.ui.locked","priority":"P1","implement":true,"outcome":"Opening the member view returns HTTP 403.","act":2,"t":"T-3mo","title":"waitlisted users cannot open the member view","actor":"bob","action":"ui.assert","assert":"memberViewStatus","params":{"status":403}}
+{"id":"act2.flow.bob","priority":"P1","implement":true,"outcome":"The 8-step browsing chain completes, ending at a URL matching '/dashboard$'.","act":2,"t":"T-3mo","title":"waitlisted chain: fresh login â†’ dashboard (Waitlisted) â†’ click my event â†’ 403 â†’ back home","actor":"bob","action":"ui.flow","fresh":true,"steps":[{"login":true},{"expectUrl":"/dashboard$"},{"expectText":"Waitlisted"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectText":"403"},{"expectText":"not a confirmed member"},{"clickLink":"Go back to Homepage"},{"expectUrl":"/dashboard$"}]}
+{"id":"act2.flow.anxious","priority":"P1","implement":true,"outcome":"The 4-step browsing chain completes, ending showing 'Waitlisted'.","act":2,"t":"T-3mo","title":"charles anxiously re-checks his waitlist status (dashboard â†’ reload â†’ still Waitlisted)","actor":"charles","action":"ui.flow","steps":[{"goto":"/dashboard"},{"expectText":"Waitlisted"},{"goto":"/dashboard"},{"expectText":"Waitlisted"}]}
+{"comment":"â”€â”€ ACT 3 â€” T-2 months: PROJECT PROPOSALS DUE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€"}
+{"id":"act3.propose.fair","priority":"P1","implement":true,"outcome":"Succeeds. Returns projectFair for later steps.","act":3,"t":"T-2mo","title":"bob proposes 'FAIR Pipeline Builder' on the Data Science track","actor":"bob","action":"rpc","method":"hackathon.ProjectService/Propose","params":{"hackathonId":"{{hackathonId}}","trackId":"{{var:trackDS}}","description":"Automated pipeline that converts raw research data into FAIR-compliant open datasets with provenance tracking.","title":"FAIR Pipeline Builder"},"save":{"projectFair":"projectId"},"expect":{"ok":true}}
+{"id":"act3.propose.litdata","priority":"P1","implement":true,"outcome":"Succeeds. Returns projectLitdata for later steps.","act":3,"t":"T-2mo","title":"Dana proposes 'LitData Extractor' on the RDI track","actor":"dana.moser","action":"rpc","method":"hackathon.ProjectService/Propose","params":{"hackathonId":"{{hackathonId}}","trackId":"{{var:trackRDI}}","description":"Automatic extraction of tabular data from published literature into open repositories.","title":"LitData Extractor"},"save":{"projectLitdata":"projectId"},"expect":{"ok":true}}
+{"id":"act3.propose.genomelens","priority":"P1","implement":true,"outcome":"Succeeds. Returns projectGenomelens for later steps.","act":3,"t":"T-2mo","title":"Erik proposes 'GenomeLens' on the Data Science track","actor":"erik.lindqvist","action":"rpc","method":"hackathon.ProjectService/Propose","params":{"hackathonId":"{{hackathonId}}","trackId":"{{var:trackDS}}","description":"Interactive visualization of genomic variants powered by open reference data.","title":"GenomeLens"},"save":{"projectGenomelens":"projectId"},"expect":{"ok":true}}
+{"id":"act3.approve.fair","priority":"P1","implement":true,"outcome":"Succeeds.","act":3,"t":"T-2mo","title":"organizer reviews and approves 'FAIR Pipeline Builder'","actor":"hackagon-admin","action":"rpc","method":"hackathon.ProjectService/Approve","params":{"projectId":"{{var:projectFair}}"},"expect":{"ok":true}}
+{"id":"act3.approve.litdata","priority":"P1","implement":true,"outcome":"Succeeds.","act":3,"t":"T-2mo","title":"organizer approves 'LitData Extractor' ('GenomeLens' stays proposed)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ProjectService/Approve","params":{"projectId":"{{var:projectLitdata}}"},"expect":{"ok":true}}
+{"id":"act3.rogue","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":3,"t":"T-2mo","title":"a non-registrant cannot approve proposals","actor":"bob","action":"rpc","method":"hackathon.ProjectService/Approve","params":{"projectId":"{{var:projectGenomelens}}"},"expect":{"error":"PermissionDenied"}}
+{"id":"act3.propose.sensor","priority":"P1","implement":true,"outcome":"Succeeds. Returns projectSensor for later steps.","act":3,"t":"T-2mo","title":"WITHDRAWN LATER: Hiro proposes 'Sensor Mesh Atlas'â€¦","actor":"hiro.tanaka","action":"rpc","method":"hackathon.ProjectService/Propose","params":{"hackathonId":"{{hackathonId}}","trackId":"{{var:trackDS}}","description":"Open atlas of environmental sensor meshes across Switzerland.","title":"Sensor Mesh Atlas"},"save":{"projectSensor":"projectId"},"expect":{"ok":true}}
+{"id":"act3.withdraw","priority":"P1","implement":true,"outcome":"Succeeds.","act":3,"t":"T-2mo","title":"â€¦then changes his mind and withdraws it (deletes his own proposal)","actor":"hiro.tanaka","action":"rpc","method":"hackathon.ProjectService/Delete","params":{"projectId":"{{var:projectSensor}}"},"expect":{"ok":true}}
+{"id":"act3.edit.fair","priority":"P1","implement":true,"outcome":"Succeeds.","act":3,"t":"T-2mo","title":"bob edits his proposal description before the deadline","actor":"bob","action":"rpc","method":"hackathon.ProjectService/Edit","params":{"projectId":"{{var:projectFair}}","description":"Automated pipeline converting raw research data into FAIR-compliant open datasets â€” now with provenance tracking AND schema inference."},"expect":{"ok":true}}
+{"id":"act3.propose.anonymous","priority":"P1","implement":true,"outcome":"Rejected with Unauthenticated - no state change.","act":3,"t":"T-2mo","title":"anonymous visitors cannot propose projects","actor":"anonymous","action":"rpc","method":"hackathon.ProjectService/Propose","params":{"hackathonId":"{{hackathonId}}","trackId":"{{var:trackDS}}","title":"drive-by proposal"},"expect":{"error":"Unauthenticated"}}
+{"id":"act3.approve.ghost","priority":"P1","implement":true,"outcome":"Rejected with NotFound - no state change.","act":3,"t":"T-2mo","title":"approving a non-existent proposal fails cleanly","actor":"hackagon-admin","action":"rpc","method":"hackathon.ProjectService/Approve","params":{"projectId":"00000000-0000-0000-0000-000000000000"},"expect":{"error":"NotFound"}}
+{"id":"act3.propose.waitlisted","priority":"P1","implement":true,"outcome":"Succeeds. Returns projectMetadata for later steps.","act":3,"t":"T-2mo","title":"waitlisted Katya proposes 'Metadata Commons' (policy: waitlisted may propose?)","actor":"katya.volkova","action":"rpc","method":"hackathon.ProjectService/Propose","params":{"hackathonId":"{{hackathonId}}","trackId":"{{var:trackRDI}}","description":"Shared metadata registry for Swiss research datasets.","title":"Metadata Commons"},"save":{"projectMetadata":"projectId"},"expect":{"ok":true}}
+{"id":"act3.ui.proposals","priority":"P2","implement":true,"outcome":"The proposals page shows approved and pending proposals with their status.","act":3,"t":"T-2mo","title":"approved proposals are published on the proposals page (organizer view - registrants are waitlisted until act 5)","actor":"hackagon-admin","action":"ui.assert","assert":"proposalsPage","params":{"approved":["FAIR Pipeline Builder","LitData Extractor"],"proposed":["GenomeLens"]}}
+{"comment":"â”€â”€ ACT 4 â€” T-1.5 months: TEAMS ARRANGEMENT + T-1 month: WEBINARS â”€â”€â”€â”€"}
+{"id":"act4.pref.bob","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"bob marks his preferred project","actor":"bob","action":"rpc","method":"hackathon.ProjectService/SetPreference","params":{"projectId":"{{var:projectFair}}"},"expect":{"ok":true}}
+{"id":"act4.pref.dana","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Dana ranks her project preferences","actor":"dana.moser","action":"rpc","method":"hackathon.ProjectService/SetPreference","params":{"projectId":"{{var:projectLitdata}}"},"expect":{"ok":true}}
+{"id":"act4.export","priority":"P1","implement":true,"outcome":"Succeeds. [Skips until the gated capability lands.]","act":4,"t":"T-1.5mo","title":"organizer exports preferences for team matching","actor":"hackagon-admin","action":"rpc","method":"hackathon.ProjectService/ExportPreferences","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true},"todo":"TODO: placeholder until ExportPreferences exists."}
+{"id":"act4.team.matterhorn","priority":"P1","implement":true,"outcome":"Succeeds. Returns teamMatterhorn for later steps.","act":4,"t":"T-1.5mo","title":"organizer creates Team Matterhorn on 'FAIR Pipeline Builder'","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/Create","params":{"name":"Team Matterhorn","projectId":"{{var:projectFair}}"},"save":{"teamMatterhorn":"teamId"},"expect":{"ok":true}}
+{"id":"act4.team.bernina","priority":"P1","implement":true,"outcome":"Succeeds. Returns teamBernina for later steps.","act":4,"t":"T-1.5mo","title":"organizer creates Team Bernina on 'LitData Extractor'","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/Create","params":{"name":"Team Bernina","projectId":"{{var:projectLitdata}}"},"save":{"teamBernina":"teamId"},"expect":{"ok":true}}
+{"id":"act4.assign.bob","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"bob is assigned to Team Matterhorn (initial teams communicated)","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:bob}}"},"expect":{"ok":true}}
+{"id":"act4.assign.alice","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"alice is assigned to Team Matterhorn","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:alice}}"},"expect":{"ok":true}}
+{"id":"act4.assign.dana","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Dana is assigned to Team Bernina","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamBernina}}","userId":"{{userId:dana.moser}}"},"expect":{"ok":true}}
+{"id":"act4.assign.erik","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Erik is assigned to Team Bernina","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamBernina}}","userId":"{{userId:erik.lindqvist}}"},"expect":{"ok":true}}
+{"id":"act4.pref.erik","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Erik marks his preferred project","actor":"erik.lindqvist","action":"rpc","method":"hackathon.ProjectService/SetPreference","params":{"projectId":"{{var:projectLitdata}}"},"expect":{"ok":true}}
+{"id":"act4.pref.update","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"EDIT: bob changes his mind and adds another preference: his preferences","actor":"bob","action":"rpc","method":"hackathon.ProjectService/SetPreference","params":{"projectId":"{{var:projectLitdata}}"},"expect":{"ok":true}}
+{"id":"act4.window.prefclose","priority":"P2","implement":true,"outcome":"Succeeds - preferences are closed from here on.","act":4,"t":"T-1mo","title":"the preference deadline passes - admin closes preferences","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}","preferencesClose":"{{now-1d}}"},"expect":{"ok":true}}
+{"id":"act4.window.preflate","priority":"P2","implement":true,"outcome":"Rejected with FailedPrecondition - no state change.","act":4,"t":"T-1.5mo","title":"ENFORCEMENT: Katya submits preferences after the preference deadline â€” bounced","actor":"katya.volkova","action":"rpc","method":"hackathon.ProjectService/SetPreference","gate":["hackathon.ConfigService/SetWindows","hackathon.ProjectService/SetPreference"],"params":{"projectId":"{{var:projectFair}}"},"expect":{"error":"FailedPrecondition"}}
+{"id":"act4.team.placeholder","priority":"P1","implement":true,"outcome":"Succeeds. Returns teamPlaceholder for later steps.","act":4,"t":"T-1.5mo","title":"CREATED THEN DELETED: admin drafts 'Team Placeholder' while sketching the splitâ€¦","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/Create","params":{"name":"Team Placeholder","projectId":"{{var:projectGenomelens}}"},"save":{"teamPlaceholder":"teamId"},"expect":{"ok":true}}
+{"id":"act4.team.placeholder.delete","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"â€¦and deletes it again","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/Delete","params":{"id":"{{var:teamPlaceholder}}"},"expect":{"ok":true}}
+{"id":"act4.rebalance.add","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"REBALANCING: Giulia is first assigned to Team Matterhornâ€¦","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:giulia.ricci}}"},"expect":{"ok":true}}
+{"id":"act4.rebalance.remove","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"â€¦then removed to balance team sizesâ€¦","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/RemoveUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:giulia.ricci}}"},"expect":{"ok":true}}
+{"id":"act4.rebalance.final","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"â€¦and lands on Team Bernina","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamBernina}}","userId":"{{userId:giulia.ricci}}"},"expect":{"ok":true}}
+{"id":"act4.assign.hiro","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Hiro is assigned to Team Matterhorn (everyone confirmed gets a seat)","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:hiro.tanaka}}"},"expect":{"ok":true}}
+{"id":"act4.assign.ines","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Ines is assigned to Team Matterhorn","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:ines.duarte}}"},"expect":{"ok":true}}
+{"id":"act4.assign.fatima","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"Fatima is assigned to Team Bernina (she will drop out at T-1wk)","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamBernina}}","userId":"{{userId:fatima.khoury}}"},"expect":{"ok":true}}
+{"id":"act4.team.edit","priority":"P1","implement":true,"outcome":"Succeeds.","act":4,"t":"T-1.5mo","title":"EDIT: admin polishes Team Bernina's description","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/Edit","params":{"description":"Cross-institution team: EPFL + ETH, focused on literature data extraction.","id":"{{var:teamBernina}}"},"expect":{"ok":true}}
+{"id":"act4.ui.teams","priority":"P2","implement":true,"outcome":"The teams page lists each team with exactly its expected members.","act":4,"t":"T-1.5mo","title":"teams and their members are visible on the teams page (organizer view - bob is still waitlisted until act 5)","actor":"hackagon-admin","action":"ui.assert","assert":"teamsPage","params":{"teams":{"Team Matterhorn":["Bob Henderson","Alice Wonderland","Hiro Tanaka","Ines Duarte"],"Team Bernina":["Dana Moser","Erik Lindqvist","Giulia Ricci","Fatima Khoury"]}}}
+{"id":"act4.webinars","priority":"P1","implement":true,"outcome":"Succeeds. Returns pageWebinars for later steps. [Skips until the gated capability lands.]","act":4,"t":"T-1mo","title":"pre-event webinar page published (2 sessions, recordings linked)","actor":"hackagon-admin","action":"rpc","method":"hackathon.PageService/Create","params":{"hackathonId":"{{hackathonId}}","title":"Pre-event webinars","content":"Session 1 (Data pipelines, 1.5h) and Session 2 (Repro tooling, 1.5h). Recordings: https://media.example.org/hackagon-2027/webinar-1 and /webinar-2.","visible":true},"save":{"pageWebinars":"pageId"},"expect":{"ok":true},"todo":"TODO: runs once PageService.Create lands."}
+{"comment":"â”€â”€ ACT 5 â€” T-1 week: REGISTRATION CLOSES (approve 8, dropout, backfill) â”€â”€"}
+{"id":"act5.approve.alice","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"alice is approved off the waitlist","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:alice}}"},"expect":{"ok":true}}
+{"id":"act5.approve.bob","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"bob is approved","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:bob}}"},"expect":{"ok":true}}
+{"id":"act5.approve.dana","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Dana is approved","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:dana.moser}}"},"expect":{"ok":true}}
+{"id":"act5.approve.erik","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Erik is approved","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:erik.lindqvist}}"},"expect":{"ok":true}}
+{"id":"act5.approve.fatima","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Fatima is approved","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:fatima.khoury}}"},"expect":{"ok":true}}
+{"id":"act5.approve.giulia","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Giulia is approved","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:giulia.ricci}}"},"expect":{"ok":true}}
+{"id":"act5.approve.hiro","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Hiro is approved","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:hiro.tanaka}}"},"expect":{"ok":true}}
+{"id":"act5.approve.ines","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Ines is approved â€” capacity (8) reached","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:ines.duarte}}"},"expect":{"ok":true}}
+{"id":"act5.approve.double","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"a double-click on approve is harmless (idempotent re-approval of bob)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:bob}}"},"expect":{"ok":true}}
+{"id":"act5.roster.full","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 13 on the list, 8 approved, 5 waitlisted.","act":5,"t":"T-1wk","title":"roster: 8 approved, 5 waitlisted (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":14,"approved":9,"waiting":5}}}
+{"id":"act5.ui.member","priority":"P1","implement":true,"outcome":"The dashboard shows 'SDSC Open Research Data Hackathon 2027' with the 'Member' membership badge.","act":5,"t":"T-1wk","title":"bob's badge flips to Member","actor":"bob","action":"ui.assert","assert":"dashboardBadge","params":{"name":"SDSC Open Research Data Hackathon 2027","badge":"Member"}}
+{"id":"act5.ui.open","priority":"P1","implement":true,"outcome":"Opening the member view returns HTTP 200.","act":5,"t":"T-1wk","title":"the member view opens for approved members","actor":"bob","action":"ui.assert","assert":"memberViewStatus","params":{"status":200}}
+{"id":"act5.ui.about","priority":"P1","implement":true,"outcome":"The member overview About section shows 'Max capacity'.","act":5,"t":"T-1wk","title":"the About section shows the real announcement","actor":"bob","action":"ui.assert","assert":"aboutVisible","params":{"textContains":"Max capacity"}}
+{"id":"act5.flow.bob","priority":"P1","implement":true,"outcome":"The 14-step browsing chain completes, ending showing 'About'.","act":5,"t":"T-1wk","title":"member tour chain: home â†’ dashboard â†’ overview â†’ Participants â†’ Timeline â†’ Overview","actor":"bob","action":"ui.flow","steps":[{"goto":"/"},{"expectUrl":"/dashboard$"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/overview$"},{"expectText":"SDSC Open Research Data Hackathon 2027"},{"expectText":"Member"},{"clickLink":"Participants"},{"expectUrl":"/participants$"},{"expectHeading":"Participants"},{"clickLink":"Timeline"},{"expectUrl":"/timeline$"},{"clickLink":"Overview"},{"expectUrl":"/overview$"},{"expectText":"About"}]}
+{"id":"act5.flow.admin","priority":"P1","implement":true,"outcome":"The 5-step browsing chain completes, ending showing 'SDSC Open Research Data Hackathon 2027'.","act":5,"t":"T-1wk","title":"admin chain: dashboard â†’ click event (not a participant) â†’ straight into the member view via the admin escape hatch","actor":"hackagon-admin","action":"ui.flow","steps":[{"goto":"/"},{"expectUrl":"/dashboard$"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/overview$"},{"expectText":"SDSC Open Research Data Hackathon 2027"}]}
+{"id":"act5.flow.alice","priority":"P1","implement":true,"outcome":"The 8-step browsing chain completes, ending at a URL matching '/webinars$'.","act":5,"t":"T-1wk","title":"alice's member tour: home â†’ dashboard â†’ overview â†’ Teams â†’ Webinars","actor":"alice","action":"ui.flow","steps":[{"goto":"/"},{"expectUrl":"/dashboard$"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/overview$"},{"clickLink":"Teams"},{"expectUrl":"/teams$"},{"clickLink":"Webinars"},{"expectUrl":"/webinars$"}]}
+{"id":"act5.flow.search","priority":"P1","implement":true,"outcome":"The 7-step browsing chain completes, ending showing 'No participants match your search.'.","act":5,"t":"T-1wk","title":"ABANDONED FORM: bob types a participant search, gets no matches, leaves without clearing it","actor":"bob","action":"ui.flow","steps":[{"goto":"/dashboard"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"clickLink":"Participants"},{"expectUrl":"/participants$"},{"fill":{"selector":"input[type=search]","value":"quantum blockchain"}},{"expectText":"No participants match your search."},{"goto":"/dashboard"}]}
+{"id":"act5.dropout.before","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Fatima (confirmed) can access the event before dropping out","actor":"fatima.khoury","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act5.dropout.remove","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Fatima cancels a week before the event and is removed","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/RemoveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:fatima.khoury}}"},"expect":{"ok":true}}
+{"id":"act5.dropout.after","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":5,"t":"T-1wk","title":"Fatima loses access immediately (row deleted, role revoked)","actor":"fatima.khoury","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"error":"PermissionDenied"}}
+{"id":"act5.dropout.team","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"â€¦and her seat on Team Bernina is cleared","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/RemoveUser","params":{"teamId":"{{var:teamBernina}}","userId":"{{userId:fatima.khoury}}"},"expect":{"ok":true}}
+{"id":"act5.backfill","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Jonas moves up from the waitlist into the freed spot","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:jonas.weber}}"},"expect":{"ok":true}}
+{"id":"act5.backfill.access","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Jonas has member access now","actor":"jonas.weber","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act5.backfill.team","priority":"P1","implement":true,"outcome":"Succeeds.","act":5,"t":"T-1wk","title":"Jonas takes Fatima's seat on Team Bernina","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamBernina}}","userId":"{{userId:jonas.weber}}"},"expect":{"ok":true}}
+{"id":"act5.roster.final","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 12 on the list, 8 approved, 4 waitlisted.","act":5,"t":"T-1wk","title":"final list confirmed: 8 approved, 4 waitlisted, 12 total (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":13,"approved":9,"waiting":4}}}
+{"id":"act5.approve.ghost","priority":"P1","implement":true,"outcome":"Rejected with NotFound - no state change.","act":5,"t":"T-1wk","title":"admin mistakenly re-approves the dropout â€” she is gone (NotFound)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:fatima.khoury}}"},"expect":{"error":"NotFound"}}
+{"id":"act5.remove.ghost","priority":"P1","implement":true,"outcome":"Rejected with NotFound - no state change.","act":5,"t":"T-1wk","title":"removing her twice also fails cleanly","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/RemoveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:fatima.khoury}}"},"expect":{"error":"NotFound"}}
+{"id":"act5.approve.badid","priority":"P1","implement":true,"outcome":"Rejected with InvalidArgument - no state change.","act":5,"t":"T-1wk","title":"a malformed approve request is rejected","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"not-a-uuid"},"expect":{"error":"InvalidArgument"}}
+{"id":"act5.window.regclose","priority":"P2","implement":true,"outcome":"Succeeds - the registration window is now closed.","act":5,"t":"T-1wk","title":"T-1 week: registration closes as announced","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}","registrationCloses":"{{now-1d}}"},"expect":{"ok":true}}
+{"id":"act5.window.regclosed","priority":"P2","implement":true,"outcome":"Rejected with FailedPrecondition - no state change.","act":5,"t":"T-1wk","title":"ENFORCEMENT: the registration window is closed â€” a late signup bounces (no override given)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Join","gate":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}"},"expect":{"error":"FailedPrecondition"}}
+{"id":"act5.ui.charles","priority":"P1","implement":true,"outcome":"The dashboard shows 'SDSC Open Research Data Hackathon 2027' with the 'Waitlisted' membership badge.","act":5,"t":"T-1wk","title":"charles stays waitlisted","actor":"charles","action":"ui.assert","assert":"dashboardBadge","params":{"name":"SDSC Open Research Data Hackathon 2027","badge":"Waitlisted"}}
+{"id":"act5.ui.charles.locked","priority":"P1","implement":true,"outcome":"Opening the member view returns HTTP 403.","act":5,"t":"T-1wk","title":"charles is still locked out of the member view","actor":"charles","action":"ui.assert","assert":"memberViewStatus","params":{"status":403}}
+{"id":"act5.rogue.approve","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":5,"t":"T-1wk","title":"a mere member cannot approve participants","actor":"bob","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:charles}}"},"expect":{"error":"PermissionDenied"}}
+{"id":"act5.rogue.remove","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":5,"t":"T-1wk","title":"a mere member cannot remove participants","actor":"bob","action":"rpc","method":"hackathon.HackathonService/RemoveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:charles}}"},"expect":{"error":"PermissionDenied"}}
+{"id":"act5.audit","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 12 on the list, 8 approved, 4 waitlisted.","act":5,"t":"T-1wk","title":"MEANWHILE admin takes a final pre-event audit snapshot (full tree) (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":13,"approved":9,"waiting":4}}}
+{"comment":"â”€â”€ ACT 6 â€” T=0 / T+1: HACKATHON DAYS (time travel: move the event, not the clock) â”€â”€"}
+{"id":"act6.begin","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"the event begins: dates shifted onto today","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","startsAt":"{{now-1d}}","endsAt":"{{now+1d}}"},"expect":{"ok":true}}
+{"id":"act6.ui.active","priority":"P1","implement":true,"outcome":"The public home lists 'SDSC Open Research Data Hackathon 2027' with the 'Active' badge.","act":6,"t":"T0","title":"the public site announces the event as Active","action":"ui.assert","assert":"homeStatus","params":{"name":"SDSC Open Research Data Hackathon 2027","status":"Active"}}
+{"id":"act6.flow.anon","priority":"P1","implement":true,"outcome":"The 4-step browsing chain completes, ending at a URL matching '/hackathon/'.","act":6,"t":"T0","title":"anonymous event-day chain: home (Active badge) â†’ hackathon detail","action":"ui.flow","steps":[{"goto":"/"},{"expectText":"Active"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/hackathon/"}]}
+{"id":"act6.list.active","priority":"P1","implement":true,"outcome":"Succeeds; the list contains 'SDSC Open Research Data Hackathon 2027'.","act":6,"t":"T0","title":"the public list API filtered by ACTIVE returns the running event","actor":"anonymous","action":"rpc","method":"hackathon.HackathonService/List","params":{"statusFilter":["HACKATHON_STATUS_ACTIVE"]},"expect":{"ok":true,"check":"listHasName","checkArgs":{"name":"SDSC Open Research Data Hackathon 2027"}}}
+{"id":"act6.noshow","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"NO-SHOW at check-in: Hiro wrote 'see you there!' and never appeared â€” admin clears his Team Matterhorn seat","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/RemoveUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:hiro.tanaka}}"},"expect":{"ok":true}}
+{"id":"act6.noshow.access","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"a no-show stays a confirmed participant (off the team, not out of the event)","actor":"hiro.tanaka","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act6.walkin.signup","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"WALK-IN: Noor Haddad hears about the event that morning and creates an account at the door","actor":"noor.haddad","action":"rpc","method":"user.UserService/Register","params":{},"expect":{"ok":true}}
+{"id":"act6.walkin.override","priority":"P2","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"admin reopens registration for on-site walk-ins (manual override)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/OverrideWindow","params":{"hackathonId":"{{hackathonId}}","window":"registration","extendMinutes":120,"reason":"on-site walk-ins at check-in"},"expect":{"ok":true}}
+{"id":"act6.walkin.join","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"Noor registers on the spot (waitlisted for a moment)","actor":"noor.haddad","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act6.walkin.approve","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"admin approves the walk-in on the spot","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/ApproveParticipant","params":{"hackathonId":"{{hackathonId}}","userId":"{{userId:noor.haddad}}"},"expect":{"ok":true}}
+{"id":"act6.walkin.form","priority":"P2","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"FORMS: admin digitizes Noor's paper registration form from the check-in desk","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/SubmitRegistrationForm","gate":["hackathon.ConfigService/SetRegistrationForm","hackathon.HackathonService/SubmitRegistrationForm"],"params":{"hackathonId":"{{hackathonId}}","onBehalfOf":"{{userId:noor.haddad}}","responses":{"affiliation":"EPFL","skills":["design","frontend"]},"consents":{"conduct":true,"photos":true}},"expect":{"ok":true}}
+{"id":"act6.walkin.access","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"Noor has member access minutes after walking in","actor":"noor.haddad","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true}}
+{"id":"act6.walkin.team","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"admin assigns Noor to Team Matterhorn â€” the no-show's seat is filled","actor":"hackagon-admin","action":"rpc","method":"hackathon.TeamService/AssignUser","params":{"teamId":"{{var:teamMatterhorn}}","userId":"{{userId:noor.haddad}}"},"expect":{"ok":true}}
+{"id":"act6.ui.teams","priority":"P2","implement":true,"outcome":"The teams page lists each team with exactly its expected members.","act":6,"t":"T0","title":"the teams page reflects the day-1 reality (no-show out, walk-in in)","actor":"bob","action":"ui.assert","assert":"teamsPage","params":{"teams":{"Team Matterhorn":["Bob Henderson","Alice Wonderland","Ines Duarte","Noor Haddad"],"Team Bernina":["Dana Moser","Erik Lindqvist","Giulia Ricci","Jonas Weber"]}}}
+{"id":"act6.roster.walkin","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 13 on the list, 9 approved, 4 waitlisted.","act":6,"t":"T0","title":"roster after check-in: 13 on the list, 9 confirmed, 4 waitlisted (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":14,"approved":10,"waiting":4}}}
+{"id":"act6.announce","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"MEANWHILE admin pins a live announcement into the event description","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","description":"UPDATE (Day 1): Lunch at 12:30 in Hall B. Keynote recording will be shared tonight. â€” Two days of building open, reproducible research-data tooling with the Swiss scientific community at the SwissTech Convention Center, EPFL, Lausanne. Max capacity: 8 participants (pilot edition)."},"expect":{"ok":true}}
+{"id":"act6.announce.ui","priority":"P1","implement":true,"outcome":"The member overview About section shows 'Lunch at 12:30'.","act":6,"t":"T0","title":"members see the live announcement on their overview","actor":"bob","action":"ui.assert","assert":"aboutVisible","params":{"textContains":"Lunch at 12:30"}}
+{"id":"act6.phase.ideation","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"Ideation phase on the schedule","actor":"hackagon-admin","action":"rpc","method":"hackathon.PhaseService/Create","params":{"hackathonId":"{{hackathonId}}","name":"Ideation","startsAt":"{{now-1d}}","endsAt":"{{now-0d}}","description":"Frame the problem, form ideas, pitch them to the room."},"expect":{"ok":true}}
+{"id":"act6.phase.hacking","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T0","title":"Hacking phase on the schedule","actor":"hackagon-admin","action":"rpc","method":"hackathon.PhaseService/Create","params":{"hackathonId":"{{hackathonId}}","name":"Hacking","startsAt":"{{now-0d}}","endsAt":"{{now+1d}}","description":"Heads-down build time across both event days."},"expect":{"ok":true}}
+{"id":"act6.phase.judging","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T+1","title":"Judging phase on the schedule","actor":"hackagon-admin","action":"rpc","method":"hackathon.PhaseService/Create","params":{"hackathonId":"{{hackathonId}}","name":"Judging","startsAt":"{{now+1d}}","endsAt":"{{now+1d}}","description":"Demos, jury deliberation and community voting."},"expect":{"ok":true}}
+{"id":"act6.phase.rogue","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":6,"t":"T0","title":"a participant cannot edit the schedule","actor":"bob","action":"rpc","method":"hackathon.PhaseService/Create","params":{"hackathonId":"{{hackathonId}}","name":"Nap Time","startsAt":"{{now-0d}}","endsAt":"{{now+1d}}","description":"Rogue phase that must be denied."},"expect":{"error":"PermissionDenied"}}
+{"id":"act6.ui.timeline","priority":"P2","implement":true,"outcome":"The timeline shows the phases in order: Ideation, Hacking, Judging.","act":6,"t":"T0","title":"the phases render in order on the member timeline","actor":"bob","action":"ui.assert","assert":"timelinePhases","params":{"phases":["Ideation","Hacking","Judging"]}}
+{"id":"act6.flow.day1end","priority":"P1","implement":true,"outcome":"The 3-step browsing chain completes, ending showing 'Log in'.","act":6,"t":"T0","title":"end of day 1: bob signs out from the venue machine","actor":"bob","action":"ui.flow","steps":[{"goto":"/dashboard"},{"clickButton":"B"},{"expectText":"Log in"}]}
+{"id":"act6.flow.day2","priority":"P1","implement":true,"outcome":"The 4-step browsing chain completes, ending at a URL matching '/overview$'.","act":6,"t":"T+1","title":"day 2: bob logs back in and heads straight to his event","actor":"bob","action":"ui.flow","fresh":true,"steps":[{"login":true},{"expectUrl":"/dashboard$"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/overview$"}]}
+{"id":"act6.files","priority":"P1","implement":true,"outcome":"Five deterministic files (PNG/SVG/PDF/CSV/README) are written to .state/uploads/team-matterhorn/ and verified byte-stable.","act":6,"t":"T+1","title":"submission upload fixtures generated deterministically (PNG/SVG/PDF/CSV/README)","action":"files.generate","params":{"slug":"team-matterhorn","seed":2027,"team":"Team Matterhorn","project":"FAIR Pipeline Builder"}}
+{"id":"act6.submit.draft","priority":"P1","implement":true,"outcome":"Succeeds. Returns submissionMatterhorn for later steps.","act":6,"t":"T+1","title":"Team Matterhorn creates a draft submission with the file bundle attached","actor":"bob","action":"rpc","method":"hackathon.TeamService/CreateSubmission","params":{"teamId":"{{var:teamMatterhorn}}","projectId":"{{var:projectFair}}","result":"FAIR Pipeline Builder â€” draft. Attachments: logo.png, poster.svg, final-report.pdf, data-sample.csv, README.md from .state/uploads/team-matterhorn/","form":{"repo":"https://github.com/sdsc/fair-pipeline-builder","demo":"https://demo.sdsc.dev/fair-pipeline","summary":"FAIR data pipeline builder."}},"save":{"submissionMatterhorn":"id"},"expect":{"ok":true}}
+{"id":"act6.submit.final","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T+1","title":"Team Matterhorn finalizes before the deadline","actor":"bob","action":"rpc","method":"hackathon.TeamService/FinalizeSubmission","params":{"submissionId":"{{var:submissionMatterhorn}}"},"expect":{"ok":true}}
+{"id":"act6.submit.bernina","priority":"P1","implement":true,"outcome":"Succeeds. Returns submissionBernina for later steps.","act":6,"t":"T+1","title":"Team Bernina submits final","actor":"dana.moser","action":"rpc","method":"hackathon.TeamService/CreateSubmission","params":{"teamId":"{{var:teamBernina}}","projectId":"{{var:projectLitdata}}","result":"LitData Extractor â€” final submission.","form":{"repo":"https://github.com/sdsc/fair-pipeline-builder","demo":"https://demo.sdsc.dev/fair-pipeline","summary":"FAIR data pipeline builder."}},"save":{"submissionBernina":"id"},"expect":{"ok":true}}
+{"id":"act6.submit.bernina.edit","priority":"P1","implement":true,"outcome":"Succeeds - the draft submission content is updated.","act":6,"t":"T+1","title":"EDIT: Team Bernina revises their draft before finalizing","actor":"dana.moser","action":"rpc","method":"hackathon.TeamService/EditSubmission","params":{"submissionId":"{{var:submissionBernina}}","result":"LitData Extractor â€” final: added evaluation on 1,200 open-access papers."},"expect":{"ok":true}}
+{"id":"act6.submit.bernina.final","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T+1","title":"Team Bernina finalizes before the deadline","actor":"dana.moser","action":"rpc","method":"hackathon.TeamService/FinalizeSubmission","params":{"submissionId":"{{var:submissionBernina}}"},"expect":{"ok":true}}
+{"id":"act6.submit.abandoned","priority":"P1","implement":true,"outcome":"Succeeds. Returns submissionBerninaScratch for later steps.","act":6,"t":"T+1","title":"ABANDONED WORK: Bernina starts a second draft that is never finalized","actor":"erik.lindqvist","action":"rpc","method":"hackathon.TeamService/CreateSubmission","params":{"teamId":"{{var:teamBernina}}","projectId":"{{var:projectLitdata}}","result":"Scratch draft â€” alternate demo idea (never submitted).","form":{"repo":"https://github.com/sdsc/fair-pipeline-builder","demo":"https://demo.sdsc.dev/fair-pipeline","summary":"FAIR data pipeline builder."}},"save":{"submissionBerninaScratch":"id"},"expect":{"ok":true}}
+{"id":"act6.logo.refresh","priority":"P1","implement":true,"outcome":"Succeeds.","act":6,"t":"T+1","title":"MEANWHILE admin swaps in the final event artwork","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","logo":"{{logoDataUri:2028}}"},"expect":{"ok":true}}
+{"id":"act6.logo.check","priority":"P1","implement":true,"outcome":"Succeeds; the stored logo (and name/description) round-trips byte-for-byte.","act":6,"t":"T+1","title":"the new artwork round-trips","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"logoRoundTrip","checkArgs":{"seed":2028}}}
+{"id":"act6.submit.rogue","priority":"P1","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":6,"t":"T+1","title":"a non-team-member cannot submit for the team","actor":"charles","action":"rpc","method":"hackathon.TeamService/CreateSubmission","params":{"teamId":"{{var:teamMatterhorn}}","projectId":"{{var:projectFair}}","result":"hijack attempt"},"expect":{"error":"PermissionDenied"}}
+{"id":"act6.submit.invalid","priority":"P2","implement":true,"outcome":"Rejected with InvalidArgument - no state change.","act":6,"t":"T+1","title":"VALIDATION: a submission missing the admin-required repo field is rejected","actor":"bob","action":"rpc","method":"hackathon.TeamService/CreateSubmission","params":{"teamId":"{{var:teamMatterhorn}}","projectId":"{{var:projectFair}}","result":"oops - forgot the repo","form":{"summary":"A submission with no repository link."}},"expect":{"error":"InvalidArgument"}}
+{"id":"act6.window.subclose","priority":"P2","implement":true,"outcome":"Succeeds - submissions are closed pending any organizer override.","act":6,"t":"T+1","title":"the submission deadline passes","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/SetWindows","params":{"hackathonId":"{{hackathonId}}","submissionsClose":"{{now-1d}}"},"expect":{"ok":true}}
+{"id":"act6.window.sublate","priority":"P2","implement":true,"outcome":"Rejected with FailedPrecondition - no state change.","act":6,"t":"T+1","title":"ENFORCEMENT: Bernina tries one more submission after the deadline â€” bounced","actor":"dana.moser","action":"rpc","method":"hackathon.TeamService/CreateSubmission","gate":["hackathon.ConfigService/SetWindows","hackathon.TeamService/CreateSubmission"],"params":{"teamId":"{{var:teamBernina}}","projectId":"{{var:projectLitdata}}","result":"Missed the deadline: supplementary slides."},"expect":{"error":"FailedPrecondition"}}
+{"id":"act6.window.override","priority":"P2","implement":true,"outcome":"Succeeds.","act":6,"t":"T+1","title":"MANUAL OVERRIDE: admin extends the submission window by 30 minutes (AV issues during demos)","actor":"hackagon-admin","action":"rpc","method":"hackathon.ConfigService/OverrideWindow","params":{"hackathonId":"{{hackathonId}}","window":"submissions","extendMinutes":30,"reason":"AV issues during the demo session"},"expect":{"ok":true}}
+{"id":"act6.submit.grace","priority":"P2","implement":true,"outcome":"Succeeds. Returns submissionBerninaExtra for later steps.","act":6,"t":"T+1","title":"within the grace window, Bernina's supplementary submission is accepted","actor":"dana.moser","action":"rpc","method":"hackathon.TeamService/CreateSubmission","gate":["hackathon.ConfigService/SetWindows","hackathon.TeamService/CreateSubmission"],"params":{"teamId":"{{var:teamBernina}}","projectId":"{{var:projectLitdata}}","result":"Supplementary slides, submitted within the admin-granted grace window.","form":{"repo":"https://github.com/sdsc/fair-pipeline-builder","demo":"https://demo.sdsc.dev/fair-pipeline","summary":"FAIR data pipeline builder."}},"save":{"submissionBerninaExtra":"id"},"expect":{"ok":true}}
+{"id":"act6.ui.submissions","priority":"P2","implement":true,"outcome":"The submissions page lists the finalized submissions.","act":6,"t":"T+1","title":"submissions render on the submissions page","actor":"bob","action":"ui.assert","assert":"submissionsPage","params":{"final":["FAIR Pipeline Builder","LitData Extractor"]}}
+{"comment":"â”€â”€ ACT 7 â€” T+1 evening: VOTING & AWARDS â”€â”€â”€ VoteService has NO proto and NO DB tables yet (priority item 8) â€” every action below is a placeholder with guessed shapes; keep them, align fields when VoteService lands. â”€â”€"}
+{"id":"act7.cat.impact","priority":"P2","implement":true,"outcome":"Succeeds - the category exists and is listed for the hackathon.","act":7,"t":"T+1","title":"organizer defines vote category: Impact","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/CreateVoteCategory","params":{"hackathonId":"{{hackathonId}}","name":"Impact","description":"Scientific and societal impact","votingMethod":"VOTING_METHOD_SINGLE_CHOICE","voterType":"VOTER_TYPE_ALL_PARTICIPANTS"},"save":{"catImpact":"voteCategory.id"},"expect":{"ok":true}}
+{"id":"act7.cat.tech","priority":"P2","implement":true,"outcome":"Succeeds - the category exists and is listed for the hackathon.","act":7,"t":"T+1","title":"organizer defines vote category: Technical Excellence","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/CreateVoteCategory","params":{"hackathonId":"{{hackathonId}}","name":"Technical Excellence","description":"Engineering quality and reproducibility","votingMethod":"VOTING_METHOD_SINGLE_CHOICE","voterType":"VOTER_TYPE_ALL_PARTICIPANTS"},"save":{"catTech":"voteCategory.id"},"expect":{"ok":true}}
+{"id":"act7.cat.demo","priority":"P2","implement":true,"outcome":"Succeeds - the category exists and is listed for the hackathon.","act":7,"t":"T+1","title":"organizer defines vote category: Best Demo","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/CreateVoteCategory","params":{"hackathonId":"{{hackathonId}}","name":"Best Demo","description":"Presentation and live demo","votingMethod":"VOTING_METHOD_SINGLE_CHOICE","voterType":"VOTER_TYPE_ALL_PARTICIPANTS"},"save":{"catDemo":"voteCategory.id"},"expect":{"ok":true}}
+{"id":"act7.voting.open","priority":"P2","implement":true,"outcome":"Succeeds - voting_enabled flips to true; ballots are now accepted.","act":7,"t":"T+1","title":"admin opens the voting window (settings toggle - there is no Open RPC)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/EditSettings","params":{"hackathonId":"{{hackathonId}}","votingEnabled":true},"expect":{"ok":true}}
+{"id":"act7.monitor.open","priority":"P2","implement":true,"outcome":"Succeeds - admin-only raw ballot export while votes come in.","act":7,"t":"T+1","title":"MEANWHILE admin watches the live leaderboard while votes come in","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/ExportVotes","params":{"categoryId":"{{var:catImpact}}","format":"EXPORT_FORMAT_JSON"},"expect":{"ok":true}}
+{"id":"act7.cast.alice","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"alice votes for Bernina/Impact 5 (own-team votes: decide policy)","actor":"alice","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.bob","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"bob votes for Bernina/Technical","actor":"bob","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catTech}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.dana","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Dana votes for Matterhorn/Impact","actor":"dana.moser","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.erik","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Erik votes for Matterhorn/Technical","actor":"erik.lindqvist","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catTech}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.giulia","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Giulia votes for Matterhorn/Demo","actor":"giulia.ricci","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catDemo}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.hiro","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Hiro votes for Bernina/Demo","actor":"hiro.tanaka","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catDemo}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.ines","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Ines votes for Matterhorn/Impact","actor":"ines.duarte","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.jonas","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Jonas votes for Matterhorn/Technical","actor":"jonas.weber","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catTech}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.noor","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"walk-in Noor votes for too: Bernina/Impact","actor":"noor.haddad","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.alice2","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"alice also votes for Bernina/Demo","actor":"alice","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catDemo}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.bob2","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"bob also votes for Matterhorn/Demo 3 (harsh on his own demo â€” decide own-team policy)","actor":"bob","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catDemo}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.ines2","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Ines also votes for Bernina/Technical","actor":"ines.duarte","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catTech}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.giulia2","priority":"P2","implement":true,"outcome":"Succeeds - the single-choice ballot is recorded.","act":7,"t":"T+1","title":"Giulia also votes for Bernina/Technical","actor":"giulia.ricci","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catTech}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"ok":true}}
+{"id":"act7.cast.admin","priority":"P2","implement":true,"outcome":"Rejected with PermissionDenied - only confirmed participants vote.","act":7,"t":"T+1","title":"the organizer does not vote (policy: organizers are neutral)","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"error":"PermissionDenied"}}
+{"id":"act7.cast.waitlisted","priority":"P2","implement":true,"outcome":"Rejected with PermissionDenied - only confirmed participants vote.","act":7,"t":"T+1","title":"waitlisted charles cannot vote","actor":"charles","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"error":"PermissionDenied"}}
+{"id":"act7.cast.double","priority":"P2","implement":true,"outcome":"Rejected with AlreadyExists - one ballot per voter per category.","act":7,"t":"T+1","title":"double-voting the same submission+category is rejected","actor":"dana.moser","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionMatterhorn}}"}},"expect":{"error":"AlreadyExists"}}
+{"id":"act7.close","priority":"P2","implement":true,"outcome":"Succeeds - voting_enabled flips to false; late ballots bounce.","act":7,"t":"T+1","title":"admin closes voting (voting_enabled toggle - there is no Close RPC)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/EditSettings","params":{"hackathonId":"{{hackathonId}}","votingEnabled":false},"expect":{"ok":true}}
+{"id":"act7.cast.late","priority":"P2","implement":true,"outcome":"Rejected with FailedPrecondition - voting is closed.","act":7,"t":"T+1","title":"votes for after closing are rejected","actor":"bob","action":"rpc","method":"vote.VoteService/SubmitVote","params":{"singleChoice":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionBernina}}"}},"expect":{"error":"FailedPrecondition"}}
+{"id":"act7.result.impact","priority":"P2","implement":true,"outcome":"Succeeds - Matterhorn is placed first in Impact (results are advisory until the admin says so).","act":7,"t":"T+1","title":"admin records the Impact winner from the tally (admin has the final voice)","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/CreateVoteResult","params":{"categoryId":"{{var:catImpact}}","submissionId":"{{var:submissionMatterhorn}}","position":1,"title":"Winner - Impact"},"expect":{"ok":true}}
+{"id":"act7.results","priority":"P2","implement":true,"outcome":"Succeeds - the Impact results list Matterhorn in first place.","act":7,"t":"T+1","title":"results: Team Matterhorn wins (aggregated leaderboard)","actor":"hackagon-admin","action":"rpc","method":"vote.VoteService/ListVoteResults","params":{"categoryId":"{{var:catImpact}}"},"expect":{"ok":true}}
+{"id":"act7.prizes.finalize","priority":"P3","implement":true,"outcome":"Succeeds.","act":7,"t":"T+1","title":"FINAL VOICE: admin reviews the results and finalizes the awards (votes are advisory)","actor":"hackagon-admin","action":"rpc","method":"hackathon.PrizeService/Finalize","params":{"hackathonId":"{{hackathonId}}","awards":[{"rank":1,"submissionId":"{{var:submissionMatterhorn}}"},{"rank":2,"submissionId":"{{var:submissionBernina}}"},{"special":"Community Choice","submissionId":"{{var:submissionBernina}}"}]},"expect":{"ok":true}}
+{"comment":"â”€â”€ ACT 8 â€” T+1 week: POST-EVENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€"}
+{"id":"act8.end","priority":"P1","implement":true,"outcome":"Succeeds.","act":8,"t":"T+1wk","title":"the event moves into the past: status flips to Finished","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","startsAt":"{{now-9d}}","endsAt":"{{now-7d}}"},"expect":{"ok":true}}
+{"id":"act8.ui.finished","priority":"P1","implement":true,"outcome":"The public home lists 'SDSC Open Research Data Hackathon 2027' with the 'Finished' badge.","act":8,"t":"T+1wk","title":"the public site shows the event as Finished","action":"ui.assert","assert":"homeStatus","params":{"name":"SDSC Open Research Data Hackathon 2027","status":"Finished"}}
+{"id":"act8.latejoin","priority":"P1","implement":true,"outcome":"Rejected with FailedPrecondition - no state change.","act":8,"t":"T+1wk","title":"late registrations are rejected once the event is over","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Join","params":{"hackathonId":"{{hackathonId}}"},"expect":{"error":"FailedPrecondition"}}
+{"id":"act8.flow.anon","priority":"P1","implement":true,"outcome":"The 6-step browsing chain completes, ending showing the 'SDSC Hackathon Platform' heading.","act":8,"t":"T+1wk","title":"anonymous archive chain: home (Finished badge) â†’ detail â†’ back","action":"ui.flow","steps":[{"goto":"/"},{"expectText":"Finished"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/hackathon/"},{"back":true},{"expectHeading":"SDSC Hackathon Platform"}]}
+{"id":"act8.audit","priority":"P1","implement":true,"outcome":"Succeeds; roster shows 13 on the list, 9 approved, 4 waitlisted.","act":8,"t":"T+1wk","title":"MEANWHILE admin takes the post-event archive snapshot (walk-in included) (roster includes the organizer)","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Get","params":{"hackathonId":"{{hackathonId}}"},"expect":{"ok":true,"check":"roster","checkArgs":{"total":14,"approved":10,"waiting":4}}}
+{"id":"act8.thanks","priority":"P1","implement":true,"outcome":"Succeeds.","act":8,"t":"T+1wk","title":"admin updates the description with thanks and the winners","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Edit","params":{"hackathonId":"{{hackathonId}}","description":"THANK YOU for an amazing edition! Winners: 1st Team Matterhorn (FAIR Pipeline Builder), 2nd Team Bernina (LitData Extractor). Photos and submissions are available to participants. â€” SDSC Open Research Data Hackathon 2027, SwissTech Convention Center, EPFL."},"expect":{"ok":true}}
+{"id":"act8.thanks.ui","priority":"P1","implement":true,"outcome":"The member overview About section shows 'Team Matterhorn'.","act":8,"t":"T+1wk","title":"members see the thank-you note and winners on their overview","actor":"bob","action":"ui.assert","assert":"aboutVisible","params":{"textContains":"Team Matterhorn"}}
+{"id":"act8.retention.alice","priority":"P1","implement":true,"outcome":"Opening the member view returns HTTP 200.","act":8,"t":"T+1wk","title":"alice also keeps access to the archived event","actor":"alice","action":"ui.assert","assert":"memberViewStatus","params":{"status":200}}
+{"id":"act8.prizes.edit","priority":"P3","implement":true,"outcome":"Succeeds.","act":8,"t":"T+1wk","title":"PRIZES: admin edits the awarded prize text (adds the sponsor credit)","actor":"hackagon-admin","action":"rpc","method":"hackathon.PrizeService/Edit","params":{"hackathonId":"{{hackathonId}}","rank":1,"title":"1st â€” CHF 5'000 + SDSC mentoring (sponsored by the Innovation Unit)"},"expect":{"ok":true}}
+{"id":"act8.prizes.rogue","priority":"P3","implement":true,"outcome":"Rejected with PermissionDenied - no state change.","act":8,"t":"T+1wk","title":"a member cannot touch the prize table","actor":"bob","action":"rpc","method":"hackathon.PrizeService/Edit","params":{"hackathonId":"{{hackathonId}}","rank":1,"title":"1st â€” a lifetime supply of pizza"},"expect":{"error":"PermissionDenied"}}
+{"id":"act8.retention","priority":"P1","implement":true,"outcome":"Opening the member view returns HTTP 200.","act":8,"t":"T+1wk","title":"confirmed members keep access to the event history","actor":"bob","action":"ui.assert","assert":"memberViewStatus","params":{"status":200}}
+{"id":"act8.flow.charles","priority":"P1","implement":true,"outcome":"The 7-step browsing chain completes, ending at a URL matching '/dashboard$'.","act":8,"t":"T+1wk","title":"post-event waitlisted chain: fresh login â†’ dashboard (still Waitlisted) â†’ click event â†’ still 403 â†’ back home","actor":"charles","action":"ui.flow","fresh":true,"steps":[{"login":true},{"expectUrl":"/dashboard$"},{"expectText":"Waitlisted"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectText":"403"},{"clickLink":"Go back to Homepage"},{"expectUrl":"/dashboard$"}]}
+{"id":"act8.flow.bob","priority":"P1","implement":true,"outcome":"The 8-step browsing chain completes, ending at a URL matching '/photos$'.","act":8,"t":"T+1wk","title":"member history chain: dashboard (Finished badge) â†’ overview â†’ Submissions â†’ Photos","actor":"bob","action":"ui.flow","steps":[{"goto":"/dashboard"},{"expectText":"Finished"},{"clickLink":"SDSC Open Research Data Hackathon 2027"},{"expectUrl":"/overview$"},{"clickLink":"Submissions"},{"expectUrl":"/submissions$"},{"clickLink":"Photos"},{"expectUrl":"/photos$"}]}
+{"id":"act8.photos","priority":"P1","implement":true,"outcome":"Succeeds. [Skips until the gated capability lands.]","act":8,"t":"T+1wk","title":"photos published + winners announced on the website","actor":"hackagon-admin","action":"rpc","method":"hackathon.PageService/Create","params":{"hackathonId":"{{hackathonId}}","title":"Photos & Winners","content":"Winners: 1st Team Matterhorn (FAIR Pipeline Builder), 2nd Team Bernina (LitData Extractor). Photo material: generated posters from helpers/files.ts by default, or CC files fetched by scripts/fetch-cc-assets.sh â€” keep .state/uploads/cc/ATTRIBUTION.md content on the page.","visible":true},"expect":{"ok":true},"todo":"TODO: runs once PageService.Create lands; image embedding needs the upload channel from act6.submit.draft."}
+{"id":"act8.ui.winners","priority":"P2","implement":true,"outcome":"The public winners page names 'Team Matterhorn' as the winner.","act":8,"t":"T+1wk","title":"the winners page renders for anonymous visitors","action":"ui.assert","assert":"publicWinnersPage","params":{"winner":"Team Matterhorn"}}
+{"id":"act8.blog","priority":"P1","implement":true,"outcome":"Succeeds. Returns pageBlog for later steps. [Skips until the gated capability lands.]","act":8,"t":"T+1wk","title":"FINAL BLOG: admin publishes the wrap-up post â€” winner, numbers, thank-yous","actor":"hackagon-admin","action":"rpc","method":"hackathon.PageService/Create","params":{"hackathonId":"{{hackathonId}}","title":"Wrap-up: ORD Hackathon 2027","content":"Final blog entry. 13 registrations, 8 confirmed participants, 2 teams, 14 ballots. Winner: Team Matterhorn with FAIR Pipeline Builder; runner-up Team Bernina with LitData Extractor. Webinar recordings, photos and the full leaderboard are linked below. See you at the Winter School!","visible":true},"save":{"pageBlog":"pageId"},"expect":{"ok":true},"todo":"TODO: runs once PageService.Create lands â€” the public wrap-up/blog entry announcing the winner."}
+{"id":"act8.ui.blog","priority":"P2","implement":true,"outcome":"The public wrap-up post is readable and names 'Team Matterhorn'.","act":8,"t":"T+1wk","title":"the wrap-up post is readable by everyone","action":"ui.assert","assert":"publicBlogEntry","params":{"titleContains":"Wrap-up","winner":"Team Matterhorn"}}
+{"id":"act8.account.liam","priority":"P3","implement":true,"outcome":"Succeeds.","act":8,"t":"T+1wk","title":"CHURN: Liam (never got off the waitlist) deletes his profile and leaves the platform","actor":"liam.obrien","action":"rpc","method":"user.UserService/DeleteAccount","params":{},"expect":{"ok":true}}
+{"id":"act8.account.mei","priority":"P3","implement":true,"outcome":"Succeeds.","act":8,"t":"T+1wk","title":"CHURN: Mei deletes her profile too","actor":"mei.chen","action":"rpc","method":"user.UserService/DeleteAccount","params":{},"expect":{"ok":true}}
+{"id":"act8.account.check","priority":"P3","implement":true,"outcome":"Succeeds; the deleted profiles no longer appear in the user list.","act":8,"t":"T+1wk","title":"the departed profiles are gone from the platform user list","actor":"hackagon-admin","action":"rpc","method":"user.UserService/List","params":{},"expect":{"ok":true,"check":"usersLackNames","checkArgs":{"names":["Liam O'Brien","Mei Chen"]}}}
+{"id":"act8.page.cleanup","priority":"P1","implement":true,"outcome":"Succeeds.","act":8,"t":"T+1wk","title":"CLEANUP: admin deletes the outdated webinar page","actor":"hackagon-admin","action":"rpc","method":"hackathon.PageService/Delete","params":{"pageId":"{{var:pageWebinars}}"},"expect":{"ok":true}}
+{"id":"act8.draft.delete","priority":"P2","implement":true,"outcome":"Succeeds. [Skips until the gated capability lands.]","act":8,"t":"T+1wk","title":"CLEANUP: admin deletes the never-announced winter draft event","actor":"hackagon-admin","action":"rpc","method":"hackathon.HackathonService/Delete","params":{"hackathonId":"{{var:draftId}}"},"expect":{"ok":true},"todo":"TODO: runs once HackathonService.Delete lands â€” pin cascade semantics (participants/pages/teams of a deleted hackathon) when it does."}
+</script>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const SVGNS = "http://www.w3.org/2000/svg";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ── parse the embedded recipe ────────────────────────────────────── */
+const EVENTS = $("recipe-data").textContent
+  .split("\n").map(s => s.trim()).filter(Boolean)
+  .map(l => JSON.parse(l)).filter(a => a.id);
+
+const ACT_NAMES = {1:"Publication",2:"Registration opens",3:"Project proposals",
+  4:"Teams & webinars",5:"Registration closes",6:"Hackathon days",
+  7:"Voting & awards",8:"Post-event"};
+
+const KIND_COLOR = {
+  create:"var(--k-create)", join:"var(--k-join)", approve:"var(--k-approve)",
+  edit:"var(--k-edit)", remove:"var(--k-remove)", vote:"var(--k-vote)",
+  check:"var(--k-check)", browse:"var(--k-check)", files:"var(--k-create)"
+};
+
+function kindOf(a){
+  if (a.action === "ui.flow") return "browse";
+  if (a.action === "ui.assert") return "check";
+  if (a.action === "files.generate") return "files";
+  const m = a.method || "";
+  if (/\/Join$|SubmitRegistrationForm/.test(m)) return "join";
+  if (/ApproveParticipant/.test(m)) return "approve";
+  if (/RemoveParticipant|RemoveUser|\/Delete$/.test(m)) return "remove";
+  if (/\/Edit|SetPreference|Finalize|EditSubmission/.test(m)) return "edit";
+  if (/VoteService/.test(m)) return "vote";
+  if (/Create|Propose|Export/.test(m)) return "create";
+  return "check";
+}
+const isDenied  = a => !!(a.expect && a.expect.error);
+const isPlanned = a => !!a.todo && (a.action === "rpc" || a.action === "ui.assert");
+
+/* ── cast & geometry ──────────────────────────────────────────────── */
+const PEOPLE = [
+  ["hackagon-admin","Hackagon Admin","HA",480,84,26,"admin"],
+  ["alice","Alice Wonderland","A",118,196,22,"principal"],
+  ["bob","Bob Henderson","B",118,330,22,"principal"],
+  ["charles","Charles Whitfield","C",118,464,22,"principal"],
+  ["anonymous","Visitor","?",118,592,19,"anon"],
+  ["dana.moser","Dana Moser","DM",850,118,15,"extra"],
+  ["erik.lindqvist","Erik Lindqvist","EL",857,168,15,"extra"],
+  ["fatima.khoury","Fatima Khoury","FK",862,218,15,"extra"],
+  ["giulia.ricci","Giulia Ricci","GR",865,268,15,"extra"],
+  ["hiro.tanaka","Hiro Tanaka","HT",866,318,15,"extra"],
+  ["ines.duarte","Ines Duarte","ID",865,368,15,"extra"],
+  ["jonas.weber","Jonas Weber","JW",862,418,15,"extra"],
+  ["katya.volkova","Katya Volkova","KV",857,468,15,"extra"],
+  ["liam.obrien","Liam O'Brien","LO",850,518,15,"extra"],
+  ["mei.chen","Mei Chen","MC",841,568,15,"extra"],
+  ["noor.haddad","Noor Haddad","NH",831,618,15,"extra"]
+];
+const ENTITIES = [
+  ["platform","",480,340],["draft","Winter draft",700,120],
+  ["teamM","Team Matterhorn",348,522],["teamB","Team Bernina",614,522],
+  ["subM","final",348,584],["subB","final",586,584],["subScratch","scratch",646,584],
+  ["assets","upload bundle",212,560],
+  ["placeholder","Team Placeholder",480,560],
+  /* the platform's sections orbit the big hexagon as little hexagons */
+  ["secOverview","Overview",480,216],
+  ["secParticipants","Participants",570,254],
+  ["secProposals","Proposals",607,340],
+  ["secSubmissions","Submissions",570,426],
+  ["secTimeline","Timeline",480,464],
+  ["secTeams","Teams",390,426],
+  ["secWebinars","Webinars",353,340],
+  ["secPhotos","Photos",390,254]
+];
+const pos = {}; PEOPLE.forEach(p => pos[p[0]] = {x:p[3], y:p[4]});
+ENTITIES.forEach(e => pos[e[0]] = {x:e[2], y:e[3]});
+
+/* ── build the SVG stage ──────────────────────────────────────────── */
+const svg = $("stage");
+const layers = {}; ["beams","entities","people","fx"].forEach(n => {
+  const g = document.createElementNS(SVGNS,"g"); svg.appendChild(g); layers[n] = g;
+});
+function el(tag, attrs, parent){
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  (parent || svg).appendChild(n); return n;
+}
+function hexPath(cx, cy, r){
+  let d = "";
+  for (let i = 0; i < 6; i++){
+    const a = Math.PI/3*i - Math.PI/6;
+    d += (i ? "L" : "M") + (cx + r*Math.cos(a)).toFixed(1) + " " + (cy + r*Math.sin(a)).toFixed(1);
+  }
+  return d + "Z";
+}
+
+const nodeEls = {};
+/* people */
+for (const [key, name, ini, x, y, r, group] of PEOPLE){
+  const g = el("g", {opacity: 1}, layers.people);
+  const ring = el("circle", {cx:x, cy:y, r:r, fill:"var(--panel)",
+    stroke: group === "anon" ? "var(--muted)" : "var(--line-strong)",
+    "stroke-width": 1.5, "stroke-dasharray": group === "anon" ? "3 3" : "none"}, g);
+  el("text", {x:x, y:y+3.5, "text-anchor":"middle", class:"node-label",
+    style:"font-weight:700"}, g).textContent = ini;
+  const labelX = group === "extra" ? x - r - 6 : x;
+  const labelY = group === "extra" ? y + 3 : y + r + 13;
+  const anchor = group === "extra" ? "end" : "middle";
+  el("text", {x:labelX, y:labelY, "text-anchor":anchor, class:"node-sub"}, g)
+    .textContent = group === "extra" ? name.split(" ")[0] : name;
+  const badge = el("circle", {cx:x + r*0.75, cy:y - r*0.75, r:4.5,
+    fill:"var(--muted)", stroke:"var(--bg)", "stroke-width":1.5, opacity:0}, g);
+  nodeEls[key] = {g, ring, badge, x, y, r};
+}
+/* platform hexagon */
+{
+  const {x, y} = pos.platform;
+  const g = el("g", {opacity:.25}, layers.entities);
+  el("path", {d: hexPath(x, y, 58), fill:"var(--surface)",
+    stroke:"var(--line-strong)", "stroke-width":2}, g);
+  const nm = el("text", {x, y:y-6, "text-anchor":"middle", class:"hex-name"}, g);
+  nm.textContent = "HACKAGON";
+  const sub = el("text", {x, y:y+12, "text-anchor":"middle", class:"node-sub"}, g);
+  sub.textContent = "no event yet";
+  const sub2 = el("text", {x, y:y+26, "text-anchor":"middle", class:"node-sub"}, g);
+  nodeEls.platform = {g, name:nm, sub, sub2, x, y};
+}
+/* secondary entities (hidden until spawned) */
+for (const [key, label, x, y] of ENTITIES){
+  if (key === "platform") continue;
+  const g = el("g", {opacity:0}, layers.entities);
+  let shape;
+  if (key === "draft" || key === "placeholder"){
+    shape = el("path", {d:hexPath(x, y, key === "draft" ? 24 : 18), fill:"var(--panel)",
+      stroke:"var(--muted)", "stroke-width":1.5, "stroke-dasharray":"4 3"}, g);
+  } else if (key.startsWith("sub")){
+    shape = el("rect", {x:x-11, y:y-11, width:22, height:22, rx:3, fill:"var(--panel)",
+      stroke:"var(--k-create)", "stroke-width":1.5, "stroke-dasharray":"4 3"}, g);
+  } else if (key === "teamM" || key === "teamB"){
+    shape = el("circle", {cx:x, cy:y, r:24, fill:"var(--panel)",
+      stroke:"var(--k-create)", "stroke-width":1.5, "stroke-dasharray":"4 3"}, g);
+  } else if (key.startsWith("sec")){
+    shape = el("path", {d:hexPath(x, y, 17), fill:"var(--panel)",
+      stroke:"var(--line-strong)", "stroke-width":1.3}, g);
+  } else {
+    shape = el("rect", {x:x-56, y:y-13, width:112, height:26, rx:13, fill:"var(--panel)",
+      stroke:"var(--line-strong)", "stroke-width":1.2, "stroke-dasharray":"4 3"}, g);
+  }
+  const ty = (key === "teamM" || key === "teamB") ? y + 38
+           : key.startsWith("sec") ? y + 31
+           : key.startsWith("sub") ? y + 24
+           : (key === "draft" || key === "placeholder") ? y + (key === "draft" ? 38 : 32)
+           : y + 4;
+  const t = el("text", {x, y:ty, "text-anchor":"middle",
+    class: (key.startsWith("sub") || key.startsWith("sec")) ? "node-sub" : "entity-label"}, g);
+  t.textContent = label;
+  const cnt = el("text", {x, y: ty + 12, "text-anchor":"middle", class:"node-sub"}, g);
+  if (key.startsWith("sec")){
+    /* the item count lives INSIDE the little hexagon */
+    cnt.setAttribute("y", y + 4.5);
+    cnt.setAttribute("class", "sec-count");
+  }
+  nodeEls[key] = {g, shape, label:t, count:cnt, x, y};
+}
+
+/* column headers: who is on each side of the stage */
+(function colHeaders(){
+  const head = (x, y, anchor, main, sub, tip) => {
+    const g = el("g", {}, layers.people);
+    const t1 = el("text", {x, y, "text-anchor":anchor, class:"col-head"}, g);
+    t1.textContent = main;
+    const t2 = el("text", {x, y: y + 12, "text-anchor":anchor, class:"node-sub"}, g);
+    t2.textContent = sub;
+    const tt = document.createElementNS(SVGNS, "title");
+    tt.textContent = tip; g.appendChild(tt);
+  };
+  head(118, 146, "middle", "PRINCIPALS", "browser + API · full sessions",
+    "The four checked-in dev-realm users. They log in through the real Keycloak flow, get Playwright storage states, and every UI outcome is asserted through their browsers. The visitor below is any signed-out session.");
+  head(905, 78, "end", "EXTRAS — THE CROWD", "API-only · cast.json",
+    "Ten registrants provisioned into Keycloak by scripts/roster.sh. They act through gRPC with real tokens (full RBAC) but have no browser session — they are the registration wave, the waitlist, the dropout and the churn.");
+})();
+
+/* ── deterministic state (rebuilt on seek) ────────────────────────── */
+let state;
+function freshState(){
+  return { badges:{}, status:null, listed:true, exists:false, draft:false,
+    placeholder:false, tracks:0, pages:0, cats:0, teamM:false, teamB:false,
+    subM:false, subB:false, subScratch:false, assets:false, winner:false,
+    pagesOverview:0, webinarPages:0, photoPages:0, proposals:0, teams:0,
+    subs:0, phases:0,
+    approved:0, waitlisted:0, played:0, denied:0, planned:0 };
+}
+function parseUserId(a){
+  const m = JSON.stringify(a.params || {}).match(/\{\{userId:([a-z.\-]+)\}\}/);
+  return m ? m[1] : null;
+}
+function parseDates(a){
+  const p = a.params || {};
+  const rel = s => { const m = /\{\{now([+-])(\d+)d\}\}/.exec(s || ""); return m ? (m[1] === "-" ? -1 : 1) * +m[2] : null; };
+  return { start: rel(p.startsAt), end: rel(p.endsAt) };
+}
+function apply(a, s){
+  s.played++;
+  if (isPlanned(a)) { s.planned++; }
+  if (isDenied(a)) { s.denied++; return; }   /* denied actions change nothing */
+  const m = a.method || "", planned = isPlanned(a), p = a.params || {};
+  const pstr = JSON.stringify(p);
+  if (a.id === "act1.publish"){ s.exists = true; s.status = "upcoming"; return; }
+  if (a.id === "act1.draft.create"){ s.draft = true; return; }
+  if (a.id === "act8.draft.delete"){ s.draft = false; return; }
+  if (a.id === "act4.team.placeholder"){ s.placeholder = true; s.teams++; return; }
+  if (a.id === "act4.team.placeholder.delete"){ s.placeholder = false; s.teams = Math.max(0, s.teams - 1); return; }
+  if (a.id === "act6.files"){ s.assets = true; return; }
+  if (a.id === "act7.results"){ s.winner = true; return; }
+  if (/DeleteAccount/.test(m)){
+    if (a.actor){
+      if (s.badges[a.actor] === "wait") s.waitlisted--;
+      if (s.badges[a.actor] === "member") s.approved--;
+      s.badges[a.actor] = "gone";
+    }
+    return;
+  }
+  if (/PageService\/Create/.test(m)){
+    s.pages++;
+    if (pstr.includes("ebinar")) s.webinarPages++;
+    else if (pstr.includes("Photos") || pstr.includes("Wrap-up")) s.photoPages++;
+    else s.pagesOverview++;
+    return;
+  }
+  if (/PageService\/Delete/.test(m)){
+    s.pages = Math.max(0, s.pages - 1);
+    if (pstr.includes("pageWebinars")) s.webinarPages = Math.max(0, s.webinarPages - 1);
+    else s.pagesOverview = Math.max(0, s.pagesOverview - 1);
+    return;
+  }
+  if (/ProjectService\/Propose/.test(m)){ s.proposals++; return; }
+  if (/ProjectService\/Delete/.test(m)){ s.proposals = Math.max(0, s.proposals - 1); return; }
+  if (/PhaseService\/Create/.test(m)){ s.phases++; return; }
+  if (/TrackService\/Create/.test(m)){ s.tracks++; return; }
+  if (/VoteService\/CreateCategory/.test(m)){ s.cats++; return; }
+  if (/TeamService\/Create$/.test(m)){
+    s.teams++;
+    if (pstr.includes("Matterhorn") || a.id === "act4.team.matterhorn") s.teamM = true;
+    else if (a.id === "act4.team.bernina") s.teamB = true;
+    return;
+  }
+  if (/TeamService\/Delete$/.test(m)){ s.teams = Math.max(0, s.teams - 1); return; }
+  if (/CreateSubmission/.test(m)){
+    s.subs++;
+    if (pstr.includes("teamMatterhorn")) s.subM = true;
+    else if (a.id === "act6.submit.abandoned") s.subScratch = true;
+    else s.subB = true;
+    return;
+  }
+  if (/\/Join$/.test(m) && a.actor && a.actor !== "anonymous" && !planned){
+    if (!s.badges[a.actor]){ s.badges[a.actor] = "wait"; s.waitlisted++; }
+    return;
+  }
+  if (/ApproveParticipant/.test(m) && !planned){
+    const u = parseUserId(a);
+    if (u && s.badges[u] !== "member"){
+      if (s.badges[u] === "wait") s.waitlisted--;
+      s.badges[u] = "member"; s.approved++;
+    }
+    return;
+  }
+  if (/RemoveParticipant/.test(m) && !planned){
+    const u = parseUserId(a);
+    if (u){
+      if (s.badges[u] === "member") s.approved--;
+      if (s.badges[u] === "wait") s.waitlisted--;
+      s.badges[u] = "left";
+    }
+    return;
+  }
+  if (/HackathonService\/Edit/.test(m) && !planned){
+    if (p.visibility === "VISIBILITY_PRIVATE") s.listed = false;
+    if (p.visibility === "VISIBILITY_PUBLIC") s.listed = true;
+    const d = parseDates(a);
+    if (d.start !== null && d.end !== null){
+      s.status = d.end < 0 ? "finished" : (d.start <= 0 && d.end >= 0 ? "active" : "upcoming");
+    }
+  }
+}
+
+/* ── render state → DOM ───────────────────────────────────────────── */
+const BADGE_TXT = {wait:"WAIT", member:"MEMBER", left:"LEFT", gone:"DELETED", none:"—", admin:"ADMIN"};
+const rosterEls = {};
+(function buildRoster(){
+  const wrap = $("roster");
+  for (const [key, name,,,, , group] of PEOPLE){
+    if (key === "anonymous") continue;
+    const row = document.createElement("div"); row.className = "person";
+    const av = document.createElement("span"); av.className = "av";
+    av.textContent = name.split(" ").map(w => w[0]).join("").slice(0,2);
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = name;
+    const bd = document.createElement("span"); bd.className = "bd none"; bd.textContent = "—";
+    row.append(av, nm, bd); wrap.appendChild(row);
+    row.style.cursor = "pointer";
+    row.title = "Click for status, history and what comes next";
+    row.addEventListener("click", () => openModal(key));
+    rosterEls[key] = {bd, fixed: group === "admin"};
+  }
+})();
+function badgeColor(b){
+  return b === "wait" ? "var(--st-warn)" : b === "member" ? "var(--st-good)"
+       : b === "left" ? "var(--st-crit)" : "var(--muted)";
+}
+function availOf(a){
+  /* red: the backend RPC does not exist yet; yellow: backend works but the
+     step runs through the API (or asserts a mock page) because the frontend
+     is missing; neutral: real browser coverage */
+  if (a.action === "rpc") return isPlanned(a) ? "red" : "yel";
+  if (a.action === "ui.assert" && a.todo) return "yel";
+  return "blue"; /* covered end-to-end today: real browser flows and checks */
+}
+function render(){
+  const s = state;
+  /* platform */
+  const P = nodeEls.platform;
+  P.g.setAttribute("opacity", s.exists ? 1 : .25);
+  P.sub.textContent = s.exists ? "SDSC ORD Hackathon 2027" : "no event yet";
+  P.sub2.textContent = s.exists ? (s.approved + " member · " + s.waitlisted + " waitlisted") : "";
+  const chip = $("statusChip");
+  chip.className = "chip " + (s.status || "hidden");
+  chip.textContent = s.status ? s.status.toUpperCase() : "";
+  if (!s.status) chip.classList.add("hidden");
+  $("unlistedChip").classList.toggle("hidden", s.listed);
+  /* entities */
+  const show = (k, on) => { const n = nodeEls[k];
+    n.g.setAttribute("opacity", on ? 1 : 0);
+    n.g.style.pointerEvents = on ? "auto" : "none"; };
+  show("draft", s.draft); show("placeholder", s.placeholder);
+  show("teamM", s.teamM); show("teamB", s.teamB);
+  show("subM", s.subM); show("subB", s.subB); show("subScratch", s.subScratch);
+  show("assets", s.assets);
+  /* section hexagons are structure: dim before the event exists, lit after —
+     each carries the live count of items inside it */
+  const secCounts = {
+    secOverview: s.pagesOverview,
+    secParticipants: s.approved + s.waitlisted,
+    secProposals: s.proposals,
+    secTeams: s.teams,
+    secSubmissions: s.subs,
+    secTimeline: s.phases,
+    secWebinars: s.webinarPages,
+    secPhotos: s.photoPages
+  };
+  for (const k in nodeEls) if (k.startsWith("sec")){
+    nodeEls[k].g.setAttribute("opacity", s.exists ? 1 : .3);
+    nodeEls[k].g.style.pointerEvents = "auto";
+    nodeEls[k].count.textContent = secCounts[k] ? secCounts[k] : "";
+  }
+  /* people badges */
+  for (const key in rosterEls){
+    const r = rosterEls[key], n = nodeEls[key];
+    if (r.fixed){ r.bd.className = "bd admin"; r.bd.textContent = "ADMIN";
+      n.badge.setAttribute("opacity", 1); n.badge.setAttribute("fill", "var(--k-create)");
+      continue; }
+    const b = s.badges[key] || "none";
+    r.bd.className = "bd " + (b === "wait" ? "wait" : b);
+    r.bd.textContent = BADGE_TXT[b];
+    n.badge.setAttribute("opacity", b === "none" ? 0 : 1);
+    n.badge.setAttribute("fill", badgeColor(b));
+    n.g.setAttribute("opacity", b === "left" ? .38 : b === "gone" ? .2 : 1);
+  }
+  nodeEls.teamM.label.textContent = s.winner ? "🏆 Team Matterhorn" : "Team Matterhorn";
+  /* counters */
+  $("stPlayed").textContent = s.played;
+  $("stDenied").textContent = s.denied;
+  $("stPlanned").textContent = s.planned;
+  $("counter").textContent = cursor + " / " + EVENTS.length;
+  /* scrubber: the playhead sweeps right as the story advances */
+  if (playheadEl){
+    const pct = cursor / EVENTS.length * 100;
+    playheadEl.style.left = "calc(" + pct + "% - 1px)";
+    elapsedEl.style.width = pct + "%";
+  }
+  phaseCells.forEach(pc => {
+    const done = cursor >= pc.from + pc.n;
+    pc.el.classList.toggle("done", done);
+    pc.el.classList.toggle("cur", !done && cursor > pc.from);
+  });
+  const cur = EVENTS[Math.min(cursor, EVENTS.length - 1)];
+  $("phaseLabel").innerHTML = cursor === 0
+    ? "<b>ACT —</b> press play"
+    : "<b>ACT " + cur.act + "</b> · " + (cur.t || "") + " · " + (ACT_NAMES[cur.act] || "");
+}
+
+/* ── target resolution ────────────────────────────────────────────── */
+function actorKey(a){
+  if (a.action === "files.generate") return "platform";
+  return a.actor && pos[a.actor] ? a.actor : "anonymous";
+}
+function targetKey(a){
+  const p = JSON.stringify(a.params || {});
+  const m = a.method || "";
+  if (/ApproveParticipant|RemoveParticipant/.test(m)){
+    const u = parseUserId(a); if (u && pos[u]) return u;
+  }
+  if (p.includes("var:draftId") || a.id === "act1.draft.create") return "draft";
+  if (a.id === "act4.team.placeholder" || p.includes("teamPlaceholder")) return "placeholder";
+  /* submissions before categories: a vote references both, the ballot lands on the submission */
+  if (p.includes("submissionMatterhorn")) return "subM";
+  if (p.includes("submissionBerninaScratch")) return "subScratch";
+  if (p.includes("submissionBernina")) return "subB";
+  if (p.includes("teamMatterhorn")) return "teamM";
+  if (p.includes("teamBernina")) return "teamB";
+  /* section hexagons around the platform */
+  if (/CreateCategory|VoteService\/(Close|Results)|PrizeService/.test(m)) return "secSubmissions";
+  if (/PhaseService|ConfigService\/(SetWindows|OverrideWindow)/.test(m)) return "secTimeline";
+  if (/TrackService|ProjectService/.test(m)) return "secProposals";
+  if (/PageService/.test(m)){
+    if (p.includes("Webinars") || p.includes("pageWebinars")) return "secWebinars";
+    if (p.includes("Photos")) return "secPhotos";
+    return "secOverview";
+  }
+  if (a.action === "ui.assert"){
+    const map = {teamsPage:"secTeams", timelinePhases:"secTimeline",
+      submissionsPage:"secSubmissions", proposalsPage:"secProposals",
+      publicWinnersPage:"secPhotos", publicBlogEntry:"secPhotos",
+      aboutVisible:"secOverview"};
+    if (map[a.assert]) return map[a.assert];
+  }
+  if (a.id === "act5.flow.search") return "secParticipants";
+  if (/SubmitRegistrationForm/.test(m)) return "secParticipants";
+  if (/HackathonService\/Get/.test(m) && a.expect && a.expect.check === "roster")
+    return "secParticipants";
+  if (a.id === "act6.files") return "assets";
+  return "platform";
+}
+
+/* ── beam animation ───────────────────────────────────────────────── */
+let beamSign = 1;
+const activeLabels = [];
+function wrapLabel(s){
+  const MAX = 42;
+  if (s.length <= MAX) return [s];
+  let cut = s.lastIndexOf(" ", MAX);
+  if (cut < 18) cut = MAX;
+  const l1 = s.slice(0, cut).trim();
+  let l2 = s.slice(cut).trim();
+  if (l2.length > MAX) l2 = l2.slice(0, MAX - 1).trimEnd() + "…";
+  return [l1, l2];
+}
+function animateBeam(a, D){
+  const A = pos[actorKey(a)], T = pos[targetKey(a)];
+  const kind = kindOf(a), denied = isDenied(a), planned = isPlanned(a);
+  const color = denied ? "var(--st-crit)" : KIND_COLOR[kind];
+  /* pulse actor */
+  const ak = nodeEls[actorKey(a)];
+  if (ak && ak.ring){ ak.ring.setAttribute("stroke", color);
+    setTimeout(() => ak.ring && ak.ring.setAttribute("stroke",
+      actorKey(a) === "anonymous" ? "var(--muted)" : "var(--line-strong)"), D * 1.4); }
+  /* curved path */
+  const mx = (A.x + T.x)/2, my = (A.y + T.y)/2;
+  const dx = T.x - A.x, dy = T.y - A.y, len = Math.hypot(dx, dy) || 1;
+  beamSign *= -1;
+  const off = Math.min(90, len * .25) * beamSign;
+  const cx = mx - dy/len * off, cy = my + dx/len * off;
+  const path = el("path", {d:`M${A.x} ${A.y} Q${cx} ${cy} ${T.x} ${T.y}`,
+    fill:"none", stroke:color, "stroke-width": planned ? 1.6 : 2.4,
+    "stroke-linecap":"round", opacity: planned ? .55 : .9,
+    "stroke-dasharray": planned ? "5 5" : "none"}, layers.beams);
+  const total = path.getTotalLength();
+  if (!planned){
+    path.setAttribute("stroke-dasharray", total);
+    path.setAttribute("stroke-dashoffset", total);
+  }
+  /* the action text rides with the shot: small type, up to two full lines
+     (no cropping), stacked away from other live labels so nothing overlaps */
+  {
+    const mid = path.getPointAtLength(total * .5);
+    const prefix = denied ? "✕ " : planned ? "◌ " : "";
+    const lines = wrapLabel(prefix + a.title);
+    const lg = el("g", {opacity: .98}, layers.fx);
+    const lt = el("text", {x: 0, y: 0, class: "shot-label"}, lg);
+    const spans = lines.map(ln => {
+      const ts = document.createElementNS(SVGNS, "tspan");
+      ts.textContent = ln; lt.appendChild(ts); return ts;
+    });
+    const w = Math.max(...spans.map(s => s.getComputedTextLength())) + 16;
+    const h = lines.length * 13 + 8;
+    const lx = Math.max(10, Math.min(950 - w, mid.x - w / 2));
+    let ly = Math.max(30, Math.min(600 - h, mid.y - 24 - h));
+    const hit = y => activeLabels.some(o =>
+      lx < o.x + o.w + 4 && o.x < lx + w + 4 && y < o.y + o.h + 4 && o.y < y + h + 4);
+    for (const s of [0, -(h + 8), h + 8, -2 * (h + 8), 2 * (h + 8), -3 * (h + 8)]){
+      const cand = Math.max(30, Math.min(600 - h, ly + s));
+      if (!hit(cand)){ ly = cand; break; }
+    }
+    const reg = {x: lx, y: ly, w, h};
+    activeLabels.push(reg);
+    const lr = el("rect", {x: lx, y: ly, width: w, height: h, rx: 4,
+      fill: "var(--surface)", "fill-opacity": .96, stroke: color,
+      "stroke-width": 1.2, "stroke-dasharray": planned ? "4 3" : "none"}, lg);
+    lg.insertBefore(lr, lt);
+    spans.forEach((ts, i2) => { ts.setAttribute("x", lx + 8); ts.setAttribute("y", ly + 13 + i2 * 13); });
+    lg.style.transition = "opacity .4s";
+    setTimeout(() => { lg.style.opacity = 0;
+      setTimeout(() => { lg.remove();
+        const ix = activeLabels.indexOf(reg); if (ix >= 0) activeLabels.splice(ix, 1);
+      }, 420);
+    }, D * 1.35);
+  }
+  const dot = el("circle", {r: planned ? 3 : 4.5, fill:color, opacity: planned ? .6 : 1}, layers.fx);
+  const t0 = performance.now(), travel = reduceMotion ? 1 : D * .62;
+  (function tick(now){
+    const f = Math.min((now - t0) / travel, 1);
+    const pt = path.getPointAtLength(total * f);
+    dot.setAttribute("cx", pt.x); dot.setAttribute("cy", pt.y);
+    if (!planned) path.setAttribute("stroke-dashoffset", total * (1 - f));
+    if (f < 1) requestAnimationFrame(tick);
+    else {
+      dot.remove();
+      if (denied){
+        const x = el("text", {x:T.x, y:T.y - 18, "text-anchor":"middle",
+          style:"font:700 16px var(--mono)", fill:"var(--st-crit)"}, layers.fx);
+        x.textContent = "✕";
+        setTimeout(() => x.remove(), Math.max(500, D));
+      }
+      if (a.id === "act7.cast" || /VoteService\/Cast/.test(a.method || "")){
+        const sc = (a.params || {}).score;
+        if (sc !== undefined && !denied){
+          const st = el("text", {x:T.x + 16, y:T.y - 14,
+            style:"font:700 11px var(--mono)", fill:"var(--k-vote)"}, layers.fx);
+          st.textContent = "+" + sc;
+          setTimeout(() => st.remove(), Math.max(600, D));
+        }
+      }
+    }
+  })(t0);
+  path.style.transition = "opacity .5s";
+  setTimeout(() => { path.style.opacity = 0; setTimeout(() => path.remove(), 520); }, D * 1.25);
+}
+
+/* ── caption + log ────────────────────────────────────────────────── */
+function caption(a, num){
+  $("capId").textContent = "#" + num + " · " + a.id;
+  $("capTitle").textContent = a.title;
+  const k = $("capKind"), kind = kindOf(a);
+  k.style.display = "inline-block";
+  k.textContent = kind;
+  const c = isDenied(a) ? "var(--st-crit)" : KIND_COLOR[kind];
+  k.style.color = c; k.style.border = "1px solid " + c;
+  $("caption").style.borderLeftColor = c;
+  $("capFlag").textContent = isDenied(a) ? "✕ DENIED" : isPlanned(a) ? "◌ PLANNED (skips today)" : "";
+  $("capFlag").style.color = isDenied(a) ? "var(--st-crit)" : "var(--k-vote)";
+  const log = $("log"), li = document.createElement("li");
+  li.className = isDenied(a) ? "denied" : isPlanned(a) ? "planned" : "";
+  const i = document.createElement("i");
+  i.style.background = isDenied(a) ? "var(--st-crit)" : KIND_COLOR[kind];
+  const t = document.createElement("span"); t.className = "t";
+  t.textContent = "#" + num + " " + a.id + " · " + (a.actor || "anon");
+  li.append(i, t); log.prepend(li);
+  /* keep the whole run — the pane scrolls, newest on top */
+  while (log.children.length > 250) log.lastChild.remove();
+}
+
+/* ── item modal: click any node, hexagon or roster row ────────────── */
+const AFFIL = {"dana.moser":"ETH Zurich","erik.lindqvist":"EPFL","fatima.khoury":"SDSC",
+  "giulia.ricci":"Univ. of Bern","hiro.tanaka":"ETH Zurich","ines.duarte":"EPFL",
+  "jonas.weber":"Univ. of Zurich","katya.volkova":"SDSC","liam.obrien":"Univ. of Bern",
+  "mei.chen":"ETH Zurich"};
+const DESC = {
+  "hackagon-admin":"Global admin (casbin g2, bootstrapped from backend config). Publishes and edits the event, approves and removes participants, audits rosters and users — and passes every permission check via the admin escape hatch.",
+  "alice":"Principal persona on the organizer track. Registers in the wave, is approved into the final eight, and tours the member view (Teams, Webinars). Keeps access to the archive after the event.",
+  "bob":"The spotlight participant — most UI outcomes are read through his browser: the waitlist badge, approval, the member tabs, day-1 sign-out and day-2 return, submissions and votes.",
+  "charles":"The over-capacity case. Registers early, fumbles a password once, keeps re-checking the dashboard — and stays waitlisted to the very end, hitting 403 on every member view.",
+  "anonymous":"Any signed-out visitor: sees only public events and their status badges, gets bounced to login on protected routes, and cannot join or vote.",
+  "platform":"The platform and its one public event, SDSC Open Research Data Hackathon 2027. Status (Upcoming → Active → Finished) is computed server-side from the event dates — the recipe moves the event through time, never the clock.",
+  "draft":"SDSC Winter School Sprint — a private draft created in act 1 to prove private events stay invisible to everyone else; deleted again in the act-8 cleanup (Delete RPC still planned).",
+  "teamM":"Team Matterhorn — bob + alice on 'FAIR Pipeline Builder'. Submits draft → final with the generated file bundle, and wins the act-7 vote. (TeamService still planned.)",
+  "teamB":"Team Bernina — Dana, Erik and (after rebalancing) Giulia on 'LitData Extractor'. Revises its draft, finalizes before the deadline, finishes runner-up. (Planned.)",
+  "subM":"Team Matterhorn's submission: drafted with the file bundle attached, finalized on day 2 — the voting winner. (Planned.)",
+  "subB":"Team Bernina's submission: drafted, revised, finalized before the deadline. (Planned.)",
+  "subScratch":"Bernina's second draft — started and never finalized. Abandoned work; the results step must confirm it is excluded from voting.",
+  "assets":"The deterministic upload bundle generated on the fly: logo.png, poster.svg, final-report.pdf, data-sample.csv, README.md — byte-identical on every run.",
+  "placeholder":"Team Placeholder — created by the admin while sketching the team split, deleted moments later. (Planned.)",
+  "secOverview":"The event's front page in the member view: description, venue, capacity announcement and live updates (Welcome and Code of Conduct pages land here).",
+  "secParticipants":"The roster page: who registered, who is confirmed, who waits. The admin's roster audits point here.",
+  "secProposals":"Tracks and project proposals: proposing, editing, withdrawing, and organizer review. (ProjectService/TrackService still planned.)",
+  "secTeams":"Team formation and rebalancing — communicated at T-1.5 months. (TeamService still planned.)",
+  "secSubmissions":"Final deliverables plus the voting machinery: categories, ballots, closing, results. (VoteService still planned.)",
+  "secTimeline":"The event schedule: Ideation → Hacking → Judging phases. (PhaseService still planned.)",
+  "secWebinars":"Pre-event technical webinars, recorded and linked for participants. (PageService still planned.)",
+  "secPhotos":"Post-event publication: photos and the winners announcement, visible to everyone. (PageService still planned.)"
+};
+for (const k in AFFIL) DESC[k] = "Registrant from " + AFFIL[k] + " (cast.json extra). Registers in the act-2 wave and acts through the API with a real Keycloak token — full RBAC, no browser session.";
+DESC["noor.haddad"] = "The same-day WALK-IN (EPFL): hears about the event on day-1 morning, creates an account at the door, registers on the spot, is approved by the admin minutes later, and fills the no-show's seat on Team Matterhorn — then votes like everyone else.";
+const PERSON_NAME = {}; PEOPLE.forEach(p => PERSON_NAME[p[0]] = p[1]);
+const ENTITY_NAME = {platform:"Hackagon — SDSC ORD Hackathon 2027",
+  draft:"Winter draft (private)", teamM:"Team Matterhorn", teamB:"Team Bernina",
+  subM:"Submission — Matterhorn", subB:"Submission — Bernina",
+  subScratch:"Submission — abandoned scratch draft", assets:"Upload bundle",
+  placeholder:"Team Placeholder", secOverview:"Section — Overview",
+  secParticipants:"Section — Participants", secProposals:"Section — Proposals",
+  secTeams:"Section — Teams", secSubmissions:"Section — Submissions & voting",
+  secTimeline:"Section — Timeline", secWebinars:"Section — Webinars",
+  secPhotos:"Section — Photos & winners"};
+
+function involves(a, key){ return actorKey(a) === key || targetKey(a) === key; }
+function modalLi(a, idx){
+  const li = document.createElement("li");
+  li.className = isDenied(a) ? "denied" : isPlanned(a) ? "planned" : "";
+  const i = document.createElement("i");
+  i.style.background = isDenied(a) ? "var(--st-crit)" : KIND_COLOR[kindOf(a)];
+  const t = document.createElement("span");
+  t.textContent = "#" + (idx + 1) + " " +
+    (isDenied(a) ? "✕ " : isPlanned(a) ? "◌ " : "") + a.title;
+  li.append(i, t); return li;
+}
+function openModal(key){
+  setPlaying(false);
+  const isPerson = !!PERSON_NAME[key];
+  $("mTitle").textContent = isPerson ? PERSON_NAME[key] : (ENTITY_NAME[key] || key);
+  const st = $("mStatus");
+  if (isPerson && key !== "anonymous"){
+    const b = key === "hackagon-admin" ? "admin" : (state.badges[key] || "none");
+    st.hidden = false;
+    st.className = "bd " + (b === "wait" ? "wait" : b);
+    st.textContent = ({wait:"WAITLISTED", member:"MEMBER", left:"LEFT",
+      gone:"PROFILE DELETED", none:"NOT REGISTERED", admin:"ADMIN"})[b];
+  } else { st.hidden = true; }
+  $("mDesc").textContent = DESC[key] || "";
+  const rel = [];
+  EVENTS.forEach((a, i) => { if (involves(a, key)) rel.push({a, i}); });
+  const histAll = rel.filter(r => r.i < cursor);
+  const nextAll = rel.filter(r => r.i >= cursor);
+  const hist = histAll.slice(-20), next = nextAll.slice(0, 12);
+  const fill = (elx, list, total, empty, moreText) => {
+    elx.innerHTML = "";
+    if (!list.length){
+      const li = document.createElement("li");
+      li.className = "empty"; li.textContent = empty; elx.appendChild(li); return;
+    }
+    if (total > list.length){
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "… " + (total - list.length) + " " + moreText;
+      elx.appendChild(li);
+    }
+    list.forEach(r => elx.appendChild(modalLi(r.a, r.i)));
+  };
+  fill($("mHist"), hist, histAll.length,
+    cursor === 0 ? "Nothing yet — press play." : "Nothing involving this item so far.",
+    "earlier actions");
+  fill($("mNext"), next, nextAll.length, "No further actions in the recipe.", "more later");
+  $("modal").hidden = false;
+  $("mClose").focus();
+}
+function closeModal(){ $("modal").hidden = true; }
+$("mClose").addEventListener("click", closeModal);
+$("mback").addEventListener("click", closeModal);
+function makeClickable(key){
+  const n = nodeEls[key]; if (!n) return;
+  n.g.style.cursor = "pointer";
+  n.g.addEventListener("click", () => openModal(key));
+}
+PEOPLE.forEach(p => makeClickable(p[0]));
+ENTITIES.forEach(en => makeClickable(en[0]));
+
+/* ── transport / engine ───────────────────────────────────────────── */
+let cursor = 0, playing = false, timer = null;
+const BASE = 1000;
+const speedSel = $("speed");
+function speed(){ return +speedSel.value; }
+
+function seek(i, silent){
+  cursor = Math.max(0, Math.min(i, EVENTS.length));
+  state = freshState();
+  for (let k = 0; k < cursor; k++) apply(EVENTS[k], state);
+  if (!silent && cursor > 0) caption(EVENTS[cursor - 1], cursor);
+  render();
+}
+function stepOnce(animate){
+  if (cursor >= EVENTS.length) return false;
+  const a = EVENTS[cursor];
+  caption(a, cursor + 1);
+  if (animate) animateBeam(a, BASE / speed());
+  apply(a, state);
+  cursor++;
+  render();
+  return true;
+}
+function loop(){
+  if (!playing) return;
+  if (!stepOnce(true)){ setPlaying(false); return; }
+  timer = setTimeout(loop, BASE / speed());
+}
+function setPlaying(on){
+  playing = on;
+  $("btnPlay").textContent = on ? "⏸" : "▶";
+  clearTimeout(timer);
+  if (on){
+    if (cursor >= EVENTS.length) seek(0, true);
+    loop();
+  }
+}
+$("btnPlay").addEventListener("click", () => setPlaying(!playing));
+$("btnFwd").addEventListener("click", () => { setPlaying(false); stepOnce(true); });
+$("btnBack").addEventListener("click", () => { setPlaying(false); seek(cursor - 1); });
+$("btnRestart").addEventListener("click", () => { setPlaying(false); seek(0, true);
+  $("capTitle").textContent = "Rewound. Press ▶ to replay."; $("capId").textContent = "—";
+  $("capKind").style.display = "none"; $("capFlag").textContent = ""; });
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "SELECT") return;
+  if (!$("modal").hidden){
+    if (e.code === "Escape") closeModal();
+    return;
+  }
+  if (e.code === "Space"){ e.preventDefault(); setPlaying(!playing); }
+  if (e.code === "ArrowRight"){ setPlaying(false); stepOnce(true); }
+  if (e.code === "ArrowLeft"){ setPlaying(false); seek(cursor - 1); }
+  if (e.key === "r" || e.key === "R"){ setPlaying(false); seek(0, true); }
+});
+
+/* ── scrubber (segments ∝ actions per act) + acts strip on top ────── */
+const segs = [], phaseCells = [];
+let playheadEl = null, elapsedEl = null;
+(function buildScrub(){
+  const byAct = {};
+  EVENTS.forEach((a, i) => { (byAct[a.act] = byAct[a.act] || []).push(i); });
+  const scrub = $("scrub"), labels = $("actLabels");
+  Object.keys(byAct).sort((a, b) => a - b).forEach(act => {
+    const idx = byAct[act];
+    const seg = document.createElement("div");
+    seg.className = "seg"; seg.style.flexGrow = idx.length;
+    /* availability heatmap: one tick per action —
+       red = backend RPC missing, yellow = frontend missing (API-driven) */
+    idx.forEach((ei, j) => {
+      const tick = document.createElement("div");
+      tick.className = "tick " + availOf(EVENTS[ei]);
+      tick.style.left = (j / idx.length * 100) + "%";
+      tick.style.width = (100 / idx.length) + "%";
+      seg.appendChild(tick);
+    });
+    scrub.appendChild(seg);
+    seg.title = "Act " + act + " — " + ACT_NAMES[act] + " (" + idx.length + " actions)";
+    segs.push({from: idx[0], n: idx.length});
+    /* phase name aligned under its segment; click jumps to the act start */
+    const pc = document.createElement("button");
+    pc.style.flexGrow = idx.length;
+    pc.innerHTML = "<b>" + (EVENTS[idx[0]].t || "act " + act) + "</b>" + ACT_NAMES[act];
+    pc.title = "Act " + act + " — " + ACT_NAMES[act] + " (" + idx.length + " actions) — click to jump";
+    pc.addEventListener("click", () => { setPlaying(false); seek(idx[0]); });
+    labels.appendChild(pc);
+    phaseCells.push({el: pc, from: idx[0], n: idx.length});
+  });
+  elapsedEl = document.createElement("div"); elapsedEl.className = "elapsed";
+  playheadEl = document.createElement("div"); playheadEl.className = "playhead";
+  scrub.append(elapsedEl, playheadEl);
+})();
+/* drag anywhere on the timeline to scrub (segment widths ∝ action counts) */
+const scrubEl = $("scrub");
+let scrubbing = false;
+function seekFromPointer(e){
+  const r = scrubEl.getBoundingClientRect();
+  const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  seek(Math.round(f * EVENTS.length));
+}
+scrubEl.addEventListener("pointerdown", e => {
+  scrubbing = true; scrubEl.setPointerCapture(e.pointerId);
+  setPlaying(false); seekFromPointer(e);
+});
+scrubEl.addEventListener("pointermove", e => { if (scrubbing) seekFromPointer(e); });
+scrubEl.addEventListener("pointerup", () => { scrubbing = false; });
+scrubEl.addEventListener("pointercancel", () => { scrubbing = false; });
+scrubEl.addEventListener("keydown", e => {
+  if (e.code === "ArrowRight"){ e.preventDefault(); setPlaying(false); stepOnce(true); }
+  if (e.code === "ArrowLeft"){ e.preventDefault(); setPlaying(false); seek(cursor - 1); }
+});
+
+seek(0, true);
+})();
+</script>
