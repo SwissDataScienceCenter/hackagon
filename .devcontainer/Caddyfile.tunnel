@@ -12,6 +12,21 @@
 # localhost-only.
 :80 {
 	@keycloak path /realms/* /resources/*
+	# Uploaded files, on the app's own origin.
+	#
+	# The database stores a root-relative path (/objects/<bucket>/<key>) rather
+	# than the object store's hostname, so one stored value resolves from
+	# localhost, from this tunnel, and from a deployment. Storing
+	# http://localhost:9000/... would render for whoever uploaded it and for
+	# nobody else — which is exactly the class of bug this whole session kept
+	# finding.
+	#
+	# Only the public prefixes are reachable this way; the bucket policy still
+	# decides, and an unsigned read of teams/* answers 403 through here too.
+	handle_path /objects/* {
+		reverse_proxy rustfs:9000
+	}
+
 	handle @keycloak {
 		reverse_proxy dev:8180 {
 			# TLS terminates at Cloudflare's edge; the hop into caddy is plain

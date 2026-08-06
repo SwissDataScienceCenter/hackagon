@@ -29,6 +29,11 @@ set -euo pipefail
 # --- configuration -----------------------------------------------------
 # Defaults MUST match the `rustfs` service in docker-compose.yml. DEV-ONLY
 # credentials; see the README before copying them anywhere real.
+# Derived from this script's location, not from cwd: seed_media reads image
+# files out of the repo, and every other stack script can be run from anywhere.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$HERE/.." && pwd)"
+
 ACCESS_KEY="${HACKAGON_RUSTFS_ACCESS_KEY:-hackagon-dev}"
 SECRET_KEY="${HACKAGON_RUSTFS_SECRET_KEY:-hackagon-dev-secret}"
 REGION="${HACKAGON_RUSTFS_REGION:-us-east-1}"
@@ -154,7 +159,25 @@ SignedHeaders=${signed_headers}, Signature=${signature}"
     fi
     # Only PUT carries a body; adding --data-binary to a GET makes curl send
     # one, which changes the request the signature was computed over.
-    [ -n "$payload" ] && args+=(--data-binary "@${payload}")
+    #
+    # Content-Type is set from the extension, because curl otherwise sends
+    # application/x-www-form-urlencoded and S3 stores THAT as the object's type
+    # — the bytes upload fine and the browser then refuses to render the image.
+    # It is deliberately not in signed_headers: SigV4 only requires that the
+    # headers it names match, so an extra unsigned header is valid and keeps the
+    # signature computation unchanged.
+    if [ -n "$payload" ]; then
+        args+=(--data-binary "@${payload}")
+        case "$payload" in
+        *.webp) args+=(-H "Content-Type: image/webp") ;;
+        *.png) args+=(-H "Content-Type: image/png") ;;
+        *.jpg | *.jpeg) args+=(-H "Content-Type: image/jpeg") ;;
+        *.svg) args+=(-H "Content-Type: image/svg+xml") ;;
+        *.json) args+=(-H "Content-Type: application/json") ;;
+        *.txt) args+=(-H "Content-Type: text/plain") ;;
+        *) args+=(-H "Content-Type: application/octet-stream") ;;
+        esac
+    fi
 
     curl "${args[@]}" "$url"
 }
@@ -265,6 +288,40 @@ POLICY
     esac
 }
 
+# The pictures the seeded hackathons point at.
+#
+# `just db::seed` sets each event's logo to /objects/<bucket>/hackathons/seed/
+# <slug>/cover.webp, keyed by slug rather than by id: ids are new on every
+# reseed and the pictures are not. This uploads them once so a fresh clone has
+# images the first time it boots, instead of three broken <img> frames.
+#
+# Sources are the repo's own event photographs, already WebP and already sized
+# for display. Idempotent: re-uploading overwrites with identical bytes.
+seed_media() {
+    local bucket="${1:-hackagon-dev}" src pair slug file
+    src="components/frontend/static/images/hackathon-ord-2024"
+
+    if [ ! -d "$ROOT_DIR/$src" ]; then
+        echo "  skipped  seed media (no $src)" >&2
+        return 0
+    fi
+
+    echo "==> Seed media"
+    for pair in \
+        "ai-innovation-challenge-2026:teams/teams_1.webp" \
+        "climate-tech-hackathon-2026:ambiance/ambiance_1.webp" \
+        "internal-product-sprint:ambiance/ambiance_3.webp"; do
+        slug="${pair%%:*}"
+        file="${pair#*:}"
+        if s3_request PUT "/${bucket}/hackathons/seed/${slug}/cover.webp" "" \
+            "$ROOT_DIR/$src/$file" /dev/null >/dev/null; then
+            echo "  uploaded hackathons/seed/${slug}/cover.webp"
+        else
+            echo "  FAILED   hackathons/seed/${slug}/cover.webp" >&2
+        fi
+    done
+}
+
 cmd_init() {
     echo "==> Object store ${ENDPOINT}"
     wait_ready
@@ -273,6 +330,7 @@ cmd_init() {
         create_bucket "$bucket"
         put_public_policy "$bucket"
     done
+    seed_media
     echo "Done. Endpoint ${ENDPOINT}, buckets: ${BUCKETS}"
 }
 
@@ -378,6 +436,7 @@ cmd_selftest() {
 
 case "${1:---init}" in
 --init | init | "") cmd_init ;;
+--seed-media | seed-media) seed_media ;;
 --selftest | selftest) cmd_selftest ;;
 --status | status) cmd_status ;;
 -h | --help)

@@ -26,6 +26,21 @@ export default defineConfig({
     // Inotify does not cross the devcontainer bind mount on Windows hosts;
     // without polling, edits made on the host never hot-reload.
     watch: { usePolling: true, interval: 500 },
+    // Uploaded files are served from the app's OWN origin at /objects, not from
+    // the object store's host. The database therefore stores a root-relative
+    // path, which resolves wherever the app is reached from — localhost, the
+    // Cloudflare tunnel, or a deployment — instead of a hostname that is only
+    // correct on the machine that wrote it.
+    //
+    // Caddy has the matching route for the tunnel and the built server; this
+    // one covers `vite dev`.
+    proxy: {
+      "/objects": {
+        target: "http://rustfs:9000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/objects/, ""),
+      },
+    },
   },
   test: {
     // Enable Vitest's global APIs (describe, it, expect, etc.)

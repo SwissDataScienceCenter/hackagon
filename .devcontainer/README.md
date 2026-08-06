@@ -89,6 +89,66 @@ docker compose -f .devcontainer/docker-compose.yml exec -u vscode dev \
   bash /workspaces/hackagon/.devcontainer/host-bridge.sh
 ```
 
+### Access: public imagery, private everything else
+
+`rustfs-init.sh` applies a bucket policy on every run. Two prefixes are readable
+with **no credentials at all**; nothing else is.
+
+| Prefix | Read access | Holds |
+| --- | --- | --- |
+| `hackathons/*` | public | event covers, gallery photos |
+| `users/*` | public | profile pictures |
+| everything else | private | submission attachments, exports |
+
+Public-read is a decision, not an accident (see `docs/storage.md`): these images
+already render on pages that need no login, so a public prefix gives a stable
+URL that never expires and can be cached — which is also what lets an uploaded
+image sit in the existing `logo` / `avatar_url` columns with no schema change.
+Private files are reached through short-lived presigned GETs, minted only after
+casbin has approved the read.
+
+`rustfs-init.sh --selftest` asserts **both halves**: it uploads a probe under
+each prefix, reads them unsigned, and fails unless it sees 200 and 403
+respectively. Getting this backwards is silent — signed callers keep working
+while the private half is world-readable — so it is tested rather than assumed.
+
+### Objects are served from the app's own origin
+
+The database stores a **root-relative path**, never a hostname:
+
+```
+/objects/hackagon-dev/hackathons/seed/climate-tech-hackathon-2026/cover.webp
+```
+
+`http://localhost:9000/...` would render for the machine that wrote it and for
+nobody else — not through the Cloudflare tunnel, not in a deployment. A
+same-origin path resolves everywhere, and two routes make that true:
+
+- **`vite dev`** — a `/objects` proxy in `components/frontend/vite.config.ts`.
+- **the tunnel and the built server** — `handle_path /objects/*` in
+  `.devcontainer/Caddyfile.tunnel`, which strips the prefix and proxies to
+  `rustfs:9000`.
+
+The bucket policy still decides what comes back: an unsigned read of `teams/*`
+answers 403 through this route exactly as it does directly.
+
+### Seeded event pictures
+
+`rustfs-init.sh` (and `--seed-media` on its own) uploads a cover for each seeded
+hackathon from the repo's own event photographs:
+
+```
+hackathons/seed/ai-innovation-challenge-2026/cover.webp
+hackathons/seed/climate-tech-hackathon-2026/cover.webp
+hackathons/seed/internal-product-sprint/cover.webp
+```
+
+Keyed by **slug, not id**: ids are new on every reseed and the pictures are not,
+so `just db::seed` points each event at a cover that is already there instead of
+leaving three broken image frames. Content-Type is set from the file extension —
+curl otherwise stores `application/x-www-form-urlencoded`, the bytes upload
+fine, and the browser then refuses to render them.
+
 ## Public URL (Cloudflare quick tunnel, optional)
 
 An opt-in `tunnel` service (compose profile `tunnel`) exposes the running

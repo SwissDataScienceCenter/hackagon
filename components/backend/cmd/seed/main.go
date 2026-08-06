@@ -30,6 +30,21 @@ const (
 // sentinelHackathon is checked to make this script idempotent.
 const sentinelHackathon = "AI Innovation Challenge 2026"
 
+// seedCover is where an event's picture lives in the object store.
+//
+// A ROOT-RELATIVE path, not an absolute URL: the same value has to resolve from
+// localhost, from a Cloudflare tunnel and from a deployment, and
+// "http://localhost:9000/..." renders only for the machine that wrote it. Caddy
+// (tunnel, built server) and the vite dev proxy both map /objects onto the
+// store -- see docs/storage.md.
+//
+// Keyed by SLUG rather than by the hackathon's id, because ids are new on every
+// reseed and the pictures are not: the objects are uploaded once by
+// .devcontainer/rustfs-init.sh --seed-media and reused by every `just db::seed`.
+func seedCover(slug string) string {
+	return "/objects/hackagon-dev/hackathons/seed/" + slug + "/cover.webp"
+}
+
 func main() {
 	logx.Setup("")
 
@@ -342,6 +357,7 @@ func seedH1(
 ) error {
 	h, err := db.Hackathon.Create().
 		SetName(sentinelHackathon).
+		SetLogo(seedCover("ai-innovation-challenge-2026")).
 		SetVisibility(hackathon.VisibilityPublic).
 		SetDescription("A 3-day hackathon focused on building AI-powered applications. Open to all skill levels.").
 		SetStartsAt(now.AddDate(0, 0, 19)).
@@ -643,6 +659,7 @@ func seedH2(
 ) error {
 	h, err := db.Hackathon.Create().
 		SetName("Climate Tech Hackathon 2026").
+		SetLogo(seedCover("climate-tech-hackathon-2026")).
 		SetVisibility(hackathon.VisibilityPublic).
 		SetDescription("Build solutions to address climate change through technology. Focus on energy, agriculture, and sustainability.").
 		SetStartsAt(now.AddDate(0, 0, -2)).
@@ -870,6 +887,7 @@ func seedH3(
 ) error {
 	h, err := db.Hackathon.Create().
 		SetName("Internal Product Sprint").
+		SetLogo(seedCover("internal-product-sprint")).
 		SetVisibility(hackathon.VisibilityPrivate).
 		SetDescription("An internal sprint to improve developer tooling and data infrastructure.").
 		SetStartsAt(now.AddDate(0, -1, -20)).
