@@ -44,9 +44,9 @@
 		#
 		#   dev:8082  the adapter-node PRODUCTION build (prod-serve.sh). Its own
 		#             port, owned by nothing else on the box.
-		#   dev:8081  process-compose's `vite dev` — the fallback, so a plain
-		#             (non---prod) tunnel still works and a built server that
-		#             died degrades to slow rather than to 502.
+		#   dev:8081  process-compose's `vite dev` — the fallback, so a tunnel
+		#             brought up without `--prod` still works, and a built server
+		#             that died degrades to slow rather than to 502.
 		#
 		# The public link used to BE :8081. The e2e suite stops, wipes and
 		# restarts everything on that port, and prod mode had to hand :8081 back
