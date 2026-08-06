@@ -314,6 +314,28 @@ func (e *Enforcer) AddGlobalRole(user string, role Role) (bool, error) {
 	return e.enforcer.AddGroupingPolicy(user, role.String(), hackathonIdToPath("*"))
 }
 
+// RemoveGlobalRole revokes a role granted by AddGlobalRole.
+//
+// Symmetric with it on purpose: AddGlobalRole writes BOTH grouping tables —
+// `g2` for the global-role checks and a wildcard `g` row so per-hackathon
+// policies match too — so removing only the `g2` row would leave the wildcard
+// behind and the user would keep the permissions while every UI that lists
+// roles showed none. That is the worst shape a permission bug can take.
+//
+// Idempotent: casbin no-ops on a policy that is not there, so revoking a role
+// nobody holds is not an error.
+func (e *Enforcer) RemoveGlobalRole(user string, role Role) (bool, error) {
+	if !role.IsGlobal() {
+		return false, fmt.Errorf("%w: %s is scoped to a single hackathon", ErrNotAGlobalRole, role)
+	}
+
+	if _, err := e.enforcer.RemoveNamedGroupingPolicy("g2", user, role.String()); err != nil {
+		return false, fmt.Errorf("remove global role %s for %s: %w", role, user, err)
+	}
+
+	return e.enforcer.RemoveGroupingPolicy(user, role.String(), hackathonIdToPath("*"))
+}
+
 func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
 	return e.enforcer.AddPolicy(
 		"*",

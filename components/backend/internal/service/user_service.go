@@ -160,6 +160,142 @@ func (s *UserService) EditProfile(
 	return &msgs.EditProfileResponse{User: entry}, nil
 }
 
+// AddRole grants a global role — Admin or Hackathon Organizer.
+//
+// Ported from main, which implemented these while our copies stayed proto-only
+// stubs. That mattered: the /manage/users page has shipped for months calling
+// them, catching PERMISSION_DENIED / NOT_FOUND / INVALID_ARGUMENT and letting
+// anything else through — so pressing "Grant Hackathon Organizer" answered
+// Unimplemented and rendered a 500.
+func (s *UserService) AddRole(
+	ctx context.Context,
+	req *msgs.AddRoleRequest,
+) (*msgs.AddRoleResponse, error) {
+	if _, _, err := m.RequireUser(ctx); err != nil {
+		return nil, err
+	}
+	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Write); err != nil {
+		return nil, err
+	}
+
+	u, role, err := s.roleTarget(ctx, req.GetUserId(), req.GetRole())
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.enforcer.AddGlobalRole(u.KeycloakID, role); err != nil {
+		slog.Error("add global role", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't assign role")
+	}
+
+	entry, err := s.userWithRoles(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return &msgs.AddRoleResponse{User: entry}, nil
+}
+
+// RemoveRole revokes a global role.
+func (s *UserService) RemoveRole(
+	ctx context.Context,
+	req *msgs.RemoveRoleRequest,
+) (*msgs.RemoveRoleResponse, error) {
+	uid, _, err := m.RequireUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.enforcer.RequirePermission(ctx, "", m.User, m.Write); err != nil {
+		return nil, err
+	}
+
+	u, role, err := s.roleTarget(ctx, req.GetUserId(), req.GetRole())
+	if err != nil {
+		return nil, err
+	}
+
+	// You cannot demote yourself out of Admin. Not paternalism: Admin is the
+	// only role that can grant Admin, so the last one to do this locks every
+	// remaining admin task out of the platform with no way back through the UI.
+	if uid == u.KeycloakID && role == m.Admin {
+		return nil, status.Error(codes.PermissionDenied, "cannot remove your own admin role")
+	}
+
+	// Idempotent — casbin no-ops on a policy that is not there.
+	if _, err := s.enforcer.RemoveGlobalRole(u.KeycloakID, role); err != nil {
+		slog.Error("remove global role", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't remove role")
+	}
+
+	entry, err := s.userWithRoles(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return &msgs.RemoveRoleResponse{User: entry}, nil
+}
+
+// roleTarget resolves the user and role both role RPCs take, so the two cannot
+// disagree about what counts as a valid request.
+func (s *UserService) roleTarget(
+	ctx context.Context,
+	userID string,
+	proto ents.GlobalRole,
+) (*ent.User, m.Role, error) {
+	targetID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, 0, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	u, err := s.dbClient.User.Query().Where(entuser.IDEQ(targetID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, 0, status.Errorf(codes.NotFound, "user %s not found", userID)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, 0, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	role, ok := protoRoleToCasbin(proto)
+	if !ok {
+		return nil, 0, status.Errorf(codes.InvalidArgument, "invalid role: %v", proto)
+	}
+
+	return u, role, nil
+}
+
+// userWithRoles reads the roles back from casbin AFTER the write, so the
+// response states what is true rather than what was requested.
+func (s *UserService) userWithRoles(u *ent.User) (*ents.User, error) {
+	globalRoles, err := s.enforcer.GetGlobalRoles(u.KeycloakID)
+	if err != nil {
+		slog.Error("get global roles", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't resolve user roles")
+	}
+	entry := userEntryFromEnt(u)
+	entry.Roles = append(entry.Roles, globalRoles...)
+
+	return entry, nil
+}
+
+// protoRoleToCasbin maps the wire enum onto a casbin role. Owner and Member are
+// per-hackathon and deliberately unmappable here — AddGlobalRole refuses them
+// too, so a mistake is caught twice.
+func protoRoleToCasbin(r ents.GlobalRole) (m.Role, bool) {
+	switch r {
+	case ents.GlobalRole_GLOBAL_ROLE_ADMIN:
+		return m.Admin, true
+	case ents.GlobalRole_GLOBAL_ROLE_HACKATHON_ORGANIZER:
+		return m.HackathonOrganizer, true
+	default:
+		return 0, false
+	}
+}
+
 func (s *UserService) List(
 	ctx context.Context,
 	_ *msgs.ListRequest,
