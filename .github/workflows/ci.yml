@@ -103,7 +103,8 @@ jobs:
           # Build images for PR verification (no push).
           # Images are tagged with commit SHA for local inspection.
           just nix::develop ci quitsh image \
-            --components backend frontend
+              --components backend \
+              --components frontend
 
       - name: Build and push images (main/tag)
         if: github.event_name == 'push'
@@ -115,7 +116,8 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # Tagged release: use release tag + latest
             just nix::develop ci quitsh image \
-              --components backend frontend \
+              --components backend \
+              --components frontend \
               --push \
               --use-release-tag \
               --add-latest-tag \
@@ -125,7 +127,8 @@ jobs:
           else
             # Branch push: use commit SHA + latest
             just nix::develop ci quitsh image \
-              --components backend frontend \
+              --components backend \
+              --components frontend \
               --push \
               --add-latest-tag \
               --credential-user-env GH_USERNAME \
