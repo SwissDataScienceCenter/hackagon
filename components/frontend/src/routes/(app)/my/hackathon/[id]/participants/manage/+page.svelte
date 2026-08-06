@@ -10,6 +10,16 @@
     let search = $state('');
     const pendingIds = new SvelteSet<string>();
 
+    // Every action on a row disables that row's whole button group while it is
+    // in flight, so the same submit handler serves all four.
+    const submitting = (id: string) => () => {
+        pendingIds.add(id);
+        return async ({ update }: { update: () => Promise<void> }) => {
+            await update();
+            pendingIds.delete(id);
+        };
+    };
+
     // TODO(backend: user-profile-fields): search covers name and role only.
     // Affiliation and skills were the other two axes, and User carries neither,
     // so the placeholder no longer promises them. Widen this back out once the
@@ -86,13 +96,7 @@
                             <form
                                 method="POST"
                                 action="?/approve"
-                                use:enhance={() => {
-                                    pendingIds.add(participant.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        pendingIds.delete(participant.id);
-                                    };
-                                }}
+                                use:enhance={submitting(participant.id)}
                             >
                                 <input type="hidden" name="userId" value={participant.id} />
                                 <button
@@ -104,6 +108,44 @@
                                 </button>
                             </form>
                         {/if}
+                        <!-- Promotion is offered to approved members only: an
+                             owner who is still waitlisted would be a
+                             contradiction the badge can't express. -->
+                        {#if !participant.isWaiting && !participant.isOwner}
+                            <form
+                                method="POST"
+                                action="?/promote"
+                                use:enhance={submitting(participant.id)}
+                            >
+                                <input type="hidden" name="userId" value={participant.id} />
+                                <button
+                                    type="submit"
+                                    disabled={pendingIds.has(participant.id)}
+                                    class="btn btn-sm btn-outline"
+                                >
+                                    Make owner
+                                </button>
+                            </form>
+                        {/if}
+                        <!-- Never on your own row: demoting yourself would take
+                             away the hackathon:write this page runs on. The
+                             backend separately refuses the last owner. -->
+                        {#if participant.isOwner && !participant.isMe}
+                            <form
+                                method="POST"
+                                action="?/demote"
+                                use:enhance={submitting(participant.id)}
+                            >
+                                <input type="hidden" name="userId" value={participant.id} />
+                                <button
+                                    type="submit"
+                                    disabled={pendingIds.has(participant.id)}
+                                    class="btn btn-sm btn-quiet"
+                                >
+                                    Remove owner
+                                </button>
+                            </form>
+                        {/if}
                         <!-- The hackathon's owner is deliberately not removable
                              here: RemoveParticipant would leave the hackathon
                              with nobody holding hackathon:write. -->
@@ -111,13 +153,7 @@
                             <form
                                 method="POST"
                                 action="?/remove"
-                                use:enhance={() => {
-                                    pendingIds.add(participant.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        pendingIds.delete(participant.id);
-                                    };
-                                }}
+                                use:enhance={submitting(participant.id)}
                             >
                                 <input type="hidden" name="userId" value={participant.id} />
                                 <button
