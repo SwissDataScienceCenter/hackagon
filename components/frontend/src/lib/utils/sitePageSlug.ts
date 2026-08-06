@@ -20,7 +20,18 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 //
 // Non-eager glob: only the KEYS are used, so this costs a path list, not the
 // modules themselves.
-const ROUTE_FILES = import.meta.glob("/src/routes/**/+page*.@(svelte|ts|js)")
+//
+// `+page.svelte` ONLY, deliberately. The pattern used to include `+page.ts`
+// and `+page.server.ts`, and a non-eager glob still puts every match in the
+// module graph — so a production build pulled server-only modules into a file
+// that client code imports and refused to build at all ("an impossible
+// situation occurred"). `vite dev` never resolves the unused branches, which
+// is why this worked locally for as long as nobody ran the build.
+//
+// Nothing is lost: every page a URL can land on has a `+page.svelte`, and the
+// two exceptions — endpoint-only routes and the auth paths — are named in
+// EXTRA_RESERVED below.
+const ROUTE_FILES = import.meta.glob("/src/routes/**/+page.svelte")
 
 function routeOwnedSegments(): Set<string> {
   const owned = new Set<string>()
