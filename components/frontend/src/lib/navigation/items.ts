@@ -1,8 +1,18 @@
+// What the sidebar's entries *are*, separate from how any surface draws them:
+// the sidebar renders these as rows on a collapsible rail, the dashboard's
+// Manage platform section renders the same entries as tiles with descriptions.
+// A component could serve one of those; a list of plain data serves both.
+//
+// This module owns the icon imports, which is why `activeNavId` lives in
+// ./active and the role rules in $lib/utils/hackathonRole — a server load that
+// only needs a permission must not pull the lucide barrel in behind it.
+//
 // ComponentType, not Component: lucide-svelte 0.479 still ships its icons as
 // legacy SvelteComponentTyped classes, which the Svelte 5 `Component` type
 // rejects.
 import type { ComponentType } from "svelte"
 import { resolve } from "$app/paths"
+import { OWNER, type ViewerMembership } from "$lib/utils/hackathonRole"
 
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
@@ -245,17 +255,6 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
     },
   ]
 }
-
-/** The viewer's relationship to one hackathon, as `HackathonMember` reports it. */
-export interface ViewerMembership {
-  /** HackathonRole: UNSPECIFIED=0, OWNER=1, MEMBER=2. */
-  role: number
-  isWaiting: boolean
-}
-
-const OWNER = 1
-const MEMBER = 2
-
 /**
  * Organiser-only destinations for one hackathon, rendered as its own section.
  *
@@ -381,71 +380,4 @@ export function manageNav(
       href: resolve(`/my/hackathon/${hackathonId}/pages`),
     },
   ]
-}
-
-/**
- * Role chip for the hackathon section heading.
- *
- * This is the only role signal a participant gets — `manageNav` gives an owner a
- * labelled section of their own, but everyone else has just this chip — and it
- * must not imply capabilities that are not there. `isWaiting` wins over `role`
- * because a waitlisted user is not yet a member in any useful sense. Global
- * admins can manage any hackathon without joining it, so they get a badge even
- * with no membership row.
- */
-export function hackathonRoleBadge(
-  membership: ViewerMembership | undefined,
-  isGlobalAdmin: boolean,
-): string | undefined {
-  if (membership?.isWaiting) return "Waitlisted"
-  if (membership?.role === OWNER) return "Owner"
-  if (isGlobalAdmin) return "Admin"
-  if (membership?.role === MEMBER) return "Member"
-
-  return undefined
-}
-
-/**
- * Whether the viewer may edit a hackathon's own fields (name, description,
- * visibility, dates, logo) — the backend's `hackathon:write`, held by the
- * confirmed owner (a waitlisted owner does not count, same rule
- * `hackathonRoleBadge` applies) and, via the admin escape hatch, by a global
- * admin. Shared by the dashboard (to show the edit pencil) and the edit
- * route's own load (to guard it), so the two can never disagree about who is
- * let in.
- */
-export function canEditHackathon(
-  membership: ViewerMembership | undefined,
-  isGlobalAdmin: boolean,
-): boolean {
-  if (isGlobalAdmin) return true
-
-  return membership?.role === OWNER && !membership.isWaiting
-}
-
-/**
- * Id of the entry matching `pathname`, longest match winning so that a nested
- * route beats its parent.
- *
- * Pass every section's items in one call: computing this per-section let two
- * sections highlight simultaneously, since each only saw its own hrefs.
- */
-export function activeNavId(
-  pathname: string,
-  items: NavItem[],
-): string | undefined {
-  let bestId: string | undefined
-  let bestLength = -1
-
-  for (const item of items) {
-    if (!item.href) continue
-    if (pathname !== item.href && !pathname.startsWith(item.href + "/"))
-      continue
-    if (item.href.length > bestLength) {
-      bestLength = item.href.length
-      bestId = item.id
-    }
-  }
-
-  return bestId
 }

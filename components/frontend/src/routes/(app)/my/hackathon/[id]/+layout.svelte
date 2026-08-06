@@ -6,7 +6,8 @@
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
-    import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import { resolvePhaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();

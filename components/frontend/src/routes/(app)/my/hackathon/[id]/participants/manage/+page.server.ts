@@ -1,5 +1,5 @@
 import type { Actions, PageServerLoad } from "./$types"
-import { membershipBadgeLabel } from "$lib/utils/hackathonStatus"
+import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { requireGrpc } from "$lib/server/grpc/client"

@@ -6,8 +6,9 @@
     import Pencil from 'lucide-svelte/icons/pencil';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
-    import { canEditHackathon, platformNav, type NavItem } from '$lib/navigation';
-    import { statusLabel, statusBadgeVariant, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { platformNav, type NavItem } from '$lib/navigation/items';
+    import { canEditHackathon, membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
+    import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
     import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
 
     interface HackathonMember {
