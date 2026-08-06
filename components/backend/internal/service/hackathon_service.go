@@ -585,6 +585,179 @@ func (s *HackathonService) RemoveParticipant(
 	return &msgs.RemoveParticipantResponse{}, nil
 }
 
+// ownerTarget resolves the (hackathon, user) pair both owner RPCs operate on,
+// after checking the caller may write to the hackathon.
+//
+// It insists the target is already a CONFIRMED participant. Ownership is a
+// casbin fact here, and the member list is built from the participants table,
+// so granting Owner to someone who never joined would create an owner nobody
+// can see — absent from the roster while holding every permission on the event.
+// Create guards the same invariant from the other end by inserting a
+// participant row for the creator.
+func (s *HackathonService) ownerTarget(
+	ctx context.Context,
+	hackathonID, userID string,
+	anonMsg string,
+) (*ent.Hackathon, *ent.User, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if uid == m.AnonSubject {
+		return nil, nil, status.Error(codes.Unauthenticated, anonMsg)
+	}
+
+	id, err := uuid.Parse(hackathonID)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, nil, err
+	}
+
+	targetID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+	}
+
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).
+		WithParticipants(func(pq *ent.ParticipantQuery) {
+			pq.Where(entparticipant.UserIDEQ(targetID)).WithUser()
+		}).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	if len(h.Edges.Participants) == 0 || h.Edges.Participants[0].Edges.User == nil {
+		return nil, nil, status.Errorf(
+			codes.NotFound,
+			"user %s is not a participant of this hackathon",
+			userID,
+		)
+	}
+	p := h.Edges.Participants[0]
+	if p.IsWaiting {
+		return nil, nil, status.Error(
+			codes.FailedPrecondition,
+			"approve this person before making them an organizer",
+		)
+	}
+
+	return h, p.Edges.User, nil
+}
+
+// AddOwner promotes a confirmed participant to co-organizer of one hackathon.
+//
+// Anyone who can write to the hackathon can do this, which means owners recruit
+// their own co-organizers — the alternative is a global admin having to be in
+// the loop for every event, which is the bottleneck this role exists to remove.
+//
+// Idempotent: casbin reports a duplicate grouping row as "not added" rather
+// than an error, and re-promoting someone who is already an owner is a no-op
+// worth succeeding at.
+func (s *HackathonService) AddOwner(
+	ctx context.Context,
+	req *msgs.AddOwnerRequest,
+) (*msgs.AddOwnerResponse, error) {
+	h, user, err := s.ownerTarget(
+		ctx, req.GetHackathonId(), req.GetUserId(),
+		"anonymous users cannot add owners",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.enforcer.AddRole(user.KeycloakID, m.Owner, h.ID.String()); err != nil {
+		slog.Error("add hackathon owner role", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't grant hackathon owner permission")
+	}
+
+	return &msgs.AddOwnerResponse{}, nil
+}
+
+// RemoveOwner demotes a co-organizer back to ordinary member.
+//
+// Two things it refuses. The last owner, because an event whose every organizer
+// has been demoted cannot be edited by anyone short of a global admin, and
+// nothing in the UI would explain why. And a caller demoting themselves, for
+// the same reason UserService.RemoveRole refuses it: the permission you are
+// giving up is the one that would let you undo it.
+//
+// The Owner row is removed and a Member row put in its place. Without that the
+// person's role resolves to UNSPECIFIED — still a participant, but rendered
+// with no role at all, which reads as a corrupted record rather than a demotion.
+func (s *HackathonService) RemoveOwner(
+	ctx context.Context,
+	req *msgs.RemoveOwnerRequest,
+) (*msgs.RemoveOwnerResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	h, user, err := s.ownerTarget(
+		ctx, req.GetHackathonId(), req.GetUserId(),
+		"anonymous users cannot remove owners",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	owners, err := s.enforcer.HackathonOwners(h.ID.String())
+	if err != nil {
+		slog.Error("list hackathon owners", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't read hackathon owners")
+	}
+
+	isOwner := false
+	for _, o := range owners {
+		if o == user.KeycloakID {
+			isOwner = true
+
+			break
+		}
+	}
+	if !isOwner {
+		return nil, status.Errorf(
+			codes.NotFound,
+			"user %s is not an owner of this hackathon",
+			req.GetUserId(),
+		)
+	}
+	if len(owners) == 1 {
+		return nil, status.Error(
+			codes.FailedPrecondition,
+			"this is the last organizer — promote someone else first",
+		)
+	}
+	if uid == user.KeycloakID {
+		return nil, status.Error(
+			codes.PermissionDenied,
+			"cannot remove your own organizer role",
+		)
+	}
+
+	if _, err := s.enforcer.RemoveRole(user.KeycloakID, m.Owner, h.ID.String()); err != nil {
+		slog.Error("remove hackathon owner role", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't remove hackathon owner permission")
+	}
+	if _, err := s.enforcer.AddRole(user.KeycloakID, m.Member, h.ID.String()); err != nil {
+		slog.Error("restore hackathon member role", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't restore hackathon member permission")
+	}
+
+	return &msgs.RemoveOwnerResponse{}, nil
+}
+
 func (s *HackathonService) Edit(
 	ctx context.Context,
 	req *msgs.EditRequest,

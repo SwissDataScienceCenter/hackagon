@@ -582,15 +582,14 @@ rg -o 'rpc (\w+)' -r '$1' api/proto --no-filename | sort -u
 rg -o '\.\s*(\w+)\s*\(' -r '$1' components/frontend/src --no-filename | sort -u
 ```
 
-Currently 95 of 102 RPCs have a frontend caller. The gaps this found were not
+Currently 97 of 102 RPCs have a frontend caller. The gaps this found were not
 small: **CreateSubmission / EditSubmission / FinalizeSubmission** had none, so a
 team could not turn work in; **EditSettings** had none, so `votingEnabled` —
 which gates every ballot and defaults to false — could only be opened over
 grpcurl; **SetVotingPolicy** had none, so an event could not state its own
 rules, and `SubmitVote` ignored them anyway.
 
-What is left without a caller is deliberate: `AddOwner`/`RemoveOwner` are proto
-stubs that return `Unimplemented`, `PageService.SetOrder` is a bulk alternative
+What is left without a caller is deliberate: `PageService.SetOrder` is a bulk alternative
 to the MoveUp/MoveDown the CMS already uses, `GetVoteCategory` and `ListVotes`
 have `List*` equivalents that drive the UI, and `registrationsEnabled` on
 `EditSettings` is enforced nowhere (audit B3 — the `register` capability

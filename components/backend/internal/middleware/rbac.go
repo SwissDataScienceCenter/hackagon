@@ -372,6 +372,32 @@ func (e *Enforcer) ListG2Policies() ([][]string, error) {
 	return e.enforcer.GetFilteredNamedGroupingPolicy("g2", 0)
 }
 
+// HackathonOwners returns the Keycloak IDs holding Owner in one hackathon.
+//
+// Exists for the last-owner guard in RemoveOwner. Ownership is a casbin fact on
+// this branch — there is no owners column to count — so the only way to ask
+// "would this leave the event unowned?" is to read the grouping table directly.
+//
+// Filters on fields 1 (role) and 2 (domain) of `g`; field 0 is the subject,
+// which is what we are collecting.
+func (e *Enforcer) HackathonOwners(hackathonID string) ([]string, error) {
+	rows, err := e.enforcer.GetFilteredGroupingPolicy(
+		1, Owner.String(), hackathonIdToPath(hackathonID),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	owners := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if len(r) > 0 {
+			owners = append(owners, r[0])
+		}
+	}
+
+	return owners, nil
+}
+
 // GetHackathonRole returns the highest-priority casbin role for keycloakID in hackathonID.
 // Owner takes precedence over Member regardless of slice order — casbin does not sort roles.
 // Global admin/organizer roles (g2) are not surfaced here — the enum only has OWNER and MEMBER.

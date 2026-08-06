@@ -4,9 +4,9 @@
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
     import DataToolbar from '$lib/components/data/DataToolbar.svelte';
     import type { FilterDef, ViewMode } from '$lib/utils/dataView';
-    import type { PageData } from './$types';
+    import type { ActionData, PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 
     let search = $state('');
     let view = $state<ViewMode>('cards');
@@ -51,9 +51,70 @@
     const countLabel = $derived(
         filtered.length === 1 ? '1 participant' : `${filtered.length} participants`
     );
+
+    type Participant = PageData['participants'][number];
+
+    // The backend is the authority on all four of these; the point of asking
+    // here is only to not offer a button whose answer is already known to be no.
+    // Demote is the interesting one: you may not demote yourself (you would be
+    // giving up the permission needed to undo it) and not the last organizer.
+    function mayPromote(p: Participant): boolean {
+        return data.mayManage && !p.isWaiting && !p.isOwner;
+    }
+    function mayDemote(p: Participant): boolean {
+        return data.mayManage && p.isOwner && !p.isSelf && data.ownerCount > 1;
+    }
 </script>
 
+<!-- One definition for both views. The table and the cards used to carry their
+     own copies of the same two forms, which is how the cards ended up without
+     the controls the table had. -->
+{#snippet action(participant: Participant, verb: string, label: string, cls: string)}
+    <form
+        method="POST"
+        action="?/{verb}"
+        use:enhance={() => {
+            pendingIds.add(participant.id);
+            return async ({ update }) => {
+                await update();
+                pendingIds.delete(participant.id);
+            };
+        }}
+    >
+        <input type="hidden" name="userId" value={participant.id} />
+        <button
+            type="submit"
+            disabled={pendingIds.has(participant.id)}
+            class="btn btn-sm {cls}"
+        >
+            {label}
+        </button>
+    </form>
+{/snippet}
+
+{#snippet rowActions(participant: Participant)}
+    {#if data.mayManage && participant.isWaiting}
+        {@render action(participant, 'approve', 'Approve', 'btn-accent')}
+    {/if}
+    {#if mayPromote(participant)}
+        {@render action(participant, 'promote', 'Make organizer', '')}
+    {/if}
+    {#if mayDemote(participant)}
+        {@render action(participant, 'demote', 'Step down', '')}
+    {/if}
+    {#if data.mayManage && !participant.isWaiting && !participant.isOwner}
+        {@render action(participant, 'remove', 'Remove', 'btn-danger')}
+    {/if}
+{/snippet}
+
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+    {#if form?.message}
+        <!-- The refusals these actions can hit (last organizer, not yet
+             approved) are explanations, not glitches, and were previously
+             swallowed by use:enhance with nothing shown at all. -->
+        <p class="alert alert-warning m-0" role="status">{form.message}</p>
+    {/if}
+
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
             <h2 class="m-0 text-title text-ink">All Participants</h2>
@@ -117,29 +178,7 @@
                                 {#if data.mayManage}
                                     <td class="px-3 py-2">
                                         <div class="flex flex-wrap gap-1">
-                                            {#if participant.isWaiting}
-                                                <form method="POST" action="?/approve" use:enhance>
-                                                    <input
-                                                        type="hidden"
-                                                        name="userId"
-                                                        value={participant.id}
-                                                    />
-                                                    <button type="submit" class="btn btn-sm btn-accent">
-                                                        Approve
-                                                    </button>
-                                                </form>
-                                            {:else if !participant.isOwner}
-                                                <form method="POST" action="?/remove" use:enhance>
-                                                    <input
-                                                        type="hidden"
-                                                        name="userId"
-                                                        value={participant.id}
-                                                    />
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        Remove
-                                                    </button>
-                                                </form>
-                                            {/if}
+                                            {@render rowActions(participant)}
                                         </div>
                                     </td>
                                 {/if}
@@ -156,50 +195,7 @@
                     profileDetailsHref="#participant-{participant.id}"
                 >
                     {#snippet actions()}
-                        {#if data.mayManage && participant.isWaiting}
-                            <form
-                                method="POST"
-                                action="?/approve"
-                                use:enhance={() => {
-                                    pendingIds.add(participant.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        pendingIds.delete(participant.id);
-                                    };
-                                }}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-accent"
-                                >
-                                    Approve
-                                </button>
-                            </form>
-                        {/if}
-                        {#if data.mayManage && !participant.isWaiting && !participant.isOwner}
-                            <form
-                                method="POST"
-                                action="?/remove"
-                                use:enhance={() => {
-                                    pendingIds.add(participant.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        pendingIds.delete(participant.id);
-                                    };
-                                }}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-danger"
-                                >
-                                    Remove
-                                </button>
-                            </form>
-                        {/if}
+                        {@render rowActions(participant)}
                     {/snippet}
                 </ParticipantCard>
             {/each}

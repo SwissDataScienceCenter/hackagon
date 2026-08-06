@@ -29,7 +29,7 @@ found; the checklist is the live status.
 | B12 | dx | `TeamService.List`/`Get` collapse every failure to `PermissionDenied` with message `"cann't get teams"` (typo, twice); `Delete` lacks the team-scoped fallback that `Edit` has | `team_service.go` |
 | B13 | api | Vote proto declares `created_at`/`modified_at` but the ent schema has no timestamp columns — always zero on the wire | `db/schema/vote.go` vs `api/proto/vote/**` |
 | B14 | minor | `PageService.List` public fallback masks `NotFound` behind the permission error; stray `"...for reordering2"` in a `SetOrder` error | `page_service.go` (~L624) |
-| B15 | missing | `UserService.AddRole/RemoveRole` and `HackathonService.AddOwner/RemoveOwner` are proto-only → `Unimplemented`; the only Owner grant is the `Create` side effect | protos vs handlers |
+| B15 | ~~missing~~ FIXED | `UserService.AddRole/RemoveRole` and `HackathonService.AddOwner/RemoveOwner` were proto-only → `Unimplemented`; the only Owner grant was the `Create` side effect. All four implemented 2026-08-06, each with a caller | protos vs handlers |
 
 ## Known bugs / gaps — frontend
 
@@ -171,7 +171,15 @@ display name is the platform's own field and is editable.
 - [x] B6 — `CreateSubmission` version race: retries once on constraint
       violation, then `Aborted` instead of `Internal`
 - [ ] B13 — either add timestamps to `Vote` or drop them from the proto
-- [ ] B15 — implement or delete the proto-only role RPCs
+- [x] B15 — implemented, not deleted, and all four now have a caller.
+      `AddRole`/`RemoveRole` were the urgent half: `/manage/users` already
+      shipped calling them, and its error handler does not catch
+      `Unimplemented`, so every promotion rendered a 500. `AddOwner`/
+      `RemoveOwner` were dormant instead — nothing called them — and are a
+      casbin role write here rather than main's parallel `owners` edge.
+      Refusals: last organizer, self-demotion, and a target who is not a
+      confirmed participant (the member list is built from that table, so a
+      role granted outside it makes an owner absent from the roster)
 - [x] F4 — `returnTo` consumed (with an open-redirect guard; the old ping-pong
       protection replaced by an explicit `sessionUsable` flag)
 - [x] F5 — `/my/hackathon/[id]` redirects to `/overview`

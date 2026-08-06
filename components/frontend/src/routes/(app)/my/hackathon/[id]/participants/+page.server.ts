@@ -22,21 +22,34 @@ export const load: PageServerLoad = async (event) => {
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
       isWaiting: m.isWaiting,
       isOwner: m.role === HackathonRole.HACKATHON_ROLE_OWNER,
+      isSelf: m.user!.id === event.locals.platformUser?.id,
     }))
+
+  // The backend refuses to demote the last organizer. Counting them here is
+  // what keeps that refusal from being the way people find out: with one owner
+  // left the button is not offered at all.
+  const ownerCount = participants.filter((p) => p.isOwner).length
 
   return {
     participants,
+    ownerCount,
     mayManage: mayManageParticipants(myMembership ?? undefined, isGlobalAdmin),
   }
 }
 
-/** The gRPC errors both write paths can return, as SvelteKit failures. */
+/** The gRPC errors these write paths can return, as SvelteKit failures. */
 function failFor(e: unknown, denied: string) {
   if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
     return fail(403, { message: denied })
   }
   if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
     return fail(404, { message: "That participant no longer exists" })
+  }
+  // The owner RPCs refuse the last organizer and the not-yet-approved. Both
+  // carry a message written for the person reading it, so pass it through
+  // rather than replacing it with a generic one.
+  if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION) {
+    return fail(409, { message: e.details })
   }
   throw e
 }
@@ -65,7 +78,7 @@ export const actions: Actions = {
       )
     }
 
-    return {}
+    return { ok: true }
   },
 
   remove: async (event) => {
@@ -83,6 +96,36 @@ export const actions: Actions = {
       return failFor(e, "You don't have permission to remove participants here")
     }
 
-    return {}
+    return { ok: true }
+  },
+
+  promote: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const userId = userIdFrom(await event.request.formData())
+    if (!userId) return fail(400, { message: "No participant was given" })
+
+    try {
+      await hackathon.addOwner({ hackathonId: event.params.id, userId })
+    } catch (e) {
+      return failFor(e, "You don't have permission to add organizers here")
+    }
+
+    return { ok: true }
+  },
+
+  demote: async (event) => {
+    const { hackathon } = requireGrpc(event.locals.grpc)
+
+    const userId = userIdFrom(await event.request.formData())
+    if (!userId) return fail(400, { message: "No participant was given" })
+
+    try {
+      await hackathon.removeOwner({ hackathonId: event.params.id, userId })
+    } catch (e) {
+      return failFor(e, "You don't have permission to remove organizers here")
+    }
+
+    return { ok: true }
   },
 }

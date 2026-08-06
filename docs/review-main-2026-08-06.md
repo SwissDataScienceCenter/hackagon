@@ -89,9 +89,20 @@ our `/manage/users` page, taken from main, already calls them
 promoting someone to Hackathon Organizer **500s**. Port: `AddRole`, `RemoveRole`,
 `protoRoleToCasbin`, `RemoveGlobalRole`, `GetAllGlobalRoles`.
 
-Same family, dormant rather than broken: `AddOwner`/`RemoveOwner` are proto-only
+Same family, dormant rather than broken: `AddOwner`/`RemoveOwner` were proto-only
 on ours with no caller; main implements them plus a `Hackathon.owners` field and
-promote/demote UI.
+promote/demote UI. **Done**, but not by copying: main stores ownership twice —
+an `owners` edge *and* a casbin role, kept in sync by hand in both handlers.
+Ours is casbin only, so the port is a role write and needs no schema change. The
+promote/demote controls live on the existing participants page.
+
+Two rules main does not have, both learned from `UserService.RemoveRole`: the
+last organizer cannot be demoted (nobody could edit the event afterwards), and
+you cannot demote yourself (the permission you would give up is the one that
+would let you undo it). A third is ours alone: the target must already be a
+confirmed participant, because the member list is built from the participants
+table and a role granted outside it produces an owner absent from the roster.
+Demotion writes Member back, so the person does not land on no role at all.
 
 ---
 
@@ -152,6 +163,10 @@ destroys our one-ballot-per-category invariant and needs a data migration.
    participant and organiser "what now?" surfaces.
 6. **`/manage` landing page** — presentation, but it is the fix for switches
    buried three clicks deep.
+7. **`AddOwner`/`RemoveOwner`** — the last dormant RPC pair, with the
+   promote/demote controls that give them a caller.
+
+All seven are done and on the branch.
 
 Explicitly **not** doing: main's `HackathonState` model, its casbin-based
 capability enforcement, ranked/points ballots.
