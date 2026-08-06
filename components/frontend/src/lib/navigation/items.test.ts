@@ -1,11 +1,29 @@
 import { describe, it, expect } from "vitest"
-import { manageNav, memberNav, platformNav } from "./items"
+import { manageNav, memberNav, platformNav, type NavItem } from "./items"
 import { activeNavId } from "./active"
 
 // HackathonRole numeric values.
 const ROLE_UNSPECIFIED = 0
 const ROLE_OWNER = 1
 const ROLE_MEMBER = 2
+
+const owner = { role: ROLE_OWNER, isWaiting: false }
+
+const idsOf = (items: NavItem[]) => items.map((i) => i.id)
+
+/**
+ * Assert that `wanted` appear in `items` in that relative order, ignoring
+ * anything else in the list.
+ *
+ * Deliberately not a full-array assertion. Asserting the entire id list fails
+ * the day anyone adds an entry, so it reports "the nav changed" rather than "the
+ * nav broke" — and because several tests each pinned the whole spine, one added
+ * entry meant re-pasting all of them. Filtering to the entries a test is
+ * actually about keeps it silent on additions and loud on the reorder or removal
+ * it exists to catch.
+ */
+const expectOrder = (items: NavItem[], wanted: string[]) =>
+  expect(idsOf(items).filter((id) => wanted.includes(id))).toEqual(wanted)
 
 describe("memberNav", () => {
   // Published unless a test says otherwise — the hidden-page cases below are the
@@ -16,11 +34,8 @@ describe("memberNav", () => {
     visible,
   })
 
-  const ids = (pages: { id: string; title: string; visible: boolean }[] = []) =>
-    memberNav("hack-1", pages).map((i) => i.id)
-
-  it("lists the fixed hackathon destinations", () => {
-    expect(ids()).toEqual([
+  it("orders the fixed destinations as a lifecycle", () => {
+    expectOrder(memberNav("hack-1"), [
       "member:overview",
       "member:participants",
       "member:my-projects",
@@ -31,53 +46,34 @@ describe("memberNav", () => {
     ])
   })
 
-  // The one entry gated on a capability. CAPABILITY_VOTE is what grants
-  // `member → vote_category:read`, and every read on the voting path checks that
-  // row first — so with voting off the page can only refuse a participant, and an
-  // entry leading there would be dead more often than live.
-  it("omits Voting until the vote capability is on", () => {
-    expect(ids()).not.toContain("member:voting")
-  })
+  // The only entries gated on anything. CAPABILITY_VOTE grants
+  // `member → vote_category:read` and CAPABILITY_VIEW_RESULTS grants
+  // `member → vote_result:read`; the backend keeps them separate so an organiser
+  // can close voting, check the tally, then publish. All four combinations are
+  // reachable, so all four are checked rather than the two in common use.
+  it.each([
+    { vote: false, viewResults: false, shown: [] as string[] },
+    { vote: true, viewResults: false, shown: ["member:voting"] },
+    { vote: false, viewResults: true, shown: ["member:results"] },
+    {
+      vote: true,
+      viewResults: true,
+      shown: ["member:voting", "member:results"],
+    },
+  ])(
+    "with vote=$vote and viewResults=$viewResults, offers $shown",
+    ({ vote, viewResults, shown }) => {
+      const ids = idsOf(memberNav("hack-1", [], vote, viewResults))
+      const gated = ["member:voting", "member:results"]
 
-  it("offers Voting once the capability is on, between Submissions and Timeline", () => {
-    expect(memberNav("hack-1", [], true).map((i) => i.id)).toEqual([
-      "member:overview",
-      "member:participants",
-      "member:my-projects",
-      "member:projects",
-      "member:teams",
-      "member:submissions",
-      "member:voting",
-      "member:timeline",
-    ])
-  })
+      expect(gated.filter((id) => ids.includes(id))).toEqual(shown)
+    },
+  )
 
-  // Two capabilities, two switches — the backend keeps CAPABILITY_VOTE and
-  // CAPABILITY_VIEW_RESULTS separate so an organiser can close voting, check the
-  // tally, then publish. Each of the four combinations has to be expressible.
-  it("gates Results on its own capability, independently of Voting", () => {
-    expect(
-      memberNav("hack-1", [], false, false).map((i) => i.id),
-    ).not.toContain("member:results")
-
-    // Voting closed, results published — the state right after a hackathon ends.
-    const published = memberNav("hack-1", [], false, true).map((i) => i.id)
-    expect(published).toContain("member:results")
-    expect(published).not.toContain("member:voting")
-
-    // Voting open, results withheld — the state while judging is under way.
-    const judging = memberNav("hack-1", [], true, false).map((i) => i.id)
-    expect(judging).toContain("member:voting")
-    expect(judging).not.toContain("member:results")
-  })
-
-  it("places Results after Voting and before Timeline", () => {
-    expect(memberNav("hack-1", [], true, true).map((i) => i.id)).toEqual([
-      "member:overview",
-      "member:participants",
-      "member:my-projects",
-      "member:projects",
-      "member:teams",
+  // The entries follow the hackathon's own order of events: you submit, then
+  // people vote on what was submitted, then the tally is published.
+  it("slots Voting and Results between Submissions and Timeline", () => {
+    expectOrder(memberNav("hack-1", [], true, true), [
       "member:submissions",
       "member:voting",
       "member:results",
@@ -85,30 +81,25 @@ describe("memberNav", () => {
     ])
   })
 
-  // Manage Voting is the organiser's way in and is *not* gated the same way:
-  // categories have to exist before voting opens, so gating the setup screen on
-  // the capability would surface it only once it was too late to use.
+  // Manage Voting is the organiser's way in and is deliberately not gated the
+  // same way: categories have to exist before voting opens, so gating the setup
+  // screen on the capability would surface it only once it was too late to use.
   it("keeps Manage Voting available while participant Voting is hidden", () => {
-    const items = [
-      ...memberNav("hack-1", [], false),
-      ...manageNav("hack-1", { role: ROLE_OWNER, isWaiting: false }, false),
+    const ids = [
+      ...idsOf(memberNav("hack-1", [], false)),
+      ...idsOf(manageNav("hack-1", owner, false)),
     ]
 
-    expect(items.map((i) => i.id)).not.toContain("member:voting")
-    expect(items.map((i) => i.id)).toContain("manage:voting")
+    expect(ids).not.toContain("member:voting")
+    expect(ids).toContain("manage:voting")
   })
 
-  it("appends one entry per content page, after the fixed ones", () => {
-    expect(ids([pg("p1", "Welcome")])).toEqual([
-      "member:overview",
-      "member:participants",
-      "member:my-projects",
-      "member:projects",
-      "member:teams",
-      "member:submissions",
-      "member:timeline",
-      "member:page:p1",
-    ])
+  // The page list's length is the organiser's to change, so the fixed entries
+  // must not move when it does.
+  it("appends page entries after every fixed one", () => {
+    const ids = idsOf(memberNav("hack-1", [pg("p1", "Welcome")], true, true))
+
+    expect(ids.at(-1)).toBe("member:page:p1")
   })
 
   // Proposals sits under /projects/proposals so that `activeNavId`'s longest-prefix
@@ -116,11 +107,6 @@ describe("memberNav", () => {
   // handing the highlight to Projects. That only holds while the nesting does.
   it("nests Proposals under All Projects so the deeper entry wins the highlight", () => {
     const items = memberNav("hack-1")
-    const projects = items.find((i) => i.id === "member:projects")
-    const mine = items.find((i) => i.id === "member:my-projects")
-
-    expect(projects?.href).toBe("/my/hackathon/hack-1/projects")
-    expect(mine?.href).toBe("/my/hackathon/hack-1/projects/proposals")
 
     expect(activeNavId("/my/hackathon/hack-1/projects", items)).toBe(
       "member:projects",
@@ -152,6 +138,8 @@ describe("memberNav", () => {
     expect(item?.badge).toBe("Hidden")
     // A state, so a status hue and never the accent, which means role.
     expect(item?.badgeVariant).toBe("badge-warning")
+    // Still linked: its organiser is exactly who needs to open it.
+    expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
   })
 
   it("leaves a published page unbadged", () => {
@@ -169,19 +157,12 @@ describe("memberNav", () => {
     expect(hidden?.icon).not.toBe(live?.icon)
   })
 
-  // Still linked: its organiser is exactly who needs to open it.
-  it("still links a hidden page", () => {
-    const item = memberNav("hack-1", [pg("p1", "Notes", false)]).at(-1)
-
-    expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
-  })
-
   // Page titles are editable and need not be unique. Keying on them would give
   // two same-named pages the same key, which takes the sidebar's {#each} down.
   it("keys same-titled pages distinctly", () => {
     const items = memberNav("hack-1", [pg("p1", "Notes"), pg("p2", "Notes")])
 
-    expect(new Set(items.map((i) => i.id)).size).toBe(items.length)
+    expect(new Set(idsOf(items)).size).toBe(items.length)
   })
 
   it("preserves the order it is given, since the backend already sorted it", () => {
@@ -195,50 +176,38 @@ describe("memberNav", () => {
     expect(titles).toEqual(["Schedule", "Welcome"])
   })
 
-  // The spine an owner and a member discuss has to be the same one. Manage Pages
-  // is organiser-only and therefore belongs to manageNav; nothing role-dependent
-  // may appear here, or the two viewers stop seeing entries in the same places.
-  it("carries no organiser-only entry, so the spine is role-independent", () => {
-    const items = memberNav("hack-1", [
-      { id: "p1", title: "Welcome", visible: true },
-    ])
+  // The spine an owner and a member discuss has to be the same one, so nothing
+  // role-dependent may appear here whatever the capabilities say — otherwise the
+  // two viewers stop seeing entries in the same places.
+  it("carries only member entries, so the spine is role-independent", () => {
+    const ids = idsOf(memberNav("hack-1", [pg("p1", "Welcome")], true, true))
 
-    expect(items.map((i) => i.id)).toEqual([
-      "member:overview",
-      "member:participants",
-      "member:my-projects",
-      "member:projects",
-      "member:teams",
-      "member:submissions",
-      "member:timeline",
-      "member:page:p1",
-    ])
+    expect(ids.filter((id) => !id.startsWith("member:"))).toEqual([])
   })
 })
 
 describe("manageNav", () => {
-  const owner = { role: ROLE_OWNER, isWaiting: false }
-  const member = { role: ROLE_MEMBER, isWaiting: false }
+  it.each([
+    {
+      who: "a participant",
+      membership: { role: ROLE_MEMBER, isWaiting: false },
+    },
+    { who: "someone with no membership row", membership: undefined },
+    {
+      who: "an unspecified role",
+      membership: { role: ROLE_UNSPECIFIED, isWaiting: false },
+    },
+  ])(
+    "is empty for $who, so the section does not render at all",
+    ({ membership }) => {
+      expect(manageNav("hack-1", membership, false)).toEqual([])
+    },
+  )
 
-  it("is empty for a participant, so the section does not render at all", () => {
-    expect(manageNav("hack-1", member, false)).toEqual([])
-  })
-
-  it("is empty for someone with no membership row", () => {
-    expect(manageNav("hack-1", undefined, false)).toEqual([])
-  })
-
-  it("is empty for an unspecified role", () => {
-    expect(
-      manageNav("hack-1", { role: ROLE_UNSPECIFIED, isWaiting: false }, false),
-    ).toEqual([])
-  })
-
-  // Order follows the participant entries these extend — Participants, then All
-  // Projects, then Teams, then Timeline, then the page list — so the two sections
-  // read down the page in the same sequence.
-  it("offers participant, project, track, team, timeline, voting and page management to an owner, in spine order", () => {
-    expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
+  // Order follows the participant entries these extend, so the two sections read
+  // down the page in the same sequence.
+  it("follows the order of the participant entries it extends", () => {
+    expectOrder(manageNav("hack-1", owner, false), [
       "manage:participants",
       "manage:projects",
       "manage:tracks",
@@ -254,36 +223,31 @@ describe("manageNav", () => {
   // hackathon, joined or not — the condition mayManageParticipants,
   // mayReviewProjects, mayManageTracks, mayManagePhases and mayManagePages all
   // mirror. The teams manage route's own load takes the same owner-or-admin pair.
-  it("offers the same to an admin who never joined", () => {
-    expect(manageNav("hack-1", undefined, true).map((i) => i.id)).toEqual([
-      "manage:participants",
-      "manage:projects",
-      "manage:tracks",
-      "manage:teams",
-      "manage:timeline",
-      "manage:voting",
-      "manage:pages",
-    ])
-  })
-
-  it("links every entry to a route that exists", () => {
-    expect(manageNav("hack-1", owner, false).map((i) => i.href)).toEqual([
-      "/my/hackathon/hack-1/participants/manage",
-      "/my/hackathon/hack-1/projects/manage",
-      "/my/hackathon/hack-1/tracks",
-      "/my/hackathon/hack-1/teams/manage",
-      "/my/hackathon/hack-1/timeline/manage",
-      "/my/hackathon/hack-1/voting/manage",
-      "/my/hackathon/hack-1/pages",
-    ])
+  //
+  // Compared against the owner's list rather than restated, so an entry added
+  // above cannot be granted to one of the two and not the other.
+  it("offers an admin who never joined exactly what it offers the owner", () => {
+    expect(idsOf(manageNav("hack-1", undefined, true))).toEqual(
+      idsOf(manageNav("hack-1", owner, false)),
+    )
   })
 
   // Mirrors the backend, which does not consult isWaiting for track:write or
   // phase:write either.
   it("does not withhold management from a waitlisted owner", () => {
     expect(
-      manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(7)
+      idsOf(manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false)),
+    ).toEqual(idsOf(manageNav("hack-1", owner, false)))
+  })
+
+  // The exact paths are the compiler's job — `resolve()` takes SvelteKit's
+  // generated Pathname union, so a renamed route fails `tsc`, not this. What is
+  // worth pinning is that no entry is a stub and none escapes the hackathon.
+  it("points every entry at a route under this hackathon", () => {
+    for (const item of manageNav("hack-1", owner, false)) {
+      expect(item.href, `${item.id} has no href`).toBeTruthy()
+      expect(item.href?.startsWith("/my/hackathon/hack-1/")).toBe(true)
+    }
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not
@@ -296,76 +260,57 @@ describe("manageNav", () => {
       ...manageNav("hack-1", owner, false),
     ]
 
-    expect(new Set(items.map((i) => i.id)).size).toBe(items.length)
-    expect(activeNavId("/my/hackathon/hack-1/projects", items)).toBe(
-      "member:projects",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/tracks", items)).toBe(
-      "manage:tracks",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/timeline", items)).toBe(
-      "member:timeline",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/timeline/manage", items)).toBe(
-      "manage:timeline",
-    )
-    // The create and edit forms live under the manage route precisely so they
-    // light Manage Timeline rather than the participant Timeline they used to sit
-    // beside.
-    expect(activeNavId("/my/hackathon/hack-1/timeline/manage/new", items)).toBe(
-      "manage:timeline",
-    )
-    expect(
-      activeNavId("/my/hackathon/hack-1/timeline/manage/ph1/edit", items),
-    ).toBe("manage:timeline")
-    expect(activeNavId("/my/hackathon/hack-1/teams", items)).toBe(
-      "member:teams",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/teams/manage", items)).toBe(
-      "manage:teams",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/participants", items)).toBe(
-      "member:participants",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/participants/manage", items)).toBe(
-      "manage:participants",
-    )
-    // A project's detail route nests under whichever list it was opened from, so
-    // the sidebar keeps saying which half of the split you are in while you read
-    // the proposal.
-    expect(activeNavId("/my/hackathon/hack-1/projects/pr1", items)).toBe(
-      "member:projects",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/projects/manage", items)).toBe(
-      "manage:projects",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/projects/manage/pr1", items)).toBe(
-      "manage:projects",
-    )
+    expect(new Set(idsOf(items)).size).toBe(items.length)
 
-    // Pages nest the other way round: the Manage entry is the *parent* of the
-    // individual page routes, so opening a page must light that page and not
-    // Manage Pages, which only wins on its own index.
-    expect(activeNavId("/my/hackathon/hack-1/pages", items)).toBe(
-      "manage:pages",
-    )
-    expect(activeNavId("/my/hackathon/hack-1/pages/p1", items)).toBe(
-      "member:page:p1",
-    )
+    // The participant entry wins on its own route; the Manage entry nested under
+    // it wins on that one and everything below it.
+    //
+    // `as const` so these destructure as tuples: without it the array is
+    // `string[][]` and `noUncheckedIndexedAccess` widens both halves to
+    // `string | undefined`.
+    const cases = [
+      ["/my/hackathon/hack-1/participants", "member:participants"],
+      ["/my/hackathon/hack-1/participants/manage", "manage:participants"],
+      ["/my/hackathon/hack-1/teams", "member:teams"],
+      ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
+      ["/my/hackathon/hack-1/timeline", "member:timeline"],
+      ["/my/hackathon/hack-1/timeline/manage", "manage:timeline"],
+      // The create and edit forms live under the manage route precisely so they
+      // light Manage Timeline rather than the participant Timeline they used to
+      // sit beside.
+      ["/my/hackathon/hack-1/timeline/manage/new", "manage:timeline"],
+      ["/my/hackathon/hack-1/timeline/manage/ph1/edit", "manage:timeline"],
+      ["/my/hackathon/hack-1/tracks", "manage:tracks"],
+      // A project's detail route nests under whichever list it was opened from,
+      // so the sidebar keeps saying which half of the split you are in while you
+      // read the proposal.
+      ["/my/hackathon/hack-1/projects", "member:projects"],
+      ["/my/hackathon/hack-1/projects/pr1", "member:projects"],
+      ["/my/hackathon/hack-1/projects/manage", "manage:projects"],
+      ["/my/hackathon/hack-1/projects/manage/pr1", "manage:projects"],
+      // Pages nest the other way round: the Manage entry is the *parent* of the
+      // individual page routes, so opening a page must light that page and not
+      // Manage Pages, which only wins on its own index.
+      ["/my/hackathon/hack-1/pages", "manage:pages"],
+      ["/my/hackathon/hack-1/pages/p1", "member:page:p1"],
+    ] as const
+
+    for (const [path, expected] of cases) {
+      expect(activeNavId(path, items), path).toBe(expected)
+    }
   })
 })
 
 describe("platformNav", () => {
-  // An organiser's one permission is a hackathon action and lives in homeNav, so
+  // An organiser's one permission, hackathon:create, is a hackathon action, so
   // Platform has nothing to show them — not even a heading.
   it("is empty for a non-admin", () => {
     expect(platformNav({ isGlobalAdmin: false })).toEqual([])
   })
 
-  it("offers user management to an admin", () => {
-    expect(platformNav({ isGlobalAdmin: true }).map((i) => i.id)).toEqual([
-      "platform:users",
-    ])
+  // Keeps the two loops below from passing vacuously on an empty list.
+  it("offers an admin something", () => {
+    expect(platformNav({ isGlobalAdmin: true }).length).toBeGreaterThan(0)
   })
 
   // The dashboard renders these as tiles that give each entry a line of its own,

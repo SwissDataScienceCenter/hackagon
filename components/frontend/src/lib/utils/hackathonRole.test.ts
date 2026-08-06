@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest"
-import { canEditHackathon, hackathonRoleBadge } from "./hackathonRole"
+import {
+  canEditHackathon,
+  hackathonRoleBadge,
+  membershipBadgeLabel,
+  membershipBadgeVariant,
+} from "./hackathonRole"
 
 // HackathonRole numeric values.
 const ROLE_UNSPECIFIED = 0
@@ -74,5 +79,36 @@ describe("canEditHackathon", () => {
 
   it("refuses someone with no relationship to the hackathon", () => {
     expect(canEditHackathon(undefined, false)).toBe(false)
+  })
+})
+
+// These two moved here from hackathonStatus.ts, which had HackathonRole's
+// numeric values hard-coded a second time. They arrived untested, and the reason
+// they are not simply `hackathonRoleBadge` is the part worth pinning.
+describe("membershipBadgeLabel", () => {
+  it("prefers Waitlisted over the role, as hackathonRoleBadge does", () => {
+    expect(membershipBadgeLabel(true, ROLE_OWNER)).toBe("Waitlisted")
+  })
+
+  it("labels an owner", () => {
+    expect(membershipBadgeLabel(false, ROLE_OWNER)).toBe("Owner")
+  })
+
+  // Deliberately not undefined the way hackathonRoleBadge is: this chip only
+  // renders where a membership row is already known to exist, so it always
+  // returns a string and an unrecognized role still reads as a participant.
+  // It names no global role either — on the dashboard "Admin" would appear
+  // against every hackathon on the platform and say nothing about any one.
+  it("falls back to Member rather than going blank", () => {
+    expect(membershipBadgeLabel(false, ROLE_MEMBER)).toBe("Member")
+    expect(membershipBadgeLabel(false, ROLE_UNSPECIFIED)).toBe("Member")
+  })
+})
+
+describe("membershipBadgeVariant", () => {
+  // A lifecycle state, so a status hue either way and never the accent.
+  it("separates waiting from confirmed", () => {
+    expect(membershipBadgeVariant(true)).toBe("badge-warning")
+    expect(membershipBadgeVariant(false)).toBe("badge-success")
   })
 })
