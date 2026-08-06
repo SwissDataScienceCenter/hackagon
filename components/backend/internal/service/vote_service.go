@@ -11,9 +11,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
 	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
+	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -365,6 +367,43 @@ func voteEntryFromEnt(v *ent.Vote) *voteEnts.Vote {
 // participant act), voting must be open (settings.voting_enabled), and for
 // jury categories the voter must be on the jury. One ballot per voter per
 // category — the DB unique index turns double votes into AlreadyExists.
+// votingPolicy is the organizer's ruling, as SetVotingPolicy stored it.
+//
+// Every field defaults to the behaviour that was hard-coded before this read
+// existed, so an event with no policy row behaves exactly as it always did:
+// organizers do not vote, voting for your own team is allowed. Setting a
+// policy is what changes anything.
+type votingPolicy struct {
+	organizerVoting bool
+	ownTeamVoting   bool
+}
+
+func (s *VoteService) votingPolicyFor(ctx context.Context, hackathonID uuid.UUID) votingPolicy {
+	p := votingPolicy{organizerVoting: false, ownTeamVoting: true}
+
+	row, err := s.dbClient.HackathonForms.Query().
+		Where(enthackathonforms.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
+		Only(ctx)
+	if err != nil {
+		// No row, or a query that failed: fall back to the defaults rather than
+		// refusing the vote. A policy nobody set must not close the ballot.
+		if !ent.IsNotFound(err) {
+			slog.Error("query voting policy", "err", err)
+		}
+
+		return p
+	}
+
+	if v, ok := row.VotingPolicy["organizerVoting"].(bool); ok {
+		p.organizerVoting = v
+	}
+	if v, ok := row.VotingPolicy["ownTeamVoting"].(bool); ok {
+		p.ownTeamVoting = v
+	}
+
+	return p
+}
+
 func (s *VoteService) SubmitVote(
 	ctx context.Context,
 	req *voteMsgs.SubmitVoteRequest,
@@ -437,17 +476,46 @@ func (s *VoteService) SubmitVote(
 			return nil, status.Error(codes.PermissionDenied, "only jury members may vote in this category")
 		}
 	} else {
-		// Organizers are neutral: whoever runs the event does not also vote
-		// in it (pinned by the voting policy's organizerVoting: false).
-		if role, err := s.enforcer.GetHackathonRole(uid, hackathonID.String()); err == nil &&
-			role == hackEnts.HackathonRole_HACKATHON_ROLE_OWNER {
-			return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
-		}
-		if globals, err := s.enforcer.GetGlobalRoles(uid); err == nil {
-			for _, g := range globals {
-				if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
-					return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
+		// The organizer's own ruling, not a constant. Both fields were stored by
+		// SetVotingPolicy and then never read: organizerVoting was hard-coded
+		// here and ownTeamVoting was enforced nowhere at all, so an event that
+		// set either one got no effect from it.
+		policy := s.votingPolicyFor(ctx, hackathonID)
+
+		// Organizers are neutral by default: whoever runs the event does not
+		// also vote in it. An event that says otherwise may.
+		if !policy.organizerVoting {
+			if role, err := s.enforcer.GetHackathonRole(uid, hackathonID.String()); err == nil &&
+				role == hackEnts.HackathonRole_HACKATHON_ROLE_OWNER {
+				return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
+			}
+			if globals, err := s.enforcer.GetGlobalRoles(uid); err == nil {
+				for _, g := range globals {
+					if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
+						return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
+					}
 				}
+			}
+		}
+
+		// Voting for the submission of a team you are on. Allowed unless the
+		// event forbids it — a small hackathon where everyone knows everyone
+		// often wants it, and a competitive one does not.
+		if !policy.ownTeamVoting {
+			ownTeam, err := s.dbClient.Submission.Query().
+				Where(
+					entsubmission.IDEQ(submissionID),
+					entsubmission.HasTeamWith(entteam.HasMembersWith(entuser.IDEQ(voter.ID))),
+				).
+				Exist(ctx)
+			if err != nil {
+				slog.Error("query own-team submission", "err", err)
+
+				return nil, status.Error(codes.Internal, "couldn't query database")
+			}
+			if ownTeam {
+				return nil, status.Error(codes.PermissionDenied,
+					"this event does not allow voting for your own team's submission")
 			}
 		}
 
