@@ -552,6 +552,50 @@ through to the single-step form when `#password` is already present.
   (clicks, `setInputFiles` with the generated bundle) and keep the
   expectations.
 
+## Two audits the suites cannot run for you
+
+Both suites answer "does this work when you drive it?". Neither answers "can
+anyone GET here?" — a passing test that reached the page with `page.goto` proves
+the route works, not that the product offers a way in. Every bug of this shape
+found so far was invisible to a green suite, so the checks are mechanical on
+purpose.
+
+**Routes with no inbound link.** List every route, then look for its last static
+segment in any href, `goto` or redirect in `src/`:
+
+```bash
+# routes
+find components/frontend/src/routes -name '+page.svelte' -o -name '+server.ts'
+# links
+rg -o '(href|goto|redirect\(\d+,)[^)"]*' components/frontend/src
+```
+
+Found: `/account` reachable only by URL (the link lived in a component no route
+mounts), `/manage/pages` — the platform CMS — linked from nowhere at all, and
+the preferences CSV endpoint sitting under a path with no page.
+
+**RPCs with no caller.** Every `rpc Name(` in `api/proto/**/*_service.proto`
+against `.name(` in the frontend:
+
+```bash
+rg -o 'rpc (\w+)' -r '$1' api/proto --no-filename | sort -u
+rg -o '\.\s*(\w+)\s*\(' -r '$1' components/frontend/src --no-filename | sort -u
+```
+
+Currently 95 of 102 RPCs have a frontend caller. The gaps this found were not
+small: **CreateSubmission / EditSubmission / FinalizeSubmission** had none, so a
+team could not turn work in; **EditSettings** had none, so `votingEnabled` —
+which gates every ballot and defaults to false — could only be opened over
+grpcurl; **SetVotingPolicy** had none, so an event could not state its own
+rules, and `SubmitVote` ignored them anyway.
+
+What is left without a caller is deliberate: `AddOwner`/`RemoveOwner` are proto
+stubs that return `Unimplemented`, `PageService.SetOrder` is a bulk alternative
+to the MoveUp/MoveDown the CMS already uses, `GetVoteCategory` and `ListVotes`
+have `List*` equivalents that drive the UI, and `registrationsEnabled` on
+`EditSettings` is enforced nowhere (audit B3 — the `register` capability
+governs, and a switch that does nothing is worse than no switch).
+
 ## See also
 
 - [requirements.md](requirements.md) — the same recipe read as a requirement
