@@ -202,3 +202,63 @@ export function mayFinalizeSubmissions(
 
   return membership !== undefined && !membership.isWaiting
 }
+
+/**
+ * Whether to offer vote category management — create, edit, delete.
+ *
+ * Mirrors the backend exactly, same as `mayManageTracks`: `CreateVoteCategory`
+ * enforces `vote_category:create` and `EditVoteCategory`/`DeleteVoteCategory`
+ * enforce `vote_category:write` (`vote_service.go:120`, `:218`, `:331`), all
+ * three granted to `Owner` outright (`rbac.go:220-222`) and to an admin through
+ * the global escape hatch.
+ *
+ * Deliberately *not* gated on `CAPABILITY_VOTE`, unlike `mayVote` below. That
+ * capability grants `vote_category:read` to `Member`; it never touches the
+ * owner's write rows. Gating here would hide the setup screen until voting was
+ * already open, which is backwards — categories have to exist *before* anyone
+ * can vote on them.
+ */
+export function mayManageVoteCategories(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}
+
+/**
+ * Whether to offer casting a vote.
+ *
+ * Gated on `CAPABILITY_VOTE`, and correctly so — unlike `mayPreferProjects`,
+ * this is a capability the app can actually turn on (the timeline's
+ * capabilities panel calls `SetCapabilities`) and seeded hackathons carry a
+ * `HackathonState` to turn it on with. Verified live in the seeded "Internal
+ * Product Sprint", where `alice`, a plain member, lists categories and submits a
+ * vote successfully.
+ *
+ * The capability is what writes `member → vote_category:read`
+ * (`hackathon_service.go:653`), and that row gates *everything* on the voting
+ * path: `ListVoteCategories`, `GetVoteCategory` and `SubmitVote` all check it
+ * before anything else. So with voting off a member cannot even read the list,
+ * which is why the nav entry is hidden rather than shown and refused.
+ *
+ * Two conditions are deliberately not mirrored, because neither is knowable
+ * here:
+ *
+ *  - **jury membership.** A `VOTER_TYPE_JURY` category refuses anyone not on its
+ *    jury list (`vote_service.go:402`). That is per-category, not per-viewer, so
+ *    callers filter the categories themselves rather than asking this.
+ *  - **the own-team rule.** `SubmitVote` refuses a vote on a submission by a team
+ *    you belong to (`vote_service.go:588`). That is per-submission; the booth
+ *    disables those options rather than hiding the whole page.
+ */
+export function mayVote(
+  membership: HackathonMember | undefined,
+  capabilityEnabled: boolean,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return capabilityEnabled && membership !== undefined && !membership.isWaiting
+}

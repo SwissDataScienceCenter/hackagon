@@ -1,5 +1,7 @@
 import type { LayoutServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
+import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -56,5 +58,17 @@ export const load: LayoutServerLoad = async (event) => {
     )
   }
 
-  return { hackathon: result.hackathon, myMembership, hackathonPages }
+  // Resolved here rather than in the sidebar because `enabledCapabilities` reads
+  // generated types and is server-only. It decides whether the participant
+  // Voting entry is in the nav at all — see `memberNav`.
+  const votingEnabled = enabledCapabilities(result.hackathon.state).includes(
+    Capability.CAPABILITY_VOTE,
+  )
+
+  return {
+    hackathon: result.hackathon,
+    myMembership,
+    hackathonPages,
+    votingEnabled,
+  }
 }

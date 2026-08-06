@@ -300,6 +300,40 @@ describe("memberNav", () => {
     ])
   })
 
+  // The one entry gated on a capability. CAPABILITY_VOTE is what grants
+  // `member → vote_category:read`, and every read on the voting path checks that
+  // row first — so with voting off the page can only refuse a participant, and an
+  // entry leading there would be dead more often than live.
+  it("omits Voting until the vote capability is on", () => {
+    expect(ids()).not.toContain("member:voting")
+  })
+
+  it("offers Voting once the capability is on, between Submissions and Timeline", () => {
+    expect(memberNav("hack-1", [], true).map((i) => i.id)).toEqual([
+      "member:overview",
+      "member:participants",
+      "member:my-projects",
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+      "member:voting",
+      "member:timeline",
+    ])
+  })
+
+  // Manage Voting is the organiser's way in and is *not* gated the same way:
+  // categories have to exist before voting opens, so gating the setup screen on
+  // the capability would surface it only once it was too late to use.
+  it("keeps Manage Voting available while participant Voting is hidden", () => {
+    const items = [
+      ...memberNav("hack-1", [], false),
+      ...manageNav("hack-1", { role: ROLE_OWNER, isWaiting: false }, false),
+    ]
+
+    expect(items.map((i) => i.id)).not.toContain("member:voting")
+    expect(items.map((i) => i.id)).toContain("manage:voting")
+  })
+
   it("appends one entry per content page, after the fixed ones", () => {
     expect(ids([pg("p1", "Welcome")])).toEqual([
       "member:overview",
@@ -439,13 +473,14 @@ describe("manageNav", () => {
   // Order follows the participant entries these extend — Participants, then All
   // Projects, then Teams, then Timeline, then the page list — so the two sections
   // read down the page in the same sequence.
-  it("offers participant, project, track, team, timeline and page management to an owner, in spine order", () => {
+  it("offers participant, project, track, team, timeline, voting and page management to an owner, in spine order", () => {
     expect(manageNav("hack-1", owner, false).map((i) => i.id)).toEqual([
       "manage:participants",
       "manage:projects",
       "manage:tracks",
       "manage:teams",
       "manage:timeline",
+      "manage:voting",
       "manage:pages",
     ])
   })
@@ -462,6 +497,7 @@ describe("manageNav", () => {
       "manage:tracks",
       "manage:teams",
       "manage:timeline",
+      "manage:voting",
       "manage:pages",
     ])
   })
@@ -473,6 +509,7 @@ describe("manageNav", () => {
       "/my/hackathon/hack-1/tracks",
       "/my/hackathon/hack-1/teams/manage",
       "/my/hackathon/hack-1/timeline/manage",
+      "/my/hackathon/hack-1/voting/manage",
       "/my/hackathon/hack-1/pages",
     ])
   })
@@ -482,7 +519,7 @@ describe("manageNav", () => {
   it("does not withhold management from a waitlisted owner", () => {
     expect(
       manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
-    ).toHaveLength(6)
+    ).toHaveLength(7)
   })
 
   // Both sections' items go to activeNavId in one call, so their ids must not

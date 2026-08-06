@@ -20,6 +20,7 @@ import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
 import Plus from "lucide-svelte/icons/plus"
 import Tag from "lucide-svelte/icons/tag"
+import Vote from "lucide-svelte/icons/vote"
 
 /**
  * A single sidebar entry.
@@ -131,6 +132,7 @@ export function homeNav(roles: {
 export function memberNav(
   hackathonId: string,
   pages: HackathonPageRef[] = [],
+  votingEnabled = false,
 ): NavItem[] {
   return [
     {
@@ -180,6 +182,27 @@ export function memberNav(
       icon: Send,
       href: resolve(`/my/hackathon/${hackathonId}/submissions`),
     },
+    // After Submissions, because that is what people vote on, and before
+    // Timeline for the same reason Submissions sits there — the entries follow
+    // the hackathon's own order of events.
+    //
+    // The one entry in this list gated on anything. `CAPABILITY_VOTE` is what
+    // grants `member → vote_category:read`, and that row gates every read on the
+    // voting path, so with voting off the page can only 403 a participant. An
+    // entry that is dead more often than it is live is worse than one that
+    // appears when judging opens — which is also the moment it becomes
+    // meaningful. Organisers reach the setup screen through `manageNav`
+    // regardless, so nobody is locked out of preparing categories in advance.
+    ...(votingEnabled
+      ? [
+          {
+            id: "member:voting",
+            label: "Voting",
+            icon: Vote,
+            href: resolve(`/my/hackathon/${hackathonId}/voting`),
+          },
+        ]
+      : []),
     {
       id: "member:timeline",
       label: "Timeline",
@@ -403,6 +426,17 @@ export function manageNav(
       label: "Manage Timeline",
       icon: CalendarCog,
       href: resolve(`/my/hackathon/${hackathonId}/timeline/manage`),
+    },
+    // Nested under the participant Voting route, same as Manage Teams and
+    // Manage Timeline above — and, unlike that entry, shown whether or not
+    // voting is on. Categories have to exist before voting opens, so gating the
+    // setup screen on the capability would mean it only appeared once it was
+    // already too late to use.
+    {
+      id: "manage:voting",
+      label: "Manage Voting",
+      icon: Vote,
+      href: resolve(`/my/hackathon/${hackathonId}/voting/manage`),
     },
     // Last, because the page list it acts on is last in `memberNav` for the same
     // reason: an organiser can add and remove pages at will, so anything below it
