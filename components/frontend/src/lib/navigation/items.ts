@@ -91,20 +91,21 @@ export interface HackathonPageRef {
 /**
  * Participant-facing nav for one hackathon, followed by its content pages.
  *
- * Order matches the horizontal sub-nav this replaces, so the move to a sidebar
- * does not also reshuffle where people expect to find things. Only routes that
- * exist are listed — there are no stub entries for pages still to be built.
+ * Every entry is one a participant can use, so the list is identical whatever
+ * the viewer's role — organiser-only destinations live in `manageNav`. Only
+ * routes that exist are listed; there are no stub entries.
  *
- * `pages` are the hackathon's own content pages, which an organizer defines and
- * can rename or reorder at will. They come last because the list's length is
- * theirs to change, and the fixed entries above must not move when it does. The
- * caller passes them already filtered and ordered — `PageService.List` does both
- * server-side — so this function never decides what a member may see.
+ * `pages` come last because an organiser adds and removes them at will, and the
+ * fixed entries above must not move when they do. The caller passes them already
+ * filtered and ordered (`PageService.List` does both server-side), so this
+ * function never decides what a member may see.
  *
- * Every entry here is one a participant can use, so this list is identical
- * whatever the viewer's role. Organiser-only destinations — including "Manage
- * Pages" and "Manage Tracks", which act on the lists above and below — live in
- * `manageNav` instead.
+ * `votingEnabled` and `resultsVisible` are the hackathon's `CAPABILITY_VOTE` and
+ * `CAPABILITY_VIEW_RESULTS`, and gate the only two conditional entries. Each
+ * capability is what grants the casbin row every read on its page depends on
+ * (`vote_category:read`, `vote_result:read`), so without it the entry could only
+ * lead to a 403. They gate independently because the backend keeps them
+ * separate: an organiser closes voting, checks the tally, then publishes.
  */
 export function memberNav(
   hackathonId: string,
@@ -125,15 +126,10 @@ export function memberNav(
       icon: Users,
       href: resolve(`/my/hackathon/${hackathonId}/participants`),
     },
-    // Proposals before All Projects: proposing is what a member does first, and
-    // the pair reads as a lifecycle — what you have put forward, then what the
-    // hackathon has taken on.
-    //
-    // Order is presentation only. `activeNavId` scans every item and keeps the
-    // longest matching href, so this entry stays lit across its own sub-routes
-    // (propose, edit) wherever it sits in the list; what matters is that
-    // `projects/proposals` is nested under `projects` in the URL, not that the two
-    // are adjacent.
+    // Nested under `projects` in the URL, which is what keeps this entry lit
+    // across its own sub-routes (propose, edit) rather than handing the
+    // highlight to All Projects — `activeNavId` keeps the longest matching href.
+    // Position in this list is presentation only.
     {
       id: "member:my-projects",
       label: "Proposals",
@@ -160,17 +156,9 @@ export function memberNav(
       icon: Send,
       href: resolve(`/my/hackathon/${hackathonId}/submissions`),
     },
-    // After Submissions, because that is what people vote on, and before
-    // Timeline for the same reason Submissions sits there — the entries follow
-    // the hackathon's own order of events.
-    //
-    // The one entry in this list gated on anything. `CAPABILITY_VOTE` is what
-    // grants `member → vote_category:read`, and that row gates every read on the
-    // voting path, so with voting off the page can only 403 a participant. An
-    // entry that is dead more often than it is live is worse than one that
-    // appears when judging opens — which is also the moment it becomes
-    // meaningful. Organisers reach the setup screen through `manageNav`
-    // regardless, so nobody is locked out of preparing categories in advance.
+    // Between Submissions and Timeline: the entries follow the hackathon's own
+    // order of events. Organisers reach voting setup through `manageNav`
+    // whatever this says, so hiding it blocks nobody from preparing categories.
     ...(votingEnabled
       ? [
           {
@@ -181,12 +169,7 @@ export function memberNav(
           },
         ]
       : []),
-    // After Voting, and gated on its own capability rather than on that one.
-    // `CAPABILITY_VIEW_RESULTS` is what grants `member → vote_result:read`, and
-    // the backend keeps it separate from `CAPABILITY_VOTE` deliberately: an
-    // organiser closes voting, checks the tally, then publishes. Folding the two
-    // together here would either leak an empty page during voting or hide the
-    // results after it.
+    // After Voting, on its own capability rather than that one's.
     ...(resultsVisible
       ? [
           {
@@ -203,17 +186,15 @@ export function memberNav(
       icon: CalendarClock,
       href: resolve(`/my/hackathon/${hackathonId}/timeline`),
     },
-    // Keyed by page id, never by title: two pages named the same would collide
-    // on a title-derived key and take the sidebar down with them.
+    // Keyed by page id, never by title: titles are editable and need not be
+    // unique, and two pages named the same would collide on a title-derived key
+    // and take the sidebar's {#each} down.
     //
-    // A page participants cannot see is marked, not omitted: this list is the
-    // only place an organiser sees their pages, so rendering one identically to a
-    // published page leaves them no way to tell what is actually live. `EyeOff`
-    // carries it on the icon rail, where the badge is not rendered.
-    //
+    // A page participants cannot see is badged, not omitted — this list is the
+    // only place an organiser sees their pages. `EyeOff` carries the same
+    // distinction on the collapsed rail, where the badge is not rendered.
     // "Hidden" rather than "Draft": `visible` says who may see the page, not how
-    // finished it is. A complete page can be deliberately withheld, and calling
-    // that a draft would misdescribe it.
+    // finished it is.
     ...pages.map((p) => ({
       id: `member:page:${p.id}`,
       label: p.title,
@@ -229,16 +210,13 @@ export function memberNav(
 /**
  * Platform-wide administration — not scoped to any hackathon.
  *
- * Admin-only, and therefore the whole section is: `UserService.List` denies
- * anyone but admin. An organizer's one permission, `hackathon:create`, is a
- * hackathon action, so an organizer sees no Platform section at all rather than
- * an empty one.
+ * Admin-only, and so is every entry: `UserService.List` denies anyone else. An
+ * organizer's one permission, `hackathon:create`, is a hackathon action, so an
+ * organizer sees no Platform section at all rather than an empty one.
  *
- * The dashboard's Manage platform section is the only thing that renders this,
- * and the only way in: the header used to carry a Users link of its own,
- * hard-coded rather than read from here, and it is gone. Kept a list here rather
- * than inlined in that view so a settings page added below reaches any further
- * surface that asks for one, and is described once rather than per surface.
+ * A list here rather than markup inlined in the dashboard, so an entry added
+ * below reaches every surface that renders it and is described once. The
+ * dashboard's tiles are what show `description`; the sidebar ignores it.
  */
 export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
   if (!roles.isGlobalAdmin) return []
@@ -255,39 +233,32 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
     },
   ]
 }
+
 /**
  * Organiser-only destinations for one hackathon, rendered as its own section.
  *
- * Separate from `memberNav` rather than mixed into it so the participant spine
- * is byte-identical across roles: an owner and a member looking at "Timeline"
- * are looking at the same entry in the same position, and can say so to each
- * other. What an owner gains is additive and grouped under one heading that
- * explains why they can see it.
+ * Separate from `memberNav` so the participant spine is identical across roles:
+ * an owner and a member looking at "Timeline" see the same entry in the same
+ * place, and what an owner gains is additive.
  *
  * One gate covers every entry because the backend applies the same one to each:
  * `mayManageParticipants`, `mayManagePhases`, `mayManagePages` and
- * `mayManageTracks` (`$lib/server/hackathon/capabilities.ts`) and the team
- * management route's own load all reduce to owner-or-admin, and casbin grants the
- * underlying `hackathon:write` / `phase:write` / `page:write` / `track:write` to
- * `Owner` outright and to an admin through the global escape hatch, with no
- * capability gating any of them.
- * So there is no state where this offers a link that then refuses. Add a
- * per-entry gate the day an entry needs a narrower one, rather than widening
- * this one. `isWaiting` is deliberately not consulted — the backend does not
- * consult it either, and an owner is not waitlisted in practice.
+ * `mayManageTracks` (`$lib/server/hackathon/capabilities.ts`), and the team
+ * management route's own load, all reduce to owner-or-admin — casbin grants
+ * `hackathon:write` / `phase:write` / `page:write` / `track:write` to `Owner`
+ * outright and to an admin through the global escape hatch, with no capability
+ * gating any of them. So this never offers a link that then refuses. Add a
+ * per-entry gate the day an entry needs a narrower one rather than widening this
+ * one: `/edit` would be the first, since `canEditHackathon` also requires the
+ * owner be confirmed, which is why it is reached from the dashboard and not
+ * listed here. `isWaiting` is deliberately not consulted; nor does the backend.
  *
- * Entries follow the order of the participant entries they extend, so the two
- * sections read down the page in the same sequence rather than as two unrelated
- * lists.
- *
- * Deliberately short, and deliberately not padded with stubs: `memberNav` lists
- * only routes that exist and this follows it.
- *
- * Editing the hackathon itself (`/my/hackathon/<id>/edit`) is the one existing
- * organiser route left out, and not by oversight: `canEditHackathon` also
- * requires the owner be confirmed, so it is the first entry that would need a
- * narrower gate than the section's. It reaches that route from the dashboard's
- * edit pencil today. Adding it here means adding that per-entry gate first.
+ * Entries follow the order of the participant entries they extend, and most are
+ * nested under that entry's route (`/teams/manage` under `/teams`) so
+ * `activeNavId`'s longest match lights the Manage entry while its page is open.
+ * Two are not: Manage Tracks has no participant counterpart, and Manage Pages is
+ * the *parent* of the individual `/pages/<id>` routes, so opening a page lights
+ * that page rather than it.
  */
 export function manageNav(
   hackathonId: string,
@@ -297,11 +268,6 @@ export function manageNav(
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
   return [
-    // First, because Participants is the first participant entry these extend.
-    // Nested under it, so `activeNavId`'s longest match lights this entry and not
-    // that one while the page is open — the same mechanism Manage Teams and
-    // Manage Timeline rely on below.
-    //
     // The participant page lists the same people and offers nothing to act on;
     // Approve and Remove exist only here.
     {
@@ -310,69 +276,48 @@ export function manageNav(
       icon: UserRoundCheck,
       href: resolve(`/my/hackathon/${hackathonId}/participants/manage`),
     },
-    // Then Projects, extending "All Projects" directly: that page lists the
-    // approved ones and offers a preference, this one is the review queue —
-    // every status, proposals first, with Approve and Revoke on the rows. Both
-    // link to a detail route that renders the same `ProjectDetail`; deciding
-    // happens on the list, so the pair is read-here, act-there.
+    // The review queue — every status, with Approve and Revoke on the rows —
+    // against All Projects' read-only list of the approved ones. Both link to a
+    // detail route rendering the same `ProjectDetail`: read there, act here.
     {
       id: "manage:projects",
       label: "Manage Projects",
       icon: ClipboardCheck,
       href: resolve(`/my/hackathon/${hackathonId}/projects/manage`),
     },
-    // Then tracks, which categorise the projects above, so the control to define
-    // them reads as acting on those two lists. Shown even when the hackathon has
-    // no tracks yet: that is exactly how an owner gets the first one. The
-    // participant-facing surfaces (propose, project edit, overview)
-    // already hide themselves when there are none, so nothing further is
-    // needed there.
+    // Shown even when the hackathon has no tracks yet: that is how an owner gets
+    // the first one. The participant surfaces (propose, project edit, overview)
+    // hide themselves when there are none.
     {
       id: "manage:tracks",
       label: "Manage Tracks",
       icon: Tag,
       href: resolve(`/my/hackathon/${hackathonId}/tracks`),
     },
-    // Nested under the participant Teams route, so `activeNavId`'s longest match
-    // lights this entry and not that one while the page is open — the same
-    // mechanism Manage Timeline relies on below.
-    //
-    // Labelled for the page it opens rather than trimmed to "Teams": the
-    // heading already says Manage, but an entry whose label repeats a
-    // participant entry's verbatim is worse than one that repeats the heading,
-    // and this way the label matches the `<h2>` it lands on.
     {
       id: "manage:teams",
       label: "Manage Teams",
       icon: UserRoundCog,
       href: resolve(`/my/hackathon/${hackathonId}/teams/manage`),
     },
-    // Nested under the participant Timeline route, same as Manage Teams above.
-    // This replaced a "New Phase" entry pointing straight at the create form:
-    // creating a phase is one of several things an organiser does to the timeline
-    // — edit, delete, declare a phase current, set the hackathon's capabilities —
-    // and singling it out in the nav left the rest reachable only from a page that
-    // no longer carries them. "Add phase" is a button on this page instead.
+    // The whole timeline, not just phase creation: edit, delete, declare a phase
+    // current, and set the hackathon's capabilities all live on this one page.
     {
       id: "manage:timeline",
       label: "Manage Timeline",
       icon: CalendarCog,
       href: resolve(`/my/hackathon/${hackathonId}/timeline/manage`),
     },
-    // Nested under the participant Voting route, same as Manage Teams and
-    // Manage Timeline above — and, unlike that entry, shown whether or not
-    // voting is on. Categories have to exist before voting opens, so gating the
-    // setup screen on the capability would mean it only appeared once it was
-    // already too late to use.
+    // Shown whether or not voting is on, unlike the participant entry it nests
+    // under: categories have to exist before voting opens, so gating the setup
+    // screen on the capability would surface it only once it was too late.
     {
       id: "manage:voting",
       label: "Manage Voting",
       icon: Vote,
       href: resolve(`/my/hackathon/${hackathonId}/voting/manage`),
     },
-    // Last, because the page list it acts on is last in `memberNav` for the same
-    // reason: an organiser can add and remove pages at will, so anything below it
-    // would move as they did.
+    // Last, because the page list it acts on is last in `memberNav`.
     {
       id: "manage:pages",
       label: "Manage Pages",
