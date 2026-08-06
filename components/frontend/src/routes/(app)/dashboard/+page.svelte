@@ -1,7 +1,7 @@
 <script lang="ts">
     import DashboardView from '$lib/components/dashboard/DashboardView.svelte';
 
-    const { data } = $props();
+    const { data, form } = $props();
 </script>
 
 <div class="mx-auto w-full max-w-7xl">
@@ -20,5 +20,6 @@
         canCreate={data.isGlobalAdmin || data.isHackathonOrganizer}
         isGlobalAdmin={data.isGlobalAdmin}
         globalRoles={data.globalRoles}
+        {form}
     />
 </div>

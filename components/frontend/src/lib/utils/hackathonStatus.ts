@@ -10,6 +10,18 @@ const BADGE_VARIANT: Partial<Record<number, string>> = {
   3: "badge-neutral",
 }
 
+const FINISHED = 3
+
+/**
+ * Whether the hackathon is over. `Join` refuses these outright with
+ * `FailedPrecondition` (`hackathon_service.go:252`) whatever the registration
+ * capability says, which makes this the one join refusal the dashboard can see
+ * coming — `status` is computed server-side and rides on every `List` entry.
+ */
+export function isFinished(s: number): boolean {
+  return s === FINISHED
+}
+
 export function statusLabel(s: number): string | undefined {
   return LABEL[s]
 }

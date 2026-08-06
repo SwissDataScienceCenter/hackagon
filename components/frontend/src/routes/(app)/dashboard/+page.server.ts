@@ -15,6 +15,12 @@ export const load: PageServerLoad = async (event) => {
   // private one appears nowhere, since the other list is filtered to public.
   // Resolves itself once Create writes the Participant row — no change needed
   // on this side.
+  // TODO(backend: list-registration-state): neither list says whether a
+  // hackathon is taking registrations, so "Other hackathons" cannot tell a Join
+  // that will work from one that will be denied. The answer lives in
+  // `state.capabilities`, which only `Get` populates — and `Get` needs
+  // `hackathon:read`, which is exactly what a non-member does not have. So the
+  // button is offered and the refusal reported, rather than guessed at here.
   const [allResult, myResult] = await Promise.all([
     hackathon.list({ visibilityFilter: Visibility.VISIBILITY_PUBLIC }),
     hackathon.list({ participantId }),
@@ -42,8 +48,26 @@ export const actions: Actions = {
     try {
       await hackathon.join({ hackathonId })
     } catch (e) {
+      // `closed` tells the view to retire this row's button rather than leave
+      // it there to be pressed again. Both refusals below are settled facts
+      // about the hackathon, not transient failures, so re-pressing cannot help.
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
-        return fail(403, { message: "You can't join this hackathon" })
+        // Named for the cause rather than the code: the *only* thing gating
+        // `hackathon:join` is the casbin row `CAPABILITY_REGISTER` writes
+        // (`hackathon_service.go:641`), so a denial here means registration is
+        // off — not that the viewer is the wrong sort of person.
+        return fail(403, {
+          closed: true,
+          message: "Registration is closed for this hackathon",
+        })
+      // TODO(backend: join-nil-ends-at): unreachable for a hackathon with no
+      // end date — `Join` nil-derefs before it can answer. Correct as written;
+      // the branch just needs the backend to survive long enough to take it.
+      if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION)
+        return fail(409, {
+          closed: true,
+          message: "This hackathon has already finished",
+        })
       if (e instanceof ClientError && e.code === Status.NOT_FOUND)
         return fail(404, { message: "This hackathon no longer exists" })
       throw e
