@@ -22,6 +22,12 @@ func userEntryFromEnt(u *ent.User) *userEnts.User {
 		Email:       u.Email,
 		CreatedAt:   timestamppb.New(u.CreatedAt),
 		ModifiedAt:  timestamppb.New(u.ModifiedAt),
+		// The platform's own profile. Sent as stored, empty string and all: an
+		// unfilled field is a normal state and every reader treats "" that way.
+		Affiliation: u.Affiliation,
+		Skills:      u.Skills,
+		Dietary:     u.Dietary,
+		AvatarUrl:   u.AvatarURL,
 	}
 }
 

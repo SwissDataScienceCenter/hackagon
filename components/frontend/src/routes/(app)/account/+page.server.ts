@@ -34,13 +34,25 @@ export const actions: Actions = {
       })
     }
 
+    // The rest of the profile. Sent as typed, empty included: these MAY be
+    // cleared, and an absent field would read as "leave unchanged" — which
+    // would make removing your dietary requirements impossible.
+    const affiliation = String(form.get("affiliation") ?? "").trim()
+    const skills = String(form.get("skills") ?? "").trim()
+    const dietary = String(form.get("dietary") ?? "").trim()
+    const avatarUrl = String(form.get("avatarUrl") ?? "").trim()
+
     try {
-      await user.editProfile({ displayName })
+      await user.editProfile({ displayName, affiliation, skills, dietary, avatarUrl })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
         return fail(400, {
           displayName,
-          profileMessage: e.details || "That name is not valid.",
+          affiliation,
+          skills,
+          dietary,
+          avatarUrl,
+          profileMessage: e.details || "That profile is not valid.",
         })
       }
       throw e

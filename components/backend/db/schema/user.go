@@ -32,6 +32,25 @@ func (User) Fields() []ent.Field {
 			Comment("Preferred display name of the user."),
 		field.String("email").Optional().Default("").
 			Comment("Email of the user, same as in Keycloak"),
+		// The platform's own profile, filled in once by the person it describes.
+		//
+		// These mirror the keys the registration forms ask for (affiliation,
+		// skills, diet, avatar) so an event can prefill from them rather than
+		// asking the same four questions at every hackathon. Consents are
+		// deliberately NOT here: a consent is an agreement with one event, given
+		// on a date, and it belongs to that event's registration record.
+		//
+		// All optional and defaulting to "": a profile nobody has filled in is a
+		// normal state, not a missing one, and Keycloak owns none of these — see
+		// syncFromKeycloak, which must never overwrite them.
+		field.String("affiliation").Optional().Default("").
+			Comment("University, company or institute the user belongs to."),
+		field.String("skills").Optional().Default("").
+			Comment("Comma-separated skills, as the registration form's tags field collects them."),
+		field.String("dietary").Optional().Default("").
+			Comment("Dietary requirements, for events that cater."),
+		field.String("avatar_url").Optional().Default("").
+			Comment("Link to a profile picture. A link, not an upload: there is no object store yet."),
 		field.Time("created_at").Immutable().Default(time.Now).
 			Comment("Timestamp when the user was first seen."),
 		field.Time("modified_at").

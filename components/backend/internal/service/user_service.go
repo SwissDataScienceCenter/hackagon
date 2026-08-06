@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -104,6 +105,40 @@ func (s *UserService) EditProfile(
 			return nil, status.Error(codes.InvalidArgument, "display_name cannot be blank")
 		}
 		upd = upd.SetDisplayName(name)
+	}
+
+	// The rest of the profile. Each MAY be cleared — emptying "dietary
+	// requirements" is a legitimate edit — so unlike display_name a blank value
+	// is stored rather than refused. Trimmed for the same reason: a field of
+	// spaces is an empty field that does not look like one.
+	if req.Affiliation != nil {
+		upd = upd.SetAffiliation(strings.TrimSpace(req.GetAffiliation()))
+	}
+	if req.Skills != nil {
+		upd = upd.SetSkills(strings.TrimSpace(req.GetSkills()))
+	}
+	if req.Dietary != nil {
+		upd = upd.SetDietary(strings.TrimSpace(req.GetDietary()))
+	}
+	if req.AvatarUrl != nil {
+		// Scheme check rather than a proto `uri: true` constraint, which would
+		// reject the empty string and make the picture impossible to remove.
+		//
+		// This value is interpolated into an <img src>, so `javascript:` and
+		// `data:` must not survive: the first executes, and the second lets a
+		// user store arbitrary payloads in a field other people's browsers
+		// fetch. http/https only, or empty.
+		avatar := strings.TrimSpace(req.GetAvatarUrl())
+		if avatar != "" {
+			parsed, perr := url.Parse(avatar)
+			if perr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+				return nil, status.Error(
+					codes.InvalidArgument,
+					"avatar_url must be an http or https link",
+				)
+			}
+		}
+		upd = upd.SetAvatarURL(avatar)
 	}
 
 	u, err = upd.Save(ctx)

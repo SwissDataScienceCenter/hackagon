@@ -17,4 +17,16 @@ message User {
   // Populated from casbin on fetch; not persisted in ent DB.
   repeated GlobalRole roles = 7;
   google.protobuf.Timestamp modified_at = 8;
+  // The platform's own profile, filled in by the person it describes.
+  //
+  // Mirrors the keys registration forms ask for, so an event can prefill rather
+  // than ask the same four questions every time. Consents are NOT here: a
+  // consent is an agreement with one event, given on a date, and it lives in
+  // that event's registration record.
+  //
+  // Empty string means "not filled in", which is a normal state.
+  string affiliation = 9;
+  string skills = 10;
+  string dietary = 11;
+  string avatar_url = 12;
 }

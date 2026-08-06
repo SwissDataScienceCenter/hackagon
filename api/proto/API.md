@@ -1806,6 +1806,14 @@ See components/backend/internal/middleware/rbac.go.
 | email | [string](#string) |  |  |
 | roles | [GlobalRole](#user-entities-GlobalRole) | repeated | Populated from casbin on fetch; not persisted in ent DB. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| affiliation | [string](#string) |  | The platform&#39;s own profile, filled in by the person it describes.
+
+Mirrors the keys registration forms ask for, so an event can prefill rather than ask the same four questions every time. Consents are NOT here: a consent is an agreement with one event, given on a date, and it lives in that event&#39;s registration record.
+
+Empty string means &#34;not filled in&#34;, which is a normal state. |
+| skills | [string](#string) |  |  |
+| dietary | [string](#string) |  |  |
+| avatar_url | [string](#string) |  |  |
 
 
 
@@ -7464,6 +7472,12 @@ Every field is optional; absent means &#34;leave unchanged&#34;.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | display_name | [string](#string) | optional |  |
+| affiliation | [string](#string) | optional | The rest of the profile. Unlike display_name these MAY be cleared, so the floor is 0: emptying &#34;dietary requirements&#34; is a legitimate edit, and a min_len of 1 would make the field impossible to unset. |
+| skills | [string](#string) | optional |  |
+| dietary | [string](#string) | optional |  |
+| avatar_url | [string](#string) | optional | A link, not an upload — there is no object store yet.
+
+Length only, deliberately: `uri: true` would reject the empty string, and clearing your picture is a legitimate edit. The handler checks the SCHEME instead (http/https only), which is the part that matters — a `javascript:` or `data:` value must never reach an &lt;img src&gt;. Same reasoning the hackathon logo field follows. |
 
 
 

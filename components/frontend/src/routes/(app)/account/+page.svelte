@@ -4,6 +4,21 @@
     const { data, form } = $props();
 
     let confirming = $state(false);
+
+    /**
+     * What a field should show: the value the person just typed if the save was
+     * rejected, otherwise what is stored.
+     *
+     * The `in` check matters — a rejected save echoes back an EMPTY string for a
+     * field someone deliberately cleared, and `??` would fall through to the
+     * stored value and silently refill it in front of them.
+     */
+    function keep(name: string, stored: string | undefined): string {
+        const echoed = form as Record<string, unknown> | null;
+        if (echoed && name in echoed) return String(echoed[name] ?? '');
+
+        return stored ?? '';
+    }
 </script>
 
 <svelte:head><title>Your account · Hackagon</title></svelte:head>
@@ -28,12 +43,74 @@
                         class="field"
                         maxlength="100"
                         required
-                        value={('displayName' in (form ?? {}) ? form?.displayName : undefined) ??
-                            data.user.displayName ??
-                            ''}
+                        value={keep('displayName', data.user.displayName)}
                     />
                     <span class="text-meta text-ink-3">
                         Shown next to everything you create here.
+                    </span>
+                </label>
+
+                <!-- The four questions every event's registration form asks.
+                     Answered once here, so an event can prefill them instead of
+                     asking again — see the note below on what does NOT live
+                     here. `field(...)` keys match the registration form's own
+                     keys (affiliation, skills, diet, avatar) deliberately. -->
+                <label class="flex flex-col gap-1">
+                    <span class="field-label">Affiliation</span>
+                    <input
+                        name="affiliation"
+                        class="field"
+                        maxlength="200"
+                        placeholder="ETH Zurich"
+                        value={keep('affiliation', data.user.affiliation)}
+                    />
+                    <span class="text-meta text-ink-3">
+                        University, company or institute. Organisers use it to see who is in
+                        the room.
+                    </span>
+                </label>
+
+                <label class="flex flex-col gap-1">
+                    <span class="field-label">Skills</span>
+                    <input
+                        name="skills"
+                        class="field"
+                        maxlength="500"
+                        placeholder="Python, ML, data viz"
+                        value={keep('skills', data.user.skills)}
+                    />
+                    <span class="text-meta text-ink-3">
+                        Comma separated. Team formation reads these.
+                    </span>
+                </label>
+
+                <label class="flex flex-col gap-1">
+                    <span class="field-label">Dietary requirements</span>
+                    <input
+                        name="dietary"
+                        class="field"
+                        maxlength="300"
+                        placeholder="vegetarian, no nuts"
+                        value={keep('dietary', data.user.dietary)}
+                    />
+                    <span class="text-meta text-ink-3">
+                        Only shared with events that cater. Leave empty for none.
+                    </span>
+                </label>
+
+                <label class="flex flex-col gap-1">
+                    <span class="field-label">Profile picture</span>
+                    <input
+                        name="avatarUrl"
+                        class="field"
+                        type="url"
+                        maxlength="500"
+                        placeholder="https://…"
+                        value={keep('avatarUrl', data.user.avatarUrl)}
+                    />
+                    <span class="text-meta text-ink-3">
+                        A link, not an upload — there is no file storage yet. http or https
+                        only.
                     </span>
                 </label>
 
@@ -47,6 +124,22 @@
                     <button type="submit" class="btn btn-accent">Save</button>
                 </div>
             </form>
+
+            <!-- The disclaimer. This page is the platform-wide profile; anything
+                 an event asked you specifically — its extra questions, and every
+                 consent you gave it — belongs to that event's registration and is
+                 edited there. Consents especially: agreeing to one event's code
+                 of conduct is not a standing agreement with the platform, and
+                 showing it here would imply it was. -->
+            <p class="m-0 border-t border-line pt-3 text-meta text-ink-3">
+                This is your profile across the whole platform. Answers you gave to a
+                <em>particular</em> event — its own extra questions, and the consents you
+                agreed to, such as its code of conduct or event photography — live with that
+                event's registration, not here: open the event and use
+                <strong>“Your registration answers → View or edit”</strong>. Changing this
+                profile does not change what an event already recorded, and organisers see
+                the answers you gave them at the time.
+            </p>
 
             <dl
                 class="m-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-line pt-4 text-sm"

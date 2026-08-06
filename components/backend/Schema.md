@@ -466,6 +466,10 @@ An authenticated user, synced from Keycloak on first login.
 | `keycloak_id` | string | yes | yes | no | no | Unique identifier from Keycloak (sub claim). |
 | `display_name` | string | no | no | no | yes | Preferred display name of the user. |
 | `email` | string | no | no | no | yes | Email of the user, same as in Keycloak |
+| `affiliation` | string | no | no | no | yes | University, company or institute the user belongs to. |
+| `skills` | string | no | no | no | yes | Comma-separated skills, as the registration form's tags field collects them. |
+| `dietary` | string | no | no | no | yes | Dietary requirements, for events that cater. |
+| `avatar_url` | string | no | no | no | yes | Link to a profile picture. A link, not an upload: there is no object store yet. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the user was first seen. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last profile update. |
 
