@@ -294,6 +294,18 @@ export const load: PageServerLoad = async (event) => {
     return {
         serviceAvailable,
         isOrganizer,
+        // Prefilled from the entity, because SetVotingPolicy replaces the whole
+        // record — the same trap GetWindows, PrizeService.Get and
+        // GetEmailTemplates each exist to avoid. It rides on the hackathon
+        // rather than behind a read RPC because these are the rules the voters
+        // are bound by, not an organiser's private setting.
+        policy: {
+            ownTeamVoting: hackathon.votingPolicy?.ownTeamVoting ?? true,
+            organizerVoting: hackathon.votingPolicy?.organizerVoting ?? false,
+            mechanism: hackathon.votingPolicy?.mechanism || "single_choice",
+            oneBallotPer: hackathon.votingPolicy?.oneBallotPer || "category",
+            tieBreak: hackathon.votingPolicy?.tieBreak ?? [],
+        },
         // Authoritative: SubmitVote reads this very flag before accepting a ballot.
         votingOpen: hackathon.settings?.votingEnabled ?? false,
         isWaiting: myMembership?.isWaiting ?? false,
@@ -309,6 +321,34 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
+    // The rules of the vote. Until this existed the policy was write-only in
+    // both directions: nothing set it, and SubmitVote ignored what was there.
+    setPolicy: async (event) => {
+        const { config } = requireGrpc(event.locals.grpc)
+        const form = await event.request.formData()
+
+        try {
+            await config.setVotingPolicy({
+                hackathonId: event.params.id,
+                // Documented, not enforced: one vote per category is the only
+                // mechanism implemented, so these two are recorded as the
+                // organiser's ruling rather than offered as choices.
+                mechanism: "single_choice",
+                oneBallotPer: "category",
+                ownTeamVoting: form.get("ownTeamVoting") === "on",
+                organizerVoting: form.get("organizerVoting") === "on",
+                tieBreak: String(form.get("tieBreak") ?? "")
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean),
+            })
+        } catch (e) {
+            return formError(e)
+        }
+
+        return ok({ done: "Voting rules saved." })
+    },
+
     createCategory: async (event) => {
         const { vote } = requireGrpc(event.locals.grpc)
         const form = await event.request.formData()

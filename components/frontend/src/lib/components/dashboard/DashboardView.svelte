@@ -55,6 +55,15 @@
          * the backend, so an empty array costs a viewer nothing but the badges.
          */
         globalRoles?: number[];
+        /**
+         * What the last Join attempt said, if it failed.
+         *
+         * The Join button posts to an action that translates the backend's
+         * verdict — registration not open yet, already joined, private event —
+         * and none of it was rendered: the form failed silently and the row
+         * simply stayed where it was, which reads as a broken button.
+         */
+        joinError?: string;
     }
 
     const {
@@ -64,6 +73,7 @@
         canCreate = false,
         isGlobalAdmin = false,
         globalRoles = [],
+        joinError = '',
     }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
@@ -204,6 +214,13 @@
         <!-- Other hackathons -->
         <section class="flex flex-col gap-4">
             <h2 class="text-section">Other hackathons</h2>
+
+            {#if joinError}
+                <!-- A refusal reads as a broken button unless it is shown. Not
+                     per row: the action posts one hackathon at a time and the
+                     message names what happened, not which row. -->
+                <p class="m-0 text-sm text-warning-ink" role="alert">{joinError}</p>
+            {/if}
 
             {#if otherHackathons.length === 0}
                 <p class="text-sm text-ink-3">No other hackathons available.</p>

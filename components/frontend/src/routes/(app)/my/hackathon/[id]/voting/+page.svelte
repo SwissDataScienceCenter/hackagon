@@ -78,12 +78,76 @@
               that whoever runs the event does not also decide it.
             -->
             <p class="card border-warning/40 p-4 text-sm text-warning-ink">
-                <span class="font-semibold">You run this event, so you do not vote in it.</span>
+                <span class="font-semibold">
+                    {data.policy.organizerVoting
+                        ? 'This event lets its organisers vote.'
+                        : 'You run this event, so you do not vote in it.'}
+                </span>
                 <span class="block text-ink-3">
-                    Ballots from organizers and admins are refused by the server. Shape the
-                    categories here, watch the tally come in, then publish the placements.
+                    {data.policy.organizerVoting
+                        ? 'Your ballot counts like anyone else’s. Change that in the rules below.'
+                        : 'Ballots from organisers and admins are refused by the server.'}
+                    Shape the categories here, watch the tally come in, then publish the
+                    placements.
                 </span>
             </p>
+
+            <!-- The rules of the vote. They were stored and never read on the
+                 server, and never written from anywhere at all — an event could
+                 not state its own rules. Prefilled, because SetVotingPolicy
+                 replaces the whole record. -->
+            <form method="POST" action="?/setPolicy" use:enhance class="card flex flex-col gap-3 p-4">
+                <h2 class="m-0 text-xl font-bold">Rules</h2>
+
+                <label class="flex items-start gap-2 text-sm">
+                    <input
+                        type="checkbox"
+                        name="ownTeamVoting"
+                        checked={data.policy.ownTeamVoting}
+                        class="mt-0.5"
+                    />
+                    <span>
+                        Voting for your own team is allowed
+                        <span class="block text-meta text-ink-3">
+                            A small event where everyone knows everyone usually wants this; a
+                            competitive one does not. Enforced by the server on every ballot.
+                        </span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-2 text-sm">
+                    <input
+                        type="checkbox"
+                        name="organizerVoting"
+                        checked={data.policy.organizerVoting}
+                        class="mt-0.5"
+                    />
+                    <span>
+                        Organisers may vote
+                        <span class="block text-meta text-ink-3">
+                            Off by default: whoever runs the event does not also decide it.
+                        </span>
+                    </span>
+                </label>
+
+                <label class="flex flex-col gap-1">
+                    <span class="field-label">Tie-break, in order</span>
+                    <input
+                        name="tieBreak"
+                        class="field"
+                        value={data.policy.tieBreak.join(', ')}
+                        placeholder="earliest submission, jury chair"
+                    />
+                    <span class="text-meta text-ink-3">
+                        Comma separated, and advisory: you record who won, so a tie is yours
+                        to break. This is the ruling people can point at.
+                    </span>
+                </label>
+
+                <div>
+                    <button type="submit" class="btn btn-accent">Save rules</button>
+                </div>
+            </form>
 
             {#if form?.exported}
                 <ExportPanel

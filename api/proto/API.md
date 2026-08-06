@@ -80,6 +80,10 @@
 - [hackathon/entities/hackathon_branding.proto](#hackathon_entities_hackathon_branding-proto)
     - [HackathonBranding](#hackathon-entities-HackathonBranding)
   
+- [hackathon/entities/hackathon_voting_policy.proto](#hackathon_entities_hackathon_voting_policy-proto)
+    - [HackathonVotingPolicy](#hackathon-entities-HackathonVotingPolicy)
+    - [ScaleRange](#hackathon-entities-ScaleRange)
+  
 - [hackathon/entities/hackathon_role.proto](#hackathon_entities_hackathon_role-proto)
     - [HackathonRole](#hackathon-entities-HackathonRole)
   
@@ -1658,6 +1662,67 @@ The event logo is not here: it is a column on the hackathon row itself
 
 
 
+<a name="hackathon_entities_hackathon_voting_policy-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_voting_policy.proto
+
+
+
+<a name="hackathon-entities-HackathonVotingPolicy"></a>
+
+### HackathonVotingPolicy
+How this event&#39;s vote works, as ConfigService.SetVotingPolicy stored it.
+
+On the entity rather than behind a GetVotingPolicy RPC because these are the
+RULES OF A VOTE, and the people bound by them are exactly the people who
+should be able to read them: &#34;may I vote for my own team&#34; is a question a
+voter asks, not an organizer&#39;s private setting.
+
+Absent when no policy was ever set, which the backend reads as its defaults —
+organizers do not vote, voting for your own team is allowed. `SubmitVote`
+enforces both (they were stored and ignored until then).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| mechanism | [string](#string) |  | Free text describing the count, e.g. &#34;single_choice&#34;. Documented rather than enforced: one vote per category is the only mechanism implemented. |
+| one_ballot_per | [string](#string) |  | What one ballot covers, e.g. &#34;category&#34;. |
+| own_team_voting | [bool](#bool) |  | Whether a voter may vote for a submission from a team they are on. |
+| organizer_voting | [bool](#bool) |  | Whether the event&#39;s own organizers may vote in it. |
+| tie_break | [string](#string) | repeated | Ordered tie-break rules, as the organizer wrote them. Advisory: the organizer records the winners, so a tie is theirs to break. |
+| scale | [ScaleRange](#hackathon-entities-ScaleRange) | optional | Present only for scored mechanisms. |
+
+
+
+
+
+
+<a name="hackathon-entities-ScaleRange"></a>
+
+### ScaleRange
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| min | [int32](#int32) |  |  |
+| max | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_hackathon_role-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2115,6 +2180,7 @@ Will become caller-dependent, so clients must not cache it across users. |
 | registration_form | [FormSchema](#hackathon-entities-FormSchema) | optional | Organizer-defined form schemas (ConfigService.SetRegistrationForm / SetSubmissionForm). Populated on Get only — a client needs them to RENDER the form it is about to submit, and without a read path the only way to fill one in was to guess the field keys. Absent when no form is defined, which means &#34;accept anything&#34; on the write side. |
 | submission_form | [FormSchema](#hackathon-entities-FormSchema) | optional |  |
 | email_templates | [Hackathon.EmailTemplatesEntry](#hackathon-entities-Hackathon-EmailTemplatesEntry) | repeated | Organizer-authored notification copy (ConfigService.SetEmailTemplates), keyed &#34;&lt;moment&gt;&#34; for the body and &#34;&lt;moment&gt;Subject&#34; for the subject line. Get only, and readable by members: it is copy about the event, not a secret — but nothing sends it, so organizers compose from it by hand. |
+| voting_policy | [HackathonVotingPolicy](#hackathon-entities-HackathonVotingPolicy) | optional | How the vote works (ConfigService.SetVotingPolicy). Readable by anyone who can read the hackathon, because these are the rules the voters are bound by: &#34;may I vote for my own team&#34; is a voter&#39;s question. Absent when the organizer set no policy, which means the backend&#39;s defaults. |
 
 
 

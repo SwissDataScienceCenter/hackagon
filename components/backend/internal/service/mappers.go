@@ -92,6 +92,52 @@ func brandingEntryFromEnt(b map[string]string) *hackEnts.HackathonBranding {
 	return e
 }
 
+// votingPolicyEntryFromEnt maps the free-form policy map stored on the forms row
+// (written by ConfigService.SetVotingPolicy) onto the wire entity.
+//
+// Every value is read defensively: the column is `map[string]any` JSON, so a
+// row written by an older build — or by hand — can hold anything. A field that
+// is not the expected type is dropped rather than guessed at, and a row with
+// nothing usable returns nil so "no policy" stays an absent field.
+func votingPolicyEntryFromEnt(p map[string]any) *hackEnts.HackathonVotingPolicy {
+	if len(p) == 0 {
+		return nil
+	}
+	e := &hackEnts.HackathonVotingPolicy{}
+	if v, ok := p["mechanism"].(string); ok {
+		e.Mechanism = v
+	}
+	if v, ok := p["oneBallotPer"].(string); ok {
+		e.OneBallotPer = v
+	}
+	if v, ok := p["ownTeamVoting"].(bool); ok {
+		e.OwnTeamVoting = v
+	}
+	if v, ok := p["organizerVoting"].(bool); ok {
+		e.OrganizerVoting = v
+	}
+	if raw, ok := p["tieBreak"].([]any); ok {
+		for _, item := range raw {
+			if v, ok := item.(string); ok {
+				e.TieBreak = append(e.TieBreak, v)
+			}
+		}
+	}
+	// JSON numbers decode as float64 even when they were written as ints.
+	if raw, ok := p["scale"].(map[string]any); ok {
+		scale := &hackEnts.ScaleRange{}
+		if v, ok := raw["min"].(float64); ok {
+			scale.Min = int32(v)
+		}
+		if v, ok := raw["max"].(float64); ok {
+			scale.Max = int32(v)
+		}
+		e.Scale = scale
+	}
+
+	return e
+}
+
 func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon {
 	e := &hackEnts.Hackathon{
 		Id:         h.ID.String(),
@@ -126,6 +172,9 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 	// branding here on purpose: both mean "render the default theme".
 	if h.Edges.Forms != nil {
 		e.Branding = brandingEntryFromEnt(h.Edges.Forms.Branding)
+		// The rules of the vote, for the people the vote binds — see
+		// HackathonVotingPolicy on why this is not organizer-only.
+		e.VotingPolicy = votingPolicyEntryFromEnt(h.Edges.Forms.VotingPolicy)
 		// The schemas a client needs to RENDER the registration/submission
 		// forms it is about to fill in. Without them the only way to complete
 		// one was to guess the organizer's field keys. Nil when unset, which

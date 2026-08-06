@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// How this event's vote works, as ConfigService.SetVotingPolicy stored it.
+//
+// On the entity rather than behind a GetVotingPolicy RPC because these are the
+// RULES OF A VOTE, and the people bound by them are exactly the people who
+// should be able to read them: "may I vote for my own team" is a question a
+// voter asks, not an organizer's private setting.
+//
+// Absent when no policy was ever set, which the backend reads as its defaults —
+// organizers do not vote, voting for your own team is allowed. `SubmitVote`
+// enforces both (they were stored and ignored until then).
+message HackathonVotingPolicy {
+  // Free text describing the count, e.g. "single_choice". Documented rather
+  // than enforced: one vote per category is the only mechanism implemented.
+  string mechanism = 1;
+  // What one ballot covers, e.g. "category".
+  string one_ballot_per = 2;
+  // Whether a voter may vote for a submission from a team they are on.
+  bool own_team_voting = 3;
+  // Whether the event's own organizers may vote in it.
+  bool organizer_voting = 4;
+  // Ordered tie-break rules, as the organizer wrote them. Advisory: the
+  // organizer records the winners, so a tie is theirs to break.
+  repeated string tie_break = 5;
+  // Present only for scored mechanisms.
+  optional ScaleRange scale = 6;
+}
+
+message ScaleRange {
+  int32 min = 1;
+  int32 max = 2;
+}
