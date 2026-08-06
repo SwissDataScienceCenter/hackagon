@@ -45,6 +45,14 @@
         $page.url.pathname === '/hackathon' || $page.url.pathname.startsWith('/hackathon/')
     );
 
+    // Where signing in returns you. Back to the page you were on, EXCEPT the
+    // public pages that are not a destination once you have an account: landing
+    // on "/" after a login reads as "nothing happened". Pages with a reason to
+    // return — an event you were about to join — pass their own callbackUrl.
+    const loginReturn = $derived(
+        $page.url.pathname === '/' ? '/dashboard' : $page.url.pathname
+    );
+
     const TAB = 'pb-0.5 text-sm font-medium no-underline hover:text-accent-ink';
     const TAB_ON = 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]';
     const TAB_OFF = 'text-ink-2';
@@ -170,7 +178,7 @@
                      a signed-out visitor is here, so it should not need a tap to
                      find. -->
                 <button
-                    onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
+                    onclick={() => signIn('keycloak', { callbackUrl: loginReturn })}
                     class="btn btn-sm btn-outline-accent"
                 >
                     Log in
