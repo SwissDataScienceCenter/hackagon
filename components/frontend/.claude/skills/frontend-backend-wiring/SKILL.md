@@ -26,19 +26,16 @@ settings YAML under `backend: { hostname, port }` (schema:
 into `event.locals.config.backend`. A deployed frontend points at the backend's
 service host, not `localhost`.
 
-⚠️ **Known gap to close before deploying:** `src/lib/server/grpc/client.ts:13`
-currently hardcodes `createChannel("localhost:3000")` and ignores
-`config.backend`. The channel (and the module-scope `healthClient` /
-`publicHackathonClient` built from it) is created at import time, before config
-is guaranteed loaded — that's why it's a literal today. To deploy, build the
-channel from `config.backend.hostname:port` (e.g. lazily on first use, or
-initialize it in `hooks.server.ts`'s `init`/`setupHandle` once config is loaded)
-so the address follows the environment. Keep the dev config pointing at
-`localhost:3000` so local flows are unchanged.
+`initBackendChannel(config)` in `hooks.server.ts` (`init` / `setupHandle`)
+builds the shared channel from that config into
+`src/lib/server/grpc/channel.ts`. Authorized clients, `publicHackathonClient()`,
+and `healthClient()` all dial through `backendChannel()` — never a hardcoded
+address. Opening a channel per request would leak; only the auth interceptor is
+per-request.
 
 The channel is **plaintext** gRPC today. A cross-network deployment will likely
 need TLS (`createChannel` with credentials / an `https`-style target) rather
-than `-plaintext` — treat that as part of the same wiring change.
+than `-plaintext` — treat that as a follow-up wiring change.
 
 ## Request lifecycle (`src/hooks.server.ts`)
 
@@ -70,8 +67,9 @@ than `-plaintext` — treat that as part of the same wiring change.
    `x: factory.create(XServiceDefinition, channel)`. The `factory` middleware
    injects `Authorization: Bearer <token>` on every call (`client.ts:44`).
 4. For endpoints that also serve **anonymous** callers, add a separate
-   unauthenticated client at module scope (pattern: `publicHackathonClient`,
-   `client.ts:22`) built with a bare `createClientFactory()`.
+   unauthenticated client as a function (pattern: `publicHackathonClient()`,
+   `client.ts`) built with a bare `createClientFactory()` over
+   `backendChannel()`.
 
 Not every service needs a client. `hackathon.get` returns tracks/projects
 **nested**, so they have no client; `team` and `page` get their own because

@@ -1,6 +1,13 @@
-import { describe, it, expect } from "vitest"
+import { beforeAll, describe, it, expect } from "vitest"
 import { createAuthorizedGrpc, requireGrpc } from "./client"
 import type { AuthorizedGrpc } from "./client"
+import { initBackendChannel } from "./channel"
+
+beforeAll(() => {
+  initBackendChannel({
+    backend: { hostname: "localhost", port: 3000 },
+  })
+})
 
 describe("requireGrpc", () => {
   it("should return the object when defined", () => {

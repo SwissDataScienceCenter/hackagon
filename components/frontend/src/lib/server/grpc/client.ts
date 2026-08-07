@@ -1,4 +1,4 @@
-import { createChannel, createClientFactory, Metadata } from "nice-grpc"
+import { createClientFactory, Metadata } from "nice-grpc"
 import {
   HealthServiceDefinition,
   type HealthServiceClient,
@@ -19,17 +19,19 @@ import type { ProjectServiceClient } from "./generated/hackathon/project_service
 import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 import type { TrackServiceClient } from "./generated/hackathon/track_service"
 import type { VoteServiceClient } from "./generated/vote/vote_service"
-
-const channel = createChannel("localhost:3000")
+import { backendChannel } from "./channel"
 
 // Unauthenticated health client for the startup check in hooks.server.ts
 export { healthClient } from "./health_client"
 
-// Unauthenticated hackathon client for public pages (List endpoint is skipAuth)
-export const publicHackathonClient = createClientFactory().create(
-  HackathonServiceDefinition,
-  channel,
-)
+// Unauthenticated hackathon client for public pages (List endpoint is skipAuth).
+// A function, not a const: the channel only exists once config has loaded.
+export function publicHackathonClient() {
+  return createClientFactory().create(
+    HackathonServiceDefinition,
+    backendChannel(),
+  )
+}
 
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
@@ -68,6 +70,9 @@ export interface AuthorizedGrpc {
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
+  // The channel is shared process-wide; only the auth interceptor is
+  // per-request. Opening one per request would leak a channel per request.
+  const channel = backendChannel()
   const factory = createClientFactory().use((call, options) =>
     call.next(call.request, {
       ...options,

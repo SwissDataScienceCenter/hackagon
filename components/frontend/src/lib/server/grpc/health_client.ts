@@ -5,9 +5,10 @@
 //
 // Follows the same ts_proto pattern as the generated code.
 
-import { createChannel, createClientFactory } from "nice-grpc"
+import { createClientFactory } from "nice-grpc"
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire"
 import type { CallContext, CallOptions } from "nice-grpc-common"
+import { backendChannel } from "./channel"
 
 // ---------------------------------------------------------------------------
 // Protobuf types for grpc.health.v1 (minimal, matching the well-known proto)
@@ -206,13 +207,10 @@ export type HealthServiceClient<CallOptionsExt = Record<string, never>> = {
 }
 
 // ---------------------------------------------------------------------------
-// Channel & standalone client (mirrors client.ts pattern)
+// Standalone client — dials through the shared channel from channel.ts
 // ---------------------------------------------------------------------------
 
-const channel = createChannel("localhost:3000")
-
 /** Standalone health client for the startup check in hooks.server.ts. */
-export const healthClient: HealthServiceClient = createClientFactory().create(
-  HealthServiceDefinition,
-  channel,
-)
+export function healthClient(): HealthServiceClient {
+  return createClientFactory().create(HealthServiceDefinition, backendChannel())
+}

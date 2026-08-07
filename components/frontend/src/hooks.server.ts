@@ -13,6 +13,7 @@ import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
 import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
+import { initBackendChannel } from "$lib/server/grpc/channel"
 import { ClientError, Status } from "nice-grpc-common"
 import type { CustomSession } from "./auth.d"
 
@@ -60,6 +61,10 @@ function setupConfigAndLogger(): ConfigLoader {
 
     setupLogger(loader.get().log?.forceDevLog)
 
+    // Build the shared gRPC channel from config so clients dial the
+    // configured backend address instead of a hardcoded localhost.
+    initBackendChannel(loader.get())
+
     return loader
   } catch (err) {
     console.error("CRITICAL: Setup config & logger failed.", err)
@@ -78,6 +83,10 @@ const setupHandle: Handle = async ({ event, resolve }) => {
   // If we are in Dev and just saved a file, this might be null.
   if (!configLoader) {
     configLoader = setupConfigAndLogger()
+  } else {
+    // Dev HMR can reload this module while keeping the process alive; re-init
+    // is a no-op when the address is unchanged, so it won't leak channels.
+    initBackendChannel(configLoader.get())
   }
 
   // Inject into the Request Context (Locals)
@@ -218,7 +227,7 @@ export const init = async () => {
   logger.info({ env: import.meta.env }, "Node environment.")
 
   try {
-    const health = await healthClient.check({})
+    const health = await healthClient().check({})
     logger.info({ health }, "Backend health check passed.")
   } catch (err) {
     logger.error({ err }, "Backend health check failed on startup.")
