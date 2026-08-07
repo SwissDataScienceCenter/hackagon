@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Search, X } from 'lucide-svelte';
     import { enhance } from '$app/forms';
-    import { SvelteSet } from 'svelte/reactivity';
+    import { SvelteMap, SvelteSet } from 'svelte/reactivity';
     import { ASSIGNABLE_GLOBAL_ROLES, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
     import type { ActionData, PageData } from './$types';
 
@@ -15,11 +15,37 @@
     // while either is in flight, so one submit handler serves both.
     const pendingIds = new SvelteSet<string>();
 
-    // The single (user, role) pair sitting one tap from revocation. One value
-    // rather than a set: two half-confirmed revocations at once is not a state
-    // anyone means to be in, so opening one closes any other.
-    let confirming = $state<string | null>(null);
-    const confirmKey = (userId: string, role: number) => `${userId}:${role}`;
+    // GlobalRole numbers, named so the Admin special cases below read as intent
+    // rather than as bare numbers. See $lib/utils/globalRole.
+    const ADMIN = 1;
+    const HACKATHON_ORGANIZER = 2;
+
+    // The one change awaiting confirmation, or null. A single slot shared by
+    // both verbs: two half-confirmed changes at once is not a state anyone means
+    // to be in, so arming one disarms any other.
+    type Confirmable = { verb: 'grant' | 'revoke'; userId: string; role: number };
+    let confirming = $state<Confirmable | null>(null);
+
+    function isConfirming(verb: Confirmable['verb'], userId: string, role: number): boolean {
+        return (
+            confirming?.verb === verb && confirming.userId === userId && confirming.role === role
+        );
+    }
+
+    // Which role each row's picker is pointing at; a row absent from the map has
+    // not been touched and falls back to the default below.
+    const picked = new SvelteMap<string, number>();
+
+    function selectedRole(user: UserRow, options: number[]): number {
+        const chosen = picked.get(user.id);
+        if (chosen !== undefined && options.includes(chosen)) return chosen;
+        // Organizer is the default whenever it is still on offer, so the picker
+        // never sits pre-loaded with the role that can do everything. The last
+        // fallback is unreachable — a picker is only rendered when at least one
+        // role is grantable — and is here to keep the return type a number.
+        if (options.includes(HACKATHON_ORGANIZER)) return HACKATHON_ORGANIZER;
+        return options[0] ?? HACKATHON_ORGANIZER;
+    }
 
     const submitting = (id: string) => () => {
         pendingIds.add(id);
@@ -43,8 +69,13 @@
         })
     );
 
+    // Counts the rows on screen, not the rows loaded: a search that narrows 42
+    // users to 3 while the header still reads "42 users" is simply wrong. The
+    // total stays alongside it so the filter's effect is visible.
     const countLabel = $derived(
-        data.users.length === 1 ? '1 user' : `${data.users.length} users`
+        filtered.length === data.users.length
+            ? `${data.users.length} ${data.users.length === 1 ? 'user' : 'users'} registered on the platform`
+            : `${filtered.length} of ${data.users.length} users match your search`
     );
 
     // Keycloak may leave display_name empty, hence the username fallback; '?'
@@ -65,8 +96,16 @@
         return user.displayName || user.username;
     }
 
+    // ISO-8601 rather than a locale format: fixed width, so the column lines up
+    // under .tnum, and unambiguous about which number is the month. Assembled
+    // from the local calendar fields because toISOString() converts to UTC
+    // first, which lands on the previous day for anyone east of Greenwich.
     function joined(createdAt: UserRow['createdAt']): string {
-        return createdAt ? new Date(createdAt).toLocaleDateString() : '—';
+        if (!createdAt) return '—';
+        const d = new Date(createdAt);
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${d.getFullYear()}-${month}-${day}`;
     }
 
     // Every assignable role the user doesn't already hold — what the picker in
@@ -96,8 +135,7 @@
 {#snippet roleBadges(user: UserRow)}
     {#each user.roles as role (role)}
         {@const label = globalRoleLabel(role) ?? 'Unknown'}
-        {@const key = confirmKey(user.id, role)}
-        {#if confirming === key}
+        {#if isConfirming('revoke', user.id, role)}
             <form
                 method="POST"
                 action="?/removeRole"
@@ -133,10 +171,10 @@
                      blocks it unconditionally (self-demotion guard in
                      UserService.RemoveRole), so offering it would only ever
                      error. -->
-                {#if !(user.id === data.currentUserId && role === 1)}
+                {#if !(user.id === data.currentUserId && role === ADMIN)}
                     <button
                         type="button"
-                        onclick={() => (confirming = key)}
+                        onclick={() => (confirming = { verb: 'revoke', userId: user.id, role })}
                         disabled={pendingIds.has(user.id)}
                         class="-my-1 -mr-1.5 flex items-center rounded-control px-1.5 py-1
                                text-ink/70 hover:bg-danger/15 hover:text-danger-ink
@@ -152,51 +190,87 @@
 {/snippet}
 
 <!--
-  `wide` stretches the control to fill a card on the phone layout, where it is
-  the row's only action and has the width to spare; the table cell wants it
-  shrink-to-fit.
+  Picker plus one button that spells out what pressing it will do, so the row
+  never shows a bare "Grant" whose meaning lives in a neighbouring control. The
+  picker keeps its caption in both layouts; `wide` is the phone card, where the
+  caption is visible because there is no column header to name the control, and
+  the whole thing stretches to the card's width.
 -->
 {#snippet grantForm(user: UserRow, options: number[], wide: boolean)}
-    <!-- With one role left there is nothing to choose, so the button names it
-         outright instead of pairing a single-entry picker with a Grant. -->
-    {@const only = options.length === 1 ? options[0] : undefined}
+    {@const selected = selectedRole(user, options)}
+    {@const label = globalRoleLabel(selected) ?? 'Unknown'}
+    {@const busy = pendingIds.has(user.id)}
     <form
         method="POST"
         action="?/addRole"
         use:enhance={submitting(user.id)}
-        class="flex items-center gap-1 {wide ? 'w-full' : ''}"
+        class="flex flex-wrap items-end gap-2 {wide ? 'w-full' : ''}"
     >
         <input type="hidden" name="userId" value={user.id} />
-        {#if only !== undefined}
-            <input type="hidden" name="role" value={only} />
-            <button
-                type="submit"
-                disabled={pendingIds.has(user.id)}
-                class="btn btn-sm btn-ghost {wide ? 'w-full' : ''}"
-            >
-                Grant {globalRoleLabel(only)}
-            </button>
-        {:else}
+        <label class="field-label {wide ? 'flex-1' : ''}">
+            <span class={wide ? '' : 'sr-only'}>Grant role</span>
             <select
                 name="role"
-                disabled={pendingIds.has(user.id)}
-                class="field h-8 px-2 {wide ? 'flex-1' : 'w-auto'}"
-                aria-label="Role to grant {fullName(user)}"
+                disabled={busy}
+                onchange={(e) => {
+                    picked.set(user.id, Number(e.currentTarget.value));
+                    // Picking a different role invalidates an armed Admin
+                    // confirmation, so it cannot be inherited by another role.
+                    confirming = null;
+                }}
+                class="field h-8 px-2 {wide ? 'w-full' : 'w-auto'}"
             >
                 {#each options as role (role)}
-                    <!-- Hackathon Organizer (2) is the pre-selected default, not
-                         Admin (1): a dropdown that silently grants the most
-                         powerful role unless someone changes it is the wrong
-                         default. -->
-                    <option value={role} selected={role === 2}>{globalRoleLabel(role)}</option>
+                    <!-- The selection is carried by `selected` on the options
+                         rather than `value` on the select: the browser honours it
+                         on first paint without depending on attribute-vs-children
+                         ordering. Falling back to the first option would mean
+                         Admin, which is both the wrong default and a label that
+                         disagrees with what the form posts. -->
+                    <option value={role} selected={role === selected}>
+                        {globalRoleLabel(role)}
+                    </option>
                 {/each}
             </select>
+        </label>
+
+        {#if isConfirming('grant', user.id, selected)}
+            <span class="badge badge-warning">
+                Grant {label}?
+                <button
+                    type="submit"
+                    disabled={busy}
+                    class="-my-1 rounded-control px-1.5 py-1 font-semibold
+                           hover:bg-warning/20 disabled:opacity-50"
+                    aria-label="Confirm granting {label} to {fullName(user)}"
+                >
+                    Yes
+                </button>
+                <button
+                    type="button"
+                    onclick={() => (confirming = null)}
+                    class="-my-1 -mr-1.5 rounded-control px-1.5 py-1 text-ink-2
+                           hover:bg-raised hover:text-ink"
+                    aria-label="Don't grant {label} to {fullName(user)}"
+                >
+                    No
+                </button>
+            </span>
+        {:else}
+            <!-- Admin passes every permission check in every hackathon — the
+                 casbin matcher ends in `|| g2(r.sub, "admin")` — so granting it
+                 gets the same second look revoking does. Organizer carries one
+                 policy row and stays a single press. -->
+            {@const confirmFirst = selected === ADMIN}
             <button
-                type="submit"
-                disabled={pendingIds.has(user.id)}
-                class="btn btn-sm btn-ghost"
+                type={confirmFirst ? 'button' : 'submit'}
+                onclick={confirmFirst
+                    ? () => (confirming = { verb: 'grant', userId: user.id, role: selected })
+                    : undefined}
+                disabled={busy}
+                class="btn btn-sm btn-outline"
             >
-                Grant
+                Grant {label}
             </button>
         {/if}
     </form>
@@ -206,7 +280,7 @@
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
             <h1 class="m-0 text-title text-ink">Users</h1>
-            <p class="m-0 text-xs text-ink-3">{countLabel} registered on the platform</p>
+            <p class="m-0 text-xs text-ink-3">{countLabel}</p>
         </div>
         <div class="relative w-full sm:w-72">
             <Search
@@ -224,6 +298,26 @@
             />
         </div>
     </div>
+
+    <!--
+      What the two roles actually carry, read off the casbin policy rather than
+      guessed from the labels: `admin` has no policy rows at all because the
+      matcher ends in `|| g2(r.sub, "admin")` and short-circuits every check,
+      while `hackathon_organizer` carries exactly one row, hackathon:create. See
+      components/backend/internal/middleware/rbac.go. Neither name says this on
+      its own, and one of them is the keys to the building.
+    -->
+    <p class="m-0 max-w-prose font-sans text-xs leading-relaxed text-ink-3">
+        <span class="badge {globalRoleBadgeVariant(ADMIN) ?? 'badge-neutral'}">
+            {globalRoleLabel(ADMIN)}
+        </span>
+        passes every permission check in every hackathon, and is the only role that can open
+        this page. Grant it sparingly.
+        <span class="badge {globalRoleBadgeVariant(HACKATHON_ORGANIZER) ?? 'badge-neutral'}">
+            {globalRoleLabel(HACKATHON_ORGANIZER)}
+        </span>
+        may create hackathons, and nothing else.
+    </p>
 
     {#if form?.message}
         <p
@@ -294,7 +388,11 @@
                         <th class="px-3 py-2 font-semibold">Email</th>
                         <th class="px-3 py-2 font-semibold">Roles</th>
                         <th class="px-3 py-2 font-semibold">Joined</th>
-                        <th class="px-3 py-2 font-semibold">Actions</th>
+                        <!-- Names what the column does, which "Actions" did not.
+                             It also labels the picker below it, whose own
+                             caption is screen-reader-only here to keep rows to
+                             one line. -->
+                        <th class="px-3 py-2 font-semibold">Grant role</th>
                     </tr>
                 </thead>
                 <tbody>
