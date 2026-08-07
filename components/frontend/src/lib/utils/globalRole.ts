@@ -10,6 +10,20 @@ const BADGE_VARIANT: Partial<Record<number, string>> = {
   2: "badge-neutral",
 }
 
+// What each role actually carries, read off the casbin policy rather than
+// inferred from the name: `admin` has no policy rows at all, because the matcher
+// ends in `|| g2(r.sub, "admin")` and short-circuits every check in every
+// hackathon, while `hackathon_organizer` carries exactly one row,
+// hackathon:create. See components/backend/internal/middleware/rbac.go.
+//
+// Terse on purpose. The same string labels an <option> in the role picker and
+// carries the legend on the users page, so it has to survive one line of a
+// native select popup.
+const DESCRIPTION: Partial<Record<number, string>> = {
+  1: "Full access to every hackathon, and to this page",
+  2: "Can create hackathons, nothing more",
+}
+
 // Every assignable role, in display order — drives both the badge list and
 // the "grant a role the user doesn't hold yet" picker.
 export const ASSIGNABLE_GLOBAL_ROLES = [1, 2]
@@ -20,6 +34,10 @@ export function globalRoleLabel(r: number): string | undefined {
 
 export function globalRoleBadgeVariant(r: number): string | undefined {
   return BADGE_VARIANT[r]
+}
+
+export function globalRoleDescription(r: number): string | undefined {
+  return DESCRIPTION[r]
 }
 
 /**

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
+  ASSIGNABLE_GLOBAL_ROLES,
   displayableGlobalRoles,
   globalRoleBadgeVariant,
+  globalRoleDescription,
   globalRoleLabel,
 } from "./globalRole"
 
@@ -58,5 +60,24 @@ describe("displayableGlobalRoles", () => {
         `role ${role} has no badge variant`,
       ).toBeTruthy()
     }
+  })
+})
+
+describe("globalRoleDescription", () => {
+  // The users page offers every assignable role in a picker whose option text is
+  // "<label> — <description>", and builds its legend from the same map. A role
+  // without a description would show up as a dangling dash, so adding one to
+  // ASSIGNABLE_GLOBAL_ROLES has to mean adding its description too.
+  it("describes every assignable role", () => {
+    for (const role of ASSIGNABLE_GLOBAL_ROLES) {
+      expect(
+        globalRoleDescription(role),
+        `role ${role} has no description`,
+      ).toBeTruthy()
+    }
+  })
+
+  it("has nothing to say about a role this build cannot name", () => {
+    expect(globalRoleDescription(99)).toBeUndefined()
   })
 })
