@@ -34,8 +34,8 @@ message CreateRequest {
     (buf.validate.field).string.max_len = 5000,
     (buf.validate.field).cel = {
       id: "logo.path_or_url"
-      message: "logo must be empty, a root-relative /objects path, or an http(s) URL"
-      expression: "this == '' || this.startsWith('/') || this.startsWith('http://') || this.startsWith('https://')"
+      message: "logo must be empty, a root-relative /objects path, an http(s) URL, or an inline data:image URI"
+      expression: "this == '' || this.startsWith('/') || this.startsWith('http://') || this.startsWith('https://') || this.startsWith('data:image/')"
     }
   ];
 }
