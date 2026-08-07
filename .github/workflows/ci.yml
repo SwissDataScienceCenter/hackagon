@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 
 # Cancel in-progress runs on the same branch/PR to avoid wasted minutes.
 concurrency:
