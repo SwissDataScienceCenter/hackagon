@@ -1807,6 +1807,71 @@ func (s *HackathonService) GetRegistrationResponse(
 	return out, nil
 }
 
+// ListRegistrationResponses returns every submitted registration form for one
+// hackathon.
+//
+// Organizer-only. GetRegistrationResponse lets you read your OWN answers and
+// requires hackathon Write to read anyone else's; reading the whole cohort is
+// the second case for every row at once, so it takes Write and nothing else.
+// A fellow member is refused here exactly as they are refused there.
+func (s *HackathonService) ListRegistrationResponses(
+	ctx context.Context,
+	req *msgs.ListRegistrationResponsesRequest,
+) (*msgs.ListRegistrationResponsesResponse, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if uid == m.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+
+	rows, err := s.dbClient.FormResponse.Query().
+		Where(entformresponse.HasHackathonWith(enthackathon.IDEQ(id))).
+		WithUser().
+		All(ctx)
+	if err != nil {
+		slog.Error("query form responses", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	out := make([]*msgs.RegistrationResponseEntry, 0, len(rows))
+	for _, r := range rows {
+		if r.Edges.User == nil {
+			// The edge is Required, so this cannot happen through the API. It
+			// is skipped rather than nil-dereferenced because a corrupt row
+			// should cost that row, not the organiser's whole page.
+			slog.Error("form response without user", "response_id", r.ID)
+
+			continue
+		}
+		responses, err := structpb.NewStruct(r.Responses)
+		if err != nil {
+			slog.Error("encode form responses", "response_id", r.ID, "err", err)
+
+			continue
+		}
+		out = append(out, &msgs.RegistrationResponseEntry{
+			UserId:      r.Edges.User.ID.String(),
+			Responses:   responses,
+			Consents:    r.Consents,
+			SubmittedAt: timestamppb.New(r.CreatedAt),
+			ModifiedAt:  timestamppb.New(r.ModifiedAt),
+		})
+	}
+
+	return &msgs.ListRegistrationResponsesResponse{Responses: out}, nil
+}
+
 // Delete removes a hackathon and its owned configuration rows. Content-heavy
 // hackathons (projects, teams, votes) are out of scope for now — this serves
 // the cleanup of drafts that never went live; richer cascades belong to a

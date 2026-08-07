@@ -25,7 +25,16 @@
         data.roster.filter((p) => {
             const q = rosterQuery.trim().toLowerCase();
             if (q === '') return true;
-            return [p.name, p.teamName, p.affiliation, p.skills, ...p.preferredTitles]
+            return [
+                p.name,
+                p.teamName,
+                p.affiliation,
+                p.skills,
+                ...p.preferredTitles,
+                // Answer TEXT, not just labels: 'who mentioned Kubernetes?' is
+                // the question this panel exists to answer.
+                ...p.answers.flatMap((a) => [a.label, a.value]),
+            ]
                 .join(' ')
                 .toLowerCase()
                 .includes(q);
@@ -431,6 +440,27 @@
                             {/if}
                             {#if p.preferredTitles.length > 0}
                                 <span class="text-xs text-ink-3">★ {p.preferredTitles.join(', ')}</span>
+                            {/if}
+                            {#if p.answers.length > 0}
+                                <!-- Collapsed by default: the answers are the
+                                     reason to open a row, not something to
+                                     read down the whole list. A native
+                                     <details> so it works before hydration. -->
+                                <details class="mt-0.5">
+                                    <summary class="cursor-pointer text-xs text-ink-3">
+                                        Registration answers ({p.answers.length})
+                                    </summary>
+                                    <dl class="m-0 mt-1 flex flex-col gap-1">
+                                        {#each p.answers as a (a.label)}
+                                            <div class="flex flex-col">
+                                                <dt class="text-[0.65rem] uppercase text-ink-3">
+                                                    {a.label}
+                                                </dt>
+                                                <dd class="m-0 text-xs text-ink-2">{a.value}</dd>
+                                            </div>
+                                        {/each}
+                                    </dl>
+                                </details>
                             {/if}
                         </li>
                     {/each}

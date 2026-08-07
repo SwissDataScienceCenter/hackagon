@@ -260,6 +260,14 @@
     - [GetRegistrationResponseResponse](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse)
     - [GetRegistrationResponseResponse.ConsentsEntry](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse-ConsentsEntry)
   
+- [hackathon/messages/hackathon_svc/list_registration_responses_request.proto](#hackathon_messages_hackathon_svc_list_registration_responses_request-proto)
+    - [ListRegistrationResponsesRequest](#hackathon-messages-hackathon_svc-ListRegistrationResponsesRequest)
+  
+- [hackathon/messages/hackathon_svc/list_registration_responses_response.proto](#hackathon_messages_hackathon_svc_list_registration_responses_response-proto)
+    - [ListRegistrationResponsesResponse](#hackathon-messages-hackathon_svc-ListRegistrationResponsesResponse)
+    - [RegistrationResponseEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry)
+    - [RegistrationResponseEntry.ConsentsEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry-ConsentsEntry)
+  
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
   
@@ -3791,6 +3799,117 @@ optional, so a bare empty map would be ambiguous.
 
 
 
+<a name="hackathon_messages_hackathon_svc_list_registration_responses_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_registration_responses_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListRegistrationResponsesRequest"></a>
+
+### ListRegistrationResponsesRequest
+Everyone&#39;s registration answers, for one hackathon, in one call.
+
+GetRegistrationResponse answers for ONE person, which is right for &#34;show me
+my own answers&#34; and wrong for every organiser screen: staffing teams or
+working a waitlist means reading the whole cohort, and doing that one RPC per
+participant is a round-trip per row on every page load.
+
+Organizer-only — this returns what people wrote about themselves, so it takes
+hackathon Write rather than Read. A fellow member cannot read it, the same
+rule GetRegistrationResponse already enforces for another person&#39;s answers.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_registration_responses_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_registration_responses_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListRegistrationResponsesResponse"></a>
+
+### ListRegistrationResponsesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| responses | [RegistrationResponseEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry) | repeated |  |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-RegistrationResponseEntry"></a>
+
+### RegistrationResponseEntry
+One participant&#39;s answers.
+
+Only people who actually submitted appear. A row per participant with an
+empty answer set would make &#34;has not filled the form in&#34; and &#34;filled it in
+and left everything blank&#34; the same thing on the wire, and those are
+different facts to an organiser chasing people.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user_id | [string](#string) |  | The platform user id (the DB UUID), matching Hackathon.members[].user.id so a caller can join this onto the roster it already has. |
+| responses | [google.protobuf.Struct](#google-protobuf-Struct) |  |  |
+| consents | [RegistrationResponseEntry.ConsentsEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry-ConsentsEntry) | repeated |  |
+| submitted_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-RegistrationResponseEntry-ConsentsEntry"></a>
+
+### RegistrationResponseEntry.ConsentsEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_remove_participant_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -4000,6 +4119,7 @@ whose response carries the full `CapabilityStatus` list this one flattens.
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
 | SubmitRegistrationForm | [messages.hackathon_svc.SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest) | [messages.hackathon_svc.SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse) |  |
 | GetRegistrationResponse | [messages.hackathon_svc.GetRegistrationResponseRequest](#hackathon-messages-hackathon_svc-GetRegistrationResponseRequest) | [messages.hackathon_svc.GetRegistrationResponseResponse](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse) | Reads the answers back so a registrant can review and correct them. |
+| ListRegistrationResponses | [messages.hackathon_svc.ListRegistrationResponsesRequest](#hackathon-messages-hackathon_svc-ListRegistrationResponsesRequest) | [messages.hackathon_svc.ListRegistrationResponsesResponse](#hackathon-messages-hackathon_svc-ListRegistrationResponsesResponse) |  |
 | AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
 | RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
 | CreateInvite | [messages.hackathon_svc.CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest) | [messages.hackathon_svc.CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse) | --- Invitations: private-hackathon access, see HackathonInvite --- |

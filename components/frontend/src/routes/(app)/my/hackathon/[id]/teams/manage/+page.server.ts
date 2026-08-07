@@ -6,9 +6,26 @@ import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/pro
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
+/**
+ * One answer, as a string an organiser can read and a filter can match.
+ *
+ * Registration answers arrive as a protobuf Struct, so a value is whatever the
+ * organiser's field type produced — text, a number, a checkbox, a multi-select.
+ * Rendering the raw JSON would put `["a","b"]` on screen.
+ */
+function formatAnswer(value: unknown): string {
+  if (value === null || value === undefined) return ""
+  if (Array.isArray(value)) return value.map(formatAnswer).filter(Boolean).join(", ")
+  if (typeof value === "boolean") return value ? "Yes" : "No"
+  if (typeof value === "object") return JSON.stringify(value)
+  return String(value).trim()
+}
+
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
-  const { team, project } = requireGrpc(event.locals.grpc)
+  const { team, project, hackathon: hackathonClient } = requireGrpc(
+    event.locals.grpc,
+  )
 
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
@@ -39,6 +56,32 @@ export const load: PageServerLoad = async (event) => {
       titles.push(p.title)
       preferredTitlesByUser.set(u.id, titles)
     }
+  }
+
+  // What people wrote about themselves when they registered. One call for the
+  // whole cohort — the per-user RPC would be a round-trip per row. Organiser
+  // only, which this page already is; a failure costs the answers, not the
+  // board, because staffing must stay possible if the form was never set up.
+  const answersByUser = new Map<string, { label: string; value: string }[]>()
+  const registrationFields = hackathon.registrationForm?.fields ?? []
+  try {
+    const { responses } = await hackathonClient.listRegistrationResponses({
+      hackathonId: event.params.id,
+    })
+    for (const r of responses) {
+      const fields = Object.entries(r.responses ?? {})
+        .map(([key, value]) => ({
+          // The stored key is the organiser's field id; show the label they
+          // wrote for it, falling back to the key so a question removed from
+          // the schema still reads as something rather than vanishing.
+          label: registrationFields.find((f) => f.key === key)?.label ?? key,
+          value: formatAnswer(value),
+        }))
+        .filter((f) => f.value !== "")
+      answersByUser.set(r.userId, fields)
+    }
+  } catch {
+    // Left empty on purpose — see above.
   }
 
   // Profiles, keyed by user id. `hackathon.members` already carries the whole
@@ -115,6 +158,7 @@ export const load: PageServerLoad = async (event) => {
     .map((m) => ({
       ...toPerson(m.user!.id, m.user!.displayName || m.user!.username),
       teamName: teamNameByUser.get(m.user!.id) ?? "",
+      answers: answersByUser.get(m.user!.id) ?? [],
     }))
     // Unassigned first — they are the ones still needing a decision.
     .sort((a, b) => {

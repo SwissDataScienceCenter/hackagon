@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// Everyone's registration answers, for one hackathon, in one call.
+//
+// GetRegistrationResponse answers for ONE person, which is right for "show me
+// my own answers" and wrong for every organiser screen: staffing teams or
+// working a waitlist means reading the whole cohort, and doing that one RPC per
+// participant is a round-trip per row on every page load.
+//
+// Organizer-only — this returns what people wrote about themselves, so it takes
+// hackathon Write rather than Read. A fellow member cannot read it, the same
+// rule GetRegistrationResponse already enforces for another person's answers.
+message ListRegistrationResponsesRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+}

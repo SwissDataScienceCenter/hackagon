@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+message ListRegistrationResponsesResponse {
+  repeated RegistrationResponseEntry responses = 1;
+}
+
+// One participant's answers.
+//
+// Only people who actually submitted appear. A row per participant with an
+// empty answer set would make "has not filled the form in" and "filled it in
+// and left everything blank" the same thing on the wire, and those are
+// different facts to an organiser chasing people.
+message RegistrationResponseEntry {
+  // The platform user id (the DB UUID), matching Hackathon.members[].user.id
+  // so a caller can join this onto the roster it already has.
+  string user_id = 1;
+  google.protobuf.Struct responses = 2;
+  map<string, bool> consents = 3;
+  google.protobuf.Timestamp submitted_at = 4;
+  google.protobuf.Timestamp modified_at = 5;
+}
