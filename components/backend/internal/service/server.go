@@ -7,6 +7,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -14,9 +15,9 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
-	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	voteSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // NewServer creates a gRPC server with all middleware, services, and registration.
@@ -62,7 +63,8 @@ func NewServer(
 	)
 
 	// Create services
-	healthService := NewHealthService()
+	healthService := health.NewServer()
+	healthService.SetServingStatus("", healthgrpc.HealthCheckResponse_SERVING)
 	userService := NewUserService(dbClient, enf)
 	hackathonService := NewHackathonService(dbClient, enf)
 	pageService := NewPageService(dbClient, enf)
@@ -73,7 +75,7 @@ func NewServer(
 	voteService := NewVoteService(dbClient, enf)
 
 	// Register services
-	health.RegisterHealthServiceServer(server, healthService)
+	healthgrpc.RegisterHealthServer(server, healthService)
 	userSvc.RegisterUserServiceServer(server, userService)
 	hackathonSvc.RegisterHackathonServiceServer(server, hackathonService)
 	hackathonSvc.RegisterPageServiceServer(server, pageService)

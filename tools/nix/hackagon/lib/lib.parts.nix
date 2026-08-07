@@ -13,6 +13,7 @@ let
   common = {
     attrset = import ./attrset.nix { inherit lib; };
   };
+  image = import ./image { inherit lib; };
   build = import ./build { };
   toolchain = import ./toolchain.nix { inherit lib; };
   shell = (import ./shell.nix) {
@@ -55,6 +56,7 @@ let
       inherit
         nixpkgs
         shell
+        image
         toolchain
         build
         ;
