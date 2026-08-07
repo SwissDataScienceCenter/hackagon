@@ -4,12 +4,34 @@
     import { Check, GripVertical, Pencil, Trash2, X } from 'lucide-svelte';
     import type { ActionData, PageData } from './$types';
 
-    type Person = { id: string; name: string; preferredTitles: string[] };
+    type Person = {
+        id: string;
+        name: string;
+        preferredTitles: string[];
+        affiliation?: string;
+        skills?: string;
+    };
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const hackathonId = $derived(data.hackathonId);
     const unassigned = $derived(data.unassigned);
+
+    // Roster filter. Matches across everything shown on a row — name, team,
+    // affiliation, skills, preferred projects — because an organiser staffing a
+    // project searches for "rust" or "EPFL" as readily as for a person.
+    let rosterQuery = $state('');
+    const roster = $derived(
+        data.roster.filter((p) => {
+            const q = rosterQuery.trim().toLowerCase();
+            if (q === '') return true;
+            return [p.name, p.teamName, p.affiliation, p.skills, ...p.preferredTitles]
+                .join(' ')
+                .toLowerCase()
+                .includes(q);
+        })
+    );
+    const unassignedCount = $derived(data.roster.filter((p) => !p.teamName).length);
     const projectRows = $derived(data.projectRows);
 
     // Drop target id for the unassigned pool; team ids are used as-is.
@@ -191,6 +213,11 @@
         </p>
     {/if}
 
+    <!-- Board on the left, people on the right. Stacked below lg, where a
+         320px-wide sidebar would leave the drop targets unusable. -->
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+    <div class="flex min-w-0 flex-1 flex-col gap-6">
+
     <section class="card card-raised flex flex-col gap-4 p-3">
         <h3 class="m-0 meta">
             Projects
@@ -359,4 +386,57 @@
             </div>
         {/if}
     </section>
+    </div>
+
+    <!-- The people panel. The board is organised by PROJECT, which cannot
+         answer "where is this person, and what can they do?" without scanning
+         every column — so that question gets its own surface, beside the board
+         rather than under it, and it stays put while you drag. -->
+    <aside class="flex w-full shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:w-80 lg:self-start">
+        <div class="card card-raised flex flex-col gap-3 p-3">
+            <div class="flex items-baseline justify-between gap-2">
+                <h3 class="m-0 meta">People ({roster.length})</h3>
+                <span class="text-xs text-ink-3">{unassignedCount} unassigned</span>
+            </div>
+
+            <label class="flex flex-col gap-1">
+                <span class="sr-only">Filter people</span>
+                <input
+                    class="field"
+                    type="search"
+                    bind:value={rosterQuery}
+                    placeholder="Filter by name, skill, affiliation…"
+                />
+            </label>
+
+            {#if roster.length === 0}
+                <p class="m-0 py-4 text-center text-xs text-ink-3">No one matches that.</p>
+            {:else}
+                <ul class="m-0 flex max-h-[32rem] list-none flex-col gap-2 overflow-y-auto p-0">
+                    {#each roster as p (p.id)}
+                        <li class="flex flex-col gap-1 rounded-field border border-line p-2">
+                            <div class="flex items-baseline justify-between gap-2">
+                                <span class="truncate text-sm font-semibold text-ink">{p.name}</span>
+                                {#if p.teamName}
+                                    <span class="badge badge-success shrink-0 text-xs">{p.teamName}</span>
+                                {:else}
+                                    <span class="badge badge-warning shrink-0 text-xs">Unassigned</span>
+                                {/if}
+                            </div>
+                            {#if p.affiliation}
+                                <span class="truncate text-xs text-ink-2">{p.affiliation}</span>
+                            {/if}
+                            {#if p.skills}
+                                <span class="text-xs text-ink-3">{p.skills}</span>
+                            {/if}
+                            {#if p.preferredTitles.length > 0}
+                                <span class="text-xs text-ink-3">★ {p.preferredTitles.join(', ')}</span>
+                            {/if}
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
+        </div>
+    </aside>
+    </div>
 </div>

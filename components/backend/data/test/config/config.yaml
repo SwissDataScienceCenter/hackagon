@@ -11,7 +11,7 @@ database:
   password: postgres
 oidc:
   jwksurl: "http://localhost:8180/realms/hackagon/protocol/openid-connect/certs"
-  issuerurl: "http://localhost:8180/realms/hackagon"
+  issuerurl: "https://calendar-jpg-bears-den.trycloudflare.com/realms/hackagon"
   algorithm: "RS256"
 # S3-compatible object store for uploaded files: the `rustfs` container from
 # .devcontainer/docker-compose.yml. Start it and create the bucket with

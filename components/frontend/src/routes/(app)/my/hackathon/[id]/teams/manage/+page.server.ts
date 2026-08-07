@@ -41,10 +41,26 @@ export const load: PageServerLoad = async (event) => {
     }
   }
 
+  // Profiles, keyed by user id. `hackathon.members` already carries the whole
+  // User — affiliation and skills included — so staffing a team no longer means
+  // opening each person's profile in another tab to find out what they do.
+  const profileById = new Map(
+    hackathon.members
+      .filter((m) => m.user)
+      .map((m) => [
+        m.user!.id,
+        {
+          affiliation: m.user!.affiliation ?? "",
+          skills: m.user!.skills ?? "",
+        },
+      ]),
+  )
+
   const toPerson = (id: string, name: string) => ({
     id,
     name,
     preferredTitles: preferredTitlesByUser.get(id) ?? [],
+    ...(profileById.get(id) ?? { affiliation: "", skills: "" }),
   })
 
   const teamsById = teams.map((t) => ({
@@ -85,10 +101,32 @@ export const load: PageServerLoad = async (event) => {
       teams: teamsByProject.get(p.id) ?? [],
     }))
 
+  // One row per confirmed participant, whether or not they are on a team, each
+  // carrying where they ended up. The board answers "who is on this project?";
+  // this answers "where is this person, and what can they do?" — which is the
+  // question an organiser actually has while staffing, and which the board
+  // cannot answer without scanning every column.
+  const teamNameByUser = new Map<string, string>()
+  for (const t of teamsById) {
+    for (const m of t.members) teamNameByUser.set(m.id, t.name)
+  }
+  const roster = hackathon.members
+    .filter((m) => !m.isWaiting && m.user)
+    .map((m) => ({
+      ...toPerson(m.user!.id, m.user!.displayName || m.user!.username),
+      teamName: teamNameByUser.get(m.user!.id) ?? "",
+    }))
+    // Unassigned first — they are the ones still needing a decision.
+    .sort((a, b) => {
+      if (!a.teamName !== !b.teamName) return a.teamName ? 1 : -1
+      return a.name.localeCompare(b.name)
+    })
+
   return {
     hackathonId: event.params.id,
     unassigned,
     projectRows,
+    roster,
   }
 }
 
