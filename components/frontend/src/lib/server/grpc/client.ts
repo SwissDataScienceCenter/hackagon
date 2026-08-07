@@ -1,4 +1,4 @@
-import { createChannel, createClientFactory, Metadata } from "nice-grpc"
+import { createClientFactory, Metadata } from "nice-grpc"
 import {
   HealthServiceDefinition,
   type HealthServiceClient,
@@ -19,44 +19,18 @@ import type { ProjectServiceClient } from "./generated/hackathon/project_service
 import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 import type { TrackServiceClient } from "./generated/hackathon/track_service"
 import type { VoteServiceClient } from "./generated/vote/vote_service"
-import { ConfigLoader } from "$lib/server/settings"
-
-// Lazy channel getter — reads the backend address from the loaded config.
-// The config is populated in hooks.server.ts init() before any request runs,
-// so the first access always sees a valid value.
-let _channel: ReturnType<typeof createChannel> | undefined
-
-function getChannel(): ReturnType<typeof createChannel> {
-  if (!_channel) {
-    const cfg = ConfigLoaderInstance.get()
-    _channel = createChannel(`${cfg.backend.hostname}:${cfg.backend.port}`)
-  }
-  return _channel
-}
-
-// Placeholder — replaced at runtime by hooks.server.ts init().
-// Initialized to a no-op so the module can be imported without error.
-let ConfigLoaderInstance: ConfigLoader = new (class {
-  get() {
-    return { backend: { hostname: "localhost", port: 3000 } }
-  }
-})() as unknown as ConfigLoader
-
-/** Called once at startup to wire the real config loader. */
-export function setConfigLoader(loader: ConfigLoader) {
-  ConfigLoaderInstance = loader
-  // Reset cached channel so it picks up the real config.
-  _channel = undefined
-}
+import { backendChannel } from "./channel"
 
 // Unauthenticated health client for the startup check in hooks.server.ts
 export { healthClient } from "./health_client"
 
 // Unauthenticated hackathon client for public pages (List endpoint is skipAuth).
-// Created fresh per call so it always picks up the current channel (which
-// reflects the config loaded at startup).
+// A function, not a const: the channel only exists once config has loaded.
 export function publicHackathonClient() {
-  return createClientFactory().create(HackathonServiceDefinition, getChannel())
+  return createClientFactory().create(
+    HackathonServiceDefinition,
+    backendChannel(),
+  )
 }
 
 // Per-request authorized client bundle (created by hooks.server.ts)
@@ -95,11 +69,10 @@ export interface AuthorizedGrpc {
   vote: VoteServiceClient
 }
 
-export function createAuthorizedGrpc(
-  accessToken: string,
-  backendAddress: string,
-): AuthorizedGrpc {
-  const channel = createChannel(backendAddress)
+export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
+  // The channel is shared process-wide; only the auth interceptor is
+  // per-request. Opening one per request would leak a channel per request.
+  const channel = backendChannel()
   const factory = createClientFactory().use((call, options) =>
     call.next(call.request, {
       ...options,

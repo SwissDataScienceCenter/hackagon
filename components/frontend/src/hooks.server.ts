@@ -12,12 +12,8 @@ import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
-import {
-  createAuthorizedGrpc,
-  healthClient,
-  setConfigLoader,
-  setHealthConfigLoader,
-} from "$lib/server/grpc/client"
+import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
+import { initBackendChannel } from "$lib/server/grpc/channel"
 import { ClientError, Status } from "nice-grpc-common"
 import type { CustomSession } from "./auth.d"
 
@@ -65,10 +61,9 @@ function setupConfigAndLogger(): ConfigLoader {
 
     setupLogger(loader.get().log?.forceDevLog)
 
-    // Wire the real config loader into gRPC clients so they read the
-    // backend address from config instead of using hardcoded localhost.
-    setConfigLoader(loader)
-    setHealthConfigLoader(loader)
+    // Build the shared gRPC channel from config so clients dial the
+    // configured backend address instead of a hardcoded localhost.
+    initBackendChannel(loader.get())
 
     return loader
   } catch (err) {
@@ -88,6 +83,10 @@ const setupHandle: Handle = async ({ event, resolve }) => {
   // If we are in Dev and just saved a file, this might be null.
   if (!configLoader) {
     configLoader = setupConfigAndLogger()
+  } else {
+    // Dev HMR can reload this module while keeping the process alive; re-init
+    // is a no-op when the address is unchanged, so it won't leak channels.
+    initBackendChannel(configLoader.get())
   }
 
   // Inject into the Request Context (Locals)
@@ -162,11 +161,7 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
       redirectToLogin(event.url, event.locals.logger, "No access token")
     }
 
-    const backendAddress = `${configLoader.get().backend.hostname}:${configLoader.get().backend.port}`
-    event.locals.grpc = createAuthorizedGrpc(
-      session!.accessToken!,
-      backendAddress,
-    )
+    event.locals.grpc = createAuthorizedGrpc(session!.accessToken!)
     event.locals.logger.debug("HOOKS: Authorized gRPC clients created.")
 
     try {
@@ -232,7 +227,7 @@ export const init = async () => {
   logger.info({ env: import.meta.env }, "Node environment.")
 
   try {
-    const health = await healthClient.check({})
+    const health = await healthClient().check({})
     logger.info({ health }, "Backend health check passed.")
   } catch (err) {
     logger.error({ err }, "Backend health check failed on startup.")
