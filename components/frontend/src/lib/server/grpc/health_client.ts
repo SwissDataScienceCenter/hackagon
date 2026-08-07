@@ -8,6 +8,7 @@
 import { createChannel, createClientFactory } from "nice-grpc"
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire"
 import type { CallContext, CallOptions } from "nice-grpc-common"
+import { ConfigLoader } from "$lib/server/settings"
 
 // ---------------------------------------------------------------------------
 // Protobuf types for grpc.health.v1 (minimal, matching the well-known proto)
@@ -206,13 +207,35 @@ export type HealthServiceClient<CallOptionsExt = Record<string, never>> = {
 }
 
 // ---------------------------------------------------------------------------
-// Channel & standalone client (mirrors client.ts pattern)
+// Channel & standalone client — lazy to pick up config loaded in hooks.server.ts init()
 // ---------------------------------------------------------------------------
 
-const channel = createChannel("localhost:3000")
+let _healthChannel: ReturnType<typeof createChannel> | undefined
+
+function getHealthChannel(): ReturnType<typeof createChannel> {
+  if (!_healthChannel) {
+    const cfg = healthConfigLoader.get()
+    _healthChannel = createChannel(
+      `${cfg.backend.hostname}:${cfg.backend.port}`,
+    )
+  }
+  return _healthChannel
+}
+
+let healthConfigLoader: ConfigLoader = new (class {
+  get() {
+    return { backend: { hostname: "localhost", port: 3000 } }
+  }
+})() as unknown as ConfigLoader
+
+/** Called once at startup to wire the real config loader. */
+export function setHealthConfigLoader(loader: ConfigLoader) {
+  healthConfigLoader = loader
+  _healthChannel = undefined
+}
 
 /** Standalone health client for the startup check in hooks.server.ts. */
 export const healthClient: HealthServiceClient = createClientFactory().create(
   HealthServiceDefinition,
-  channel,
+  getHealthChannel(),
 )

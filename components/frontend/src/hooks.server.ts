@@ -12,7 +12,12 @@ import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
 import type { Logger } from "pino"
-import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
+import {
+  createAuthorizedGrpc,
+  healthClient,
+  setConfigLoader,
+  setHealthConfigLoader,
+} from "$lib/server/grpc/client"
 import { ClientError, Status } from "nice-grpc-common"
 import type { CustomSession } from "./auth.d"
 
@@ -59,6 +64,11 @@ function setupConfigAndLogger(): ConfigLoader {
     loader.load(opts["config-dir"])
 
     setupLogger(loader.get().log?.forceDevLog)
+
+    // Wire the real config loader into gRPC clients so they read the
+    // backend address from config instead of using hardcoded localhost.
+    setConfigLoader(loader)
+    setHealthConfigLoader(loader)
 
     return loader
   } catch (err) {
@@ -152,7 +162,11 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
       redirectToLogin(event.url, event.locals.logger, "No access token")
     }
 
-    event.locals.grpc = createAuthorizedGrpc(session!.accessToken!)
+    const backendAddress = `${configLoader.get().backend.hostname}:${configLoader.get().backend.port}`
+    event.locals.grpc = createAuthorizedGrpc(
+      session!.accessToken!,
+      backendAddress,
+    )
     event.locals.logger.debug("HOOKS: Authorized gRPC clients created.")
 
     try {

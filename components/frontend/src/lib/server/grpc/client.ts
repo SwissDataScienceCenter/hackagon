@@ -19,17 +19,45 @@ import type { ProjectServiceClient } from "./generated/hackathon/project_service
 import type { PhaseServiceClient } from "./generated/hackathon/phase_service"
 import type { TrackServiceClient } from "./generated/hackathon/track_service"
 import type { VoteServiceClient } from "./generated/vote/vote_service"
+import { ConfigLoader } from "$lib/server/settings"
 
-const channel = createChannel("localhost:3000")
+// Lazy channel getter — reads the backend address from the loaded config.
+// The config is populated in hooks.server.ts init() before any request runs,
+// so the first access always sees a valid value.
+let _channel: ReturnType<typeof createChannel> | undefined
+
+function getChannel(): ReturnType<typeof createChannel> {
+  if (!_channel) {
+    const cfg = ConfigLoaderInstance.get()
+    _channel = createChannel(`${cfg.backend.hostname}:${cfg.backend.port}`)
+  }
+  return _channel
+}
+
+// Placeholder — replaced at runtime by hooks.server.ts init().
+// Initialized to a no-op so the module can be imported without error.
+let ConfigLoaderInstance: ConfigLoader = new (class {
+  get() {
+    return { backend: { hostname: "localhost", port: 3000 } }
+  }
+})() as unknown as ConfigLoader
+
+/** Called once at startup to wire the real config loader. */
+export function setConfigLoader(loader: ConfigLoader) {
+  ConfigLoaderInstance = loader
+  // Reset cached channel so it picks up the real config.
+  _channel = undefined
+}
 
 // Unauthenticated health client for the startup check in hooks.server.ts
 export { healthClient } from "./health_client"
 
-// Unauthenticated hackathon client for public pages (List endpoint is skipAuth)
-export const publicHackathonClient = createClientFactory().create(
-  HackathonServiceDefinition,
-  channel,
-)
+// Unauthenticated hackathon client for public pages (List endpoint is skipAuth).
+// Created fresh per call so it always picks up the current channel (which
+// reflects the config loaded at startup).
+export function publicHackathonClient() {
+  return createClientFactory().create(HackathonServiceDefinition, getChannel())
+}
 
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
@@ -67,7 +95,11 @@ export interface AuthorizedGrpc {
   vote: VoteServiceClient
 }
 
-export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
+export function createAuthorizedGrpc(
+  accessToken: string,
+  backendAddress: string,
+): AuthorizedGrpc {
+  const channel = createChannel(backendAddress)
   const factory = createClientFactory().use((call, options) =>
     call.next(call.request, {
       ...options,
