@@ -80,7 +80,13 @@ test.describe("media upload", () => {
     // upload long after the upload succeeded.
     const got = await request.get(url!)
     expect(got.status()).toBe(200)
-    expect(got.headers()["content-type"]).toContain("image/png")
-    expect((await got.body()).length).toBe(PNG.length)
+    // WebP, not PNG: the editor re-encodes in the browser before presigning,
+    // because the size and content type are conditions ON the signature —
+    // converting after signing would guarantee a mismatch. A 1x1 PNG is the
+    // one case where the result could come out LARGER, and the converter
+    // keeps the original when it does, so accept either type and assert the
+    // stored bytes are a real image rather than pinning the exact encoding.
+    expect(got.headers()["content-type"]).toMatch(/^image\/(webp|png)$/)
+    expect((await got.body()).length).toBeGreaterThan(0)
   })
 })

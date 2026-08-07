@@ -13,6 +13,13 @@ wait_for "postgres" "$TIMEOUT" pg_isready -h 127.0.0.1 -p 5432 -U postgres
 wait_for "keycloak" "$TIMEOUT" curl -fsS \
   "$KEYCLOAK_URL/realms/hackagon/.well-known/openid-configuration"
 wait_for "backend" "$TIMEOUT" grpcurl -plaintext "$GRPC_ADDR" list
+# vite may be unusable — see prod-frontend.sh for why, and for the three traps
+# in starting the built server by hand. Only kicks in when nothing is serving,
+# so a healthy `vite dev` is left alone.
+if ! curl -fsS -o /dev/null --max-time 5 "$FRONTEND_URL" 2>/dev/null; then
+  bash "$HERE/prod-frontend.sh" ensure "$FRONTEND_URL" || true
+fi
+
 if ! wait_for "frontend" "$TIMEOUT" curl -fsS "$FRONTEND_URL"; then
   echo ""
   echo "  The frontend did not come up on $FRONTEND_URL." >&2
