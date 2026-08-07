@@ -8,6 +8,17 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
+    // Organiser field type -> HTML input type. Kept narrow on purpose: `date`
+    // and `file` are not here because neither round-trips through this form yet,
+    // and rendering a control the submit path drops would be worse than a text
+    // box that works.
+    const INPUT_TYPE: Record<string, string> = {
+        url: 'url',
+        email: 'email',
+        number: 'number',
+        tel: 'tel',
+    };
+
     /** SubmissionStatus: DRAFT=1, FINAL=2 */
     const FINAL = 2;
 

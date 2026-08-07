@@ -52,14 +52,65 @@
         });
     }
 
+    /**
+     * Re-encode to WebP in the browser, before anything is uploaded.
+     *
+     * Done here rather than server-side for two reasons: the bytes are already
+     * in the page, and the presign's size and content-type are CONDITIONS on
+     * the signature — converting after signing would guarantee a mismatch, and
+     * converting on the server would mean sending the large original first,
+     * which is what presigned uploads exist to avoid.
+     *
+     * Returns the original untouched when conversion is not appropriate:
+     *   - GIF, because a canvas keeps only the first frame and a silently
+     *     de-animated GIF is worse than a larger file.
+     *   - already-WebP, which has nothing to gain.
+     *   - any failure at all — an older browser, a decode error, or a result
+     *     that came out BIGGER than the original, which happens with flat
+     *     graphics. Uploading the original is always the safe answer.
+     */
+    async function toWebp(file: File): Promise<File> {
+        if (file.type === 'image/gif' || file.type === 'image/webp') return file;
+        try {
+            const bitmap = await createImageBitmap(file);
+            // Cap the long edge: photographs off a phone are 4000px+, and no
+            // markdown page renders them above about 1600 CSS pixels.
+            const MAX = 2000;
+            const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
+            const w = Math.round(bitmap.width * scale);
+            const h = Math.round(bitmap.height * scale);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return file;
+            ctx.drawImage(bitmap, 0, 0, w, h);
+            bitmap.close?.();
+
+            const blob = await new Promise<Blob | null>((resolve) =>
+                canvas.toBlob(resolve, 'image/webp', 0.85)
+            );
+            // A browser without WebP encoding returns a PNG instead of null,
+            // so check the type rather than trusting the request.
+            if (!blob || blob.type !== 'image/webp' || blob.size >= file.size) return file;
+
+            const name = file.name.replace(/\.[^.]+$/, '') + '.webp';
+            return new File([blob], name, { type: 'image/webp' });
+        } catch {
+            return file;
+        }
+    }
+
     async function upload(event: Event) {
         const input = event.currentTarget as HTMLInputElement;
-        const file = input.files?.[0];
-        if (!file || !uploadEndpoint) return;
+        const original = input.files?.[0];
+        if (!original || !uploadEndpoint) return;
 
         uploading = true;
         uploadError = '';
         try {
+            const file = await toWebp(original);
             const presign = await fetch(uploadEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -91,7 +142,8 @@
             // Alt text from the filename: empty alt on a content image is a
             // hole for anyone using a screen reader, and the person who picked
             // the file is the only one who knows what it shows.
-            const alt = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+            // From the name the PERSON chose, not the converted one.
+            const alt = original.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
             insertAtCaret(`![${alt}](${publicUrl})`);
         } catch {
             uploadError = 'Could not reach the object store';
