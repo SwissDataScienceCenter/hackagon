@@ -1,5 +1,8 @@
 import { createChannel, createClientFactory, Metadata } from "nice-grpc"
-import { HealthServiceDefinition } from "./generated/health/health_service"
+import {
+  HealthServiceDefinition,
+  type HealthServiceClient,
+} from "./health_client"
 import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
@@ -8,7 +11,6 @@ import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
 import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import { TrackServiceDefinition } from "./generated/hackathon/track_service"
 import { VoteServiceDefinition } from "./generated/vote/vote_service"
-import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
 import type { TeamServiceClient } from "./generated/hackathon/team_service"
@@ -21,10 +23,7 @@ import type { VoteServiceClient } from "./generated/vote/vote_service"
 const channel = createChannel("localhost:3000")
 
 // Unauthenticated health client for the startup check in hooks.server.ts
-export const healthClient = createClientFactory().create(
-  HealthServiceDefinition,
-  channel,
-)
+export { healthClient } from "./health_client"
 
 // Unauthenticated hackathon client for public pages (List endpoint is skipAuth)
 export const publicHackathonClient = createClientFactory().create(
@@ -81,7 +80,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
 
   return {
     user: factory.create(UserServiceDefinition, channel),
-    health: factory.create(HealthServiceDefinition, channel),
+    health: factory.create(HealthServiceDefinition, channel), // standard grpc.health.v1
     hackathon: factory.create(HackathonServiceDefinition, channel),
     team: factory.create(TeamServiceDefinition, channel),
     page: factory.create(PageServiceDefinition, channel),
