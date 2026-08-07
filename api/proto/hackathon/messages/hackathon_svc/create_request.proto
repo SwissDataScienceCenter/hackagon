@@ -24,5 +24,18 @@ message CreateRequest {
 
   hackathon.entities.Visibility visibility = 4 [(buf.validate.field).enum.defined_only = true];
   optional string description = 5 [(buf.validate.field).string.max_len = 10000];
-  optional string logo = 6 [(buf.validate.field).string.uri = true];
+  // A `uri = true` rule here rejected BOTH values this platform actually
+  // produces: the empty string (an event with no cover yet, which is every
+  // event at Create time) and the root-relative `/objects/...` path that
+  // StorageService returns and cmd/seed writes. Only a full absolute URL
+  // passed — the one shape we do not generate. Edit.logo never had the rule,
+  // so the same value was accepted or refused depending on which RPC you used.
+  optional string logo = 6 [
+    (buf.validate.field).string.max_len = 5000,
+    (buf.validate.field).cel = {
+      id: "logo.path_or_url"
+      message: "logo must be empty, a root-relative /objects path, or an http(s) URL"
+      expression: "this == '' || this.startsWith('/') || this.startsWith('http://') || this.startsWith('https://')"
+    }
+  ];
 }

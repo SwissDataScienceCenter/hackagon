@@ -48,6 +48,12 @@ export const load: PageServerLoad = async (event) => {
           hackathonName: h.name,
           rank: a.rank,
           title: a.title,
+          // The event's own cover. A submission has no image of its own, and
+          // inventing one for a real award would be a fabricated record — the
+          // exact thing the hard-coded cards here were replaced for. The cover
+          // is the event's real picture, so an award card carries a true image
+          // or none at all.
+          hackathonLogo: h.logo,
         }))
       }),
     )

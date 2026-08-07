@@ -38,7 +38,11 @@ export const load: PageServerLoad = async (event) => {
   const result = await prize.get({ hackathonId: event.params.id })
 
   return {
-    prizes: result.prizes.map((p) => ({ rank: p.rank, title: p.title })),
+    prizes: result.prizes.map((p) => ({
+      rank: p.rank,
+      title: p.title,
+      image: p.image ?? "",
+    })),
     awards: result.awards.map((p) => ({ rank: p.rank, title: p.title })),
     finalized: result.finalized,
   }
@@ -51,12 +55,22 @@ export const actions: Actions = {
 
     const ranks = form.getAll("rank")
     const titles = form.getAll("title")
-    const prizes: { rank: number; title: string }[] = []
+    // Set replaces the table wholesale, so anything the form does not send back
+    // is deleted. The image is not editable here yet, which makes carrying it
+    // through mandatory rather than optional: without it, opening this page and
+    // pressing Save silently strips every prize's picture.
+    const images = form.getAll("image")
+    const prizes: { rank: number; title: string; image?: string }[] = []
     for (let i = 0; i < titles.length; i++) {
       const title = String(titles[i] ?? "").trim()
       // An empty title is a row the organiser abandoned, not a nameless prize.
       if (!title) continue
-      prizes.push({ rank: Number(ranks[i] ?? 0) || 0, title })
+      const image = String(images[i] ?? "").trim()
+      prizes.push({
+        rank: Number(ranks[i] ?? 0) || 0,
+        title,
+        ...(image ? { image } : {}),
+      })
     }
     if (prizes.length === 0) return fail(400, { message: "Add at least one prize." })
 

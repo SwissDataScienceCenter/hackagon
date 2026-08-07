@@ -70,7 +70,17 @@
     <!-- Chrome hugs the viewport instead of matching the page shell's
          sm:px-10 md:px-20 inset. At md that inset is 5.6rem, which left the
          wordmark adrift mid-bar rather than anchored to the edge it belongs to. -->
-    <div class="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+    <!-- Three columns, not justify-between: with the latter the nav is only
+         centred when the wordmark and the actions happen to be the same width,
+         and they never are once you sign in — the right side gains a monogram,
+         a name and a sign-out button, so the nav visibly slid left the moment
+         you logged in. The outer columns are 1fr each and the middle is auto,
+         which centres the nav on the VIEWPORT regardless of what either side
+         holds. min-w-0 on the sides so a long display name truncates instead of
+         pushing the centre off. -->
+    <div
+        class="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6"
+    >
         <!-- The wordmark is the platform instance, so it goes to the platform's
              own front page — for everyone. It used to send signed-in people to
              their dashboard instead, which made the landing page unreachable
@@ -122,7 +132,7 @@
             <a href="/about" class="{TAB} {TAB_OFF}">About</a>
         </nav>
 
-        <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div class="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-3">
             <LightSwitch />
 
             {#if session?.user}

@@ -170,6 +170,7 @@
                     badgeVariant={statusBadgeVariant(h.status)}
                     gradFrom={gradient(i).from}
                     gradTo={gradient(i).to}
+                                    logo={h.logo}
                 />
             {/each}
         {/if}
@@ -197,6 +198,19 @@
         <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {#each data.awards as award (award.hackathonId + award.rank + award.title)}
                 <a href="/hackathon/{award.hackathonId}" class="card overflow-hidden no-underline">
+                    {#if award.hackathonLogo}
+                        <!-- The event's own cover, not a stock photo of a
+                             trophy: the card names a real award, so its picture
+                             has to be a real one too. Events without a cover
+                             keep the icon-only card rather than gaining a
+                             placeholder that implies a photo exists. -->
+                        <img
+                            src={award.hackathonLogo}
+                            alt=""
+                            loading="lazy"
+                            class="block h-32 w-full object-cover object-center"
+                        />
+                    {/if}
                     <div class="flex h-10 items-center justify-between border-b border-line px-4">
                         <div class="flex items-center gap-1.5 text-warning-ink">
                             <Trophy class="h-3.5 w-3.5" />

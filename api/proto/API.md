@@ -2409,6 +2409,9 @@ discretionary/special prize (e.g. Community Choice).
 | ----- | ---- | ----- | ----------- |
 | rank | [int32](#int32) |  |  |
 | title | [string](#string) |  |  |
+| image | [string](#string) | optional | A picture for the prize — the trophy, the sponsor&#39;s award, the plaque. Optional, and empty for every prize table written before this existed.
+
+No migration: the prize table is stored as flexible JSON (`[]map[string]any` in db/schema/hackathonprizes.go), so a new key costs nothing at rest. Same shape as Hackathon.logo — a root-relative /objects path from StorageService, or an http(s) URL. |
 
 
 
@@ -2777,7 +2780,7 @@ Clearing deliberately does NOT touch capabilities. Advancing applies the ones sc
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | visibility | [hackathon.entities.Visibility](#hackathon-entities-Visibility) |  |  |
 | description | [string](#string) | optional |  |
-| logo | [string](#string) | optional |  |
+| logo | [string](#string) | optional | A `uri = true` rule here rejected BOTH values this platform actually produces: the empty string (an event with no cover yet, which is every event at Create time) and the root-relative `/objects/...` path that StorageService returns and cmd/seed writes. Only a full absolute URL passed — the one shape we do not generate. Edit.logo never had the rule, so the same value was accepted or refused depending on which RPC you used. |
 
 
 
@@ -2970,7 +2973,7 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 | visibility | [hackathon.entities.Visibility](#hackathon-entities-Visibility) | optional |  |
 | starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
-| logo | [string](#string) | optional |  |
+| logo | [string](#string) | optional | Same rule as Create.logo, so a value is accepted or refused by what it IS rather than by which RPC it arrived on. |
 
 
 

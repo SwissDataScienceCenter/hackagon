@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { eventGlyph } from '$lib/utils/eventGlyph';
     import { Calendar } from 'lucide-svelte';
 
     // A hackathon as a panel, for the browse grid. The row component is the
@@ -41,6 +42,16 @@
             <!-- object-contain, not cover: an event's artwork is a logo, and
                  cropping it to fill the strip cuts the wordmark in half. -->
             <img src={logo} alt="" class="h-full w-full object-contain p-4" />
+        {:else}
+            <!-- Same reasoning as HackathonRow: an empty gradient strip reads
+                 as a failed image. The glyph is derived from the event's name,
+                 so it is stable per event and varied across the grid. -->
+            <div
+                class="flex h-full w-full items-center justify-center text-4xl"
+                aria-hidden="true"
+            >
+                {eventGlyph(name)}
+            </div>
         {/if}
         {#if badge}
             <span class="badge {badgeVariant} absolute top-2 right-2 text-xs">{badge}</span>

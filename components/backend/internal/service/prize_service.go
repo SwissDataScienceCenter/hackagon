@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
@@ -40,6 +41,12 @@ func prizesFromJSON(rows []map[string]any) []*ents.Prize {
 		}
 		if v, ok := r["title"].(string); ok {
 			p.Title = v
+		}
+		// Absent on every row written before the field existed, which is why it
+		// is only set when non-empty: an empty string would render as a broken
+		// image rather than as no image.
+		if v, ok := r["image"].(string); ok && v != "" {
+			p.Image = &v
 		}
 		out = append(out, p)
 	}
@@ -91,6 +98,7 @@ func (s *PrizeService) requireOrganizer(
 
 	return u, nil
 }
+
 // Get reads the prize table back.
 //
 // Set replaces it wholesale, so a form that cannot prefill makes editing one
@@ -144,7 +152,6 @@ func (s *PrizeService) Get(
 	}, nil
 }
 
-
 func (s *PrizeService) Set(
 	ctx context.Context,
 	req *prizeMsgs.SetRequest,
@@ -160,10 +167,14 @@ func (s *PrizeService) Set(
 
 	prizes := make([]map[string]any, 0, len(req.GetPrizes()))
 	for _, p := range req.GetPrizes() {
-		prizes = append(prizes, map[string]any{
+		row := map[string]any{
 			"rank":  float64(p.GetRank()),
 			"title": p.GetTitle(),
-		})
+		}
+		if img := strings.TrimSpace(p.GetImage()); img != "" {
+			row["image"] = img
+		}
+		prizes = append(prizes, row)
 	}
 
 	existing, err := s.prizeRowFor(ctx, hackathonID)

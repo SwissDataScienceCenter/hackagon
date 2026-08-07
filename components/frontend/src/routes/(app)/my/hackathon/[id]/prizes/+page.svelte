@@ -8,8 +8,8 @@
 
     let rows = $state(
         data.prizes.length > 0
-            ? data.prizes.map((p) => ({ rank: p.rank, title: p.title }))
-            : [{ rank: 1, title: '' }]
+            ? data.prizes.map((p) => ({ rank: p.rank, title: p.title, image: p.image }))
+            : [{ rank: 1, title: '', image: '' }]
     );
 
     let confirmingFinalize = $state(false);
@@ -42,7 +42,20 @@
         </div>
 
         {#each rows as row, i (i)}
-            <div class="grid gap-2 sm:grid-cols-[6rem_1fr_auto] sm:items-end">
+            <div class="grid gap-2 sm:grid-cols-[3rem_6rem_1fr_auto] sm:items-end">
+                <!-- The prize's picture. Not editable here yet, but it MUST be
+                     submitted: Set replaces the whole table, so a row that came
+                     back without its image would lose it on the next save. -->
+                <input type="hidden" name="image" value={row.image ?? ''} />
+                {#if row.image}
+                    <img
+                        src={row.image}
+                        alt=""
+                        class="h-12 w-12 rounded-field object-cover object-center"
+                    />
+                {:else}
+                    <div class="h-12 w-12 rounded-field border border-dashed border-line"></div>
+                {/if}
                 <label class="flex flex-col gap-1">
                     <span class="field-label">Rank</span>
                     <!-- Rank orders the table; it is not a unique key, so two
@@ -73,7 +86,7 @@
             <button
                 type="button"
                 class="btn btn-sm"
-                onclick={() => (rows = [...rows, { rank: rows.length + 1, title: '' }])}
+                onclick={() => (rows = [...rows, { rank: rows.length + 1, title: '', image: '' }])}
             >
                 <Plus class="h-4 w-4" /> Add prize
             </button>

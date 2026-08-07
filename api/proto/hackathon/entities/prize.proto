@@ -9,6 +9,14 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 message Prize {
   int32 rank = 1;
   string title = 2;
+  // A picture for the prize — the trophy, the sponsor's award, the plaque.
+  // Optional, and empty for every prize table written before this existed.
+  //
+  // No migration: the prize table is stored as flexible JSON
+  // (`[]map[string]any` in db/schema/hackathonprizes.go), so a new key costs
+  // nothing at rest. Same shape as Hackathon.logo — a root-relative /objects
+  // path from StorageService, or an http(s) URL.
+  optional string image = 3;
 }
 
 // Award attaches a submission to a prize once the admin finalizes: by rank

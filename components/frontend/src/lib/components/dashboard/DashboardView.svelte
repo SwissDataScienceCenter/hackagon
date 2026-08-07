@@ -21,6 +21,8 @@
         startsAt?: Date;
         endsAt?: Date;
         status: number;
+        /** The event's cover, shown as the row thumbnail. */
+        logo?: string;
         viewerMembership?: HackathonMember;
     }
 
@@ -187,6 +189,7 @@
                                     badgeVariant={statusBadgeVariant(h.status)}
                                     gradFrom={gradient(i).from}
                                     gradTo={gradient(i).to}
+                                    logo={h.logo}
                                 />
                             </div>
                             <div class="mr-4 flex shrink-0 items-center gap-2">
@@ -238,6 +241,7 @@
                                     badgeVariant={statusBadgeVariant(h.status)}
                                     gradFrom={gradient(i).from}
                                     gradTo={gradient(i).to}
+                                    logo={h.logo}
                                 />
                             </div>
                             <form
