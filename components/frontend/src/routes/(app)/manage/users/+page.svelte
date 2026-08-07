@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Search, X } from 'lucide-svelte';
     import { enhance } from '$app/forms';
+    import { resolve } from '$app/paths';
     import { SvelteSet } from 'svelte/reactivity';
     import {
         ASSIGNABLE_GLOBAL_ROLES,
@@ -264,6 +265,12 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 flex-col gap-1">
+            <a
+                href={resolve('/(app)/dashboard')}
+                class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
+            >
+                &larr; Back to dashboard
+            </a>
             <h1 class="m-0 text-title text-ink">Users</h1>
             <p class="m-0 text-xs text-ink-3">{countLabel}</p>
         </div>
