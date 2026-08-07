@@ -212,8 +212,5 @@ export type HealthServiceClient<CallOptionsExt = Record<string, never>> = {
 
 /** Standalone health client for the startup check in hooks.server.ts. */
 export function healthClient(): HealthServiceClient {
-  return createClientFactory().create(
-    HealthServiceDefinition,
-    backendChannel(),
-  )
+  return createClientFactory().create(HealthServiceDefinition, backendChannel())
 }

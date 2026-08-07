@@ -26,11 +26,12 @@ settings YAML under `backend: { hostname, port }` (schema:
 into `event.locals.config.backend`. A deployed frontend points at the backend's
 service host, not `localhost`.
 
-`initBackendChannel(config)` in `hooks.server.ts` (`init` / `setupHandle`) builds
-the shared channel from that config into `src/lib/server/grpc/channel.ts`.
-Authorized clients, `publicHackathonClient()`, and `healthClient()` all dial
-through `backendChannel()` — never a hardcoded address. Opening a channel per
-request would leak; only the auth interceptor is per-request.
+`initBackendChannel(config)` in `hooks.server.ts` (`init` / `setupHandle`)
+builds the shared channel from that config into
+`src/lib/server/grpc/channel.ts`. Authorized clients, `publicHackathonClient()`,
+and `healthClient()` all dial through `backendChannel()` — never a hardcoded
+address. Opening a channel per request would leak; only the auth interceptor is
+per-request.
 
 The channel is **plaintext** gRPC today. A cross-network deployment will likely
 need TLS (`createChannel` with credentials / an `https`-style target) rather
