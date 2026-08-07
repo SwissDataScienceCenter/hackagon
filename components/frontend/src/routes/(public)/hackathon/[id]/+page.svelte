@@ -21,7 +21,7 @@
     title={hackathonTitle}
     dates="24 – 25 October 2026"
     venue="ETH Zurich, Zurich"
-    imageUrl="/images/hackathon-ord-2024/ambiance/ambiance_1.jpg"
+    imageUrl="/images/hackathon-ord-2024/ambiance/ambiance_1.webp"
     status="Registration Open"
     registered={42}
     capacity={100}
@@ -80,15 +80,15 @@
 <HighlightsSection highlights={[
     {
         message: 'Build tools that make Swiss research data findable and reusable across institutions.',
-        imageUrl: '/images/hackathon-ord-2024/ambiance/ambiance_1.jpg',
+        imageUrl: '/images/hackathon-ord-2024/ambiance/ambiance_1.webp',
     },
     {
         message: 'Collaborate with researchers, engineers, and data stewards from across Switzerland.',
-        imageUrl: '/images/hackathon-ord-2024/teams/teams_1.jpg',
+        imageUrl: '/images/hackathon-ord-2024/teams/teams_1.webp',
     },
     {
         message: 'Win prizes and gain recognition for innovative solutions to real data challenges.',
-        imageUrl: '/images/hackathon-ord-2024/winners/winners_1.jpg',
+        imageUrl: '/images/hackathon-ord-2024/winners/winners_1.webp',
     },
 ]} />
 

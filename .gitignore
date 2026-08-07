@@ -20,11 +20,19 @@ result
 # Merge files
 *.orig
 
+# macOS Finder metadata
+.DS_Store
+
 # Cursor CLI config (machine-specific permissions)
 .cursor/cli.json
 
 # Claude local permissions file (machine-specific permissions)
 .claude/settings.local.json
+
+# Claude worktrees (nested checkouts of this repo, never part of a commit).
+# Also keeps quitsh from discovering the nested `.component.yaml` files, which
+# collide by name with the components of the parent checkout.
+.claude/worktrees/
 
 ## Sensitive Information ======================================================
 # All .env files
