@@ -18,6 +18,8 @@ const VOTING_METHOD_LABEL: Partial<Record<number, string>> = {
     2: "Ranked",
     3: "Points",
 }
+const METHOD_RANKED = 2
+const METHOD_POINTS = 3
 
 /** VoterType: ALL_PARTICIPANTS=1, JURY=2 */
 const VOTER_TYPE_LABEL: Partial<Record<number, string>> = {
@@ -118,6 +120,8 @@ type Category = {
     description: string
     votingMethod: number
     voterType: number
+    /** Points categories only; absent on the wire for the other methods. */
+    maxPoints?: number | undefined
     juryMembers: { id: string; displayName: string; username: string }[]
 }
 type VoteResult = {
@@ -131,6 +135,13 @@ type Ballot = {
     categoryId: string
     voterId: string
     singleChoice?: { submissionId: string } | undefined
+}
+
+/** Reads the points budget off a category form; undefined when left blank. */
+function maxPointsFrom(form: FormData): number | undefined {
+    const raw = Number(form.get("maxPoints") ?? 0)
+
+    return Number.isInteger(raw) && raw > 0 ? raw : undefined
 }
 
 function safeName(raw: string): string {
@@ -217,53 +228,74 @@ export const load: PageServerLoad = async (event) => {
     // ListVotes needs voter_id and submission_id to be UUIDs even when they are
     // meant as "no filter", so the tally is read from the export instead — the
     // same organizer-only gate, one call, already shaped as rows.
-    async function tallyFor(categoryId: string) {
+    //
+    // Scored the same way SuggestResults scores it, because a ranked category
+    // counted as "how many rows mention you" ranks every submission equally —
+    // every voter names every one of them.
+    async function tallyFor(categoryId: string, votingMethod: number) {
         try {
             const res = await vote.exportVotes({ categoryId, format: EXPORT_JSON })
             const rows: unknown = JSON.parse(new TextDecoder().decode(res.data) || "[]")
             if (!Array.isArray(rows)) return []
-            const counts = new Map<string, number>()
-            for (const row of rows as { submission_id?: string }[]) {
-                const id = row.submission_id ?? ""
-                if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+            const ballots = (rows as { submission_id?: string; value?: number }[])
+                .map((row) => ({ id: row.submission_id ?? "", value: Number(row.value ?? 0) }))
+                .filter((row) => row.id)
+
+            const scores = new Map<string, number>()
+            for (const b of ballots) scores.set(b.id, 0)
+            // Borda's N is the size of the field, fixed before scoring starts.
+            const field = scores.size
+            for (const b of ballots) {
+                const worth =
+                    votingMethod === METHOD_RANKED
+                        ? field - b.value
+                        : votingMethod === METHOD_POINTS
+                          ? b.value
+                          : 1
+                scores.set(b.id, (scores.get(b.id) ?? 0) + worth)
             }
 
-            return [...counts]
-                .map(([submissionId, votes]) => ({
+            return [...scores]
+                .map(([submissionId, score]) => ({
                     submissionId,
                     label: labelFor(submissionId),
-                    votes,
+                    score,
                 }))
-                .sort((a, b) => b.votes - a.votes)
+                .sort((a, b) => b.score - a.score)
         } catch (e) {
             if (e instanceof ClientError) return []
             throw e
         }
     }
 
-    async function myBallotFor(categoryId: string): Promise<string> {
+    // A ranked or points ballot is several Vote rows, so the remembered id is
+    // only ever one of them — enough to prove a ballot was cast, not enough to
+    // replay it. Single choice is the one case where the row IS the ballot.
+    async function myBallotFor(categoryId: string) {
         const voteId = remembered[categoryId]
-        if (!voteId) return ""
+        if (!voteId) return { cast: false, submissionId: "" }
         try {
             const res = await vote.getVote({ id: voteId })
             const ballot: Ballot | undefined = res.vote
             // A shared browser could carry someone else's hint; the server's
             // answer is what decides whose ballot this is.
-            if (!ballot || ballot.voterId !== myUserId) return ""
+            if (!ballot || ballot.voterId !== myUserId) return { cast: false, submissionId: "" }
 
-            return ballot.singleChoice?.submissionId ?? ""
+            return { cast: true, submissionId: ballot.singleChoice?.submissionId ?? "" }
         } catch (e) {
-            if (e instanceof ClientError) return ""
+            if (e instanceof ClientError) return { cast: false, submissionId: "" }
             throw e
         }
     }
 
     const detailed = await Promise.all(
         categories.map(async (c) => {
-            const [results, tally, myVoteSubmissionId] = await Promise.all([
+            const [results, tally, myBallot] = await Promise.all([
                 resultsFor(c.id),
-                isOrganizer ? tallyFor(c.id) : Promise.resolve([]),
-                isOrganizer ? Promise.resolve("") : myBallotFor(c.id),
+                isOrganizer ? tallyFor(c.id, c.votingMethod) : Promise.resolve([]),
+                isOrganizer
+                    ? Promise.resolve({ cast: false, submissionId: "" })
+                    : myBallotFor(c.id),
             ])
 
             return {
@@ -271,6 +303,7 @@ export const load: PageServerLoad = async (event) => {
                 name: c.name,
                 description: c.description ?? "",
                 votingMethod: c.votingMethod,
+                maxPoints: c.maxPoints ?? 0,
                 methodLabel: VOTING_METHOD_LABEL[c.votingMethod] ?? "Unknown",
                 voterType: c.voterType,
                 voterTypeLabel: VOTER_TYPE_LABEL[c.voterType] ?? "Unknown",
@@ -285,8 +318,8 @@ export const load: PageServerLoad = async (event) => {
                     submissionLabel: labelFor(r.submissionId),
                 })),
                 tally,
-                myVoteSubmissionId,
-                myVoteLabel: myVoteSubmissionId ? labelFor(myVoteSubmissionId) : "",
+                myBallotCast: myBallot.cast,
+                myVoteLabel: myBallot.submissionId ? labelFor(myBallot.submissionId) : "",
             }
         }),
     )
@@ -381,13 +414,17 @@ export const actions: Actions = {
         const form = await event.request.formData()
         const name = String(form.get("name") ?? "").trim()
         if (name.length < 3) return bad(400, { message: "A category name needs three characters." })
+        const votingMethod = Number(form.get("votingMethod") ?? 0)
         try {
             await vote.createVoteCategory({
                 hackathonId: event.params.id,
                 name,
                 description: String(form.get("description") ?? "").trim(),
-                votingMethod: Number(form.get("votingMethod") ?? 0),
+                votingMethod,
                 voterType: Number(form.get("voterType") ?? 0),
+                // Only points categories carry a budget; the server refuses one
+                // without it and clears it on the other methods.
+                maxPoints: votingMethod === METHOD_POINTS ? maxPointsFrom(form) : undefined,
                 juryMemberIds: form.getAll("juryMemberIds").map(String).filter(Boolean),
             })
         } catch (e) {
@@ -402,13 +439,15 @@ export const actions: Actions = {
         const form = await event.request.formData()
         const id = String(form.get("categoryId") ?? "")
         if (!id) return bad(400, { message: "Missing category." })
+        const votingMethod = Number(form.get("votingMethod") ?? 0) || undefined
         try {
             await vote.editVoteCategory({
                 id,
                 name: String(form.get("name") ?? ""),
                 description: String(form.get("description") ?? ""),
-                votingMethod: Number(form.get("votingMethod") ?? 0) || undefined,
+                votingMethod,
                 voterType: Number(form.get("voterType") ?? 0) || undefined,
+                maxPoints: votingMethod === METHOD_POINTS ? maxPointsFrom(form) : undefined,
                 // An empty list leaves the jury untouched — proto3 cannot tell
                 // "no jury" from "field absent" on a repeated field.
                 juryMemberIds: form.getAll("juryMemberIds").map(String).filter(Boolean),
@@ -434,17 +473,56 @@ export const actions: Actions = {
         return ok({ done: "Category deleted." })
     },
 
+    // All three methods. The ranked and points forms emit a hidden
+    // `submissionId` beside every number input, so `getAll` returns the two
+    // lists in the same document order and they zip together.
+    //
+    // Nothing here decides whether a ballot is valid: contiguity of ranks, the
+    // points budget and one-ballot-per-category are all checked in
+    // vote_service.go. The only checks below are about the FORM being filled
+    // in at all.
     castBallot: async (event) => {
         const { vote } = requireGrpc(event.locals.grpc)
         const form = await event.request.formData()
         const categoryId = String(form.get("categoryId") ?? "")
-        const submissionId = String(form.get("submissionId") ?? "")
         if (!categoryId) return bad(400, { message: "Missing category." })
-        if (!submissionId) return bad(400, { message: "Pick a submission first." })
+        const method = Number(form.get("votingMethod") ?? 0)
+
+        let ballot
+        if (method === METHOD_RANKED) {
+            const ids = form.getAll("submissionId").map(String)
+            const ranks = form.getAll("rank").map((r) => Number(r))
+            if (ids.length === 0) return bad(400, { message: "Nothing to rank." })
+            if (ranks.some((r) => !Number.isInteger(r) || r < 1))
+                return bad(400, { message: "Give every submission a rank of 1 or more." })
+            ballot = {
+                ranked: {
+                    categoryId,
+                    submissions: ids.map((submissionId, i) => ({
+                        submissionId,
+                        rank: ranks[i] ?? 0,
+                    })),
+                },
+            }
+        } else if (method === METHOD_POINTS) {
+            const ids = form.getAll("submissionId").map(String)
+            const points = form.getAll("points").map((p) => Number(p))
+            // Zero means "awarded nothing", which is not a row: only positive
+            // awards are stored, and the server refuses a non-positive one.
+            const submissions = ids
+                .map((submissionId, i) => ({ submissionId, points: points[i] ?? 0 }))
+                .filter((s) => Number.isInteger(s.points) && s.points > 0)
+            if (submissions.length === 0)
+                return bad(400, { message: "Award points to at least one submission." })
+            ballot = { points: { categoryId, submissions } }
+        } else {
+            const submissionId = String(form.get("submissionId") ?? "")
+            if (!submissionId) return bad(400, { message: "Pick a submission first." })
+            ballot = { singleChoice: { categoryId, submissionId } }
+        }
+
         try {
-            // Only single_choice ballots are accepted today; ranked and points
-            // categories exist but SubmitVote rejects those payloads.
-            const res = await vote.submitVote({ singleChoice: { categoryId, submissionId } })
+            const res = await vote.submitVote(ballot)
             if (res.vote?.id) rememberBallot(event.cookies, categoryId, res.vote.id)
         } catch (e) {
             if (e instanceof ClientError && e.code === Status.ALREADY_EXISTS) {

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package storage.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/entities";
+
+// What is being uploaded. The kind is the ONLY thing the client gets to choose
+// about placement: the backend derives the key prefix, the content-type
+// allowlist, the size ceiling and the authorization rule from it (see
+// docs/storage.md, "Keys, not URLs"). A client-supplied path is never trusted.
+//
+//   HACKATHON_LOGO        hackathons/<hackathon-id>/logo/<uuid>.<ext>            public
+//   HACKATHON_MEDIA       hackathons/<hackathon-id>/media/<uuid>.<ext>           public
+//   USER_AVATAR           users/<user-id>/avatar/<uuid>.<ext>                    public
+//   SUBMISSION_ATTACHMENT teams/<team-id>/submissions/<submission-id>/<uuid>.<ext>  private
+//
+// `owner_id` is read against the kind: the hackathon id for the two hackathon
+// kinds, the platform user id for an avatar, and the SUBMISSION id for an
+// attachment — the team half of that key is looked up server-side, so a caller
+// cannot file an attachment under someone else's team.
+enum UploadKind {
+  UPLOAD_KIND_UNSPECIFIED = 0;
+  UPLOAD_KIND_HACKATHON_LOGO = 1;
+  UPLOAD_KIND_HACKATHON_MEDIA = 2;
+  UPLOAD_KIND_USER_AVATAR = 3;
+  UPLOAD_KIND_SUBMISSION_ATTACHMENT = 4;
+}

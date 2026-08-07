@@ -99,6 +99,10 @@
 - [hackathon/entities/hackathon_settings.proto](#hackathon_entities_hackathon_settings-proto)
     - [HackathonSettings](#hackathon-entities-HackathonSettings)
   
+- [hackathon/entities/hackathon_state.proto](#hackathon_entities_hackathon_state-proto)
+    - [CapabilityToggle](#hackathon-entities-CapabilityToggle)
+    - [HackathonState](#hackathon-entities-HackathonState)
+  
 - [hackathon/entities/hackathon_status.proto](#hackathon_entities_hackathon_status-proto)
     - [HackathonStatus](#hackathon-entities-HackathonStatus)
   
@@ -260,11 +264,16 @@
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
   
 - [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
-    - [CapabilityToggle](#hackathon-messages-hackathon_svc-CapabilityToggle)
     - [SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest)
   
 - [hackathon/messages/hackathon_svc/set_capabilities_response.proto](#hackathon_messages_hackathon_svc_set_capabilities_response-proto)
     - [SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse)
+  
+- [hackathon/messages/hackathon_svc/set_current_phase_request.proto](#hackathon_messages_hackathon_svc_set_current_phase_request-proto)
+    - [SetCurrentPhaseRequest](#hackathon-messages-hackathon_svc-SetCurrentPhaseRequest)
+  
+- [hackathon/messages/hackathon_svc/set_current_phase_response.proto](#hackathon_messages_hackathon_svc_set_current_phase_response-proto)
+    - [SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse)
   
 - [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
     - [HackathonService](#hackathon-HackathonService)
@@ -604,6 +613,24 @@
 - [site/site_page_service.proto](#site_site_page_service-proto)
     - [SitePageService](#site-SitePageService)
   
+- [storage/entities/upload_kind.proto](#storage_entities_upload_kind-proto)
+    - [UploadKind](#storage-entities-UploadKind)
+  
+- [storage/messages/storage_svc/create_download_url_request.proto](#storage_messages_storage_svc_create_download_url_request-proto)
+    - [CreateDownloadUrlRequest](#storage-messages-storage_svc-CreateDownloadUrlRequest)
+  
+- [storage/messages/storage_svc/create_download_url_response.proto](#storage_messages_storage_svc_create_download_url_response-proto)
+    - [CreateDownloadUrlResponse](#storage-messages-storage_svc-CreateDownloadUrlResponse)
+  
+- [storage/messages/storage_svc/create_upload_url_request.proto](#storage_messages_storage_svc_create_upload_url_request-proto)
+    - [CreateUploadUrlRequest](#storage-messages-storage_svc-CreateUploadUrlRequest)
+  
+- [storage/messages/storage_svc/create_upload_url_response.proto](#storage_messages_storage_svc_create_upload_url_response-proto)
+    - [CreateUploadUrlResponse](#storage-messages-storage_svc-CreateUploadUrlResponse)
+  
+- [storage/storage_service.proto](#storage_storage_service-proto)
+    - [StorageService](#storage-StorageService)
+  
 - [user/messages/user_svc/add_role_request.proto](#user_messages_user_svc_add_role_request-proto)
     - [AddRoleRequest](#user-messages-user_svc-AddRoleRequest)
   
@@ -657,7 +684,6 @@
   
 - [vote/entities/vote.proto](#vote_entities_vote-proto)
     - [PointsVote](#vote-entities-PointsVote)
-    - [PointsVote.PointsGrantedEntry](#vote-entities-PointsVote-PointsGrantedEntry)
     - [RankedVote](#vote-entities-RankedVote)
     - [SingleChoiceVote](#vote-entities-SingleChoiceVote)
     - [Vote](#vote-entities-Vote)
@@ -755,8 +781,9 @@
     - [ListVotesResponse](#vote-messages-vote_svc-ListVotesResponse)
   
 - [vote/messages/vote_svc/submit_vote_request.proto](#vote_messages_vote_svc_submit_vote_request-proto)
+    - [PointsSubmission](#vote-messages-vote_svc-PointsSubmission)
     - [PointsVote](#vote-messages-vote_svc-PointsVote)
-    - [PointsVote.PointsGrantedEntry](#vote-messages-vote_svc-PointsVote-PointsGrantedEntry)
+    - [RankedSubmission](#vote-messages-vote_svc-RankedSubmission)
     - [RankedVote](#vote-messages-vote_svc-RankedVote)
     - [SingleChoiceVote](#vote-messages-vote_svc-SingleChoiceVote)
     - [SubmitVoteRequest](#vote-messages-vote_svc-SubmitVoteRequest)
@@ -1905,6 +1932,81 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_entities_hackathon_state-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_state.proto
+
+
+
+<a name="hackathon-entities-CapabilityToggle"></a>
+
+### CapabilityToggle
+Main calls this message `CapabilityState`. It cannot keep that name here:
+`hackathon.entities.CapabilityState` is already an ENUM in this package —
+COMING / OPEN / CLOSED / UNGOVERNED — and the two would collide outright.
+`Toggle` is also the truer name. This carries a boolean intent, in or out;
+the four-state answer the server computes from it is the enum.
+
+The message NAME is not on the wire, so a main client decoding field 5 of
+`HackathonState`, or encoding `SetCapabilitiesRequest.capabilities`, is
+unaffected by the rename.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| capability | [Capability](#hackathon-entities-Capability) |  |  |
+| enabled | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="hackathon-entities-HackathonState"></a>
+
+### HackathonState
+A FAÇADE. `HackathonState` is upstream `main`&#39;s shape for &#34;what is switched on
+in this event&#34;: one record of booleans plus the current phase. It is stored
+nowhere here — there is no HackathonState table and no ent entity. Every field
+is computed, per request, from the `Capability` rows that already back
+`Hackathon.capabilities`.
+
+It exists so a client written against main&#39;s contract decodes ours, which is
+why the field numbers below are main&#39;s verbatim. Read `Hackathon.capabilities`
+instead if you are writing a new client: `CapabilityStatus` carries the four
+states, the schedule and the audit that this message flattens away.
+
+**It carries no enforcement.** The gate is `requireCapability` reading the
+stored rows; this message never reaches it. Main enforces by writing casbin
+policy from `SetCapabilities`; that path is deliberately not ported, so
+nothing here can open or close anything on its own.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | The hackathon&#39;s own id. Main&#39;s state is a row with an identity of its own; ours is a projection, and the event it belongs to is the only honest identity available. One state per hackathon on both sides, so it is unique in the same way. |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | The hackathon&#39;s created_at: the capability rows are created with the event. |
+| modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | The most recent modification across the capability rows — when the state last actually changed — falling back to the hackathon&#39;s own modified_at when no row has been touched. |
+| current_phase_id | [string](#string) |  | Empty when no phase has been declared current, matching main. `Hackathon` reports the same value as an optional field. |
+| capabilities | [CapabilityToggle](#hackathon-entities-CapabilityToggle) | repeated | One entry per capability in the vocabulary, in vocabulary order, including the ones with no stored row.
+
+`enabled` is the projection `state == OPEN || state == UNGOVERNED`: the same predicate `capability.State.Allowed` uses to admit a mutation, so a client reading this boolean is told exactly what the server will permit. COMING and CLOSED both flatten to false — the distinction between &#34;not yet&#34; and &#34;no longer&#34; survives only in `CapabilityStatus`. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_hackathon_status-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2195,6 +2297,11 @@ Will become caller-dependent, so clients must not cache it across users. |
 | submission_form | [FormSchema](#hackathon-entities-FormSchema) | optional |  |
 | email_templates | [Hackathon.EmailTemplatesEntry](#hackathon-entities-Hackathon-EmailTemplatesEntry) | repeated | Organizer-authored notification copy (ConfigService.SetEmailTemplates), keyed &#34;&lt;moment&gt;&#34; for the body and &#34;&lt;moment&gt;Subject&#34; for the subject line. Get only, and readable by members: it is copy about the event, not a secret — but nothing sends it, so organizers compose from it by hand. |
 | voting_policy | [HackathonVotingPolicy](#hackathon-entities-HackathonVotingPolicy) | optional | How the vote works (ConfigService.SetVotingPolicy). Readable by anyone who can read the hackathon, because these are the rules the voters are bound by: &#34;may I vote for my own team&#34; is a voter&#39;s question. Absent when the organizer set no policy, which means the backend&#39;s defaults. |
+| state | [HackathonState](#hackathon-entities-HackathonState) |  | A FAÇADE over `capabilities` above, in main&#39;s flat boolean shape — see `hackathon_state.proto`. Nothing is stored for it and nothing enforces from it; it is `capabilities` projected through `state == OPEN || state == UNGOVERNED`, plus `current_phase_id`.
+
+Populated wherever `capabilities` is, which is Get AND List: a facade that appeared on only one of them would be a worse contract than no facade.
+
+Tag 27 because main&#39;s 19 is our `settings` and 1-26 are all in use here. A main client therefore finds `state` at a different number than it expects — the shape is compatible, the address on this message is not, and renumbering shipped fields to fix that would break every caller we have. |
 
 
 
@@ -3714,25 +3821,6 @@ optional, so a bare empty map would be ambiguous.
 
 
 
-<a name="hackathon-messages-hackathon_svc-CapabilityToggle"></a>
-
-### CapabilityToggle
-Named Toggle, not State, because `hackathon.entities.CapabilityState` is
-already an enum here — COMING / OPEN / CLOSED / UNGOVERNED — and a message of
-the same name would be a lie as well as a confusion: this carries a boolean
-intent, not the four-state answer the server computes from it.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| capability | [hackathon.entities.Capability](#hackathon-entities-Capability) |  |  |
-| enabled | [bool](#bool) |  |  |
-
-
-
-
-
-
 <a name="hackathon-messages-hackathon_svc-SetCapabilitiesRequest"></a>
 
 ### SetCapabilitiesRequest
@@ -3740,11 +3828,18 @@ Batch form of EditCapability: an organiser toggling several switches at once
 is one intent, and one call keeps it atomic instead of a burst the UI has to
 sequence and half-undo when one of them fails.
 
+This is also main&#39;s write side of `HackathonState`, field-for-field, so a
+client written against main&#39;s contract can drive our capability rows. What it
+does NOT do is what main&#39;s does next: main&#39;s SetCapabilities writes casbin
+policy rows, and that enforcement path is deliberately not ported. Here the
+booleans land on the stored `Capability` rows — true opens, false closes —
+and `requireCapability` remains the only gate.
+
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
-| capabilities | [CapabilityToggle](#hackathon-messages-hackathon_svc-CapabilityToggle) | repeated |  |
+| capabilities | [hackathon.entities.CapabilityToggle](#hackathon-entities-CapabilityToggle) | repeated | `CapabilityToggle` is main&#39;s `CapabilityState` message, renamed because we already have an enum of that name in `hackathon.entities`. It lives in `entities/hackathon_state.proto` — shared with `HackathonState`, exactly as main shares it. The rename is invisible on the wire. |
 
 
 
@@ -3783,6 +3878,75 @@ organiser&#39;s switch did not decide it.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | capabilities | [hackathon.entities.CapabilityStatus](#hackathon-entities-CapabilityStatus) | repeated |  |
+| state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  | The same answer flattened into main&#39;s `HackathonState`, for clients written against that contract. Field 2, not 1: main puts `state` on tag 1 and ours is already taken by `capabilities`, and renumbering a shipped field to gain decode compatibility would break the callers we actually have. A main client reads `state` from `Get` instead, where the tag was free. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_current_phase_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_current_phase_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCurrentPhaseRequest"></a>
+
+### SetCurrentPhaseRequest
+Main&#39;s name for what `AdvancePhase` does. Same two fields, same numbers, so a
+client written against main&#39;s contract drives ours unchanged.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| phase_id | [string](#string) |  | EMPTY means &#34;clear the current phase&#34; — main&#39;s semantics, and ours: AdvancePhase has read an empty phase_id that way since the &#34;Clear current phase&#34; button was fixed.
+
+Clearing does not touch capabilities. Advancing applies the ones scheduled for the target phase; with no target there is nothing to apply, and switching things off because someone cleared a label would be the opposite of what they asked for. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_set_current_phase_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/set_current_phase_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SetCurrentPhaseResponse"></a>
+
+### SetCurrentPhaseResponse
+Main&#39;s shape verbatim, tag included — this message is new here, so nothing
+had to move to make room for it. Native callers should prefer `AdvancePhase`,
+whose response carries the full `CapabilityStatus` list this one flattens.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  |  |
 
 
 
@@ -3826,6 +3990,7 @@ organiser&#39;s switch did not decide it.
 | EditCapability | [messages.hackathon_svc.EditCapabilityRequest](#hackathon-messages-hackathon_svc-EditCapabilityRequest) | [messages.hackathon_svc.EditCapabilityResponse](#hackathon-messages-hackathon_svc-EditCapabilityResponse) |  |
 | SetCapabilities | [messages.hackathon_svc.SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest) | [messages.hackathon_svc.SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse) | Batch form of EditCapability: an organiser toggles several at once, so one call is one intent rather than a burst the UI has to sequence. |
 | AdvancePhase | [messages.hackathon_svc.AdvancePhaseRequest](#hackathon-messages-hackathon_svc-AdvancePhaseRequest) | [messages.hackathon_svc.AdvancePhaseResponse](#hackathon-messages-hackathon_svc-AdvancePhaseResponse) |  |
+| SetCurrentPhase | [messages.hackathon_svc.SetCurrentPhaseRequest](#hackathon-messages-hackathon_svc-SetCurrentPhaseRequest) | [messages.hackathon_svc.SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse) | Main&#39;s name for AdvancePhase, and a thin alias over it: same authorisation, same capability application, same &#34;empty phase_id clears it&#34;. Answers in main&#39;s flat HackathonState instead of the CapabilityStatus list, so native callers should keep using AdvancePhase. |
 | EditSettings | [messages.hackathon_svc.EditSettingsRequest](#hackathon-messages-hackathon_svc-EditSettingsRequest) | [messages.hackathon_svc.EditSettingsResponse](#hackathon-messages-hackathon_svc-EditSettingsResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
@@ -7342,6 +7507,232 @@ Admin role: there is no per-hackathon owner for site-wide content.
 
 
 
+<a name="storage_entities_upload_kind-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/entities/upload_kind.proto
+
+
+ 
+
+
+<a name="storage-entities-UploadKind"></a>
+
+### UploadKind
+What is being uploaded. The kind is the ONLY thing the client gets to choose
+about placement: the backend derives the key prefix, the content-type
+allowlist, the size ceiling and the authorization rule from it (see
+docs/storage.md, &#34;Keys, not URLs&#34;). A client-supplied path is never trusted.
+
+  HACKATHON_LOGO        hackathons/&lt;hackathon-id&gt;/logo/&lt;uuid&gt;.&lt;ext&gt;            public
+  HACKATHON_MEDIA       hackathons/&lt;hackathon-id&gt;/media/&lt;uuid&gt;.&lt;ext&gt;           public
+  USER_AVATAR           users/&lt;user-id&gt;/avatar/&lt;uuid&gt;.&lt;ext&gt;                    public
+  SUBMISSION_ATTACHMENT teams/&lt;team-id&gt;/submissions/&lt;submission-id&gt;/&lt;uuid&gt;.&lt;ext&gt;  private
+
+`owner_id` is read against the kind: the hackathon id for the two hackathon
+kinds, the platform user id for an avatar, and the SUBMISSION id for an
+attachment — the team half of that key is looked up server-side, so a caller
+cannot file an attachment under someone else&#39;s team.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| UPLOAD_KIND_UNSPECIFIED | 0 |  |
+| UPLOAD_KIND_HACKATHON_LOGO | 1 |  |
+| UPLOAD_KIND_HACKATHON_MEDIA | 2 |  |
+| UPLOAD_KIND_USER_AVATAR | 3 |  |
+| UPLOAD_KIND_SUBMISSION_ATTACHMENT | 4 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_messages_storage_svc_create_download_url_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/messages/storage_svc/create_download_url_request.proto
+
+
+
+<a name="storage-messages-storage_svc-CreateDownloadUrlRequest"></a>
+
+### CreateDownloadUrlRequest
+Mint a short-lived read URL for a PRIVATE object.
+
+Public imagery does not come through here and is rejected on purpose: those
+prefixes are world-readable by bucket policy, so their stored path already
+works and signing one would hand out a bearer credential for nothing.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  | An object key as returned by CreateUploadUrl — not a URL, and not a path with a bucket in it. The key&#39;s own shape says which entity owns it, and that is what is authorized. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_messages_storage_svc_create_download_url_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/messages/storage_svc/create_download_url_response.proto
+
+
+
+<a name="storage-messages-storage_svc-CreateDownloadUrlResponse"></a>
+
+### CreateDownloadUrlResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| download_url | [string](#string) |  | Root-relative and same-origin, like upload_url. Treat it as a bearer credential: anything holding it can read the object until it lapses, which is exactly why it is never written to the database. |
+| expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_messages_storage_svc_create_upload_url_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/messages/storage_svc/create_upload_url_request.proto
+
+
+
+<a name="storage-messages-storage_svc-CreateUploadUrlRequest"></a>
+
+### CreateUploadUrlRequest
+Ask for permission to upload one object. Nothing here names a path: the key
+is the server&#39;s to decide, so the worst a hostile client can do is ask for a
+kind it may not write, which casbin refuses.
+
+`content_type` and `size_bytes` are DECLARED here and then baked into the
+signature as conditions, which is what lets an oversized or wrong-typed
+upload be refused before a single byte moves. Declaring them falsely does not
+help: the object store recomputes the signature over the headers the browser
+actually sent, so a mismatch fails at the store.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| kind | [storage.entities.UploadKind](#storage-entities-UploadKind) |  |  |
+| owner_id | [string](#string) |  | The owning entity, read according to `kind` — see UploadKind. |
+| filename | [string](#string) |  | The user&#39;s own filename. Used only to cross-check the declared content_type; the stored key gets a fresh uuid and an extension derived from the content type, so nothing a user typed reaches the object store. |
+| content_type | [string](#string) |  |  |
+| size_bytes | [int64](#int64) |  | Exact byte length of the file about to be uploaded, not an estimate. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_messages_storage_svc_create_upload_url_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/messages/storage_svc/create_upload_url_response.proto
+
+
+
+<a name="storage-messages-storage_svc-CreateUploadUrlResponse"></a>
+
+### CreateUploadUrlResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| upload_url | [string](#string) |  | Where the BROWSER PUTs the bytes — root-relative and same-origin (/objects/&lt;bucket&gt;/&lt;key&gt;?X-Amz-...), so the file never passes through the app server and no CORS grant is needed. The request must carry exactly the Content-Type and byte count that were declared, because both are signed. |
+| key | [string](#string) |  | The stable object key. This is what identifies the object forever; the signed URL above stops working in minutes. |
+| public_url | [string](#string) |  | Root-relative path the object will be readable at once uploaded, for the public kinds. EMPTY for private kinds (submission attachments) — those are read through CreateDownloadUrl, after casbin has approved the read.
+
+This is the value that goes into Hackathon.logo / User.avatar_url: it never expires and it resolves from localhost, the tunnel and a deployment alike. |
+| expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | When the signature above stops being accepted. Purely informational — the upload either starts in time or it does not. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_storage_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/storage_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="storage-StorageService"></a>
+
+### StorageService
+Signed access to the object store (docs/storage.md).
+
+Files do not travel through this service — only permission to move them
+does. The backend authorizes the caller, decides the key, pins the
+content-type and the byte count into the signature, and hands back a URL the
+browser uses directly.
+
+There is deliberately no Delete RPC. Objects are removed by prefix when their
+OWNER is deleted (HackathonService.Delete, UserService.DeleteAccount), which
+is what keeps deletion complete without a manifest of what belongs to whom.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| CreateUploadUrl | [messages.storage_svc.CreateUploadUrlRequest](#storage-messages-storage_svc-CreateUploadUrlRequest) | [messages.storage_svc.CreateUploadUrlResponse](#storage-messages-storage_svc-CreateUploadUrlResponse) |  |
+| CreateDownloadUrl | [messages.storage_svc.CreateDownloadUrlRequest](#storage-messages-storage_svc-CreateDownloadUrlRequest) | [messages.storage_svc.CreateDownloadUrlResponse](#storage-messages-storage_svc-CreateDownloadUrlResponse) |  |
+
+ 
+
+
+
 <a name="user_messages_user_svc_add_role_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -7878,23 +8269,8 @@ Edit returns the updated entity (write-path convention).
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| points_granted | [PointsVote.PointsGrantedEntry](#vote-entities-PointsVote-PointsGrantedEntry) | repeated |  |
-
-
-
-
-
-
-<a name="vote-entities-PointsVote-PointsGrantedEntry"></a>
-
-### PointsVote.PointsGrantedEntry
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| key | [string](#string) |  |  |
-| value | [int32](#int32) |  |  |
+| submission_id | [string](#string) |  |  |
+| points | [int32](#int32) |  |  |
 
 
 
@@ -7909,7 +8285,8 @@ Edit returns the updated entity (write-path convention).
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| submission_ids | [string](#string) | repeated |  |
+| submission_id | [string](#string) |  |  |
+| rank | [int32](#int32) |  | 1 is the voter&#39;s first preference. |
 
 
 
@@ -7919,7 +8296,10 @@ Edit returns the updated entity (write-path convention).
 <a name="vote-entities-SingleChoiceVote"></a>
 
 ### SingleChoiceVote
-
+Each variant describes ONE stored row, because a Vote row is one judgment on
+one submission (see the schema comment). A ranked or points ballot is
+therefore several Vote entities, one per submission, all sharing a category
+and a voter — SubmitVoteResponse.votes hands the whole set back.
 
 
 | Field | Type | Label | Description |
@@ -8047,6 +8427,7 @@ the criteria and rules for one dimension of evaluation.
 | jury_members | [user.entities.User](#user-entities-User) | repeated |  |
 | created_at | [int64](#int64) |  |  |
 | modified_at | [int64](#int64) |  |  |
+| max_points | [int32](#int32) | optional | Points-based voting only: the budget one voter may spread over the submissions. Absent for the other methods. Tag 10 rather than main&#39;s 7 — jury_members/created_at/modified_at already hold 7-9 here. |
 
 
 
@@ -8120,6 +8501,7 @@ VoteResult is a placement entry within a vote category.
 | voting_method | [vote.entities.VotingMethod](#vote-entities-VotingMethod) |  |  |
 | voter_type | [vote.entities.VoterType](#vote-entities-VoterType) |  |  |
 | jury_member_ids | [string](#string) | repeated |  |
+| max_points | [int32](#int32) | optional | Required (and &gt;0) when voting_method is POINTS, ignored otherwise. |
 
 
 
@@ -8366,6 +8748,7 @@ VoteResult is a placement entry within a vote category.
 | voting_method | [vote.entities.VotingMethod](#vote-entities-VotingMethod) | optional |  |
 | voter_type | [vote.entities.VoterType](#vote-entities-VoterType) | optional |  |
 | jury_member_ids | [string](#string) | repeated |  |
+| max_points | [int32](#int32) | optional | Required (and &gt;0) once the category&#39;s method is POINTS, cleared otherwise. |
 
 
 
@@ -8943,6 +9326,22 @@ this service supports.
 
 
 
+<a name="vote-messages-vote_svc-PointsSubmission"></a>
+
+### PointsSubmission
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| submission_id | [string](#string) |  |  |
+| points | [int32](#int32) |  |  |
+
+
+
+
+
+
 <a name="vote-messages-vote_svc-PointsVote"></a>
 
 ### PointsVote
@@ -8952,23 +9351,23 @@ this service supports.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | category_id | [string](#string) |  |  |
-| points_granted | [PointsVote.PointsGrantedEntry](#vote-messages-vote_svc-PointsVote-PointsGrantedEntry) | repeated |  |
+| submissions | [PointsSubmission](#vote-messages-vote_svc-PointsSubmission) | repeated |  |
 
 
 
 
 
 
-<a name="vote-messages-vote_svc-PointsVote-PointsGrantedEntry"></a>
+<a name="vote-messages-vote_svc-RankedSubmission"></a>
 
-### PointsVote.PointsGrantedEntry
+### RankedSubmission
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| key | [string](#string) |  |  |
-| value | [int32](#int32) |  |  |
+| submission_id | [string](#string) |  |  |
+| rank | [int32](#int32) |  |  |
 
 
 
@@ -8978,13 +9377,15 @@ this service supports.
 <a name="vote-messages-vote_svc-RankedVote"></a>
 
 ### RankedVote
-
+Ranks are carried explicitly rather than implied by list order: the voter
+types a number per submission, so a gap or a repeat is a mistake the server
+has to be able to name instead of one the client silently normalises away.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | category_id | [string](#string) |  |  |
-| submission_ids | [string](#string) | repeated |  |
+| submissions | [RankedSubmission](#vote-messages-vote_svc-RankedSubmission) | repeated |  |
 
 
 
@@ -9010,7 +9411,8 @@ this service supports.
 <a name="vote-messages-vote_svc-SubmitVoteRequest"></a>
 
 ### SubmitVoteRequest
-
+One ballot. The variant chosen must match the category&#39;s voting_method or
+the server refuses it.
 
 
 | Field | Type | Label | Description |
@@ -9048,7 +9450,8 @@ this service supports.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| vote | [vote.entities.Vote](#vote-entities-Vote) |  |  |
+| vote | [vote.entities.Vote](#vote-entities-Vote) |  | The first row of the accepted ballot — for single_choice that is the whole ballot, and callers that predate ranked/points keep working unchanged. |
+| votes | [vote.entities.Vote](#vote-entities-Vote) | repeated | Every row the ballot produced: one for single_choice, N for ranked and points. |
 
 
 

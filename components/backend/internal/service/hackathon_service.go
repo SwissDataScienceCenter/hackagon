@@ -22,6 +22,7 @@ import (
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc"
 	userEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
+	objstore "github.com/swissdatasciencecenter/hackagon/components/backend/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -32,13 +33,21 @@ type HackathonService struct {
 	hackathon.UnimplementedHackathonServiceServer
 	dbClient *ent.Client
 	enforcer *m.Enforcer
+	// store deletes the event's uploaded imagery when the event goes. nil when
+	// no object store is configured; see purgeObjects.
+	store *objstore.Client
 }
 
-func NewHackathonService(dbClient *ent.Client, enf *m.Enforcer) *HackathonService {
+func NewHackathonService(
+	dbClient *ent.Client,
+	enf *m.Enforcer,
+	store *objstore.Client,
+) *HackathonService {
 	return &HackathonService{
 		UnimplementedHackathonServiceServer: hackathon.UnimplementedHackathonServiceServer{},
 		dbClient:                            dbClient,
 		enforcer:                            enf,
+		store:                               store,
 	}
 }
 
@@ -269,6 +278,9 @@ func (s *HackathonService) Get(
 	// so the clock has to reach the mapper.
 	clock := newCapabilityClock(phaseOrderFrom(h.Edges.Phases), h.CurrentPhaseID)
 	entry.Capabilities = capabilityStatusesFromEnt(h.Edges.Capabilities, clock, now)
+	// Main's flat shape over the same rows — a projection, never a second
+	// answer. See hackathon_state.go; it must follow the line above.
+	entry.State = hackathonStateFromEntry(entry)
 
 	if h.Edges.Settings != nil {
 		entry.Settings = settingsEntryFromEnt(h.Edges.Settings)
@@ -1107,8 +1119,20 @@ func (s *HackathonService) SetCapabilities(
 		return nil, status.Error(codes.Internal, "couldn't update capabilities")
 	}
 
+	statuses := s.capabilityStatuses(ctx, id)
+
+	currentPhase := ""
+	if hack, err := s.dbClient.Hackathon.Get(ctx, id); err == nil && hack.CurrentPhaseID != nil {
+		currentPhase = hack.CurrentPhaseID.String()
+	}
+
 	return &msgs.SetCapabilitiesResponse{
-		Capabilities: s.capabilityStatuses(ctx, id),
+		Capabilities: statuses,
+		// The same answer in main's flat shape, projected from `statuses` rather
+		// than from the booleans that came in: a capability the phase window
+		// decided did not take the value the organiser sent, and echoing the
+		// request would hide that. See hackathon_state.go.
+		State: s.hackathonStateFacade(ctx, id, statuses, currentPhase),
 	}, nil
 }
 
@@ -1524,6 +1548,9 @@ func (s *HackathonService) List(
 			newCapabilityClock(phaseOrderFrom(h.Edges.Phases), h.CurrentPhaseID),
 			now,
 		)
+		// Same projection Get applies, from the same statuses, so a list and a
+		// detail page cannot report different booleans for the same event.
+		e.State = hackathonStateFromEntry(e)
 		if participantUID != nil && len(h.Edges.Participants) > 0 {
 			p := h.Edges.Participants[0]
 			role, err := s.enforcer.GetHackathonRole(p.Edges.User.KeycloakID, h.ID.String())
@@ -1856,6 +1883,13 @@ func (s *HackathonService) Delete(
 
 		return nil, status.Error(codes.Internal, "couldn't delete hackathon")
 	}
+
+	// Only now, and never before: an event that is gone must not leave its
+	// gallery reachable at a guessable URL, but a purge that ran first and then
+	// hit a failed delete would leave rows pointing at objects already gone.
+	// Every key this event owns is under its id, so one prefix is the whole of
+	// it — no manifest to keep in sync. Failure logs and does not propagate.
+	purgeObjects(ctx, s.store, hackathonPrefix+id.String()+"/")
 
 	return &msgs.DeleteResponse{}, nil
 }

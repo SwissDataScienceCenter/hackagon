@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entcapability "github.com/swissdatasciencecenter/hackagon/components/backend/ent/capability"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
@@ -1785,6 +1786,206 @@ var _ = Describe("HackathonService", func() {
 					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(got.GetHackathon().CurrentPhaseId).To(BeNil())
+				})
+			})
+
+			// HackathonState is main's flat shape projected over our capability
+			// rows — see internal/service/hackathon_state.go. These pin the two
+			// properties that make it a facade rather than a second model: it
+			// agrees with the four-state answer it is derived from, and writing
+			// through it lands on the same stored rows everything else reads.
+			Describe("HackathonState facade", func() {
+				// togglesFrom indexes a state's booleans by capability.
+				togglesFrom := func(st *entities.HackathonState) map[entities.Capability]bool {
+					out := map[entities.Capability]bool{}
+					for _, t := range st.GetCapabilities() {
+						out[t.GetCapability()] = t.GetEnabled()
+					}
+
+					return out
+				}
+
+				It("projects OPEN and UNGOVERNED to true, COMING and CLOSED to false", func() {
+					// One capability of each reachable state: registration closed by
+					// hand, proposals COMING behind a future phase, the rest open.
+					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId: hackathonID,
+						Capability:  entities.Capability_CAPABILITY_REGISTER,
+						Enabled:     proto.Bool(false),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					later := newPhase("Later", 10)
+					_, err = client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId:   hackathonID,
+						Capability:    entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+						Enabled:       proto.Bool(false),
+						OpenInPhaseId: proto.String(later),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+
+					// The projection must agree with the statuses it flattens, for
+					// every capability — that is the whole contract.
+					toggles := togglesFrom(got.GetHackathon().GetState())
+					Expect(toggles).To(HaveLen(6))
+					for _, c := range got.GetHackathon().GetCapabilities() {
+						want := c.GetState() == entities.CapabilityState_CAPABILITY_STATE_OPEN ||
+							c.GetState() == entities.CapabilityState_CAPABILITY_STATE_UNGOVERNED
+						Expect(toggles[c.GetCapability()]).To(
+							Equal(want),
+							"facade and status disagree about %v (state %v)",
+							c.GetCapability(), c.GetState(),
+						)
+					}
+
+					Expect(statusOf(entities.Capability_CAPABILITY_PROPOSE_PROJECTS).GetState()).
+						To(Equal(entities.CapabilityState_CAPABILITY_STATE_COMING))
+					Expect(toggles[entities.Capability_CAPABILITY_REGISTER]).To(BeFalse())
+					Expect(toggles[entities.Capability_CAPABILITY_PROPOSE_PROJECTS]).To(BeFalse())
+					Expect(toggles[entities.Capability_CAPABILITY_VOTE]).To(BeTrue())
+				})
+
+				It("reports the same state on List as on Get", func() {
+					_, err := client.EditCapability(adminCtx, &msgs.EditCapabilityRequest{
+						HackathonId: hackathonID,
+						Capability:  entities.Capability_CAPABILITY_VOTE,
+						Enabled:     proto.Bool(false),
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					got, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+					Expect(err).NotTo(HaveOccurred())
+
+					listed, err := client.List(adminCtx, &msgs.ListRequest{})
+					Expect(err).NotTo(HaveOccurred())
+
+					var fromList *entities.HackathonState
+					for _, h := range listed.GetHackathons() {
+						if h.GetId() == hackathonID {
+							fromList = h.GetState()
+						}
+					}
+					Expect(fromList).NotTo(BeNil(), "hackathon missing from List response")
+					Expect(togglesFrom(fromList)).
+						To(Equal(togglesFrom(got.GetHackathon().GetState())))
+				})
+
+				It("writes SetCapabilities booleans onto the stored rows", func() {
+					// The round trip: main's boolean payload in, our four-state
+					// answer out, and the stored row changed to match.
+					resp, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+						HackathonId: hackathonID,
+						Capabilities: []*entities.CapabilityToggle{
+							{Capability: entities.Capability_CAPABILITY_VOTE, Enabled: false},
+							{
+								Capability: entities.Capability_CAPABILITY_VIEW_RESULTS,
+								Enabled:    true,
+							},
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(togglesFrom(resp.GetState())[entities.Capability_CAPABILITY_VOTE]).
+						To(BeFalse())
+					Expect(togglesFrom(resp.GetState())[entities.Capability_CAPABILITY_VIEW_RESULTS]).
+						To(BeTrue())
+
+					// Our own representation moved, not just the facade's.
+					Expect(statusOf(entities.Capability_CAPABILITY_VOTE).GetState()).
+						To(Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED))
+					row, err := dbClient.Capability.Query().
+						Where(
+							entcapability.HasHackathonWith(
+								enthackathon.IDEQ(uuid.MustParse(hackathonID)),
+							),
+							entcapability.CapabilityEQ(entcapability.CapabilityVote),
+						).
+						Only(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(row.Enabled).To(BeFalse())
+				})
+
+				It("carries no enforcement of its own", func() {
+					// Closing REGISTER through the facade must block Join for the
+					// same reason EditCapability does: requireCapability read the
+					// stored row. Nothing about HackathonState is consulted.
+					_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+						HackathonId: hackathonID,
+						Capabilities: []*entities.CapabilityToggle{
+							{
+								Capability: entities.Capability_CAPABILITY_REGISTER,
+								Enabled:    false,
+							},
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = client.Join(newUser("facade-late-joiner"), &msgs.JoinRequest{
+						HackathonId: hackathonID,
+					})
+					Expect(status.Code(err)).To(Equal(codes.FailedPrecondition))
+					Expect(err.Error()).To(ContainSubstring("registrations are closed"))
+				})
+
+				Describe("SetCurrentPhase", func() {
+					It("advances and reports the phase in the state", func() {
+						target := newPhase("Facade Hacking", 2)
+
+						resp, err := client.SetCurrentPhase(
+							adminCtx,
+							&msgs.SetCurrentPhaseRequest{
+								HackathonId: hackathonID, PhaseId: target,
+							},
+						)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(resp.GetState().GetCurrentPhaseId()).To(Equal(target))
+						Expect(resp.GetState().GetId()).To(Equal(hackathonID))
+						Expect(resp.GetState().GetCapabilities()).To(HaveLen(6))
+
+						got, err := client.Get(
+							adminCtx,
+							&msgs.GetRequest{HackathonId: hackathonID},
+						)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(got.GetHackathon().GetCurrentPhaseId()).To(Equal(target))
+					})
+
+					It("clears the current phase on an empty phase_id", func() {
+						target := newPhase("Facade Judging", 3)
+						_, err := client.SetCurrentPhase(adminCtx, &msgs.SetCurrentPhaseRequest{
+							HackathonId: hackathonID, PhaseId: target,
+						})
+						Expect(err).NotTo(HaveOccurred())
+
+						resp, err := client.SetCurrentPhase(adminCtx, &msgs.SetCurrentPhaseRequest{
+							HackathonId: hackathonID, PhaseId: "",
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(resp.GetState().GetCurrentPhaseId()).To(BeEmpty())
+
+						got, err := client.Get(
+							adminCtx,
+							&msgs.GetRequest{HackathonId: hackathonID},
+						)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(got.GetHackathon().CurrentPhaseId).To(BeNil())
+					})
+
+					It("denies a non-owner, exactly as AdvancePhase does", func() {
+						// The alias must not become a hole around the casbin check.
+						target := newPhase("Facade Denied", 4)
+
+						_, err := client.SetCurrentPhase(
+							newUser("facade-bystander"),
+							&msgs.SetCurrentPhaseRequest{
+								HackathonId: hackathonID, PhaseId: target,
+							},
+						)
+						Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+					})
 				})
 			})
 

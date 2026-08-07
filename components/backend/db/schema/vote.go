@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema"
@@ -43,6 +44,13 @@ func (Vote) Fields() []ent.Field {
 		field.Int("value").
 			Optional().
 			Comment("Rank position (ranked) or points awarded (points-based). Optional for single_choice."),
+		field.Time("created_at").
+			Immutable().
+			Default(time.Now).
+			Comment("Timestamp when the vote was created."),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last modification."),
 	}
 }
 
@@ -57,14 +65,22 @@ func (Vote) Edges() []ent.Edge {
 			Comment("Keycloak user ID of the voter."),
 		edge.From("submission", Submission.Type).
 			Ref("votes").
+			Unique().
 			Comment("The submission this vote is for."),
 	}
 }
 
 // Indexes of the Vote.
+//
+// A ranked or points ballot is several rows sharing a (category, voter), so the
+// old (category, voter) unique index could not hold. Uniqueness moves down to
+// the submission, and "one ballot per category" — which the DB used to
+// guarantee for single_choice — is now VoteService.SubmitVote's job: it refuses
+// a second ballot outright and replaces any stale rows inside the same
+// transaction that writes the new ones.
 func (Vote) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Edges("category", "voter").Unique(),
+		index.Edges("category", "voter", "submission").Unique(),
 	}
 }
 

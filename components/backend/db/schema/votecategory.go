@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"time"
+
 	"entgo.io/ent"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
@@ -35,6 +37,16 @@ func (VoteCategory) Fields() []ent.Field {
 		field.Enum("voter_type").
 			Values("all_participants", "jury").
 			Comment("Who can vote: all participants or jury only."),
+		field.Int("max_points").
+			Optional().
+			Comment("Maximum points a voter can distribute across submissions (points-based voting only)."),
+		field.Time("created_at").
+			Immutable().
+			Default(time.Now).
+			Comment("Timestamp when the category was created."),
+		field.Time("modified_at").
+			Default(time.Now).UpdateDefault(time.Now).
+			Comment("Timestamp of the last modification."),
 	}
 }
 

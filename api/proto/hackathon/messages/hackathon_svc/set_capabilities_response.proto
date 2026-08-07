@@ -3,6 +3,7 @@ syntax = "proto3";
 package hackathon.messages.hackathon_svc;
 
 import "hackathon/entities/capability.proto";
+import "hackathon/entities/hackathon_state.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
 
@@ -16,4 +17,10 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 // organiser's switch did not decide it.
 message SetCapabilitiesResponse {
   repeated hackathon.entities.CapabilityStatus capabilities = 1;
+  // The same answer flattened into main's `HackathonState`, for clients written
+  // against that contract. Field 2, not 1: main puts `state` on tag 1 and ours
+  // is already taken by `capabilities`, and renumbering a shipped field to gain
+  // decode compatibility would break the callers we actually have. A main
+  // client reads `state` from `Get` instead, where the tag was free.
+  hackathon.entities.HackathonState state = 2;
 }

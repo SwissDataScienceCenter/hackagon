@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+// Main's name for what `AdvancePhase` does. Same two fields, same numbers, so a
+// client written against main's contract drives ours unchanged.
+message SetCurrentPhaseRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  // EMPTY means "clear the current phase" — main's semantics, and ours:
+  // AdvancePhase has read an empty phase_id that way since the "Clear current
+  // phase" button was fixed.
+  //
+  // Clearing does not touch capabilities. Advancing applies the ones scheduled
+  // for the target phase; with no target there is nothing to apply, and
+  // switching things off because someone cleared a label would be the opposite
+  // of what they asked for.
+  string phase_id = 2 [(buf.validate.field).cel = {
+    id: "phase_id.uuid_or_empty"
+    message: "phase_id must be a UUID, or empty to clear the current phase"
+    expression: "this == '' || this.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+  }];
+}

@@ -18,4 +18,6 @@ message EditVoteCategoryRequest {
   optional vote.entities.VotingMethod voting_method = 4 [(buf.validate.field).enum.defined_only = true];
   optional vote.entities.VoterType voter_type = 5 [(buf.validate.field).enum.defined_only = true];
   repeated string jury_member_ids = 6 [(buf.validate.field).repeated.items.string.uuid = true];
+  // Required (and >0) once the category's method is POINTS, cleared otherwise.
+  optional int32 max_points = 7 [(buf.validate.field).int32.gte = 1];
 }

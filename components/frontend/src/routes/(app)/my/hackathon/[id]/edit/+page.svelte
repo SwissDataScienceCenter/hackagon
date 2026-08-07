@@ -1,12 +1,96 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
-    import { enhance } from '$app/forms';
+    import { enhance, deserialize } from '$app/forms';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import EventBranding, { safeHex } from '$lib/components/hackathon/EventBranding.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     const hackathon = $derived(data.hackathon);
+
+    // --- logo upload ----------------------------------------------------
+    // Mirrored into a text field rather than posted as a file: the bytes go
+    // straight from the browser to the object store, and what this form
+    // submits is only the PATH the backend gave back. That is what keeps the
+    // app server out of the transfer entirely.
+    let logo = $state(hackathon.logo ?? '');
+    let uploading = $state(false);
+    let uploaded = $state(false);
+    let uploadError = $state('');
+
+    // Kept in step with imageTypes in components/backend/internal/service/
+    // storage_service.go — the backend refuses anything else regardless, this
+    // only spares the round trip. SVG is absent on both sides deliberately:
+    // /objects is the app's OWN origin, so an SVG would be script running as
+    // the application.
+    const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif';
+    const LOGO_MAX_MB = 5;
+
+    async function uploadLogo(event: Event & { currentTarget: HTMLInputElement }) {
+        const file = event.currentTarget.files?.[0];
+        if (!file) return;
+
+        uploading = true;
+        uploaded = false;
+        uploadError = '';
+        try {
+            // Step 1: ask the backend for permission. It decides the key,
+            // checks casbin, and pins the type and the byte count into the
+            // signature — so an oversized file is refused HERE, before a byte
+            // is transferred, rather than after.
+            const ask = new FormData();
+            ask.set('filename', file.name);
+            ask.set('contentType', file.type);
+            ask.set('sizeBytes', String(file.size));
+
+            // These two headers are what make SvelteKit answer with a
+            // SERIALIZED ACTION RESULT rather than a rendered HTML page:
+            // `is_action_json_request` keys off `accept: application/json`.
+            // They are exactly what `use:enhance` sends — this call is a
+            // hand-rolled enhance, so it has to speak the same protocol.
+            const response = await fetch('?/presignLogo', {
+                method: 'POST',
+                body: ask,
+                headers: { accept: 'application/json', 'x-sveltekit-action': 'true' }
+            });
+            const result = deserialize(await response.text());
+
+            if (result.type === 'failure') {
+                uploadError = String(result.data?.uploadMessage ?? 'Upload was refused');
+                return;
+            }
+            if (result.type !== 'success' || !result.data?.uploadUrl) {
+                uploadError = 'Could not start the upload';
+                return;
+            }
+            const { uploadUrl, publicUrl } = result.data as {
+                uploadUrl: string;
+                publicUrl: string;
+            };
+
+            // Step 2: the file itself, direct to storage. Content-Type is set
+            // explicitly and must match what was signed — both because the
+            // signature covers it, and because whatever arrives is what the
+            // object is STORED as: send none and the browser later refuses to
+            // render its own image.
+            const put = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
+            if (!put.ok) {
+                uploadError = `Storage rejected the upload (${put.status})`;
+                return;
+            }
+
+            logo = publicUrl;
+            uploaded = true;
+        } catch {
+            uploadError = 'Upload failed — check your connection and try again';
+        } finally {
+            uploading = false;
+        }
+    }
 
     // Branding is edited live so the preview below means something. Seeded from
     // the server once — `$state` from a prop is intentional here: this form owns
@@ -135,16 +219,56 @@
                 </p>
             {/if}
 
-            <label class="{LABEL_CLASS} sm:col-span-2">
-                Logo URL (optional)
+            <div class="{LABEL_CLASS} sm:col-span-2">
+                <span id="logo-label">Logo (optional)</span>
+
+                <!-- `type="text"`, NOT `type="url"`. An uploaded logo is stored
+                     as a root-relative path (/objects/<bucket>/<key>) so it
+                     resolves from localhost, the tunnel and a deployment
+                     alike — and `type="url"` rejects exactly that, which made
+                     an already-seeded event impossible to re-save through this
+                     form. External links still work. -->
                 <input
-                    type="url"
+                    type="text"
                     name="logo"
-                    placeholder="https://…"
-                    value={hackathon.logo ?? ''}
+                    aria-labelledby="logo-label"
+                    placeholder="/objects/… or https://…"
+                    bind:value={logo}
                     class={FIELD_CLASS}
                 />
-            </label>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <input
+                        type="file"
+                        accept={ACCEPT}
+                        aria-label="Upload a logo image"
+                        disabled={uploading}
+                        onchange={uploadLogo}
+                        class="text-xs text-ink"
+                    />
+                    {#if uploading}
+                        <span class="text-xs text-ink-3">Uploading…</span>
+                    {:else if uploadError}
+                        <span class="text-xs text-danger-ink" role="alert">{uploadError}</span>
+                    {:else if uploaded}
+                        <span class="text-xs text-success-ink">
+                            Uploaded — press Save changes to keep it.
+                        </span>
+                    {/if}
+                </div>
+                <p class="m-0 text-meta text-ink-3">
+                    PNG, JPEG, WebP or GIF, up to {LOGO_MAX_MB}&nbsp;MB. The file goes
+                    straight to storage; nothing is saved until you press Save changes.
+                </p>
+
+                {#if logo}
+                    <img
+                        src={logo}
+                        alt="Current logo"
+                        class="h-20 w-auto rounded-control border border-line object-contain"
+                    />
+                {/if}
+            </div>
         </div>
 
         <!-- Last and full width: the only field with no natural size, and the one

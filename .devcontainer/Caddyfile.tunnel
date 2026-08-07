@@ -24,7 +24,21 @@
 	# Only the public prefixes are reachable this way; the bucket policy still
 	# decides, and an unsigned read of teams/* answers 403 through here too.
 	handle_path /objects/* {
-		reverse_proxy rustfs:9000
+		reverse_proxy rustfs:9000 {
+			# REQUIRED for presigned uploads and downloads, not cosmetic.
+			#
+			# SigV4 signs the Host header, and the backend signs the object
+			# store's own hostname because that is the only name it knows.
+			# Caddy otherwise passes the INCOMING host through
+			# (*.trycloudflare.com here), which makes the store recompute a
+			# different signature and answer 403 SignatureDoesNotMatch — while
+			# unsigned public reads keep working, so the breakage would show up
+			# only for someone uploading through the tunnel.
+			#
+			# vite's proxy does the same thing under the name `changeOrigin`
+			# (components/frontend/vite.config.ts).
+			header_up Host {upstream_hostport}
+		}
 	}
 
 	handle @keycloak {

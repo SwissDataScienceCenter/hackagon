@@ -71,6 +71,13 @@ type StorageConfig struct {
 	// set, which the dev service deliberately does not set — there is no
 	// wildcard DNS for *.rustfs on the compose network.
 	UsePathStyle bool `yaml:"usepathstyle"`
+	// PublicPrefix is the path the FRONTEND serves objects under, on its own
+	// origin — the vite proxy in components/frontend/vite.config.ts and the
+	// matching caddy route in .devcontainer/Caddyfile.tunnel. Presigned URLs
+	// and stored paths are both built from it, so they are root-relative and
+	// resolve from localhost, the tunnel and a deployment alike. Point it at a
+	// CDN origin to serve uploads from somewhere else.
+	PublicPrefix string `yaml:"publicprefix"`
 }
 
 func (c *Config) ConnectionStr() string {
@@ -125,6 +132,7 @@ func Load(configDir string) (*Config, error) {
 			"accesskey":    "hackagon-dev",
 			"secretkey":    "hackagon-dev-secret",
 			"usepathstyle": true,
+			"publicprefix": "/objects",
 		},
 		"logging": map[string]interface{}{
 			"level": "info",

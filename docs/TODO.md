@@ -27,7 +27,7 @@ found; the checklist is the live status.
 | B10 | contract | `TeamService.Edit` / `ProjectService.Edit` (`track_id`) treat empty string as "unchanged" although the protos declare `optional` — a description can never be cleared | `team_service.go`, `project_service.go` |
 | B11 | audit | `ProjectService.Edit` and `setApproval` never `SetModifier` (every other Edit handler does) | `project_service.go` |
 | B12 | dx | `TeamService.List`/`Get` collapse every failure to `PermissionDenied` with message `"cann't get teams"` (typo, twice); `Delete` lacks the team-scoped fallback that `Edit` has | `team_service.go` |
-| B13 | api | Vote proto declares `created_at`/`modified_at` but the ent schema has no timestamp columns — always zero on the wire | `db/schema/vote.go` vs `api/proto/vote/**` |
+| B13 | ~~api~~ FIXED | Vote proto declares `created_at`/`modified_at` but the ent schema has no timestamp columns — always zero on the wire. Columns added to `Vote` **and** `VoteCategory` (whose proto declares them too) 2026-08-07, alongside ranked/points voting | `db/schema/vote.go` vs `api/proto/vote/**` |
 | B14 | minor | `PageService.List` public fallback masks `NotFound` behind the permission error; stray `"...for reordering2"` in a `SetOrder` error | `page_service.go` (~L624) |
 | B15 | ~~missing~~ FIXED | `UserService.AddRole/RemoveRole` and `HackathonService.AddOwner/RemoveOwner` were proto-only → `Unimplemented`; the only Owner grant was the `Create` side effect. All four implemented 2026-08-06, each with a caller | protos vs handlers |
 
@@ -170,7 +170,37 @@ display name is the platform's own field and is editable.
       error; "reordering2" typo gone
 - [x] B6 — `CreateSubmission` version race: retries once on constraint
       violation, then `Aborted` instead of `Internal`
-- [ ] B13 — either add timestamps to `Vote` or drop them from the proto
+- [x] B13 — added, not dropped: `created_at`/`modified_at` on `Vote` and on
+      `VoteCategory` (its proto declared them too and they were equally zero).
+      Landed with ranked/points voting, which touched the same two schemas
+
+### Ranked and points ballots (2026-08-07)
+
+`VoteCategory.voting_method` had offered all three methods since the schema was
+written, and the organiser's `<select>` listed all three — while `SubmitVote`
+answered every non-single_choice ballot with `InvalidArgument`. A ranked
+category was therefore creatable and unvotable. Now implemented end to end:
+`RankedVote`/`PointsVote` carry per-submission ranks/awards, `VoteCategory`
+gained `max_points`, and `SuggestResults` scores Borda (rank 1 = N-1, N = the
+number of distinct submissions that received votes) and points (sum of `value`).
+
+**The unique index moved and that is a real migration.**
+`index.Edges("category","voter")` became
+`index.Edges("category","voter","submission")` because a ranked ballot is
+several rows sharing a (category, voter). On a database that already holds
+votes, building the new index FAILS if duplicate (category, voter, submission)
+rows exist — none can exist under the old index, so the only hazard is a
+database where the old index was already absent or dropped by hand. The dev
+flow (`just schema-change`) wipes state and is unaffected.
+
+**One ballot per category is now the handler's job, not the DB's.** The index no
+longer says anything about a second ballot, so `SubmitVote` checks for existing
+(category, voter) rows and answers `AlreadyExists` itself, then clears and
+rewrites inside one transaction. That check is not race-proof the way a unique
+index was: two ballots submitted concurrently by the same voter could both pass
+it. A partial unique index on `(category, voter) WHERE vote_type =
+'single_choice'` would close it for single choice, but ent cannot express one,
+so it would have to be hand-written SQL outside the schema.
 - [x] B15 — implemented, not deleted, and all four now have a caller.
       `AddRole`/`RemoveRole` were the urgent half: `/manage/users` already
       shipped calling them, and its error handler does not catch

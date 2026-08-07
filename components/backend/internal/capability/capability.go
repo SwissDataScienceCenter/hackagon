@@ -183,14 +183,27 @@ func Advance(rows []AdvanceRow, target int) map[Capability]bool {
 	return out
 }
 
-// Allowed reports whether a mutation guarded by c may proceed.
+// Allowed reports whether a resolved state permits the action it guards.
 //
-// Note that ungoverned counts as allowed. Enforcement call sites must use this
-// rather than comparing against StateOpen, since that comparison would block
-// every capability that has no row yet — including on every hackathon created
-// before the capability was introduced.
+// Note that ungoverned counts as allowed. Callers must use this rather than
+// comparing against StateOpen, since that comparison would block every
+// capability that has no row yet — including on every hackathon created before
+// the capability was introduced.
+//
+// This is the one predicate for "is it on", and everything that needs a boolean
+// goes through it: enforcement via States.Allowed below, and the flat
+// HackathonState facade the API exposes for main's contract. A facade that
+// disagreed with the gate would tell a client it could do something the server
+// then refuses.
+func (s State) Allowed() bool {
+	return s == StateOpen || s == StateUngoverned
+}
+
+// Allowed reports whether a mutation guarded by c may proceed. An absent
+// capability is one this map has no opinion about, which is the ungoverned case
+// by another route.
 func (s States) Allowed(c Capability) bool {
 	state, ok := s[c]
 
-	return !ok || state == StateOpen || state == StateUngoverned
+	return !ok || state.Allowed()
 }

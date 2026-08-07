@@ -77,10 +77,41 @@ Two properties worth stating, because they are easy to get wrong:
   user is concerned; log the orphaned prefix loudly so it can be swept, and do
   not resurrect a hackathon because a bucket call timed out.
 
-## Not yet built
+## What is built
 
-The store itself and this design. Still to come: the `StorageService` RPCs
-(`CreateUploadUrl` / finalise), the limits, the delete-by-prefix calls in the
-two delete handlers, and one uploader in the UI — first for the event logo,
-because it is the smallest surface that proves the whole path, then reused for
-avatars, gallery photos and submissions.
+`storage.StorageService` — `CreateUploadUrl(kind, owner_id, filename,
+content_type, size_bytes)` and `CreateDownloadUrl(key)`. The `UploadKind` is
+the only placement input a client has; the backend derives the key, the
+content-type allowlist, the size ceiling and the authorization rule from it.
+Presigning is hand-rolled SigV4 in `components/backend/internal/storage` — no
+AWS SDK, because the algorithm is four HMACs and a string in a fixed order and
+this repo's Nix build pins a `vendorHash` that every new dependency invalidates.
+
+Two things are worth knowing because they are not obvious from the RPC names:
+
+- **The limits are signed headers, not checks.** `content-type` and
+  `content-length` are in `X-Amz-SignedHeaders`, so the store recomputes the
+  signature over what the browser actually sent. A body of the wrong length or
+  a different declared type is refused with 403 at the authentication stage —
+  which is what "refused before transfer" concretely means.
+- **Presigned URLs are root-relative** (`/objects/<bucket>/<key>?X-Amz-…`), and
+  the signature covers the OBJECT STORE's hostname, not the one the browser
+  used. Both proxies in front of it rewrite Host to the upstream — vite's
+  `changeOrigin`, and `header_up Host {upstream_hostport}` in
+  `.devcontainer/Caddyfile.tunnel`. Remove either and uploads answer
+  `SignatureDoesNotMatch` while public reads keep working, so the breakage is
+  invisible to anyone not uploading.
+
+`image/svg+xml` is deliberately NOT on any allowlist. `/objects` is the app's
+own origin — that is what makes stored paths portable — so an SVG there is
+script running as the application, with a stable URL.
+
+Delete-by-prefix runs in `HackathonService.Delete` and
+`UserService.DeleteAccount`, after the row is gone and unable to fail the
+delete, exactly as above.
+
+**Still to come:** the uploader exists for the event logo only — the smallest
+surface that proves the whole path — on the hackathon edit page. Avatars,
+gallery photos and submission attachments are all authorized and keyed by the
+service already; each needs only its own UI. `CreateDownloadUrl` likewise has
+no caller yet, because nothing uploads a private object to read back.

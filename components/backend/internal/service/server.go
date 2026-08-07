@@ -16,8 +16,10 @@ import (
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/health"
 	siteSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site"
+	storageSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage"
 	userSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	voteSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote"
+	objstore "github.com/swissdatasciencecenter/hackagon/components/backend/internal/storage"
 )
 
 // NewServer creates a gRPC server with all middleware, services, and registration.
@@ -62,10 +64,24 @@ func NewServer(
 		),
 	)
 
+	// Object store. Optional: with no endpoint configured (which is what the
+	// unit-test config does) the storage RPCs answer Unavailable and the two
+	// delete handlers skip their purge, rather than every test needing a
+	// bucket. New performs no I/O, so a store that is merely DOWN still lets
+	// the backend start — that failure belongs on the first upload, where
+	// someone can act on it.
+	var store *objstore.Client
+	if cfg.Storage.Endpoint != "" {
+		store, err = objstore.New(cfg.Storage)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("create storage client: %w", err)
+		}
+	}
+
 	// Create services
 	healthService := NewHealthService()
-	userService := NewUserService(dbClient, enf)
-	hackathonService := NewHackathonService(dbClient, enf)
+	userService := NewUserService(dbClient, enf, store)
+	hackathonService := NewHackathonService(dbClient, enf, store)
 	pageService := NewPageService(dbClient, enf)
 	phaseService := NewPhaseService(dbClient, enf)
 	trackService := NewTrackService(dbClient, enf)
@@ -75,6 +91,7 @@ func NewServer(
 	configService := NewConfigService(dbClient, enf)
 	prizeService := NewPrizeService(dbClient, enf)
 	sitePageService := NewSitePageService(dbClient, enf)
+	storageService := NewStorageService(dbClient, enf, store)
 
 	// Register services
 	health.RegisterHealthServiceServer(server, healthService)
@@ -89,6 +106,7 @@ func NewServer(
 	hackathonSvc.RegisterConfigServiceServer(server, configService)
 	hackathonSvc.RegisterPrizeServiceServer(server, prizeService)
 	siteSvc.RegisterSitePageServiceServer(server, sitePageService)
+	storageSvc.RegisterStorageServiceServer(server, storageService)
 	reflection.Register(server)
 
 	// Cleanup: shutdown the gRPC server

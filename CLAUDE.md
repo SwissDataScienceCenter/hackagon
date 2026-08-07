@@ -48,8 +48,8 @@ just up                 # start keycloak + postgres + backend via process-compos
 just down               # stop everything
 just refresh            # wipe state + regen ent + regen proto + tidy + install deps
 just seed               # populate dev hackathons, users, projects (see cmd/seed/README.md)
-just generate-proto     # buf generate — wipes codegen dirs first (prevents stale shadowing)
-just generate-db-schema # ent codegen + Schema.md
+just codegen::proto     # buf generate — wipes codegen dirs first (prevents stale shadowing)
+just codegen::db-schema # ent codegen + Schema.md
 just rpc-as <user> <password> <method> [json]   # authed grpcurl
 just rpc-unauth <method> [json]                 # unauthed grpcurl (health)
 ```
@@ -287,8 +287,8 @@ props so the row works for any badge text, not just status labels.
 - Don't edit generated code: `components/backend/internal/proto/**`,
   `components/backend/ent/**`,
   `components/frontend/src/lib/server/grpc/generated/**`, `api/proto/API.md`.
-  Regenerate via `just generate-proto` or `just generate-db-schema`.
-- Don't run `just generate-proto` outside the Nix shell — `buf` isn't in PATH.
+  Regenerate via `just codegen::proto` or `just codegen::db-schema`.
+- Don't run `just codegen::proto` outside the Nix shell — `buf` isn't in PATH.
   Either run it yourself, or stage proto changes and ask the user to regen.
 - Don't skip the casbin `Enforce` check on mutation handlers — follow the
   user_service.go pattern.

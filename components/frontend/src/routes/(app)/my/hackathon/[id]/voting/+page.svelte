@@ -7,14 +7,15 @@
 
     const { data, form } = $props();
 
-    // VotingMethod: SINGLE_CHOICE=1, RANKED=2, POINTS=3. A category may be
-    // defined with any of them, but SubmitVote only stores single-choice
-    // ballots — one Vote row per (category, voter) cannot hold a ranking.
+    // VotingMethod: SINGLE_CHOICE=1, RANKED=2, POINTS=3. All three are
+    // castable: a ranked or points ballot is stored as several Vote rows
+    // sharing a (category, voter).
     const METHODS = [
         { value: 1, label: 'Single choice' },
-        { value: 2, label: 'Ranked (not castable yet)' },
-        { value: 3, label: 'Points (not castable yet)' }
+        { value: 2, label: 'Ranked (Borda count)' },
+        { value: 3, label: 'Points (spread a budget)' }
     ];
+    const METHOD_POINTS = 3;
 
     // VoterType: ALL_PARTICIPANTS=1, JURY=2
     const VOTER_TYPES = [
@@ -236,6 +237,14 @@
                             </label>
                         </div>
                         <label>
+                            <span class="text-sm">Points budget per voter</span>
+                            <input name="maxPoints" type="number" min="1" class="field" />
+                            <span class="block text-meta text-ink-3">
+                                Points categories only, and required for them — a ballot may not
+                                spend more than this in total. Ignored by the other methods.
+                            </span>
+                        </label>
+                        <label>
                             <span class="text-sm">Jury (only used by jury categories)</span>
                             <select name="juryMemberIds" class="field" multiple size="4">
                                 {#each data.members as member (member.id)}
@@ -323,6 +332,20 @@
                                     </label>
                                 </div>
                                 <label>
+                                    <span class="text-sm">Points budget per voter</span>
+                                    <input
+                                        name="maxPoints"
+                                        type="number"
+                                        min="1"
+                                        class="field"
+                                        value={c.maxPoints || ''}
+                                    />
+                                    <span class="block text-meta text-ink-3">
+                                        Points categories only. Left blank, the current budget
+                                        stands.
+                                    </span>
+                                </label>
+                                <label>
                                     <span class="text-sm">Jury</span>
                                     <select name="juryMemberIds" class="field" multiple size="4">
                                         {#each data.members as member (member.id)}
@@ -357,10 +380,19 @@
                                         {#each c.tally as t (t.submissionId)}
                                             <li class="flex items-start justify-between gap-3 text-sm">
                                                 <span class="min-w-0 break-words">{t.label}</span>
-                                                <span class="badge badge-neutral shrink-0">{t.votes}</span>
+                                                <span class="badge badge-neutral shrink-0">{t.score}</span>
                                             </li>
                                         {/each}
                                     </ul>
+                                    <p class="text-meta text-ink-3">
+                                        {#if c.votingMethod === METHOD_POINTS}
+                                            Points awarded, summed across ballots.
+                                        {:else if c.votingMethod === 2}
+                                            Borda points, scored the way SuggestResults scores them.
+                                        {:else}
+                                            Ballots cast for each submission.
+                                        {/if}
+                                    </p>
                                 {/if}
                             </div>
 

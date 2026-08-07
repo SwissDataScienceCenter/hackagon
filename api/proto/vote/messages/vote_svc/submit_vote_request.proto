@@ -6,6 +6,8 @@ import "buf/validate/validate.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
 
+// One ballot. The variant chosen must match the category's voting_method or
+// the server refuses it.
 message SubmitVoteRequest {
   oneof vote {
     SingleChoiceVote single_choice = 1;
@@ -19,12 +21,25 @@ message SingleChoiceVote {
   string submission_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
+// Ranks are carried explicitly rather than implied by list order: the voter
+// types a number per submission, so a gap or a repeat is a mistake the server
+// has to be able to name instead of one the client silently normalises away.
 message RankedVote {
   string category_id = 1 [(buf.validate.field).string.uuid = true];
-  repeated string submission_ids = 2 [(buf.validate.field).repeated.items.string.uuid = true];
+  repeated RankedSubmission submissions = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message RankedSubmission {
+  string submission_id = 1 [(buf.validate.field).string.uuid = true];
+  int32 rank = 2 [(buf.validate.field).int32.gt = 0];
 }
 
 message PointsVote {
   string category_id = 1 [(buf.validate.field).string.uuid = true];
-  map<string, int32> points_granted = 2 [(buf.validate.field).map.keys.string.uuid = true];
+  repeated PointsSubmission submissions = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message PointsSubmission {
+  string submission_id = 1 [(buf.validate.field).string.uuid = true];
+  int32 points = 2 [(buf.validate.field).int32.gt = 0];
 }

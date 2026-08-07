@@ -7,5 +7,10 @@ import "vote/entities/vote.proto";
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote/messages/vote_svc";
 
 message SubmitVoteResponse {
+  // The first row of the accepted ballot — for single_choice that is the whole
+  // ballot, and callers that predate ranked/points keep working unchanged.
   vote.entities.Vote vote = 1;
+  // Every row the ballot produced: one for single_choice, N for ranked and
+  // points.
+  repeated vote.entities.Vote votes = 2;
 }

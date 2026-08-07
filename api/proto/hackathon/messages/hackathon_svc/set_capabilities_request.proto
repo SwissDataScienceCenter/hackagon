@@ -2,23 +2,25 @@ syntax = "proto3";
 
 package hackathon.messages.hackathon_svc;
 
-import "hackathon/entities/capability.proto";
+import "hackathon/entities/hackathon_state.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
 
 // Batch form of EditCapability: an organiser toggling several switches at once
 // is one intent, and one call keeps it atomic instead of a burst the UI has to
 // sequence and half-undo when one of them fails.
+//
+// This is also main's write side of `HackathonState`, field-for-field, so a
+// client written against main's contract can drive our capability rows. What it
+// does NOT do is what main's does next: main's SetCapabilities writes casbin
+// policy rows, and that enforcement path is deliberately not ported. Here the
+// booleans land on the stored `Capability` rows — true opens, false closes —
+// and `requireCapability` remains the only gate.
 message SetCapabilitiesRequest {
   string hackathon_id = 1;
-  repeated CapabilityToggle capabilities = 2;
-}
-
-// Named Toggle, not State, because `hackathon.entities.CapabilityState` is
-// already an enum here — COMING / OPEN / CLOSED / UNGOVERNED — and a message of
-// the same name would be a lie as well as a confusion: this carries a boolean
-// intent, not the four-state answer the server computes from it.
-message CapabilityToggle {
-  hackathon.entities.Capability capability = 1;
-  bool enabled = 2;
+  // `CapabilityToggle` is main's `CapabilityState` message, renamed because we
+  // already have an enum of that name in `hackathon.entities`. It lives in
+  // `entities/hackathon_state.proto` — shared with `HackathonState`, exactly as
+  // main shares it. The rename is invisible on the wire.
+  repeated hackathon.entities.CapabilityToggle capabilities = 2;
 }

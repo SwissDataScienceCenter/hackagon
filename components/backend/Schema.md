@@ -378,7 +378,7 @@ A versioned submission from a team for a project.
 | `project` | Project | M2O | yes | yes | The project this submission is for. |
 | `creator` | User | M2O | yes | yes | The user who created this submission. |
 | `modifier` | User | M2O | yes | no | The user who last modified this submission. |
-| `votes` | Vote | M2M | no | no | Votes cast on this submission. |
+| `votes` | Vote | O2M | no | no | Votes cast on this submission. |
 | `vote_results` | VoteResult | O2M | no | no | Vote results placing this submission. |
 
 ### Indexes
@@ -519,6 +519,8 @@ A single atomic judgment from one voter on one submission within one category.
 |--------|------|----------|--------|-----------|---------|-------------|
 | `vote_type` | enum(single_choice, ranked, points) | yes | no | no | no | Discriminator for the vote method. |
 | `value` | int | no | no | no | no | Rank position (ranked) or points awarded (points-based). Optional for single_choice. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the vote was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 
 ### Relationships
 
@@ -526,11 +528,11 @@ A single atomic judgment from one voter on one submission within one category.
 |------|--------|----------|---------|----------|-------------|
 | `category` | VoteCategory | M2O | yes | yes | The vote category this vote belongs to. |
 | `voter` | User | M2O | yes | yes | Keycloak user ID of the voter. |
-| `submission` | Submission | M2M | yes | no | The submission this vote is for. |
+| `submission` | Submission | M2O | yes | no | The submission this vote is for. |
 
 ### Indexes
 
-- `vote_category_votes, user_votes` *(unique)*
+- `vote_category_votes, user_votes, submission_votes` *(unique)*
 
 ## VoteCategory
 
@@ -544,6 +546,9 @@ A voting category within a hackathon, defining the criteria and rules for one di
 | `description` | string | no | no | no | no | Criteria and instructions for voters. |
 | `voting_method` | enum(single_choice, ranked, points) | yes | no | no | no | How votes are cast: single choice, ranked, or points-based. |
 | `voter_type` | enum(all_participants, jury) | yes | no | no | no | Who can vote: all participants or jury only. |
+| `max_points` | int | no | no | no | no | Maximum points a voter can distribute across submissions (points-based voting only). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the category was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 
 ### Relationships
 

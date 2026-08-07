@@ -20,4 +20,8 @@ message VoteCategory {
   repeated user.entities.User jury_members = 7;
   int64 created_at = 8;
   int64 modified_at = 9;
+  // Points-based voting only: the budget one voter may spread over the
+  // submissions. Absent for the other methods. Tag 10 rather than main's 7 —
+  // jury_members/created_at/modified_at already hold 7-9 here.
+  optional int32 max_points = 10;
 }

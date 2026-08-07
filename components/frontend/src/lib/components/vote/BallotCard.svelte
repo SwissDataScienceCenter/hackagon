@@ -13,11 +13,16 @@
             id: string;
             name: string;
             description: string;
+            /** VotingMethod: SINGLE_CHOICE=1, RANKED=2, POINTS=3. */
+            votingMethod: number;
+            /** Points budget, points categories only. */
+            maxPoints: number;
             methodLabel: string;
             voterTypeLabel: string;
             isJuryOnly: boolean;
             juryNames: string[];
-            myVoteSubmissionId: string;
+            /** The server confirmed a ballot from this account in this category. */
+            myBallotCast: boolean;
             myVoteLabel: string;
         };
         submissions: { id: string; label: string; status: string }[];
@@ -29,7 +34,24 @@
         justCast?: boolean;
     } = $props();
 
-    const decided = $derived(Boolean(category.myVoteSubmissionId) || alreadyVoted || justCast);
+    const RANKED = 2;
+    const POINTS = 3;
+
+    const decided = $derived(category.myBallotCast || alreadyVoted || justCast);
+
+    // One entry per submission, in the order they are rendered. Ranked starts
+    // blank so nothing is pre-ranked on the voter's behalf; points starts at
+    // zero because zero means "awarded nothing", which is a real answer.
+    let ranks = $state<string[]>([]);
+    let points = $state<number[]>([]);
+
+    $effect(() => {
+        if (ranks.length !== submissions.length) ranks = submissions.map(() => '');
+        if (points.length !== submissions.length) points = submissions.map(() => 0);
+    });
+
+    const spent = $derived(points.reduce((total, p) => total + (Number(p) || 0), 0));
+    const remaining = $derived(category.maxPoints - spent);
 </script>
 
 <section class="card flex flex-col gap-3 p-4">
@@ -92,24 +114,102 @@
             class="flex flex-col gap-3"
         >
             <input type="hidden" name="categoryId" value={category.id} />
-            <fieldset class="flex flex-col gap-2">
-                <legend class="text-sm font-medium">Pick one submission</legend>
-                {#each submissions as s (s.id)}
-                    <label class="flex items-start gap-2">
-                        <input
-                            type="radio"
-                            name="submissionId"
-                            value={s.id}
-                            class="radio mt-1 shrink-0"
-                            required
-                        />
-                        <span class="min-w-0">
-                            <span class="block break-words text-sm font-medium">{s.label}</span>
-                            <span class="block text-xs text-ink-3">{s.status}</span>
-                        </span>
-                    </label>
-                {/each}
-            </fieldset>
+            <input type="hidden" name="votingMethod" value={category.votingMethod} />
+
+            {#if category.votingMethod === RANKED}
+                <fieldset class="flex flex-col gap-2">
+                    <legend class="text-sm font-medium">
+                        Rank every submission, 1 first
+                    </legend>
+                    <p class="text-xs text-ink-3">
+                        Use each number from 1 to {submissions.length} exactly once. The server
+                        refuses a ballot with a gap or a repeat rather than guessing what you
+                        meant.
+                    </p>
+                    {#each submissions as s, i (s.id)}
+                        <label class="flex items-start gap-2">
+                            <input type="hidden" name="submissionId" value={s.id} />
+                            <input
+                                type="number"
+                                name="rank"
+                                class="field w-20 shrink-0"
+                                min="1"
+                                max={submissions.length}
+                                step="1"
+                                required
+                                aria-label="Rank for {s.label}"
+                                bind:value={ranks[i]}
+                            />
+                            <span class="min-w-0">
+                                <span class="block break-words text-sm font-medium">{s.label}</span>
+                                <span class="block text-xs text-ink-3">{s.status}</span>
+                            </span>
+                        </label>
+                    {/each}
+                </fieldset>
+            {:else if category.votingMethod === POINTS}
+                <fieldset class="flex flex-col gap-2">
+                    <legend class="text-sm font-medium">
+                        Spread your points across the submissions
+                    </legend>
+                    <p
+                        class="rounded p-2 text-sm {remaining < 0
+                            ? 'badge-warning'
+                            : 'badge-neutral'}"
+                        aria-live="polite"
+                    >
+                        {#if remaining < 0}
+                            {-remaining} points over the limit of {category.maxPoints} — the server
+                            will refuse this ballot.
+                        {:else}
+                            {remaining} of {category.maxPoints} points remaining.
+                        {/if}
+                    </p>
+                    {#each submissions as s, i (s.id)}
+                        <label class="flex items-start gap-2">
+                            <input type="hidden" name="submissionId" value={s.id} />
+                            <input
+                                type="number"
+                                name="points"
+                                class="field w-24 shrink-0"
+                                min="0"
+                                max={category.maxPoints}
+                                step="1"
+                                aria-label="Points for {s.label}"
+                                bind:value={points[i]}
+                            />
+                            <span class="min-w-0">
+                                <span class="block break-words text-sm font-medium">{s.label}</span>
+                                <span class="block text-xs text-ink-3">{s.status}</span>
+                            </span>
+                        </label>
+                    {/each}
+                    <p class="text-xs text-ink-3">
+                        Leave a submission at zero to award it nothing — only positive awards are
+                        recorded.
+                    </p>
+                </fieldset>
+            {:else}
+                <fieldset class="flex flex-col gap-2">
+                    <legend class="text-sm font-medium">Pick one submission</legend>
+                    {#each submissions as s (s.id)}
+                        <label class="flex items-start gap-2">
+                            <input
+                                type="radio"
+                                name="submissionId"
+                                value={s.id}
+                                class="radio mt-1 shrink-0"
+                                required
+                            />
+                            <span class="min-w-0">
+                                <span class="block break-words text-sm font-medium">{s.label}</span>
+                                <span class="block text-xs text-ink-3">{s.status}</span>
+                            </span>
+                        </label>
+                    {/each}
+                </fieldset>
+            {/if}
+
             <div>
                 <button class="btn btn-sm btn-accent">Cast ballot</button>
             </div>

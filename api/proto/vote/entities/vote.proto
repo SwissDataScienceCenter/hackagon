@@ -19,14 +19,21 @@ message Vote {
   int64 modified_at = 8;
 }
 
+// Each variant describes ONE stored row, because a Vote row is one judgment on
+// one submission (see the schema comment). A ranked or points ballot is
+// therefore several Vote entities, one per submission, all sharing a category
+// and a voter — SubmitVoteResponse.votes hands the whole set back.
 message SingleChoiceVote {
   string submission_id = 1;
 }
 
 message RankedVote {
-  repeated string submission_ids = 1;
+  string submission_id = 1;
+  // 1 is the voter's first preference.
+  int32 rank = 2;
 }
 
 message PointsVote {
-  map<string, int32> points_granted = 1;
+  string submission_id = 1;
+  int32 points = 2;
 }

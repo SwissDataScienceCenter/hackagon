@@ -10,6 +10,7 @@ import "hackathon/entities/hackathon_branding.proto";
 import "hackathon/entities/hackathon_voting_policy.proto";
 import "hackathon/entities/hackathon_member.proto";
 import "hackathon/entities/hackathon_settings.proto";
+import "hackathon/entities/hackathon_state.proto";
 import "hackathon/entities/hackathon_status.proto";
 import "hackathon/entities/page.proto";
 import "hackathon/entities/phase.proto";
@@ -84,4 +85,17 @@ message Hackathon {
   // by: "may I vote for my own team" is a voter's question. Absent when the
   // organizer set no policy, which means the backend's defaults.
   optional HackathonVotingPolicy voting_policy = 26;
+  // A FAÇADE over `capabilities` above, in main's flat boolean shape — see
+  // `hackathon_state.proto`. Nothing is stored for it and nothing enforces from
+  // it; it is `capabilities` projected through
+  // `state == OPEN || state == UNGOVERNED`, plus `current_phase_id`.
+  //
+  // Populated wherever `capabilities` is, which is Get AND List: a facade that
+  // appeared on only one of them would be a worse contract than no facade.
+  //
+  // Tag 27 because main's 19 is our `settings` and 1-26 are all in use here.
+  // A main client therefore finds `state` at a different number than it expects
+  // — the shape is compatible, the address on this message is not, and
+  // renumbering shipped fields to fix that would break every caller we have.
+  HackathonState state = 27;
 }

@@ -15,6 +15,8 @@ import (
 	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
 	enthackathonsettings "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonsettings"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
+	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
@@ -74,6 +76,20 @@ func votingMethodFromEnt(v votecategoryMethod) voteEnts.VotingMethod {
 	}
 }
 
+// voteTypeForMethod names the row discriminator a category's method produces.
+// The two enums are separate ent types with the same three values, so the
+// mapping is written out rather than cast.
+func voteTypeForMethod(v votecategoryMethod) entvote.VoteType {
+	switch v {
+	case entvotecategory.VotingMethodRanked:
+		return entvote.VoteTypeRanked
+	case entvotecategory.VotingMethodPoints:
+		return entvote.VoteTypePoints
+	default:
+		return entvote.VoteTypeSingleChoice
+	}
+}
+
 func voterTypeToEnt(v voteEnts.VoterType) (votecategoryVoter, bool) {
 	switch v {
 	case voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS:
@@ -105,8 +121,7 @@ type (
 // ─── Entity mappers ──────────────────────────────────────────────────
 
 // voteCategoryEntryFromEnt maps an ent VoteCategory (with Hackathon and
-// JuryMembers eager-loaded) to its proto entity. The vote schema carries no
-// timestamp columns, so created_at/modified_at stay zero.
+// JuryMembers eager-loaded) to its proto entity.
 func voteCategoryEntryFromEnt(c *ent.VoteCategory) *voteEnts.VoteCategory {
 	entry := &voteEnts.VoteCategory{
 		Id:           c.ID.String(),
@@ -114,6 +129,14 @@ func voteCategoryEntryFromEnt(c *ent.VoteCategory) *voteEnts.VoteCategory {
 		Description:  c.Description,
 		VotingMethod: votingMethodFromEnt(c.VotingMethod),
 		VoterType:    voterTypeFromEnt(c.VoterType),
+		CreatedAt:    c.CreatedAt.Unix(),
+		ModifiedAt:   c.ModifiedAt.Unix(),
+	}
+	// Optional, not Nillable, so zero is how "no budget" reaches us — and a
+	// budget of zero would be a category nobody can vote in anyway.
+	if c.MaxPoints > 0 {
+		maxPoints := int32(c.MaxPoints)
+		entry.MaxPoints = &maxPoints
 	}
 	if c.Edges.Hackathon != nil {
 		entry.HackathonId = c.Edges.Hackathon.ID.String()
@@ -224,6 +247,10 @@ func (s *VoteService) CreateVoteCategory(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid jury_member_ids: %v", err)
 	}
+	maxPoints, err := resolveMaxPoints(method, req.MaxPoints, 0)
+	if err != nil {
+		return nil, err
+	}
 
 	create := s.dbClient.VoteCategory.Create().
 		SetHackathonID(hackathonID).
@@ -231,6 +258,7 @@ func (s *VoteService) CreateVoteCategory(
 		SetDescription(req.GetDescription()).
 		SetVotingMethod(method).
 		SetVoterType(voter).
+		SetMaxPoints(maxPoints).
 		AddJuryMemberIDs(juryIDs...)
 	created, err := create.Save(ctx)
 	if err != nil {
@@ -275,13 +303,23 @@ func (s *VoteService) EditVoteCategory(
 	if req.Description != nil {
 		update.SetDescription(req.GetDescription())
 	}
+	method := c.VotingMethod
 	if req.VotingMethod != nil {
-		method, ok := votingMethodToEnt(req.GetVotingMethod())
+		requested, ok := votingMethodToEnt(req.GetVotingMethod())
 		if !ok {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid voting_method")
 		}
+		if err := s.methodChangeAllowed(ctx, id, c.VotingMethod, requested); err != nil {
+			return nil, err
+		}
+		method = requested
 		update.SetVotingMethod(method)
 	}
+	maxPoints, err := resolveMaxPoints(method, req.MaxPoints, c.MaxPoints)
+	if err != nil {
+		return nil, err
+	}
+	update.SetMaxPoints(maxPoints)
 	if req.VoterType != nil {
 		voter, ok := voterTypeToEnt(req.GetVoterType())
 		if !ok {
@@ -315,6 +353,34 @@ func (s *VoteService) EditVoteCategory(
 	return &voteMsgs.EditVoteCategoryResponse{VoteCategory: voteCategoryEntryFromEnt(updated)}, nil
 }
 
+// methodChangeAllowed refuses to re-shape a category people have already voted
+// in. Ballots are cast in the shape the method dictates: a ranked row means
+// nothing under points scoring, and a category holding two kinds of row tallies
+// to nonsense. Deleting the category is the explicit way to throw ballots away.
+func (s *VoteService) methodChangeAllowed(
+	ctx context.Context,
+	categoryID uuid.UUID,
+	current, requested votecategoryMethod,
+) error {
+	if requested == current {
+		return nil
+	}
+	cast, err := s.dbClient.Vote.Query().
+		Where(entvote.HasCategoryWith(entvotecategory.IDEQ(categoryID))).
+		Exist(ctx)
+	if err != nil {
+		slog.Error("query votes for method change", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if cast {
+		return status.Error(codes.FailedPrecondition,
+			"ballots have already been cast in this category — its voting method cannot change")
+	}
+
+	return nil
+}
+
 func (s *VoteService) DeleteVoteCategory(
 	ctx context.Context,
 	req *voteMsgs.DeleteVoteCategoryRequest,
@@ -343,32 +409,241 @@ func (s *VoteService) DeleteVoteCategory(
 
 // ─── Voting ──────────────────────────────────────────────────────────
 
-// voteEntryFromEnt maps an ent Vote (with Category, Voter, Submissions
-// eager-loaded) to its proto entity.
+// voteEntryFromEnt maps an ent Vote (with Category, Voter, Submission
+// eager-loaded) to its proto entity. One row is one judgment on one submission,
+// so a ranked or points ballot maps to several of these.
 func voteEntryFromEnt(v *ent.Vote) *voteEnts.Vote {
-	entry := &voteEnts.Vote{Id: v.ID.String()}
+	entry := &voteEnts.Vote{
+		Id:         v.ID.String(),
+		CreatedAt:  v.CreatedAt.Unix(),
+		ModifiedAt: v.ModifiedAt.Unix(),
+	}
 	if v.Edges.Category != nil {
 		entry.CategoryId = v.Edges.Category.ID.String()
 	}
 	if v.Edges.Voter != nil {
 		entry.VoterId = v.Edges.Voter.ID.String()
 	}
-	if v.VoteType == entvote.VoteTypeSingleChoice && len(v.Edges.Submission) > 0 {
+	if v.Edges.Submission == nil {
+		return entry
+	}
+	submissionID := v.Edges.Submission.ID.String()
+	value := int32(v.Value)
+	switch v.VoteType {
+	case entvote.VoteTypeSingleChoice:
 		entry.Vote = &voteEnts.Vote_SingleChoice{
-			SingleChoice: &voteEnts.SingleChoiceVote{
-				SubmissionId: v.Edges.Submission[0].ID.String(),
-			},
+			SingleChoice: &voteEnts.SingleChoiceVote{SubmissionId: submissionID},
+		}
+	case entvote.VoteTypeRanked:
+		entry.Vote = &voteEnts.Vote_Ranked{
+			Ranked: &voteEnts.RankedVote{SubmissionId: submissionID, Rank: value},
+		}
+	case entvote.VoteTypePoints:
+		entry.Vote = &voteEnts.Vote_Points{
+			Points: &voteEnts.PointsVote{SubmissionId: submissionID, Points: value},
 		}
 	}
 
 	return entry
 }
 
+// ballotLine is one row a ballot will produce: which submission, and the rank
+// or point award attached to it (zero for single_choice).
+type ballotLine struct {
+	submissionID uuid.UUID
+	value        int
+}
+
+// parseBallot pulls the category, the method and the rows out of whichever
+// oneof variant the caller filled in. It does not consult the category — the
+// caller does that, because refusing a ballot for the wrong method needs the
+// category loaded first.
+func parseBallot(
+	req *voteMsgs.SubmitVoteRequest,
+) (uuid.UUID, entvote.VoteType, []ballotLine, error) {
+	fail := func(format string, args ...any) (uuid.UUID, entvote.VoteType, []ballotLine, error) {
+		return uuid.Nil, "", nil, status.Errorf(codes.InvalidArgument, format, args...)
+	}
+
+	switch v := req.GetVote().(type) {
+	case *voteMsgs.SubmitVoteRequest_SingleChoice:
+		categoryID, err := uuid.Parse(v.SingleChoice.GetCategoryId())
+		if err != nil {
+			return fail("invalid category_id: %v", err)
+		}
+		submissionID, err := uuid.Parse(v.SingleChoice.GetSubmissionId())
+		if err != nil {
+			return fail("invalid submission_id: %v", err)
+		}
+
+		return categoryID, entvote.VoteTypeSingleChoice,
+			[]ballotLine{{submissionID: submissionID, value: 0}}, nil
+
+	case *voteMsgs.SubmitVoteRequest_Ranked:
+		categoryID, err := uuid.Parse(v.Ranked.GetCategoryId())
+		if err != nil {
+			return fail("invalid category_id: %v", err)
+		}
+		lines := make([]ballotLine, 0, len(v.Ranked.GetSubmissions()))
+		for _, entry := range v.Ranked.GetSubmissions() {
+			submissionID, err := uuid.Parse(entry.GetSubmissionId())
+			if err != nil {
+				return fail("invalid submission_id: %v", err)
+			}
+			lines = append(lines, ballotLine{
+				submissionID: submissionID,
+				value:        int(entry.GetRank()),
+			})
+		}
+
+		return categoryID, entvote.VoteTypeRanked, lines, nil
+
+	case *voteMsgs.SubmitVoteRequest_Points:
+		categoryID, err := uuid.Parse(v.Points.GetCategoryId())
+		if err != nil {
+			return fail("invalid category_id: %v", err)
+		}
+		lines := make([]ballotLine, 0, len(v.Points.GetSubmissions()))
+		for _, entry := range v.Points.GetSubmissions() {
+			submissionID, err := uuid.Parse(entry.GetSubmissionId())
+			if err != nil {
+				return fail("invalid submission_id: %v", err)
+			}
+			lines = append(lines, ballotLine{
+				submissionID: submissionID,
+				value:        int(entry.GetPoints()),
+			})
+		}
+
+		return categoryID, entvote.VoteTypePoints, lines, nil
+
+	default:
+		return fail("a ballot must carry single_choice, ranked or points")
+	}
+}
+
+// validateBallot applies the rules that belong to the method itself. Anything
+// needing the database (does this submission belong to the event, has this
+// voter already voted) is checked by the caller.
+func validateBallot(c *ent.VoteCategory, method entvote.VoteType, lines []ballotLine) error {
+	if len(lines) == 0 {
+		return status.Error(codes.InvalidArgument, "a ballot must name at least one submission")
+	}
+	// A submission twice in one ballot is a double vote wearing a ranking.
+	seen := make(map[uuid.UUID]struct{}, len(lines))
+	for _, l := range lines {
+		if _, dup := seen[l.submissionID]; dup {
+			return status.Errorf(codes.InvalidArgument,
+				"submission %s appears twice in the same ballot", l.submissionID)
+		}
+		seen[l.submissionID] = struct{}{}
+	}
+
+	switch method {
+	case entvote.VoteTypeSingleChoice:
+		if len(lines) != 1 {
+			return status.Error(codes.InvalidArgument,
+				"a single_choice ballot names exactly one submission")
+		}
+
+	case entvote.VoteTypeRanked:
+		// Ranks must be a contiguous 1..N. A gap or a repeat makes Borda count
+		// something the voter did not mean: with N submissions ranked 1,1,3 two
+		// of them share a first preference that only one voter cast.
+		ranks := make([]int, 0, len(lines))
+		for _, l := range lines {
+			ranks = append(ranks, l.value)
+		}
+		sort.Ints(ranks)
+		for i, r := range ranks {
+			if r != i+1 {
+				return status.Errorf(codes.InvalidArgument,
+					"ranks must be 1..%d with no gaps and no repeats", len(lines))
+			}
+		}
+
+	case entvote.VoteTypePoints:
+		if c.MaxPoints <= 0 {
+			return status.Error(codes.FailedPrecondition,
+				"this points category has no points budget — an organizer must set max_points")
+		}
+		total := 0
+		for _, l := range lines {
+			if l.value <= 0 {
+				return status.Error(codes.InvalidArgument,
+					"every points award must be greater than zero")
+			}
+			total += l.value
+		}
+		if total > c.MaxPoints {
+			return status.Errorf(codes.InvalidArgument,
+				"this ballot spends %d points but the category allows %d", total, c.MaxPoints)
+		}
+	}
+
+	return nil
+}
+
+// submissionsInHackathon refuses a ballot naming a submission from another
+// event. A submission belongs to a hackathon through its project.
+func (s *VoteService) submissionsInHackathon(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	lines []ballotLine,
+) error {
+	ids := make([]uuid.UUID, 0, len(lines))
+	for _, l := range lines {
+		ids = append(ids, l.submissionID)
+	}
+	found, err := s.dbClient.Submission.Query().
+		Where(
+			entsubmission.IDIn(ids...),
+			entsubmission.HasProjectWith(entproject.HasHackathonWith(enthackathon.IDEQ(hackathonID))),
+		).
+		Count(ctx)
+	if err != nil {
+		slog.Error("query ballot submissions", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if found != len(ids) {
+		return status.Error(codes.InvalidArgument,
+			"a ballot may only name submissions from this hackathon")
+	}
+
+	return nil
+}
+
+// resolveMaxPoints decides what max_points a category should carry given the
+// method it will have. Points categories must have a positive budget or nobody
+// can cast a valid ballot; the other methods carry none.
+func resolveMaxPoints(
+	method votecategoryMethod,
+	requested *int32,
+	current int,
+) (int, error) {
+	if method != entvotecategory.VotingMethodPoints {
+		return 0, nil
+	}
+	effective := current
+	if requested != nil {
+		effective = int(*requested)
+	}
+	if effective <= 0 {
+		return 0, status.Error(codes.InvalidArgument,
+			"points categories need max_points greater than zero")
+	}
+
+	return effective, nil
+}
+
 // SubmitVote casts one ballot. The voter must be a confirmed participant of
 // the category's hackathon (organizers/admins are NOT exempt — voting is a
 // participant act), voting must be open (settings.voting_enabled), and for
 // jury categories the voter must be on the jury. One ballot per voter per
-// category — the DB unique index turns double votes into AlreadyExists.
+// category, which the handler now enforces itself: a ranked ballot is several
+// rows sharing a (category, voter), so the unique index moved down to the
+// submission and can no longer say "you already voted".
 // votingPolicy is the organizer's ruling, as SetVotingPolicy stored it.
 //
 // Every field defaults to the behaviour that was hard-coded before this read
@@ -406,6 +681,106 @@ func (s *VoteService) votingPolicyFor(ctx context.Context, hackathonID uuid.UUID
 	return p
 }
 
+// mayVote answers whether this voter is allowed to cast this ballot in this
+// category: jury membership for jury categories, and for everyone else the
+// organizer's own ruling plus confirmed participation.
+func (s *VoteService) mayVote(
+	ctx context.Context,
+	c *ent.VoteCategory,
+	uid string,
+	voter *ent.User,
+	lines []ballotLine,
+) error {
+	hackathonID := c.Edges.Hackathon.ID
+
+	if c.VoterType == entvotecategory.VoterTypeJury {
+		for _, j := range c.Edges.JuryMembers {
+			if j.ID == voter.ID {
+				return nil
+			}
+		}
+
+		return status.Error(codes.PermissionDenied, "only jury members may vote in this category")
+	}
+
+	// The organizer's own ruling, not a constant. Both fields were stored by
+	// SetVotingPolicy and then never read: organizerVoting was hard-coded here
+	// and ownTeamVoting was enforced nowhere at all, so an event that set either
+	// one got no effect from it.
+	policy := s.votingPolicyFor(ctx, hackathonID)
+
+	// Organizers are neutral by default: whoever runs the event does not also
+	// vote in it. An event that says otherwise may.
+	if !policy.organizerVoting && s.isOrganizer(uid, hackathonID) {
+		return status.Error(codes.PermissionDenied, "organizers do not vote")
+	}
+
+	// Voting for the submission of a team you are on. Allowed unless the event
+	// forbids it — a small hackathon where everyone knows everyone often wants
+	// it, and a competitive one does not.
+	if !policy.ownTeamVoting {
+		ids := make([]uuid.UUID, 0, len(lines))
+		for _, l := range lines {
+			ids = append(ids, l.submissionID)
+		}
+		ownTeam, err := s.dbClient.Submission.Query().
+			Where(
+				entsubmission.IDIn(ids...),
+				entsubmission.HasTeamWith(entteam.HasMembersWith(entuser.IDEQ(voter.ID))),
+			).
+			Exist(ctx)
+		if err != nil {
+			slog.Error("query own-team submission", "err", err)
+
+			return status.Error(codes.Internal, "couldn't query database")
+		}
+		if ownTeam {
+			return status.Error(codes.PermissionDenied,
+				"this event does not allow voting for your own team's submission")
+		}
+	}
+
+	confirmed, err := s.dbClient.Participant.Query().
+		Where(
+			entparticipant.HasUserWith(entuser.IDEQ(voter.ID)),
+			entparticipant.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+			entparticipant.IsWaiting(false),
+		).
+		Exist(ctx)
+	if err != nil {
+		slog.Error("query participant", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if !confirmed {
+		return status.Error(codes.PermissionDenied, "only confirmed participants may vote")
+	}
+
+	return nil
+}
+
+// isOrganizer is true for a hackathon Owner and for a global Admin. A role
+// lookup that errors is read as "not an organizer": the participant check
+// below is the one that has to hold, and a casbin hiccup must not hand someone
+// a ballot they would otherwise be refused.
+func (s *VoteService) isOrganizer(uid string, hackathonID uuid.UUID) bool {
+	if role, err := s.enforcer.GetHackathonRole(uid, hackathonID.String()); err == nil &&
+		role == hackEnts.HackathonRole_HACKATHON_ROLE_OWNER {
+		return true
+	}
+	globals, err := s.enforcer.GetGlobalRoles(uid)
+	if err != nil {
+		return false
+	}
+	for _, g := range globals {
+		if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (s *VoteService) SubmitVote(
 	ctx context.Context,
 	req *voteMsgs.SubmitVoteRequest,
@@ -418,26 +793,22 @@ func (s *VoteService) SubmitVote(
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
 
-	sc := req.GetSingleChoice()
-	if sc == nil {
-		// The Vote schema stores one row per (category, voter); ranked and
-		// points ballots need multiple rows and cannot be persisted until the
-		// schema decision lands (see #78 review). NOT Unimplemented — the
-		// capability probe reads that code as "RPC does not exist".
-		return nil, status.Error(codes.InvalidArgument,
-			"only single_choice ballots are accepted for now")
-	}
-	categoryID, err := uuid.Parse(sc.GetCategoryId())
+	categoryID, method, lines, err := parseBallot(req)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id: %v", err)
-	}
-	submissionID, err := uuid.Parse(sc.GetSubmissionId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid submission_id: %v", err)
+		return nil, err
 	}
 
 	c, err := s.categoryWithHackathon(ctx, categoryID)
 	if err != nil {
+		return nil, err
+	}
+	// The organizer picks the method; the ballot has to be cast in it. A ranked
+	// payload against a single_choice category is a client bug, not a vote.
+	if want := voteTypeForMethod(c.VotingMethod); want != method {
+		return nil, status.Errorf(codes.InvalidArgument,
+			"this category takes %s ballots, not %s", want, method)
+	}
+	if err := validateBallot(c, method, lines); err != nil {
 		return nil, err
 	}
 	hackathonID := c.Edges.Hackathon.ID
@@ -473,101 +844,120 @@ func (s *VoteService) SubmitVote(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	if c.VoterType == entvotecategory.VoterTypeJury {
-		onJury := false
-		for _, j := range c.Edges.JuryMembers {
-			if j.ID == voter.ID {
-				onJury = true
-
-				break
-			}
-		}
-		if !onJury {
-			return nil, status.Error(codes.PermissionDenied, "only jury members may vote in this category")
-		}
-	} else {
-		// The organizer's own ruling, not a constant. Both fields were stored by
-		// SetVotingPolicy and then never read: organizerVoting was hard-coded
-		// here and ownTeamVoting was enforced nowhere at all, so an event that
-		// set either one got no effect from it.
-		policy := s.votingPolicyFor(ctx, hackathonID)
-
-		// Organizers are neutral by default: whoever runs the event does not
-		// also vote in it. An event that says otherwise may.
-		if !policy.organizerVoting {
-			if role, err := s.enforcer.GetHackathonRole(uid, hackathonID.String()); err == nil &&
-				role == hackEnts.HackathonRole_HACKATHON_ROLE_OWNER {
-				return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
-			}
-			if globals, err := s.enforcer.GetGlobalRoles(uid); err == nil {
-				for _, g := range globals {
-					if g == userEnts.GlobalRole_GLOBAL_ROLE_ADMIN {
-						return nil, status.Error(codes.PermissionDenied, "organizers do not vote")
-					}
-				}
-			}
-		}
-
-		// Voting for the submission of a team you are on. Allowed unless the
-		// event forbids it — a small hackathon where everyone knows everyone
-		// often wants it, and a competitive one does not.
-		if !policy.ownTeamVoting {
-			ownTeam, err := s.dbClient.Submission.Query().
-				Where(
-					entsubmission.IDEQ(submissionID),
-					entsubmission.HasTeamWith(entteam.HasMembersWith(entuser.IDEQ(voter.ID))),
-				).
-				Exist(ctx)
-			if err != nil {
-				slog.Error("query own-team submission", "err", err)
-
-				return nil, status.Error(codes.Internal, "couldn't query database")
-			}
-			if ownTeam {
-				return nil, status.Error(codes.PermissionDenied,
-					"this event does not allow voting for your own team's submission")
-			}
-		}
-
-		confirmed, err := s.dbClient.Participant.Query().
-			Where(
-				entparticipant.HasUserWith(entuser.IDEQ(voter.ID)),
-				entparticipant.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
-				entparticipant.IsWaiting(false),
-			).
-			Exist(ctx)
-		if err != nil {
-			slog.Error("query participant", "err", err)
-
-			return nil, status.Error(codes.Internal, "couldn't query database")
-		}
-		if !confirmed {
-			return nil, status.Error(codes.PermissionDenied,
-				"only confirmed participants may vote")
-		}
+	if err := s.mayVote(ctx, c, uid, voter, lines); err != nil {
+		return nil, err
 	}
 
-	created, err := s.dbClient.Vote.Create().
-		SetCategoryID(categoryID).
-		SetVoterID(voter.ID).
-		AddSubmissionIDs(submissionID).
-		SetVoteType(entvote.VoteTypeSingleChoice).
-		Save(ctx)
-	if err != nil {
-		if ent.IsConstraintError(err) {
-			return nil, status.Error(codes.AlreadyExists, "already voted in this category")
-		}
-		slog.Error("create vote", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't create vote")
+	// Every submission on the ballot has to be this event's. The unique index
+	// used to make voting for a foreign submission merely odd; nothing ever
+	// refused it.
+	if err := s.submissionsInHackathon(ctx, hackathonID, lines); err != nil {
+		return nil, err
 	}
 
-	v, err := s.voteByID(ctx, created.ID)
+	written, err := s.writeBallot(ctx, c, voter.ID, method, lines)
 	if err != nil {
 		return nil, err
 	}
 
-	return &voteMsgs.SubmitVoteResponse{Vote: voteEntryFromEnt(v)}, nil
+	entries := make([]*voteEnts.Vote, 0, len(written))
+	for _, v := range written {
+		entries = append(entries, voteEntryFromEnt(v))
+	}
+	if len(entries) == 0 {
+		return nil, status.Error(codes.Internal, "the ballot recorded no votes")
+	}
+
+	return &voteMsgs.SubmitVoteResponse{Vote: entries[0], Votes: entries}, nil
+}
+
+// writeBallot is where "one ballot per voter per category" now lives. The DB
+// index guards (category, voter, submission) so that one voter cannot rank the
+// same submission twice; it says nothing at all about a SECOND ballot, which
+// used to come back as AlreadyExists for free.
+//
+// So: refuse outright if this voter already has rows in this category, then
+// clear and rewrite inside one transaction. The delete is what keeps the
+// invariant true if rows ever survive a half-written ballot — without it a
+// retry would stack a second ballot on top of the first.
+func (s *VoteService) writeBallot(
+	ctx context.Context,
+	c *ent.VoteCategory,
+	voterID uuid.UUID,
+	method entvote.VoteType,
+	lines []ballotLine,
+) ([]*ent.Vote, error) {
+	mine := []predicate.Vote{
+		entvote.HasCategoryWith(entvotecategory.IDEQ(c.ID)),
+		entvote.HasVoterWith(entuser.IDEQ(voterID)),
+	}
+	voted, err := s.dbClient.Vote.Query().Where(mine...).Exist(ctx)
+	if err != nil {
+		slog.Error("query existing ballot", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if voted {
+		return nil, status.Error(codes.AlreadyExists, "already voted in this category")
+	}
+
+	txn, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		slog.Error("start transaction", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't start transaction")
+	}
+	fail := func(err error, msg string) ([]*ent.Vote, error) {
+		_ = txn.Rollback()
+		if ent.IsConstraintError(err) {
+			return nil, status.Error(codes.AlreadyExists, "already voted in this category")
+		}
+		slog.Error(msg, "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't record ballot")
+	}
+
+	if _, err := txn.Vote.Delete().Where(mine...).Exec(ctx); err != nil {
+		return fail(err, "clear previous ballot")
+	}
+
+	written := make([]*ent.Vote, 0, len(lines))
+	for _, l := range lines {
+		create := txn.Vote.Create().
+			SetCategoryID(c.ID).
+			SetVoterID(voterID).
+			SetSubmissionID(l.submissionID).
+			SetVoteType(method)
+		// single_choice carries no value, and the schema hook rejects a
+		// non-positive one on the other two.
+		if method != entvote.VoteTypeSingleChoice {
+			create.SetValue(l.value)
+		}
+		row, err := create.Save(ctx)
+		if err != nil {
+			return fail(err, "create vote")
+		}
+		written = append(written, row)
+	}
+
+	if err := txn.Commit(); err != nil {
+		slog.Error("commit ballot", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't record ballot")
+	}
+
+	// Read back through the normal path so the response carries the same edges
+	// every other vote read does.
+	out := make([]*ent.Vote, 0, len(written))
+	for _, row := range written {
+		v, err := s.voteByID(ctx, row.ID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+
+	return out, nil
 }
 
 func (s *VoteService) voteByID(ctx context.Context, id uuid.UUID) (*ent.Vote, error) {
@@ -694,18 +1084,22 @@ func (s *VoteService) ExportVotes(
 		VoterID      string `json:"voter_id"`
 		SubmissionID string `json:"submission_id"`
 		VoteType     string `json:"vote_type"`
+		// Rank for ranked ballots, points awarded for points ballots, 0 for
+		// single choice. Without it an export of a ranked category was a list of
+		// names with the ranking stripped out.
+		Value int `json:"value"`
 	}
 	rows := make([]row, 0, len(votes))
 	for _, v := range votes {
-		r := row{ID: v.ID.String(), VoteType: string(v.VoteType)}
+		r := row{ID: v.ID.String(), VoteType: string(v.VoteType), Value: v.Value}
 		if v.Edges.Category != nil {
 			r.CategoryID = v.Edges.Category.ID.String()
 		}
 		if v.Edges.Voter != nil {
 			r.VoterID = v.Edges.Voter.ID.String()
 		}
-		if len(v.Edges.Submission) > 0 {
-			r.SubmissionID = v.Edges.Submission[0].ID.String()
+		if v.Edges.Submission != nil {
+			r.SubmissionID = v.Edges.Submission.ID.String()
 		}
 		rows = append(rows, r)
 	}
@@ -723,9 +1117,11 @@ func (s *VoteService) ExportVotes(
 	case voteMsgs.ExportFormat_EXPORT_FORMAT_CSV:
 		var buf bytes.Buffer
 		w := csv.NewWriter(&buf)
-		_ = w.Write([]string{"id", "category_id", "voter_id", "submission_id", "vote_type"})
+		_ = w.Write([]string{"id", "category_id", "voter_id", "submission_id", "vote_type", "value"})
 		for _, r := range rows {
-			_ = w.Write([]string{r.ID, r.CategoryID, r.VoterID, r.SubmissionID, r.VoteType})
+			_ = w.Write([]string{
+				r.ID, r.CategoryID, r.VoterID, r.SubmissionID, r.VoteType, strconv.Itoa(r.Value),
+			})
 		}
 		w.Flush()
 
@@ -953,9 +1349,7 @@ func (s *VoteService) DeleteVoteResult(
 // it existed the count lived nowhere — placements were typed in by hand from an
 // export, which is the easiest possible place to get "who won" quietly wrong.
 //
-// Only single choice is tallied, because only single-choice ballots can be
-// cast: SubmitVote refuses ranked and points outright. When those land, this is
-// where their scoring goes.
+// All three methods are scored; scoreBallots holds the per-method arithmetic.
 func (s *VoteService) SuggestResults(
 	ctx context.Context,
 	req *voteMsgs.SuggestResultsRequest,
@@ -1008,12 +1402,7 @@ func (s *VoteService) SuggestResults(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	counts := map[uuid.UUID]int{}
-	for _, v := range votes {
-		for _, sub := range v.Edges.Submission {
-			counts[sub.ID]++
-		}
-	}
+	counts := scoreBallots(c.VotingMethod, votes)
 	if len(counts) == 0 {
 		return nil, status.Error(
 			codes.FailedPrecondition,
@@ -1098,6 +1487,47 @@ func (s *VoteService) SuggestResults(
 	}
 
 	return &voteMsgs.SuggestResultsResponse{Results: out}, nil
+}
+
+// scoreBallots turns a category's raw rows into one score per submission. Every
+// submission that appears on any ballot gets a key, so a submission ranked last
+// by everyone still places rather than vanishing.
+//
+//   - single_choice: one point per ballot naming it.
+//   - ranked: Borda. With N distinct submissions on the ballots, rank 1 is worth
+//     N-1 and rank N is worth 0 — the gap between consecutive ranks is the same
+//     everywhere, which is the property that makes ranks addable at all.
+//   - points: the sum of what voters awarded it.
+func scoreBallots(method votecategoryMethod, votes []*ent.Vote) map[uuid.UUID]int {
+	scores := map[uuid.UUID]int{}
+	for _, v := range votes {
+		if v.Edges.Submission != nil {
+			scores[v.Edges.Submission.ID] += 0
+		}
+	}
+	if len(scores) == 0 {
+		return scores
+	}
+
+	// N is fixed before scoring: it is the size of the field, not of one ballot,
+	// so a voter who ranked only some submissions cannot change what a rank is
+	// worth to everyone else.
+	field := len(scores)
+	for _, v := range votes {
+		if v.Edges.Submission == nil {
+			continue
+		}
+		switch method {
+		case entvotecategory.VotingMethodRanked:
+			scores[v.Edges.Submission.ID] += field - v.Value
+		case entvotecategory.VotingMethodPoints:
+			scores[v.Edges.Submission.ID] += v.Value
+		default:
+			scores[v.Edges.Submission.ID]++
+		}
+	}
+
+	return scores
 }
 
 func (s *VoteService) ExportResults(

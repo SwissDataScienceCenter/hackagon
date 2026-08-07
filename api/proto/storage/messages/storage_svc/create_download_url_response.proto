@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package storage.messages.storage_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
+
+import "google/protobuf/timestamp.proto";
+
+message CreateDownloadUrlResponse {
+  // Root-relative and same-origin, like upload_url. Treat it as a bearer
+  // credential: anything holding it can read the object until it lapses, which
+  // is exactly why it is never written to the database.
+  string download_url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}

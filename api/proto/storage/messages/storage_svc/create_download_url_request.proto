@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package storage.messages.storage_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
+
+import "buf/validate/validate.proto";
+
+// Mint a short-lived read URL for a PRIVATE object.
+//
+// Public imagery does not come through here and is rejected on purpose: those
+// prefixes are world-readable by bucket policy, so their stored path already
+// works and signing one would hand out a bearer credential for nothing.
+message CreateDownloadUrlRequest {
+  // An object key as returned by CreateUploadUrl — not a URL, and not a path
+  // with a bucket in it. The key's own shape says which entity owns it, and
+  // that is what is authorized.
+  string key = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 1024
+  }];
+}

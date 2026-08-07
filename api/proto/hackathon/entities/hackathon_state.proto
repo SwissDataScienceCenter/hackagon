@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+import "hackathon/entities/capability.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// A FAÇADE. `HackathonState` is upstream `main`'s shape for "what is switched on
+// in this event": one record of booleans plus the current phase. It is stored
+// nowhere here — there is no HackathonState table and no ent entity. Every field
+// is computed, per request, from the `Capability` rows that already back
+// `Hackathon.capabilities`.
+//
+// It exists so a client written against main's contract decodes ours, which is
+// why the field numbers below are main's verbatim. Read `Hackathon.capabilities`
+// instead if you are writing a new client: `CapabilityStatus` carries the four
+// states, the schedule and the audit that this message flattens away.
+//
+// **It carries no enforcement.** The gate is `requireCapability` reading the
+// stored rows; this message never reaches it. Main enforces by writing casbin
+// policy from `SetCapabilities`; that path is deliberately not ported, so
+// nothing here can open or close anything on its own.
+message HackathonState {
+  // The hackathon's own id. Main's state is a row with an identity of its own;
+  // ours is a projection, and the event it belongs to is the only honest
+  // identity available. One state per hackathon on both sides, so it is unique
+  // in the same way.
+  string id = 1;
+  // The hackathon's created_at: the capability rows are created with the event.
+  google.protobuf.Timestamp created_at = 2;
+  // The most recent modification across the capability rows — when the state
+  // last actually changed — falling back to the hackathon's own modified_at
+  // when no row has been touched.
+  google.protobuf.Timestamp modified_at = 3;
+  // Empty when no phase has been declared current, matching main. `Hackathon`
+  // reports the same value as an optional field.
+  string current_phase_id = 4;
+  // One entry per capability in the vocabulary, in vocabulary order, including
+  // the ones with no stored row.
+  //
+  // `enabled` is the projection `state == OPEN || state == UNGOVERNED`: the same
+  // predicate `capability.State.Allowed` uses to admit a mutation, so a client
+  // reading this boolean is told exactly what the server will permit. COMING
+  // and CLOSED both flatten to false — the distinction between "not yet" and
+  // "no longer" survives only in `CapabilityStatus`.
+  repeated CapabilityToggle capabilities = 5;
+}
+
+// Main calls this message `CapabilityState`. It cannot keep that name here:
+// `hackathon.entities.CapabilityState` is already an ENUM in this package —
+// COMING / OPEN / CLOSED / UNGOVERNED — and the two would collide outright.
+// `Toggle` is also the truer name. This carries a boolean intent, in or out;
+// the four-state answer the server computes from it is the enum.
+//
+// The message NAME is not on the wire, so a main client decoding field 5 of
+// `HackathonState`, or encoding `SetCapabilitiesRequest.capabilities`, is
+// unaffected by the rename.
+message CapabilityToggle {
+  Capability capability = 1;
+  bool enabled = 2;
+}

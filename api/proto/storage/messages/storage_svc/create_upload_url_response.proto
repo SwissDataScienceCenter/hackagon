@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package storage.messages.storage_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
+
+import "google/protobuf/timestamp.proto";
+
+message CreateUploadUrlResponse {
+  // Where the BROWSER PUTs the bytes — root-relative and same-origin
+  // (/objects/<bucket>/<key>?X-Amz-...), so the file never passes through the
+  // app server and no CORS grant is needed. The request must carry exactly the
+  // Content-Type and byte count that were declared, because both are signed.
+  string upload_url = 1;
+  // The stable object key. This is what identifies the object forever; the
+  // signed URL above stops working in minutes.
+  string key = 2;
+  // Root-relative path the object will be readable at once uploaded, for the
+  // public kinds. EMPTY for private kinds (submission attachments) — those are
+  // read through CreateDownloadUrl, after casbin has approved the read.
+  //
+  // This is the value that goes into Hackathon.logo / User.avatar_url: it never
+  // expires and it resolves from localhost, the tunnel and a deployment alike.
+  string public_url = 3;
+  // When the signature above stops being accepted. Purely informational — the
+  // upload either starts in time or it does not.
+  google.protobuf.Timestamp expires_at = 4;
+}

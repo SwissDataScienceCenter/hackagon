@@ -11,6 +11,7 @@ import { ConfigServiceDefinition } from "./generated/hackathon/config_service"
 import { PrizeServiceDefinition } from "./generated/hackathon/prize_service"
 import { VoteServiceDefinition } from "./generated/vote/vote_service"
 import { SitePageServiceDefinition } from "./generated/site/site_page_service"
+import { StorageServiceDefinition } from "./generated/storage/storage_service"
 import type { HealthServiceClient } from "./generated/health/health_service"
 import type { UserServiceClient } from "./generated/user/user_service"
 import type { HackathonServiceClient } from "./generated/hackathon/hackathon_service"
@@ -23,6 +24,7 @@ import type { ConfigServiceClient } from "./generated/hackathon/config_service"
 import type { PrizeServiceClient } from "./generated/hackathon/prize_service"
 import type { VoteServiceClient } from "./generated/vote/vote_service"
 import type { SitePageServiceClient } from "./generated/site/site_page_service"
+import type { StorageServiceClient } from "./generated/storage/storage_service"
 
 const channel = createChannel("localhost:3000")
 
@@ -107,6 +109,11 @@ export interface AuthorizedGrpc {
   // PageService, which serves the pages belonging to one event. Different
   // scope, different authority: these are global and admin-only to write.
   sitePage: SitePageServiceClient
+  // Permission to move a file, never the file itself. It hands back a URL the
+  // BROWSER uploads to directly, so uploads never occupy an app-server
+  // request — which is also why there is no `+server.ts` here that accepts
+  // bytes.
+  storage: StorageServiceClient
 }
 
 export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
@@ -133,6 +140,7 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
     prize: factory.create(PrizeServiceDefinition, channel),
     vote: factory.create(VoteServiceDefinition, channel),
     sitePage: factory.create(SitePageServiceDefinition, channel),
+    storage: factory.create(StorageServiceDefinition, channel),
   }
 }
 

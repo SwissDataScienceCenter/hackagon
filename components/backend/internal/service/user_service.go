@@ -16,6 +16,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/entities"
 	msgs "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/user/messages/user_svc"
+	objstore "github.com/swissdatasciencecenter/hackagon/components/backend/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -24,13 +25,17 @@ type UserService struct {
 	user.UnimplementedUserServiceServer
 	dbClient *ent.Client
 	enforcer *m.Enforcer
+	// store removes the person's uploaded files on account deletion. nil when
+	// no object store is configured; see purgeObjects.
+	store *objstore.Client
 }
 
-func NewUserService(dbClient *ent.Client, enf *m.Enforcer) *UserService {
+func NewUserService(dbClient *ent.Client, enf *m.Enforcer, store *objstore.Client) *UserService {
 	return &UserService{
 		UnimplementedUserServiceServer: user.UnimplementedUserServiceServer{},
 		dbClient:                       dbClient,
 		enforcer:                       enf,
+		store:                          store,
 	}
 }
 
@@ -545,6 +550,12 @@ func (s *UserService) DeleteAccount(
 
 		return nil, status.Error(codes.Internal, "couldn't purge roles")
 	}
+
+	// This one matters more than the hackathon's: it is a person exercising
+	// erasure, and a profile picture left behind at a stable public URL would
+	// make the deletion a lie. After the row is gone, and never at the cost of
+	// the deletion itself.
+	purgeObjects(ctx, s.store, userPrefix+u.ID.String()+"/")
 
 	return &msgs.DeleteAccountResponse{}, nil
 }

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package storage;
+
+import "storage/messages/storage_svc/create_download_url_request.proto";
+import "storage/messages/storage_svc/create_download_url_response.proto";
+import "storage/messages/storage_svc/create_upload_url_request.proto";
+import "storage/messages/storage_svc/create_upload_url_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage";
+
+// Signed access to the object store (docs/storage.md).
+//
+// Files do not travel through this service — only permission to move them
+// does. The backend authorizes the caller, decides the key, pins the
+// content-type and the byte count into the signature, and hands back a URL the
+// browser uses directly.
+//
+// There is deliberately no Delete RPC. Objects are removed by prefix when their
+// OWNER is deleted (HackathonService.Delete, UserService.DeleteAccount), which
+// is what keeps deletion complete without a manifest of what belongs to whom.
+service StorageService {
+  rpc CreateUploadUrl(storage.messages.storage_svc.CreateUploadUrlRequest) returns (storage.messages.storage_svc.CreateUploadUrlResponse);
+  rpc CreateDownloadUrl(storage.messages.storage_svc.CreateDownloadUrlRequest) returns (storage.messages.storage_svc.CreateDownloadUrlResponse);
+}
