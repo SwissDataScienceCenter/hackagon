@@ -7,6 +7,7 @@
         cancelHref,
         submitLabel,
         message,
+        uploadEndpoint,
     }: {
         page: {
             title: string;
@@ -18,6 +19,8 @@
         submitLabel: string;
         /** Failure text from the action, if the last submit failed. */
         message?: string;
+        /** Presign endpoint for inline image uploads; see MarkdownEditor. */
+        uploadEndpoint?: string;
     } = $props();
 
     const FIELD_CLASS =
@@ -65,6 +68,7 @@
             rows={16}
             maxlength={10000}
             placeholder="What should participants know?"
+            {uploadEndpoint}
         />
     </div>
 

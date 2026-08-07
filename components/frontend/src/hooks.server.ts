@@ -30,6 +30,11 @@ let configLoader: ConfigLoader
 // --- CONSTANTS ---
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
+  // Uploaded objects. Event logos and gallery photos render on PUBLIC event
+  // pages, before login, so the path that serves them cannot require a
+  // session — the public-read policy on those prefixes is the access decision,
+  // and it was already made in the object store.
+  /^\/objects\//,
   // Public EVENT pages, but not /hackathons/create — that route lives in the
   // (app) group and needs locals.grpc. Matching it here would make it public,
   // the group's own guard would find no client and redirect to login, and the
