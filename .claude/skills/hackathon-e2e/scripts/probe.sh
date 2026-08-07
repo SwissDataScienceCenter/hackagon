@@ -44,6 +44,11 @@ METHODS=(
   hackathon.HackathonService/RemoveParticipant
   hackathon.HackathonService/AddOwner
   hackathon.HackathonService/RemoveOwner
+  hackathon.HackathonService/SetCapabilities
+  hackathon.HackathonService/SetCurrentPhase
+  vote.VoteService/SuggestResults
+  storage.StorageService/CreateUploadUrl
+  storage.StorageService/CreateDownloadUrl
   hackathon.PageService/Create
   hackathon.PageService/Delete
   hackathon.PhaseService/Create

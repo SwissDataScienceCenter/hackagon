@@ -53,9 +53,25 @@ DELETED the `Capability` entity our branch is built on and replaced it with
 flat `HackathonState` booleans enforced through casbin policy. The two
 enforcement paths cannot both run, so ours is kept and none of that is ported.
 Everywhere else additive holds, and all seven items in the review's order of
-work are on `sketch/06-08-26`: journey **277 passed / 0 failed / 0 skipped**
-(274 recipe actions, six of them new), smoke **77 passed / 0 skipped**,
+work are on `sketch/06-08-26`. Since extended with the three items the review
+had deferred — ranked/points ballots, the `HackathonState` façade, and the
+storage upload path — so the recipe now runs **294 actions**: journey
+**297 passed / 0 failed / 0 skipped**, smoke **77 passed / 0 skipped**,
 `svelte-check` 0 errors, plus the tunnel login proof.
+
+**Two of those three "features" were switches that did nothing.**
+`VoteCategory.voting_method` already offered ranked and points, and the
+organiser's form already listed them, while `SubmitVote` rejected every ballot
+cast in such a category. The review had reasoned about a schema migration and
+missed that the surface was already shipped. The façade is the opposite case —
+genuinely additive, and deliberately carries **no enforcement**:
+`requireCapability` is still the only gate.
+
+**The guard paid for itself immediately.** `runRpc`'s throw-on-unprobed-gate
+caught two of my own omissions in this batch (`SuggestResults`, and the four new
+RPCs) — actions that would otherwise have self-skipped forever behind a growing
+green number. Cross-check with: every `method`/`gate` in `recipe.jsonl` must
+appear in `probe.sh`'s `METHODS`.
 
 **Reviewing main mostly found bugs in OURS.** Five of the seven were defects
 the comparison exposed rather than features main had: `/manage/users` shipped
@@ -266,6 +282,46 @@ frontend) **and wipes anything apt-installed at runtime.** That is how the e2e
 suite lost Firefox's system libraries (`libgtk-3.so.0: cannot open shared
 object file`); they are baked into the Dockerfile now. After any recreate:
 restart the stack (`scripts/up.sh` + `wait-ready.sh`) before anything else.
+
+**2b. After a proto/ent regeneration, vite's first SSR can take longer than
+anyone will wait — and process-compose kills it while it tries.** Regenerating
+wipes and rewrites ~260 files under `src/lib/server/grpc/generated/`, which
+invalidates that much of vite's transform cache. `src/` is on the 9p mount, so
+each cold transform is seconds (measured: 28 s for `src/app.css` alone). The
+first request to `/` then hangs, and the readiness probe (`curl`, 5 s timeout,
+kills after 100 failures) terminates the process mid-warm-up — the log says
+`readiness check fail - signal: killed`, which reads like a crash and is not one.
+
+How to tell this apart from a real hang, in one command:
+
+```bash
+PID=$(pgrep -f "vite.js dev"); cat /proc/$PID/task/$PID/stat | awk '{print $14, $15}'
+```
+
+Low utime/stime with the process alive means it is I/O-bound on 9p, not
+deadlocked. `ss -tanp | grep $PID` showing NO outbound socket means it has not
+reached the backend yet, so nothing downstream is to blame.
+
+**The fix is not to wait — serve the built output instead.** It has no transform
+step and boots in seconds:
+
+```bash
+cd components/frontend && pnpm build
+PORT=8081 HOST=::1 ORIGIN=http://localhost:8081 AUTH_URL=http://localhost:8081 \
+  node build/service/index.js --config-dir ./data/test/config --data-dir ./data/test
+```
+
+Smoke drops from 3.0 m to 1.4 m against it. Three traps in that one command:
+`HOST=::` collides with the socat bridge already on `:8081` (EADDRINUSE);
+`HOST=127.0.0.1` binds a port `localhost` does not resolve to, because
+`localhost` is **`::1`** in this container; and `AUTH_URL` must be set alongside
+`ORIGIN` or login completes and does nothing. Stop process-compose's `frontend`
+first, and check for a leftover vite still holding `[::1]:8081`.
+
+`E2E_BASE_URL` retargets the whole harness (`lib.sh` derives `FRONTEND_URL` from
+it), but prefer serving on **:8081**: Keycloak's `hackagon-dev` client only
+allows `localhost:8081/*` redirect URIs, so :8082 dies at login with
+`Invalid parameter: redirect_uri`.
 
 **3. Do not gate sidecars on `dev`'s health.** `dev` is healthy only once
 someone runs `just up`, which compose does not manage, so
