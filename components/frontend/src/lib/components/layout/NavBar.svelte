@@ -16,14 +16,16 @@
     // as much as on a desktop, since the mobile panel drops the entry too.
     let {
         session,
-        showPublicLinks = true,
+        showNav = true,
     }: {
         session: Omit<Session, 'accessToken'> | null;
         /**
-         * Marketing links (Challenges, About). Off inside the app shell, where the
-         * header is chrome for a signed-in workspace rather than a landing page.
+         * Render the nav row. Off on public pages: every destination the bar could
+         * name there is either the page you are already on or already reachable
+         * from the wordmark, so the landing page gets identity, theme and Log in
+         * and nothing that competes with its own CTA.
          */
-        showPublicLinks?: boolean;
+        showNav?: boolean;
     } = $props();
 
     let mobileOpen = $state(false);
@@ -43,6 +45,11 @@
         'flex h-10 items-center rounded-control px-2 text-sm no-underline transition-colors';
     const ROW_ACTIVE = 'bg-raised font-medium text-accent-ink';
     const ROW_IDLE = 'text-ink-3 hover:text-ink-2';
+
+    // Below md the panel holds the nav rows and, when signed in, Log out. With
+    // neither there is nothing behind the trigger, so the trigger goes too rather
+    // than opening an empty sheet.
+    const hasMobilePanel = $derived(showNav || !!session?.user);
 
     // Any navigation closes the panel. It sits in the header's own flow rather
     // than over the page, so leaving it open would push the destination down
@@ -93,45 +100,33 @@
             </a>
         {/if}
 
-        <nav class="hidden items-center gap-6 md:flex">
-            {#if session?.user}
-                <a
-                    href={resolve('/(app)/dashboard')}
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+        {#if showNav}
+            <nav class="hidden items-center gap-6 md:flex">
+                {#if session?.user}
+                    <a
+                        href={resolve('/(app)/dashboard')}
+                        aria-current={onHackathons ? 'page' : undefined}
+                        class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
                        {onHackathons
-                        ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
-                        : 'text-ink-2'}"
-                >
-                    Hackathons
-                </a>
-            {:else}
-                <a
-                    href={resolve('/')}
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
+                            ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                            : 'text-ink-2'}"
+                    >
+                        Hackathons
+                    </a>
+                {:else}
+                    <a
+                        href={resolve('/')}
+                        aria-current={onHackathons ? 'page' : undefined}
+                        class="pb-0.5 text-sm font-medium no-underline hover:text-accent-ink
                        {onHackathons
-                        ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
-                        : 'text-ink-2'}"
-                >
-                    Hackathons
-                </a>
-            {/if}
-            {#if showPublicLinks}
-                <a
-                    href={resolve('/')}
-                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
-                >
-                    Challenges
-                </a>
-                <a
-                    href={resolve('/')}
-                    class="text-sm text-ink-3 no-underline hover:text-accent-ink"
-                >
-                    About
-                </a>
-            {/if}
-        </nav>
+                            ? 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]'
+                            : 'text-ink-2'}"
+                    >
+                        Hackathons
+                    </a>
+                {/if}
+            </nav>
+        {/if}
 
         <div class="flex shrink-0 items-center gap-2 sm:gap-3">
             <LightSwitch />
@@ -174,19 +169,21 @@
                 </button>
             {/if}
 
-            <button
-                onclick={() => (mobileOpen = !mobileOpen)}
-                aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
-                aria-expanded={mobileOpen}
-                aria-controls="navbar-mobile-nav"
-                class="btn btn-icon btn-sm btn-quiet md:hidden"
-            >
-                {#if mobileOpen}
-                    <X class="h-5 w-5" />
-                {:else}
-                    <Menu class="h-5 w-5" />
-                {/if}
-            </button>
+            {#if hasMobilePanel}
+                <button
+                    onclick={() => (mobileOpen = !mobileOpen)}
+                    aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+                    aria-expanded={mobileOpen}
+                    aria-controls="navbar-mobile-nav"
+                    class="btn btn-icon btn-sm btn-quiet md:hidden"
+                >
+                    {#if mobileOpen}
+                        <X class="h-5 w-5" />
+                    {:else}
+                        <Menu class="h-5 w-5" />
+                    {/if}
+                </button>
+            {/if}
         </div>
     </div>
 
@@ -199,26 +196,24 @@
             id="navbar-mobile-nav"
             class="flex flex-col gap-0.5 border-t border-line px-4 py-2 md:hidden"
         >
-            {#if session?.user}
-                <a
-                    href={resolve('/(app)/dashboard')}
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
-                >
-                    Hackathons
-                </a>
-            {:else}
-                <a
-                    href={resolve('/')}
-                    aria-current={onHackathons ? 'page' : undefined}
-                    class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
-                >
-                    Hackathons
-                </a>
-            {/if}
-            {#if showPublicLinks}
-                <a href={resolve('/')} class="{ROW} {ROW_IDLE}">Challenges</a>
-                <a href={resolve('/')} class="{ROW} {ROW_IDLE}">About</a>
+            {#if showNav}
+                {#if session?.user}
+                    <a
+                        href={resolve('/(app)/dashboard')}
+                        aria-current={onHackathons ? 'page' : undefined}
+                        class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
+                    >
+                        Hackathons
+                    </a>
+                {:else}
+                    <a
+                        href={resolve('/')}
+                        aria-current={onHackathons ? 'page' : undefined}
+                        class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
+                    >
+                        Hackathons
+                    </a>
+                {/if}
             {/if}
             {#if session?.user}
                 <button
