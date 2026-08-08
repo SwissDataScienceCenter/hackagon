@@ -13,12 +13,16 @@ wait_for "postgres" "$TIMEOUT" pg_isready -h 127.0.0.1 -p 5432 -U postgres
 wait_for "keycloak" "$TIMEOUT" curl -fsS \
   "$KEYCLOAK_URL/realms/hackagon/.well-known/openid-configuration"
 wait_for "backend" "$TIMEOUT" grpcurl -plaintext "$GRPC_ADDR" list
-# vite may be unusable — see prod-frontend.sh for why, and for the three traps
-# in starting the built server by hand. Only kicks in when nothing is serving,
-# so a healthy `vite dev` is left alone.
-if ! curl -fsS -o /dev/null --max-time 5 "$FRONTEND_URL" 2>/dev/null; then
-  bash "$HERE/prod-frontend.sh" ensure "$FRONTEND_URL" || true
-fi
+# vite is unusable here — see prod-frontend.sh for why, and for the traps in
+# starting the built server by hand. This is UNCONDITIONAL: the guard used to be
+# "leave it alone if anything answers within 5s", which handed the run to a cold
+# `vite dev` whenever it happened to reply in time, and left it holding
+# [::1]:8081 against the built server whenever it did not.
+#
+# No `|| true` either. Swallowing the failure meant the real error (EADDRINUSE,
+# printed the moment it happened) was followed by 300s of polling and a closing
+# message blaming the frontend for not starting.
+bash "$HERE/prod-frontend.sh" ensure "$FRONTEND_URL"
 
 if ! wait_for "frontend" "$TIMEOUT" curl -fsS "$FRONTEND_URL"; then
   echo ""
