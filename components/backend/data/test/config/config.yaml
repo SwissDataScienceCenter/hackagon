@@ -34,3 +34,12 @@ storage:
   usepathstyle: true
 logging:
   level: info
+# RPC journal: one JSON line per gRPC call, in the shape the e2e recipe uses.
+# A LOCAL ANALYSIS TOOL — see docs/backend/rpc-journal.md for exactly what it
+# records (actor username, method, allowlisted request fields, status code,
+# response ids) and what it never reads (IP, user agent, session id, free
+# text). Off here and off by default in code; env override
+# HACKAGON_AUDIT_ENABLED=true. `path` is relative to components/backend.
+audit:
+  enabled: false
+  path: ".output/audit/rpc-journal.jsonl"

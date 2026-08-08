@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/audit"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
@@ -57,11 +58,25 @@ func NewServer(
 	// Create auth interceptor
 	authInterceptor := mw.AuthUnaryServerInterceptor(validator)
 
-	// Create gRPC server with middleware chain (matching main.go exactly)
+	// RPC journal — OFF unless cfg.Audit.Enabled. See internal/audit and
+	// config.AuditConfig for exactly what enabling it records.
+	journal, err := audit.Open(cfg.Audit, audit.NewResolver(audit.EntLookup(dbClient)))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("open rpc journal: %w", err)
+	}
+
+	// Middleware chain, in order. Auth first: everything downstream reads the
+	// claims it puts in the context. The journal sits between auth and
+	// validation so a request rejected by protovalidate is still recorded —
+	// InvalidArgument is an outcome the recipe asserts on.
+	chain := []grpc.UnaryServerInterceptor{authInterceptor}
+	if audited := audit.UnaryServerInterceptor(journal); audited != nil {
+		chain = append(chain, audited)
+	}
+	chain = append(chain, validationInterceptor)
+
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(
-			grpc_middleware.ChainUnaryServer(authInterceptor, validationInterceptor),
-		),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(chain...)),
 	)
 
 	// Object store. Optional: with no endpoint configured (which is what the
@@ -109,9 +124,11 @@ func NewServer(
 	storageSvc.RegisterStorageServiceServer(server, storageService)
 	reflection.Register(server)
 
-	// Cleanup: shutdown the gRPC server
+	// Cleanup: shutdown the gRPC server, then drain the journal so the last
+	// calls of a session are on disk before the process exits.
 	cleanup := func() {
 		server.GracefulStop()
+		journal.Close()
 	}
 
 	return server, cleanup, enf, nil

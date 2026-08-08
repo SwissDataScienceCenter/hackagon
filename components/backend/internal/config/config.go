@@ -20,6 +20,39 @@ type Config struct {
 	Oidc     OidcConfig     `yaml:"oidc"`
 	Storage  StorageConfig  `yaml:"storage"`
 	Logging  LoggingConfig  `yaml:"logging"`
+	Audit    AuditConfig    `yaml:"audit"`
+}
+
+// AuditConfig turns on the RPC journal (internal/audit): a development and
+// analysis tool that appends one JSON line per gRPC call to a local file.
+//
+// WHAT TURNING THIS ON COLLECTS, for every unary RPC that reaches a handler:
+//   - the platform USERNAME of the caller (resolved from the JWT subject;
+//     `anonymous` for unauthenticated callers), never the Keycloak ID;
+//   - the full method name, e.g. hackathon.HackathonService/Edit;
+//   - the request message, run through the allowlist in internal/audit —
+//     ids, enums, booleans, numbers, timestamps and slugs are recorded as
+//     sent, and EVERY other field becomes "<redacted>";
+//   - whether the call succeeded, or the gRPC status code name if not;
+//   - the UUIDs of objects the response reports (id / *Id fields only), so a
+//     later call referring to the same object can be recognised.
+//
+// It never reads the peer address, the user agent, any session or trace id,
+// or any response field that is not an id. It is off by default because it is
+// a local analysis tool and nothing should start recording implicitly:
+// enable with `audit.enabled: true` in config.yaml, or
+// HACKAGON_AUDIT_ENABLED=true.
+type AuditConfig struct {
+	// Enabled is the master switch. False (the default) means no journal is
+	// created and no interceptor is installed at all.
+	Enabled bool `yaml:"enabled"`
+	// Path is the JSONL file to append to, relative to the backend's working
+	// directory. Parent directories are created on demand.
+	Path string `yaml:"path"`
+	// Buffer is the depth of the hand-off queue to the writer goroutine.
+	// When it fills, entries are DROPPED (and counted) rather than making an
+	// RPC wait on file IO.
+	Buffer int `yaml:"buffer"`
 }
 
 type LoggingConfig struct {
@@ -136,6 +169,11 @@ func Load(configDir string) (*Config, error) {
 		},
 		"logging": map[string]interface{}{
 			"level": "info",
+		},
+		"audit": map[string]interface{}{
+			"enabled": false,
+			"path":    ".output/audit/rpc-journal.jsonl",
+			"buffer":  4096, //nolint:mnd // queue depth; see AuditConfig.Buffer
 		},
 	}
 	if err := k.Load(confmap.Provider(defaults, ""), nil); err != nil {

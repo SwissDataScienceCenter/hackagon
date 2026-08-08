@@ -15,6 +15,7 @@ by `just` and process-compose.
 | [backend/services.md](backend/services.md)           | Which gRPC services and RPCs exist, and what does each handler do?                                     |
 | [backend/data-model.md](backend/data-model.md)       | What tables/entities exist and how do they relate?                                                     |
 | [backend/rbac.md](backend/rbac.md)                   | How are permissions modelled and enforced (casbin roles, domains, policy rows)?                        |
+| [backend/rpc-journal.md](backend/rpc-journal.md)     | The off-by-default RPC journal: what it records, what it never reads, and how it seeds recipe actions.  |
 | [frontend/routes-and-auth.md](frontend/routes-and-auth.md) | Which routes exist, which are public, and how does the session/auth guard work?                  |
 | [frontend/grpc-clients.md](frontend/grpc-clients.md) | How does the SvelteKit server talk to the backend, and how are gRPC errors translated to HTTP?         |
 | [user-flows.md](user-flows.md)                       | What does the platform look like to a visitor, participant, organizer and admin — screen by screen, desktop and phone? |
