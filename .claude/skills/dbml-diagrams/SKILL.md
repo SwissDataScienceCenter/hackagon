@@ -10,17 +10,21 @@ the ent schema (`components/backend/db/schema/*.go`), rendered human-readably
 in `components/backend/Schema.md` — regenerate that first after schema edits
 (`just codegen::db-schema`), then update the DBML from it, then **validate**.
 
-⚠ **The checked-in DBML is behind the ent schema** (checked 2026-08-08). Three
-known gaps: `HackathonInvite` and `SitePage` have no `Table` at all; `votes`
-still shows the old `(vote_category_votes, user_votes)` unique index, which
-moved to `(category, voter, submission)` when ranked/points ballots landed; and
-`votes` is missing the `created_at`/`modified_at` columns added at the same
-time. Run the workflow below before quoting the diagram.
+The DBML was brought level with the ent schema on 2026-08-08 — all 23 physical
+tables are present and every name in it is now the one ent generates. Re-check
+it against `ent/migrate/schema.go` (see step 2) after any schema edit.
 
 ## The workflow
 
 1. `just codegen::db-schema` — refresh `Schema.md` from the ent sources.
-2. Edit `docs/backend/schema.dbml` to match (mapping rules below).
+2. Edit `docs/backend/schema.dbml` to match (mapping rules below). **Read the
+   physical names off `components/backend/ent/migrate/schema.go`, not off
+   `Schema.md`** — that file lists edges by their Go name (`hackathon`,
+   `modifier`) and only names the columns inside its index lists, so guessing a
+   FK column from an edge name is how the diagram drifted last time. Its
+   `<Table>Columns` blocks give every column, its nullability and its FK
+   target; `PrimaryKey:` shows which join tables have a composite key and no
+   `id` at all.
 3. **Validate**: `bash .claude/skills/dbml-diagrams/scripts/validate.sh`
    (wraps the official `@dbml/cli` parser — the same one dbdiagram.io uses).
 4. Only then share / commit / paste into https://dbdiagram.io/d.
@@ -30,10 +34,10 @@ time. Run the workflow below before quoting the diagram.
 | ent concept | DBML |
 | --- | --- |
 | Entity `FooBar` | `Table foo_bars` (snake_case plural; already-plural names unchanged) |
-| M2O edge with inverse `bars` on parent `Foo` | FK column named `foo_bars` → `[ref: > foos.id]` — confirm names against `Schema.md`'s index list when available |
-| O2O edge (settings/windows/forms/prizes → hackathon) | `hackathon_id uuid [unique, ref: - hackathons.id]` |
-| Explicit join entity (Participant, TeamParticipant) | Its own Table with real `*_id` field columns |
-| Implicit M2M edge | A join table `<owner>_<edge>` with composite `[pk]` index; header-note that the generated physical name may differ |
+| M2O edge with inverse `bars` on parent `Foo` | FK column named `foo_bars` → `[ref: > foos.id]` (so `pages.hackathon_pages`, `votes.user_votes`) |
+| O2O edge to hackathon | Same convention, NOT `hackathon_id`: `hackathon_settings`, `hackathon_windows`, `hackathon_forms`, and — because the edge is called `prize_table` — `hackathon_prize_table`, each `[unique, ref: - hackathons.id]` |
+| Explicit join entity (Participant, TeamParticipant) | Its own Table with real `*_id` field columns and a COMPOSITE `[pk]` index — ent gives these no `id` column |
+| Implicit M2M edge | A join table `<owner>_<edge>` with composite `[pk]` index (`user_preferred_projects`, `user_jury_categories`) |
 | `Optional().Nillable()` field | Column without `not null` |
 | enum field | A DBML `Enum` block + column typed with it |
 | Composite unique index | `indexes { (col_a, col_b) [unique] }` |

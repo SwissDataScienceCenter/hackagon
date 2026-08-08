@@ -24,7 +24,12 @@ wait_for "backend" "$TIMEOUT" grpcurl -plaintext "$GRPC_ADDR" list
 # message blaming the frontend for not starting.
 bash "$HERE/prod-frontend.sh" ensure "$FRONTEND_URL"
 
-if ! wait_for "frontend" "$TIMEOUT" curl -fsS "$FRONTEND_URL"; then
+# --max-time is load-bearing, not belt-and-braces. wait_for checks its deadline
+# BETWEEN attempts, so a probe that never returns defeats the timeout entirely:
+# with a cold `vite dev` holding :8081 this curl blocked for 15+ minutes on a
+# single attempt, printing not one dot, and the run looked hung rather than
+# failed. Bound every attempt so the deadline can actually be reached.
+if ! wait_for "frontend" "$TIMEOUT" curl -fsS --max-time 10 "$FRONTEND_URL"; then
   echo ""
   echo "  The frontend did not come up on $FRONTEND_URL." >&2
   echo "  If it is not part of the process-compose stack, start it manually:" >&2

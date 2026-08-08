@@ -94,21 +94,77 @@ export interface RecipeAction {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTest = TestType<any, any>
 
+/**
+ * Read recipe.jsonl into the action list the journey executes.
+ *
+ * The file holds two kinds of line: ACTIONS (they carry an `id`, and become
+ * one test each) and act BANNERS (a lone `comment`, pure decoration for the
+ * player and for anyone reading the file). The only honest way to tell them
+ * apart is the `id` — an action is a thing that can be named and reported.
+ *
+ * This used to filter on `!("comment" in a)`, which is a property of banners
+ * but NOT exclusive to them: `act8.flow.bob` carries a trailing `comment`
+ * explaining why it runs where it does, so it was dropped and had never once
+ * executed — 309 action lines, 308 tests, and nothing anywhere said so. The
+ * invariants below make that specific silent-green shape impossible: a line
+ * that is neither a banner nor an action, an action whose count disagrees with
+ * an INDEPENDENT textual scan of the file, or two actions sharing an id all
+ * throw at load time rather than quietly shortening the suite.
+ */
 export function loadRecipe(): RecipeAction[] {
   const file = path.join(SKILL_DIR, "recipe.jsonl")
-  return fs
+  const lines = fs
     .readFileSync(file, "utf8")
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean)
-    .map((l, i) => {
-      try {
-        return JSON.parse(l) as RecipeAction
-      } catch (e) {
-        throw new Error(`recipe.jsonl line ${i + 1} is not valid JSON: ${e}`)
-      }
-    })
-    .filter((a) => !("comment" in a))
+
+  const parsed = lines.map((l, i) => {
+    try {
+      return JSON.parse(l) as Partial<RecipeAction>
+    } catch (e) {
+      throw new Error(`recipe.jsonl line ${i + 1} is not valid JSON: ${e}`)
+    }
+  })
+
+  const isAction = (a: Partial<RecipeAction>): boolean =>
+    typeof a.id === "string" && a.id.length > 0
+
+  // Anything that is not an action must be an act banner. A line that is
+  // neither is an action that lost its id — the one way this filter could
+  // still drop real work without anyone noticing.
+  parsed.forEach((a, i) => {
+    if (!isAction(a) && !("comment" in a)) {
+      throw new Error(
+        `recipe.jsonl line ${i + 1} has no 'id' and no 'comment' — an action ` +
+          `without an id cannot be reported, and would be silently dropped.`,
+      )
+    }
+  })
+
+  const actions = parsed.filter(isAction) as RecipeAction[]
+
+  // Cross-check against a scan of the RAW text, not of `parsed`: if the
+  // predicate above ever drifts again, the two counts disagree and the suite
+  // fails loudly instead of running fewer tests.
+  const textualIdLines = lines.filter((l) => /(^|[{,])\s*"id"\s*:/.test(l)).length
+  if (actions.length !== textualIdLines) {
+    throw new Error(
+      `recipe.jsonl: loaded ${actions.length} actions but ${textualIdLines} lines ` +
+        `carry an "id". loadRecipe() is dropping real actions — fix the filter, ` +
+        `do not adjust this check.`,
+    )
+  }
+
+  // One test is generated per id; duplicates would report as one action having
+  // run when two were written.
+  const seen = new Set<string>()
+  for (const a of actions) {
+    if (seen.has(a.id)) throw new Error(`recipe.jsonl: duplicate action id '${a.id}'`)
+    seen.add(a.id)
+  }
+
+  return actions
 }
 
 // ─── Cross-test state (single worker; serial) ────────────────────────────────

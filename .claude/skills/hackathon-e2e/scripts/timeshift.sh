@@ -8,9 +8,12 @@
 # Usage: timeshift.sh <hackathon-uuid> <days>
 #   e.g. timeshift.sh 3f2a... -120     # pull the event 4 months into the past
 #
-# NOTE: phases have their own dates and PhaseService has no Edit yet — until
-# then this shifts only the hackathon-level window (which is what drives the
-# status badge and Join cutoffs).
+# Phases carry their own dates, so shifting only the hackathon window would
+# leave the timeline pointing at the old calendar. PhaseService.Edit exists now
+# (seed-past-hackathons uses it), so this moves every dated phase by the same N
+# days — which keeps each phase where it was RELATIVE to the event. Phases with
+# no dates are left alone: the proto requires starts_at and ends_at together,
+# so there is nothing to shift.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
@@ -45,5 +48,29 @@ echo "    ends_at:   $ENDS -> $NEW_ENDS"
 grpcurl -plaintext -H "authorization: Bearer $TOKEN" \
   -d "{\"hackathonId\":\"$HACKATHON_ID\",\"startsAt\":\"$NEW_STARTS\",\"endsAt\":\"$NEW_ENDS\"}" \
   "$GRPC_ADDR" hackathon.HackathonService/Edit >/dev/null
+
+PHASES=$(grpcurl -plaintext -H "authorization: Bearer $TOKEN" \
+  -d "{\"hackathonId\":\"$HACKATHON_ID\"}" "$GRPC_ADDR" \
+  hackathon.PhaseService/List)
+PHASE_COUNT=$(echo "$PHASES" | jq '.phases | length')
+
+for i in $(seq 0 $((PHASE_COUNT - 1))); do
+  [ "$PHASE_COUNT" -eq 0 ] && break
+  PHASE=$(echo "$PHASES" | jq -c ".phases[$i]")
+  PID=$(echo "$PHASE" | jq -r '.id')
+  P_STARTS=$(echo "$PHASE" | jq -r '.startsAt // empty')
+  P_ENDS=$(echo "$PHASE" | jq -r '.endsAt // empty')
+  P_NAME=$(echo "$PHASE" | jq -r '.name')
+  if [ -z "$P_STARTS" ] || [ -z "$P_ENDS" ]; then
+    echo "    phase '$P_NAME': no dates, left as is"
+    continue
+  fi
+  P_NEW_STARTS=$(date -u -d "$P_STARTS $DAYS days" +%Y-%m-%dT%H:%M:%SZ)
+  P_NEW_ENDS=$(date -u -d "$P_ENDS $DAYS days" +%Y-%m-%dT%H:%M:%SZ)
+  echo "    phase '$P_NAME': $P_STARTS -> $P_NEW_STARTS"
+  grpcurl -plaintext -H "authorization: Bearer $TOKEN" \
+    -d "{\"phaseId\":\"$PID\",\"startsAt\":\"$P_NEW_STARTS\",\"endsAt\":\"$P_NEW_ENDS\"}" \
+    "$GRPC_ADDR" hackathon.PhaseService/Edit >/dev/null
+done
 
 echo "==> Done."
