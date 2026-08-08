@@ -10,6 +10,13 @@ ensure_toolchain "${BASH_SOURCE[0]}" "$@"
 echo "==> Stopping services..."
 (cd "$ROOT_DIR" && just deploy::down) || true
 
+# The built frontend is NOT managed by process-compose, so `deploy::down` leaves
+# it running — and it read its OIDC config once at boot, against the Keycloak
+# realm this reset is about to wipe and re-import. Leaving it up meant
+# wait-ready found something serving, left it alone, and the whole suite then
+# failed in auth.setup with a login form that never rendered.
+bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 || true
+
 echo "==> Wiping Postgres + Keycloak state..."
 (cd "$ROOT_DIR" && just clean::state)
 

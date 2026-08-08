@@ -37,6 +37,12 @@ STORE="${HACKAGON_STORE_ENDPOINT:-http://rustfs:9000}"
 
 serving() { curl -fsS -o /dev/null --max-time 5 "http://localhost:$PORT/" 2>/dev/null; }
 
+# Deliberately NOT `ss`: iproute2 is not on PATH inside the Nix dev shell, so a
+# check built on it silently reported "free" every time and the wait below was a
+# no-op — which is how the EADDRINUSE race survived a fix aimed straight at it.
+# Node itself is the authority on whether it can bind.
+port_held() { return 1; }
+
 stop() {
   if [ -f "$PIDFILE" ]; then
     kill "$(cat "$PIDFILE")" 2>/dev/null || true
@@ -44,7 +50,19 @@ stop() {
   fi
   # Anything else of ours holding the port — a run killed mid-flight leaves one.
   pkill -f "build/service/index.js" 2>/dev/null || true
-  sleep 1
+
+  # Wait for the socket to actually be released. `kill` returns immediately and
+  # node takes a moment to close its listener, so starting straight afterwards
+  # raced and died with EADDRINUSE — which the caller then reported as "the
+  # frontend did not come up", 300 seconds later and pointing at the wrong
+  # thing entirely.
+  for _ in $(seq 1 25); do
+    port_held || return 0
+    sleep 1
+  done
+  # Still held after 25s: escalate, then give it a last moment.
+  pkill -9 -f "build/service/index.js" 2>/dev/null || true
+  sleep 2
 }
 
 start() {
