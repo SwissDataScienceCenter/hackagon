@@ -1,6 +1,6 @@
 # Testing
 
-How Hackagon is tested on `sketch/04-08-26`: Go unit tests, frontend unit
+How Hackagon is tested on `sketch/06-08-26`: Go unit tests, frontend unit
 tests, the CI pipeline, and — the bulk of this document — the deterministic
 end-to-end system that plays the entire hackathon lifecycle as an executable
 screenplay.
@@ -9,9 +9,18 @@ screenplay.
 
 | Layer | Where | Tool | Count | Runs in CI |
 | --- | --- | --- | --- | --- |
-| Backend unit/integration | `components/backend/internal/service/*_test.go` | Ginkgo v2 + Gomega, in-memory SQLite, gRPC over `bufconn` | 231 specs | yes |
-| Frontend unit | `components/frontend/src/**/*.test.ts` | Vitest + jsdom | 14 tests | yes |
-| End-to-end | `.claude/skills/hackathon-e2e/` | Playwright (Firefox) against the real stack | 241 recipe actions + 26 smoke + 10 mobile | **no** — run manually |
+| Backend unit/integration | `components/backend/internal/{service,middleware,capability}/*_test.go` | Ginkgo v2 + Gomega, in-memory SQLite, gRPC over `bufconn` | 338 specs (337 run, 1 pending) | yes |
+| Backend unit (plain) | `components/backend/internal/{audit,storage}/*_test.go` | stdlib `testing` | 27 tests | **currently not** — see below |
+| Frontend unit | `components/frontend/src/**/*.test.ts` | Vitest + jsdom | 154 tests in 9 files | yes |
+| End-to-end | `.claude/skills/hackathon-e2e/` | Playwright (Firefox) against the real stack | 308 recipe actions + 76 smoke + 14 mobile + 7 openreplay | **no** — run manually |
+
+⚠ **`just check::test -c backend` currently fails, and no test is failing.**
+The quitsh target appends `--ginkgo.v` to every package's test binary.
+`internal/audit` and `internal/storage` are plain `testing` packages with no
+ginkgo bootstrap, so each exits 1 on `flag provided but not defined:
+-ginkgo.v` before running a single test. Both pass under a plain
+`go test --tags "test,unittest" ./internal/audit/... ./internal/storage/...`.
+CI runs the failing command.
 
 ### Backend Go tests
 
@@ -30,17 +39,22 @@ target enforces this constraint mechanically: `checkBuildConstraints` requires
 `test && unittest` on `**/internal/**/*_test.go` and `**/pkg/**/*_test.go`, so
 a test file without the tag fails lint, not just the build.
 
-The suite files:
+Three Ginkgo suites, each with its own `*_suite_test.go` entry point
+(`RunSpecs`):
 
-| File | Specs | Describes |
+| Suite | Specs | Files |
 | --- | --- | --- |
-| `components/backend/internal/service/service_suite_test.go` | — | Ginkgo entry point (`RunSpecs`) |
-| `components/backend/internal/service/hackathon_service_test.go` | 79 | 19 |
-| `components/backend/internal/service/project_service_test.go` | 37 | 10 |
-| `components/backend/internal/service/page_service_test.go` | 36 | 9 |
-| `components/backend/internal/service/team_service_test.go` | 35 | 12 |
-| `components/backend/internal/service/phase_service_test.go` | 28 | 7 |
-| `components/backend/internal/service/track_service_test.go` | 16 | 6 |
+| `internal/service` | 258 (257 run, 1 pending) | hackathon 87 · project 37 · page 36 · team 35 · phase 28 · vote-scoring 19 · track 16 |
+| `internal/middleware` | 43 | auth 12 · rbac 10 `It` + 21 `DescribeTable` entries |
+| `internal/capability` | 37 | capability 37 |
+
+The one pending spec is an explicit `XIt` in `hackathon_service_test.go`
+("returns FAILED_PRECONDITION when registrations are disabled") — audit B3:
+`registrationsEnabled` on `EditSettings` is enforced nowhere, the `register`
+capability governs instead.
+
+`internal/audit` (19 tests) and `internal/storage` (8 tests) are plain
+`testing`, not Ginkgo — which is why the runner's `--ginkgo.v` breaks them.
 
 Fixtures live in `components/backend/internal/testutils/`:
 
@@ -70,9 +84,20 @@ Config lives in the `test` block of `components/frontend/vite.config.ts`:
 
 | File | Tests | Covers |
 | --- | --- | --- |
-| `components/frontend/src/auth.callback.test.ts` | 6 | Auth.js callback handling |
-| `components/frontend/src/hooks.guard.test.ts` | 5 | Route guards in `hooks.server.ts` |
-| `components/frontend/src/lib/server/grpc/client.test.ts` | 3 | gRPC client construction |
+| `src/lib/navigation.test.ts` | 59 | Nav invariants (one meaning per entry, `aria-current`) |
+| `src/lib/utils/phase.test.ts` | 30 | Phase/capability state resolution |
+| `src/lib/utils/markdown.test.ts` | 20 | Markdown rendering + sanitiser |
+| `src/lib/server/hackathon/phaseForm.test.ts` | 18 | Phase form parsing/validation |
+| `src/hooks.guard.test.ts` | 7 | Route guards in `hooks.server.ts` |
+| `src/auth.callback.test.ts` | 6 | Auth.js callback handling |
+| `src/lib/utils/globalRole.test.ts` | 6 | Global role labels/checks |
+| `src/lib/server/grpc/client.test.ts` | 5 | gRPC client construction |
+| `src/lib/utils/markdown.dom.test.ts` | 3 | Sanitiser against a real DOM |
+
+`TEST_CONFIG_DIR` must be set — the quitsh target sets it to
+`data/test/config`. Running `pnpm vitest run` without it fails every file at
+import time with `Config file not defined by env. variable TEST_CONFIG_DIR`,
+which looks like nine broken tests and is one missing variable.
 
 ### CI
 
@@ -121,33 +146,53 @@ sources `scripts/lib.sh`, which re-execs the caller inside the Nix dev shell
    `.state/journey.json`.
 2. `scripts/up.sh` — `just deploy::up` (process-compose, detached).
 3. `scripts/wait-ready.sh` — polls Postgres (`pg_isready`), Keycloak's
-   `/realms/hackagon/.well-known/openid-configuration`, the backend
-   (`grpcurl list`) and the frontend, 300 s per service by default
-   (`E2E_READY_TIMEOUT`).
-4. `scripts/seed.sh` (smoke, and fresh mobile runs) **or** `scripts/roster.sh`
-   (journey).
+   `/realms/hackagon/.well-known/openid-configuration` and the backend
+   (`grpcurl list`), 300 s per service by default (`E2E_READY_TIMEOUT`); then
+   calls `scripts/prod-frontend.sh ensure`, which **stops process-compose's
+   `vite dev` and serves the adapter-node build on `:8081` instead**, and waits
+   for that.
+4. `scripts/seed.sh` (smoke, openreplay, and fresh mobile runs) **or**
+   `scripts/roster.sh` (journey).
 5. `scripts/probe.sh` — writes `.state/capabilities.json`.
 6. `pnpm install` if `node_modules/` is absent, then
    `pnpm exec playwright install --with-deps firefox` (falls back to a plain
    install), then `pnpm exec playwright test --project=<suite>`.
 
+Step 3's frontend swap is not an optimisation, it is what makes a run finish.
+Regenerating protos rewrites ~260 files under `src/lib/server/grpc/generated/`,
+invalidating that much of vite's transform cache; `src/` is on the 9p bind
+mount in the devcontainer, so the first SSR request measured **five minutes**
+(2026-08-08) and process-compose's readiness probe killed the process
+mid-warm-up — logged as `readiness check fail - signal: killed`, which reads
+like a crash and is not one. The built output has no transform step: smoke
+drops from 3.0 m to 1.4 m. It is unconditional on purpose; the earlier "leave
+it alone if anything answers within 5 s" guard handed the run to a cold vite
+whenever it happened to reply in time and let vite keep `[::1]:8081` whenever
+it did not, so the same command passed for one suite and failed for the next.
+
 The stack is **left running** afterwards; stop it with `just down`. The HTML
 report is printed at the end:
 `pnpm --dir .claude/skills/hackathon-e2e run report`.
 
-### The three suites
+### The suites
 
-| Suite | Database | What it does | Playwright project |
+Six Playwright projects plus `setup`, which is a dependency of every one of
+them except `tunnel`. `setup` logs each principal in through the real Keycloak
+flow and saves a storage state, so the totals below include its 4 tests.
+
+| Suite | Database | What it does | Last green run |
 | --- | --- | --- | --- |
-| `smoke` | seeded fixture (`just db::seed`) | Snapshot mode: what each principal can see and do — public vs private listing for anonymous visitors, the login flow, dashboard contents and membership badges, and the full persona × hackathon member-view access matrix (200/403/404). 26 assertions across `tests/smoke/01-anonymous` `02-login` `03-dashboard` `04-access-control`, plus 4 auth-setup tests = **30**. | `smoke` |
-| `journey` | **empty** (reset, never seeded) | The full lifecycle as a data-driven screenplay: `recipe.jsonl` executed strictly in order by `tests/journey/recipe.spec.ts`. **241 actions** across 8 acts. With the 4 setup tests: 245 total — currently **239 passed / 0 failed / 6 deferred-by-design**. | `journey` |
-| `mobile` | seeded fixture on a fresh run; whatever is live with `--no-reset` | Phone-viewport battery at 390×844 over every surface: public home, public event page, dashboard, the six member tabs (overview, teams, proposals, timeline, submissions, participants) and `/manage/users`. Asserts no horizontal overflow (1 px slack, naming the widest offenders) and no broken images (`naturalWidth === 0`), and writes a full-page screenshot per page into `.artifacts/mobile/`. 10 tests. | `mobile` |
-| `openreplay` | seeded fixture (same as `smoke`) | The session-replay privacy proof, and the only suite that measures **bytes on the wire**: nothing is recorded before consent (and the tracker's project key is not even sent to the page), the real banner starts it, `/account` stops it, Do Not Track suppresses it, and what does get recorded contains neither typed text, nor the signed-in name, nor any URL path. 7 tests. Needs a live OpenReplay (`.claude/skills/openreplay-stack`) and `replay.enabled: true`; **self-skips otherwise**, so it never runs as part of smoke or journey. See [frontend/session-replay.md](frontend/session-replay.md). | `openreplay` |
+| `smoke` | seeded fixture (`just db::seed`) | Snapshot mode: what each principal can see and do — public vs private listing for anonymous visitors, the login flow, dashboard contents and membership badges, the full persona × hackathon member-view access matrix (200/403/404), list views, the CMS pages, global-role and co-organizer grants, nav centring, and a media upload read back from the object store. 76 tests across 16 spec files (`01-anonymous` … `15-media-upload`). | **80 passed** (2026-08-08) |
+| `journey` | **empty** (reset, never seeded) | The full lifecycle as a data-driven screenplay: `recipe.jsonl` executed strictly in order by `tests/journey/recipe.spec.ts`. 309 action lines, **308 executed** (see the loader caveat in §3), across acts 0–8. | **312 passed / 0 failed / 0 skipped** (2026-08-08) |
+| `mobile` | seeded fixture on a fresh run; whatever is live with `--no-reset` | Phone-viewport battery at 390×844 over every surface: public home, public event page, dashboard, the member tabs and `/manage/users`. Asserts no horizontal overflow (1 px slack, naming the widest offenders) and no broken images (`naturalWidth === 0`), and writes a full-page screenshot per page into `.artifacts/mobile/`. | 14 passed (2026-08-05) |
+| `openreplay` | seeded fixture (same as `smoke`) | The session-replay privacy proof, and the only suite that measures **bytes on the wire**: nothing is recorded before consent (and the tracker's project key is not even sent to the page), the real banner starts it, `/account` stops it, Do Not Track suppresses it, and what does get recorded contains neither typed text, nor the signed-in name, nor any URL path. 7 tests. Needs a live OpenReplay (`.claude/skills/openreplay-stack`) and `replay.enabled: true`; **self-skips otherwise**, so it never runs as part of smoke or journey. See [frontend/session-replay.md](frontend/session-replay.md). | **11 passed** (2026-08-08) |
+| `tunnel` | whatever is live | A real login round-trip through the public quick-tunnel URL, plus admin and light/dark theme screenshots. 5 tests; **self-skip without `TUNNEL_BASE_URL`**. No `setup` dependency — it performs a fresh interactive login. | run per tunnel |
+| `docs` | seeded fixture | Writes the screenshots in `docs/flows/` for [user-flows.md](user-flows.md). **Self-skips without `DOCS_SHOTS=1`**, so a normal run never rewrites committed images. | on demand |
 
-Act sizes in the journey recipe: act 1 = 36, act 2 = 45, act 3 = 13,
-act 4 = 24, act 5 = 35, act 6 = 40, act 7 = 26, act 8 = 22.
+Act sizes in the journey recipe: act 0 = 15, act 1 = 42, act 2 = 51,
+act 3 = 13, act 4 = 29, act 5 = 48, act 6 = 43, act 7 = 37, act 8 = 31.
 
-By action type: 195 `rpc`, 26 `ui.assert`, 19 `ui.flow`, 1 `files.generate`.
+By action type: 254 `rpc`, 27 `ui.assert`, 27 `ui.flow`, 1 `files.generate`.
 
 ### Running it
 
@@ -170,7 +215,7 @@ Direct — any Linux/WSL shell with the repo checked out (scripts re-exec inside
 the Nix dev shell automatically):
 
 ```bash
-bash .claude/skills/hackathon-e2e/scripts/run.sh [smoke|journey|all|mobile] [options]
+bash .claude/skills/hackathon-e2e/scripts/run.sh [smoke|journey|all|mobile|openreplay] [options]
 ```
 
 | Flag | Effect |
@@ -178,12 +223,18 @@ bash .claude/skills/hackathon-e2e/scripts/run.sh [smoke|journey|all|mobile] [opt
 | *(positional)* `smoke` | Default. Reset, boot, seed, probe, run the smoke project. |
 | *(positional)* `journey` | Reset, boot, provision the extras roster, probe, run the journey project. |
 | *(positional)* `mobile` | Reset + seed (unless `--no-reset`), probe, run the mobile project. |
-| *(positional)* `all` | Two independent runs: `smoke`, then a fresh reset, then `journey`. Does **not** include `mobile`. |
+| *(positional)* `openreplay` | Reset, boot, seed (same fixture as smoke), probe, run the openreplay project. Not part of `all`: it needs a live OpenReplay, which nothing else does. |
+| *(positional)* `all` | Two independent runs: `smoke`, then a fresh reset, then `journey`. Does **not** include `mobile` or `openreplay`. |
 | `--no-reset` | Reuse the running stack and its data. **Ignored for `journey`** — it prints a note and resets anyway, because the recipe requires an empty database. |
 | `--headed` | Run Firefox headed (`playwright test --headed`). |
 | `--grep <p>` | Forwarded to `playwright test --grep`; filters by test title, which for recipe actions is `[<id>] <title>` — so `--grep act5` selects a whole act, `--grep act6.walkin` a single action. |
-| `--until-act <n>` | Journey only. Exports `JOURNEY_UNTIL_ACT=<n>`; `recipe.spec.ts` skips every action with `act > n`. |
+| `--until-act <n>` | Journey only. Exports `JOURNEY_UNTIL_ACT=<n>`; `recipe.spec.ts` skips every action with `act > n`. Act 0 therefore always plays. |
 | `-h` / `--help` | Prints the usage header. |
+
+`run.sh` also unwires a `--with-auth` Cloudflare tunnel for the duration of a
+run and **re-wires it on EXIT** — every persona logs in over localhost, and
+tokens carrying the tunnel issuer fail every auth setup. See
+[.claude/CLAUDE.md](../.claude/CLAUDE.md) for why that trap was invisible.
 
 Environment overrides read by `lib.sh` / `personas.ts` / `playwright.config.ts`:
 `E2E_GRPC_ADDR` (default `localhost:3000`), `E2E_KEYCLOAK_URL` (default
@@ -203,6 +254,7 @@ state — browse it at http://localhost:8081 to inspect any page mid-lifecycle
 
 | Act | Timeline | Theme |
 | --- | --- | --- |
+| 0 | before any event | Platform setup (site pages, the About page) |
 | 1 | T-4mo | Publication & announcement |
 | 2 | T-3mo | Registration opens |
 | 3 | T-2mo | Project proposals |
@@ -221,18 +273,25 @@ bash .claude/skills/hackathon-e2e/scripts/run.sh mobile --no-reset
 ## 3. The recipe as executable spec
 
 `.claude/skills/hackathon-e2e/recipe.jsonl` is **the screenplay and the product
-spec at once**: 250 lines, of which 9 are `{"comment": ...}` section banners
-(dropped by `loadRecipe()`) and 241 are actions. `tests/journey/recipe.spec.ts`
-does nothing but emit one Playwright test per line, in file order, under
-`test.describe.configure({ mode: "serial" })`. All the semantics live in
+spec at once**: 319 lines, of which 10 are `{"comment": ...}` banners (one
+header plus one per act) and 309 are actions. `tests/journey/recipe.spec.ts`
+does nothing but emit one Playwright test per surviving line, in file order,
+under `test.describe.configure({ mode: "serial" })`. All the semantics live in
 `helpers/recipe.ts`.
+
+⚠ **308 of the 309 actions actually run.** `loadRecipe()` drops every line
+carrying a `comment` key — that is how the banners are removed — and it does
+not check for an `id` first, so `act8.flow.bob`, which carries a trailing
+`comment` explaining why it is ordered where it is, has never executed. That is
+the arithmetic behind "309 actions, 312 tests" (312 = 4 setup + 308).
+Explanatory prose belongs in `outcome` or `todo` on any line that has an `id`.
 
 **Extend the lifecycle by editing `recipe.jsonl`, never the spec file.**
 
 ### Action shape
 
 ```jsonc
-{"id":"act1.publish","priority":"P1","implement":true,
+{"id":"act1.publish","priority":"P1",
  "outcome":"Succeeds. Returns hackathonId for later steps.",
  "act":1,"t":"T-4mo","title":"admin publishes the hackathon",
  "actor":"hackagon-admin","action":"rpc",
@@ -255,7 +314,7 @@ does nothing but emit one Playwright test per line, in file order, under
 | `expect` | `{ok}`, `{error: "<StatusName>"}` (matched against grpcurl's `Code: …`), and optionally `{check, checkArgs}` naming a post-condition in `CHECKS`. |
 | `save` | `{varName: "dot.path.in.response"}` — see chaining below. |
 | `gate` | Override capability gate; see below. |
-| `priority` / `implement` / `outcome` / `todo` | Triage metadata; see below. |
+| `priority` / `outcome` / `todo` | Triage metadata; see below. (`implement` is still read but no action sets it.) |
 | `fresh` | `ui.flow` only: use a clean anonymous context instead of the saved storage state (for fresh-login chains). |
 | `steps` | `ui.flow` only: the navigation chain. |
 
@@ -264,7 +323,7 @@ does nothing but emit one Playwright test per line, in file order, under
 | Type | Executor | Behaviour |
 | --- | --- | --- |
 | `rpc` | `runRpc` | Shells out to `grpcurl` via `helpers/api.ts` with a real Keycloak password-grant token for `actor` (or no token when anonymous). Extras are lazily self-registered first through `user.UserService/Register` — the same RPC the frontend hooks call. Gated on the capability probe. |
-| `ui.assert` | `runUiAssert` | Looks the `assert` name up in `UI_ASSERTS` in `helpers/recipe.ts` (`worldEmpty`, `homeStatus`, `homeAbsent`, `dashboardOthersShows`, `dashboardBadge`, `memberViewStatus`, `aboutVisible`, `proposalsPage`, `timelinePhases`, `publicWinnersPage`, `publicBlogEntry`, `submissionsPage`, `teamsPage`). An **unknown name skips** with the action's `todo` — that is the signal to implement it once the page renders real data. |
+| `ui.assert` | `runUiAssert` | Looks the `assert` name up in `UI_ASSERTS` in `helpers/recipe.ts` (`worldEmpty`, `homeStatus`, `homeAbsent`, `dashboardOthersShows`, `dashboardBadge`, `memberViewStatus`, `aboutVisible`, `proposalsPage`, `timelinePhases`, `publicWinnersPage`, `sitePageSanitized`, `publicBlogEntry`, `submissionsPage`, `teamsPage`). An **unknown name skips** with the action's `todo` — that is the signal to implement it once the page renders real data. |
 | `ui.flow` | `runFlow` | A chained browsing session. Step keys: `goto` (+ optional `status`), `login`, `clickLink`, `clickButton`, `clickSelector`, `fill{selector,value}`, `back`, `expectUrl`, `expectText`, `expectHeading`. After every `goto` the engine waits for `networkidle` — SvelteKit attaches `onclick` handlers only after hydration, so clicking earlier is a silent no-op. |
 | `files.generate` | `runFilesGenerate` | Builds the deterministic upload bundle via `helpers/files.ts` into `.state/uploads/<slug>/`: `logo.png`, `poster.svg`, `final-report.pdf`, `data-sample.csv`, `README.md`. Asserts byte-identical regeneration for the same seed and pins the PNG magic bytes. Dependency-free and offline — hand-rolled PNG encoder (IHDR/IDAT/IEND + CRC32 + `node:zlib`) and a hand-assembled single-page PDF xref. |
 
@@ -312,7 +371,15 @@ array of strings) **fully replaces** `method` for gating purposes. Two uses:
   negatives gate on `hackathon.ConfigService/SetWindows` while calling
   `hackathon.HackathonService/Join`.
 
-19 actions currently carry a `gate`.
+24 actions currently carry a `gate`.
+
+**A gate that nobody probes is worse than no gate.** `implemented()` cannot
+distinguish "the backend answered `Unimplemented`" from "no one ever asked" —
+both are falsy — so an action gated on an RPC missing from `METHODS` self-skips
+on every run, forever, behind a growing green number. Six `act5.owner.*`
+actions did exactly that. `runRpc` now **throws** when a gate is absent from the
+probe list: gating exists so an action wakes up when its RPC lands, and one that
+is never probed never wakes.
 
 ### Triage fields
 
@@ -320,13 +387,13 @@ Every action is triaged against the current state of development.
 
 | Field | Values | Current distribution |
 | --- | --- | --- |
-| `priority` | `P1` runs today or its backend just landed; `P2` next wave (vote handler, window enforcement, forms); `P3` later | P1 = 171, P2 = 61, P3 = 9 |
-| `implement` | `false` = deliberately deferred; the action stays as documentation only | 6 actions: `act1.config.emails`, `act1.config.branding`, `act6.submit.invalid`, `act8.account.liam`, `act8.account.mei`, `act8.account.check` |
+| `priority` | `P1` runs today or its backend just landed; `P2` next wave; `P3` later | P1 = 215, P2 = 85, P3 = 9 |
+| `implement` | `false` = deliberately deferred; the action stays as documentation only | **0 actions** — nothing in the recipe is deferred any more |
 | `outcome` | Human-readable expected outcome derived from the machine assertions | on every action |
-| `todo` | Placeholder note carrying what to verify (typically guessed proto field names) | 18 actions |
+| `todo` | Placeholder note carrying what to verify (typically guessed proto field names) | 24 actions |
 
-The 6 `implement: false` actions are exactly the 6 currently reported as
-deferred-by-design in a green journey run.
+A green journey run therefore reports no deferred-by-design results at all:
+**0 failed, 0 skipped.**
 
 ### `todo` placeholders
 
@@ -342,10 +409,10 @@ says what to check), then delete the `todo`.
 
 ### Capability probing
 
-`scripts/probe.sh` holds a `METHODS` list of 47 lifecycle RPCs — from
+`scripts/probe.sh` holds a `METHODS` list of 64 lifecycle RPCs — from
 `hackathon.HackathonService/Get` through `hackathon.ConfigService/*`,
-`hackathon.PrizeService/*` and `user.UserService/DeleteAccount`, several of
-which have no proto at all yet. For each it runs:
+`hackathon.PrizeService/*`, `storage.StorageService/*`, `site.SitePageService/*`
+and `user.UserService/DeleteAccount`. For each it runs:
 
 ```bash
 grpcurl -plaintext -d '{}' localhost:3000 <package.Service/Method>
@@ -396,8 +463,8 @@ get **browser sessions** as well as API access.
 | bob | `bob` | The spotlight participant — every UI outcome is asserted through his eyes |
 | charles | `charles` | The unlucky one — registers, never gets off the waitlist |
 
-`tests/auth.setup.ts` runs as a Playwright **project dependency** for all three
-suites. For each principal it drives the real login flow
+`tests/auth.setup.ts` runs as a Playwright **project dependency** for every
+project except `tunnel`. For each principal it drives the real login flow
 (`helpers/login.ts`: frontend "Log in" → Auth.js → Keycloak form → back), then
 visits `/dashboard`, then saves the browser storage state to
 `.state/<persona>.json`. Two things matter here:
@@ -442,10 +509,11 @@ via the Edit RPC (`{{now±Nd}}` tokens; acts 6 and 8 move the event into the
 present and the past). Faking the system clock would fight JWT validity and
 Keycloak. `scripts/timeshift.sh <hackathon-uuid> <days>` does the same thing
 manually — it `Get`s the hackathon as `hackagon-admin`, adds N days to both
-timestamps and `Edit`s them back. Caveat recorded in the script: phases carry
-their own dates and `PhaseService` has no `Edit` yet, so it shifts only the
-hackathon-level window (which is what drives the status badge and Join
-cut-offs). Window fields must be time-travelled together with the event dates.
+timestamps and `Edit`s them back. It shifts only the hackathon-level window,
+which is what drives the status badge and the Join cut-offs; phases carry their
+own dates and are left alone. (The note in the script says `PhaseService` has no
+`Edit` — it does now, so the script *could* shift phases too; it has not been
+changed to.) Window fields must be time-travelled together with the event dates.
 
 **Single worker, no retries.** `playwright.config.ts` sets `fullyParallel:
 false`, `workers: 1`, `retries: 0`, `timeout: 60_000`, `expect.timeout:
@@ -457,8 +525,9 @@ report lands in `.artifacts/report`.
 **API-driven acts, UI-asserted outcomes.** Mutations that have no UI yet run
 through `helpers/api.ts` (grpcurl + real tokens); outcomes are asserted in
 Firefox wherever the UI is real (badges, listings, 403s, the About text).
-Roster counts are asserted through the API because the participants page still
-renders mock data.
+Roster counts are still asserted through the API, but no longer because the
+page is fake — the participants page renders the real roster from the layout's
+`hackathon.get`; an API assertion is simply the cheaper place to count.
 
 `.state/` and `.artifacts/` are gitignored
 (`.claude/skills/hackathon-e2e/.gitignore`) and regenerated per run.
@@ -466,7 +535,7 @@ renders mock data.
 ## 5. The recipe player
 
 `.claude/skills/hackathon-e2e/recipe-player.html` is a **self-contained
-animated replay** of the recipe — a single ~177 KB file with no external
+animated replay** of the recipe — a single ~192 KB file with no external
 assets, openable in any browser (and publishable as an artifact). It shows the
 story act by act, colour-coded by action kind (create / join / approve / edit /
 remove / vote / check / browse / files), and honours
@@ -481,13 +550,21 @@ The recipe is embedded verbatim:
 ```
 
 and parsed at load time with
-`$("recipe-data").textContent.split("\n")…map(JSON.parse).filter(a => a.id)` —
-the same comment-dropping rule as `loadRecipe()`.
+`$("recipe-data").textContent.split("\n")…map(JSON.parse).filter(a => a.id)`.
+Note that this is **not** the same rule as `loadRecipe()`, which filters on the
+presence of a `comment` key — the player shows all 309 actions while the suite
+runs 308.
 
 **To rebuild after editing the recipe**: re-splice the current contents of
 `recipe.jsonl` between the `<script id="recipe-data" type="application/jsonl">`
 marker and its closing `</script>`. Nothing else in the file needs to change —
 act names and colours are derived from the data.
+
+**The splice must escape `</script>`.** An inline `<script>` block ends at the
+first literal `</script>` in the source, even inside a JSON string — and
+`act0.about.xss` pastes a script tag on purpose. Written as `<\/script>` it
+parses back to exactly the same character. Getting this wrong is silent: the
+player rendered 10 actions of 274 and looked fine.
 
 ## 6. Operational gotchas
 
@@ -532,7 +609,9 @@ through to the single-step form when `#password` is already present.
 | All journey acts skip | `.state/capabilities.json` missing or stale — run `scripts/probe.sh` with the backend up. |
 | Extras cannot get tokens | `scripts/roster.sh` did not run (needs Keycloak up). `run.sh journey` runs it automatically. |
 | Firefox fails to launch | `pnpm exec playwright install --with-deps firefox` (needs sudo/apt — fine in the devcontainer; on NixOS use `playwright-driver.browsers`). |
-| Frontend never ready | Not in the process-compose shell: `cd components/frontend && just serve`. |
+| Frontend never ready, or `EADDRINUSE: ::1:8081` | A `vite dev` is holding the port against the built server. `just deploy::down` frees only :8180 and :3000, so vite can outlive its supervisor. `scripts/prod-frontend.sh stop` then `ensure`; `reset.sh` already does the stop. |
+| The openreplay suite skips everything | `replay.enabled` is false. Wire it with `openreplay-stack/scripts/wire-frontend.sh`, which bounces **both** the process-compose frontend and the harness's built server — the built one reads `config.yaml` once at boot, so restarting only the other prints "restarted" and changes nothing. |
+| A recipe action self-skips forever | Its `gate` is not in `probe.sh`'s `METHODS`. That throws now; if it still skips, the probe file is stale. |
 | Windows host | Use the `devcontainer-up` skill; do not run the stack natively. If git checks scripts out with CRLF: `git config core.autocrlf input` and re-checkout. |
 | Journey fails at `act1.guard` ("hackathon already exists") | The database was not empty — the journey needs a reset; do not pass `--no-reset`. |
 
@@ -583,18 +662,30 @@ rg -o 'rpc (\w+)' -r '$1' api/proto --no-filename | sort -u
 rg -o '\.\s*(\w+)\s*\(' -r '$1' components/frontend/src --no-filename | sort -u
 ```
 
-Currently 97 of 102 RPCs have a frontend caller. The gaps this found were not
-small: **CreateSubmission / EditSubmission / FinalizeSubmission** had none, so a
-team could not turn work in; **EditSettings** had none, so `votingEnabled` —
-which gates every ballot and defaults to false — could only be opened over
-grpcurl; **SetVotingPolicy** had none, so an event could not state its own
-rules, and `SubmitVote` ignored them anyway.
+Currently **99 of 107** `rpc` declarations have a frontend caller. The gaps this
+audit found were not small: **CreateSubmission / EditSubmission /
+FinalizeSubmission** had none, so a team could not turn work in;
+**EditSettings** had none, so `votingEnabled` — which gates every ballot and
+defaults to false — could only be opened over grpcurl; **SetVotingPolicy** had
+none, so an event could not state its own rules, and `SubmitVote` ignored them
+anyway.
 
-What is left without a caller is deliberate: `PageService.SetOrder` is a bulk alternative
-to the MoveUp/MoveDown the CMS already uses, `GetVoteCategory` and `ListVotes`
-have `List*` equivalents that drive the UI, and `registrationsEnabled` on
-`EditSettings` is enforced nowhere (audit B3 — the `register` capability
-governs, and a switch that does nothing is worse than no switch).
+The eight left over, and why:
+
+| RPC | Why it has no caller |
+| --- | --- |
+| `PageService.SetOrder` | Bulk alternative to the MoveUp/MoveDown the CMS already uses. |
+| `HackathonService.SetCurrentPhase` | Alias for `AdvancePhase`, which the timeline page calls. |
+| `VoteService.GetVoteCategory` | `ListVoteCategories` drives the UI. |
+| `VoteService.ListVotes` | Raw ballots; the UI shows `ListVoteResults` instead. |
+| `TeamService.GetSubmission` | `ListSubmissions` drives the UI. |
+| `VoteService.SuggestResults` | Computes a tally; the UI records the outcome with `CreateVoteResult` and reads it with `ListVoteResults`. The recipe exercises it (`act7.result.ranked`, `act7.result.points`). |
+| `StorageService.CreateDownloadUrl` | Nothing private is served yet — uploaded imagery is public-read. |
+| `ProjectService.RemovePreference` | "★ Preferred" is a badge, not a toggle: the UI offers no un-prefer control. |
+
+Also worth recording: `registrationsEnabled` on `EditSettings` is enforced
+nowhere (audit B3 — the `register` capability governs, and a switch that does
+nothing is worse than no switch). The one pending Ginkgo spec is its test.
 
 ## See also
 
