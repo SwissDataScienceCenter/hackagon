@@ -260,8 +260,28 @@ scripts/roster.sh         provision extras into Keycloak (idempotent)
 scripts/probe.sh          backend capability probe -> .state/capabilities.json
 scripts/timeshift.sh      shift a hackathon's dates by N days (manual time travel)
 scripts/fetch-cc-assets.sh  optional CC sample photos (Wikimedia Commons + attribution)
+scripts/journal-to-recipe.sh  captured RPC journal -> DRAFT recipe actions
 .state/                   gitignored: storage states, capabilities, uploads
 ```
+
+## Seeding the recipe from real traffic
+
+The backend can journal every gRPC call in this recipe's own shape — actor,
+method, params, expect — so actions can be derived from what people actually
+do. It is OFF by default; `docs/backend/rpc-journal.md` states exactly what it
+records (allowlisted structural params only; no IP, no user agent, no free
+text, no Keycloak ID) and how to turn it on.
+
+```bash
+bash .claude/skills/hackathon-e2e/scripts/journal-to-recipe.sh --dedupe --out draft.jsonl
+```
+
+It templates ids the way the recipe does ({{hackathonId}}, {{var:NAME}},
+{{userId:alice}}) and leaves `id`/`title`/`outcome`/`priority`/`act`/`t`
+blank on purpose — a generated outcome that reads plausible but was never
+thought about is worse than a blank one. **A journal seeds a recipe; it does
+not write one.** It captures traffic, not intent: the deliberate denials this
+recipe is largely made of look like ordinary failures in a log.
 
 ## Extending
 
