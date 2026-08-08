@@ -121,20 +121,33 @@ require_docker
 url="$(tunnel_url || true)"
 [ -n "$url" ] || { echo "error: no OpenReplay tunnel running — scripts/up.sh first" >&2; exit 1; }
 
-email="${OPENREPLAY_EMAIL:-}"
-password="${OPENREPLAY_PASSWORD:-}"
-[ -n "$email" ] && [ -n "$password" ] || {
-  echo "error: set OPENREPLAY_EMAIL and OPENREPLAY_PASSWORD (the account from $url/signup)" >&2
-  exit 1
-}
+# The project key, by preference from OpenReplay's own API — but the rig
+# outlives the shell that created its account, and the admin password is not
+# recoverable from the stack (it is stored hashed). `OPENREPLAY_PROJECT_KEY`
+# short-circuits the login for that case; read it out of the running instance
+# with:
+#
+#   docker exec postgres sh -lc \
+#     'PGPASSWORD="$POSTGRESQL_PASSWORD" psql -U postgres -d postgres \
+#        -tAc "select project_key from public.projects;"'
+key="${OPENREPLAY_PROJECT_KEY:-}"
+if [ -z "$key" ]; then
+  email="${OPENREPLAY_EMAIL:-}"
+  password="${OPENREPLAY_PASSWORD:-}"
+  [ -n "$email" ] && [ -n "$password" ] || {
+    echo "error: set OPENREPLAY_EMAIL and OPENREPLAY_PASSWORD (the account from $url/signup)," >&2
+    echo "       or OPENREPLAY_PROJECT_KEY to skip the login entirely" >&2
+    exit 1
+  }
 
-jwt="$(curl -fsS -X POST "$url/api/login" -H 'Content-Type: application/json' \
-  -d "{\"email\":\"$email\",\"password\":\"$password\"}" |
-  sed -n 's/.*"jwt":"\([^"]*\)".*/\1/p')"
-[ -n "$jwt" ] || { echo "error: OpenReplay login failed for $email" >&2; exit 1; }
+  jwt="$(curl -fsS -X POST "$url/api/login" -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$email\",\"password\":\"$password\"}" |
+    sed -n 's/.*"jwt":"\([^"]*\)".*/\1/p')"
+  [ -n "$jwt" ] || { echo "error: OpenReplay login failed for $email" >&2; exit 1; }
 
-key="$(curl -fsS "$url/api/projects" -H "Authorization: Bearer $jwt" |
-  sed -n 's/.*"projectKey":"\([^"]*\)".*/\1/p' | head -1)"
+  key="$(curl -fsS "$url/api/projects" -H "Authorization: Bearer $jwt" |
+    sed -n 's/.*"projectKey":"\([^"]*\)".*/\1/p' | head -1)"
+fi
 [ -n "$key" ] || { echo "error: no project found — sign up at $url/signup first" >&2; exit 1; }
 
 block=$(cat <<YAML
@@ -158,5 +171,9 @@ fi
 apply "$FRONTEND_CFG.tmp" "==> session replay is ON"
 echo "    ingestPoint  $url/ingest"
 echo "    projectKey   $key"
-echo "    ⚠ every visitor to http://localhost:8081 is now recorded (masked — see"
-echo "      components/frontend/src/lib/components/observability/SessionReplay.svelte)"
+echo "    ⚠ visitors to http://localhost:8081 are now ASKED whether to be recorded."
+echo "      Nothing is recorded until somebody clicks \"Allow recording\" in the"
+echo "      banner — so an empty OpenReplay UI after wiring is the correct default,"
+echo "      not a broken ingest. What is recorded is masked; see"
+echo "      components/frontend/src/lib/components/observability/SessionReplay.svelte"
+echo "      and docs/frontend/session-replay.md."

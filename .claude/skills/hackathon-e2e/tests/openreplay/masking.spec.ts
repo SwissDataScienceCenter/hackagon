@@ -1,10 +1,18 @@
 import fs from "node:fs"
 import path from "node:path"
-import zlib from "node:zlib"
-import { test, expect, type Page, type Request } from "@playwright/test"
-import { storageStatePath, SKILL_DIR } from "../../helpers/state.js"
+import { test, expect } from "@playwright/test"
+import { storageStatePath } from "../../helpers/state.js"
 import { rpcAs, rpcAnonymous } from "../../helpers/api.js"
 import { SEED_HACKATHONS } from "../../personas.js"
+import {
+  FRONTEND,
+  bytes,
+  captureIngest,
+  contains,
+  grantConsent,
+  replayConfig,
+  writeCapture,
+} from "./capture.js"
 
 /*
  * Does OpenReplay capture what people type into the registration form?
@@ -30,6 +38,12 @@ import { SEED_HACKATHONS } from "../../personas.js"
  * throwaway page fulfilled by `page.route` on the app's origin, and the
  * production component is never given an "unmask" switch to forget about.
  *
+ * CONSENT IS A PRECONDITION HERE, NOT THE SUBJECT. Recording now requires the
+ * visitor's say-so (`consent.spec.ts` is where that is proved), so every test
+ * below that needs a running tracker grants it first. Without that these tests
+ * would pass for the worst possible reason — nothing recorded, so nothing
+ * leaked — which is the exact false green the control exists to rule out.
+ *
  * Needs `replay.enabled: true` in the frontend config pointed at a live
  * OpenReplay (`.claude/skills/openreplay-stack`); it self-skips otherwise, so
  * it never runs as part of smoke or journey.
@@ -40,70 +54,7 @@ const SENTINEL = "ZZQX-SENTINEL-7731"
 /** Typed into the unmasked control page. MUST reach the wire. */
 const CONTROL_SENTINEL = "ZZQX-CONTROL-4409"
 
-const ARTIFACTS = path.join(SKILL_DIR, ".artifacts", "openreplay")
-const FRONTEND = path.join(SKILL_DIR, "..", "..", "..", "components", "frontend")
-
-function replayConfig(): { ingestPoint: string; projectKey: string } | null {
-  const cfg = path.join(FRONTEND, "data", "test", "config", "config.yaml")
-  let text: string
-  try {
-    text = fs.readFileSync(cfg, "utf8")
-  } catch {
-    return null
-  }
-  if (!/^\s*enabled:\s*true\s*$/m.test(text)) return null
-  const ingestPoint = text.match(/^\s*ingestPoint:\s*"?([^"\s]+)"?\s*$/m)?.[1]
-  const projectKey = text.match(/^\s*projectKey:\s*"?([^"\s]+)"?\s*$/m)?.[1]
-  return ingestPoint && projectKey ? { ingestPoint, projectKey } : null
-}
-
 const REPLAY = replayConfig()
-
-/**
- * Collect every byte the page posts to the ingest endpoint.
- *
- * `postDataBuffer()` and not `postData()`: the tracker's batches are a binary
- * message stream, and reading them as a string would re-encode invalid UTF-8
- * and could destroy the very bytes we are searching for.
- */
-function captureIngest(page: Page): { chunks: Buffer[] } {
-  const chunks: Buffer[] = []
-  const onRequest = (req: Request) => {
-    if (!req.url().includes("/ingest")) return
-    const body = req.postDataBuffer()
-    if (body) chunks.push(body)
-  }
-  page.on("request", onRequest)
-  return { chunks }
-}
-
-function writeCapture(name: string, chunks: Buffer[]): string {
-  fs.mkdirSync(ARTIFACTS, { recursive: true })
-  const file = path.join(ARTIFACTS, `${name}.bin`)
-  fs.writeFileSync(file, Buffer.concat(chunks))
-  return file
-}
-
-/**
- * Case-sensitive raw-byte search — the sentinels are pure ASCII.
- *
- * Every chunk is searched raw AND, when it turns out to be gzip, inflated
- * first: the tracker compresses a batch once it exceeds ~24 kB, and a grep
- * that only reads the raw bytes would report "not found" for a sentinel that
- * was transmitted perfectly well, just deflated. Exactly the false green this
- * file is built to avoid, in the direction that matters.
- */
-function contains(chunks: Buffer[], needle: string): boolean {
-  const target = Buffer.from(needle, "utf8")
-  if (Buffer.concat(chunks).includes(target)) return true
-  return chunks.some((c) => {
-    try {
-      return zlib.gunzipSync(c).includes(target)
-    } catch {
-      return false
-    }
-  })
-}
 
 test.describe("OpenReplay masking", () => {
   test.skip(
@@ -178,23 +129,39 @@ test.describe("OpenReplay masking", () => {
     await page.waitForTimeout(3_000)
 
     const file = writeCapture("control", cap.chunks)
-    const bytes = Buffer.concat(cap.chunks).length
-    console.log(`control capture: ${bytes} bytes -> ${file}`)
+    console.log(`control capture: ${bytes(cap.chunks)} bytes -> ${file}`)
 
     // Without this the whole spec is theatre: it proves the interception sees
     // the tracker's traffic AND that a plain ASCII string survives readable in
     // it, so a later zero-hit grep means masking and not measurement failure.
-    expect(bytes, "the control run captured no ingest traffic at all").toBeGreaterThan(0)
+    expect(
+      bytes(cap.chunks),
+      "the control run captured no ingest traffic at all",
+    ).toBeGreaterThan(0)
     expect(
       contains(cap.chunks, CONTROL_SENTINEL),
       "an UNMASKED tracker did not transmit the typed text — the capture method is broken, not the masking",
+    ).toBe(true)
+
+    // The control also demonstrates the URL leak the production component
+    // closes: with default options the tracker stamps the FULL page URL onto
+    // every URL-based DOM message as its base href. Asserting it here is what
+    // makes the "no path" assertion in the masked run below mean "we closed
+    // it" rather than "this tracker never sent paths anyway".
+    expect(
+      contains(cap.chunks, "/__replay_control__"),
+      "the unmasked control did not transmit the page path — the URL assertions below would prove nothing",
     ).toBe(true)
   })
 
   test.describe("the real registration form", () => {
     test.use({ storageState: storageStatePath("bob") })
 
-    test("does not transmit what was typed into it", async ({ page }) => {
+    test("does not transmit what was typed into it", async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       test.setTimeout(120_000)
 
       // The seed fixture defines no registration form, so give h1 one. `diet`
@@ -217,6 +184,10 @@ test.describe("OpenReplay masking", () => {
       })
       expect(set.ok, set.raw).toBe(true)
 
+      // Recording is opt-in now. Grant it, or the tracker never starts and
+      // every assertion below passes because nothing was captured.
+      await grantConsent(context, baseURL ?? "http://localhost:8081")
+
       const cap = captureIngest(page)
 
       await page.goto(`/register/${h1!.id}`)
@@ -233,7 +204,8 @@ test.describe("OpenReplay masking", () => {
       // that proves nothing. Nothing in the output said so.
       await expect
         .poll(() => cap.chunks.length, {
-          message: "the tracker never sent anything — is replay.enabled on, and did the frontend restart since?",
+          message:
+            "the tracker never sent anything — is replay.enabled on, was consent granted, and did the frontend restart since?",
           timeout: 30_000,
         })
         .toBeGreaterThan(0)
@@ -245,10 +217,12 @@ test.describe("OpenReplay masking", () => {
       await page.waitForTimeout(5_000)
 
       const file = writeCapture("masked", cap.chunks)
-      const bytes = Buffer.concat(cap.chunks).length
-      console.log(`masked capture: ${bytes} bytes -> ${file}`)
+      console.log(`masked capture: ${bytes(cap.chunks)} bytes -> ${file}`)
 
-      expect(bytes, "no ingest traffic captured — the tracker never started").toBeGreaterThan(0)
+      expect(
+        bytes(cap.chunks),
+        "no ingest traffic captured — the tracker never started",
+      ).toBeGreaterThan(0)
 
       // Positive control WITHIN this run. Attribute values other than href,
       // alt and placeholder are transmitted verbatim (they are structure, not
@@ -276,6 +250,25 @@ test.describe("OpenReplay masking", () => {
         contains(cap.chunks, "Bob Henderson"),
         "the signed-in user's display name was transmitted — something is putting personal data in an ATTRIBUTE, which no masking option covers",
       ).toBe(false)
+
+      // NO URL EVER CARRIES A PATH. Also found by reading a capture: privateMode
+      // wipes the page LOCATION, but the tracker stamps `document.baseURI` — the
+      // full current URL — onto every URL-based DOM message so the replayer can
+      // resolve relative assets, and those are not sanitized. The bytes held
+      // `http://localhost:8081/register/<uuid>` dozens of times.
+      //
+      // Route ids would have been arguable. `/invite/<token>` is not: that
+      // token IS the credential, so a recording of somebody opening their
+      // invitation would contain a working key to a private event.
+      // `resourceBaseHref` pins the base to the origin; this is the proof.
+      expect(
+        contains(cap.chunks, `/register/${h1!.id}`),
+        `the page path (with the hackathon id) was transmitted to OpenReplay (see ${file})`,
+      ).toBe(false)
+      expect(
+        contains(cap.chunks, "/register/"),
+        `a page path was transmitted to OpenReplay (see ${file})`,
+      ).toBe(false)
     })
   })
 
@@ -289,10 +282,18 @@ test.describe("OpenReplay masking", () => {
   test.describe("a dead ingest endpoint", () => {
     test.use({ storageState: storageStatePath("bob") })
 
-    test("does not take the app down with it", async ({ page }) => {
+    test("does not take the app down with it", async ({
+      page,
+      context,
+      baseURL,
+    }) => {
       const failures: string[] = []
       page.on("pageerror", (e) => failures.push(String(e)))
 
+      // Consent granted, or the tracker would never try to reach the endpoint
+      // this test kills, and "an unreachable ingest does not break the page"
+      // would be true about a page that never contacted it.
+      await grantConsent(context, baseURL ?? "http://localhost:8081")
       await page.route("**/ingest/**", (route) => route.abort("connectionrefused"))
 
       await page.goto("/dashboard")

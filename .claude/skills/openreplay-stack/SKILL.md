@@ -16,6 +16,7 @@ bash .claude/skills/openreplay-stack/scripts/doctor.sh          # preflight — 
 bash .claude/skills/openreplay-stack/scripts/up.sh              # fetch, prepare, tunnel, start
 bash .claude/skills/openreplay-stack/scripts/up.sh --dry-run    # everything except `compose up`
 bash .claude/skills/openreplay-stack/scripts/url.sh             # current public URL
+bash .claude/skills/openreplay-stack/scripts/retention.sh       # what is past the cutoff (dry run)
 bash .claude/skills/openreplay-stack/scripts/down.sh            # stop, keep recorded sessions
 bash .claude/skills/openreplay-stack/scripts/down.sh --volumes  # stop and delete everything
 ```
@@ -80,13 +81,16 @@ ingestPoint: <url>/ingest
 projectKey:  <from the OpenReplay UI>
 ```
 
-`docs/TODO.md` carries the frontend plan (a `replay` block in the config
-schema, passed through the root `+layout.server.ts` to one client-only
-component) **and the blockers to settle first**: the registration form's `diet`
-field is GDPR Article 9 special-category data and must be masked explicitly,
-consent should reuse the existing registration-consent mechanism, users are
-identified by platform UUID rather than email, and the e2e suite needs a kill
-switch or the tracker fires on every recipe action.
+`docs/frontend/session-replay.md` is the statement of what this collects, when,
+and on whose say-so — read it before pointing the tracker at anything real.
+
+Two of the original blockers were settled differently from the plan, and
+`docs/TODO.md` records why. `diet` needed no per-field rule (masking is
+default-deny, so every input is hidden and every text node starred), and
+consent could **not** reuse the registration-consent mechanism: that is an
+agreement with one event, keyed `(hackathon, user)`, while the tracker runs
+before an event is chosen and for visitors who have no `User` row. It is a
+first-party cookie instead, read server-side.
 
 ## Cost and caveats
 
@@ -140,6 +144,55 @@ serves. The built server reads `config.yaml` ONCE at boot, so restarting only
 process-compose's copy succeeds, prints "Process frontend restarted", and
 changes nothing — the page keeps rendering `replay: null`. `wire-frontend.sh`
 bounces both.
+
+## Retention: there isn't one, so there's a script
+
+Upstream's compose distribution has **no session-retention setting** — checked,
+not assumed. `vendor/docker-envs/*.env` has nothing of the kind (`FS_CLEAN_HRS`
+is about a container's own scratch files), and `experimental.sessions` in
+`vendor/migration-files/init_ch_schema.sql` carries no TTL. Retention limits
+are an EE feature. Left alone, a self-hosted rig keeps every recording of every
+visitor forever.
+
+```bash
+bash scripts/retention.sh                              # dry run, 30 days
+bash scripts/retention.sh --days 30 --apply            # purge
+bash scripts/retention.sh --days 30 --apply --install-ttl
+```
+
+**A session lives in four places**, and deleting from one leaves the others
+holding the same visit:
+
+| Where | What | How it is deleted |
+| --- | --- | --- |
+| object store | `mobs/<session_id>/dom.mobs`, `/devtools.mob` — the recording itself | boto3 inside `chalice`, which already holds the S3 credentials |
+| Postgres | `public.sessions` + ~20 event tables | one `DELETE` on the parent; every FK is `ON DELETE CASCADE` (verified against `pg_constraint`) |
+| ClickHouse | `experimental.sessions`, `product_analytics.events`, the by-`session_id` tables | `ALTER … DELETE`, plus an optional declarative TTL |
+| Hackagon | nothing, by design — there is no session id on our side | — |
+
+**Order is not arbitrary.** Postgres is where the expired ids are *enumerated*,
+so it is deleted **last**. An interrupted run then leaves rows pointing at
+nothing, which the next run fixes; the reverse order would leave recordings
+that nothing can enumerate any more — undeletable except by wiping the bucket.
+
+`--install-ttl` is the closest thing to a built-in setting (ClickHouse expires
+parts on its own, no cron), but it reaches neither the recordings nor Postgres,
+which is where the actual personal data is. It supplements the purge; it does
+not replace it.
+
+## Consent: nobody is recorded who did not say yes
+
+Wiring this rig up no longer means "every visitor to localhost:8081 is
+recorded". A deployment switch (`replay.enabled`) and a per-browser consent
+must **both** be on, and the consent is the visitor's — asked by a banner,
+withdrawable at `/account`, honoured before the tracker's config is ever sent
+to the page. `docs/frontend/session-replay.md` is the full statement; the
+proof is `hackathon-e2e/tests/openreplay/consent.spec.ts`, which counts bytes
+on the wire rather than asserting that a flag was read.
+
+Practical consequence for anyone driving this rig by hand: **after wiring, load
+a page and click "Allow recording"**, or the OpenReplay UI will stay empty and
+look broken.
 
 ## Masking is proved, not configured
 
