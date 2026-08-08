@@ -250,16 +250,51 @@ so it would have to be hand-written SQL outside the schema.
       - Kill switch: an absent `replay:` block parses to `{enabled:false}`, so
         the suites need no opt-out.
 
+      Closed since (2026-08-08) — full statement in
+      `docs/frontend/session-replay.md`:
+      - **Consent — done, but NOT as planned.** The plan said "reuse the
+        registration-consent mechanism (a `replay` key alongside
+        `conduct`/`photos`)". That does not fit, and the reasons are already
+        written down elsewhere in this codebase: a registration consent is an
+        agreement with ONE EVENT recorded against `(hackathon, user)`, while
+        the tracker runs on the landing page and on invite links — before an
+        event is chosen, and for people with no `User` row at all. `/account`
+        and `user.proto` both already say that agreeing to one event's terms is
+        not a standing agreement with the platform. Storing it server-side
+        would also create exactly the person↔recording link the design avoids.
+        It is a first-party `httpOnly` cookie read in `+layout.server.ts`, so
+        an unconsented browser is never sent an ingest endpoint or a project
+        key — "off by default" is a property of what was transmitted, not of
+        what a script chose to do. Banner to ask, `/account` to withdraw.
+      - **Do Not Track — verified, not trusted.** `respectDoNotTrack` was
+        already set; the component now checks DNT *and* Global Privacy Control
+        (which the SDK ignores) before the dynamic import, so the tracker
+        bundle is not even fetched. Asserted with a real Firefox pref and
+        consent deliberately granted, so DNT is the only thing left that can
+        suppress it.
+      - **URLs — masked.** `privateMode` does wipe the page LOCATION, so the
+        replay UI already showed `****`. The leak was elsewhere: the tracker
+        stamps `document.baseURI` onto every URL-based DOM message, unsanitized
+        — a capture held `/register/<uuid>` dozens of times. Ids would have
+        been arguable; `/invite/<token>` is not, because that token IS the
+        credential. `resourceBaseHref` is pinned to the origin.
+      - **Retention — scripted.** OpenReplay's compose distribution has no
+        retention setting at all (checked in `docker-envs/` and
+        `init_ch_schema.sql`; it is an EE feature), so
+        `openreplay-stack/scripts/retention.sh` purges the recording, the
+        Postgres rows and the ClickHouse rows together, with an optional
+        declarative ClickHouse TTL. Dry run by default; run it from cron.
+
       Still open before this is offered to real participants:
-      - **Consent.** Nothing asks anybody. Reuse the registration-consent
-        mechanism (a `replay` key alongside `conduct`/`photos`) — recording is
-        currently all-or-nothing per deployment.
       - **Hosting.** A quick tunnel mints a new hostname on every restart, so
         `ingestPoint` goes stale silently; anything lasting needs a NAMED
         tunnel and a stable `COMMON_DOMAIN_NAME`. Upstream still documents the
         Compose path as experimental (k3s is supported). The box is real:
         2 vCPU / 8 GB RAM / 50 GB disk, on top of whatever else runs.
-      - Retention: sessions currently accumulate in the object store forever.
+      - The consent banner's copy has not been through anyone who writes
+        privacy notices for a living, and there is no link from it to a privacy
+        page (the platform's own SitePages are admin-authored, so there is no
+        fixed slug to point at).
 
 ### Found while fixing (new)
 - [ ] The dev seeder creates participant rows without granting the hackathon

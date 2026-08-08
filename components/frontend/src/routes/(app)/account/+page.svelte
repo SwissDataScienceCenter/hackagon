@@ -160,6 +160,50 @@
         </section>
     {/if}
 
+    <!-- Session replay. Shown only where a deployment configured it at all, so
+         an instance that does not record never advertises a setting that does
+         nothing. The decision is stored in a cookie, not on the profile, which
+         is why this section talks about "this browser" and not "your account" —
+         see $lib/utils/replayConsent for why that is the honest scope. The form
+         has no use:enhance on purpose: the 303 reloads the document, and the
+         reloaded page is rendered by a server that has already read the new
+         cookie, so withdrawing tears the running tracker down with the page
+         rather than leaving it recording in a live document. -->
+    {#if data.replay.configured}
+        <section class="card flex flex-col gap-3 p-4">
+            <h2 class="m-0 text-section text-ink">Session recording</h2>
+            <p class="m-0 text-sm text-ink-2">
+                We can record how <strong>this browser</strong> moves through the pages —
+                clicks, scrolls and the structure of the page — to find buttons and links that
+                do nothing. What you type and the text on the page are never sent, and a
+                recording is never linked to your account.
+            </p>
+
+            <p class="m-0 text-sm text-ink" data-testid="replay-consent-state">
+                {#if data.replay.consent === 'granted'}
+                    Recording is <strong>on</strong> for this browser.
+                {:else if data.replay.consent === 'denied'}
+                    Recording is <strong>off</strong> for this browser.
+                {:else}
+                    Recording is <strong>off</strong> — you have not been asked yet.
+                {/if}
+            </p>
+
+            <form method="POST" action="/consent/replay" class="flex flex-wrap gap-2">
+                <input type="hidden" name="returnTo" value="/account" />
+                {#if data.replay.consent === 'granted'}
+                    <button type="submit" name="decision" value="denied" class="btn">
+                        Stop recording this browser
+                    </button>
+                {:else}
+                    <button type="submit" name="decision" value="granted" class="btn btn-accent">
+                        Allow recording on this browser
+                    </button>
+                {/if}
+            </form>
+        </section>
+    {/if}
+
     <section class="card flex flex-col gap-3 border-danger p-4">
         <h2 class="m-0 text-section text-ink">Delete your profile</h2>
         <p class="m-0 text-sm text-ink-2">

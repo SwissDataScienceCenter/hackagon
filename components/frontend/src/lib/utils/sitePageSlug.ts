@@ -58,7 +58,7 @@ function routeOwnedSegments(): Set<string> {
 
 // Reserved beyond the route tree: paths served by hooks/handlers rather than by
 // a +page file, which therefore never show up in the glob above.
-const EXTRA_RESERVED = ["auth", "error", "api"]
+const EXTRA_RESERVED = ["auth", "error", "api", "consent"]
 
 const RESERVED_SLUGS = new Set([...routeOwnedSegments(), ...EXTRA_RESERVED])
 

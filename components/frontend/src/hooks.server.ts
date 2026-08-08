@@ -45,6 +45,11 @@ const PUBLIC_ROUTE_PATTERNS = [
   // Invitation links must open for someone who is not signed in yet — the token
   // in the URL is the credential, and they sign in from that page.
   /^\/invite(\/|$)/,
+  // Recording consent. The tracker runs on public pages, so the person being
+  // asked may have no account at all — a consent endpoint behind a login would
+  // only ever be answerable by people who had already been recorded on the way
+  // in.
+  /^\/consent(\/|$)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,

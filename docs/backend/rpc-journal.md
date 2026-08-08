@@ -19,6 +19,14 @@ inside SvelteKit `load` functions and form actions. There is no browser-side
 gRPC at all. A browser SDK would record "clicked Save" and never see
 `hackathon.HackathonService/Edit`.
 
+The reverse is also true, which is why both exist: this journal cannot see a
+click that produces **no** RPC, and that absence is a whole bug class of its
+own. Session replay covers it —
+[`frontend/session-replay.md`](../frontend/session-replay.md) — under a
+separate consent, and the two are deliberately **impossible to join**: no
+replay or session identifier exists anywhere in this backend, and no line here
+carries one.
+
 Every RPC in the system passes through one chokepoint —
 `grpc.UnaryInterceptor` in `internal/service/server.go` — and that chokepoint
 already has everything a recipe action needs: the JWT subject the auth

@@ -133,16 +133,9 @@ func (s *TeamService) Create(
 	ctx context.Context,
 	req *msgs.CreateRequest,
 ) (*msgs.CreateResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
+	sub, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	u, err := s.dbClient.User.Query().
-		Where(entuser.KeycloakIDEQ(sub)).
-		Only(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
 	}
 
 	projectID, err := uuid.Parse(req.GetProjectId())
@@ -156,6 +149,11 @@ func (s *TeamService) Create(
 		return nil, status.Errorf(codes.NotFound, "could not find hackathon: %v", err)
 	}
 	if err := s.enforcer.RequirePermission(ctx, hackathon.ID.String(), m.Team, m.Create); err != nil {
+		return nil, err
+	}
+
+	u, err := s.callerUser(ctx, sub)
+	if err != nil {
 		return nil, err
 	}
 
@@ -177,7 +175,7 @@ func (s *TeamService) Edit(
 	ctx context.Context,
 	req *msgs.EditRequest,
 ) (*msgs.EditResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
+	sub, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -209,11 +207,9 @@ func (s *TeamService) Edit(
 		}
 	}
 
-	u, err := s.dbClient.User.Query().
-		Where(entuser.KeycloakIDEQ(sub)).
-		Only(ctx)
+	u, err := s.callerUser(ctx, sub)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
+		return nil, err
 	}
 
 	update := s.dbClient.Team.UpdateOne(t).
@@ -262,7 +258,7 @@ func (s *TeamService) Delete(
 	ctx context.Context,
 	req *msgs.DeleteRequest,
 ) (*msgs.DeleteResponse, error) {
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 
@@ -309,7 +305,7 @@ func (s *TeamService) AssignUser(
 	ctx context.Context,
 	req *msgs.AssignUserRequest,
 ) (*msgs.AssignUserResponse, error) {
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 
@@ -379,7 +375,7 @@ func (s *TeamService) RemoveUser(
 	ctx context.Context,
 	req *msgs.RemoveUserRequest,
 ) (*msgs.RemoveUserResponse, error) {
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 
@@ -461,7 +457,7 @@ func (s *TeamService) CreateSubmission(
 	ctx context.Context,
 	req *msgs.CreateSubmissionRequest,
 ) (*msgs.CreateSubmissionResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
+	sub, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -524,11 +520,9 @@ func (s *TeamService) CreateSubmission(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	u, err := s.dbClient.User.Query().
-		Where(entuser.KeycloakIDEQ(sub)).
-		Only(ctx)
+	u, err := s.callerUser(ctx, sub)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
+		return nil, err
 	}
 
 	// The version is derived from a count, so two concurrent creates can pick the
@@ -686,7 +680,7 @@ func (s *TeamService) FinalizeSubmission(
 	ctx context.Context,
 	req *msgs.FinalizeSubmissionRequest,
 ) (*msgs.FinalizeSubmissionResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
+	sub, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -743,11 +737,9 @@ func (s *TeamService) FinalizeSubmission(
 		return nil, err
 	}
 
-	u, err := s.dbClient.User.Query().
-		Where(entuser.KeycloakIDEQ(sub)).
-		Only(ctx)
+	u, err := s.callerUser(ctx, sub)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
+		return nil, err
 	}
 
 	updatedSubm, err := s.dbClient.Submission.UpdateOne(subm).
@@ -775,6 +767,39 @@ func (s *TeamService) FinalizeSubmission(
 	return &msgs.FinalizeSubmissionResponse{Submission: submissionEntryFromEnt(updatedSubm)}, nil
 }
 
+// callerUser resolves the Keycloak subject of an ALREADY-AUTHENTICATED caller
+// to their platform User row, for the creator/modifier stamp every write here
+// carries.
+//
+// Two status codes this deliberately does not return, both of which it used to:
+//
+//   - Not `Internal`. Every handler below reached this query through
+//     `m.RequireSubject`, which ADMITS the anonymous subject the auth
+//     interceptor injects when there is no bearer token — so an unauthenticated
+//     call looked up keycloak_id "anonymous", missed, and was reported as
+//     `Internal, "user not found"`. `Internal` means "we broke": it tells the
+//     client to retry something that will never work, and it buries genuine
+//     faults among routine unauthenticated traffic. Callers now pass
+//     `m.RequireUser`, so anonymous is refused with `Unauthenticated` at the top
+//     of the handler, before any argument is parsed or any row is read.
+//   - Not `Internal` for a real miss either. A subject that authenticated but
+//     has no platform profile is a `NotFound` about the user, the same answer
+//     `HackathonService.SetCapabilities` and `ProjectService.GetPreference`
+//     give.
+func (s *TeamService) callerUser(ctx context.Context, sub string) (*ent.User, error) {
+	u, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(sub)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", sub)
+		}
+		slog.Error("query user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return u, nil
+}
+
 func getTeamById(ctx context.Context, s *TeamService, teamID uuid.UUID) (*ent.Team, error) {
 	t, err := s.dbClient.Team.Query().
 		Where(entteam.IDEQ(teamID)).
@@ -799,7 +824,7 @@ func (s *TeamService) EditSubmission(
 	ctx context.Context,
 	req *msgs.EditSubmissionRequest,
 ) (*msgs.EditSubmissionResponse, error) {
-	sub, _, err := m.RequireSubject(ctx)
+	sub, _, err := m.RequireUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -855,9 +880,9 @@ func (s *TeamService) EditSubmission(
 		return nil, err
 	}
 
-	u, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(sub)).Only(ctx)
+	u, err := s.callerUser(ctx, sub)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "user not found: %v", err)
+		return nil, err
 	}
 
 	update := s.dbClient.Submission.UpdateOne(subm).SetModifierID(u.ID)

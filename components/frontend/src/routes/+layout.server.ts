@@ -1,4 +1,8 @@
 import type { LayoutServerLoad } from "./$types"
+import {
+  REPLAY_CONSENT_COOKIE,
+  parseReplayConsent,
+} from "$lib/utils/replayConsent"
 
 // The origin a VISITOR reaches the app at, for the absolute URLs in link
 // previews (og:url, og:image, canonical).
@@ -39,24 +43,45 @@ export const load: LayoutServerLoad = async (event) => {
       event.url.protocol.replace(":", ""))
     : "https"
 
-  // Session replay, if it has been switched on deliberately. Only the values
-  // the browser SDK needs cross the wire, and only when the block is complete
-  // — when replay is off the client gets `null` and never even imports the
-  // tracker. It is mounted on the ROOT layout because a dead control is just
-  // as dead on a public page as on a signed-in one.
+  // Session replay, if it has been switched on deliberately AND this visitor
+  // has said yes. It is mounted on the ROOT layout because a dead control is
+  // just as dead on a public page as on a signed-in one.
+  //
+  // TWO INDEPENDENT SWITCHES, and both must be on:
+  //
+  //   configured  a deployment filled in `replay:` in config.yaml. Absent or
+  //               incomplete ⇒ the feature does not exist here, and nobody is
+  //               asked anything.
+  //   consent     THIS browser answered "allow". Absent ⇒ no decision has been
+  //               made yet, which behaves exactly like "no".
+  //
+  // The gate is HERE, on the server, and not in the component — that is the
+  // whole point. A client-side check would mean the browser had already been
+  // handed an ingest endpoint and a project key and was trusted not to use
+  // them; withholding them makes "no consent ⇒ no recording" a property of
+  // what was sent rather than of what the page decided to do. It is therefore
+  // true on the very first paint of the very first page, before any script of
+  // ours has run.
   const replay = event.locals.config?.replay
-  const replayConfig =
-    replay?.enabled && replay.ingestPoint && replay.projectKey
-      ? {
-          ingestPoint: replay.ingestPoint,
-          projectKey: replay.projectKey,
-          allowInsecureOrigin: replay.allowInsecureOrigin,
-        }
-      : null
+  const configured = Boolean(
+    replay?.enabled && replay.ingestPoint && replay.projectKey,
+  )
+  const consent = parseReplayConsent(event.cookies.get(REPLAY_CONSENT_COOKIE))
 
   return {
     session: event.locals.session,
     publicOrigin: `${proto}://${host}`,
-    replay: replayConfig,
+    replay: {
+      configured,
+      consent,
+      config:
+        configured && consent === "granted"
+          ? {
+              ingestPoint: replay!.ingestPoint!,
+              projectKey: replay!.projectKey!,
+              allowInsecureOrigin: replay!.allowInsecureOrigin,
+            }
+          : null,
+    },
   }
 }
