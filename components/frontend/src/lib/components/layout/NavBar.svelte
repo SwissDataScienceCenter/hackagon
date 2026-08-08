@@ -140,10 +140,18 @@
                      identity, not an action to be drawn toward. The header's accent
                      is spent on the active-nav underline instead. -->
                 <div class="flex min-w-0 items-center gap-2">
+                    <!-- No `title={userName}` here, deliberately. Session replay
+                         (SessionReplay.svelte) masks TEXT nodes but transmits
+                         attribute values verbatim — the tracker only stars `alt`
+                         and `placeholder`, and blanks `href`. A tooltip carrying
+                         the signed-in person's full name therefore went to the
+                         ingest endpoint in clear while the very same name,
+                         rendered as text in the span below, arrived as
+                         asterisks. Keep personal data in text nodes, never in
+                         attributes. Pinned by tests/openreplay/masking.spec.ts. -->
                     <span
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-field
                            border border-line-strong bg-raised text-sm font-semibold text-ink-2"
-                        title={userName}
                     >
                         {initial}
                     </span>

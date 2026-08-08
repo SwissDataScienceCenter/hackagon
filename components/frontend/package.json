@@ -50,6 +50,7 @@
   "dependencies": {
     "@auth/core": "^0.39.1",
     "@auth/sveltekit": "^1.11.0",
+    "@openreplay/tracker": "^18.1.2",
     "@sveltejs/adapter-node": "^5.5.2",
     "command-line-args": "^6.0.1",
     "isomorphic-dompurify": "^3.21.0",

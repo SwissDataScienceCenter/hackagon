@@ -39,8 +39,24 @@ export const load: LayoutServerLoad = async (event) => {
       event.url.protocol.replace(":", ""))
     : "https"
 
+  // Session replay, if it has been switched on deliberately. Only the values
+  // the browser SDK needs cross the wire, and only when the block is complete
+  // — when replay is off the client gets `null` and never even imports the
+  // tracker. It is mounted on the ROOT layout because a dead control is just
+  // as dead on a public page as on a signed-in one.
+  const replay = event.locals.config?.replay
+  const replayConfig =
+    replay?.enabled && replay.ingestPoint && replay.projectKey
+      ? {
+          ingestPoint: replay.ingestPoint,
+          projectKey: replay.projectKey,
+          allowInsecureOrigin: replay.allowInsecureOrigin,
+        }
+      : null
+
   return {
     session: event.locals.session,
     publicOrigin: `${proto}://${host}`,
+    replay: replayConfig,
   }
 }

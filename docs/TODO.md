@@ -221,28 +221,45 @@ so it would have to be hand-written SQL outside the schema.
 - [ ] Public landing page: description-as-markdown hero + ordered Pages as panels (PageService is ready; blocked on F6)
 - [ ] Own-team voting: enforce the stored policy or remove the knob (B7)
 - [ ] Aggregation rule for results (sum vs mean) — decides the winner; admin Finalize exists either way
-- [ ] **Session replay (OpenReplay) — evaluate, do not adopt yet.** Open-source
-      tier is free and self-hosted, but wants its own box: **2 vCPU / 8 GB RAM /
-      50 GB disk minimum**, and the Docker Compose path is documented as
-      *experimental* (Kubernetes/k3s is the supported one) and needs a public
-      domain — a **named** Cloudflare tunnel, not a quick tunnel, whose URL
-      changes on every restart. Recommended sequencing: trial it against a real
-      event (7-day trial or a month managed, ~$199) rather than standing up
-      permanent infrastructure before Hackagon has any production topology of
-      its own. Blockers to settle *before* any tracker ships:
-      - GDPR: replay records real sessions. The registration form collects
-        `diet`, which can reveal religion or health (**Article 9 special
-        category**) — those fields and anything rendering form responses back
-        must be explicitly masked, beyond the default `obscureInputFields`.
-      - Consent: reuse the existing registration-consent mechanism (a `replay`
-        key alongside `conduct`/`photos`) instead of a cookie banner.
-      - Identify users by platform UUID, never by email.
-      - Kill switch for the e2e suite (`replay.enabled: false` in
-        `data/test/config/`) or the tracker fires on every recipe action.
-      Frontend wiring itself is ~half a day: `@openreplay/tracker`, a `replay`
-      block in the config schema, pass it through the root `+layout.server.ts`,
-      and one client-only component mounted in the root layout (dynamic import
-      — the tracker touches `window`, so it must never be pulled in during SSR).
+- [~] **Session replay (OpenReplay) — wired, OFF by default, masking proved
+      (2026-08-08).** The rig runs (`.claude/skills/openreplay-stack`, booted
+      for real; five host-specific bugs fixed there), the tracker is mounted in
+      the root layout behind `replay.enabled`, and
+      `hackathon-e2e/tests/openreplay/masking.spec.ts` proves a sentinel typed
+      into the registration form never reaches the wire — with an **unmasked
+      control run first**, because a zero-hit grep is also what "nothing was
+      captured" looks like, and on the first attempt that is exactly what it
+      was. Both e2e suites are unaffected with the flag off.
+
+      Settled while doing it:
+      - GDPR / `diet`: not per-field opt-in. `privateMode` + `defaultInputMode:
+        Hidden` mask every text node and every input value by default, and
+        nothing is un-masked. Verified against the captured ingest bytes and
+        against what the OpenReplay backend stored, not against the replay UI.
+      - **New finding, not in the original list:** masking covers text nodes
+        and input values but NOT attribute values — the tracker stars only
+        `alt`/`placeholder` and blanks `href`. `title={userName}` on the NavBar
+        monogram was shipping the signed-in person's full name in clear. The
+        attribute is gone and the spec asserts it stays gone; the general rule
+        (personal data in text nodes, never in attributes) is a review rule, as
+        no option enforces it.
+      - Correlation with the RPC journal is deliberately impossible:
+        `setUserID` is never called and `network.sessionTokenHeader: false`, or
+        the tracker would stamp its session id onto every request the page
+        makes and the Go backend would receive it.
+      - Kill switch: an absent `replay:` block parses to `{enabled:false}`, so
+        the suites need no opt-out.
+
+      Still open before this is offered to real participants:
+      - **Consent.** Nothing asks anybody. Reuse the registration-consent
+        mechanism (a `replay` key alongside `conduct`/`photos`) — recording is
+        currently all-or-nothing per deployment.
+      - **Hosting.** A quick tunnel mints a new hostname on every restart, so
+        `ingestPoint` goes stale silently; anything lasting needs a NAMED
+        tunnel and a stable `COMMON_DOMAIN_NAME`. Upstream still documents the
+        Compose path as experimental (k3s is supported). The box is real:
+        2 vCPU / 8 GB RAM / 50 GB disk, on top of whatever else runs.
+      - Retention: sessions currently accumulate in the object store forever.
 
 ### Found while fixing (new)
 - [ ] The dev seeder creates participant rows without granting the hackathon
