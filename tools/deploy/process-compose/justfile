@@ -36,13 +36,111 @@ attach:
 # Stop processes.
 down *args:
     #!/usr/bin/env bash
+    # Deliberately no `set -e`: `down` is called repeatedly (test harnesses run
+    # it before every boot) and must be a clean no-op on an already-down stack.
+
+    # `down` is not "ask nicely and hope" — its contract is that the next `up`
+    # can BIND. process-compose's ordered shutdown usually does the job, but it
+    # cannot when it is not there to do it: kill -9 it, let it crash, or run
+    # `down` twice, and its children are orphaned and keep their ports. That is
+    # why every port the stack binds is force-freed below, not just some.
+
+    # lsof is what this recipe has always used, and it is NOT in the Nix
+    # package set — it comes from the surrounding image (/usr/bin), as does ss.
+    # So neither is guaranteed, and the failure mode is the dangerous kind: a
+    # missing tool prints nothing, every port reads as "free", and `down`
+    # cheerfully reports success having freed nothing. Say so instead.
+    if ! command -v lsof >/dev/null 2>&1; then
+        echo "error: lsof not found — cannot free the stack's ports, and" >&2
+        echo "       cannot tell 'nothing is listening' from 'cannot look'." >&2
+        echo "       Install lsof (or add it to the Nix shell) before trusting" >&2
+        echo "       'just down'." >&2
+        exit 1
+    fi
+
+    # PIDs LISTENING on <port>, optionally only on one bind address.
+    #
+    #   -sTCP:LISTEN is load-bearing. Without it lsof also returns both ends of
+    #   ESTABLISHED connections to that port — i.e. the devcontainer's socat
+    #   bridge, which is not ours to kill.
+    #
+    #   Only stdout is read, never lsof's exit status: lsof reports failure
+    #   whenever a search is "not fully satisfied", including the ordinary case
+    #   of no match.
+    listeners() { # <port> [bind-address]
+        local pids pid
+        if [ -n "${2:-}" ]; then
+            pids=$(lsof -t -nP -iTCP@"${2}":"${1}" -sTCP:LISTEN 2>/dev/null)
+        else
+            pids=$(lsof -t -nP -iTCP:"${1}" -sTCP:LISTEN 2>/dev/null)
+        fi
+        for pid in $pids; do
+            # Belt and braces on top of the address scoping below: a socat is
+            # always a bridge (.devcontainer/{host,service}-bridge.sh), never a
+            # service this stack started.
+            [ "$(ps -o comm= -p "$pid" 2>/dev/null)" = "socat" ] && continue
+            echo "$pid"
+        done
+        return 0
+    }
+
+    # Free <port>, politely first. Non-zero only if something is STILL
+    # listening after SIGKILL — i.e. `up` is about to fail and should say so.
+    free_port() { # <label> <port> [bind-address]
+        local label="$1" port="$2" addr="${3:-}" sig pid i pids
+        for sig in TERM KILL; do
+            pids=$(listeners "$port" "$addr")
+            [ -n "$pids" ] || return 0
+            echo "  freeing ${addr:+${addr}:}${port} (${label}) — SIG${sig} $(echo $pids)"
+            for pid in $pids; do kill -"$sig" "$pid" 2>/dev/null || true; done
+            for i in 1 2 3 4 5; do
+                [ -n "$(listeners "$port" "$addr")" ] || return 0
+                sleep 1
+            done
+        done
+        [ -z "$(listeners "$port" "$addr")" ]
+    }
+
     pkill -f "process-compose" 2>/dev/null || true
     sleep 1
     pkill -f "keycloak" 2>/dev/null || true
     sleep 1
-    kill $(lsof -ti :8180) 2>/dev/null || true
-    kill $(lsof -ti :3000) 2>/dev/null || true
+
+    rc=0
+    # Wildcard binds — keycloak listens on 0.0.0.0, the backend on *.
+    free_port keycloak 8180 || rc=1
+    free_port backend 3000 || rc=1
+
+    # Loopback binds — here the ADDRESS is part of the identity, so kill by
+    # port AND address rather than by process name:
+    #
+    #   * inside the dev container `localhost` resolves to ::1, so vite binds
+    #     [::1]:8081 and a check written against 127.0.0.1 misses it entirely;
+    #   * the socat bridge on <eth0-ip>:8081 and <eth0-ip>:5432 belongs to the
+    #     devcontainer service bridge and must survive a `down`;
+    #   * the cloudflare-tunnel skill's adapter-node build listens on :8082 and
+    #     must survive too — nothing restarts what auth-wire cannot find.
+    #
+    # 127.0.0.1:8081 as well as [::1]:8081 because which loopback vite picks
+    # depends on how the host resolves `localhost`; no bridge ever binds it.
+    free_port frontend 8081 "[::1]" || rc=1
+    free_port frontend 8081 "127.0.0.1" || rc=1
+    free_port postgres 5432 "127.0.0.1" || rc=1
+
+    # `{{socket_file}}` only holds the PATH of the control socket; the socket
+    # itself lives under /tmp and process-compose unlinks it on a clean SIGTERM
+    # exit — but not when it is SIGKILLed or crashes, which is exactly the case
+    # every force-free above exists for. `up` then sees the leftover socket,
+    # logs "Assume process-compose is started", and dies dialling a socket
+    # nobody is listening on. Remove both, in that order.
+    pc_socket=$(cat "{{socket_file}}" 2>/dev/null || true)
+    [ -n "$pc_socket" ] && [ -S "$pc_socket" ] && rm -f "$pc_socket"
     rm -rf "{{socket_file}}"
+
+    if [ "$rc" -ne 0 ]; then
+        echo "error: a port is still held — 'just up' will fail to bind it." >&2
+        exit 1
+    fi
     echo "All processes stopped."
 
 # Run commands on the socket created on `just up`.
