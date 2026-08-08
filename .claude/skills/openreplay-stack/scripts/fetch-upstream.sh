@@ -27,12 +27,23 @@ echo "==> cloning $UPSTREAM_REPO @ $UPSTREAM_REF (sparse)…"
 # docker's sake, which stops Git Bash translating POSIX paths for Windows
 # binaries — so git.exe would put an absolute /tmp/... clone somewhere this
 # shell cannot see. Relative paths sidestep it on every platform.
+#
+# `-c core.autocrlf=false -c core.eol=lf`: these files are consumed by LINUX
+# containers, not by the host. On a Windows host with the usual global
+# `core.autocrlf=true`, git rewrites every one of them to CRLF on checkout and
+# the stack fails in ways that name neither git nor line endings:
+# `hacks/minio.sh` (bind-mounted and run by the migration container) dies with
+# `$'\r': command not found` / `syntax error near unexpected token $'{\r'`,
+# and every value in `docker-envs/*.env` gains a trailing CR — which is how a
+# correct S3 secret produces "The request signature we calculated does not
+# match the signature you provided".
 (
   cd "$tmp"
-  git clone --depth 1 --filter=blob:none --sparse --branch "$UPSTREAM_REF" \
+  git -c core.autocrlf=false -c core.eol=lf \
+    clone --depth 1 --filter=blob:none --sparse --branch "$UPSTREAM_REF" \
     "$UPSTREAM_REPO" or 2>&1 | tail -1
   cd or
-  git sparse-checkout set scripts/docker-compose
+  git -c core.autocrlf=false -c core.eol=lf sparse-checkout set scripts/docker-compose
   git rev-parse HEAD > ../SHA
 )
 sha="$(cat "$tmp/SHA")"

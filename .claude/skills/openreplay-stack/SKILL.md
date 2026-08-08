@@ -102,9 +102,56 @@ switch or the tracker fires on every recipe action.
 
 ## Verification status
 
-Fetch, secret preparation, compose merge and `--dry-run` are **verified on
-this repo** (24 services resolve, including the tunnel). A full `up.sh` has
-**not** been run here — it pulls ~25 images and the machine had ~54 GB free
-against a 50 GB requirement, so the first real boot is yours to make. If it
-fails, `docker compose -p openreplay logs <service>` and the migration
-services (`db-migration`, `clickhouse-migration`) are where to look first.
+**Booted for real on 2026-08-08** (Windows host, Docker Desktop, 47 GB / 32
+vCPU): all 24 services running, four migrations exited 0, the tunnel serving
+200 on `/` and `/signup`, an account created and a project key read back from
+`/api/projects`. Sessions recorded from the SvelteKit app arrive and are
+stored.
+
+Getting there took **four fixes, and `--dry-run` could not have found any of
+them** — it proves the compose files merge, which is a different claim from
+"the containers can talk to each other and their scripts can run":
+
+| Symptom | Cause |
+| --- | --- |
+| `Bind for 0.0.0.0:9001 failed` mid-`up` | upstream publishes minio's console port; the hackagon devcontainer's own rustfs already holds 9000-9001. Overlay unpublishes it, as it already did for caddy. |
+| `$'\r': command not found` in `minio-migration`, then an S3 signature mismatch | a Windows host with `core.autocrlf=true` checks the vendored tree out as CRLF. `fetch-upstream.sh` clones with `-c core.autocrlf=false -c core.eol=lf`. |
+| `chalice`: `Invalid endpoint: https://change_me_domain` | `ln -s common.env .env` silently degrades to a COPY on MSYS, so compose interpolated a `.env` frozen before the domain was known. `up.sh` copies explicitly, after every edit. |
+| `network <id> not found` on every subsequent `up` | `down` ran without `COMPOSE_PROFILES=migration`, so the four migration containers survived holding a reference to the deleted network. A profile-gated service is not an "orphan". |
+| public URL answered 502 while every container was healthy | the overlay's `tunnel` named no network, so it landed on compose's implicit `default` — alone. `http://caddy:80` failed to RESOLVE, not to connect. |
+
+## Wiring the app (and unwiring it)
+
+```bash
+OPENREPLAY_EMAIL=… OPENREPLAY_PASSWORD=… \
+  bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh          # ON
+bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore  # OFF
+```
+
+It reads the live tunnel URL and the project key from OpenReplay's own API
+(a quick tunnel mints a new hostname on every `up.sh`, and a stale
+`ingestPoint` fails silently), writes the `replay:` block, and restarts the
+frontend. `--restore` puts the config back byte-identical.
+
+**Two servers can own :8081.** process-compose's `frontend` is `vite dev`; the
+e2e harness replaces it with the adapter-node build via
+`hackathon-e2e/scripts/prod-frontend.sh`, and after a suite run that is what
+serves. The built server reads `config.yaml` ONCE at boot, so restarting only
+process-compose's copy succeeds, prints "Process frontend restarted", and
+changes nothing — the page keeps rendering `replay: null`. `wire-frontend.sh`
+bounces both.
+
+## Masking is proved, not configured
+
+`components/frontend/src/lib/components/observability/SessionReplay.svelte`
+sets default-deny masking; `hackathon-e2e/tests/openreplay/masking.spec.ts`
+types a sentinel into the registration form and greps the tracker's own ingest
+bytes for it. It runs an **unmasked control first**, because a zero-hit grep
+reads identically whether the string was masked or nothing was ever captured —
+and on the first run nothing was.
+
+One hole no option closes: the tracker masks TEXT NODES and input values but
+sends ATTRIBUTE values verbatim (only `alt`/`placeholder` are starred, `href`
+blanked). `title={userName}` was shipping the signed-in person's name in clear
+next to the same name arriving as asterisks. Personal data goes in text nodes,
+never in an attribute.

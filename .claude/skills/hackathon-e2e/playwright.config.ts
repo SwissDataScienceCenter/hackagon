@@ -66,5 +66,17 @@ export default defineConfig({
       testMatch: /tunnel\/.*\.spec\.ts/,
       use: { baseURL: process.env.TUNNEL_BASE_URL ?? "http://localhost:8081" },
     },
+    // Session-replay privacy proof: types a sentinel into the registration
+    // form and greps the tracker's own ingest traffic for it. Its own project
+    // and NOT in smoke or journey, because it needs two things neither of
+    // those may assume: a live OpenReplay
+    // (.claude/skills/openreplay-stack/scripts/up.sh) and `replay.enabled:
+    // true` in the frontend config. Self-skips when the config says off, so
+    // running it without the rig costs nothing and claims nothing.
+    {
+      name: "openreplay",
+      testMatch: /openreplay\/.*\.spec\.ts/,
+      dependencies: ["setup"],
+    },
   ],
 })

@@ -38,6 +38,18 @@ require_vendor
 # Upstream substitutes the domain first; we simply exclude it here and set it
 # in part B, once the tunnel URL is known.
 ENV_FILE="$VENDOR/common.env"
+
+# compose reads `.env` from the project directory for `${VAR}` interpolation,
+# and upstream expects it to BE common.env. A symlink is the obvious way to say
+# that and the one thing that does not work here: MSYS `ln -s` silently
+# degrades to a copy on a Windows host, so `.env` froze at whatever common.env
+# held when it was first created — `COMMON_DOMAIN_NAME=change_me_domain`. The
+# stack then booted with correct secrets against a placeholder hostname, and
+# chalice died on `ValueError: Invalid endpoint: https://change_me_domain`
+# while everything else came up green. Copy explicitly, and re-copy after every
+# edit to common.env.
+sync_dotenv() { cp -f "$ENV_FILE" "$VENDOR/.env"; }
+
 if [ ! -f "$STATE/env.prepared" ]; then
   echo "==> randomizing placeholder secrets in common.env"
   mapfile -t tokens < <(grep -oE 'change_me_[a-zA-Z0-9_]*' "$ENV_FILE" | sort -u | grep -v '^change_me_domain$' || true)
@@ -51,11 +63,11 @@ if [ ! -f "$STATE/env.prepared" ]; then
   grep -q '^CADDY_DOMAIN=' "$ENV_FILE" \
     && sed -i 's|^CADDY_DOMAIN=.*|CADDY_DOMAIN=":80"|' "$ENV_FILE" \
     || echo 'CADDY_DOMAIN=":80"' >> "$ENV_FILE"
-  [ -e "$VENDOR/.env" ] || ln -s common.env "$VENDOR/.env"
   touch "$STATE/env.prepared"
 else
   echo "==> secrets already prepared (delete .state/env.prepared to redo)"
 fi
+sync_dotenv
 
 if [ "$DRY" -eq 1 ]; then
   echo ""
@@ -87,6 +99,7 @@ else
   echo "COMMON_DOMAIN_NAME=$host" >> "$ENV_FILE"
 fi
 grep -qE '^COMMON_PROTOCOL=https' "$ENV_FILE" || sed -i 's|^COMMON_PROTOCOL=.*|COMMON_PROTOCOL=https|' "$ENV_FILE"
+sync_dotenv
 
 # ── phase 3: everything (migration profile creates schemas on first run) ───
 echo "==> starting OpenReplay (first run pulls ~25 images — this takes a while)…"

@@ -2,10 +2,14 @@
 # One-command deterministic e2e run:
 #   reset -> boot stack -> wait ready -> (seed) -> probe capabilities -> Playwright (Firefox)
 #
-# Usage: run.sh [smoke|journey|all|mobile] [options]
+# Usage: run.sh [smoke|journey|all|mobile|openreplay] [options]
 #   smoke      (default) seed-fixture suite: what each persona can see and do
 #   journey    full lifecycle recipe on an EMPTY database (acts 1-8)
 #   all        smoke, then a fresh reset, then journey
+#   openreplay session-replay privacy proof on the seed fixture. Self-skips
+#              unless replay.enabled is true in the frontend config — wire it
+#              with openreplay-stack/scripts/wire-frontend.sh first. NOT part
+#              of `all`: it needs a live OpenReplay, which nothing else does.
 #
 # Options:
 #   --no-reset   reuse the running stack + data (fast iteration; smoke only —
@@ -26,7 +30,7 @@ GREP=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    smoke | journey | all | mobile) SUITE="$1" ;;
+    smoke | journey | all | mobile | openreplay) SUITE="$1" ;;
     --no-reset) RESET=0 ;;
     --headed) HEADED=1 ;;
     --grep)
@@ -38,7 +42,7 @@ while [ $# -gt 0 ]; do
       export JOURNEY_UNTIL_ACT="${1:?--until-act needs an act number (1..8)}"
       ;;
     -h | --help)
-      sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -126,7 +130,9 @@ fi
 bash "$HERE/up.sh"
 bash "$HERE/wait-ready.sh"
 
-if [ "$SUITE" = "smoke" ]; then
+# The openreplay suite asserts against the seed fixture (it gives h1 a
+# registration form and types into it), so it seeds exactly like smoke.
+if [ "$SUITE" = "smoke" ] || [ "$SUITE" = "openreplay" ]; then
   bash "$HERE/seed.sh"
 elif [ "$SUITE" = "mobile" ]; then
   # Fresh mobile runs use the seeded fixture; --no-reset runs the battery
