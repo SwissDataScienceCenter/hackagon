@@ -2,12 +2,13 @@
 
 What is needed to run the next hackathon on this platform, and what is needed
 for the platform to be what it is meant to be. Written against branch
-`sketch/04-08-26` (2026-08-04).
+`sketch/06-08-26` (first drafted 2026-08-04, counts re-measured 2026-08-08).
 
 This page is the product-level view. Its three companions carry the detail:
 
-- [requirements.md](requirements.md) — the 241-requirement scoreboard generated
-  from the executable spec; the source of truth for "is this behaviour built".
+- [requirements.md](requirements.md) — the 309-requirement scoreboard
+  summarising the executable spec; the source of truth for "is this behaviour
+  built".
 - [TODO.md](TODO.md) — the engineering list: bug ids (`B*`, `F*`) and the
   ordered checklist.
 - [lifecycle.md](lifecycle.md) — how the flow behaves today, the pinned policy
@@ -125,7 +126,7 @@ is on the record.
 
 | List | Tracked in |
 | ---- | ---------- |
-| Requirement-level truth | `.claude/skills/hackathon-e2e/recipe.jsonl` (241 actions), summarised in [requirements.md](requirements.md) |
+| Requirement-level truth | `.claude/skills/hackathon-e2e/recipe.jsonl` (309 actions), summarised in [requirements.md](requirements.md) |
 | Bugs and cleanup order | [TODO.md](TODO.md) |
 | Policy questions blocking design | [lifecycle.md § open decisions](lifecycle.md#open-decisions) |
 | Burn-down | the availability heatmap in `recipe-player.html` |

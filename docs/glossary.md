@@ -1,7 +1,7 @@
 # Glossary
 
 The vocabulary this documentation and the code use, alphabetized. Every entry is
-verified against branch `sketch/04-08-26`; where a word means two different
+verified against branch `sketch/06-08-26`; where a word means two different
 things the entry says which one is which.
 
 Four collisions are worth reading before the rest:
@@ -17,7 +17,7 @@ Four collisions are worth reading before the rest:
 
 ---
 
-**Act** — one of the eight groupings of the e2e recipe's 241 actions
+**Act** — one of the nine groupings (0-8) of the e2e recipe's 309 actions
 (`.claude/skills/hackathon-e2e/recipe.jsonl`), carried as the `act` field on
 every line and used by `run.sh journey --until-act <n>` to freeze the story
 partway. Acts are a narrative device for the test suite only — the backend has
@@ -160,7 +160,7 @@ that is why `HackathonService.List` applies `status_filter` after the query
 rather than in SQL, and why the e2e suite time-travels by editing dates.
 
 **Journey suite** — the Playwright project that plays `recipe.jsonl` in order on
-a completely **empty** database: 241 actions across 8 acts, single worker, no
+a completely **empty** database: 309 actions across 9 acts, single worker, no
 retries. `--no-reset` is ignored for it, because the recipe asserts on a world it
 built itself.
 
@@ -245,7 +245,7 @@ auto-registers them in the backend.
 — all `hackathon:write`.
 
 **Recipe** — `.claude/skills/hackathon-e2e/recipe.jsonl`: one JSON action per
-line, 241 actions plus 9 comment banners, played strictly in order by
+line, 309 actions plus 10 comment banners, played strictly in order by
 `tests/journey/recipe.spec.ts`. It is both the screenplay and the product spec —
 **policy questions are settled by making a recipe action pass** — so extend the
 lifecycle by editing the JSONL, never the spec file.

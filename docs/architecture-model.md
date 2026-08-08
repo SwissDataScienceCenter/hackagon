@@ -12,8 +12,8 @@ endpoint catalogue. This page is **generated** from one authored file
 probe and the executable spec, on the fully-qualified gRPC method name
 (e.g. `hackathon.HackathonService/Join`).
 
-> 12 services · 97 RPCs · 268 requirements ·
-> 22 tables · generated from `sketch/04-08-26` @ `42856b9d`.
+> 13 services · 105 RPCs · 309 requirements ·
+> 23 tables · generated from `sketch/06-08-26` @ `be4ccd22`.
 
 ## Level 1 — System context
 
@@ -67,33 +67,37 @@ RPCs at least one requirement exercises.
 
 | Service | RPCs | Probed live | With requirements |
 | --- | ---: | ---: | ---: |
-| `hackathon.ConfigService` | 7 | 7 | 7 |
-| `hackathon.HackathonService` | 19 | 13 | 11 |
+| `hackathon.ConfigService` | 9 | 7 | 7 |
+| `hackathon.HackathonService` | 22 | 18 | 16 |
 | `hackathon.PageService` | 8 | 2 | 2 |
 | `hackathon.PhaseService` | 5 | 1 | 1 |
-| `hackathon.PrizeService` | 3 | 3 | 3 |
-| `hackathon.ProjectService` | 10 | 6 | 6 |
+| `hackathon.PrizeService` | 4 | 3 | 3 |
+| `hackathon.ProjectService` | 11 | 6 | 6 |
 | `hackathon.TeamService` | 12 | 8 | 8 |
 | `hackathon.TrackService` | 5 | 1 | 1 |
 | `health.HealthService` | 1 | 0 | 0 |
 | `site.SitePageService` | 5 | 5 | 3 |
+| `storage.StorageService` | 2 | 2 | 1 |
 | `user.UserService` | 8 | 5 | 5 |
-| `vote.VoteService` | 14 | 5 | 5 |
-| **total** | **97** | **56** | **52** |
+| `vote.VoteService` | 15 | 6 | 6 |
+| **total** | **107** | **64** | **59** |
 
-### RPCs no requirement exercises (45)
+### RPCs no requirement exercises (48)
 
 Not necessarily untested — reads reached through a UI flow are exercised
 without being named — but nothing *asserts* their behaviour.
 
 | Service | RPCs |
 | --- | --- |
-| HackathonService | `AddOwner`, `AdvancePhase`, `CreateInvite`, `EditCapability`, `ListInvites`, `PreviewInvite`, `RemoveOwner`, `RevokeInvite` |
+| ConfigService | `GetEmailTemplates`, `GetWindows` |
+| HackathonService | `AdvancePhase`, `CreateInvite`, `EditCapability`, `ListInvites`, `PreviewInvite`, `RevokeInvite` |
 | HealthService | `Check` |
 | PageService | `Edit`, `Get`, `List`, `MoveDown`, `MoveUp`, `SetOrder` |
 | PhaseService | `Delete`, `Edit`, `Get`, `List` |
-| ProjectService | `Disapprove`, `Get`, `List`, `RemovePreference` |
+| PrizeService | `Get` |
+| ProjectService | `Disapprove`, `Get`, `GetPreference`, `List`, `RemovePreference` |
 | SitePageService | `Delete`, `List` |
+| StorageService | `CreateDownloadUrl` |
 | TeamService | `Get`, `GetSubmission`, `List`, `ListSubmissions` |
 | TrackService | `Delete`, `Edit`, `Get`, `List` |
 | UserService | `AddRole`, `Get`, `RemoveRole` |

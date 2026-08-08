@@ -1,7 +1,7 @@
 # Backend gRPC services
 
 Reference for the gRPC surface of the Go backend, as it exists on branch
-`sketch/04-08-26`.
+`sketch/06-08-26`.
 
 Protos live under `api/proto/`; handlers under
 `components/backend/internal/service/`. The generated stubs in

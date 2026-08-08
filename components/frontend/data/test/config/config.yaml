@@ -9,6 +9,6 @@ cookies:
   useSecure: false
 
 oidc:
-  issuer: https://calendar-jpg-bears-den.trycloudflare.com/realms/hackagon
+  issuer: http://localhost:8180/realms/hackagon
   clientId: hackagon-frontend
   audience: hackagon-backend

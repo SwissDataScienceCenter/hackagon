@@ -1,8 +1,14 @@
 # Bringing main's design and screens onto this branch
 
-Written 2026-08-05, comparing `sketch/04-08-26` (this branch) with `origin/main`
-(`6f8c7346`). A worktree of main sits at `../hackagon-main` for side-by-side
-reading.
+Written 2026-08-05, comparing `sketch/04-08-26` (the branch at the time) with
+`origin/main` (`6f8c7346`). A worktree of main sits at `../hackagon-main` for
+side-by-side reading.
+
+> **This is the plan as written, kept as the record of what was decided.** Every
+> figure in it is as-of 2026-08-05 — including the recipe size, quoted here as
+> 278 actions. The migration landed; work is now on `sketch/06-08-26` and the
+> recipe is **309 actions**. Read [requirements.md](requirements.md) and
+> [testing.md](testing.md) for current numbers, not this page.
 
 **Direction: main's work comes to us.** We keep this branch's backend and its
 feature surface, and take main's design system, shell, navigation model and

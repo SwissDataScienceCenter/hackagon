@@ -28,6 +28,8 @@ sudo chown "$(id -u):$(id -g)" \
 if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
     # The USER guard matters: docker exec shells have no USER set, and
     # nix.sh silently no-ops without it.
+    # shellcheck disable=SC2016  # literal on purpose: this line is APPENDED to
+    # an rc file, so $USER and $HOME must expand when that shell runs, not now.
     line='export USER="${USER:-$(whoami)}"; . "$HOME/.nix-profile/etc/profile.d/nix.sh"'
     for rc in "$HOME/.bashrc" "$HOME/.bash_profile"; do
         grep -qs "nix-profile/etc/profile.d/nix.sh" "$rc" || echo "$line" >> "$rc"
@@ -42,6 +44,8 @@ for pkg in just direnv socat; do
     nix profile add "nixpkgs#$pkg" 2>/dev/null || nix profile install "nixpkgs#$pkg"
 done
 
+# shellcheck disable=SC2016  # literal on purpose: the substitution must run
+# when .bashrc is sourced, not while this script writes it.
 grep -qs 'direnv hook bash' "$HOME/.bashrc" ||
     echo 'eval "$(direnv hook bash)"' >> "$HOME/.bashrc"
 direnv allow "${workspace}" || true

@@ -1,24 +1,25 @@
 # The hackathon lifecycle
 
 What actually happens between "we're running a hackathon" and "here are the
-winners", as the platform behaves on branch `sketch/04-08-26`. Written for
+winners", as the platform behaves on branch `sketch/06-08-26`. Written for
 organizers running an event and for developers adding to the flow.
 
 ## Where the spec lives
 
 The executable specification is
 `.claude/skills/hackathon-e2e/recipe.jsonl` — one JSON action per line,
-241 actions, played strictly in order by
+309 actions across nine acts (0-8), played strictly in order by
 `.claude/skills/hackathon-e2e/tests/journey/recipe.spec.ts`. It runs the whole
 story on an empty database with a 15-person cast. Its companion guide is
 `.claude/skills/hackathon-e2e/SKILL.md`.
 
-Every action carries triage metadata: `priority` (P1/P2/P3 against current dev
-state), `implement` (`false` = deliberately deferred, kept as documentation),
-`outcome` (human-readable expectation), an optional `todo` (placeholder note),
-and an optional `gate` (skip until the listed RPCs exist — capability-probed at
-runtime by `scripts/probe.sh`, so an action wakes up by itself the day its
-backend lands).
+Every action carries triage metadata: `priority` (P1 215 / P2 85 / P3 9),
+`outcome` (human-readable expectation), an optional `todo` (placeholder note,
+24 actions) and an optional `gate` (24 actions — skip until the listed RPCs
+exist, capability-probed at runtime by `scripts/probe.sh`, so an action wakes
+up by itself the day its backend lands). `implement: false` used to mark work
+deliberately deferred; **no action sets it any more** — nothing in the recipe
+is deferred.
 
 Treat the recipe as the product spec: **policy questions are settled by making
 a recipe action pass**, and the decisions below are pinned that way. Action ids

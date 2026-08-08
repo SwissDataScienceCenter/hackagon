@@ -5,6 +5,10 @@ while generating this documentation set). Line references are to that branch.
 Policy-level open questions live in [lifecycle.md](lifecycle.md) ("open
 decisions"); this page is the engineering list.
 
+**Work continued on `sketch/06-08-26`**, which is where every entry dated
+2026-08-05 or later was fixed. The two branch names below are kept as written:
+they record where a finding was made, not where to look now.
+
 **Update 2026-08-04 (later the same day):** B1, B5, B6, B8, B10, B11, B12
 (partial), B14 and F2, F3, F4, F5, F7, F8 are fixed on `sketch/04-08-26` —
 see the checklist below for the per-item notes, including two deliberate

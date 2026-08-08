@@ -106,6 +106,7 @@ func (s *ConfigService) callerUser(ctx context.Context) (*ent.User, error) {
 
 	return u, nil
 }
+
 // GetWindows reads the deadlines back.
 //
 // SetWindows replaces every field, so an organiser editing one deadline on a
@@ -142,7 +143,6 @@ func (s *ConfigService) GetWindows(
 		Windows: windowsEntryFromEnt(row, hackathonID),
 	}, nil
 }
-
 
 func (s *ConfigService) SetWindows(
 	ctx context.Context,

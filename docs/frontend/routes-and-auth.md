@@ -237,7 +237,7 @@ is logged server-side only; it is not shown to the user.
 
 ## Verified UX gaps on this branch
 
-These are all reproducible from the code as it stands on `sketch/04-08-26`.
+These are all reproducible from the code as it stands on `sketch/06-08-26`.
 
 - **A signed-in non-member cannot open a public hackathon page.**
   `(public)/hackathon/[id]/+page.server.ts` redirects *any* session holder to

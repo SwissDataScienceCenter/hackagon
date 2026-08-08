@@ -1,13 +1,14 @@
-// Hackagon — backend data model (branch sketch/04-08-26)
+// Hackagon — backend data model (branch sketch/06-08-26)
 // Source of truth: components/backend/db/schema/*.go (ent), rendered in
 // components/backend/Schema.md. Load this file at https://dbdiagram.io/d
 // (paste the whole thing).
 //
-// Naming: FK columns follow ent's generated <owner>_<edge> convention where
-// Schema.md's index list confirms it (e.g. hackathon_capabilities,
-// project_submissions, user_votes). The three pure M2M join tables at the
-// bottom are ent-generated; their exact physical names may differ — the
-// structure and cardinalities are exact.
+// Every table and column name below is the PHYSICAL name ent generates, taken
+// from components/backend/ent/migrate/schema.go — including the FK columns ent
+// names <owner>_<inverse-edge> (hackathon_settings, hackathon_prize_table,
+// submission_votes, user_created_pages) rather than the *_id a hand-drawn
+// diagram would use. Regenerate with `just codegen::db-schema` and re-check
+// against that file after any schema edit.
 
 Enum visibility {
   public
@@ -50,9 +51,13 @@ Table users {
   keycloak_id varchar [unique, not null, note: 'Keycloak sub claim - the RBAC subject']
   display_name varchar
   email varchar
+  affiliation varchar [note: 'university, company or institute']
+  skills varchar [note: 'comma-separated, as the registration tags field collects them']
+  dietary varchar [note: 'dietary requirements, for events that cater']
+  avatar_url varchar [note: 'a link, not an upload']
   created_at timestamp [not null]
   modified_at timestamp [not null]
-  Note: 'Synced from Keycloak on first login (WhoAmI -> Register)'
+  Note: 'Identity is synced from Keycloak on first login (WhoAmI -> Register); the profile columns below email are the platform own and are never overwritten from the token'
 }
 
 Table hackathons {
@@ -68,30 +73,48 @@ Table hackathons {
   user_modified_hackathons uuid [ref: > users.id, not null, note: 'modifier']
   created_at timestamp [not null]
   modified_at timestamp [not null]
+  indexes {
+    name
+    starts_at
+    ends_at
+    visibility
+  }
+}
+
+Table hackathon_invites {
+  id uuid [pk]
+  token uuid [unique, not null, note: 'the whole secret in the invite URL; v4 random, generated server-side']
+  note varchar [note: 'organizer-facing reminder of who the link went to']
+  created_at timestamp [not null]
+  revoked_at timestamp [note: 'set = the link stops working; revoking is preferred over deletion so the trail survives']
+  hackathon_invites uuid [ref: > hackathons.id, not null]
+  user_created_invites uuid [ref: > users.id, not null]
+  indexes { token [unique] }
+  Note: 'Multi-use link that unlocks a private hackathon page. Redeeming grants VISIBILITY only - the normal Join then approval path still applies, so a forwarded link cannot put a stranger on the roster'
 }
 
 Table participants {
-  id uuid [pk]
   hackathon_id uuid [ref: > hackathons.id, not null]
   user_id uuid [ref: > users.id, not null]
   is_waiting bool [not null, note: 'true = waitlisted, false = confirmed']
   created_at timestamp [not null, note: 'joined at']
-  Note: 'Explicit M2M join user<->hackathon with participation state'
+  indexes { (user_id, hackathon_id) [pk] }
+  Note: 'Explicit M2M join user<->hackathon with participation state. Composite primary key - this table has no id column'
 }
 
 Table hackathon_settings {
   id uuid [pk]
-  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  hackathon_settings uuid [unique, ref: - hackathons.id, not null]
   registrations_enabled bool [not null]
   voting_enabled bool [not null, note: 'the live gate for SubmitVote']
-  user_modified_settings uuid [ref: > users.id]
+  user_modified_settings uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
 }
 
 Table hackathon_windows {
   id uuid [pk]
-  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  hackathon_windows uuid [unique, ref: - hackathons.id, not null]
   registration_opens timestamp
   registration_closes timestamp
   proposals_close timestamp
@@ -100,7 +123,7 @@ Table hackathon_windows {
   registration_override_until timestamp [note: 'manual walk-in window']
   submissions_override_until timestamp [note: 'manual grace window']
   late_policy varchar
-  user_modified_windows uuid [ref: > users.id]
+  user_modified_windows uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
   Note: 'Enforced on Join / Propose / SetPreference / CreateSubmission; unset = not enforced'
@@ -108,23 +131,25 @@ Table hackathon_windows {
 
 Table hackathon_forms {
   id uuid [pk]
-  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  hackathon_forms uuid [unique, ref: - hackathons.id, not null]
   registration_fields jsonb [note: 'array of {key,label,type,required,maxMb}']
   registration_consents jsonb [note: 'array of {key,label,required}']
   submission_fields jsonb
   voting_policy jsonb [note: 'mechanism, scale, tie-breaks']
-  user_modified_forms uuid [ref: > users.id]
+  email_templates jsonb [note: 'organizer-authored copy keyed by moment; stored only, nothing sends them yet']
+  branding jsonb [note: 'primaryColor, accentColor, bannerText; the logo lives on the hackathon row']
+  user_modified_forms uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
 }
 
 Table hackathon_prizes {
   id uuid [pk]
-  hackathon_id uuid [unique, ref: - hackathons.id, not null]
+  hackathon_prize_table uuid [unique, ref: - hackathons.id, not null]
   prizes jsonb [note: 'array of {rank,title}; rank 0 = special prize']
   awards jsonb [note: 'array of {rank|special, submissionId}, set at Finalize']
   finalized bool [not null, note: 'votes are advisory until the admin finalizes']
-  user_modified_prizes uuid [ref: > users.id]
+  user_modified_prizes uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
 }
@@ -162,11 +187,33 @@ Table pages {
   visible bool [not null]
   "order" int [not null, note: 'lower first; MoveUp/MoveDown/SetOrder']
   hackathon_pages uuid [ref: > hackathons.id, not null]
-  phase_page uuid [ref: - phases.id, note: 'optional O2O link to a phase']
+  phase_page uuid [unique, ref: - phases.id, note: 'optional O2O link to a phase']
   user_created_pages uuid [ref: > users.id, not null]
   user_modified_pages uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
+  indexes {
+    "order"
+    visible
+  }
+}
+
+Table site_pages {
+  id uuid [pk]
+  slug varchar [unique, not null, note: 'URL segment, lowercase kebab-case (about, privacy, terms)']
+  title varchar [not null]
+  content text [not null, note: 'markdown, rendered through the sanitizing pipeline']
+  visible bool [not null, note: 'false = draft; drafts answer NotFound to non-admins so their existence stays private']
+  "order" int [not null, note: 'lower first in navigation listings']
+  user_created_site_pages uuid [ref: > users.id, not null]
+  user_modified_site_pages uuid [ref: > users.id, not null]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  indexes {
+    "order"
+    visible
+  }
+  Note: 'Platform-level pages. They belong to no event, so there is no hackathon domain to scope them to: published pages are world-readable and every mutation needs the global Admin role'
 }
 
 Table phases {
@@ -180,6 +227,11 @@ Table phases {
   user_modified_phases uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
+  indexes {
+    starts_at
+    ends_at
+    name
+  }
 }
 
 Table tracks {
@@ -206,6 +258,10 @@ Table projects {
   user_modified_projects uuid [ref: > users.id, not null]
   created_at timestamp [not null]
   modified_at timestamp [not null]
+  indexes {
+    title
+    status
+  }
 }
 
 Table teams {
@@ -220,16 +276,17 @@ Table teams {
 }
 
 Table team_participants {
-  id uuid [pk]
   team_id uuid [ref: > teams.id, not null]
   user_id uuid [ref: > users.id, not null]
   created_at timestamp [not null, note: 'joined the team at']
-  Note: 'Explicit M2M join user<->team'
+  indexes { (user_id, team_id) [pk] }
+  Note: 'Explicit M2M join user<->team. Composite primary key - this table has no id column'
 }
 
 Table submissions {
   id uuid [pk]
   result varchar [note: 'e.g. repository URL']
+  form jsonb [note: 'structured answers keyed by the organizer submission form fields; validated on write']
   status submission_status [not null]
   version int [not null, note: 'monotonic per project+team']
   team_submissions uuid [ref: > teams.id, not null]
@@ -247,7 +304,10 @@ Table vote_categories {
   description text [note: 'criteria and instructions for voters']
   voting_method vote_method [not null]
   voter_type voter_type [not null, note: 'all_participants or jury']
+  max_points int [note: 'ceiling a voter may distribute; points-based voting only']
   hackathon_vote_categories uuid [ref: > hackathons.id, not null]
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
 }
 
 Table votes {
@@ -256,7 +316,11 @@ Table votes {
   value int [note: 'rank position or points; null for single_choice']
   vote_category_votes uuid [ref: > vote_categories.id, not null]
   user_votes uuid [ref: > users.id, not null, note: 'the voter']
-  indexes { (vote_category_votes, user_votes) [unique, note: 'one ballot per voter per category'] }
+  submission_votes uuid [ref: > submissions.id, note: 'the submission being judged; a hook requires it for all three methods']
+  created_at timestamp [not null]
+  modified_at timestamp [not null]
+  indexes { (vote_category_votes, user_votes, submission_votes) [unique] }
+  Note: 'One ATOMIC judgment, not one ballot: a ranked or points ballot is several rows sharing (category, voter), which is why uniqueness moved down to the submission. One-ballot-per-category is no longer a database rule - SubmitVote enforces it'
 }
 
 Table vote_results {
@@ -267,14 +331,7 @@ Table vote_results {
   submission_vote_results uuid [ref: > submissions.id, not null]
 }
 
-// ── ent-generated M2M join tables (exact physical names may differ) ────────
-
-Table submission_votes {
-  submission_id uuid [ref: > submissions.id, not null]
-  vote_id uuid [ref: > votes.id, not null]
-  indexes { (submission_id, vote_id) [pk] }
-  Note: 'M2M: a vote targets a submission'
-}
+// ── ent-generated M2M join tables ─────────────────────────────────────────
 
 Table user_preferred_projects {
   user_id uuid [ref: > users.id, not null]

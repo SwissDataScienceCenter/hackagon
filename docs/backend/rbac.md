@@ -1,7 +1,7 @@
 # Authorization (casbin RBAC)
 
 How Hackagon decides who may do what. Everything here is verified against
-branch `sketch/04-08-26`.
+branch `sketch/06-08-26`.
 
 Source of truth:
 

@@ -44,8 +44,8 @@ const (
 	// listPageLimit bounds the pagination loop. A store that kept returning a
 	// continuation token with no keys would otherwise spin forever, and this
 	// runs inside a delete handler.
-	listPageLimit  = 1000
-	httpTimeout    = 30 * time.Second
+	listPageLimit       = 1000
+	httpTimeout         = 30 * time.Second
 	defaultPublicPrefix = "/objects"
 )
 
