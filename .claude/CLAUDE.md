@@ -8,28 +8,30 @@ required beyond the repo itself (Nix dev shell via `just`).
 
 | Skill | What it does |
 | --- | --- |
-| `hackathon-e2e` | Deterministic end-to-end suite: boots the whole stack from scratch (Keycloak, Postgres, backend, frontend), then runs Playwright (Firefox) as a 15-person cast. Suites: `smoke` (seeded fixture), `journey` (the full lifecycle recipe on an empty DB), `mobile` (phone-viewport battery). |
-| `devcontainer-up` | Spins up the docker-compose devcontainer and gets it ready (Nix, toolchain warmed). `scripts/e2e.sh` is the default entry point: runs the e2e suite inside the container. |
+| `hackathon-e2e` | Deterministic end-to-end suite: boots the whole stack from scratch (Keycloak, Postgres, backend, frontend), then runs Playwright (Firefox) as a 15-person cast. Projects: `smoke` (seeded fixture), `journey` (the full lifecycle recipe on an empty DB), `mobile` (phone-viewport battery), `openreplay` (session-replay privacy proof), `tunnel` (login through the public URL), `docs` (documentation screenshots). |
+| `devcontainer-up` | Spins up the docker-compose devcontainer and gets it ready (Nix, toolchain warmed). `scripts/e2e.sh` runs the e2e suite inside the container; `scripts/start.sh` is the one-command path from nothing to a running (optionally public, optionally seeded) stack. |
 | `cloudflare-tunnel` | Exposes the locally running stack through a Cloudflare quick tunnel. One public hostname serves frontend and Keycloak (caddy path-mux), so `up.sh --with-auth` gives working OIDC login/registration through the tunnel; plain `up.sh` is anonymous view-only. |
 | `dbml-diagrams` | Builds and validates the dbdiagram.io DBML (`docs/backend/schema.dbml`) from the ent schema; `scripts/validate.sh` runs the official parser. |
 | `docs-bundle` | Builds `docs/` into ONE self-contained HTML (`out/hackagon-docs.html`): images re-encoded to webp and inlined, mermaid pre-rendered to SVG, cross-doc links anchored. No network needed to read it; prints to PDF. |
-| `openreplay-stack` | Self-hosted OpenReplay (session replay) via docker compose behind a Cloudflare quick tunnel. Vendors the upstream compose into the skill, prepares secrets non-interactively, points the stack at the tunnel URL. Debug rig — needs 8 GB RAM of its own. |
-| `seed-past-hackathons` | Populates a running instance with SDSC's real past hackathons — one source-cited JSON per edition under `data/` (details, phases, tracks, markdown pages, image paths). |
+| `openreplay-stack` | Self-hosted OpenReplay (session replay) via docker compose behind a Cloudflare quick tunnel. Vendors the upstream compose into the skill, prepares secrets non-interactively, points the stack at the tunnel URL, wires the app at it and back (`wire-frontend.sh`), and purges expired sessions (`retention.sh` — upstream has no retention setting). Debug rig — needs 8 GB RAM of its own. |
+| `seed-past-hackathons` | Populates a running instance with SDSC's real past hackathons — one source-cited JSON per edition under `data/` (details, phases, tracks, markdown pages, images). Uploads the pictures into the instance's object store, sets each event's cover, rewrites page markdown to the uploaded paths, and gives every edition a prize table with drawn (not photographed) badge art. |
 
 ## The recipe = the product spec
 
-`skills/hackathon-e2e/recipe.jsonl` — **278 actions, one JSON per line**,
-covering publication → configuration → registration (13-person wave, forms,
-waitlist) → proposals → teams → event days (no-show, same-day walk-in,
-deadline overrides) → voting → prizes (admin final voice) → post-event
-(winners, wrap-up blog, profile churn). Executed in order by
-`tests/journey/recipe.spec.ts` via `helpers/recipe.ts`.
+`skills/hackathon-e2e/recipe.jsonl` — **309 actions, one JSON per line**,
+covering platform setup → publication → configuration → registration
+(13-person wave, forms, waitlist) → proposals → teams → event days (no-show,
+same-day walk-in, deadline overrides) → voting (single-choice, ranked, points)
+→ prizes (admin final voice) → post-event (winners, gallery uploads, wrap-up
+blog, profile churn). Executed in order by `tests/journey/recipe.spec.ts` via
+`helpers/recipe.ts`.
 
-Each action carries: `priority` (P1/P2/P3 vs current dev state), `implement`
-(false = deliberately deferred), `outcome` (human-readable expectation),
-`todo` (placeholder note), and optional `gate` (skip until listed RPCs exist —
-capability-probed at runtime by `scripts/probe.sh`, so actions wake up
-automatically as the backend lands).
+Each action carries: `priority` (P1 215 / P2 85 / P3 9), `outcome`
+(human-readable expectation), an optional `todo` (placeholder note, 24
+actions) and an optional `gate` (24 actions — skip until the listed RPCs
+exist, capability-probed at runtime by `scripts/probe.sh`, so actions wake up
+automatically as the backend lands). `implement: false` meant "deliberately
+deferred"; **no action sets it any more** — nothing in the recipe is deferred.
 
 `recipe-player.html` — self-contained animated replay of the recipe (open in
 any browser). Rebuild after recipe edits by re-splicing the JSONL between the
@@ -39,226 +41,253 @@ any browser). Rebuild after recipe edits by re-splicing the JSONL between the
 the About page, the draft stays invisible to the public, an organizer is
 denied (site pages need the *global* Admin role), publish makes it
 world-readable, duplicate/invalid slugs are rejected, and a `<script>` payload
-pasted into the markdown must not execute (`sitePageSanitized`). Fixing a bug
-that a recipe action *pins* will turn the suite red on purpose — that is the
-mechanism working. Re-specify the action, do not delete it: `act2.flow.alice.users`
-asserted the `/manage/users` 500 until F3 was fixed, and its own `todo` said to
-flip it to 403.
+pasted into the markdown must not execute (`sitePageSanitized`).
 
-## Status (2026-08-06) — bringing `origin/main` in
+Act sizes: 0 = 15, 1 = 42, 2 = 51, 3 = 13, 4 = 29, 5 = 48, 6 = 43, 7 = 37,
+8 = 31. By kind: 254 `rpc`, 27 `ui.assert`, 27 `ui.flow`, 1 `files.generate`.
 
-`docs/review-main-2026-08-06.md` is the read: 183 commits, 746 files, reviewed
-from code on both sides. **The merge is not additive everywhere** — main
-DELETED the `Capability` entity our branch is built on and replaced it with
-flat `HackathonState` booleans enforced through casbin policy. The two
-enforcement paths cannot both run, so ours is kept and none of that is ported.
-Everywhere else additive holds, and all seven items in the review's order of
-work are on `sketch/06-08-26`. Since extended with the three items the review
-had deferred — ranked/points ballots, the `HackathonState` façade, and the
-storage upload path — so the recipe now runs **294 actions**: journey
-**297 passed / 0 failed / 0 skipped**, smoke **77 passed / 0 skipped**,
-`svelte-check` 0 errors, plus the tunnel login proof.
+## Where things stand (2026-08-08)
 
-**Two of those three "features" were switches that did nothing.**
-`VoteCategory.voting_method` already offered ranked and points, and the
-organiser's form already listed them, while `SubmitVote` rejected every ballot
-cast in such a category. The review had reasoned about a schema migration and
-missed that the surface was already shipped. The façade is the opposite case —
-genuinely additive, and deliberately carries **no enforcement**:
-`requireCapability` is still the only gate.
+Work is on `sketch/06-08-26`. **`.claude/` is gitignored there** and tracked on
+`feat/claude` instead (worktree `../hackagon-wt-claude`) — edit the live copy
+under `.claude/` and sync it across.
 
-**The guard paid for itself immediately.** `runRpc`'s throw-on-unprobed-gate
-caught two of my own omissions in this batch (`SuggestResults`, and the four new
-RPCs) — actions that would otherwise have self-skipped forever behind a growing
-green number. Cross-check with: every `method`/`gate` in `recipe.jsonl` must
-appear in `probe.sh`'s `METHODS`.
+| Suite | Result | When |
+| --- | --- | --- |
+| journey (309-action recipe) | **312 passed / 0 failed / 0 skipped** | 2026-08-08 |
+| smoke (76 tests, 16 files) | **80 passed** | 2026-08-08 |
+| openreplay (7 tests) | **11 passed** | 2026-08-08 |
+| frontend units (9 files) | **154 passed** | 2026-08-08 |
+| mobile | 14 passed | 2026-08-05 |
 
-**Reviewing main mostly found bugs in OURS.** Five of the seven were defects
-the comparison exposed rather than features main had: `/manage/users` shipped
-calling `AddRole`/`RemoveRole` while both were `Unimplemented`, so promoting
-anyone 500'd; "Clear current phase" submitted no id into a UUID parse; the
-`VOTE` and `VIEW_RESULTS` capabilities were seeded and toggleable with **no
-handler reading them**; `EditSubmission` checked the window but not the
-capability; "★ Preferred" called an organizer-only RPC without the argument it
-requires, so it always failed.
+Playwright totals include the 4 auth-setup tests every suite depends on, so
+journey's 312 is 4 setup + 308 recipe actions. The recipe file has 309 action
+lines: `loadRecipe()` drops any line carrying a `comment` key without checking
+for an `id` first, and `act8.flow.bob` has one — see the silent-green traps
+below.
 
-Two things ported as genuine additions: `SuggestResults` (single-choice tally
-only — ranked/points would force the `Vote` unique index from
-`(category, voter)` to `(category, voter, submission)` and destroy the
-one-ballot-per-category invariant) and the "what can I do now" surfaces
-(`CurrentStateCard`, `OrganizerStateAlert`, the `/manage` landing page).
-`AddOwner`/`RemoveOwner` — the last B15 stub pair — went in as a casbin role
-write with no schema change, because ownership is a casbin fact here while main
-stores it twice and syncs by hand.
+⚠ **`just check::test -c backend` is currently RED**, and not because a test
+fails. The quitsh runner appends `--ginkgo.v` to every package's test binary;
+`internal/audit` and `internal/storage` are plain `testing` packages with no
+ginkgo bootstrap, so they exit 1 on `flag provided but not defined: -ginkgo.v`
+before running anything. Both pass under a plain `go test`. The three Ginkgo
+suites are green: service 257 of 258 specs, middleware 43/43, capability 37/37.
+CI runs the failing command.
 
-**Same test trap, third time.** A locator that contains the thing it asserts
-about passes for the wrong reason: `12-roles` checked the row, which holds a
-`<select>` whose options are named after the roles; `13-owners` checked the
-card, which holds a button named "Make organizer". Assert on the element that
-states the fact — the badge, the role line — never the container.
+**API-to-UI coverage: 99 of 107 RPC declarations have a frontend caller.** The
+eight without one are accounted for in `docs/testing.md` — `PageService.SetOrder`
+is a bulk alternative to the MoveUp/MoveDown the CMS uses,
+`HackathonService.SetCurrentPhase` aliases the `AdvancePhase` the timeline
+calls, `GetVoteCategory`/`ListVotes`/`GetSubmission` are covered by the list
+endpoints already driving the UI, `SuggestResults` computes a tally the UI
+records by hand with `CreateVoteResult`, `CreateDownloadUrl` waits for something
+private to serve, and `RemovePreference` has no un-prefer control to call it.
 
-**Three ways a test reported green while proving nothing**, all found in this
-pass and all now impossible-by-construction rather than fixed case by case:
+### What landed most recently
 
+**Backend.** Ranked and points ballots with per-row votes (`{submission_id,
+rank}`), plus `SuggestResults` tallies for both. A `HackathonState` façade over
+the existing Capability model — projection only, **no enforcement**, because two
+gates that can disagree are worse than either alone. `StorageService`: presigned
+uploads with hand-rolled SigV4 (~200 lines rather than aws-sdk-go-v2 and its ~15
+modules through a pinned Nix `vendorHash`), size and content-type as conditions
+ON the presign so an oversized upload is refused before a byte moves, and
+delete-by-prefix so deleting a hackathon or an account purges its objects.
+`AddOwner`/`RemoveOwner`, `ListRegistrationResponses`, and an RPC audit journal
+in `internal/audit/`.
+
+**Frontend.** Media upload from the markdown editor, re-encoded to WebP in the
+browser; an `/objects` fallback proxy; a people panel beside the team-assignment
+board; centred nav; event-glyph placeholders; prize images; session replay with
+default-deny masking behind a consent cookie.
+
+**Tooling.** `scripts/prod-frontend.sh` (the harness serves the adapter-node
+build itself — see container trap 2b), `journal-to-recipe`, `--refresh` /
+`reseed.sh` / `prizes.sh` and real uploads in `seed-past-hackathons`, a working
+`openreplay-stack` with `retention.sh`, and the new `14-nav-centering`,
+`15-media-upload` and `tests/openreplay/` specs.
+
+**`image/svg+xml` is excluded from uploads on purpose.** `/objects` is our own
+origin, so a stored SVG is script running as the application.
+
+### Three things that were switches doing nothing
+
+Worth knowing because each looked like a feature request and was a bug:
+
+- `VoteCategory.voting_method` had always offered ranked and points, and the
+  organiser's form had always listed them, while `SubmitVote` rejected every
+  ballot cast in such a category. A review weighed a schema migration against "a
+  feature nobody asked for" and missed that the surface was already shipped.
+- The `VOTE` and `VIEW_RESULTS` capabilities were seeded and toggleable with
+  **no handler reading them**.
+- `/manage/users` shipped calling `AddRole`/`RemoveRole` while both returned
+  `Unimplemented`, so promoting anyone 500'd.
+
+The ranked/points fix has a cost written down rather than left to be
+discovered: the `Vote` unique index moved from `(category, voter)` to
+`(category, voter, submission)`, so one-ballot-per-category is no longer the
+database's rule. `writeBallot` deletes existing `(category, voter)` rows inside
+the transaction and a pre-check still answers `AlreadyExists`, but two
+concurrent submits from one voter could both pass the pre-check — a partial
+unique index is not expressible in ent.
+
+### Policy decisions, pinned by making a recipe action pass
+
+Member role at Join; waitlisted may propose; **anonymous → `Unauthenticated`,
+never `PermissionDenied`** (a status code is an answer, and "who are you" and
+"not you" are different answers — `TeamService`'s eight mutation handlers moved
+to `RequireUser` for this, because telling an anonymous caller `NotFound` let
+them probe which team ids exist); organizers cannot vote; members read all
+submissions hackathon-wide; public pages anonymous-readable; window enforcement
+with now-anchored overrides.
+
+Known upstream quirks: the casbin enforcer does not reload after external
+seeding (the suite restarts the backend after `just db::seed`); casbin writes on
+its own connection, so an ent transaction must never be held across one — it
+deadlocks, and team membership uses compensating writes instead.
+
+The `docs/` set drives bug work: `docs/TODO.md` carries the per-item status,
+including deliberate non-fixes (team members may not delete their team; `Join`
+still needs the public-visibility decision).
+
+## How we got here
+
+Three passes, in order. Kept short because the lessons outlived the numbers.
+
+**1. Reachability (2026-08-05).** **Nothing had ever CLICKED the account menu.**
+Every suite reached `/account`, `/hackathon/create` and `/manage/*` with
+`page.goto`, which proves the route works and not that you can get there. Three
+bugs were hiding behind "clicking my hackathons does nothing" — `/account`
+redirect-looped because single-segment paths that no route owns are treated as
+candidate SitePages and `account` was missing from a hand-written reserved list
+(`sitePageSlug.ts` DERIVES that set from the route tree via `import.meta.glob`
+now, so a new route reserves its own segment); the avatar swallowed its first
+click because the menu was a `<button>` whose `onclick` only exists after
+hydration; and "My hackathons" navigated to where you already were, which reads
+as a dead link. *(The menu itself is gone — see pass 2 — but the reserved-slug
+derivation and the "goto proves nothing" lesson are why it is written down.)*
+
+Two editable-personal-data blockers from the same pass, neither of which was a
+missing form: `WhoAmI` re-synced `display_name` from the token on EVERY request
+and hooks calls it on every protected page, so any edit was reverted by the next
+click — `syncFromKeycloak` now refreshes only what the IdP owns. And
+`SubmitRegistrationForm` used to insert only, so a second submit hit the unique
+`(hackathon, user)` constraint and returned `AlreadyExists`: **the first typo
+was permanent.** It is an upsert now, and `GetRegistrationResponse` reads the
+answers back as its own RPC — not part of `Get`, which denies waitlisted users,
+exactly the people who still need their form.
+
+**2. The design migration (2026-08-06, `feat/main-design`)** carried main's
+design onto our backend. Almost nothing was lost as *design*; what was lost was
+*wiring*, and none of it announced itself in a diff — submissions listing only
+your own team, a Photos tab that no longer existed when its chain reached it, a
+landing hero whose primary action was a 404. **The recipe found more product
+bugs than review did.** Two mechanical audits found what neither could
+(`docs/testing.md` documents both): **routes with no inbound link** (`/account`,
+`/manage/pages` — the platform CMS — linked from nowhere at all) and **RPCs
+with no caller** (`CreateSubmission`/`EditSubmission`/`FinalizeSubmission` had
+none, so a team could not turn work in; `EditSettings` had none, so
+`votingEnabled` — which gates every ballot and defaults to false — could only be
+opened over grpcurl).
+
+Three read RPCs had to be added for one reason each time — `GetWindows`,
+`PrizeService.Get`, `GetEmailTemplates`: **a `Set*` that replaces a whole record
+makes any form that cannot prefill destructive.** The voting policy took the
+fourth slot but landed on the hackathon entity instead: those are the rules the
+VOTERS are bound by, so "may I vote for my own team" is readable by whoever the
+vote binds.
+
+This design has **no account menu at all** — identity is a monogram and sign-out
+is a top-bar button — so `02-login` and `07-account-menu` were re-specified
+rather than repaired. Nav IA is one meaning per entry: Dashboard (yours),
+Hackathons (all, searchable), About; the wordmark goes home for everyone.
+"Hackathons" used to resolve to the dashboard when signed in and the browse page
+when not, so the same word meant two things and the browse page was unreachable
+from the chrome for exactly the people with an account.
+
+**3. Bringing `origin/main` in (2026-08-06)** —
+`docs/review-main-2026-08-06.md`: 183 commits, 746 files, reviewed from code on
+both sides. **The merge is not additive everywhere** — main DELETED the
+`Capability` entity our branch is built on and replaced it with flat
+`HackathonState` booleans enforced through casbin policy. The two enforcement
+paths cannot both run, so ours is kept. Everywhere else additive holds.
+**Reviewing main mostly found bugs in OURS**, not features main had.
+`AddOwner`/`RemoveOwner` went in as a casbin role write with no schema change,
+because ownership is a casbin fact here while main stores it twice and syncs by
+hand.
+
+## Ways a test reported green while proving nothing
+
+The most expensive category of bug here, because nothing turns red. Most are
+now impossible-by-construction rather than fixed case by case; the last one in
+the list is **still live** and is why the recipe has 309 actions and 308 tests.
+
+- **A locator that contains the thing it asserts about.** Three times now.
+  `12-roles` checked the row, which holds a `<select>` whose options are named
+  after the roles; `13-owners` checked the card, which holds a button named
+  "Make organizer". Assert on the element that STATES the fact — the badge, the
+  role line — never the container.
 - **A gate nobody probed.** `implemented()` cannot tell "the backend returned
-  Unimplemented" from "no one ever asked" — both are falsy — so the six new
-  `act5.owner.*` actions, whose RPCs were missing from `probe.sh`'s `METHODS`,
+  Unimplemented" from "no one ever asked" — both are falsy — so six
+  `act5.owner.*` actions whose RPCs were missing from `probe.sh`'s `METHODS`
   self-skipped and would have done so forever. `runRpc` now THROWS on a gate
   absent from the probe list: gating exists so an action wakes up when its RPC
-  lands, and one that is never probed never wakes.
+  lands, and one that is never probed never wakes. It paid for itself
+  immediately, catching `SuggestResults` and four more the next batch.
 - **A `test.skip` on the only path.** `12-roles`'s self-demotion test clicked a
   revoke control and skipped when none rendered — but own-Admin revoke is
   deliberately hidden, so skipping was every run. It asserts the absence now,
   and grants a role to someone else to prove the control did not vanish for
   everybody.
-- **`recipe-player.html` showed 10 actions of 274.** An inline `<script>` block
-  ends at the first literal `</script>`, even inside a JSON string — and
-  `act0.about.xss` pastes a script tag on purpose. The splice escapes it as
-  `<\/script>`, which JSON parses back to the same character.
+- **A count nobody read back.** `recipe-player.html` showed 10 actions of 274.
+  An inline `<script>` block ends at the first literal `</script>`, even inside
+  a JSON string — and `act0.about.xss` pastes a script tag on purpose. The
+  splice escapes it as `<\/script>`, which JSON parses back to the same
+  character. Re-splicing the player after a recipe edit is required, not
+  cosmetic; the escape is part of the splice.
+- **A zero that could be vacuous.** The replay privacy proofs count BYTES ON THE
+  WIRE, and a zero-hit grep reads identically whether the string was masked or
+  nothing was ever captured — on the first run nothing was. `masking.spec.ts`
+  therefore runs an **unmasked control first**, and `consent.spec.ts` asserts the
+  positive too (the project key IS in the HTML once granted).
+- ⚠ **An action the loader silently drops — still live.** `loadRecipe()` filters
+  every line with a `comment` key, which is how act banners are removed, and it
+  does not check for an `id` first. `act8.flow.bob` carries a trailing `comment`
+  explaining why it runs where it does, so it has never executed: 309 lines,
+  308 tests. Explanatory prose belongs in `outcome` or `todo` on any line that
+  has an `id`.
 
-Re-splicing the player after a recipe edit is required, not cosmetic; the
-escape is part of the splice.
+One hole no option closes: the tracker masks TEXT NODES and input values but
+sends ATTRIBUTE values verbatim. `title={userName}` was shipping the signed-in
+person's name in clear next to the same name arriving as asterisks. **Personal
+data goes in text nodes, never in an attribute.**
+
+**Fixing a bug that a recipe action *pins* will turn the suite red on purpose** —
+that is the mechanism working. Re-specify the action, do not delete it:
+`act2.flow.alice.users` asserted the `/manage/users` 500 until it was fixed, and
+its own `todo` said to flip it to 403.
 
 **Cast differs between suites.** In the smoke fixture alice OWNS h1; in the
 journey `hackagon-admin` creates the hackathon and alice joins it and votes in
 act 7 (organizers may not vote). A recipe action written with the smoke cast in
 mind gets `PermissionDenied` from the right code for the wrong reason.
 
-## Status (2026-08-06) — design migration
-
-Branch `feat/main-design` carries main's design onto our backend. Journey
-**271 passed / 0 failed**, frontend units **154/154** (23 markdown-sanitiser
-cases restored with the renderer), `svelte-check` **0 errors**.
-
-Getting there took nine runs, one failure at a time — the story is
-`mode: "serial"`, so a failure skips the tail and each run surfaces exactly
-one. Worth knowing for the next migration: **the recipe found more product
-bugs than review did.** Submissions listing only your own team, the Photos tab
-that no longer existed when its chain reached it, a landing hero whose primary
-action was a 404 — none of those look wrong in a diff.
-
-**What the migration actually cost.** Almost nothing was lost as *design*; what
-was lost was *wiring*, and none of it announced itself. Two mechanical audits
-found what the suites could not (`docs/testing.md` documents both):
-
-- **Routes with no inbound link.** `/account` (the link lived in `AppSidebar`,
-  which no route mounts), `/manage/pages` — the platform CMS — linked from
-  nowhere at all, and the preferences CSV endpoint under a path with no page.
-- **RPCs with no caller.** 95 of 102 have one now. The gaps were not small:
-  `CreateSubmission`/`EditSubmission`/`FinalizeSubmission` had none, so a team
-  could not turn work in; `EditSettings` had none, so `votingEnabled` — which
-  gates every ballot and defaults to false — could only be opened over grpcurl;
-  `SetVotingPolicy` had none, and `SubmitVote` ignored the stored policy anyway.
-
-**Three read RPCs had to be added** — `ConfigService.GetWindows`,
-`PrizeService.Get`, `ConfigService.GetEmailTemplates` — for one reason each
-time: a `Set*` that replaces a whole record makes any form that cannot prefill
-destructive. The voting policy took the fourth slot but landed on the hackathon
-entity instead: those are the rules the VOTERS are bound by, so "may I vote for
-my own team" is readable by whoever the vote binds.
-
-**Mock pages that shipped as real ones.** `/hackathon/[id]` had a literal
-title, venue, speaker list and "42 of 100 spots taken", identical for every
-event, and redirected signed-in visitors into the member view — which assumes
-signed in ⇒ member and answers 403 to anyone who had not joined. The landing
-hero's "Get Started" pointed at `/hackathon/ord-2026`, a slug and not an id, so
-the front page's primary action was a 404.
-
-**Nav IA.** One meaning per entry: Dashboard (yours), Hackathons (all,
-searchable), About; the wordmark goes home for everyone. "Hackathons" used to
-resolve to the dashboard when signed in and the browse page when not, so the
-same word meant two things and the browse page was unreachable from the chrome
-for exactly the people with an account.
-
-**Test-side lessons.** The dashboard's membership badge is a SIBLING of the row
-link, so rows are reached as the link's grandparent (`helpers/ui.ts`) — the
-badge has moved three times and the class lists changed with it, but "the thing
-the link is mounted in" did not. `clickLink` falls back to the accessible name:
-an icon-only link (the account control) has no text content to filter on. And
-`02-login`/`07-account-menu` are re-specified rather than repaired — this
-design has no account menu at all; identity is a monogram and sign-out is a
-top-bar button.
-
-## Status (2026-08-05)
-
-On branch `sketch/04-08-26` **every recipe action runs**: journey
-**271 passed / 0 failed / 0 skipped** — nothing deferred, nothing gated —
-plus smoke **45/45**, mobile **14/14**, frontend units **39/39**, the theme
-screenshots **35/35** and the tunnel login proof.
-
-**Nothing had ever CLICKED the account menu** — every suite reached
-`/account`, `/hackathon/create` and `/manage/*` with `page.goto`, which proves
-the route works and not that you can get there. Three separate bugs were
-hiding behind "clicking my hackathons does nothing", all now pinned by
-`tests/smoke/07-account-menu.spec.ts` and `act8.menu.*`:
-
-- `/account` **redirect-looped** on a full page load. Single-segment paths that
-  no route owns are treated as candidate SitePages (public), and `account` was
-  missing from the hand-written reserved list — same bug as `/hackathon/create`
-  a day earlier. `sitePageSlug.ts` now DERIVES the reserved set from the route
-  tree via `import.meta.glob`, so a new route reserves its own segment.
-- The avatar swallowed its first click: the menu was a `<button>` whose
-  `onclick` only exists after hydration. It is a native `<details>` now, and
-  `menuOpen` mirrors the DOM instead of driving it — a two-way `bind:open`
-  re-closed a menu that was opened before hydration.
-- "My hackathons" from the dashboard navigates to where you already are, which
-  reads as a dead link. Entries carry `aria-current="page"` and a dot.
-
-Two traps this created for the suite itself, both fixed in the helpers:
-the account menu now lives in the DOM at all times (hidden), so a page-wide
-`getByText("Bob Henderson")` matched the menu first — content assertions scope
-to `<main>` (`helpers/ui.ts:content`); and `getByRole("button", {name})` is
-substring + case-insensitive, so `clickButton: "A"` also matched "Toggle
-light/d**a**rk mode" and clicked the theme switch. `clickButton` prefers an
-exact match now. `login: true` only works with `fresh: true` — with a persona's
-saved session Keycloak SSOs straight through and the helper waits forever for
-a `#username` field that never renders.
-
-Getting the last six actions to run meant building what they referenced:
-`ConfigService.SetEmailTemplates` / `SetBranding`, structured submission
-validation, and `UserService.DeleteAccount`. **API-to-UI coverage: 57 of 64
-RPCs have a frontend caller.** The other seven are four proto-only stubs
-returning `Unimplemented` (audit B15: AddRole/RemoveRole,
-AddOwner/RemoveOwner) and three readers whose `List*` equivalents already
-drive the UI. *(All four B15 stubs are implemented and called as of
-2026-08-06 — see the main-merge section below.)*
-
-**Editable personal data (2026-08-05).** Two things people could not change
-about themselves, both now `act2.form.*` / `act8.profile.*` in the recipe:
-
-- `UserService.EditProfile` (display name). The blocker was not a missing form
-  — `WhoAmI` re-synced `username`, `display_name` and `email` from the token on
-  EVERY request, and hooks calls it on every protected page, so any edit was
-  reverted by the next click. `syncFromKeycloak` now refreshes only what the
-  IdP owns; the display name is the platform's, seeded on Register and
-  backfilled only when empty. Username/email/password stay in Keycloak's own
-  account console, which `/account` links to.
-- `SubmitRegistrationForm` is an UPSERT. It used to insert only, so a second
-  submit hit the unique (hackathon, user) constraint and returned
-  `AlreadyExists` — the first typo was permanent. `GetRegistrationResponse`
-  reads the answers back (its own RPC, not part of `Get`, which denies
-  waitlisted users — exactly who still needs their form); organizers may read
-  another person's with hackathon `Write`, and `act2.form.bob.snoop` pins that
-  a fellow member may not. The form had no link anywhere in the UI either — the
-  member overview now has one.
-
-Policy decisions were pinned by making recipe actions pass
-(Member role at Join, waitlisted may propose, anonymous → UNAUTHENTICATED,
-organizers cannot vote, members read all submissions hackathon-wide, public
-pages anonymous-readable, window enforcement with now-anchored overrides).
-Known upstream quirks: casbin enforcer does not reload after external seeding
-(the suite restarts the backend after `just db::seed`); casbin writes on its
-own connection, so an ent transaction must never be held across one (it
-deadlocks — team membership uses compensating writes instead).
-
-The `docs/` set (2026-08-04 audit) drives bug work: `docs/TODO.md` carries the
-per-item status, including two deliberate non-fixes (team members may not
-delete their team; `Join` still needs the public-visibility decision).
+**Test-side locator lessons.** The dashboard's membership badge is a SIBLING of
+the row link, so rows are reached as the link's grandparent (`helpers/ui.ts`) —
+the badge has moved three times and the class lists changed with it, but "the
+thing the link is mounted in" did not. `clickLink` falls back to the accessible
+name: an icon-only link has no text content to filter on. Content assertions
+scope to `<main>`, because a hidden-but-present account menu matched a page-wide
+`getByText` first. `getByRole("button", {name})` is substring AND
+case-insensitive, so `clickButton: "A"` also matched "Toggle light/d**a**rk
+mode" — `clickButton` prefers an exact match now. And `login: true` only works
+with `fresh: true`: with a persona's saved session Keycloak SSOs straight
+through and the helper waits forever for a `#username` field that never renders.
 
 ## Container traps (Windows/macOS hosts) — read before touching compose
 
-These cost hours; all three are now fixed in `.devcontainer/`, but the failure
-modes recur whenever the setup changes.
+These cost hours; all of them are handled in `.devcontainer/` (or, for 2b, in
+the e2e harness), but the failure modes recur whenever the setup changes.
 
 **1. Never let `node_modules` live on the bind mount.** The workspace mount is
 `9p` on Windows; the volumes are `ext4`. Measured in this container:
@@ -380,6 +409,18 @@ bash .claude/skills/devcontainer-up/scripts/up.sh      # container up + ready
 bash .claude/skills/devcontainer-up/scripts/e2e.sh smoke
 bash .claude/skills/devcontainer-up/scripts/e2e.sh journey
 bash .claude/skills/hackathon-e2e/scripts/run.sh journey --until-act 5   # freeze mid-story
+```
+
+Session-replay privacy proof (needs the openreplay rig up and the app wired at
+it — the suite self-skips otherwise, so running it without the rig costs
+nothing and claims nothing):
+
+```bash
+bash .claude/skills/openreplay-stack/scripts/up.sh
+OPENREPLAY_EMAIL=… OPENREPLAY_PASSWORD=… \
+  bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh
+bash .claude/skills/hackathon-e2e/scripts/run.sh openreplay
+bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore
 ```
 
 Public URL with working login (see the cloudflare-tunnel skill):

@@ -10,6 +10,13 @@ the ent schema (`components/backend/db/schema/*.go`), rendered human-readably
 in `components/backend/Schema.md` — regenerate that first after schema edits
 (`just codegen::db-schema`), then update the DBML from it, then **validate**.
 
+⚠ **The checked-in DBML is behind the ent schema** (checked 2026-08-08). Three
+known gaps: `HackathonInvite` and `SitePage` have no `Table` at all; `votes`
+still shows the old `(vote_category_votes, user_votes)` unique index, which
+moved to `(category, voter, submission)` when ranked/points ballots landed; and
+`votes` is missing the `created_at`/`modified_at` columns added at the same
+time. Run the workflow below before quoting the diagram.
+
 ## The workflow
 
 1. `just codegen::db-schema` — refresh `Schema.md` from the ent sources.

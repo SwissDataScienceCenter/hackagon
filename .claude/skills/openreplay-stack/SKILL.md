@@ -6,8 +6,9 @@ description: Spin up a self-hosted OpenReplay (session replay) instance with doc
 # OpenReplay behind a quick tunnel
 
 A **debugging rig**, not a deployment. It brings up the full upstream stack
-(24 services) with a `*.trycloudflare.com` URL in front, so you can wire the
-SvelteKit tracker to a real ingest endpoint without owning a domain or a VM.
+(23 long-running services, plus four one-shot migration containers) with a
+`*.trycloudflare.com` URL in front, so you can wire the SvelteKit tracker to a
+real ingest endpoint without owning a domain or a VM.
 
 ## Commands
 
@@ -27,8 +28,10 @@ at `<url>/signup`; **the first account becomes the admin**.
 ## Layout
 
 ```
-compose.tunnel.yaml    overlay: adds cloudflared, unpublishes caddy's host ports
+compose.tunnel.yaml    overlay: adds cloudflared, unpublishes caddy's and minio's host ports
 scripts/               doctor · fetch-upstream · up · url · down
+                       wire-frontend (point the app at this rig, and back)
+                       retention (purge expired sessions — see below)
 vendor/                upstream scripts/docker-compose/ (fetched, gitignored)
 vendor/UPSTREAM.txt    repo, ref and exact commit — a fetch is reproducible
 .state/                tunnel URL, "secrets prepared" marker (gitignored)
@@ -107,12 +110,13 @@ first-party cookie instead, read server-side.
 ## Verification status
 
 **Booted for real on 2026-08-08** (Windows host, Docker Desktop, 47 GB / 32
-vCPU): all 24 services running, four migrations exited 0, the tunnel serving
+vCPU): all 23 services running, four migrations exited 0, the tunnel serving
 200 on `/` and `/signup`, an account created and a project key read back from
 `/api/projects`. Sessions recorded from the SvelteKit app arrive and are
-stored.
+stored, and the e2e `openreplay` project passes against it (7 tests: consent,
+masking, Do Not Track — plus the 4 auth-setup tests it depends on).
 
-Getting there took **four fixes, and `--dry-run` could not have found any of
+Getting there took **five fixes, and `--dry-run` could not have found any of
 them** — it proves the compose files merge, which is a different claim from
 "the containers can talk to each other and their scripts can run":
 
@@ -186,9 +190,10 @@ Wiring this rig up no longer means "every visitor to localhost:8081 is
 recorded". A deployment switch (`replay.enabled`) and a per-browser consent
 must **both** be on, and the consent is the visitor's — asked by a banner,
 withdrawable at `/account`, honoured before the tracker's config is ever sent
-to the page. `docs/frontend/session-replay.md` is the full statement; the
-proof is `hackathon-e2e/tests/openreplay/consent.spec.ts`, which counts bytes
-on the wire rather than asserting that a flag was read.
+to the page. A browser sending `DNT: 1` is not recorded even if it consented
+(`tests/openreplay/dnt.spec.ts`). `docs/frontend/session-replay.md` is the full
+statement; the proof is `hackathon-e2e/tests/openreplay/consent.spec.ts`, which
+counts bytes on the wire rather than asserting that a flag was read.
 
 Practical consequence for anyone driving this rig by hand: **after wiring, load
 a page and click "Allow recording"**, or the OpenReplay UI will stay empty and

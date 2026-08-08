@@ -13,6 +13,8 @@ Git Bash on Windows (MSYS path mangling is handled).
 ## Commands
 
 ```bash
+bash .claude/skills/devcontainer-up/scripts/start.sh   # nothing → running stack (see below)
+bash .claude/skills/devcontainer-up/scripts/start.sh --tunnel --seed   # …public, with login, seeded
 bash .claude/skills/devcontainer-up/scripts/up.sh      # start + make ready (idempotent)
 bash .claude/skills/devcontainer-up/scripts/e2e.sh smoke     # hackathon-e2e inside the container
 bash .claude/skills/devcontainer-up/scripts/e2e.sh journey   # full lifecycle recipe
@@ -21,6 +23,13 @@ bash .claude/skills/devcontainer-up/scripts/exec.sh              # interactive s
 bash .claude/skills/devcontainer-up/scripts/down.sh              # stop (volumes kept)
 bash .claude/skills/devcontainer-up/scripts/down.sh --volumes    # full cold reset
 ```
+
+`start.sh` is **the one-command path**: container → stack → optionally a
+Cloudflare quick tunnel with OIDC wired → optionally the seed fixture. It
+exists because the chain has four steps across three skills and the one people
+forget is the last — a tunnel that serves pages but was never auth-wired looks
+completely fine until somebody tries to sign in. It finishes by driving a real
+login round-trip, because serving HTML proves nothing about OIDC.
 
 ## What `up.sh` does
 
@@ -43,10 +52,12 @@ http://localhost:8081 while tests run.
 ## Notes
 
 - Everything (Keycloak, Postgres, backend, frontend) runs *inside* the `dev`
-  container via process-compose. Optional sidecars: `caddy`+`tunnel` (profile
-  `tunnel`, see the cloudflare-tunnel skill) and `postgres`+`keycloak` as real
-  containers (profile `services`, opt-in — `just up` still starts devenv's
-  own copies and they would collide).
+  container via process-compose. `rustfs` — the S3-compatible object store the
+  storage service presigns against — is a sibling container and always on.
+  Optional sidecars: `caddy`+`tunnel` (profile `tunnel`, see the
+  cloudflare-tunnel skill) and `postgres`+`keycloak` as real containers
+  (profile `services`, opt-in — `just up` still starts devenv's own copies and
+  they would collide).
 - **Editing `.devcontainer/docker-compose.yml` recreates the `dev` container
   on the next `compose up`**, which kills process-compose inside it *and*
   discards anything apt-installed at runtime. Restart the stack afterwards,

@@ -1,12 +1,16 @@
 ---
 name: hackathon-e2e
-description: Deterministic end-to-end testing of the full hackathon lifecycle. Boots the whole stack from scratch (Keycloak, Postgres, backend, frontend), then runs Playwright (Firefox) suites with a 15-person cast — admin, organizer, a 13-strong registration wave, capacity cut-off, waitlist, dropout, day-1 no-show, and a same-day walk-in — plus generated file-upload fixtures and a 256-action recipe (recipe.jsonl) with priority/implement/outcome triage. Runs inside the devcontainer by default (see the devcontainer-up skill). Use when asked to run e2e/browser tests, verify the hackathon lifecycle (publication → registration → teams → event → voting → post-event), smoke-test the platform, or check which lifecycle RPCs the backend implements.
+description: Deterministic end-to-end testing of the full hackathon lifecycle. Boots the whole stack from scratch (Keycloak, Postgres, backend, frontend), then runs Playwright (Firefox) suites with a 15-person cast — admin, organizer, a 13-strong registration wave, capacity cut-off, waitlist, dropout, day-1 no-show, and a same-day walk-in — plus generated file-upload fixtures and a 309-action recipe (recipe.jsonl) with priority/outcome/gate triage. Runs inside the devcontainer by default (see the devcontainer-up skill). Use when asked to run e2e/browser tests, verify the hackathon lifecycle (publication → registration → teams → event → voting → post-event), smoke-test the platform, or check which lifecycle RPCs the backend implements.
 ---
 
 # Hackathon lifecycle e2e testing
 
 Everything lives in this directory (`.claude/skills/hackathon-e2e/`) — scripts,
-cast, Playwright config, and tests. Nothing outside the skill is modified.
+cast, Playwright config, and tests. No source file outside the skill is edited
+by a run. It does write outside it: the stack's state is wiped
+(`just clean::state`), the frontend is built (`components/frontend/build/`,
+logs and pidfile under `.output/run/`), and the `docs` project writes
+`docs/flows/` when `DOCS_SHOTS=1`.
 
 ## How to run
 
@@ -22,7 +26,8 @@ Direct (any Linux/WSL shell with the repo checked out — scripts re-exec inside
 the Nix dev shell automatically):
 
 ```bash
-bash .claude/skills/hackathon-e2e/scripts/run.sh [smoke|journey|all] [--headed] [--grep <p>] [--no-reset] [--until-act <n>]
+bash .claude/skills/hackathon-e2e/scripts/run.sh [smoke|journey|all|mobile|openreplay] \
+     [--headed] [--grep <p>] [--no-reset] [--until-act <n>]
 ```
 
 **Mobile battery**: `run.sh mobile` runs every surface (public home + event
@@ -37,8 +42,9 @@ story up to (and including) act 4 and leaves the stack in exactly that state
 — browse it at http://localhost:8081, or publicly via the sibling
 `cloudflare-tunnel` skill (`up.sh` for anonymous viewing, `up.sh --with-auth`
 for logged-in browsing through the tunnel) to inspect any page
-mid-lifecycle. Acts: 1 publication, 2 registration, 3 proposals,
-4 teams, 5 roster cut, 6 event days, 7 voting, 8 post-event.
+mid-lifecycle. Acts: 0 platform setup, 1 publication, 2 registration,
+3 proposals, 4 teams, 5 roster cut, 6 event days, 7 voting, 8 post-event.
+(`--until-act` compares against each action's `act`, so act 0 always plays.)
 
 **Tunnel login proof**: `tests/tunnel/login.spec.ts` (project `tunnel`)
 drives a real login through the public tunnel URL — Keycloak on the same
@@ -50,12 +56,39 @@ bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth
 TUNNEL_BASE_URL=https://<X>.trycloudflare.com pnpm exec playwright test --project=tunnel
 ```
 
+**Session-replay privacy proof**: `run.sh openreplay` seeds the same fixture as
+smoke and runs `tests/openreplay/` — 7 tests that count BYTES ON THE WIRE
+rather than reading a flag back. It needs a live OpenReplay (sibling skill
+`openreplay-stack`) and `replay.enabled: true` in the frontend config; it
+self-skips otherwise, and it is deliberately not part of `all`.
+
 Each run is **deterministic by default**: stop stack → wipe Postgres+Keycloak
 (`just clean::state`) → boot via process-compose → wait for readiness →
-seed (smoke) / provision the extras roster (journey) → probe backend
+seed (smoke/openreplay) / provision the extras roster (journey) → probe backend
 capabilities → Playwright on Firefox. The stack is left running afterwards
 (`just down` to stop). `pnpm install` and the Firefox download happen
 automatically on first run.
+
+**The harness serves the frontend itself.** `wait-ready.sh` unconditionally
+stops process-compose's `vite dev` and starts the adapter-node build on
+`:8081` (`scripts/prod-frontend.sh`). Regenerating protos rewrites ~260 files
+under `src/lib/server/grpc/generated/`, which invalidates that much of vite's
+transform cache; `src/` is on the 9p bind mount, so the first SSR request took
+**five minutes** (measured 2026-08-08) and process-compose's readiness probe
+killed the process mid-warm-up — the log says
+`readiness check fail - signal: killed`, which reads like a crash and is not
+one. The built output has no transform step: smoke drops from 3.0 m to 1.4 m.
+
+"Unconditionally" is the load-bearing word. The earlier guard — *leave it alone
+if anything answers within 5 s* — handed the run to a cold vite whenever it
+happened to reply in time, and left vite holding `[::1]:8081` against the built
+server whenever it did not, so the identical command passed for one suite and
+failed for the next. `:8081` and not `:8082` because Keycloak's `hackagon-dev`
+client only allows redirect URIs on 8081; `:8082` belongs to the
+cloudflare-tunnel skill's own built server, which is why everything here is
+scoped to servers launched with `PORT=8081` — a blanket
+`pkill -f build/service/index.js` also killed the tunnel's upstream, and nothing
+ever restarted it.
 
 ## The cast (15 people)
 
@@ -79,14 +112,28 @@ lives in `personas.ts` (`JOURNEY_CAST`): **13 registrations, capacity 8, one
 dropout, one backfill, one no-show, one walk-in — final roster 13 (9
 confirmed, 4 waitlisted), 8 of 9 confirmed in teams.**
 
-## The two suites
+## The suites
 
-**smoke** — snapshot mode. Seeds the fixture (`just db::seed`) and verifies
-what each principal can see and do: public vs private listing for anonymous
-visitors, login, dashboard contents + membership badges, and the full
-persona × hackathon member-view access matrix (200/403/404). Plus the
-**new-user funnel** (`05-new-user-funnel.spec.ts`): Keycloak self-registration
-→ auto-login → backend auto-registration → the dashboard Join button →
+Playwright projects, all Firefox, all serial (`workers: 1`, `retries: 0`).
+`setup` is a dependency of every suite except `tunnel`; it logs each principal
+in through the real Keycloak flow and saves a storage state.
+
+| Project | Database | Size (last green run) |
+| --- | --- | --- |
+| `smoke` | seed fixture (`just db::seed`) | 76 tests across 16 spec files — **80 passed** with setup (2026-08-08) |
+| `journey` | **empty**, never seeded | 308 recipe actions — **312 passed / 0 failed / 0 skipped** with setup (2026-08-08) |
+| `mobile` | seed fixture (fresh runs) | 14 tests at 390×844 (2026-08-05) |
+| `openreplay` | seed fixture | 7 tests — **11 passed** with setup (2026-08-08); self-skips without a live rig |
+| `tunnel` | whatever is live | 5 tests; self-skip without `TUNNEL_BASE_URL` |
+| `docs` | seed fixture | 1 test; self-skips without `DOCS_SHOTS=1` (writes `docs/flows/`) |
+
+**smoke** — snapshot mode. Verifies what each principal can see and do: public
+vs private listing for anonymous visitors, login, dashboard contents +
+membership badges, the full persona × hackathon member-view access matrix
+(200/403/404), list views, the CMS pages, global-role and co-organizer grants,
+nav centring, and a media upload that is read back. Plus the **new-user
+funnel** (`05-new-user-funnel.spec.ts`): Keycloak self-registration →
+auto-login → backend auto-registration → the dashboard Join button →
 Waitlisted badge. Its actor is `SELF_REGISTRANT` in `personas.ts` —
 deliberately outside `PERSONAS` and never provisioned by the realm import or
 `roster.sh`, because walking through the signup form is the point.
@@ -94,8 +141,9 @@ deliberately outside `PERSONAS` and never provisioned by the realm import or
 **journey** — the **full lifecycle as a data-driven screenplay**:
 `recipe.jsonl`, one JSON action per line, executed strictly in order by
 `tests/journey/recipe.spec.ts` via the engine in `helpers/recipe.ts`. The
-recipe covers the complete hackathon **including voting** — **256 actions**,
-interleaving the participant story with a realistic mess of life:
+recipe covers the complete hackathon **including voting** — **309 action
+lines** across acts 0–8 — interleaving the participant story with a realistic
+mess of life:
 
 - **Filled-in forms that conform to the admin's schema**: 9 registration-form
   responses use exactly the keys defined in act1.config.regform (affiliation/
@@ -103,10 +151,10 @@ interleaving the participant story with a realistic mess of life:
   consent, which must flow to act-8 publication), plus two validation
   negatives (missing required consent, unknown field) and Noor's paper form
   digitized by the admin (`onBehalfOf`). Submission payloads carry the
-  subform keys (repo/demo/slides/summary); slides is `file-or-url` — link
-  works today, byte upload waits for blob storage. Media decision pinned:
-  people provide LINKS to their pictures (no avatar field or blob store
-  exists in the platform).
+  subform keys (repo/demo/slides/summary); slides is `file-or-url`, and the
+  recipe exercises the link form. A blob store exists now (`StorageService`),
+  but the registration form still asks people for a LINK to their picture —
+  there is no avatar upload field.
 
 - **Everyone confirmed gets a team seat** (act 4): Matterhorn = bob, alice,
   hiro, ines; Bernina = dana, erik, giulia, fatima — and team composition
@@ -119,82 +167,89 @@ interleaving the participant story with a realistic mess of life:
   registration window, approves her on the spot and slots her into the
   no-show's seat. Roster: 13 on the list, 9 confirmed, 4 waitlisted.
 
-- **Per-event configuration (act 1, all TODO-gated on a future ConfigService)**:
-  custom registration form + consents, submission form, voting mechanism +
-  tie-breaking, email templates, branding, and time windows — pinned as ONE
-  configuration-engine design decision.
+- **Per-event configuration (act 1, `ConfigService`)**: custom registration
+  form + consents, submission form, voting policy, email templates, branding,
+  and time windows — pinned as ONE configuration-engine design decision.
 - **Time-window enforcement + manual override**: early/late registration,
   post-deadline preferences and submissions all bounce (`FailedPrecondition`,
   array-gated on ConfigService.SetWindows + the acting RPC); the admin
   extends the submission window by 30 minutes (`OverrideWindow`) and the
   grace-period submission is accepted. Note: window fields must time-travel
   together with the event dates.
-- **Prize governance (PrizeService, TODO-gated)**: prize table defined at
-  publication; after the vote the **admin has the final voice** — results
-  are advisory until `Finalize`; prizes stay admin-editable afterwards
-  (sponsor credit edit) and members are denied.
-
-- **Admin "meanwhile" actions throughout** (80 of them): identity checks,
-  watching registrations arrive mid-wave, user-management chains, a
-  maintenance unlist/relist cycle, audit snapshots, live announcements, logo
-  refresh, post-event cleanup.
+- **Ballots that are not just a tick** (act 7): five categories — three
+  single-choice, one RANKED, one POINTS with a 10-point budget. The negatives
+  are the point: a ranked ballot that skips rank 2 or names one project twice
+  is refused, a single-choice ballot cast into the ranked category is refused,
+  and a points ballot over budget is refused. `SuggestResults` computes the
+  Borda and points tallies.
+- **Co-organizers** (act 5): the admin promotes Alice with `AddOwner`; a mere
+  member and a waitlisted person are both denied; an organizer cannot demote
+  themselves and the LAST organizer cannot be demoted at all.
+- **The `HackathonState` façade** (act 5): the organizer flips capabilities
+  through main's boolean contract, a member cannot, and the switch goes back.
+- **Media, uploaded for real** (act 8): the organizer presigns a gallery photo
+  upload, a member is denied one, and an SVG is refused outright.
+- **Prize governance (`PrizeService`)**: prize table defined at publication;
+  after the vote the **admin has the final voice** — results are advisory until
+  `Finalize`; prizes stay admin-editable afterwards (sponsor credit edit) and
+  members are denied.
+- **Admin "meanwhile" actions throughout** (138 of the 309 are the admin's):
+  identity checks, watching registrations arrive mid-wave, user-management
+  chains, a maintenance unlist/relist cycle, audit snapshots, live
+  announcements, logo refresh, post-event cleanup.
 - **Edit cycles**: name typo published → noticed → fixed; reschedule; venue
-  change; description announcements; proposal/preference/team/submission
-  edits (gated).
+  change; description announcements; proposal/preference/team/submission edits.
 - **Deletions & churn**: withdrawn proposal, created-then-deleted placeholder
   team, participant removal (dropout), obsolete page cleanup, draft-event
   deletion, and two never-approved registrants deleting their platform
-  profiles post-event (`UserService.DeleteAccount`, proto TBD — verification
-  gated via the recipe's `gate` field).
+  profiles post-event (`UserService.DeleteAccount`).
 - **Finale**: winners announced, photos page, and a final wrap-up blog entry
-  published by the admin (PageService, gated).
+  published by the admin.
 - **Abandoned/incomplete actions**: a login form filled halfway and left, a
   wrong-password recovery chain, a participant search typed and abandoned,
-  the stub Join button dead end, an unfinalized scratch submission.
+  an unfinalized scratch submission.
 - **Malformed/ghost negatives**: bad UUIDs → InvalidArgument, ghosts →
   NotFound, double-approve idempotency, and permission negatives for every
-  privileged mutation.
-- **One pinned UX gap** (marked `TODO(ux)`): signed-in non-members clicking a
-  public event land on a 403 (F1/B2 — awaiting the public-visibility
-  decision). The /manage/users untranslated 500 is fixed: that action now
-  asserts a 403, and the dashboard Join button is real (was an alert stub),
-  so acts 1 and 2 exercise the true join flow.
+  privileged mutation. Anonymous callers get `Unauthenticated`, not
+  `PermissionDenied` — a status code is an answer, and "who are you" and "not
+  you" are different answers.
 
-| Act | Timeline | Actions | Status (vs sketch/04-08-26) |
+| Act | Timeline | Actions | What it covers |
 | --- | --- | --- | --- |
-| 1 | T-4mo publication | publish (generated PNG logo, capacity announcement), round-trip check, config block (forms/consents/voting policy/emails/branding/windows), prize table, typo-edit-fix cycle, reschedule, venue change, private draft, browse + abandoned-login + wrong-password chains, rogue create/edit denied; pages + tracks | ✅ runs; pages/tracks **landed — unskip**; config/prizes gated |
-| 2 | T-3mo registration | 13 named sign-ups → all waitlisted, 9 schema-conformant form responses + 2 validation negatives, mid-wave admin roster check, unlist/relist cycle, manage-users chains, malformed/ghost joins, anxious-recheck chain | ✅ runs; forms gated (P2) |
-| 3 | T-2mo proposals | 5 proposals across tracks, 2 approved, withdrawal, edit, anonymous/rogue/ghost negatives, proposals-page check | 🟡 **ProjectService landed — align params & unskip** |
-| 4 | T-1.5/1mo teams + webinars | preferences (+re-rank), export, 2 teams + placeholder create/delete, 7 assignments incl. rebalancing, full seating (everyone confirmed), teams-page check, webinar page | 🟡 **TeamService landed — align & unskip**; prefs gated |
-| 5 | T-1wk registration closes | approve 8 of 13 (+idempotent double), member tours, dropout loses access + team seat cleared, backfill takes the seat, window-closed negative, ghost/malformed negatives, audit snapshot | ✅ runs; team-seat cascade landed — unskip |
-| 6 | T0/T+1 event days | status → Active, **no-show seat cleared**, **walk-in Noor: register→override→join→approve→team**, phases, day-boundary sign-out/return, announcements, logo refresh, fixtures + submissions (draft→edit→final, link+upload cases), deadline negatives + 30-min admin override, roster 13/9/4 | ✅ partly; Phase/Team **landed — unskip**; windows gated |
-| 7 | T+1 voting & awards | 3 categories, 13 member ballots incl. walk-in, waitlisted/organizer denied, double-vote + late-vote rejected, close, results → Matterhorn, **admin finalizes prizes (final voice)** | 🟡 **protos + DB tables landed on sketch; handler pending — ⚠ align method names (see below)** |
-| 8 | T+1wk post-event | status → Finished, late join rejected, member/waitlisted archive chains, thanks + winners edit, prize edit + rogue denied, photos page + **wrap-up blog**, page/draft cleanup, **profile churn (2 deletions + gated verification)** | ✅ partly; pages landed — unskip; churn deferred |
+| 0 | before any event | 15 | platform setup: the admin drafts the About site page, the draft stays invisible, an organizer is denied (site pages need the *global* Admin role), publish makes it world-readable, duplicate/invalid slugs rejected, a pasted `<script>` must not execute |
+| 1 | T-4mo publication | 42 | publish (generated PNG logo, capacity announcement), round-trip check, config block (forms/consents/voting policy/emails/branding/windows), prize table, typo-edit-fix cycle, reschedule, venue change, private draft, browse + abandoned-login + wrong-password chains, rogue create/edit denied, pages + tracks |
+| 2 | T-3mo registration | 51 | 13 named sign-ups → all waitlisted, 9 schema-conformant form responses + 2 validation negatives, read-back / correction / privacy-snoop on the answers, mid-wave admin roster check, unlist/relist cycle, manage-users chains, malformed/ghost joins, anxious-recheck chain |
+| 3 | T-2mo proposals | 13 | 5 proposals across tracks, 2 approved, withdrawal, edit, anonymous/rogue/ghost negatives, projects-page check |
+| 4 | T-1.5/1mo teams + webinars | 29 | preferences (+re-rank), export, 2 teams + placeholder create/delete, assignments incl. rebalancing, full seating (everyone confirmed), teams-page check, webinar page |
+| 5 | T-1wk registration closes | 48 | approve 8 of 13 (+idempotent double), member tours, dropout loses access + team seat cleared, backfill takes the seat, co-organizer promote/demote, the state façade, window-closed and ghost/malformed negatives, audit snapshot |
+| 6 | T0/T+1 event days | 43 | status → Active, **no-show seat cleared**, **walk-in Noor: register→override→join→approve→team**, phases, day-boundary sign-out/return, announcements, logo refresh, fixtures + submissions (draft→edit→final), deadline negatives + 30-min admin override, roster 13/9/4 |
+| 7 | T+1 voting & awards | 37 | 5 categories (single-choice, ranked, points), 13 member ballots incl. the walk-in, waitlisted/organizer denied, malformed-ballot negatives, double-vote + late-vote rejected, close, tallies, **admin finalizes prizes (final voice)** |
+| 8 | T+1wk post-event | 31 | status → Finished, late join rejected, member/waitlisted archive chains, thanks + winners edit, prize edit + rogue denied, gallery uploads, photos page + **wrap-up blog**, page/draft cleanup, **profile churn (2 account deletions + verification)** |
 
-**Triage fields** (assessed against `sketch/04-08-26`, where Page/Phase/
-Track/Project/Team services are implemented + registered, vote protos and
-tables landed, and HackathonSettings gates registrations): every action
-carries `priority` (`P1` = runs today or its backend just landed — unskip and
-align now: 171 actions; `P2` = next wave: vote handler, window enforcement,
-forms — 61; `P3` = later — 9), `implement` (`false` = deliberately deferred:
-email templates, branding, GDPR deletion verification — 5 actions kept as
-documentation only), and `outcome` — a human-readable expected outcome
-derived from each action's machine assertions. ⚠ Act 7's vote method names
-were guessed before the real proto landed — align them: package is
-`vote.VoteService` with `SubmitVote` / `CreateVoteCategory` /
-`ListVoteResults` / `ExportVotes`, and there is **no Close RPC** — closing
-voting is the `voting_enabled` toggle in HackathonSettings.
+**Triage fields.** Every action carries `priority` (`P1` runs today — 215
+actions; `P2` next wave — 85; `P3` later — 9) and `outcome`, a human-readable
+expected outcome derived from that action's machine assertions. `implement`
+still exists in the schema but **no action currently sets it to `false`**:
+nothing in the recipe is deferred any more. 24 actions carry an explicit
+`gate`, 24 carry a `todo`.
 
-**Recipe semantics**: actions with a `todo` are placeholders — they **skip**
-while their `method` probes as unimplemented and start running the day the
-backend lands it (the `todo` text carries what to verify, e.g. guessed proto
-field names). Steps that `save` response values (ids) feed later steps via
-`{{var:NAME}}`; if a producer skipped, dependents cascade-skip cleanly. Other
-tokens: `{{hackathonId}}`, `{{userId:username}}`, `{{now±Nd}}`,
-`{{logoDataUri}}`. Action types: `rpc` (gRPC as any cast member),
-`ui.assert` (named browser assertion), `ui.flow` (chained navigation:
-home → click → member view → tab → back, including fresh-login chains), and
-`files.generate` (upload fixture bundle).
+**Recipe semantics**: an action with a `todo` is a placeholder — it **skips**
+while its `method` (or `gate`) probes as unimplemented and starts running the
+day the backend lands it, with the `todo` text as the skip reason. Steps that
+`save` response values (ids) feed later steps via `{{var:NAME}}`; if a producer
+skipped, dependents cascade-skip cleanly. Other tokens: `{{hackathonId}}`,
+`{{userId:username}}`, `{{now±Nd}}`, `{{logoDataUri}}`. Action types: `rpc`
+(254 — gRPC as any cast member), `ui.assert` (27 — named browser assertion),
+`ui.flow` (27 — chained navigation: home → click → member view → tab → back,
+including fresh-login chains), and `files.generate` (1 — upload fixture
+bundle).
+
+⚠ **`loadRecipe()` drops any line with a `comment` key**, which is how act
+banners are filtered out — and it does not check for an `id` first. One action
+(`act8.flow.bob`) carries a trailing `comment` explaining its position and is
+therefore silently never executed: 309 lines in the file, 308 tests in a run.
+Put explanatory prose in `outcome` or `todo`, never in `comment`, on a line
+that has an `id`.
 
 ## File-upload fixtures
 
@@ -202,10 +257,16 @@ home → click → member view → tab → back, including fresh-login chains), 
 and offline**: a PNG team-logo identicon (hand-rolled encoder: IHDR/IDAT/IEND
 + CRC32 + node:zlib), an SVG poster, a single-page PDF report (hand-assembled
 xref), a CSV sensor-data sample, and a README — same seed ⇒ byte-identical
-output. Act 6 pins magic bytes and determinism today and writes the bundle to
-`.state/uploads/team-matterhorn/`, ready for the gated upload act. Act 1
-already pushes a generated PNG through the API as the hackathon logo (data
-URI) and asserts the round-trip.
+output. Act 6 pins magic bytes and determinism and writes the bundle to
+`.state/uploads/team-matterhorn/`. Act 1 pushes a generated PNG through the API
+as the hackathon logo (data URI) and asserts the round-trip.
+
+Real object-store uploads are proved elsewhere, and deliberately not with these
+fixtures: `tests/smoke/15-media-upload.spec.ts` drives the page editor's upload
+control with an inline 1×1 PNG and then **fetches the URL back**. A presign that
+returns a URL proves nothing — a bug in this exact path once stored images as
+`application/x-www-form-urlencoded` and uploaded no bytes at all while
+reporting success.
 
 Optional garnish: `scripts/fetch-cc-assets.sh` pulls two well-known
 Creative-Commons/PD files from Wikimedia Commons (checksums recorded
@@ -222,17 +283,18 @@ fixtures are the default because they need no network and cannot drift.
   computed server-side from `starts_at`/`ends_at`, so acts 6/8 shift the dates
   via the Edit RPC (clock faking would fight JWTs/Keycloak).
   `scripts/timeshift.sh <uuid> <days>` does it manually.
-- **Capability gating**: `scripts/probe.sh` writes
-  `.state/capabilities.json` via **unauthenticated** probes (enforce-first
+- **Capability gating**: `scripts/probe.sh` probes 64 lifecycle RPCs and writes
+  `.state/capabilities.json` via **unauthenticated** calls (enforce-first
   handlers reject before touching the DB; missing ones return
   `Unimplemented`). Gated acts self-skip; when an RPC lands they un-skip and
   **fail on purpose** with scripting instructions — test-with-feature,
-  enforced mechanically.
+  enforced mechanically. `runRpc` **throws** on a gate that is not in `METHODS`:
+  `implemented()` cannot tell "the backend returned Unimplemented" from "nobody
+  ever asked" — both are falsy — so an action gated on an unprobed RPC would
+  self-skip forever behind a growing green number.
 - **API-driven acts, UI-asserted outcomes**: mutations without UI run through
   `helpers/api.ts` (grpcurl + real Keycloak tokens); outcomes are asserted in
   Firefox where the UI is real (badges, listings, 403s, the About text).
-  Roster counts are asserted via the API because the participants page still
-  renders mock data.
 - **Serial, no retries** (`workers: 1`, `retries: 0`): a stateful recipe can't
   retry mid-way; the retry unit is a whole run. Acts share state through
   `.state/journey.json` (user ids keyed by username).
@@ -241,27 +303,37 @@ fixtures are the default because they need no network and cannot drift.
 
 ```
 recipe.jsonl              THE SCREENPLAY: one action per line, full lifecycle incl. voting,
-                          each with priority/implement/outcome triage fields
+                          each with priority/outcome/gate triage fields
 recipe-player.html        self-contained animated replay of the recipe (also published
                           as an artifact); rebuild after recipe edits by re-splicing the
                           JSONL between the <script id="recipe-data"> markers
 personas.ts               principals + seed matrix + JOURNEY_CAST constants
 cast.json                 the 11 extras (incl. the walk-in) (names, emails, shared dev password)
-playwright.config.ts      Firefox-only; setup/smoke/journey/mobile/tunnel projects
+playwright.config.ts      Firefox-only; setup/smoke/journey/mobile/docs/tunnel/openreplay projects
 helpers/recipe.ts         the recipe engine (rpc / ui.assert / ui.flow / files.generate)
-helpers/                  login, grpc api, capability gates, file generators, ui locators
+helpers/                  api, capabilities, discover, files, login, state, ui
 tests/auth.setup.ts       per-principal Keycloak login -> .state/<persona>.json
-tests/smoke/              01-anonymous 02-login 03-dashboard 04-access-control
+tests/smoke/              01-anonymous … 15-media-upload (16 files, 76 tests)
 tests/journey/recipe.spec.ts  executes recipe.jsonl in order
 tests/mobile/             phone-viewport battery (overflow + broken-image checks, screenshots)
-tests/tunnel/login.spec.ts    login proof through a --with-auth quick tunnel
+tests/openreplay/         session-replay privacy: consent, masking, Do Not Track
+tests/tunnel/             login proof + admin/theme screenshots through a --with-auth tunnel
+tests/docs/flows.spec.ts  writes docs/flows/*.webp (needs DOCS_SHOTS=1)
+
 scripts/run.sh            orchestrator (reset -> up -> ready -> seed|roster -> probe -> test)
+scripts/reset.sh          stop the stack, wipe Postgres+Keycloak state, drop .state/journey.json
+scripts/up.sh             just deploy::up (process-compose, detached)
+scripts/wait-ready.sh     block until pg/keycloak/backend answer, then serve the BUILT frontend
+scripts/prod-frontend.sh  start|stop|ensure the adapter-node build on :8081 (replaces vite)
+scripts/seed.sh           just db::seed + restart the backend (casbin does not reload)
 scripts/roster.sh         provision extras into Keycloak (idempotent)
-scripts/probe.sh          backend capability probe -> .state/capabilities.json
+scripts/probe.sh          backend capability probe (64 methods) -> .state/capabilities.json
 scripts/timeshift.sh      shift a hackathon's dates by N days (manual time travel)
 scripts/fetch-cc-assets.sh  optional CC sample photos (Wikimedia Commons + attribution)
-scripts/journal-to-recipe.sh  captured RPC journal -> DRAFT recipe actions
+scripts/journal-to-recipe.sh  captured RPC journal -> DRAFT recipe actions (.mjs does the work)
+scripts/lib.sh            shared: re-exec inside the Nix dev shell, URLs, wait_for
 .state/                   gitignored: storage states, capabilities, uploads
+.artifacts/               gitignored: HTML report, results.json, screenshots, run logs
 ```
 
 ## Seeding the recipe from real traffic
@@ -295,7 +367,9 @@ recipe is largely made of look like ordinary failures in a log.
   add the named assertion to `UI_ASSERTS` in `helpers/recipe.ts` (and result
   checks to `CHECKS`).
 - **New lifecycle RPC to track**: add to `METHODS` in `scripts/probe.sh` and
-  reference it from the recipe line's `method`.
+  reference it from the recipe line's `method`. Not optional: an action whose
+  `gate` is missing from `METHODS` now throws instead of skipping. Cross-check
+  with — every `method`/`gate` in `recipe.jsonl` must appear in `METHODS`.
 - **Bigger crowd**: append to `cast.json`, add join/approve/vote lines to
   `recipe.jsonl`, and keep the roster-check numbers in sync.
 - **Seed changed**: update `SEED_HACKATHONS`/`SEED_EXPECTATIONS` in
@@ -326,8 +400,20 @@ recipe is largely made of look like ordinary failures in a log.
 - **Firefox fails to launch** → `pnpm exec playwright install --with-deps
   firefox` (sudo/apt — fine in the devcontainer; on NixOS use
   `playwright-driver.browsers`).
-- **frontend never ready** → not in the process-compose shell? Start it
-  manually: `cd components/frontend && just serve`.
+- **frontend never ready**, or `EADDRINUSE: address already in use ::1:8081`
+  → a `vite dev` is still holding the port against the built server. Note that
+  `just deploy::down` only frees :8180 and :3000, so vite can outlive its
+  supervisor; `scripts/prod-frontend.sh stop` then `ensure` is the fix, and
+  `reset.sh` already does the stop.
+- **The openreplay suite skips everything** → `replay.enabled` is false in the
+  frontend config. Wire it with
+  `openreplay-stack/scripts/wire-frontend.sh`, which bounces BOTH the
+  process-compose frontend and this skill's built server (the built one reads
+  `config.yaml` once at boot, so restarting only the other prints "restarted"
+  and changes nothing).
+- **A recipe action self-skips forever** → its `gate` is not in `probe.sh`'s
+  `METHODS`. This throws now rather than skipping; if you see the skip, the
+  probe file is stale — re-run `scripts/probe.sh`.
 - **Windows host** → use the devcontainer-up skill; don't run the stack
   natively. If git checks out scripts with CRLF: `git config core.autocrlf
   input` and re-checkout.

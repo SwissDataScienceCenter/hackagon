@@ -20,8 +20,11 @@ bash .claude/skills/devcontainer-up/scripts/exec.sh just develop \
 cd .claude/skills/docs-bundle && pnpm install && node scripts/build.mjs
 ```
 
-Output: `out/hackagon-docs.html` (~1.3 MB for 16 documents, 26 screenshots and
-7 diagrams).
+Output: `out/hackagon-docs.html`. `docs/` currently holds **23 markdown
+documents, 26 screenshots and 7 mermaid diagrams**; the last build on disk came
+to 1.8 MB. Only 17 documents are named in `ORDER` — the rest are appended
+alphabetically and reported, so a new file is never silently dropped, but it
+does land at the end until someone places it.
 
 | Flag | Default | Effect |
 | --- | --- | --- |
