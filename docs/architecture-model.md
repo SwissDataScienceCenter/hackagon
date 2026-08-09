@@ -13,7 +13,7 @@ and the executable spec, on the fully-qualified gRPC method name (e.g.
 `hackathon.HackathonService/Join`).
 
 > 13 services · 107 RPCs · 309 requirements · 23 tables · generated from
-> `sketch/06-08-26` @ `13331242`.
+> `sketch/06-08-26` @ `48fe7831`.
 
 ## Level 1 — System context
 
@@ -53,10 +53,10 @@ path-shaped domain.
 | **Backend ↔ Postgres**<br><small>backend → postgres</small>           | SQL<br><small>pgx pool via ent</small>                                      | connection credentials                                                        | built       |
 | **Backend ↔ casbin policy**<br><small>backend → postgres</small>      | in-process<br><small>in-memory enforcer, loaded once at startup</small>     | n/a                                                                           | built       |
 | **Backend → Participants**<br><small>backend → participant</small>     | SMTP / provider API<br><small>via a notification queue</small>              | provider credentials                                                          | **planned** |
-| **Frontend/Backend ↔ Object store**<br><small>backend → blob</small>  | S3-compatible<br><small>presigned upload/download</small>                   | presigned URLs                                                                | **planned** |
+| **Frontend/Backend ↔ Object store**<br><small>backend → blob</small>  | S3-compatible<br><small>presigned upload/download</small>                   | presigned URLs                                                                | built       |
 | **Backend → SDSC leaderboard**<br><small>backend → leaderboard</small> | HTTPS API<br><small>outbound integration</small>                            | API token                                                                     | **planned** |
 
-Notes worth carrying: 3 channels are not built yet (notifications, object
+Notes worth carrying: 2 channels are not built yet (notifications, object
 storage, the external leaderboard), and the casbin policy channel is in-process
 with the reload caveat above.
 
