@@ -12,8 +12,8 @@ endpoint catalogue. This page is **generated** from one authored file
 probe and the executable spec, on the fully-qualified gRPC method name
 (e.g. `hackathon.HackathonService/Join`).
 
-> 13 services · 105 RPCs · 309 requirements ·
-> 23 tables · generated from `sketch/06-08-26` @ `be4ccd22`.
+> 13 services · 107 RPCs · 309 requirements ·
+> 23 tables · generated from `sketch/06-08-26` @ `13331242`.
 
 ## Level 1 — System context
 
@@ -30,7 +30,7 @@ client — nothing in a browser talks to the backend directly.
 
 ## Level 3 — Backend components
 
-All 12 gRPC services sit behind the same interceptor chain:
+All 13 gRPC services sit behind the same interceptor chain:
 authentication resolves claims (or the anonymous subject), then casbin
 authorizes against a path-shaped domain.
 
