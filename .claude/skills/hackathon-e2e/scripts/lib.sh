@@ -32,13 +32,22 @@ ensure_toolchain() {
 }
 
 # wait_for <name> <timeout_seconds> <cmd...> — poll until cmd succeeds.
+# The deadline is only checked BETWEEN attempts, so every attempt is bounded
+# with coreutils `timeout` — otherwise one blocking probe defeats the deadline
+# entirely (an untimed curl against a cold vite holding :8081 once blocked a
+# single attempt for 15+ minutes, printing not one dot). Callers may still
+# pass tighter bounds of their own (e.g. curl --max-time 10); the 15s cap only
+# backstops the ones that forget. Attempts must be external commands, not
+# shell functions — `timeout` cannot run a function, and no caller passes one.
 wait_for() {
   local name="$1" timeout="$2"
   shift 2
   local start
+  local -a bound=()
+  command -v timeout >/dev/null 2>&1 && bound=(timeout 15)
   start=$(date +%s)
   printf "  waiting for %-12s " "$name"
-  until "$@" >/dev/null 2>&1; do
+  until "${bound[@]}" "$@" >/dev/null 2>&1; do
     if [ $(($(date +%s) - start)) -ge "$timeout" ]; then
       echo "FAILED (timeout after ${timeout}s)"
       return 1

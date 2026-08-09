@@ -57,14 +57,18 @@ wait_for() { # <name> <timeout_s> <cmd...>
   echo "ok"
 }
 
+# Every curl in this script carries --max-time: an unbounded request that
+# never returns reads as a hang, not a failure (a single untimed attempt once
+# blocked a wait loop for 15+ minutes with no output). 10s is generous for the
+# local Keycloak admin API and still fails fast when it is wedged.
 admin_token() {
-  curl -s -X POST "$KC/realms/master/protocol/openid-connect/token" \
+  curl -s --max-time 10 -X POST "$KC/realms/master/protocol/openid-connect/token" \
     -d client_id=admin-cli -d username=admin -d password=admin \
     -d grant_type=password | jq -r ".access_token"
 }
 
 client_id() { # <token>
-  curl -s -H "Authorization: Bearer $1" \
+  curl -s --max-time 10 -H "Authorization: Bearer $1" \
     "$KC/admin/realms/$REALM/clients?clientId=$CLIENT" | jq -r ".[0].id"
 }
 
@@ -78,9 +82,9 @@ patch_client() { # <redirectUris-json> <webOrigins-json>
     echo "error: realm client '$CLIENT' not found" >&2
     return 1
   }
-  rep=$(curl -s -H "Authorization: Bearer $token" "$KC/admin/realms/$REALM/clients/$cid")
+  rep=$(curl -s --max-time 10 -H "Authorization: Bearer $token" "$KC/admin/realms/$REALM/clients/$cid")
   echo "$rep" | jq ".redirectUris = $1 | .webOrigins = $2" |
-    curl -s -f -X PUT -H "Authorization: Bearer $token" \
+    curl -s -f --max-time 10 -X PUT -H "Authorization: Bearer $token" \
       -H "Content-Type: application/json" -d @- \
       "$KC/admin/realms/$REALM/clients/$cid"
 }
@@ -89,9 +93,12 @@ restart_and_wait() {
   echo "==> Restarting frontend + backend to load the new issuer..."
   (cd "$ROOT_DIR" && just deploy::proc-comp process restart frontend >/dev/null)
   (cd "$ROOT_DIR" && just deploy::proc-comp process restart backend >/dev/null)
-  wait_for "backend" 120 grpcurl -plaintext localhost:3000 health.HealthService/Check
+  # Per-attempt bounds are load-bearing: wait_for checks its deadline BETWEEN
+  # attempts, so one blocking probe (a cold vite holding :8081 has sat on a
+  # single untimed curl for 15+ minutes) defeats the timeout entirely.
+  wait_for "backend" 120 grpcurl -plaintext -max-time 10 localhost:3000 health.HealthService/Check
   # vite binds [::1] only; `localhost` hits 127.0.0.1 first in this container.
-  wait_for "frontend" 120 curl -fsS "http://[::1]:8081/"
+  wait_for "frontend" 120 curl -fsS --max-time 10 "http://[::1]:8081/"
 }
 
 # The two restarts above are process-compose's. The adapter-node build that the

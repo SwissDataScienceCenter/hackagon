@@ -213,7 +213,9 @@ cmd_start() {
     echo $! >"$PID_FILE"
   )
 
-  if ! wait_for "built frontend" 90 curl -fsS -o /dev/null "http://localhost:$PROD_PORT/"; then
+  # --max-time bounds each attempt: wait_for only checks its deadline BETWEEN
+  # attempts, so a probe that never returns would defeat the 90s budget.
+  if ! wait_for "built frontend" 90 curl -fsS -o /dev/null --max-time 10 "http://localhost:$PROD_PORT/"; then
     echo "error: the built server never answered on :$PROD_PORT." >&2
     echo "── $LOG_FILE (tail) ─────────────────────────────" >&2
     tail -40 "$LOG_FILE" >&2
