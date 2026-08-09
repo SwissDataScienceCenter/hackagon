@@ -346,6 +346,22 @@ func seedCapabilities(
 	return nil
 }
 
+// seedSettings creates the default HackathonSettings row, mirroring what
+// HackathonService.Create does (both flags false). EditSettings UPDATES and
+// answers NotFound when the row is missing — so before this existed, no
+// seeded hackathon could ever open voting: the organizer's "Open voting"
+// button failed with "That item no longer exists", found by the mobile
+// full-route sweep's setup, not by any functional suite.
+func seedSettings(ctx context.Context, db *ent.Client, h *ent.Hackathon, modifier *ent.User) error {
+	if _, err := db.HackathonSettings.Create().
+		SetHackathon(h).
+		SetModifier(modifier).
+		Save(ctx); err != nil {
+		return fmt.Errorf("settings for %q: %w", h.Name, err)
+	}
+	return nil
+}
+
 // seedH1 seeds the upcoming public AI Innovation Challenge hackathon.
 // alice acts as organizer (creator); charles is waitlisted.
 func seedH1(
@@ -366,6 +382,9 @@ func seedH1(
 		SetModifier(alice).
 		Save(ctx)
 	if err != nil {
+		return err
+	}
+	if err := seedSettings(ctx, db, h, alice); err != nil {
 		return err
 	}
 
@@ -670,6 +689,9 @@ func seedH2(
 	if err != nil {
 		return err
 	}
+	if err := seedSettings(ctx, db, h, admin); err != nil {
+		return err
+	}
 
 	phases := map[string]*ent.Phase{}
 	for _, ph := range []struct {
@@ -896,6 +918,9 @@ func seedH3(
 		SetModifier(admin).
 		Save(ctx)
 	if err != nil {
+		return err
+	}
+	if err := seedSettings(ctx, db, h, admin); err != nil {
 		return err
 	}
 

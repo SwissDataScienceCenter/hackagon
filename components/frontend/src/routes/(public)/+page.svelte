@@ -249,13 +249,17 @@
         </div>
     </div>
 
-    <div class="relative mt-6 overflow-hidden">
+    <!-- Slides per view is a CSS variable so one number drives both the slide
+         width and the translate step: 1-up on phones (4-up squeezed each slide
+         to ~70px at 360 and the captions overflowed their boxes), 2-up from
+         sm, the original 4-up from lg. -->
+    <div class="relative mt-6 overflow-hidden [--step:100%] sm:[--step:50%] lg:[--step:25%]">
         <div
             class="flex gap-4 transition-transform duration-500 ease-in-out"
-            style="transform: translateX(-{carouselIndex * 25}%)"
+            style="transform: translateX(calc(-{carouselIndex} * var(--step)))"
         >
             {#each carouselSlides as slide, i (i)}
-                <div class="w-[calc(25%-12px)] shrink-0">
+                <div class="w-[calc(var(--step)-12px)] shrink-0">
                     <div class="relative aspect-video overflow-hidden rounded-card border border-line">
                         <img
                             src={slide.src}

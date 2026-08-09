@@ -76,7 +76,12 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-        <div class="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+        <!-- w-full below sm, not flex-1: a flexed search box shrank to ~40px
+             beside the filters at 360 (useless to type in), and Firefox's
+             intrinsic minimum for input[type=search] made the w-full input
+             poke a few px into the select beside it. Full row on phones —
+             filters and the view toggle wrap to the next line. -->
+        <div class="relative w-full sm:w-64">
             <Search
                 class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-3"
                 aria-hidden="true"

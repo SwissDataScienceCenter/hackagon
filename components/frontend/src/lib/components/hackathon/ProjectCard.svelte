@@ -124,7 +124,13 @@
         {/if}
     </div>
 
-    <div class="flex shrink-0 flex-wrap items-center gap-2">
+    <!-- w-full below sm: an approved row's controls (Edit / Revoke approval /
+         Prefer / More Info) are ~420px of max-content, and a shrink-0 item
+         keeps that width even after wrapping onto its own line — the inner
+         flex-wrap never fires because the BOX still fits its buttons. Giving
+         the group the full row lets the buttons wrap inside it instead of
+         pushing the page sideways. sm and up: unchanged single-row layout. -->
+    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
         {@render actions?.()}
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
         <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">

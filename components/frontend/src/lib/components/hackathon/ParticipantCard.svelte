@@ -57,7 +57,12 @@
 <div
     class="card card-raised box-border w-full px-5 py-4"
 >
-    <div class="flex w-full items-start gap-4">
+    <!-- flex-wrap + the actions group's w-full/sm:w-auto: at phone widths the
+         controls (View / Approve / Make organizer / Remove — up to ~230px,
+         shrink-0 by design so buttons never squeeze) take their own row under
+         the card instead of pushing the card past the viewport. From sm up
+         nothing wraps and the row is exactly what it was. -->
+    <div class="flex w-full flex-wrap items-start gap-4">
         {#if avatarUrl}
             <div
                 class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
@@ -106,7 +111,7 @@
             </div>
         </div>
 
-        <div class="flex shrink-0 items-center gap-2">
+        <div class="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
             <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
             <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
             {#if actions}
