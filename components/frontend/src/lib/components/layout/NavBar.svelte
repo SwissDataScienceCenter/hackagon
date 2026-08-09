@@ -70,16 +70,25 @@
     <!-- Chrome hugs the viewport instead of matching the page shell's
          sm:px-10 md:px-20 inset. At md that inset is 5.6rem, which left the
          wordmark adrift mid-bar rather than anchored to the edge it belongs to. -->
-    <!-- Three columns, not justify-between: with the latter the nav is only
-         centred when the wordmark and the actions happen to be the same width,
-         and they never are once you sign in — the right side gains a monogram,
-         a name and a sign-out button, so the nav visibly slid left the moment
-         you logged in. The outer columns are 1fr each and the middle is auto,
-         which centres the nav on the VIEWPORT regardless of what either side
-         holds. min-w-0 on the sides so a long display name truncates instead of
-         pushing the centre off. -->
+    <!-- Three columns at md+, not justify-between: with the latter the nav is
+         only centred when the wordmark and the actions happen to be the same
+         width, and they never are once you sign in — the right side gains a
+         monogram, a name and a sign-out button, so the nav visibly slid left
+         the moment you logged in. The outer columns are 1fr each and the
+         middle is auto, which centres the nav on the VIEWPORT regardless of
+         what either side holds. min-w-0 on the sides so a long display name
+         truncates instead of pushing the centre off.
+         (Pinned by tests/smoke/14-nav-centering.spec.ts.)
+
+         BELOW md the grid must go: the nav it centres is hidden there, but
+         the two 1fr columns still split the bar in half — and the right half
+         (theme switch, Log in, hamburger) holds its content while the left
+         half squeezed the wordmark to "H…" on a phone. With nothing to
+         centre, plain justify-between gives each side its natural width.
+         (Pinned across widths by tests/mobile/chrome-reflow.spec.ts.) -->
     <div
-        class="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-6"
+        class="flex h-14 items-center justify-between gap-3 px-4 sm:px-6
+               md:grid md:grid-cols-[1fr_auto_1fr]"
     >
         <!-- The wordmark is the platform instance, so it goes to the platform's
              own front page — for everyone. It used to send signed-in people to
@@ -97,7 +106,16 @@
                 alt="SDSC"
                 class="block h-6 shrink-0 dark:hidden sm:h-7"
             />
-            <span class="truncate text-section">Hackathons</span>
+            <!-- Below 390px the TEXT is dropped deliberately and the logo
+                 stays — the alternative is `truncate` quietly eating it to
+                 "H…", which is a bug, not a layout choice. 390 because the
+                 signed-out bar (theme switch + Log in + hamburger) leaves the
+                 full word ~22px short at 360; measured, not guessed. The
+                 cutoff is mirrored by WORDMARK_MIN in
+                 tests/mobile/chrome-reflow.spec.ts; move both together.
+                 `truncate` stays as a last resort for widths the app does
+                 not support (<320px). -->
+            <span class="truncate text-section max-[389px]:hidden">Hackathons</span>
         </a>
 
         <nav class="hidden items-center gap-6 md:flex">

@@ -142,7 +142,10 @@
         <a href={resolve('/')} class="text-sm text-accent-ink no-underline">Browse all →</a>
     </div>
 
-    <div class="mt-6 flex gap-1 border-b border-line">
+    <!-- flex-wrap: three labelled chips need ~370px, which a 320px phone
+         does not have — without it this row was the widest thing on the
+         landing page and made the whole document scroll sideways. -->
+    <div class="mt-6 flex flex-wrap gap-1 border-b border-line">
         <button class="chip chip-active">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
