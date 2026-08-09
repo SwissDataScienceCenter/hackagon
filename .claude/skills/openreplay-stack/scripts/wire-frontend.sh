@@ -13,8 +13,9 @@
 # The project key is fetched from OpenReplay's own API rather than pasted from
 # its UI, because a quick tunnel mints a NEW hostname on every `up.sh` and a
 # stale ingestPoint fails silently — the tracker just never delivers anything.
-# Credentials come from OPENREPLAY_EMAIL / OPENREPLAY_PASSWORD (the account
-# created at <url>/signup; the first one is the admin).
+# Credentials come from OPENREPLAY_EMAIL / OPENREPLAY_PASSWORD, or — when
+# those are unset — from .secrets.env, the file signup.sh wrote when it
+# created the admin account during up.sh.
 #
 # ⚠ This restarts the frontend. Do not run it while an e2e suite is in flight —
 # the pages keep answering 200 through the handover, so the damage shows up as
@@ -121,21 +122,24 @@ require_docker
 url="$(tunnel_url || true)"
 [ -n "$url" ] || { echo "error: no OpenReplay tunnel running — scripts/up.sh first" >&2; exit 1; }
 
-# The project key, by preference from OpenReplay's own API — but the rig
-# outlives the shell that created its account, and the admin password is not
-# recoverable from the stack (it is stored hashed). `OPENREPLAY_PROJECT_KEY`
-# short-circuits the login for that case; read it out of the running instance
-# with:
+# The project key, by preference from OpenReplay's own API. The credentials
+# normally come from .secrets.env (written by signup.sh, which up.sh runs);
+# the environment overrides it, and `OPENREPLAY_PROJECT_KEY` short-circuits
+# the login entirely — e.g. for an account someone created by hand with a
+# password the file does not know. The stack itself only stores a hash, but
+# the key is plain in Postgres:
 #
 #   docker exec postgres sh -lc \
 #     'PGPASSWORD="$POSTGRESQL_PASSWORD" psql -U postgres -d postgres \
 #        -tAc "select project_key from public.projects;"'
 key="${OPENREPLAY_PROJECT_KEY:-}"
 if [ -z "$key" ]; then
+  load_secrets
   email="${OPENREPLAY_EMAIL:-}"
   password="${OPENREPLAY_PASSWORD:-}"
   [ -n "$email" ] && [ -n "$password" ] || {
-    echo "error: set OPENREPLAY_EMAIL and OPENREPLAY_PASSWORD (the account from $url/signup)," >&2
+    echo "error: no credentials — expected $SECRETS_FILE (written by signup.sh)," >&2
+    echo "       or OPENREPLAY_EMAIL + OPENREPLAY_PASSWORD in the environment," >&2
     echo "       or OPENREPLAY_PROJECT_KEY to skip the login entirely" >&2
     exit 1
   }

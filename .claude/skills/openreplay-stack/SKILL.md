@@ -14,27 +14,31 @@ real ingest endpoint without owning a domain or a VM.
 
 ```bash
 bash .claude/skills/openreplay-stack/scripts/doctor.sh          # preflight — run this first
-bash .claude/skills/openreplay-stack/scripts/up.sh              # fetch, prepare, tunnel, start
+bash .claude/skills/openreplay-stack/scripts/up.sh              # fetch, prepare, tunnel, start, admin account
 bash .claude/skills/openreplay-stack/scripts/up.sh --dry-run    # everything except `compose up`
 bash .claude/skills/openreplay-stack/scripts/url.sh             # current public URL
+bash .claude/skills/openreplay-stack/scripts/signup.sh          # (re)ensure the admin account — up.sh already does
 bash .claude/skills/openreplay-stack/scripts/retention.sh       # what is past the cutoff (dry run)
 bash .claude/skills/openreplay-stack/scripts/down.sh            # stop, keep recorded sessions
 bash .claude/skills/openreplay-stack/scripts/down.sh --volumes  # stop and delete everything
 ```
 
-First run pulls ~25 images and runs DB migrations — expect a long wait. Sign up
-at `<url>/signup`; **the first account becomes the admin**.
+First run pulls ~25 images and runs DB migrations — expect a long wait. There
+is no signing up by hand: **`up.sh` creates the admin account itself** from
+`.secrets.env` (see below) and prints the project key when done.
 
 ## Layout
 
 ```
 compose.tunnel.yaml    overlay: adds cloudflared, unpublishes caddy's and minio's host ports
 scripts/               doctor · fetch-upstream · up · url · down
+                       signup (create the admin account from .secrets.env)
                        wire-frontend (point the app at this rig, and back)
                        retention (purge expired sessions — see below)
 vendor/                upstream scripts/docker-compose/ (fetched, gitignored)
 vendor/UPSTREAM.txt    repo, ref and exact commit — a fetch is reproducible
 .state/                tunnel URL, "secrets prepared" marker (gitignored)
+.secrets.env           admin email + password (generated, gitignored — see below)
 ```
 
 `vendor/` is fetched by sparse checkout at a pinned ref (`OPENREPLAY_REF`,
@@ -75,13 +79,45 @@ a *new* URL and rewrites the config — fine for debugging, unworkable for
 anything lasting. For that, use a **named** Cloudflare tunnel with a stable
 hostname and set `COMMON_DOMAIN_NAME` once.
 
+## The admin account, and where its password lives
+
+OpenReplay seeds no account: the first signup at `<url>/signup` becomes the
+admin, and there is no recovery path — an admin created by hand with an
+unrecorded password once made the dashboard permanently unreachable, and the
+only fix was `down.sh --volumes`. So `up.sh` runs `scripts/signup.sh`, which
+polls `GET /api/signup` until it answers, and:
+
+- `tenants: false` → `POST /api/signup` with
+  `{email, password, fullname, organizationName}` (the route read from
+  chalice's `routers/core_dynamic.py`; it is only registered while no tenant
+  exists, which is why the GET is always checked first), then verifies a
+  `POST /api/login` with the stored credentials and prints the project key.
+- `tenants: true` → skips signup, still verifies the login. A failed login
+  here WARNS and exits 0 — an existing account must never fail a bring-up —
+  and names the two ways out (fix `.secrets.env`, or wipe).
+
+**Credentials live in `.secrets.env`** (skill root), generated on first run —
+`openssl rand -hex 16` — shown once, then readable only from the file. Chosen
+because it is the repo's existing convention for dev secrets
+(`.devcontainer/post-create.sh` mints the gitignored `secrets.yaml` the same
+way), because `sops`/`age` are not in the toolchain and this script runs on
+the HOST anyway, and because env-vars-only would recreate exactly the
+lost-password incident on the next machine. Environment variables override the
+file when set. The file sits OUTSIDE `.state/` on purpose: it must survive
+`down.sh` and even `--volumes` — after a wipe, the next `up.sh` re-creates
+the same account from it, so the wipe is the recovery path and not a second
+loss. It is gitignored in the skill's own `.gitignore` (which is what protects
+it on `feat/claude`, where the skill is tracked), and `signup.sh` refuses to
+write it at all if git would not ignore it.
+
 ## Wiring the tracker
 
-After signup, take the project key from the UI:
+`up.sh` prints the project key after creating the account (or
+`wire-frontend.sh --print` shows it any time):
 
 ```
 ingestPoint: <url>/ingest
-projectKey:  <from the OpenReplay UI>
+projectKey:  <printed by up.sh / signup.sh>
 ```
 
 `docs/frontend/session-replay.md` is the statement of what this collects, when,
@@ -131,15 +167,17 @@ them** — it proves the compose files merge, which is a different claim from
 ## Wiring the app (and unwiring it)
 
 ```bash
-OPENREPLAY_EMAIL=… OPENREPLAY_PASSWORD=… \
-  bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh          # ON
+bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh            # ON
 bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore  # OFF
 ```
 
 It reads the live tunnel URL and the project key from OpenReplay's own API
 (a quick tunnel mints a new hostname on every `up.sh`, and a stale
 `ingestPoint` fails silently), writes the `replay:` block, and restarts the
-frontend. `--restore` puts the config back byte-identical.
+frontend. `--restore` puts the config back byte-identical. Credentials come
+from `.secrets.env` automatically; `OPENREPLAY_EMAIL` / `OPENREPLAY_PASSWORD`
+in the environment override it, and `OPENREPLAY_PROJECT_KEY` skips the login
+entirely.
 
 **Two servers can own :8081.** process-compose's `frontend` is `vite dev`; the
 e2e harness replaces it with the adapter-node build via

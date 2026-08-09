@@ -30,7 +30,8 @@ case "${1:-}" in
     echo "==> stopping and DELETING ALL VOLUMES (recorded sessions included)…"
     compose down --volumes --remove-orphans
     rm -f "$STATE/tunnel-url" "$STATE/env.prepared"
-    echo "done. Next up.sh re-randomizes secrets and re-runs migrations." ;;
+    echo "done. Next up.sh re-randomizes secrets, re-runs migrations, and"
+    echo "re-creates the admin account from .secrets.env (kept on purpose)." ;;
   *)
     compose down --remove-orphans
     rm -f "$STATE/tunnel-url"

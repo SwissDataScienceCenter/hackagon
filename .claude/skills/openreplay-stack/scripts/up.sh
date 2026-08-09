@@ -105,16 +105,23 @@ sync_dotenv
 echo "==> starting OpenReplay (first run pulls ~25 images — this takes a while)…"
 COMPOSE_PROFILES=migration compose up -d
 
+# ── phase 4: the admin account, from .secrets.env ──────────────────────────
+# The stack has no seeded account and the first signup becomes the admin; an
+# account created by hand with an unrecorded password has already cost one
+# full volume wipe. signup.sh is idempotent: it waits for /api/signup, signs
+# up only while it reports tenants:false, and only says so when it skips.
+bash "$HERE/signup.sh"
+
 echo ""
 echo "── OpenReplay ─────────────────────────────────────────────"
 echo "  URL      $url"
-echo "  Sign up  $url/signup      (first account becomes the admin)"
+echo "  Login    $url/login       (credentials: .secrets.env — see above)"
 echo "  Logs     docker compose -p $PROJECT logs -f <service>"
 echo "  Stop     bash $HERE/down.sh"
 echo ""
 echo "  Tracker config for the SvelteKit app:"
 echo "    ingestPoint: \"$url/ingest\""
-echo "    projectKey:  <from the OpenReplay UI after signup>"
+echo "    projectKey:  printed above, or: bash $HERE/wire-frontend.sh --print"
 echo ""
 echo "  ⚠ This URL dies with the tunnel. Re-running up.sh mints a new one and"
 echo "    rewrites the config — fine for debugging, not for anything lasting."

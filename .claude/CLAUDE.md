@@ -416,9 +416,8 @@ it — the suite self-skips otherwise, so running it without the rig costs
 nothing and claims nothing):
 
 ```bash
-bash .claude/skills/openreplay-stack/scripts/up.sh
-OPENREPLAY_EMAIL=… OPENREPLAY_PASSWORD=… \
-  bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh
+bash .claude/skills/openreplay-stack/scripts/up.sh   # creates the admin account itself (.secrets.env)
+bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh
 bash .claude/skills/hackathon-e2e/scripts/run.sh openreplay
 bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore
 ```
