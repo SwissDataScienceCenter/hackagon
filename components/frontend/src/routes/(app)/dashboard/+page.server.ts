@@ -47,9 +47,13 @@ export const actions: Actions = {
     const asksQuestions = await hackathon
       .list({ visibilityFilter: Visibility.VISIBILITY_PUBLIC })
       .then((r) => {
-        const form = r.hackathons.find((h) => h.id === hackathonId)?.registrationForm
+        const form = r.hackathons.find(
+          (h) => h.id === hackathonId,
+        )?.registrationForm
 
-        return Boolean(form && (form.fields.length > 0 || form.consents.length > 0))
+        return Boolean(
+          form && (form.fields.length > 0 || form.consents.length > 0),
+        )
       })
       .catch(() => false)
 
@@ -60,7 +64,9 @@ export const actions: Actions = {
       // FAILED_PRECONDITION so this can say "registration is not open" rather
       // than "you are not allowed".
       if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION)
-        return fail(409, { message: "Registration is not open for this hackathon." })
+        return fail(409, {
+          message: "Registration is not open for this hackathon.",
+        })
       if (e instanceof ClientError && e.code === Status.ALREADY_EXISTS)
         return fail(409, { message: "You have already joined this hackathon." })
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)

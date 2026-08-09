@@ -6,12 +6,12 @@ The database schema is hand-written in `components/backend/db/schema/*.go` using
 
 `components/backend/Schema.md` is the auto-generated exhaustive reference —
 every column with its type, nullability, uniqueness, immutability and default,
-plus every edge with its cardinality. Consult it when you need the exact shape of
-a table. This page covers the parts that carry meaning: which fields decide
+plus every edge with its cardinality. Consult it when you need the exact shape
+of a table. This page covers the parts that carry meaning: which fields decide
 behaviour, and which edges the handlers actually traverse.
 
-For an interactive, explorable diagram: [`schema.dbml`](schema.dbml) is the
-same model in DBML — paste it into [dbdiagram.io](https://dbdiagram.io/d).
+For an interactive, explorable diagram: [`schema.dbml`](schema.dbml) is the same
+model in DBML — paste it into [dbdiagram.io](https://dbdiagram.io/d).
 
 Regenerate both the ORM code and `Schema.md` after editing a schema file:
 
@@ -34,33 +34,33 @@ order is recoverable from the ID. Timestamps follow a fixed pattern:
 `entsql.OnDelete(entsql.Restrict)` so a user who has authored anything cannot be
 deleted out from under it.
 
-`Optional().Nillable()` on a time field means the Go type is `*time.Time` and the
-proto field is `optional` — see the mapper conventions in
+`Optional().Nillable()` on a time field means the Go type is `*time.Time` and
+the proto field is `optional` — see the mapper conventions in
 `components/backend/internal/service/mappers.go`.
 
 ## Entity index
 
-| Entity | Schema file | Role |
-|---|---|---|
-| `User` | `components/backend/db/schema/user.go` | Person, synced from Keycloak |
-| `Hackathon` | `components/backend/db/schema/hackathon.go` | The event |
-| `HackathonSettings` | `components/backend/db/schema/hackathonsettings.go` | Two feature booleans |
-| `HackathonWindows` | `components/backend/db/schema/hackathonwindows.go` | Enforced deadlines |
-| `HackathonForms` | `components/backend/db/schema/hackathonforms.go` | Form schemas + voting policy |
-| `HackathonPrizes` | `components/backend/db/schema/hackathonprizes.go` | Prize table and awards |
-| `Capability` | `components/backend/db/schema/capability.go` | Per-action open/closed gate |
-| `Participant` | `components/backend/db/schema/participant.go` | User↔Hackathon roster row |
-| `FormResponse` | `components/backend/db/schema/formresponse.go` | One registrant's answers |
-| `Page` | `components/backend/db/schema/page.go` | Content page |
-| `Phase` | `components/backend/db/schema/phase.go` | Timeline segment |
-| `Track` | `components/backend/db/schema/track.go` | Thematic grouping |
-| `Project` | `components/backend/db/schema/project.go` | Project proposal |
-| `Team` | `components/backend/db/schema/team.go` | Team on a project |
-| `TeamParticipant` | `components/backend/db/schema/teamparticipant.go` | User↔Team join row |
-| `Submission` | `components/backend/db/schema/submission.go` | Versioned team deliverable |
-| `VoteCategory` | `components/backend/db/schema/votecategory.go` | One dimension of evaluation |
-| `Vote` | `components/backend/db/schema/vote.go` | One ballot |
-| `VoteResult` | `components/backend/db/schema/voteresult.go` | A placement in a category |
+| Entity              | Schema file                                         | Role                         |
+| ------------------- | --------------------------------------------------- | ---------------------------- |
+| `User`              | `components/backend/db/schema/user.go`              | Person, synced from Keycloak |
+| `Hackathon`         | `components/backend/db/schema/hackathon.go`         | The event                    |
+| `HackathonSettings` | `components/backend/db/schema/hackathonsettings.go` | Two feature booleans         |
+| `HackathonWindows`  | `components/backend/db/schema/hackathonwindows.go`  | Enforced deadlines           |
+| `HackathonForms`    | `components/backend/db/schema/hackathonforms.go`    | Form schemas + voting policy |
+| `HackathonPrizes`   | `components/backend/db/schema/hackathonprizes.go`   | Prize table and awards       |
+| `Capability`        | `components/backend/db/schema/capability.go`        | Per-action open/closed gate  |
+| `Participant`       | `components/backend/db/schema/participant.go`       | User↔Hackathon roster row   |
+| `FormResponse`      | `components/backend/db/schema/formresponse.go`      | One registrant's answers     |
+| `Page`              | `components/backend/db/schema/page.go`              | Content page                 |
+| `Phase`             | `components/backend/db/schema/phase.go`             | Timeline segment             |
+| `Track`             | `components/backend/db/schema/track.go`             | Thematic grouping            |
+| `Project`           | `components/backend/db/schema/project.go`           | Project proposal             |
+| `Team`              | `components/backend/db/schema/team.go`              | Team on a project            |
+| `TeamParticipant`   | `components/backend/db/schema/teamparticipant.go`   | User↔Team join row          |
+| `Submission`        | `components/backend/db/schema/submission.go`        | Versioned team deliverable   |
+| `VoteCategory`      | `components/backend/db/schema/votecategory.go`      | One dimension of evaluation  |
+| `Vote`              | `components/backend/db/schema/vote.go`              | One ballot                   |
+| `VoteResult`        | `components/backend/db/schema/voteresult.go`        | A placement in a category    |
 
 ## Core diagram
 
@@ -110,8 +110,8 @@ erDiagram
     }
 ```
 
-Voting sits on the side of this graph: `Hackathon` → `VoteCategory` →
-(`Vote`, `VoteResult`), with `Vote` pointing at a `Submission` and a `User`, and
+Voting sits on the side of this graph: `Hackathon` → `VoteCategory` → (`Vote`,
+`VoteResult`), with `Vote` pointing at a `Submission` and a `User`, and
 `VoteResult` pointing at a `Submission`.
 
 ---
@@ -122,8 +122,8 @@ Key fields: `username`, `keycloak_id` (`NotEmpty().Unique()` — the JWT `sub`,
 and the casbin subject), `display_name`, `email`, `created_at`, `modified_at`.
 
 The platform UUID and the Keycloak ID are different identifiers and are used in
-different places: casbin always keys on `keycloak_id`, while proto request fields
-named `user_id` carry the platform UUID. `UserService.WhoAmI` and
+different places: casbin always keys on `keycloak_id`, while proto request
+fields named `user_id` carry the platform UUID. `UserService.WhoAmI` and
 `UserService.Register` re-sync `username`/`display_name`/`email` from the token
 claims whenever they drift.
 
@@ -138,8 +138,8 @@ The ones that carry domain meaning:
 - `jury_categories` — M2M to `VoteCategory`. Present, and read by
   `VoteService.SubmitVote` to decide whether the caller may vote in a
   `voter_type=jury` category.
-- `form_responses` (responses *about* this user) versus
-  `submitted_form_responses` (responses this user *entered*) — distinct so an
+- `form_responses` (responses _about_ this user) versus
+  `submitted_form_responses` (responses this user _entered_) — distinct so an
   organizer can digitise someone else's paper form.
 
 Roles are **not** in this table. `GlobalRole` and `HackathonRole` come from
@@ -159,9 +159,9 @@ therefore has to apply `status_filter` after the query rather than in SQL.
 `current_phase_id` is a plain column on `hackathons`, not a joined edge — the
 `current_phase` edge is declared on the inverse side precisely so the FK lands
 here and the value can be read without touching the phases table. It is written
-by `HackathonService.AdvancePhase` and is `SET NULL` on phase deletion. Nil means
-"fall back to deriving the current phase from dates", which is right before an
-event and wrong during one, where schedules slip.
+by `HackathonService.AdvancePhase` and is `SET NULL` on phase deletion. Nil
+means "fall back to deriving the current phase from dates", which is right
+before an event and wrong during one, where schedules slip.
 
 One-to-one configuration edges, each `Unique()`: `settings`, `windows`, `forms`,
 `prize_table`. One-to-many: `tracks`, `projects`, `pages`, `phases`,
@@ -176,8 +176,8 @@ timestamps and a required `modifier`. Created with both flags false by
 
 Only `voting_enabled` is actually enforced — `VoteService.SubmitVote` refuses
 with `FailedPrecondition` unless a settings row exists and the flag is on.
-`registrations_enabled` is stored and editable but **not** consulted: registration
-is gated by the `register` capability instead. The merge comment at
+`registrations_enabled` is stored and editable but **not** consulted:
+registration is gated by the `register` capability instead. The merge comment at
 `components/backend/internal/service/hackathon_service.go:330` documents this as
 a deliberate, temporary resolution of two contradictory gating mechanisms.
 
@@ -194,14 +194,14 @@ Enforced by `requireWindowOpen`
 instant, means no enforcement. Only registration and submissions honour an
 override; proposals and preferences close hard. Written by
 `ConfigService.SetWindows` (upsert) and `ConfigService.OverrideWindow`, which
-anchors the extension at *now* rather than at the configured close.
+anchors the extension at _now_ rather than at the configured close.
 
 ## HackathonForms
 
 Four JSON columns, all optional: `registration_fields` and
 `registration_consents` (`{key,label,type,required,maxMb}` /
-`{key,label,required}`), `submission_fields`, and `voting_policy`
-(mechanism, scale, tie-breaks). Written by `ConfigService.SetRegistrationForm`,
+`{key,label,required}`), `submission_fields`, and `voting_policy` (mechanism,
+scale, tie-breaks). Written by `ConfigService.SetRegistrationForm`,
 `SetSubmissionForm` and `SetVotingPolicy`.
 
 `registration_fields` and `registration_consents` are the schema that
@@ -227,10 +227,10 @@ double-create cannot produce two rows disagreeing about whether an action is
 open.
 
 `enabled` is the authoritative gate. The two phase edges, `open_in_phase` and
-`closed_in_phase`, are **display and scheduling only** and never change `enabled`
-by themselves; both are `SET NULL` on phase deletion so deleting a phase from the
-owner UI cannot delete the capability with it. A capability with no
-`open_in_phase` is purely manual, which is what keeps voting immune to
+`closed_in_phase`, are **display and scheduling only** and never change
+`enabled` by themselves; both are `SET NULL` on phase deletion so deleting a
+phase from the owner UI cannot delete the capability with it. A capability with
+no `open_in_phase` is purely manual, which is what keeps voting immune to
 `AdvancePhase`.
 
 `HackathonService.Create` pre-creates all six rows with `enabled=true`
@@ -239,10 +239,11 @@ owner UI cannot delete the capability with it. A capability with no
 plain update and never an upsert, and a new hackathon states its policy
 explicitly instead of being ambiguously ungoverned.
 
-State resolution lives in `components/backend/internal/capability/capability.go`:
-`enabled` → `OPEN`; otherwise pending (by phase position when an organizer has
-advanced, else by date) → `COMING`; else `CLOSED`. A capability with no row at
-all reports `UNGOVERNED`, and `States.Allowed` treats `UNGOVERNED` as permissive.
+State resolution lives in
+`components/backend/internal/capability/capability.go`: `enabled` → `OPEN`;
+otherwise pending (by phase position when an organizer has advanced, else by
+date) → `COMING`; else `CLOSED`. A capability with no row at all reports
+`UNGOVERNED`, and `States.Allowed` treats `UNGOVERNED` as permissive.
 
 ## Participant
 
@@ -258,7 +259,8 @@ gates the sensitive paths, not the casbin role:
   `member` role, so a waitlisted registrant can propose projects and see the
   private hackathon they signed up for.
 - `HackathonService.ApproveParticipant` flips it to `false`.
-- `HackathonService.Get` refuses anyone still waiting (`viewerMayOpenMemberView`).
+- `HackathonService.Get` refuses anyone still waiting
+  (`viewerMayOpenMemberView`).
 - `VoteService.SubmitVote` requires `is_waiting=false`.
 - `ProjectService.SetPreference` accepts waitlisted users — preferences are
   expressed before the roster cut.
@@ -275,8 +277,8 @@ response is about) and `submitted_by` (who typed it in).
 
 ## Page
 
-`title`, `content` (text), `visible` (`Default(true)`), `order` (int), indexed on
-both `order` and `visible`.
+`title`, `content` (text), `visible` (`Default(true)`), `order` (int), indexed
+on both `order` and `visible`.
 
 `order` is a dense `0..n-1` sequence maintained entirely server-side —
 `PageService.Create` appends at `max+1`, and `Delete`, `MoveUp`, `MoveDown` and
@@ -292,10 +294,9 @@ is managed from the phase side.
 indexed on `starts_at`, `ends_at`, `name`.
 
 Phases are ordered by `starts_at` with the ID as tiebreaker and undated phases
-last (`phaseOrderFrom` in
-`components/backend/internal/service/capability.go`), matching Postgres'
-`NULLS LAST` default so the query form and the slice form agree. That ordering is
-what `AdvancePhase` compares positions against.
+last (`phaseOrderFrom` in `components/backend/internal/service/capability.go`),
+matching Postgres' `NULLS LAST` default so the query form and the slice form
+agree. That ordering is what `AdvancePhase` compares positions against.
 
 Edges: `page` (at most one), `opens_capabilities` / `closes_capabilities` (the
 display-only schedule), and `current_of` — the hackathon currently sitting in
@@ -312,8 +313,8 @@ projects; a project's track is optional.
 `approved` (indexed, along with `title`).
 
 `ProjectService.Propose` writes `proposed` and grants the proposer a casbin
-`owner` role on `/hackathon/<id>/project/<projectID>`; `Approve` and `Disapprove`
-move the enum between the two values.
+`owner` role on `/hackathon/<id>/project/<projectID>`; `Approve` and
+`Disapprove` move the enum between the two values.
 
 Edges: required `hackathon`, optional `track`, required `creator`/`modifier`,
 plus `teams`, `submissions`, and `preferred_by_users` — the M2M written by
@@ -322,23 +323,23 @@ plus `teams`, `submissions`, and `preferred_by_users` — the M2M written by
 ## Team
 
 `name` and an optional `description`. Required `project` edge (teams hang off
-projects, not directly off hackathons — every handler resolves
-team → project → hackathon), required immutable `creator`, optional `modifier`,
-`submissions` (cascade on delete) and `members` through `TeamParticipant`.
+projects, not directly off hackathons — every handler resolves team → project →
+hackathon), required immutable `creator`, optional `modifier`, `submissions`
+(cascade on delete) and `members` through `TeamParticipant`.
 
 ## TeamParticipant
 
 The `users`↔`teams` join: `team_id`, `user_id`, `created_at`, both edges
-cascading on delete. Written alongside a casbin `member` grant on the team domain
-by `TeamService.AssignUser`.
+cascading on delete. Written alongside a casbin `member` grant on the team
+domain by `TeamService.AssignUser`.
 
 ## Submission
 
 `result` (optional — typically a URL), `status` (`draft` | `final`), and
 `version` (`Positive()`), unique on `(version, project, team)`.
 
-Versioning is per project-and-team, computed by `TeamService.CreateSubmission` as
-`count(existing) + 1`; the unique index is what stops two concurrent creates
+Versioning is per project-and-team, computed by `TeamService.CreateSubmission`
+as `count(existing) + 1`; the unique index is what stops two concurrent creates
 sharing a number. New submissions are always `draft`.
 `TeamService.FinalizeSubmission` moves the status to `final`, after which
 `EditSubmission` refuses to touch it — finalized submissions are frozen.
@@ -348,8 +349,8 @@ Edges: required `team`, `project` and `creator`; optional `modifier`; plus
 
 ## VoteCategory
 
-`name`, `description`, and two enums: `voting_method` (`single_choice` | `ranked`
-| `points`) and `voter_type` (`all_participants` | `jury`).
+`name`, `description`, and two enums: `voting_method` (`single_choice` |
+`ranked` | `points`) and `voter_type` (`all_participants` | `jury`).
 
 Edges: required `hackathon`, `jury_members` (M2M to `User`, the inverse of
 `User.jury_categories`, meaningful only when `voter_type=jury`), `votes`, and
@@ -374,8 +375,8 @@ are always zero.
 
 ## VoteResult
 
-A placement within a category: `position` (1 = first; **not** unique, so ties are
-allowed) and an optional `title` for a named award. Required edges to
+A placement within a category: `position` (1 = first; **not** unique, so ties
+are allowed) and an optional `title` for a named award. Required edges to
 `vote_category` and `submission`. Written by organizers through
 `CreateVoteResult`/`EditVoteResult` rather than computed from the ballots.
 

@@ -1,6 +1,9 @@
 import { error, fail, redirect } from "@sveltejs/kit"
 import type { Actions, PageServerLoad } from "./$types"
-import { createAuthorizedGrpc, publicHackathonClient } from "$lib/server/grpc/client"
+import {
+  createAuthorizedGrpc,
+  publicHackathonClient,
+} from "$lib/server/grpc/client"
 import { ClientError, Status } from "nice-grpc-common"
 // Importing the type also pulls in the module augmentation that puts
 // accessToken on Session — the same thing hooks.server.ts relies on.
@@ -17,7 +20,9 @@ import type { CustomSession } from "../../../../auth.d"
 export const load: PageServerLoad = async (event) => {
   let preview
   try {
-    preview = await publicHackathonClient.previewInvite({ token: event.params.token })
+    preview = await publicHackathonClient.previewInvite({
+      token: event.params.token,
+    })
   } catch (e) {
     // Unknown, malformed and revoked tokens must all look identical, so that a
     // link nobody should have cannot be told apart from one that expired.
@@ -51,7 +56,10 @@ export const actions: Actions = {
     // Public route, so there is no locals.grpc: build a client from the
     // session, or send them to sign in and come straight back here.
     if (!session?.accessToken) {
-      redirect(302, `/?returnTo=${encodeURIComponent(`/invite/${event.params.token}`)}`)
+      redirect(
+        302,
+        `/?returnTo=${encodeURIComponent(`/invite/${event.params.token}`)}`,
+      )
     }
 
     const form = await event.request.formData()
@@ -60,7 +68,10 @@ export const actions: Actions = {
 
     const grpc = createAuthorizedGrpc(session.accessToken)
     try {
-      await grpc.hackathon.join({ hackathonId, inviteToken: event.params.token })
+      await grpc.hackathon.join({
+        hackathonId,
+        inviteToken: event.params.token,
+      })
     } catch (e) {
       if (e instanceof ClientError) {
         if (e.code === Status.PERMISSION_DENIED)

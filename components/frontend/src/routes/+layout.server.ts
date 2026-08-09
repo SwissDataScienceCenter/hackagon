@@ -22,12 +22,18 @@ function firstHeaderValue(value: string | null): string | undefined {
 function isLocalHost(host: string): boolean {
   const name = host.split(":")[0] ?? ""
 
-  return name === "localhost" || name === "127.0.0.1" || name === "[::1]" || name === "::1"
+  return (
+    name === "localhost" ||
+    name === "127.0.0.1" ||
+    name === "[::1]" ||
+    name === "::1"
+  )
 }
 
 export const load: LayoutServerLoad = async (event) => {
   const host =
-    firstHeaderValue(event.request.headers.get("x-forwarded-host")) ?? event.url.host
+    firstHeaderValue(event.request.headers.get("x-forwarded-host")) ??
+    event.url.host
 
   // A non-local hostname is served over https, full stop — a public URL on
   // plain http is not a deployment this app supports.

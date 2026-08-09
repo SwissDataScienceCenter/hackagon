@@ -138,7 +138,11 @@ func (s *StorageService) CreateUploadUrl(
 
 	rule, known := uploadRules[req.GetKind()]
 	if !known {
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported upload kind %s", req.GetKind())
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"unsupported upload kind %s",
+			req.GetKind(),
+		)
 	}
 
 	// Limits before authorization lookups: a 4 GB request should cost one

@@ -32,7 +32,7 @@ if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
     # an rc file, so $USER and $HOME must expand when that shell runs, not now.
     line='export USER="${USER:-$(whoami)}"; . "$HOME/.nix-profile/etc/profile.d/nix.sh"'
     for rc in "$HOME/.bashrc" "$HOME/.bash_profile"; do
-        grep -qs "nix-profile/etc/profile.d/nix.sh" "$rc" || echo "$line" >> "$rc"
+        grep -qs "nix-profile/etc/profile.d/nix.sh" "$rc" || echo "$line" >>"$rc"
     done
     . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 fi
@@ -47,7 +47,7 @@ done
 # shellcheck disable=SC2016  # literal on purpose: the substitution must run
 # when .bashrc is sourced, not while this script writes it.
 grep -qs 'direnv hook bash' "$HOME/.bashrc" ||
-    echo 'eval "$(direnv hook bash)"' >> "$HOME/.bashrc"
+    echo 'eval "$(direnv hook bash)"' >>"$HOME/.bashrc"
 direnv allow "${workspace}" || true
 
 # Dev-only frontend secrets (gitignored) — without them the frontend
@@ -55,7 +55,7 @@ direnv allow "${workspace}" || true
 secrets="${workspace}/components/frontend/data/test/config/secrets.yaml"
 if [ ! -f "$secrets" ]; then
     printf 'oidc:\n  clientSecret: "%s"\n  authSecret: "%s"\n' \
-        "$(openssl rand -base64 32)" "$(openssl rand -base64 32)" > "$secrets"
+        "$(openssl rand -base64 32)" "$(openssl rand -base64 32)" >"$secrets"
     echo "Generated dev secrets at ${secrets}."
 fi
 

@@ -24,7 +24,14 @@ export interface SchemaConsent {
 }
 
 /** Field types the builder offers. `file-or-url` accepts a link today. */
-export const FIELD_TYPES = ["text", "textarea", "url", "email", "tags", "file-or-url"] as const
+export const FIELD_TYPES = [
+  "text",
+  "textarea",
+  "url",
+  "email",
+  "tags",
+  "file-or-url",
+] as const
 
 export function formFieldRows(form: FormData): SchemaField[] {
   const keys = form.getAll("fieldKey")

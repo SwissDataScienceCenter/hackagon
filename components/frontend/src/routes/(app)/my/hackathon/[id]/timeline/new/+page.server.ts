@@ -2,7 +2,10 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
-import { parsePhaseForm, syncPhaseCapabilities } from "$lib/server/hackathon/phaseForm"
+import {
+  parsePhaseForm,
+  syncPhaseCapabilities,
+} from "$lib/server/hackathon/phaseForm"
 import { resolve } from "$app/paths"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"

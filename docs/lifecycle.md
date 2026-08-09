@@ -6,23 +6,22 @@ organizers running an event and for developers adding to the flow.
 
 ## Where the spec lives
 
-The executable specification is
-`.claude/skills/hackathon-e2e/recipe.jsonl` — one JSON action per line,
-309 actions across nine acts (0-8), played strictly in order by
-`.claude/skills/hackathon-e2e/tests/journey/recipe.spec.ts`. It runs the whole
-story on an empty database with a 15-person cast. Its companion guide is
-`.claude/skills/hackathon-e2e/SKILL.md`.
+The executable specification is `.claude/skills/hackathon-e2e/recipe.jsonl` —
+one JSON action per line, 309 actions across nine acts (0-8), played strictly in
+order by `.claude/skills/hackathon-e2e/tests/journey/recipe.spec.ts`. It runs
+the whole story on an empty database with a 15-person cast. Its companion guide
+is `.claude/skills/hackathon-e2e/SKILL.md`.
 
 Every action carries triage metadata: `priority` (P1 215 / P2 85 / P3 9),
-`outcome` (human-readable expectation), an optional `todo` (placeholder note,
-24 actions) and an optional `gate` (24 actions — skip until the listed RPCs
-exist, capability-probed at runtime by `scripts/probe.sh`, so an action wakes
-up by itself the day its backend lands). `implement: false` used to mark work
-deliberately deferred; **no action sets it any more** — nothing in the recipe
-is deferred.
+`outcome` (human-readable expectation), an optional `todo` (placeholder note, 24
+actions) and an optional `gate` (24 actions — skip until the listed RPCs exist,
+capability-probed at runtime by `scripts/probe.sh`, so an action wakes up by
+itself the day its backend lands). `implement: false` used to mark work
+deliberately deferred; **no action sets it any more** — nothing in the recipe is
+deferred.
 
-Treat the recipe as the product spec: **policy questions are settled by making
-a recipe action pass**, and the decisions below are pinned that way. Action ids
+Treat the recipe as the product spec: **policy questions are settled by making a
+recipe action pass**, and the decisions below are pinned that way. Action ids
 are cited here only where the behaviour would otherwise be ambiguous.
 
 Run it:
@@ -41,16 +40,16 @@ hand. Time-window fields must be moved together with the event dates.
 
 ## Timeline
 
-| Act | Story time | Headline | Main actors |
-| --- | ---------- | -------- | ----------- |
-| 1 | T-4 months | Publication: create, configure, announce; pages and tracks; a private draft alongside | admin / organizer |
-| 2 | T-3 months | Registration opens; 13 sign-ups arrive, all waitlisted; registration forms filled | everyone |
-| 3 | T-2 months | Project proposals; organizer approves some, one is withdrawn | participants + organizer |
-| 4 | T-1.5 to T-1 month | Preferences, team formation, rebalancing; webinar page | organizer |
-| 5 | T-1 week | Roster cut: 8 approved; a dropout, a backfill; registration closes | organizer |
-| 6 | T0 / T+1 | Event days: no-show, walk-in, phases, submissions, deadline override | everyone |
-| 7 | T+1 evening | Voting and awards; admin finalizes prizes | members + admin |
-| 8 | T+1 week | Post-event: archive, winners page, wrap-up blog, cleanup | admin |
+| Act | Story time         | Headline                                                                              | Main actors              |
+| --- | ------------------ | ------------------------------------------------------------------------------------- | ------------------------ |
+| 1   | T-4 months         | Publication: create, configure, announce; pages and tracks; a private draft alongside | admin / organizer        |
+| 2   | T-3 months         | Registration opens; 13 sign-ups arrive, all waitlisted; registration forms filled     | everyone                 |
+| 3   | T-2 months         | Project proposals; organizer approves some, one is withdrawn                          | participants + organizer |
+| 4   | T-1.5 to T-1 month | Preferences, team formation, rebalancing; webinar page                                | organizer                |
+| 5   | T-1 week           | Roster cut: 8 approved; a dropout, a backfill; registration closes                    | organizer                |
+| 6   | T0 / T+1           | Event days: no-show, walk-in, phases, submissions, deadline override                  | everyone                 |
+| 7   | T+1 evening        | Voting and awards; admin finalizes prizes                                             | members + admin          |
+| 8   | T+1 week           | Post-event: archive, winners page, wrap-up blog, cleanup                              | admin                    |
 
 ## Act 1 — T-4 months: publication
 
@@ -67,13 +66,13 @@ happen atomically-ish inside that one call:
 
 Then the organizer configures the event through `ConfigService`:
 
-| Call | What it sets |
-| ---- | ------------ |
-| `SetRegistrationForm` | registration fields + consents (the schema registrants must conform to) |
-| `SetSubmissionForm` | submission fields (repo / demo / slides / summary) |
-| `SetVotingPolicy` | mechanism, scale, `oneBallotPer`, `ownTeamVoting`, `organizerVoting`, tie-breaks |
-| `SetWindows` | `registration_opens`, `registration_closes`, `proposals_close`, `preferences_close`, `submissions_close`, `late_policy` |
-| `PrizeService.Set` | the prize table (ranks + titles), defined up front |
+| Call                  | What it sets                                                                                                            |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `SetRegistrationForm` | registration fields + consents (the schema registrants must conform to)                                                 |
+| `SetSubmissionForm`   | submission fields (repo / demo / slides / summary)                                                                      |
+| `SetVotingPolicy`     | mechanism, scale, `oneBallotPer`, `ownTeamVoting`, `organizerVoting`, tie-breaks                                        |
+| `SetWindows`          | `registration_opens`, `registration_closes`, `proposals_close`, `preferences_close`, `submissions_close`, `late_policy` |
+| `PrizeService.Set`    | the prize table (ranks + titles), defined up front                                                                      |
 
 Pages (`PageService.Create`) and tracks (`TrackService.Create`) are published
 here too. A second, **private** hackathon is drafted in parallel and stays
@@ -84,9 +83,9 @@ fixed; the event is rescheduled; the venue changes — all through
 `HackathonService.Edit`, which returns the updated entity.
 
 Who can do what: **only `hackathon:write` holders** (the owner and global
-admins) may create, edit, configure or price the event. A regular signed-in
-user attempting `Create` or `Edit` gets `PermissionDenied`. Anonymous visitors
-see the public listing and the public pages, nothing else.
+admins) may create, edit, configure or price the event. A regular signed-in user
+attempting `Create` or `Edit` gets `PermissionDenied`. Anonymous visitors see
+the public listing and the public pages, nothing else.
 
 Two UX gaps are pinned here rather than hidden (both marked `TODO(ux)` in the
 recipe): a signed-in **non-member** clicking a public event is redirected into
@@ -108,10 +107,10 @@ What `Join` does, in order:
 6. grant the casbin `member` role.
 
 Everyone lands on the **waitlist**. The `member` role is granted immediately —
-`is_waiting` is what carries the approved/waitlisted distinction, not casbin.
-A second `Join` is idempotent and returns success — though note that the gates
-at steps 2–4 run *before* the already-a-participant check, so re-joining after
-the window has closed fails rather than no-opping.
+`is_waiting` is what carries the approved/waitlisted distinction, not casbin. A
+second `Join` is idempotent and returns success — though note that the gates at
+steps 2–4 run _before_ the already-a-participant check, so re-joining after the
+window has closed fails rather than no-opping.
 
 Registrants fill the organizer's form
 (`HackathonService.SubmitRegistrationForm`). Validation is strict and pinned by
@@ -136,14 +135,14 @@ the `propose_projects` capability, and an open proposals window. The proposer
 becomes `owner` of that project's domain, which is what later lets them edit or
 withdraw their own proposal while leaving everyone else's alone.
 
-The organizer approves proposals (`Approve` / `Disapprove`, `project:write`).
-A proposer withdraws their own (`Delete`, which also revokes the project-owner
+The organizer approves proposals (`Approve` / `Disapprove`, `project:write`). A
+proposer withdraws their own (`Delete`, which also revokes the project-owner
 role).
 
 Pinned here: **waitlisted registrants may propose** (`act3.propose.waitlisted`)
 — they hold `member` from `Join`, and `member` has `project:propose` on every
-hackathon. Anonymous callers get `Unauthenticated`; a non-registrant approving
-a proposal gets `PermissionDenied`; approving a ghost id gets `NotFound`.
+hackathon. Anonymous callers get `Unauthenticated`; a non-registrant approving a
+proposal gets `PermissionDenied`; approving a ghost id gets `NotFound`.
 
 ## Act 4 — T-1.5 to T-1 month: teams
 
@@ -154,8 +153,8 @@ participant row in the hackathon — waiting or not — plus the
 are expressed before the roster cut on purpose, so team formation can consider
 the whole list.
 
-The organizer exports the preferences (`ExportPreferences`,
-`project:write`), then builds teams:
+The organizer exports the preferences (`ExportPreferences`, `project:write`),
+then builds teams:
 
 - `TeamService.Create` (`team:create` — organizer only);
 - `AssignUser` / `RemoveUser` (`team:write` at the **hackathon** domain —
@@ -188,11 +187,11 @@ registrants stay at 403.
 
 Churn is modelled explicitly:
 
-| Event | Mechanism | Effect |
-| ----- | --------- | ------ |
-| **Dropout** | `RemoveParticipant` | participant row deleted, `member` role revoked; the person immediately loses `Get` access (`PermissionDenied`) |
-| Team-seat cleanup | `TeamService.RemoveUser` | their team seat is cleared separately — removing a participant does **not** cascade to teams |
-| **Backfill** | `ApproveParticipant` on a waitlisted registrant | they gain member access, then `AssignUser` puts them in the freed seat |
+| Event             | Mechanism                                       | Effect                                                                                                         |
+| ----------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Dropout**       | `RemoveParticipant`                             | participant row deleted, `member` role revoked; the person immediately loses `Get` access (`PermissionDenied`) |
+| Team-seat cleanup | `TeamService.RemoveUser`                        | their team seat is cleared separately — removing a participant does **not** cascade to teams                   |
+| **Backfill**      | `ApproveParticipant` on a waitlisted registrant | they gain member access, then `AssignUser` puts them in the freed seat                                         |
 
 Then registration closes (`registration_closes` moved into the past). A late
 `Join` bounces with `FailedPrecondition` — **including one attempted by the
@@ -203,8 +202,8 @@ Members can now tour the event: overview, participants, timeline, teams,
 webinars. Global admins reach the member view of any hackathon through the
 escape hatch even without a participant row.
 
-Roster after the cut, as the recipe asserts it (counts **include the
-organizer's own participant row**): 13 on the list, 9 approved, 4 waitlisted.
+Roster after the cut, as the recipe asserts it (counts **include the organizer's
+own participant row**): 13 on the list, 9 approved, 4 waitlisted.
 
 ### From Join to member view
 
@@ -246,7 +245,7 @@ participant rows and resolves each one's casbin role, which is what the
 **Walk-in variant (act 6).** Same shape, one step in front: the registration
 window has closed, so the organizer first calls
 `ConfigService.OverrideWindow{window: "registration", extendMinutes: N}` —
-anchored at *now* — and only then does `Join` succeed; `ApproveParticipant`
+anchored at _now_ — and only then does `Join` succeed; `ApproveParticipant`
 follows immediately instead of a month later.
 
 ## Act 6 — T0 / T+1: event days
@@ -258,7 +257,7 @@ Two real-world flows are pinned:
 
 **No-show.** A confirmed participant never turns up. The organizer clears their
 team seat (`TeamService.RemoveUser`) but leaves the participant row alone — a
-no-show is *off the team, not out of the event*, and still passes
+no-show is _off the team, not out of the event_, and still passes
 `HackathonService.Get`.
 
 **Walk-in.** Someone hears about the event that morning:
@@ -266,8 +265,8 @@ no-show is *off the team, not out of the event*, and still passes
 1. `UserService.Register` — creates the platform account from Keycloak claims;
 2. `ConfigService.OverrideWindow{window: "registration", extendMinutes: 120}` —
    the organizer reopens registration. The override is anchored at **now**, not
-   at the configured close, so "extend by N minutes" always means N minutes
-   from the moment the organizer says it;
+   at the configured close, so "extend by N minutes" always means N minutes from
+   the moment the organizer says it;
 3. `Join` — waitlisted for a moment;
 4. `ApproveParticipant` — confirmed on the spot;
 5. `SubmitRegistrationForm{on_behalf_of: <walk-in>}` — the organizer digitizes
@@ -284,16 +283,16 @@ registration) alone.
 
 Submissions:
 
-| Call | Gate |
-| ---- | ---- |
-| `CreateSubmission` | `submission:create` at the team domain, submissions window, `create_project_submissions` capability |
-| `EditSubmission` | `submission:write` at the team domain, window; refuses if the submission is already `final` (finalized submissions are frozen) |
-| `FinalizeSubmission` | `submission:write` at the team domain, capability — gated as well as create, so a draft made before the close cannot be turned in afterwards |
-| `GetSubmission` / `ListSubmissions` | `submission:read` at the team domain **or** at the hackathon level |
+| Call                                | Gate                                                                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CreateSubmission`                  | `submission:create` at the team domain, submissions window, `create_project_submissions` capability                                          |
+| `EditSubmission`                    | `submission:write` at the team domain, window; refuses if the submission is already `final` (finalized submissions are frozen)               |
+| `FinalizeSubmission`                | `submission:write` at the team domain, capability — gated as well as create, so a draft made before the close cannot be turned in afterwards |
+| `GetSubmission` / `ListSubmissions` | `submission:read` at the team domain **or** at the hackathon level                                                                           |
 
 **Members read every team's submissions, hackathon-wide.** That is a deliberate
 `p` rule (`member, /hackathon/*, submission, read`): demo day and voting both
-require seeing what the other teams turned in. Submitting *for* another team is
+require seeing what the other teams turned in. Submitting _for_ another team is
 still `PermissionDenied`.
 
 Deadline theatre, exactly as it happens in practice: the submissions window
@@ -317,8 +316,8 @@ The organizer defines vote categories (`VoteService.CreateVoteCategory`,
 - `voting_enabled` is true (otherwise `FailedPrecondition`, "voting is closed");
 - for a **jury** category, the caller is on the jury list;
 - for an **all-participants** category, the caller is **not** the hackathon
-  owner and **not** a global admin — *organizers are neutral: whoever runs the
-  event does not vote in it* — and is a **confirmed** participant
+  owner and **not** a global admin — _organizers are neutral: whoever runs the
+  event does not vote in it_ — and is a **confirmed** participant
   (`is_waiting = false`), so waitlisted registrants are refused;
 - only `single_choice` ballots are accepted for now — ranked and points ballots
   need a schema change and return `InvalidArgument` (deliberately not
@@ -332,14 +331,14 @@ category**; a second attempt is `AlreadyExists`. After the organizer flips
 Then the results and the prizes:
 
 - `CreateVoteResult` records placements — organizer/admin only;
-- `ListVoteResults` is readable by any signed-in user; raw ballots
-  (`ListVotes`, `ExportVotes`) and `ExportResults` are organizer/admin only;
+- `ListVoteResults` is readable by any signed-in user; raw ballots (`ListVotes`,
+  `ExportVotes`) and `ExportResults` are organizer/admin only;
 - `PrizeService.Finalize` writes the awards and sets `finalized = true`.
 
-**Votes are advisory; the admin has the final voice.** The tally does not
-assign prizes — a human reviews it and finalizes. Prizes stay editable
-afterwards (`PrizeService.Edit`, e.g. adding a sponsor credit), and a member
-attempting to touch the prize table gets `PermissionDenied`.
+**Votes are advisory; the admin has the final voice.** The tally does not assign
+prizes — a human reviews it and finalizes. Prizes stay editable afterwards
+(`PrizeService.Edit`, e.g. adding a sponsor credit), and a member attempting to
+touch the prize table gets `PermissionDenied`.
 
 ### From categories to awards
 
@@ -397,15 +396,15 @@ its verification step is gated behind it.
 
 ## The three gates
 
-Three independent mechanisms decide whether a call succeeds. They compose —
-all must pass — and they fail with different codes, which is how you tell them
-apart in a log.
+Three independent mechanisms decide whether a call succeeds. They compose — all
+must pass — and they fail with different codes, which is how you tell them apart
+in a log.
 
-| Gate | Question | Code on failure | Organizer bypass |
-| ---- | -------- | --------------- | ---------------- |
-| **casbin** (`RequirePermission`) | may this user ever do this? | `PermissionDenied` (or `Unauthenticated` for anonymous) | n/a — the admin escape hatch *is* the bypass |
-| **capabilities** (`requireCapability`) | is this action switched on? | `FailedPrecondition` | **yes** — anyone with `hackathon:write` skips it entirely |
-| **time windows** (`requireWindowOpen`) | are we inside the announced window? | `FailedPrecondition` | **no** — requires an explicit `OverrideWindow` |
+| Gate                                   | Question                            | Code on failure                                         | Organizer bypass                                          |
+| -------------------------------------- | ----------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| **casbin** (`RequirePermission`)       | may this user ever do this?         | `PermissionDenied` (or `Unauthenticated` for anonymous) | n/a — the admin escape hatch _is_ the bypass              |
+| **capabilities** (`requireCapability`) | is this action switched on?         | `FailedPrecondition`                                    | **yes** — anyone with `hackathon:write` skips it entirely |
+| **time windows** (`requireWindowOpen`) | are we inside the announced window? | `FailedPrecondition`                                    | **no** — requires an explicit `OverrideWindow`            |
 
 Authorization is documented in `docs/backend/rbac.md`.
 
@@ -415,10 +414,10 @@ Authorization is documented in `docs/backend/rbac.md`.
 Each hackathon gets one row per capability at creation, **all enabled by
 default** — so introducing capabilities was behaviour-preserving and a new
 hackathon is not bricked before an organizer settings screen exists. Closing an
-action is an explicit act (`EditCapability`), or a consequence of
-`AdvancePhase` when the capability is linked to phases. Rows may be linked to an
-opening and a closing phase, which is what lets a member see "opens in 19 days"
-instead of a bare "closed".
+action is an explicit act (`EditCapability`), or a consequence of `AdvancePhase`
+when the capability is linked to phases. Rows may be linked to an opening and a
+closing phase, which is what lets a member see "opens in 19 days" instead of a
+bare "closed".
 
 **Windows** (`HackathonWindows`, set by `ConfigService.SetWindows`): a missing
 row or an unset field means no enforcement at all. `OverrideWindow` exists only
@@ -431,28 +430,28 @@ branch — see the note below.
 
 ## Pinned policy decisions
 
-| Decision | Where it is enforced |
-| -------- | -------------------- |
-| `Join` grants the casbin `member` role immediately; `is_waiting` carries approved-vs-waitlisted | `HackathonService.Join` |
+| Decision                                                                                                                | Where it is enforced                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `Join` grants the casbin `member` role immediately; `is_waiting` carries approved-vs-waitlisted                         | `HackathonService.Join`                                                                   |
 | The member view needs a **confirmed** participant row (or owner, or global admin) — a `member` role alone is not enough | `viewerMayOpenMemberView` in `HackathonService.Get`; asserted as 403 vs 200 in the recipe |
-| Waitlisted registrants may propose projects and set preferences | `project:propose` for `member`; `SetPreference`'s participant-row check |
-| Waitlisted registrants may submit the registration form | `SubmitRegistrationForm` has no waitlist check |
-| Anonymous mutations are rejected with `Unauthenticated`, never `PermissionDenied` | `RequirePermission` + hand-written `AnonSubject` checks |
-| Organizers and global admins **cannot vote** in all-participant categories | `VoteService.SubmitVote` |
-| Waitlisted registrants cannot vote | `SubmitVote`'s confirmed-participant check |
-| One ballot per voter per category | unique index on `(category, voter)` |
-| Members read every team's submissions hackathon-wide | `member, /hackathon/*, submission, read` |
-| Pages of a public hackathon are anonymous-readable; hidden pages are not | `PageService.List` public fallback |
-| Voting opens and closes via `EditSettings{voting_enabled}` — no dedicated RPC | `VoteService.SubmitVote` |
-| Window overrides are anchored at **now**, not at the configured close | `ConfigService.OverrideWindow` |
-| Registration windows bind organizers too; capabilities do not | `requireWindowOpen` vs `requireCapability` |
-| Capacity is enforced by the organizer approving or not approving — there is no backend cap | absence of any capacity field |
-| A no-show loses their team seat but stays a confirmed participant | act-6 flow; `RemoveUser` ≠ `RemoveParticipant` |
-| Removing a participant does not cascade to their team seat — clear it separately | `RemoveParticipant` |
-| Finalized submissions are frozen | `EditSubmission` |
-| Votes are advisory; prizes are finalized by the admin and stay editable afterwards | `PrizeService.Finalize` / `Edit` |
-| `Join`, `ApproveParticipant` are idempotent; ghost ids are `NotFound`, malformed ids `InvalidArgument` | the handlers |
-| Media are **links**, not uploads — no avatar field and no blob store exists | recipe design decision |
+| Waitlisted registrants may propose projects and set preferences                                                         | `project:propose` for `member`; `SetPreference`'s participant-row check                   |
+| Waitlisted registrants may submit the registration form                                                                 | `SubmitRegistrationForm` has no waitlist check                                            |
+| Anonymous mutations are rejected with `Unauthenticated`, never `PermissionDenied`                                       | `RequirePermission` + hand-written `AnonSubject` checks                                   |
+| Organizers and global admins **cannot vote** in all-participant categories                                              | `VoteService.SubmitVote`                                                                  |
+| Waitlisted registrants cannot vote                                                                                      | `SubmitVote`'s confirmed-participant check                                                |
+| One ballot per voter per category                                                                                       | unique index on `(category, voter)`                                                       |
+| Members read every team's submissions hackathon-wide                                                                    | `member, /hackathon/*, submission, read`                                                  |
+| Pages of a public hackathon are anonymous-readable; hidden pages are not                                                | `PageService.List` public fallback                                                        |
+| Voting opens and closes via `EditSettings{voting_enabled}` — no dedicated RPC                                           | `VoteService.SubmitVote`                                                                  |
+| Window overrides are anchored at **now**, not at the configured close                                                   | `ConfigService.OverrideWindow`                                                            |
+| Registration windows bind organizers too; capabilities do not                                                           | `requireWindowOpen` vs `requireCapability`                                                |
+| Capacity is enforced by the organizer approving or not approving — there is no backend cap                              | absence of any capacity field                                                             |
+| A no-show loses their team seat but stays a confirmed participant                                                       | act-6 flow; `RemoveUser` ≠ `RemoveParticipant`                                            |
+| Removing a participant does not cascade to their team seat — clear it separately                                        | `RemoveParticipant`                                                                       |
+| Finalized submissions are frozen                                                                                        | `EditSubmission`                                                                          |
+| Votes are advisory; prizes are finalized by the admin and stay editable afterwards                                      | `PrizeService.Finalize` / `Edit`                                                          |
+| `Join`, `ApproveParticipant` are idempotent; ghost ids are `NotFound`, malformed ids `InvalidArgument`                  | the handlers                                                                              |
+| Media are **links**, not uploads — no avatar field and no blob store exists                                             | recipe design decision                                                                    |
 
 ### Divergence worth knowing about
 
@@ -462,36 +461,36 @@ branch — see the note below.
 handler says so explicitly:
 
 > MERGE NOTE (sketch): #87 (Register capability) and #78
-> (settings.registrations_enabled) both gate Join, with contradictory defaults
-> — their test suites cannot both pass with both gates active. The capability
-> governs here; settings remain editable data until the team consolidates on
-> one mechanism.
+> (settings.registrations_enabled) both gate Join, with contradictory defaults —
+> their test suites cannot both pass with both gates active. The capability
+> governs here; settings remain editable data until the team consolidates on one
+> mechanism.
 
 Note the defaults point opposite ways: `registrations_enabled` defaults to
-`false`, every capability defaults to enabled. Consolidating on one mechanism
-is an open decision.
+`false`, every capability defaults to enabled. Consolidating on one mechanism is
+an open decision.
 
 ## Open decisions
 
-Carried from `todo` notes in the recipe and from gaps found in the code. None
-of these is settled on this branch.
+Carried from `todo` notes in the recipe and from gaps found in the code. None of
+these is settled on this branch.
 
-| # | Question | Current behaviour | Pointer |
-| - | -------- | ----------------- | ------- |
-| 1 | **Own-team voting.** May a team member vote for their own team's submission? | `SetVotingPolicy` stores `ownTeamVoting` but **nothing enforces it**; the recipe casts own-team ballots and marks them "decide policy" (`act7.cast.alice`, `act7.cast.bob2`) | `SubmitVote` |
-| 2 | **Registration gating: capability or setting?** | Both exist with contradictory defaults; only the capability is enforced | `Join`'s MERGE NOTE |
-| 3 | **Organizer registration on behalf of someone.** `on_behalf_of` exists for the registration *form* only — the walk-in still has to create an account and call `Join` themselves | no `on_behalf_of` on `Join` / `ApproveParticipant` | `SubmitRegistrationForm` |
-| 4 | **Private-hackathon invitations.** There is no invitation mechanism. `Join` performs **no visibility check** — anyone authenticated who knows the UUID can join a private hackathon; privacy today is discovery-only (`List` filters, `Get` requires membership) | — | `HackathonService.Join` |
-| 5 | **Ranked and points ballots.** The voting policy can specify them, but `SubmitVote` accepts `single_choice` only; the `Vote` row shape (one row per category+voter) cannot hold a ranking | `InvalidArgument` | `SubmitVote` |
-| 6 | **Structured submissions.** Submissions are a single `result` blob, so the submission form's fields cannot be validated; file uploads wait on a blob store | deferred (`act6.submit.invalid`, `implement: false`) | — |
-| 7 | **Account deletion semantics.** `UserService.DeleteAccount` has no proto. Decide: are participant rows removed? are casbin `g`/`g2` rows purged? is the Keycloak account left untouched? | not implemented | `act8.account.liam` |
-| 8 | **Hackathon delete cascade.** `Delete` removes configuration and roster rows but refuses (`FailedPrecondition`) when projects, pages or teams remain — "archive it instead". Richer cascades belong to an archival flow that does not exist | partial | `HackathonService.Delete` |
-| 9 | **Email / notification.** No notification service exists; `SetEmailTemplates` is documentation only | not implemented | `act1.config.emails` |
-| 10 | **Branding beyond the logo.** Only the logo field exists; colors and visuals have no home | not implemented | `act1.config.branding` |
-| 11 | **Role-granting RPCs.** `user.UserService/AddRole` and `RemoveRole` exist in the proto but have no handler; global roles come only from config bootstrap and the seeder | `Unimplemented` | `docs/backend/rbac.md` |
-| 12 | **Public detail page for signed-in non-members.** They are redirected into the member view and get a 403 instead of seeing the public marketing page | pinned as today's behaviour | `act1.flow.bob` |
-| 13 | **Untranslated 500s.** `/manage/users` does not catch `PermissionDenied`, so non-admins get a 500 instead of a 403 | pinned as today's behaviour | `act2.flow.alice.users` |
-| 14 | **`late_policy`.** Stored on the windows row, echoed back, and read by nothing | inert | `requireWindowOpen` |
+| #   | Question                                                                                                                                                                                                                                                         | Current behaviour                                                                                                                                                            | Pointer                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| 1   | **Own-team voting.** May a team member vote for their own team's submission?                                                                                                                                                                                     | `SetVotingPolicy` stores `ownTeamVoting` but **nothing enforces it**; the recipe casts own-team ballots and marks them "decide policy" (`act7.cast.alice`, `act7.cast.bob2`) | `SubmitVote`              |
+| 2   | **Registration gating: capability or setting?**                                                                                                                                                                                                                  | Both exist with contradictory defaults; only the capability is enforced                                                                                                      | `Join`'s MERGE NOTE       |
+| 3   | **Organizer registration on behalf of someone.** `on_behalf_of` exists for the registration _form_ only — the walk-in still has to create an account and call `Join` themselves                                                                                  | no `on_behalf_of` on `Join` / `ApproveParticipant`                                                                                                                           | `SubmitRegistrationForm`  |
+| 4   | **Private-hackathon invitations.** There is no invitation mechanism. `Join` performs **no visibility check** — anyone authenticated who knows the UUID can join a private hackathon; privacy today is discovery-only (`List` filters, `Get` requires membership) | —                                                                                                                                                                            | `HackathonService.Join`   |
+| 5   | **Ranked and points ballots.** The voting policy can specify them, but `SubmitVote` accepts `single_choice` only; the `Vote` row shape (one row per category+voter) cannot hold a ranking                                                                        | `InvalidArgument`                                                                                                                                                            | `SubmitVote`              |
+| 6   | **Structured submissions.** Submissions are a single `result` blob, so the submission form's fields cannot be validated; file uploads wait on a blob store                                                                                                       | deferred (`act6.submit.invalid`, `implement: false`)                                                                                                                         | —                         |
+| 7   | **Account deletion semantics.** `UserService.DeleteAccount` has no proto. Decide: are participant rows removed? are casbin `g`/`g2` rows purged? is the Keycloak account left untouched?                                                                         | not implemented                                                                                                                                                              | `act8.account.liam`       |
+| 8   | **Hackathon delete cascade.** `Delete` removes configuration and roster rows but refuses (`FailedPrecondition`) when projects, pages or teams remain — "archive it instead". Richer cascades belong to an archival flow that does not exist                      | partial                                                                                                                                                                      | `HackathonService.Delete` |
+| 9   | **Email / notification.** No notification service exists; `SetEmailTemplates` is documentation only                                                                                                                                                              | not implemented                                                                                                                                                              | `act1.config.emails`      |
+| 10  | **Branding beyond the logo.** Only the logo field exists; colors and visuals have no home                                                                                                                                                                        | not implemented                                                                                                                                                              | `act1.config.branding`    |
+| 11  | **Role-granting RPCs.** `user.UserService/AddRole` and `RemoveRole` exist in the proto but have no handler; global roles come only from config bootstrap and the seeder                                                                                          | `Unimplemented`                                                                                                                                                              | `docs/backend/rbac.md`    |
+| 12  | **Public detail page for signed-in non-members.** They are redirected into the member view and get a 403 instead of seeing the public marketing page                                                                                                             | pinned as today's behaviour                                                                                                                                                  | `act1.flow.bob`           |
+| 13  | **Untranslated 500s.** `/manage/users` does not catch `PermissionDenied`, so non-admins get a 500 instead of a 403                                                                                                                                               | pinned as today's behaviour                                                                                                                                                  | `act2.flow.alice.users`   |
+| 14  | **`late_policy`.** Stored on the windows row, echoed back, and read by nothing                                                                                                                                                                                   | inert                                                                                                                                                                        | `requireWindowOpen`       |
 
 ## See also
 

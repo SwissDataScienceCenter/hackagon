@@ -14,8 +14,6 @@ import "vote/messages/vote_svc/edit_category_request.proto";
 import "vote/messages/vote_svc/edit_category_response.proto";
 import "vote/messages/vote_svc/edit_result_request.proto";
 import "vote/messages/vote_svc/edit_result_response.proto";
-import "vote/messages/vote_svc/suggest_results_request.proto";
-import "vote/messages/vote_svc/suggest_results_response.proto";
 import "vote/messages/vote_svc/export_results_request.proto";
 import "vote/messages/vote_svc/export_results_response.proto";
 import "vote/messages/vote_svc/export_votes_request.proto";
@@ -32,6 +30,8 @@ import "vote/messages/vote_svc/list_votes_request.proto";
 import "vote/messages/vote_svc/list_votes_response.proto";
 import "vote/messages/vote_svc/submit_vote_request.proto";
 import "vote/messages/vote_svc/submit_vote_response.proto";
+import "vote/messages/vote_svc/suggest_results_request.proto";
+import "vote/messages/vote_svc/suggest_results_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/vote";
 

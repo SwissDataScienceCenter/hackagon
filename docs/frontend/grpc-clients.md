@@ -7,8 +7,8 @@ Everything the SvelteKit app knows about the backend goes through
 never import from a component).
 
 The browser never speaks gRPC. Every call originates in a `+page.server.ts` /
-`+layout.server.ts` load or a form action, and only the mapped result crosses the
-wire to the client.
+`+layout.server.ts` load or a form action, and only the mapped result crosses
+the wire to the client.
 
 ## Channel
 
@@ -17,13 +17,14 @@ const channel = createChannel("localhost:3000")
 ```
 
 One module-level, insecure channel shared by every client, authorized or not.
-`nice-grpc` multiplexes calls over it, so creating a client per request is cheap.
+`nice-grpc` multiplexes calls over it, so creating a client per request is
+cheap.
 
-Note: the address is hard-coded. `config.backend.hostname` / `config.backend.port`
-exist in `src/lib/schemas/config-schema.ts` and in the settings YAML
-(`components/frontend/data/test/config/config.yaml`) but nothing in `src/` reads
-them — pointing the frontend at a non-local backend currently means editing
-`client.ts`.
+Note: the address is hard-coded. `config.backend.hostname` /
+`config.backend.port` exist in `src/lib/schemas/config-schema.ts` and in the
+settings YAML (`components/frontend/data/test/config/config.yaml`) but nothing
+in `src/` reads them — pointing the frontend at a non-local backend currently
+means editing `client.ts`.
 
 ## Authorized clients
 
@@ -51,48 +52,48 @@ export function createAuthorizedGrpc(accessToken: string): AuthorizedGrpc {
 }
 ```
 
-`hooks.server.ts` calls this in `sessionSetupHandle` for protected routes only and
-stores the result on `event.locals.grpc` (typed in `src/app.d.ts` as
-`grpc?: AuthorizedGrpc`). Because the bundle is per request it always carries the
-token that the Auth.js `jwt` callback just refreshed.
+`hooks.server.ts` calls this in `sessionSetupHandle` for protected routes only
+and stores the result on `event.locals.grpc` (typed in `src/app.d.ts` as
+`grpc?: AuthorizedGrpc`). Because the bundle is per request it always carries
+the token that the Auth.js `jwt` callback just refreshed.
 
 ### `AuthorizedGrpc` on this branch
 
-| Key         | Service                  | Used by                                                                 |
-| ----------- | ------------------------ | ----------------------------------------------------------------------- |
-| `user`      | `user.UserService`       | `hooks.server.ts` (`whoAmI` / `register`), `/manage/users` (`list`)      |
-| `health`    | `health.HealthService`   | wired but unused by any route                                            |
+| Key         | Service                      | Used by                                                             |
+| ----------- | ---------------------------- | ------------------------------------------------------------------- |
+| `user`      | `user.UserService`           | `hooks.server.ts` (`whoAmI` / `register`), `/manage/users` (`list`) |
+| `health`    | `health.HealthService`       | wired but unused by any route                                       |
 | `hackathon` | `hackathon.HackathonService` | `/dashboard` (`list`), `/my/hackathon/[id]` layout (`get`)          |
-| `team`      | `hackathon.TeamService`  | `…/teams` (`list`), `…/submissions` (`list` + `listSubmissions`)         |
+| `team`      | `hackathon.TeamService`      | `…/teams` (`list`), `…/submissions` (`list` + `listSubmissions`)    |
 
 Stubs are generated for far more services than are registered here — `page`,
 `phase`, `project`, `track`, `prize`, `config` and the whole `vote` domain all
-have generated TypeScript clients but no entry in `AuthorizedGrpc`. Adding one is
-the three-line change described in `CLAUDE.md` (import the definition and client
-type, add the field to the interface, create it in `createAuthorizedGrpc`).
+have generated TypeScript clients but no entry in `AuthorizedGrpc`. Adding one
+is the three-line change described in `CLAUDE.md` (import the definition and
+client type, add the field to the interface, create it in
+`createAuthorizedGrpc`).
 
 ## Unauthenticated (public) clients
 
-Three clients are created at module scope with a plain
-`createClientFactory()` — no `Authorization` metadata, so the backend sees the
-`anonymous` casbin subject:
+Three clients are created at module scope with a plain `createClientFactory()` —
+no `Authorization` metadata, so the backend sees the `anonymous` casbin subject:
 
-| Export                  | Service           | Purpose                                                                                     |
-| ----------------------- | ----------------- | --------------------------------------------------------------------------------------------- |
-| `healthClient`          | `HealthService`   | The startup probe in `hooks.server.ts`'s `init()`; the health handler never reads claims.       |
-| `publicHackathonClient` | `HackathonService` | The home page's `list({ visibilityFilter: VISIBILITY_PUBLIC })`. `List` filters private hackathons through casbin, so anonymous callers see only public ones. |
-| `publicPageClient`      | `PageService`     | `/hackathon/[id]` news & pages. `PageService.List` falls back to allowing the read when the hackathon's visibility is `PUBLIC`, and hides `visible=false` pages from callers without write permission. |
+| Export                  | Service            | Purpose                                                                                                                                                                                                |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `healthClient`          | `HealthService`    | The startup probe in `hooks.server.ts`'s `init()`; the health handler never reads claims.                                                                                                              |
+| `publicHackathonClient` | `HackathonService` | The home page's `list({ visibilityFilter: VISIBILITY_PUBLIC })`. `List` filters private hackathons through casbin, so anonymous callers see only public ones.                                          |
+| `publicPageClient`      | `PageService`      | `/hackathon/[id]` news & pages. `PageService.List` falls back to allowing the read when the hackathon's visibility is `PUBLIC`, and hides `visible=false` pages from callers without write permission. |
 
-**Which to use.** If the route is under `(app)`, use `locals.grpc` — the token is
-what makes per-hackathon roles resolve. If the route is under `(public)` and must
-work for a logged-out visitor, use a public client; an authorized client is not
-even available there, because `hooks.server.ts` only builds `locals.grpc` for
-protected routes.
+**Which to use.** If the route is under `(app)`, use `locals.grpc` — the token
+is what makes per-hackathon roles resolve. If the route is under `(public)` and
+must work for a logged-out visitor, use a public client; an authorized client is
+not even available there, because `hooks.server.ts` only builds `locals.grpc`
+for protected routes.
 
 ## Load-function pattern
 
-`requireGrpc` turns the "public route calling an authorized client" mistake into a
-loud error instead of a `undefined is not an object`:
+`requireGrpc` turns the "public route calling an authorized client" mistake into
+a loud error instead of a `undefined is not an object`:
 
 ```ts
 export function requireGrpc(grpc: AuthorizedGrpc | undefined): AuthorizedGrpc {
@@ -105,7 +106,8 @@ export function requireGrpc(grpc: AuthorizedGrpc | undefined): AuthorizedGrpc {
 }
 ```
 
-Independent calls go in one `Promise.all` — `src/routes/(app)/dashboard/+page.server.ts`:
+Independent calls go in one `Promise.all` —
+`src/routes/(app)/dashboard/+page.server.ts`:
 
 ```ts
 const { hackathon } = requireGrpc(event.locals.grpc)
@@ -120,8 +122,8 @@ const [allResult, myResult] = await Promise.all([
 Note `participantId` is the **DB UUID** from `locals.platformUser`, not
 `locals.session.user.id` (which is the Keycloak `sub`).
 
-Nested loads reuse the parent's fetch rather than re-querying — the proposals and
-timeline tabs read `hackathon.projects` / `hackathon.phases` straight off
+Nested loads reuse the parent's fetch rather than re-querying — the proposals
+and timeline tabs read `hackathon.projects` / `hackathon.phases` straight off
 `await event.parent()`, because `HackathonService.Get` already returns the full
 tree.
 
@@ -152,9 +154,9 @@ just codegen::proto
 ```
 
 Defined in `tools/just/codegen.just`. It wipes both codegen output trees first —
-`buf generate` does not prune stale files, and a leftover `user.ts` will silently
-shadow a new `user/` directory in Node resolution — then runs `buf generate` from
-the repo root.
+`buf generate` does not prune stale files, and a leftover `user.ts` will
+silently shadow a new `user/` directory in Node resolution — then runs
+`buf generate` from the repo root.
 
 `buf.gen.yaml` takes `api/proto` as its only input and drives four plugins; the
 TypeScript one is:
@@ -171,21 +173,22 @@ TypeScript one is:
     - useExactTypes=false
 ```
 
-Because the input is the whole `api/proto` directory, **all four proto domains are
-generated**: `hackathon` (hackathon, page, phase, project, team, track, prize,
-config services), `health`, `user`, and `vote` — `generated/vote/vote_service.ts`
-plus its entities (`vote`, `vote_category`, `vote_result`, `voter_type`,
-`voting_method`) are present on this branch even though no client consumes them
-yet.
+Because the input is the whole `api/proto` directory, **all four proto domains
+are generated**: `hackathon` (hackathon, page, phase, project, team, track,
+prize, config services), `health`, `user`, and `vote` —
+`generated/vote/vote_service.ts` plus its entities (`vote`, `vote_category`,
+`vote_result`, `voter_type`, `voting_method`) are present on this branch even
+though no client consumes them yet.
 
 `buf` lives in the Nix dev shell, so run `just codegen::proto` inside
 `just develop` (or ask someone who can).
 
 There is also a legacy `pnpm proto:generate` script in
 `components/frontend/package.json`. It shells out to `protoc` directly and lists
-only `health/health_service.proto user/user_service.proto
-hackathon/hackathon_service.proto`, so it produces a strict subset of what the app
-imports. Prefer `just codegen::proto`; the pnpm script is stale.
+only
+`health/health_service.proto user/user_service.proto hackathon/hackathon_service.proto`,
+so it produces a strict subset of what the app imports. Prefer
+`just codegen::proto`; the pnpm script is stale.
 
 ## Rules
 
@@ -196,12 +199,13 @@ Restated from `CLAUDE.md`, with the reasons they matter here:
   component breaks the build. Server load functions may import generated enums
   freely (`/dashboard` and `/` both import `Visibility` this way).
 - **Enum display helpers belong in `src/lib/utils/`,** typed
-  `Partial<Record<number, string>>` so an unrecognized value is `string | undefined`
-  rather than a lying `string`. `src/lib/utils/hackathonStatus.ts` is the
-  reference (`statusLabel`, `visibilityLabel`, `membershipBadgeLabel`, plus the
-  matching `*BadgePreset` functions). Load functions that map an enum to a label
-  before it reaches the component do the same thing inline — see the
-  `STATUS_LABELS` maps in the proposals and submissions loads.
+  `Partial<Record<number, string>>` so an unrecognized value is
+  `string | undefined` rather than a lying `string`.
+  `src/lib/utils/hackathonStatus.ts` is the reference (`statusLabel`,
+  `visibilityLabel`, `membershipBadgeLabel`, plus the matching `*BadgePreset`
+  functions). Load functions that map an enum to a label before it reaches the
+  component do the same thing inline — see the `STATUS_LABELS` maps in the
+  proposals and submissions loads.
 - **The backend is authoritative for access decisions.** The frontend never
   re-derives who may read what; it calls the RPC and translates the status code.
 - **Never edit generated code** under
@@ -228,10 +232,10 @@ unparsed and unsanitized**; the `<style>` block just styles `h2`/`h3`/`p`/`ul`/
 lint rule that would flag this (`svelte/no-at-html-tags`) is explicitly disabled
 on that line.
 
-Today the only caller is `src/routes/(public)/hackathon/[id]/+page.svelte`, which
-passes a hard-coded HTML literal, so there is no live vulnerability. But backend
-`Page.content` — organizer-authored text served to anonymous visitors — is
-rendered in the same file by the "News & Pages" section as *plain text*:
+Today the only caller is `src/routes/(public)/hackathon/[id]/+page.svelte`,
+which passes a hard-coded HTML literal, so there is no live vulnerability. But
+backend `Page.content` — organizer-authored text served to anonymous visitors —
+is rendered in the same file by the "News & Pages" section as _plain text_:
 
 ```svelte
 <p class="whitespace-pre-line text-surface-300">{p.content}</p>

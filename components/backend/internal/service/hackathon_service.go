@@ -243,7 +243,10 @@ func (s *HackathonService) Get(
 		return nil, err
 	}
 	if !s.viewerMayOpenMemberView(ctx, uid, h) {
-		return nil, status.Error(codes.PermissionDenied, "hackathon is only open to confirmed participants")
+		return nil, status.Error(
+			codes.PermissionDenied,
+			"hackathon is only open to confirmed participants",
+		)
 	}
 
 	// One instant for the whole response, so the status badge and the capability
@@ -1055,11 +1058,19 @@ func (s *HackathonService) SetCapabilities(
 	for _, t := range req.GetCapabilities() {
 		c, ok := CapabilityFromProto(t.GetCapability())
 		if !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", t.GetCapability())
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"unknown capability: %v",
+				t.GetCapability(),
+			)
 		}
 		entCapability, ok := capabilityToEnt(c)
 		if !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "unknown capability: %v", t.GetCapability())
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"unknown capability: %v",
+				t.GetCapability(),
+			)
 		}
 		wanted[entCapability] = t.GetEnabled()
 	}

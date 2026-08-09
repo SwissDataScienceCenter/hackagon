@@ -6,15 +6,15 @@ produced.
 
 ## Monorepo layout
 
-| Path                  | Contents                                                                                                                           |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `api/proto/`          | The API contract. One buf module (`buf.yaml`), ~200 `.proto` files, 11 services across four domains: `hackathon`, `user`, `vote`, `health`. |
-| `components/backend/` | Go gRPC server. `cmd/service/` (entrypoint), `cmd/seed/` (dev fixture), `db/schema/` (hand-written ent schema), `internal/service/` (handlers), `internal/middleware/` (auth + casbin), `ent/` and `internal/proto/` (generated, gitignored). |
-| `components/frontend/`| SvelteKit app (Svelte 5, Vite, Tailwind/Skeleton). Server-side gRPC clients in `src/lib/server/grpc/`, generated ts-proto stubs in `src/lib/server/grpc/generated/` (gitignored). |
-| `tools/`              | `nix/` (flake + devenv modules, incl. the process-compose stack in `tools/nix/hackagon/lib/toolchain.nix`), `just/` (justfile modules), `deploy/process-compose/` (stack control), `configs/` (Keycloak realm, linters), `sql/`, `quitsh/`. |
-| `.devcontainer/`      | Docker-compose devcontainer that provides Nix; everything else comes from the flake.                                                 |
-| `.claude/skills/`     | Repo-local automation: `devcontainer-up`, `hackathon-e2e`, `cloudflare-tunnel`.                                                      |
-| `justfile`            | Root command surface; delegates to the modules in `tools/just/*.just`.                                                              |
+| Path                   | Contents                                                                                                                                                                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/proto/`           | The API contract. One buf module (`buf.yaml`), ~200 `.proto` files, 11 services across four domains: `hackathon`, `user`, `vote`, `health`.                                                                                                   |
+| `components/backend/`  | Go gRPC server. `cmd/service/` (entrypoint), `cmd/seed/` (dev fixture), `db/schema/` (hand-written ent schema), `internal/service/` (handlers), `internal/middleware/` (auth + casbin), `ent/` and `internal/proto/` (generated, gitignored). |
+| `components/frontend/` | SvelteKit app (Svelte 5, Vite, Tailwind/Skeleton). Server-side gRPC clients in `src/lib/server/grpc/`, generated ts-proto stubs in `src/lib/server/grpc/generated/` (gitignored).                                                             |
+| `tools/`               | `nix/` (flake + devenv modules, incl. the process-compose stack in `tools/nix/hackagon/lib/toolchain.nix`), `just/` (justfile modules), `deploy/process-compose/` (stack control), `configs/` (Keycloak realm, linters), `sql/`, `quitsh/`.   |
+| `.devcontainer/`       | Docker-compose devcontainer that provides Nix; everything else comes from the flake.                                                                                                                                                          |
+| `.claude/skills/`      | Repo-local automation: `devcontainer-up`, `hackathon-e2e`, `cloudflare-tunnel`.                                                                                                                                                               |
+| `justfile`             | Root command surface; delegates to the modules in `tools/just/*.just`.                                                                                                                                                                        |
 
 Generated output is not committed. `.gitignore` excludes
 `components/backend/internal/proto`, `components/backend/ent/*` and
@@ -26,15 +26,15 @@ run codegen before it compiles (see [getting-started.md](getting-started.md)).
 `just start` (or `just deploy::up`) launches the devenv shell
 `hackagon.shells.test-services`, whose process-compose stack is defined in
 `tools/nix/hackagon/lib/toolchain.nix`. All four processes run on one host —
-inside the devcontainer they run inside the single `dev` container; there are
-no sidecar service containers.
+inside the devcontainer they run inside the single `dev` container; there are no
+sidecar service containers.
 
-| Process  | Port   | Bind        | Defined in                                             | Notes                                                                                        |
-| -------- | ------ | ----------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Keycloak | 8180   | `0.0.0.0`   | `toolchain.nix` (`services.keycloak`)                  | `dev-file` (H2) database; realm `hackagon` imported from `tools/configs/keycloak/realm-hackagon.json`. Admin console `admin`/`admin`. |
-| Postgres | 5432   | `127.0.0.1` | `toolchain.nix` (`services.postgres`)                  | PostgreSQL 18, database `hackagon`, role `postgres`/`postgres`. Data in `.devenv/state/postgres`. |
-| Backend  | 3000   | all         | `toolchain.nix` (`processes.backend`)                  | Runs `just develop just run` in `components/backend`; port from `data/test/config/config.yaml`. Readiness probe: `grpcurl -plaintext localhost:3000 health.HealthService/Check`. Depends on Keycloak being healthy. |
-| Frontend | 8081   | `[::1]`     | `toolchain.nix` (`processes.frontend`)                 | Dev: `just develop just serve` → `vite dev` with `server.port: 8081`, `strictPort: true` (`components/frontend/vite.config.ts`). CI/build mode runs the node build with `ORIGIN`/`PORT` 8081 (`components/frontend/justfile`). |
+| Process  | Port | Bind        | Defined in                             | Notes                                                                                                                                                                                                                          |
+| -------- | ---- | ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Keycloak | 8180 | `0.0.0.0`   | `toolchain.nix` (`services.keycloak`)  | `dev-file` (H2) database; realm `hackagon` imported from `tools/configs/keycloak/realm-hackagon.json`. Admin console `admin`/`admin`.                                                                                          |
+| Postgres | 5432 | `127.0.0.1` | `toolchain.nix` (`services.postgres`)  | PostgreSQL 18, database `hackagon`, role `postgres`/`postgres`. Data in `.devenv/state/postgres`.                                                                                                                              |
+| Backend  | 3000 | all         | `toolchain.nix` (`processes.backend`)  | Runs `just develop just run` in `components/backend`; port from `data/test/config/config.yaml`. Readiness probe: `grpcurl -plaintext localhost:3000 health.HealthService/Check`. Depends on Keycloak being healthy.            |
+| Frontend | 8081 | `[::1]`     | `toolchain.nix` (`processes.frontend`) | Dev: `just develop just serve` → `vite dev` with `server.port: 8081`, `strictPort: true` (`components/frontend/vite.config.ts`). CI/build mode runs the node build with `ORIGIN`/`PORT` 8081 (`components/frontend/justfile`). |
 
 Port 8081 is also pinned in the Keycloak realm: the `hackagon-frontend` client
 declares `redirectUris: ["http://localhost:8081/*"]` and
@@ -74,10 +74,9 @@ Configuration for each component is loaded from a config directory passed with
 1. The browser hits a SvelteKit route. `components/frontend/src/hooks.server.ts`
    runs its handle chain: config/logger setup, request-scoped logger, then the
    session handle.
-2. Routes are protected by default; only the patterns in
-   `PUBLIC_ROUTE_PATTERNS` (`/`, `/hackathon/…`, `/signin`, `/signout`,
-   `/auth/…`, `/error`) are anonymous. Protected routes without a session
-   redirect to `/?returnTo=…`.
+2. Routes are protected by default; only the patterns in `PUBLIC_ROUTE_PATTERNS`
+   (`/`, `/hackathon/…`, `/signin`, `/signout`, `/auth/…`, `/error`) are
+   anonymous. Protected routes without a session redirect to `/?returnTo=…`.
 3. For protected routes, `createAuthorizedGrpc(session.accessToken)`
    (`src/lib/server/grpc/client.ts`) builds nice-grpc clients on the shared
    channel `localhost:3000`, with a middleware that sets the
@@ -149,19 +148,19 @@ runs `dbClient.Schema.Create` (auto-migration), inserts the admin user row for
 the interceptor chain, and registers every service — all eleven proto services
 have a runtime implementation, plus gRPC reflection:
 
-| Proto service                                    | Constructor            | Registered as                              |
-| ------------------------------------------------ | ---------------------- | ------------------------------------------ |
-| `health.HealthService`                           | `NewHealthService`     | `health.RegisterHealthServiceServer`       |
-| `user.UserService`                               | `NewUserService`       | `userSvc.RegisterUserServiceServer`        |
-| `hackathon.HackathonService`                     | `NewHackathonService`  | `hackathonSvc.RegisterHackathonServiceServer` |
-| `hackathon.PageService`                          | `NewPageService`       | `hackathonSvc.RegisterPageServiceServer`   |
-| `hackathon.PhaseService`                         | `NewPhaseService`      | `hackathonSvc.RegisterPhaseServiceServer`  |
-| `hackathon.TrackService`                         | `NewTrackService`      | `hackathonSvc.RegisterTrackServiceServer`  |
-| `hackathon.ProjectService`                       | `NewProjectService`    | `hackathonSvc.RegisterProjectServiceServer`|
-| `hackathon.TeamService`                          | `NewTeamService`       | `hackathonSvc.RegisterTeamServiceServer`   |
-| `hackathon.ConfigService`                        | `NewConfigService`     | `hackathonSvc.RegisterConfigServiceServer` |
-| `hackathon.PrizeService`                         | `NewPrizeService`      | `hackathonSvc.RegisterPrizeServiceServer`  |
-| `vote.VoteService`                               | `NewVoteService`       | `voteSvc.RegisterVoteServiceServer`        |
+| Proto service                | Constructor           | Registered as                                 |
+| ---------------------------- | --------------------- | --------------------------------------------- |
+| `health.HealthService`       | `NewHealthService`    | `health.RegisterHealthServiceServer`          |
+| `user.UserService`           | `NewUserService`      | `userSvc.RegisterUserServiceServer`           |
+| `hackathon.HackathonService` | `NewHackathonService` | `hackathonSvc.RegisterHackathonServiceServer` |
+| `hackathon.PageService`      | `NewPageService`      | `hackathonSvc.RegisterPageServiceServer`      |
+| `hackathon.PhaseService`     | `NewPhaseService`     | `hackathonSvc.RegisterPhaseServiceServer`     |
+| `hackathon.TrackService`     | `NewTrackService`     | `hackathonSvc.RegisterTrackServiceServer`     |
+| `hackathon.ProjectService`   | `NewProjectService`   | `hackathonSvc.RegisterProjectServiceServer`   |
+| `hackathon.TeamService`      | `NewTeamService`      | `hackathonSvc.RegisterTeamServiceServer`      |
+| `hackathon.ConfigService`    | `NewConfigService`    | `hackathonSvc.RegisterConfigServiceServer`    |
+| `hackathon.PrizeService`     | `NewPrizeService`     | `hackathonSvc.RegisterPrizeServiceServer`     |
+| `vote.VoteService`           | `NewVoteService`      | `voteSvc.RegisterVoteServiceServer`           |
 
 Every service constructor takes `(dbClient, enforcer)`. Reflection is enabled,
 which is what makes `just rpc::as` / `grpcurl` work without descriptor files.
@@ -178,33 +177,32 @@ prune stale files, and leftovers silently shadow new output — then runs
 
 `buf.gen.yaml` drives four plugins:
 
-| Plugin                                   | Output                                                   |
-| ---------------------------------------- | -------------------------------------------------------- |
-| `protoc-gen-doc` (`markdown,API.md`)     | `api/proto/API.md` (rewritten in place, so `api/proto` is not wiped) |
-| `protoc-gen-go` (`paths=source_relative`)| `components/backend/internal/proto/`                     |
-| `protoc-gen-go-grpc`                     | `components/backend/internal/proto/`                     |
-| `ts_proto` from `components/frontend/node_modules/.bin` (`outputServices=nice-grpc,outputServices=generic-definitions,esModuleInterop=true,env=node,useExactTypes=false`) | `components/frontend/src/lib/server/grpc/generated/` |
+| Plugin                                                                                                                                                                    | Output                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `protoc-gen-doc` (`markdown,API.md`)                                                                                                                                      | `api/proto/API.md` (rewritten in place, so `api/proto` is not wiped) |
+| `protoc-gen-go` (`paths=source_relative`)                                                                                                                                 | `components/backend/internal/proto/`                                 |
+| `protoc-gen-go-grpc`                                                                                                                                                      | `components/backend/internal/proto/`                                 |
+| `ts_proto` from `components/frontend/node_modules/.bin` (`outputServices=nice-grpc,outputServices=generic-definitions,esModuleInterop=true,env=node,useExactTypes=false`) | `components/frontend/src/lib/server/grpc/generated/`                 |
 
 Because the ts-proto plugin binary comes from the frontend's `node_modules`,
 `pnpm install` must run before `buf generate` in a fresh workspace — that is why
 `.devcontainer/bootstrap.sh` orders the steps pnpm → buf → ent → `go mod tidy`.
 
 `buf.yaml` lints with `STANDARD` minus `PACKAGE_VERSION_SUFFIX`, checks
-`FILE`-level breaking changes, and depends on
-`buf.build/bufbuild/protovalidate` (the constraints enforced by the
-protovalidate interceptor).
+`FILE`-level breaking changes, and depends on `buf.build/bufbuild/protovalidate`
+(the constraints enforced by the protovalidate interceptor).
 
 ### DB schema → ent + Schema.md
 
 `components/backend/db/schema/*.go` is the hand-written source of truth (20
 files: `hackathon`, `participant`, `phase`, `track`, `project`, `team`,
 `teamparticipant`, `submission`, `page`, `user`, `vote`, `votecategory`,
-`voteresult`, `capability`, `formresponse`, `hackathonforms`,
-`hackathonprizes`, `hackathonsettings`, `hackathonwindows`, `mixin`).
-`just codegen::db-schema` runs `quitsh generate-schema`, which regenerates
-`components/backend/ent/**` (everything except `ent/schema`) and rewrites
-`components/backend/Schema.md`. At runtime `dbClient.Schema.Create` applies the
-schema to Postgres — there are no migration files.
+`voteresult`, `capability`, `formresponse`, `hackathonforms`, `hackathonprizes`,
+`hackathonsettings`, `hackathonwindows`, `mixin`). `just codegen::db-schema`
+runs `quitsh generate-schema`, which regenerates `components/backend/ent/**`
+(everything except `ent/schema`) and rewrites `components/backend/Schema.md`. At
+runtime `dbClient.Schema.Create` applies the schema to Postgres — there are no
+migration files.
 
 ## Proto layout convention
 
@@ -217,10 +215,10 @@ api/proto/
 │       └── *_request.proto | *_response.proto
 ```
 
-Concretely, `api/proto/hackathon/` holds eight service files
-(`hackathon`, `page`, `phase`, `track`, `project`, `team`, `config`, `prize`)
-with one `messages/<svc>_svc/` directory each; `user` and `vote` follow the same
-shape; `health` has only `messages/health_svc/`.
+Concretely, `api/proto/hackathon/` holds eight service files (`hackathon`,
+`page`, `phase`, `track`, `project`, `team`, `config`, `prize`) with one
+`messages/<svc>_svc/` directory each; `user` and `vote` follow the same shape;
+`health` has only `messages/health_svc/`.
 
 The `_svc` suffix is a buf workaround: buf rejects a path segment that collides
 with its parent (`hackathon/messages/hackathon/`), so the directory is named

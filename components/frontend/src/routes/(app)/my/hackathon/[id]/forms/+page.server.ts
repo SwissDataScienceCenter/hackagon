@@ -23,7 +23,8 @@ function formError(e: unknown) {
   if (e instanceof ClientError) {
     if (e.code === Status.PERMISSION_DENIED)
       return fail(403, { message: "Only this event's organisers can do that." })
-    if (e.code === Status.INVALID_ARGUMENT) return fail(400, { message: e.details })
+    if (e.code === Status.INVALID_ARGUMENT)
+      return fail(400, { message: e.details })
   }
   throw e
 }
@@ -56,16 +57,22 @@ export const actions: Actions = {
     const form = await event.request.formData()
 
     const fields = formFieldRows(form)
-    if (fields.length === 0) return fail(400, { message: "Add at least one question." })
+    if (fields.length === 0)
+      return fail(400, { message: "Add at least one question." })
 
     const consents = consentRows(form)
     const dupe =
-      duplicateKey(fields.map((f) => f.key)) ?? duplicateKey(consents.map((c) => c.key))
+      duplicateKey(fields.map((f) => f.key)) ??
+      duplicateKey(consents.map((c) => c.key))
     if (dupe) return fail(400, { message: `Two rows share the key "${dupe}".` })
 
     try {
       // Set REPLACES the whole schema, which is why the form posts every row.
-      await config.setRegistrationForm({ hackathonId: event.params.id, fields, consents })
+      await config.setRegistrationForm({
+        hackathonId: event.params.id,
+        fields,
+        consents,
+      })
     } catch (e) {
       return formError(e)
     }
@@ -78,7 +85,8 @@ export const actions: Actions = {
     const form = await event.request.formData()
 
     const fields = formFieldRows(form)
-    if (fields.length === 0) return fail(400, { message: "Add at least one question." })
+    if (fields.length === 0)
+      return fail(400, { message: "Add at least one question." })
 
     const dupe = duplicateKey(fields.map((f) => f.key))
     if (dupe) return fail(400, { message: `Two rows share the key "${dupe}".` })

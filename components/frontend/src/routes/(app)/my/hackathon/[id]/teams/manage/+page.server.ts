@@ -15,7 +15,8 @@ import { ClientError, Status } from "nice-grpc-common"
  */
 function formatAnswer(value: unknown): string {
   if (value === null || value === undefined) return ""
-  if (Array.isArray(value)) return value.map(formatAnswer).filter(Boolean).join(", ")
+  if (Array.isArray(value))
+    return value.map(formatAnswer).filter(Boolean).join(", ")
   if (typeof value === "boolean") return value ? "Yes" : "No"
   if (typeof value === "object") return JSON.stringify(value)
   return String(value).trim()
@@ -23,9 +24,11 @@ function formatAnswer(value: unknown): string {
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
-  const { team, project, hackathon: hackathonClient } = requireGrpc(
-    event.locals.grpc,
-  )
+  const {
+    team,
+    project,
+    hackathon: hackathonClient,
+  } = requireGrpc(event.locals.grpc)
 
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,

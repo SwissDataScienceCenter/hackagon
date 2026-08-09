@@ -39,7 +39,13 @@ export const GET: RequestHandler = async (event) => {
       continue
     }
     for (const u of p.preferences) {
-      rows.push([p.title, status, u.displayName || u.username, u.username, u.email])
+      rows.push([
+        p.title,
+        status,
+        u.displayName || u.username,
+        u.username,
+        u.email,
+      ])
     }
   }
 

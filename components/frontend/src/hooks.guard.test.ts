@@ -31,8 +31,17 @@ describe("isProtectedRoute", () => {
   it("reserves every top-level segment the route tree owns", () => {
     // Derived from the tree, so a new route reserves itself. If this ever
     // shrinks, some route just became shadowable by a CMS page.
-    for (const segment of ["account", "dashboard", "hackathon", "manage", "my", "register"]) {
-      expect(reservedSlugs.has(segment), `${segment} must be reserved`).toBe(true)
+    for (const segment of [
+      "account",
+      "dashboard",
+      "hackathon",
+      "manage",
+      "my",
+      "register",
+    ]) {
+      expect(reservedSlugs.has(segment), `${segment} must be reserved`).toBe(
+        true,
+      )
     }
   })
 

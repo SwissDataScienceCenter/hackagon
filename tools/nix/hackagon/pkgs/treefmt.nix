@@ -32,6 +32,11 @@ _: {
     "*/api/openapi*" # this are symlinks, which prettier cannot deal with
     ".golangci.yaml" # this is a symlink, which prettier cannot deal with
     ".yamllint.yaml" # this is a symlink, which prettier cannot deal with
+    # pnpm writes this file and owns its style. Formatting it means prettier
+    # and pnpm each rewrite it back, so every real dependency change would
+    # reappear as a format failure. Same reason the codegen dirs are excluded
+    # above: a generated file belongs to its generator.
+    "components/frontend/pnpm-lock.yaml"
   ];
 
   programs.ruff-format.enable = true;

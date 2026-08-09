@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package storage.messages.storage_svc;
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
-
 import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
 
 // Mint a short-lived read URL for a PRIVATE object.
 //

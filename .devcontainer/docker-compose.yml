@@ -195,7 +195,11 @@ services:
       # incompatible-data-directory error.
       - postgres-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${HACKAGON_PG_USER:-postgres} -d ${HACKAGON_PG_DB:-hackagon}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${HACKAGON_PG_USER:-postgres} -d ${HACKAGON_PG_DB:-hackagon}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

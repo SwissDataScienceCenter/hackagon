@@ -55,7 +55,13 @@ async function forward(
   // Only the headers a browser needs to render or cache the object. Copying
   // everything would forward the store's own auth and server headers.
   const headers = new Headers()
-  for (const h of ["content-type", "content-length", "etag", "last-modified", "cache-control"]) {
+  for (const h of [
+    "content-type",
+    "content-length",
+    "etag",
+    "last-modified",
+    "cache-control",
+  ]) {
     const v = upstream.headers.get(h)
     if (v) headers.set(h, v)
   }

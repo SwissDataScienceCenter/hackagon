@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package site.messages.site_page_svc;
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site/messages/site_page_svc";
-
 import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/site/messages/site_page_svc";
 
 message CreateRequest {
   string slug = 1 [(buf.validate.field).string.pattern = "^[a-z0-9]+(-[a-z0-9]+)*$"];

@@ -6,10 +6,10 @@ import "hackathon/messages/prize_svc/edit_request.proto";
 import "hackathon/messages/prize_svc/edit_response.proto";
 import "hackathon/messages/prize_svc/finalize_request.proto";
 import "hackathon/messages/prize_svc/finalize_response.proto";
-import "hackathon/messages/prize_svc/set_request.proto";
-import "hackathon/messages/prize_svc/set_response.proto";
 import "hackathon/messages/prize_svc/get_request.proto";
 import "hackathon/messages/prize_svc/get_response.proto";
+import "hackathon/messages/prize_svc/set_request.proto";
+import "hackathon/messages/prize_svc/set_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 

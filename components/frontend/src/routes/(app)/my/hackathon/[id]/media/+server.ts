@@ -27,9 +27,15 @@ export const POST: RequestHandler = async (event) => {
   }
 
   const filename = typeof body.filename === "string" ? body.filename : ""
-  const contentType = typeof body.contentType === "string" ? body.contentType : ""
+  const contentType =
+    typeof body.contentType === "string" ? body.contentType : ""
   const sizeBytes = Number(body.sizeBytes)
-  if (!filename || !contentType || !Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+  if (
+    !filename ||
+    !contentType ||
+    !Number.isFinite(sizeBytes) ||
+    sizeBytes <= 0
+  ) {
     error(400, "filename, contentType and sizeBytes are required")
   }
 

@@ -1890,7 +1890,9 @@ var _ = Describe("HackathonService", func() {
 
 					Expect(togglesFrom(resp.GetState())[entities.Capability_CAPABILITY_VOTE]).
 						To(BeFalse())
-					Expect(togglesFrom(resp.GetState())[entities.Capability_CAPABILITY_VIEW_RESULTS]).
+					Expect(
+						togglesFrom(resp.GetState())[entities.Capability_CAPABILITY_VIEW_RESULTS],
+					).
 						To(BeTrue())
 
 					// Our own representation moved, not just the facade's.

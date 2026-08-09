@@ -10,18 +10,18 @@ shape it.
 
 ## The store
 
-S3-compatible, so nothing written against it is specific to development.
-RustFS runs as a sibling container in `.devcontainer/`; a deployment swaps the
-endpoint and credentials for a real bucket and changes no application code.
+S3-compatible, so nothing written against it is specific to development. RustFS
+runs as a sibling container in `.devcontainer/`; a deployment swaps the endpoint
+and credentials for a real bucket and changes no application code.
 
 ## Keys, not URLs
 
 **The database stores an object KEY, never a presigned URL.**
 
 Presigned URLs expire — minutes to hours — and they are bearer credentials:
-anything holding one has access until it lapses. A row written today would
-serve broken images tomorrow, and a leaked row would be a leaked grant. The key
-is stable and means nothing on its own.
+anything holding one has access until it lapses. A row written today would serve
+broken images tomorrow, and a leaked row would be a leaked grant. The key is
+stable and means nothing on its own.
 
 ```
 hackathons/<hackathon-id>/logo/<uuid>.<ext>       public
@@ -40,7 +40,8 @@ pictures are already world-readable — they render on public event pages, befor
 login. Giving those prefixes a public-read policy means:
 
 - the stored value is a stable URL that never expires, so it drops straight into
-  the existing `Hackathon.logo` and `User.avatar_url` columns — no schema change;
+  the existing `Hackathon.logo` and `User.avatar_url` columns — no schema
+  change;
 - the browser and Cloudflare can cache them, and no request pays a signing cost.
 
 **Private files keep presigned GETs.** Submission attachments and the
@@ -52,8 +53,8 @@ object store rather than duplicating it there.
 
 The backend authorises the upload, decides the key, and returns a URL the
 browser uploads to directly — the file never passes through the app. Size and
-content-type limits are conditions ON the presign, which is the only place a
-4 GB upload can be refused *before* it is transferred rather than after.
+content-type limits are conditions ON the presign, which is the only place a 4
+GB upload can be refused _before_ it is transferred rather than after.
 
 ## Deletion
 
@@ -79,20 +80,21 @@ Two properties worth stating, because they are easy to get wrong:
 
 ## What is built
 
-`storage.StorageService` — `CreateUploadUrl(kind, owner_id, filename,
-content_type, size_bytes)` and `CreateDownloadUrl(key)`. The `UploadKind` is
-the only placement input a client has; the backend derives the key, the
-content-type allowlist, the size ceiling and the authorization rule from it.
-Presigning is hand-rolled SigV4 in `components/backend/internal/storage` — no
-AWS SDK, because the algorithm is four HMACs and a string in a fixed order and
-this repo's Nix build pins a `vendorHash` that every new dependency invalidates.
+`storage.StorageService` —
+`CreateUploadUrl(kind, owner_id, filename, content_type, size_bytes)` and
+`CreateDownloadUrl(key)`. The `UploadKind` is the only placement input a client
+has; the backend derives the key, the content-type allowlist, the size ceiling
+and the authorization rule from it. Presigning is hand-rolled SigV4 in
+`components/backend/internal/storage` — no AWS SDK, because the algorithm is
+four HMACs and a string in a fixed order and this repo's Nix build pins a
+`vendorHash` that every new dependency invalidates.
 
 Two things are worth knowing because they are not obvious from the RPC names:
 
 - **The limits are signed headers, not checks.** `content-type` and
   `content-length` are in `X-Amz-SignedHeaders`, so the store recomputes the
-  signature over what the browser actually sent. A body of the wrong length or
-  a different declared type is refused with 403 at the authentication stage —
+  signature over what the browser actually sent. A body of the wrong length or a
+  different declared type is refused with 403 at the authentication stage —
   which is what "refused before transfer" concretely means.
 - **Presigned URLs are root-relative** (`/objects/<bucket>/<key>?X-Amz-…`), and
   the signature covers the OBJECT STORE's hostname, not the one the browser
@@ -113,5 +115,5 @@ delete, exactly as above.
 **Still to come:** the uploader exists for the event logo only — the smallest
 surface that proves the whole path — on the hackathon edit page. Avatars,
 gallery photos and submission attachments are all authorized and keyed by the
-service already; each needs only its own UI. `CreateDownloadUrl` likewise has
-no caller yet, because nothing uploads a private object to read back.
+service already; each needs only its own UI. `CreateDownloadUrl` likewise has no
+caller yet, because nothing uploads a private object to read back.

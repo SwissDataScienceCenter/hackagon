@@ -116,7 +116,10 @@ func TestRedactRecursesIntoKeptContainers(t *testing.T) {
 		t.Errorf("nested rank was not kept: %v", prize["rank"])
 	}
 	if prize["title"] != Redacted {
-		t.Errorf("nested title recorded as %v — a kept container must not shelter free text", prize["title"])
+		t.Errorf(
+			"nested title recorded as %v — a kept container must not shelter free text",
+			prize["title"],
+		)
 	}
 }
 
@@ -145,7 +148,12 @@ func TestRedactMessageSubmitRegistrationForm(t *testing.T) {
 		t.Errorf("hackathonId must survive: %v", out["hackathonId"])
 	}
 	if out["responses"] != Redacted || out["consents"] != Redacted {
-		t.Errorf("responses=%v consents=%v — both must be %q", out["responses"], out["consents"], Redacted)
+		t.Errorf(
+			"responses=%v consents=%v — both must be %q",
+			out["responses"],
+			out["consents"],
+			Redacted,
+		)
 	}
 	blob, _ := json.Marshal(out)
 	for _, leak := range []string{"coeliac", "nuts", "ETH Zurich", "tshirt", "photo"} {

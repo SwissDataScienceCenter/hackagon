@@ -540,7 +540,11 @@ func (s *TeamService) CreateSubmission(
 			Where(entsubmission.HasTeamWith(entteam.IDEQ(teamID)), entsubmission.HasProjectWith(entproject.IDEQ(projectID))).
 			Count(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "couldn't determine submission version: %v", err)
+			return nil, status.Errorf(
+				codes.Internal,
+				"couldn't determine submission version: %v",
+				err,
+			)
 		}
 
 		subm, err = s.dbClient.Submission.Create().
@@ -561,7 +565,15 @@ func (s *TeamService) CreateSubmission(
 			return nil, status.Errorf(codes.Internal, "couldn't create submission: %v", err)
 		}
 		if attempt == versionAttempts {
-			slog.Warn("submission version conflict", "team", teamID, "project", projectID, "err", err)
+			slog.Warn(
+				"submission version conflict",
+				"team",
+				teamID,
+				"project",
+				projectID,
+				"err",
+				err,
+			)
 
 			return nil, status.Error(
 				codes.Aborted,
@@ -844,7 +856,11 @@ func (s *TeamService) EditSubmission(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "submission %s not found", req.GetSubmissionId())
+			return nil, status.Errorf(
+				codes.NotFound,
+				"submission %s not found",
+				req.GetSubmissionId(),
+			)
 		}
 
 		return nil, status.Errorf(codes.Internal, "query submission: %v", err)

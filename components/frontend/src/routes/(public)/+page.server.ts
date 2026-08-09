@@ -1,5 +1,8 @@
 import type { PageServerLoad } from "./$types"
-import { publicHackathonClient, publicPrizeClient } from "$lib/server/grpc/client"
+import {
+  publicHackathonClient,
+  publicPrizeClient,
+} from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { HackathonStatus } from "$lib/server/grpc/generated/hackathon/entities/hackathon_status"
 

@@ -15,9 +15,9 @@ feature surface, and take main's design system, shell, navigation model and
 per-entity CRUD screens on top.
 
 That is cheaper than it looks. The backend delta runs almost entirely in our
-favour — 65 RPCs to their 48, and we serve three whole services they do not
-have (voting, prizes, config). Only **four RPCs** have to come the other way.
-The bulk of the work is frontend, and most of it is mechanical.
+favour — 65 RPCs to their 48, and we serve three whole services they do not have
+(voting, prizes, config). Only **four RPCs** have to come the other way. The
+bulk of the work is frontend, and most of it is mechanical.
 
 ## What main actually changed
 
@@ -26,8 +26,8 @@ Not a reskin. Four things, in descending order of how much they constrain us:
 1. **A token-based theme** (`src/themes/hackagon.css`, 578 lines). `--hk-*`
    custom properties in oklch, redefined per colour mode, exposed to Tailwind
    via `@theme`. It replaces `hackathonsdsc.css` and, with it, the
-   `bg-surface-100-900` mode-pair machinery **every component of ours is
-   written in**. This is the single biggest cost in the migration.
+   `bg-surface-100-900` mode-pair machinery **every component of ours is written
+   in**. This is the single biggest cost in the migration.
 2. **A different app shell.** The top bar carries identity, theme and sign-out
    only; per-hackathon navigation moved into a `HackathonSidebar` rendered
    inside `my/hackathon/[id]`, because as shell chrome it followed you onto the
@@ -46,24 +46,24 @@ same posture as ours — nothing to defend there.
 
 ## Where the two branches stand
 
-| Capability | main | this branch |
-| --- | --- | --- |
-| Design tokens, sidebar shell, nav model | **yes** | no |
-| Organiser CRUD for pages/tracks/phases/projects | **yes**, per-entity routes | one `manage` cockpit |
-| Batch capability toggle, preference read, suggested results | **yes** | **ported** (see Phase 1) |
-| Prizes, config, site-page services | no | **yes** (3 services) |
-| Platform CMS (About/Privacy/Terms + `/manage/pages`) | no | **yes** |
-| Invitation links for private events | no | **yes** |
-| Account page, `EditProfile`, `DeleteAccount` | no | **yes** |
-| Registration forms: define, fill, read back, edit | no | **yes** |
-| Public browse page, event SEO/OpenGraph | no | **yes** |
-| Email composer, event branding | no | **yes** |
-| Search/filter/table views on lists | no | **yes** |
+| Capability                                                  | main                       | this branch              |
+| ----------------------------------------------------------- | -------------------------- | ------------------------ |
+| Design tokens, sidebar shell, nav model                     | **yes**                    | no                       |
+| Organiser CRUD for pages/tracks/phases/projects             | **yes**, per-entity routes | one `manage` cockpit     |
+| Batch capability toggle, preference read, suggested results | **yes**                    | **ported** (see Phase 1) |
+| Prizes, config, site-page services                          | no                         | **yes** (3 services)     |
+| Platform CMS (About/Privacy/Terms + `/manage/pages`)        | no                         | **yes**                  |
+| Invitation links for private events                         | no                         | **yes**                  |
+| Account page, `EditProfile`, `DeleteAccount`                | no                         | **yes**                  |
+| Registration forms: define, fill, read back, edit           | no                         | **yes**                  |
+| Public browse page, event SEO/OpenGraph                     | no                         | **yes**                  |
+| Email composer, event branding                              | no                         | **yes**                  |
+| Search/filter/table views on lists                          | no                         | **yes**                  |
 
 ## The plan
 
-Six phases. Each ends green and is independently shippable — this must not
-land as one merge.
+Six phases. Each ends green and is independently shippable — this must not land
+as one merge.
 
 ### Phase 0 — baseline (half a day)
 
@@ -82,19 +82,19 @@ Two of the four candidates landed; the other two were not what they looked like.
   `CapabilityState` **enum** (COMING/OPEN/CLOSED/UNGOVERNED) in the same proto
   package, so ours keeps the name and theirs became `CapabilityToggle` — which
   is also the truer name: it carries an intent, not the four-state answer the
-  server computes. The response returns `CapabilityStatus`, so a caller sees
-  the state a phase window forced rather than the boolean it sent.
-- **`GetPreference`** — ported, and it closes a standing TODO: `ExportPreferences`
-  is organiser-only, so a participant had no way to see a choice that is final
-  by policy. Reads only the caller's own row, so it needs no permission beyond
-  being signed in.
-- **`SetCurrentPhase`** — **not ported.** It is our `AdvancePhase` under
-  another name: both take an explicit `phase_id`. Theirs writes a separate
+  server computes. The response returns `CapabilityStatus`, so a caller sees the
+  state a phase window forced rather than the boolean it sent.
+- **`GetPreference`** — ported, and it closes a standing TODO:
+  `ExportPreferences` is organiser-only, so a participant had no way to see a
+  choice that is final by policy. Reads only the caller's own row, so it needs
+  no permission beyond being signed in.
+- **`SetCurrentPhase`** — **not ported.** It is our `AdvancePhase` under another
+  name: both take an explicit `phase_id`. Theirs writes a separate
   `HackathonState` table they introduced and ours writes the hackathon row and
   advances the scheduled capabilities with it — adopting theirs would be a
   schema migration, not a frontend change. Their screens get a one-line call
-  change instead. Theirs can *clear* the current phase, which ours cannot;
-  worth adding to `AdvancePhase` later.
+  change instead. Theirs can _clear_ the current phase, which ours cannot; worth
+  adding to `AdvancePhase` later.
 - **`SuggestResults`** — deferred, deliberately. It is 103 lines and its
   aggregation rule (sum vs mean) is an open decision in TODO.md; porting it in
   passing would settle that question by accident.
@@ -107,33 +107,30 @@ stubs here (audit B15), implemented there.
 ### Phase 2 — theme and shell (the design)
 
 **Main deleted Skeleton.** `@skeletonlabs/skeleton` is gone from their
-`package.json` and `app.css`; the theme ships its own component classes
-instead (`.btn` `.btn-accent` `.btn-outline` `.btn-ghost` `.btn-icon` `.card`
-`.card-raised` `.badge-*` `.field` `.field-area` `.field-label` `.chip`
-`.meta` `.prose`).
+`package.json` and `app.css`; the theme ships its own component classes instead
+(`.btn` `.btn-accent` `.btn-outline` `.btn-ghost` `.btn-icon` `.card`
+`.card-raised` `.badge-*` `.field` `.field-area` `.field-label` `.chip` `.meta`
+`.prose`).
 
 That makes this phase bigger than "reclass the colour pairs". Our components
 carry roughly a thousand Skeleton class usages — `input` x206, `btn` x134,
-`btn-sm` x118, `card` x91, `select` x67, `textarea` x60, plus the
-`preset-*` and `surface-N-N` families — and every one of them loses its
-styling the moment Skeleton goes. There is a clean mapping
-(`card preset-outlined-surface-200-800` -> `card`,
-`btn preset-filled-primary-500` -> `btn btn-accent`,
+`btn-sm` x118, `card` x91, `select` x67, `textarea` x60, plus the `preset-*` and
+`surface-N-N` families — and every one of them loses its styling the moment
+Skeleton goes. There is a clean mapping (`card preset-outlined-surface-200-800`
+-> `card`, `btn preset-filled-primary-500` -> `btn btn-accent`,
 `badge preset-tonal-success` -> `badge badge-success`,
-`input`/`select`/`textarea` -> `field`/`field-area`), so it is mechanical —
-but it cannot be done a component at a time while both stylesheets are loaded,
-because `card`, `btn` and `badge` exist in *both* and would collide
+`input`/`select`/`textarea` -> `field`/`field-area`), so it is mechanical — but
+it cannot be done a component at a time while both stylesheets are loaded,
+because `card`, `btn` and `badge` exist in _both_ and would collide
 unpredictably.
 
 **Therefore the order changes: swap first, re-add second.** Take their `src/`
 wholesale, drop our superseded and not-yet-ported screens in the same commit,
 and treat git as the staging area — each feature is recovered from
-`git show <swap-commit>^:<path>` when its turn comes, reclassed as it lands.
-The branch is red between the swap and the end of Phase 4; that is the honest
-cost of removing a component library, and pretending otherwise by
-half-migrating would be worse.
-
-
+`git show <swap-commit>^:<path>` when its turn comes, reclassed as it lands. The
+branch is red between the swap and the end of Phase 4; that is the honest cost
+of removing a component library, and pretending otherwise by half-migrating
+would be worse.
 
 Take wholesale, no edits: `themes/hackagon.css`, `app.html`, `NavBar`,
 `AppSidebar`, `HackathonSidebar`, `SidebarNavSection`, `SidebarUserFooter`,
@@ -141,9 +138,9 @@ Take wholesale, no edits: `themes/hackagon.css`, `app.html`, `NavBar`,
 
 Then the mechanical bulk: **reclass every component of ours** from
 `bg-surface-100-900`-style pairs to the new tokens. Ours that survive and need
-this: `HackathonRow`, `HackathonCard`, `DataToolbar`, `DataTable`,
-`RowActions`, `EmailComposer`, `EventBranding`, the vote components,
-`ParticipationCard`, `CtaSection`, `HeroSection`.
+this: `HackathonRow`, `HackathonCard`, `DataToolbar`, `DataTable`, `RowActions`,
+`EmailComposer`, `EventBranding`, the vote components, `ParticipationCard`,
+`CtaSection`, `HeroSection`.
 
 Expect the light/dark screenshots to be the check that catches what typing
 cannot.
@@ -154,30 +151,31 @@ Wholesale: `pages/**`, `tracks/**`, `timeline/**`, `projects/**` (including
 `proposals/propose`), `teams/manage`, `participants`, `edit`,
 `hackathons/create`, `dashboard`, `manage/users`.
 
-Retire ours as each lands: our `manage` cockpit (only after Phase 4 redistributes
-it), `proposals/`, `hackathon/create` (note the rename to plural `hackathons/`).
+Retire ours as each lands: our `manage` cockpit (only after Phase 4
+redistributes it), `proposals/`, `hackathon/create` (note the rename to plural
+`hackathons/`).
 
 ### Phase 4 — re-home our exclusive features into their IA
 
 The only part with real design decisions.
 
-| Ours | Destination in their information architecture |
-| --- | --- |
-| `/account` | `SidebarUserFooter`, next to sign-out |
-| `/register/[id]` | reached from the dashboard join action and event overview, as now |
-| `[slug=sitepage]`, `/manage/pages` | Platform section, beside Users |
-| `(public)/hackathon` browse | public nav: Home · Hackathons · About |
-| `invite/[token]` | public, unlinked by design (the token is the credential) |
-| Windows, capabilities, settings | their existing `…/edit` |
-| Registration + submission form builders | new `…/forms` under Manage |
-| Invitation links | new `…/invites` under Manage |
-| Email templates + composer | new `…/email` under Manage |
-| Branding | fold into `…/edit` |
-| Prizes | new `…/prizes` |
-| Voting, photos, webinars | keep as routes, add nav entries |
+| Ours                                    | Destination in their information architecture                     |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| `/account`                              | `SidebarUserFooter`, next to sign-out                             |
+| `/register/[id]`                        | reached from the dashboard join action and event overview, as now |
+| `[slug=sitepage]`, `/manage/pages`      | Platform section, beside Users                                    |
+| `(public)/hackathon` browse             | public nav: Home · Hackathons · About                             |
+| `invite/[token]`                        | public, unlinked by design (the token is the credential)          |
+| Windows, capabilities, settings         | their existing `…/edit`                                           |
+| Registration + submission form builders | new `…/forms` under Manage                                        |
+| Invitation links                        | new `…/invites` under Manage                                      |
+| Email templates + composer              | new `…/email` under Manage                                        |
+| Branding                                | fold into `…/edit`                                                |
+| Prizes                                  | new `…/prizes`                                                    |
+| Voting, photos, webinars                | keep as routes, add nav entries                                   |
 
-`Seo.svelte`, `sitePageSlug.ts`, the `sitepage` param matcher, `returnTo.ts`
-and the `publicOrigin` layout load have no visual surface and move unchanged.
+`Seo.svelte`, `sitePageSlug.ts`, the `sitepage` param matcher, `returnTo.ts` and
+the `publicOrigin` layout load have no visual surface and move unchanged.
 
 ### Phase 5 — tests (the expensive part, budget it)
 
@@ -204,8 +202,8 @@ itself), update `user-flows.md`, and refresh the status block in
 - **The reclass is where the bugs hide.** A component that types fine can still
   be unreadable in one mode. The light/dark screenshot pass is not optional.
 - **`.claude/` is gitignored**, so the e2e skill, its 278-action recipe and the
-  tunnel tooling do not exist on main's side. They travel with the working
-  copy, not the branch — nothing to merge, but nothing to inherit either.
+  tunnel tooling do not exist on main's side. They travel with the working copy,
+  not the branch — nothing to merge, but nothing to inherit either.
 - **Route renames are silent breakage.** `/hackathon/create` →
   `/hackathons/create` and `/proposals` → `/projects/proposals` will not fail a
   type check.

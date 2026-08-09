@@ -242,7 +242,10 @@ func (s *ConfigService) OverrideWindow(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 	if existing == nil {
-		return nil, status.Error(codes.FailedPrecondition, "no windows configured for this hackathon")
+		return nil, status.Error(
+			codes.FailedPrecondition,
+			"no windows configured for this hackathon",
+		)
 	}
 
 	// The override is anchored at NOW, not at the configured close: months of

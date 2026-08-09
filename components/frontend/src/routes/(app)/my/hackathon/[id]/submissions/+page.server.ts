@@ -174,7 +174,9 @@ export const actions: Actions = {
     const teamId = String(form.get("teamId") ?? "")
     const projectId = String(form.get("projectId") ?? "")
     if (!teamId || !projectId)
-      return fail(400, { message: "A submission needs a team and its project." })
+      return fail(400, {
+        message: "A submission needs a team and its project.",
+      })
 
     try {
       await team.createSubmission({

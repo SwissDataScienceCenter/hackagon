@@ -76,7 +76,8 @@ export const actions: Actions = {
     // browser may add) would trip that.
     const responses: Record<string, string> = {}
     for (const [k, v] of form.entries()) {
-      if (k.startsWith("field:")) responses[k.slice("field:".length)] = String(v)
+      if (k.startsWith("field:"))
+        responses[k.slice("field:".length)] = String(v)
     }
     const consents: Record<string, boolean> = {}
     for (const k of form.keys()) {
@@ -99,9 +100,13 @@ export const actions: Actions = {
         if (e.code === Status.INVALID_ARGUMENT)
           // The backend names the offending key ("missing required field
           // \"affiliation\""), which is more useful than anything generic.
-          return fail(400, { message: e.details || "Some answers are missing or invalid." })
+          return fail(400, {
+            message: e.details || "Some answers are missing or invalid.",
+          })
         if (e.code === Status.PERMISSION_DENIED)
-          return fail(403, { message: "You are not registered for this hackathon." })
+          return fail(403, {
+            message: "You are not registered for this hackathon.",
+          })
         if (e.code === Status.FAILED_PRECONDITION)
           return fail(409, {
             message:

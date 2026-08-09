@@ -62,7 +62,11 @@
   --hk-on-accent: var(--hk-green-950);
   --hk-focus-ring: var(--hk-green-700);
   --hk-danger: var(--hk-error-700);
-  --hk-field-bg: color-mix(in oklab, var(--hk-surface-100) 45%, var(--hk-surface-50));
+  --hk-field-bg: color-mix(
+    in oklab,
+    var(--hk-surface-100) 45%,
+    var(--hk-surface-50)
+  );
   --hk-field-border: var(--hk-surface-500);
   --hk-hairline: color-mix(in oklab, var(--hk-surface-500) 35%, transparent);
   --hk-card-ring: color-mix(in oklab, var(--hk-green-600) 30%, transparent);
@@ -180,7 +184,9 @@ body#keycloak-bg {
   min-height: 100vh;
   min-height: 100svh; /* svh ignores the phone browser chrome 100vh overscrolls */
   padding: clamp(1.5rem, 4vw, 3rem);
-  padding-block-end: calc(clamp(1.5rem, 4vw, 3rem) + env(safe-area-inset-bottom, 0px));
+  padding-block-end: calc(
+    clamp(1.5rem, 4vw, 3rem) + env(safe-area-inset-bottom, 0px)
+  );
   box-sizing: border-box;
 }
 
@@ -460,8 +466,12 @@ body#keycloak-bg {
   --pf-v5-c-form-control--before--BorderRightColor: var(--hk-field-border);
   --pf-v5-c-form-control--before--BorderLeftColor: var(--hk-field-border);
   --pf-v5-c-form-control--after--BorderBottomColor: var(--hk-field-border);
-  --pf-v5-c-form-control--hover--after--BorderBottomColor: var(--hk-accent-strong);
-  --pf-v5-c-form-control--focus--after--BorderBottomColor: var(--hk-accent-strong);
+  --pf-v5-c-form-control--hover--after--BorderBottomColor: var(
+    --hk-accent-strong
+  );
+  --pf-v5-c-form-control--focus--after--BorderBottomColor: var(
+    --hk-accent-strong
+  );
   --pf-v5-c-form-control--m-error--after--BorderBottomColor: var(--hk-danger);
 
   border-radius: 0.5rem;

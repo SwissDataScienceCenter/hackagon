@@ -11,15 +11,19 @@ import { ClientError, Status } from "nice-grpc-common"
 function formError(e: unknown) {
   if (e instanceof ClientError) {
     if (e.code === Status.PERMISSION_DENIED)
-      return fail(403, { message: "Only platform admins can manage these pages." })
+      return fail(403, {
+        message: "Only platform admins can manage these pages.",
+      })
     if (e.code === Status.UNAUTHENTICATED)
       return fail(401, { message: "Please sign in again." })
-    if (e.code === Status.NOT_FOUND) return fail(404, { message: "That page no longer exists." })
+    if (e.code === Status.NOT_FOUND)
+      return fail(404, { message: "That page no longer exists." })
     if (e.code === Status.ALREADY_EXISTS)
       return fail(409, { message: "A page with that slug already exists." })
     if (e.code === Status.INVALID_ARGUMENT)
       return fail(400, {
-        message: "Invalid page: the slug must be lowercase words joined by dashes, and the title cannot be empty.",
+        message:
+          "Invalid page: the slug must be lowercase words joined by dashes, and the title cannot be empty.",
       })
   }
   throw e
@@ -48,7 +52,8 @@ export const actions: Actions = {
     const form = await event.request.formData()
     const slug = String(form.get("slug") ?? "").trim()
     const title = String(form.get("title") ?? "").trim()
-    if (!slug || !title) return fail(400, { message: "Slug and title are required." })
+    if (!slug || !title)
+      return fail(400, { message: "Slug and title are required." })
 
     try {
       await sitePage.create({

@@ -40,7 +40,9 @@ type HackathonInvite struct {
 
 func (HackathonInvite) Annotations() []schema.Annotation {
 	return []schema.Annotation{
-		schema.Comment("A revocable, shareable invitation link granting visibility of a private hackathon."),
+		schema.Comment(
+			"A revocable, shareable invitation link granting visibility of a private hackathon.",
+		),
 	}
 }
 

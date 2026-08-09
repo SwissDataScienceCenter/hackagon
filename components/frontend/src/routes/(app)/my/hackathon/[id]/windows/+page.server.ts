@@ -40,8 +40,10 @@ function formError(e: unknown) {
   if (e instanceof ClientError) {
     if (e.code === Status.PERMISSION_DENIED)
       return fail(403, { message: "Only this event's organisers can do that." })
-    if (e.code === Status.INVALID_ARGUMENT) return fail(400, { message: e.details })
-    if (e.code === Status.FAILED_PRECONDITION) return fail(409, { message: e.details })
+    if (e.code === Status.INVALID_ARGUMENT)
+      return fail(400, { message: e.details })
+    if (e.code === Status.FAILED_PRECONDITION)
+      return fail(409, { message: e.details })
   }
   throw e
 }
@@ -60,7 +62,9 @@ export const load: PageServerLoad = async (event) => {
   // Read through ConfigService: the deadlines are not nested on the hackathon,
   // and SetWindows replaces every field, so the form MUST prefill or saving it
   // would blank whatever the organiser could not see.
-  const { windows: w } = await config.getWindows({ hackathonId: event.params.id })
+  const { windows: w } = await config.getWindows({
+    hackathonId: event.params.id,
+  })
 
   return {
     windows: {
@@ -103,7 +107,8 @@ export const actions: Actions = {
     const form = await event.request.formData()
 
     const minutes = Number(form.get("extendMinutes") ?? 0)
-    if (!minutes || minutes < 1) return fail(400, { message: "Say how many minutes to add." })
+    if (!minutes || minutes < 1)
+      return fail(400, { message: "Say how many minutes to add." })
 
     try {
       // Anchored on now, not on the original deadline: an organiser reaching

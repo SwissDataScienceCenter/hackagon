@@ -1004,7 +1004,12 @@ func (s *VoteService) ListVotes(
 	ctx context.Context,
 	req *voteMsgs.ListVotesRequest,
 ) (*voteMsgs.ListVotesResponse, error) {
-	votes, err := s.votesForExport(ctx, req.GetCategoryId(), req.GetVoterId(), req.GetSubmissionId())
+	votes, err := s.votesForExport(
+		ctx,
+		req.GetCategoryId(),
+		req.GetVoterId(),
+		req.GetSubmissionId(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1117,7 +1122,9 @@ func (s *VoteService) ExportVotes(
 	case voteMsgs.ExportFormat_EXPORT_FORMAT_CSV:
 		var buf bytes.Buffer
 		w := csv.NewWriter(&buf)
-		_ = w.Write([]string{"id", "category_id", "voter_id", "submission_id", "vote_type", "value"})
+		_ = w.Write(
+			[]string{"id", "category_id", "voter_id", "submission_id", "vote_type", "value"},
+		)
 		for _, r := range rows {
 			_ = w.Write([]string{
 				r.ID, r.CategoryID, r.VoterID, r.SubmissionID, r.VoteType, strconv.Itoa(r.Value),
@@ -1593,7 +1600,9 @@ func (s *VoteService) ExportResults(
 		w := csv.NewWriter(&buf)
 		_ = w.Write([]string{"id", "category_id", "submission_id", "position", "title"})
 		for _, r := range rows {
-			_ = w.Write([]string{r.ID, r.CategoryID, r.SubmissionID, strconv.Itoa(r.Position), r.Title})
+			_ = w.Write(
+				[]string{r.ID, r.CategoryID, r.SubmissionID, strconv.Itoa(r.Position), r.Title},
+			)
 		}
 		w.Flush()
 

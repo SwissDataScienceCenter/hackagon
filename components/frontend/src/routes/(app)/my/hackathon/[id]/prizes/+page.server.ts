@@ -16,9 +16,12 @@ function formError(e: unknown) {
   if (e instanceof ClientError) {
     if (e.code === Status.PERMISSION_DENIED)
       return fail(403, { message: "Only this event's organisers can do that." })
-    if (e.code === Status.INVALID_ARGUMENT) return fail(400, { message: e.details })
+    if (e.code === Status.INVALID_ARGUMENT)
+      return fail(400, { message: e.details })
     if (e.code === Status.FAILED_PRECONDITION)
-      return fail(409, { message: e.details || "The awards are already finalised." })
+      return fail(409, {
+        message: e.details || "The awards are already finalised.",
+      })
   }
   throw e
 }
@@ -72,7 +75,8 @@ export const actions: Actions = {
         ...(image ? { image } : {}),
       })
     }
-    if (prizes.length === 0) return fail(400, { message: "Add at least one prize." })
+    if (prizes.length === 0)
+      return fail(400, { message: "Add at least one prize." })
 
     try {
       await prize.set({ hackathonId: event.params.id, prizes })

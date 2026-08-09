@@ -34,7 +34,12 @@ export const actions: Actions = {
     const contentType = String(form.get("contentType") ?? "")
     const sizeBytes = Number(form.get("sizeBytes") ?? 0)
 
-    if (!filename || !contentType || !Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+    if (
+      !filename ||
+      !contentType ||
+      !Number.isFinite(sizeBytes) ||
+      sizeBytes <= 0
+    ) {
       return fail(400, { uploadMessage: "Pick a file first" })
     }
 

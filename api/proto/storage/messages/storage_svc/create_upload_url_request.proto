@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package storage.messages.storage_svc;
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
-
 import "buf/validate/validate.proto";
 import "storage/entities/upload_kind.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
 
 // Ask for permission to upload one object. Nothing here names a path: the key
 // is the server's to decide, so the worst a hostile client can do is ask for a

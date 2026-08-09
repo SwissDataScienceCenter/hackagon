@@ -10,49 +10,50 @@ decisions"); this page is the engineering list.
 they record where a finding was made, not where to look now.
 
 **Update 2026-08-04 (later the same day):** B1, B5, B6, B8, B10, B11, B12
-(partial), B14 and F2, F3, F4, F5, F7, F8 are fixed on `sketch/04-08-26` —
-see the checklist below for the per-item notes, including two deliberate
-non-fixes. The tables keep the original audit text as the record of what was
-found; the checklist is the live status.
+(partial), B14 and F2, F3, F4, F5, F7, F8 are fixed on `sketch/04-08-26` — see
+the checklist below for the per-item notes, including two deliberate non-fixes.
+The tables keep the original audit text as the record of what was found; the
+checklist is the live status.
 
 ## Known bugs — backend
 
-| # | Severity | What | Where |
-| --- | --- | --- | --- |
-| B1 | **crash** | `Join` nil-derefs on any hackathon without an end date: `h.EndsAt.Before(...)` on a nillable `*time.Time` | `internal/service/hackathon_service.go` (~L326) |
-| B2 | **access** | `AllowPublicHackathonAccess` is dead code — never called by any handler, so a public hackathon is listable anonymously but `Get` still requires membership (backend half of the F1 dead end) | `internal/middleware/rbac.go` |
-| B3 | **conflict** | Two contradictory registration gates: `settings.registrations_enabled` is stored/editable but enforced nowhere; the `register` capability governs (see the MERGE NOTE re #78/#87 — opposite defaults) | `hackathon_service.go` (~L330) |
-| B4 | data loss | `PhaseService.Create` accepts `starts_at`/`ends_at` in the proto but silently drops them — phases are always created undated | `phase_service.go` |
-| B5 | drift | `TeamService.AssignUser`/`RemoveUser` only log casbin failures and still return success — join table and policy table can diverge | `team_service.go` |
-| B6 | race | `CreateSubmission` computes `version = count+1`; concurrent creates hit the unique index and surface as `Internal` instead of a retry | `team_service.go` |
-| B7 | policy | `ownTeamVoting` is persisted via `SetVotingPolicy` but never read by `SubmitVote`; `organizerVoting` is enforced but hard-coded rather than read from the policy | `vote_service.go` |
-| B8 | auth gap | `ProjectService.SetPreference` is the only mutation with **no casbin check** (participant lookup + capability + window only) | `project_service.go` |
-| B9 | access | Private hackathons are joinable by anyone authenticated who has the UUID — `Join` never checks visibility; privacy is discovery-only | `hackathon_service.go` |
-| B10 | contract | `TeamService.Edit` / `ProjectService.Edit` (`track_id`) treat empty string as "unchanged" although the protos declare `optional` — a description can never be cleared | `team_service.go`, `project_service.go` |
-| B11 | audit | `ProjectService.Edit` and `setApproval` never `SetModifier` (every other Edit handler does) | `project_service.go` |
-| B12 | dx | `TeamService.List`/`Get` collapse every failure to `PermissionDenied` with message `"cann't get teams"` (typo, twice); `Delete` lacks the team-scoped fallback that `Edit` has | `team_service.go` |
-| B13 | ~~api~~ FIXED | Vote proto declares `created_at`/`modified_at` but the ent schema has no timestamp columns — always zero on the wire. Columns added to `Vote` **and** `VoteCategory` (whose proto declares them too) 2026-08-07, alongside ranked/points voting | `db/schema/vote.go` vs `api/proto/vote/**` |
-| B14 | minor | `PageService.List` public fallback masks `NotFound` behind the permission error; stray `"...for reordering2"` in a `SetOrder` error | `page_service.go` (~L624) |
-| B15 | ~~missing~~ FIXED | `UserService.AddRole/RemoveRole` and `HackathonService.AddOwner/RemoveOwner` were proto-only → `Unimplemented`; the only Owner grant was the `Create` side effect. All four implemented 2026-08-06, each with a caller | protos vs handlers |
+| #   | Severity          | What                                                                                                                                                                                                                                            | Where                                           |
+| --- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| B1  | **crash**         | `Join` nil-derefs on any hackathon without an end date: `h.EndsAt.Before(...)` on a nillable `*time.Time`                                                                                                                                       | `internal/service/hackathon_service.go` (~L326) |
+| B2  | **access**        | `AllowPublicHackathonAccess` is dead code — never called by any handler, so a public hackathon is listable anonymously but `Get` still requires membership (backend half of the F1 dead end)                                                    | `internal/middleware/rbac.go`                   |
+| B3  | **conflict**      | Two contradictory registration gates: `settings.registrations_enabled` is stored/editable but enforced nowhere; the `register` capability governs (see the MERGE NOTE re #78/#87 — opposite defaults)                                           | `hackathon_service.go` (~L330)                  |
+| B4  | data loss         | `PhaseService.Create` accepts `starts_at`/`ends_at` in the proto but silently drops them — phases are always created undated                                                                                                                    | `phase_service.go`                              |
+| B5  | drift             | `TeamService.AssignUser`/`RemoveUser` only log casbin failures and still return success — join table and policy table can diverge                                                                                                               | `team_service.go`                               |
+| B6  | race              | `CreateSubmission` computes `version = count+1`; concurrent creates hit the unique index and surface as `Internal` instead of a retry                                                                                                           | `team_service.go`                               |
+| B7  | policy            | `ownTeamVoting` is persisted via `SetVotingPolicy` but never read by `SubmitVote`; `organizerVoting` is enforced but hard-coded rather than read from the policy                                                                                | `vote_service.go`                               |
+| B8  | auth gap          | `ProjectService.SetPreference` is the only mutation with **no casbin check** (participant lookup + capability + window only)                                                                                                                    | `project_service.go`                            |
+| B9  | access            | Private hackathons are joinable by anyone authenticated who has the UUID — `Join` never checks visibility; privacy is discovery-only                                                                                                            | `hackathon_service.go`                          |
+| B10 | contract          | `TeamService.Edit` / `ProjectService.Edit` (`track_id`) treat empty string as "unchanged" although the protos declare `optional` — a description can never be cleared                                                                           | `team_service.go`, `project_service.go`         |
+| B11 | audit             | `ProjectService.Edit` and `setApproval` never `SetModifier` (every other Edit handler does)                                                                                                                                                     | `project_service.go`                            |
+| B12 | dx                | `TeamService.List`/`Get` collapse every failure to `PermissionDenied` with message `"cann't get teams"` (typo, twice); `Delete` lacks the team-scoped fallback that `Edit` has                                                                  | `team_service.go`                               |
+| B13 | ~~api~~ FIXED     | Vote proto declares `created_at`/`modified_at` but the ent schema has no timestamp columns — always zero on the wire. Columns added to `Vote` **and** `VoteCategory` (whose proto declares them too) 2026-08-07, alongside ranked/points voting | `db/schema/vote.go` vs `api/proto/vote/**`      |
+| B14 | minor             | `PageService.List` public fallback masks `NotFound` behind the permission error; stray `"...for reordering2"` in a `SetOrder` error                                                                                                             | `page_service.go` (~L624)                       |
+| B15 | ~~missing~~ FIXED | `UserService.AddRole/RemoveRole` and `HackathonService.AddOwner/RemoveOwner` were proto-only → `Unimplemented`; the only Owner grant was the `Create` side effect. All four implemented 2026-08-06, each with a caller                          | protos vs handlers                              |
 
 ## Known bugs / gaps — frontend
 
-| # | Severity | What | Where |
-| --- | --- | --- | --- |
-| F1 | **UX dead end** | Signed-in non-members opening `/hackathon/[id]` are unconditionally redirected to the member view → 403, with no Join affordance (pairs with B2) | `(public)/hackathon/[id]/+page.server.ts` |
-| F2 | **stub** | Dashboard "Other hackathons" links straight into F1, and its Join button is `alert('Join: not yet implemented')` although `HackathonService.Join` exists | `DashboardView.svelte` |
-| F3 | error | `/manage/users` returns **500** (untranslated `PERMISSION_DENIED`) to non-admins; also unreachable from any nav | `(app)/manage/users/+page.server.ts` |
-| F4 | UX | `returnTo` is written by both guards but never consumed — deep links always land on `/dashboard` | `hooks.server.ts`, `NavBar.svelte` |
-| F5 | 404 | `/my/hackathon/[id]` has a layout but no `+page.*` → 404 on the bare URL | `(app)/my/hackathon/[id]/` |
-| F6 | **security** | `MarkdownSection.svelte` renders `{@html content}` with no parser and no sanitizer (no markdown dep in `package.json`). Currently fed a literal only — wiring it to `Page.content` as-is would be stored XSS | `MarkdownSection.svelte` |
-| F7 | config | gRPC channel hard-codes `localhost:3000`; the validated `config.backend.hostname/port` is loaded but read by nothing | `lib/server/grpc/client.ts` |
-| F8 | stale | `pnpm proto:generate` covers only health/user/hackathon — a strict subset of what the app imports; `just codegen::proto` is the real pipeline | `package.json` |
-| F9 | minor | `idToken` dropped on initial sign-in (cookie size) but written back by the refresh branch | `auth.ts` |
-| F10 | stubs | Static placeholders: participants page (hard-coded demo array), overview (only `description` real), webinars/photos, home "Get Started" → non-UUID `/hackathon/ord-2026` | various |
+| #   | Severity        | What                                                                                                                                                                                                         | Where                                     |
+| --- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| F1  | **UX dead end** | Signed-in non-members opening `/hackathon/[id]` are unconditionally redirected to the member view → 403, with no Join affordance (pairs with B2)                                                             | `(public)/hackathon/[id]/+page.server.ts` |
+| F2  | **stub**        | Dashboard "Other hackathons" links straight into F1, and its Join button is `alert('Join: not yet implemented')` although `HackathonService.Join` exists                                                     | `DashboardView.svelte`                    |
+| F3  | error           | `/manage/users` returns **500** (untranslated `PERMISSION_DENIED`) to non-admins; also unreachable from any nav                                                                                              | `(app)/manage/users/+page.server.ts`      |
+| F4  | UX              | `returnTo` is written by both guards but never consumed — deep links always land on `/dashboard`                                                                                                             | `hooks.server.ts`, `NavBar.svelte`        |
+| F5  | 404             | `/my/hackathon/[id]` has a layout but no `+page.*` → 404 on the bare URL                                                                                                                                     | `(app)/my/hackathon/[id]/`                |
+| F6  | **security**    | `MarkdownSection.svelte` renders `{@html content}` with no parser and no sanitizer (no markdown dep in `package.json`). Currently fed a literal only — wiring it to `Page.content` as-is would be stored XSS | `MarkdownSection.svelte`                  |
+| F7  | config          | gRPC channel hard-codes `localhost:3000`; the validated `config.backend.hostname/port` is loaded but read by nothing                                                                                         | `lib/server/grpc/client.ts`               |
+| F8  | stale           | `pnpm proto:generate` covers only health/user/hackathon — a strict subset of what the app imports; `just codegen::proto` is the real pipeline                                                                | `package.json`                            |
+| F9  | minor           | `idToken` dropped on initial sign-in (cookie size) but written back by the refresh branch                                                                                                                    | `auth.ts`                                 |
+| F10 | stubs           | Static placeholders: participants page (hard-coded demo array), overview (only `description` real), webinars/photos, home "Get Started" → non-UUID `/hackathon/ord-2026`                                     | various                                   |
 
 ## Checklist
 
 ### Correctness first
+
 - [x] B1 — nil-check `EndsAt` in `Join` (crash on undated hackathons) — matches
       `computeHackathonStatus`: no end date ⇒ never FINISHED ⇒ still joinable
 - [x] F1 — the 403 dead end is gone. `/hackathon/[id]` no longer redirects
@@ -67,19 +68,20 @@ found; the checklist is the live status.
       needs the deep tree — tracks, pages, the project list.
 - [x] F2 — real Join button: `?/join` form action on the dashboard calling
       `HackathonService.Join`, backend verdicts translated to messages
-- [x] B3 — DECIDED: the `register` **capability** governs; `settings.registrations_enabled`
-      is vestigial and is deliberately not enforced and not exposed in the UI.
-      Reasons, in order: the capability is the gate that is actually enforced and
-      it is phase-aware, which is the schedule organisers already maintain; the
-      setting defaults to FALSE, so enforcing it would make every existing
-      hackathon unjoinable for no gain; and "registration is closed" is already
-      expressible by closing the capability window. The proto field stays until
-      there is a reason to make a breaking change — nothing reads it. The voting
-      page wires up `EditSettings` for `voting_enabled` ONLY, with a comment
-      saying why its neighbour is left alone.
+- [x] B3 — DECIDED: the `register` **capability** governs;
+      `settings.registrations_enabled` is vestigial and is deliberately not
+      enforced and not exposed in the UI. Reasons, in order: the capability is
+      the gate that is actually enforced and it is phase-aware, which is the
+      schedule organisers already maintain; the setting defaults to FALSE, so
+      enforcing it would make every existing hackathon unjoinable for no gain;
+      and "registration is closed" is already expressible by closing the
+      capability window. The proto field stays until there is a reason to make a
+      breaking change — nothing reads it. The voting page wires up
+      `EditSettings` for `voting_enabled` ONLY, with a comment saying why its
+      neighbour is left alone.
 - [ ] B4 — persist phase dates on create
-- [x] B5 — casbin write errors no longer swallowed in team membership ops.
-      NOTE: the two stores cannot share a transaction (casbin writes on its own
+- [x] B5 — casbin write errors no longer swallowed in team membership ops. NOTE:
+      the two stores cannot share a transaction (casbin writes on its own
       connection; an ent tx held across it deadlocks) — compensating writes are
       used instead, ordered so a partial failure is always inert-not-privileged
 - [x] B8 — added the missing casbin check to `SetPreference` (`project`/`read`,
@@ -101,8 +103,9 @@ adds only; there is no self-service unset, because team formation reads these
 choices and letting people churn them mid-allocation keeps moving the ground
 under it. The UI therefore confirms before submitting ("this cannot be undone").
 
-- [x] Organizer override — `ProjectService.RemovePreference(project_id, user_id)`
-      requires `project:write`, so someone who picked in error asks an organizer.
+- [x] Organizer override —
+      `ProjectService.RemovePreference(project_id, user_id)` requires
+      `project:write`, so someone who picked in error asks an organizer.
       Removing a preference nobody expressed is a no-op, not an error.
 - [ ] Participants still cannot SEE their own preferences: the only read is the
       organizer-only `ExportPreferences`. A `ListMyPreferences` (or preferences
@@ -135,37 +138,40 @@ display name is the platform's own field and is editable.
       person is the current state of the answers, not an append-only log;
       `submitted_by` is re-stamped so an organizer correcting a walk-in's paper
       form is recorded as the author of THOSE answers.
-- [x] `GetRegistrationResponse` reads the answers back. Deliberately its own
-      RPC rather than a field on `Get`: `Get` denies waitlisted users, who are
+- [x] `GetRegistrationResponse` reads the answers back. Deliberately its own RPC
+      rather than a field on `Get`: `Get` denies waitlisted users, who are
       exactly the people who still need to review their form. Own answers need
       no casbin check; someone else's needs hackathon `Write`.
-- [ ] Changing email/password still means leaving for Keycloak's account
-      console (`/account` links to it). Proxying those through a backend
-      Keycloak Admin API client would keep people in the app, at the cost of
-      giving the backend admin credentials it does not have today.
+- [ ] Changing email/password still means leaving for Keycloak's account console
+      (`/account` links to it). Proxying those through a backend Keycloak Admin
+      API client would keep people in the app, at the cost of giving the backend
+      admin credentials it does not have today.
 - [ ] Consent withdrawal is only as granular as the form: unticking the photo
       consent updates the row, but nothing propagates that to photos already
       published.
 
 ### Security
-- [ ] F6 — markdown pipeline: parser + sanitizer (no raw HTML, allowlisted video embeds) **before** rendering `Page.content`/`description`
+
+- [ ] F6 — markdown pipeline: parser + sanitizer (no raw HTML, allowlisted video
+      embeds) **before** rendering `Page.content`/`description`
 - [x] F3 — `PERMISSION_DENIED` → 403 on `/manage/users`; audit found and fixed
       two more unguarded loads (dashboard, submissions fan-out)
-- [ ] Votes/ballot privacy: keep individual ballots non-listable except voter+admin (see rbac matrix)
-- [ ] **Content Security Policy** — none configured today (`svelte.config.js` has no
-      `kit.csp`). It is the second line of defence behind F6: if the markdown
-      sanitizer ever has a hole, a strict `script-src 'self'` still stops the
-      injected script from executing. Sequence it right after F6, since both
-      defend the same page. Directives it must cover:
-      `script-src` (self only), `frame-src` (allowlisted video providers, for
-      the pasted-URL embeds), `img-src` (self + `data:` + the image hosts the
-      seeded editions use — Firebase Storage, SDSC CDN), `connect-src` (self;
-      plus the ingest endpoint if session replay is ever adopted),
-      `object-src 'none'`, `base-uri 'self'`.
-      Roll out with `Content-Security-Policy-Report-Only` first, watch the
-      violations for a week, then enforce.
+- [ ] Votes/ballot privacy: keep individual ballots non-listable except
+      voter+admin (see rbac matrix)
+- [ ] **Content Security Policy** — none configured today (`svelte.config.js`
+      has no `kit.csp`). It is the second line of defence behind F6: if the
+      markdown sanitizer ever has a hole, a strict `script-src 'self'` still
+      stops the injected script from executing. Sequence it right after F6,
+      since both defend the same page. Directives it must cover: `script-src`
+      (self only), `frame-src` (allowlisted video providers, for the pasted-URL
+      embeds), `img-src` (self + `data:` + the image hosts the seeded editions
+      use — Firebase Storage, SDSC CDN), `connect-src` (self; plus the ingest
+      endpoint if session replay is ever adopted), `object-src 'none'`,
+      `base-uri 'self'`. Roll out with `Content-Security-Policy-Report-Only`
+      first, watch the violations for a week, then enforce.
 
 ### Contracts & polish
+
 - [x] B10/B11/B12 — Edit-optional semantics (team + project), modifier edges,
       team error messages (+ typo). `Delete`'s missing team-scoped fallback was
       deliberately NOT added: team members deleting their own team is a policy
@@ -194,17 +200,19 @@ number of distinct submissions that received votes) and points (sum of `value`).
 several rows sharing a (category, voter). On a database that already holds
 votes, building the new index FAILS if duplicate (category, voter, submission)
 rows exist — none can exist under the old index, so the only hazard is a
-database where the old index was already absent or dropped by hand. The dev
-flow (`just schema-change`) wipes state and is unaffected.
+database where the old index was already absent or dropped by hand. The dev flow
+(`just schema-change`) wipes state and is unaffected.
 
 **One ballot per category is now the handler's job, not the DB's.** The index no
 longer says anything about a second ballot, so `SubmitVote` checks for existing
 (category, voter) rows and answers `AlreadyExists` itself, then clears and
 rewrites inside one transaction. That check is not race-proof the way a unique
 index was: two ballots submitted concurrently by the same voter could both pass
-it. A partial unique index on `(category, voter) WHERE vote_type =
-'single_choice'` would close it for single choice, but ent cannot express one,
-so it would have to be hand-written SQL outside the schema.
+it. A partial unique index on
+`(category, voter) WHERE vote_type = 'single_choice'` would close it for single
+choice, but ent cannot express one, so it would have to be hand-written SQL
+outside the schema.
+
 - [x] B15 — implemented, not deleted, and all four now have a caller.
       `AddRole`/`RemoveRole` were the urgent half: `/manage/users` already
       shipped calling them, and its error handler does not catch
@@ -212,8 +220,8 @@ so it would have to be hand-written SQL outside the schema.
       `RemoveOwner` were dormant instead — nothing called them — and are a
       casbin role write here rather than main's parallel `owners` edge.
       Refusals: last organizer, self-demotion, and a target who is not a
-      confirmed participant (the member list is built from that table, so a
-      role granted outside it makes an owner absent from the roster)
+      confirmed participant (the member list is built from that table, so a role
+      granted outside it makes an owner absent from the roster)
 - [x] F4 — `returnTo` consumed (with an open-redirect guard; the old ping-pong
       protection replaced by an explicit `sessionUsable` flag)
 - [x] F5 — `/my/hackathon/[id]` redirects to `/overview`
@@ -221,19 +229,23 @@ so it would have to be hand-written SQL outside the schema.
 - [x] F8 — stale `proto:generate` npm script deleted
 
 ### Product decisions to pin (details in lifecycle.md)
-- [ ] Private-hackathon membership: `AddParticipant` primitive + invitation links (agreed direction; not yet in code)
-- [ ] Public landing page: description-as-markdown hero + ordered Pages as panels (PageService is ready; blocked on F6)
+
+- [ ] Private-hackathon membership: `AddParticipant` primitive + invitation
+      links (agreed direction; not yet in code)
+- [ ] Public landing page: description-as-markdown hero + ordered Pages as
+      panels (PageService is ready; blocked on F6)
 - [ ] Own-team voting: enforce the stored policy or remove the knob (B7)
-- [ ] Aggregation rule for results (sum vs mean) — decides the winner; admin Finalize exists either way
+- [ ] Aggregation rule for results (sum vs mean) — decides the winner; admin
+      Finalize exists either way
 - [~] **Session replay (OpenReplay) — wired, OFF by default, masking proved
-      (2026-08-08).** The rig runs (`.claude/skills/openreplay-stack`, booted
-      for real; five host-specific bugs fixed there), the tracker is mounted in
-      the root layout behind `replay.enabled`, and
-      `hackathon-e2e/tests/openreplay/masking.spec.ts` proves a sentinel typed
-      into the registration form never reaches the wire — with an **unmasked
-      control run first**, because a zero-hit grep is also what "nothing was
-      captured" looks like, and on the first attempt that is exactly what it
-      was. Both e2e suites are unaffected with the flag off.
+  (2026-08-08).** The rig runs (`.claude/skills/openreplay-stack`, booted for
+  real; five host-specific bugs fixed there), the tracker is mounted in the root
+  layout behind `replay.enabled`, and
+  `hackathon-e2e/tests/openreplay/masking.spec.ts` proves a sentinel typed into
+  the registration form never reaches the wire — with an **unmasked control run
+  first**, because a zero-hit grep is also what "nothing was captured" looks
+  like, and on the first attempt that is exactly what it was. Both e2e suites
+  are unaffected with the flag off.
 
       Settled while doing it:
       - GDPR / `diet`: not per-field opt-in. `privateMode` + `defaultInputMode:
@@ -301,6 +313,7 @@ so it would have to be hand-written SQL outside the schema.
         fixed slug to point at).
 
 ### Found while fixing (new)
+
 - [ ] The dev seeder creates participant rows without granting the hackathon
       `Member` role (`cmd/seed/main.go` — charles is a waitlisted participant of
       h1 but gets no role), which contradicts `Join`, where everyone on the
@@ -312,15 +325,25 @@ so it would have to be hand-written SQL outside the schema.
       "redirect to /dashboard unless returnTo" rule.
 
 ### Housekeeping
-- [ ] Refresh the root `CLAUDE.md` — stale `just` command names, "runtime status" claims 3 services (11 registered), casbin description predates path domains/globMatch
+
+- [ ] Refresh the root `CLAUDE.md` — stale `just` command names, "runtime
+      status" claims 3 services (11 registered), casbin description predates
+      path domains/globMatch
 - [ ] Add a `LICENSE` file (open-source requirement; repo has none)
 - [ ] Commit `docs/` (this set) once reviewed
-- [ ] Notification service (emails) — deliberately deferred; unblocks confirmations, reminders, invites (Mailpit sidecar sketched in `.devcontainer/README.md`)
-- [ ] GDPR: `DeleteAccount` + data access/export — deferred, tracked as recipe placeholders
+- [ ] Notification service (emails) — deliberately deferred; unblocks
+      confirmations, reminders, invites (Mailpit sidecar sketched in
+      `.devcontainer/README.md`)
+- [ ] GDPR: `DeleteAccount` + data access/export — deferred, tracked as recipe
+      placeholders
 
 ### Testing follow-through
-- [ ] Keep `.claude/skills/hackathon-e2e/recipe.jsonl` in lockstep — every fix above that changes behaviour should flip a recipe action from red/yellow toward blue (the timeline in `recipe-player.html` is the burn-down chart)
-- [ ] Add invitation-flow actions once the mechanism lands (the private "Winter draft" event is the ready fixture)
+
+- [ ] Keep `.claude/skills/hackathon-e2e/recipe.jsonl` in lockstep — every fix
+      above that changes behaviour should flip a recipe action from red/yellow
+      toward blue (the timeline in `recipe-player.html` is the burn-down chart)
+- [ ] Add invitation-flow actions once the mechanism lands (the private "Winter
+      draft" event is the ready fixture)
 
 ## See also
 

@@ -43,7 +43,13 @@ export const actions: Actions = {
     const avatarUrl = String(form.get("avatarUrl") ?? "").trim()
 
     try {
-      await user.editProfile({ displayName, affiliation, skills, dietary, avatarUrl })
+      await user.editProfile({
+        displayName,
+        affiliation,
+        skills,
+        dietary,
+        avatarUrl,
+      })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
         return fail(400, {

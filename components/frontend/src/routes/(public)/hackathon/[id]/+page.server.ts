@@ -80,7 +80,9 @@ export const load: PageServerLoad = async (event) => {
   // failure here costs the section rather than the page.
   const pages = await publicPageClient
     .list({ hackathonId: event.params.id })
-    .then((r) => r.pages.map((p) => ({ id: p.id, title: p.title, content: p.content })))
+    .then((r) =>
+      r.pages.map((p) => ({ id: p.id, title: p.title, content: p.content })),
+    )
     .catch(() => [])
 
   return { session, hackathon, pages }
@@ -103,10 +105,13 @@ export const actions: Actions = {
     const asksQuestions = await client
       .list({})
       .then((r) => {
-        const form = r.hackathons.find((h) => h.id === event.params.id)
-          ?.registrationForm
+        const form = r.hackathons.find(
+          (h) => h.id === event.params.id,
+        )?.registrationForm
 
-        return Boolean(form && (form.fields.length > 0 || form.consents.length > 0))
+        return Boolean(
+          form && (form.fields.length > 0 || form.consents.length > 0),
+        )
       })
       .catch(() => false)
 

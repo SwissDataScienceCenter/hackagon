@@ -68,7 +68,8 @@ func TestResolveUnknownSubjectIsPseudonymous(t *testing.T) {
 	if !IsPseudonym(got) {
 		t.Fatalf("Resolve = %q, want an unknown: pseudonym", got)
 	}
-	if strings.Contains(got, ghostSub) || strings.Contains(ghostSub, strings.TrimPrefix(got, "unknown:")) {
+	if strings.Contains(got, ghostSub) ||
+		strings.Contains(ghostSub, strings.TrimPrefix(got, "unknown:")) {
 		t.Errorf("pseudonym %q leaks the subject %q", got, ghostSub)
 	}
 	if again := NewResolver(nil).Resolve(context.Background(), ghostSub); again != got {
@@ -103,7 +104,10 @@ func TestResolveNeverCachesAMiss(t *testing.T) {
 		r.Resolve(context.Background(), ghostSub)
 	}
 	if lookup.calls != before {
-		t.Errorf("lookup called %d more times after a hit — hits must be memoized", lookup.calls-before)
+		t.Errorf(
+			"lookup called %d more times after a hit — hits must be memoized",
+			lookup.calls-before,
+		)
 	}
 }
 

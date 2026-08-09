@@ -9,24 +9,24 @@ identically.
 ## Path A — devcontainer
 
 `.devcontainer/docker-compose.yml` defines a single `dev` service; Keycloak,
-Postgres, backend and frontend all run *inside* it via process-compose. Ports
+Postgres, backend and frontend all run _inside_ it via process-compose. Ports
 3000, 5432, 8081 and 8180 are published/forwarded.
 
-| How                    | Command                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------- |
-| VS Code                | "Dev Containers: Reopen in Container" — the Nix feature and `post-create.sh` run automatically. |
-| devcontainer CLI       | `devcontainer up --workspace-folder .`                                                       |
-| Helper script          | `bash .claude/skills/devcontainer-up/scripts/up.sh`                                          |
-| Plain compose          | `docker compose -f .devcontainer/docker-compose.yml up -d dev`, then install Nix manually and run `.devcontainer/post-create.sh` (see `.devcontainer/README.md`). |
+| How              | Command                                                                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VS Code          | "Dev Containers: Reopen in Container" — the Nix feature and `post-create.sh` run automatically.                                                                   |
+| devcontainer CLI | `devcontainer up --workspace-folder .`                                                                                                                            |
+| Helper script    | `bash .claude/skills/devcontainer-up/scripts/up.sh`                                                                                                               |
+| Plain compose    | `docker compose -f .devcontainer/docker-compose.yml up -d dev`, then install Nix manually and run `.devcontainer/post-create.sh` (see `.devcontainer/README.md`). |
 
 ### Helper scripts (`.claude/skills/devcontainer-up/scripts/`)
 
-| Script                    | What it does                                                                                                                             |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `up.sh`                   | Idempotent "up and ready": prefers the `devcontainer` CLI when installed; otherwise plain compose + single-user Nix install + `post-create.sh`. Then warms the dev shell with `just develop true` (first run downloads the whole toolchain). |
-| `exec.sh [cmd …]`         | Runs a command inside the container as `vscode` in `/workspaces/hackagon` through a login shell (so the Nix profile is loaded). No args → interactive shell. Example: `exec.sh just start`. |
-| `e2e.sh smoke\|journey`   | Ensures readiness, then forwards to `.claude/skills/hackathon-e2e/scripts/run.sh` inside the container.                                     |
-| `down.sh [--volumes]`     | Stops the stack. `--volumes` also deletes the `nix-store`/`devenv-state` volumes — the next start re-downloads the toolchain.               |
+| Script                  | What it does                                                                                                                                                                                                                                 |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `up.sh`                 | Idempotent "up and ready": prefers the `devcontainer` CLI when installed; otherwise plain compose + single-user Nix install + `post-create.sh`. Then warms the dev shell with `just develop true` (first run downloads the whole toolchain). |
+| `exec.sh [cmd …]`       | Runs a command inside the container as `vscode` in `/workspaces/hackagon` through a login shell (so the Nix profile is loaded). No args → interactive shell. Example: `exec.sh just start`.                                                  |
+| `e2e.sh smoke\|journey` | Ensures readiness, then forwards to `.claude/skills/hackathon-e2e/scripts/run.sh` inside the container.                                                                                                                                      |
+| `down.sh [--volumes]`   | Stops the stack. `--volumes` also deletes the `nix-store`/`devenv-state` volumes — the next start re-downloads the toolchain.                                                                                                                |
 
 ### What `post-create.sh` does
 
@@ -72,38 +72,38 @@ Recipes live in the root `justfile` plus the modules in `tools/just/*.just`
 
 ### Everyday
 
-| Command                | Effect                                                                                                                                                                                                 |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `just start`           | The default "run everything". Stops any running stack, `go mod tidy` in `components/backend` (with `GOWORK=off`), `pnpm install --frozen-lockfile` in `components/frontend`, `quitsh setup`, then `just deploy::up` and attaches to the process-compose TUI. Use after a code-only change. |
-| `just api-change`      | `just codegen::proto`, then `just start`. Use after editing `*.proto`.                                                                                                                                   |
-| `just schema-change`   | Full reset flow after editing `db/schema/*.go`: `codegen::proto` → `codegen::db-schema` → `clean::state` (wipes Postgres + Keycloak state) → `deploy::up` → wait for `pg_isready` → `db::seed` → attach.   |
-| `just changes [ref]`   | Diffs `ref` (default `HEAD~1`) against HEAD and prints which of the three commands above to run.                                                                                                          |
-| `just down`            | `just deploy::down` — kills process-compose/Keycloak and frees ports 8180 and 3000.                                                                                                                       |
+| Command              | Effect                                                                                                                                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `just start`         | The default "run everything". Stops any running stack, `go mod tidy` in `components/backend` (with `GOWORK=off`), `pnpm install --frozen-lockfile` in `components/frontend`, `quitsh setup`, then `just deploy::up` and attaches to the process-compose TUI. Use after a code-only change. |
+| `just api-change`    | `just codegen::proto`, then `just start`. Use after editing `*.proto`.                                                                                                                                                                                                                     |
+| `just schema-change` | Full reset flow after editing `db/schema/*.go`: `codegen::proto` → `codegen::db-schema` → `clean::state` (wipes Postgres + Keycloak state) → `deploy::up` → wait for `pg_isready` → `db::seed` → attach.                                                                                   |
+| `just changes [ref]` | Diffs `ref` (default `HEAD~1`) against HEAD and prints which of the three commands above to run.                                                                                                                                                                                           |
+| `just down`          | `just deploy::down` — kills process-compose/Keycloak and frees ports 8180 and 3000.                                                                                                                                                                                                        |
 
 ### Stack control (`tools/just/deploy.just`)
 
-| Command                                   | Effect                                                                                              |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `just deploy::up`                         | Starts the `test-services` process-compose stack (Keycloak, Postgres, backend, frontend), waiting for Keycloak. |
-| `just deploy::attach`                     | Attaches to the process-compose TUI for logs.                                                          |
-| `just deploy::proc-comp <args>`           | Sends a command to the running instance over its unix socket, e.g. `process restart backend`, `process list`. |
-| `just deploy::down`                       | Stops everything.                                                                                      |
-| `just deploy::save-keycloak`              | Exports the live realm back to `tools/configs/keycloak/realm-hackagon.json`.                            |
+| Command                         | Effect                                                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `just deploy::up`               | Starts the `test-services` process-compose stack (Keycloak, Postgres, backend, frontend), waiting for Keycloak. |
+| `just deploy::attach`           | Attaches to the process-compose TUI for logs.                                                                   |
+| `just deploy::proc-comp <args>` | Sends a command to the running instance over its unix socket, e.g. `process restart backend`, `process list`.   |
+| `just deploy::down`             | Stops everything.                                                                                               |
+| `just deploy::save-keycloak`    | Exports the live realm back to `tools/configs/keycloak/realm-hackagon.json`.                                    |
 
 ### Database (`tools/just/db.just`)
 
-| Command                  | Effect                                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `just db::seed`          | `go run ./cmd/seed/ --config-dir ./data/test/config/` in `components/backend` — populates the dev fixture.    |
-| `just db::psql [args]`   | `psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon`; args pass through, e.g. `just db::psql -c 'SELECT * FROM users;'`. |
-| `just db::summary`       | Runs `tools/sql/db-summary.sql` against the same database for a formatted overview.                          |
+| Command                | Effect                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `just db::seed`        | `go run ./cmd/seed/ --config-dir ./data/test/config/` in `components/backend` — populates the dev fixture.              |
+| `just db::psql [args]` | `psql -h 127.0.0.1 -p 5432 -U postgres -d hackagon`; args pass through, e.g. `just db::psql -c 'SELECT * FROM users;'`. |
+| `just db::summary`     | Runs `tools/sql/db-summary.sql` against the same database for a formatted overview.                                     |
 
 ### gRPC (`tools/just/rpc.just`)
 
-| Command                                             | Effect                                                                                                                    |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `just rpc::as <user> <password> <method> [json]`    | Fetches an access token from Keycloak (password grant, client `hackagon-backend`, realm `hackagon`), then calls `grpcurl -plaintext -H "authorization: Bearer …" localhost:3000 <method>`. Default payload `{}`. |
-| `just rpc::unauth <method> [json]`                  | Same call without a token — used for `health.HealthService/Check` and to check anonymous behaviour.                          |
+| Command                                          | Effect                                                                                                                                                                                                           |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `just rpc::as <user> <password> <method> [json]` | Fetches an access token from Keycloak (password grant, client `hackagon-backend`, realm `hackagon`), then calls `grpcurl -plaintext -H "authorization: Bearer …" localhost:3000 <method>`. Default payload `{}`. |
+| `just rpc::unauth <method> [json]`               | Same call without a token — used for `health.HealthService/Check` and to check anonymous behaviour.                                                                                                              |
 
 ```bash
 just rpc::as bob aliceandbob user.UserService/WhoAmI
@@ -115,14 +115,14 @@ Server reflection is enabled, so `grpcurl localhost:3000 list` works too.
 
 ### Codegen, cleaning, checks
 
-| Command                                        | Effect                                                                                          |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `just codegen::proto`                          | Wipes the two generated dirs, then `buf generate` (Go, Go-gRPC, ts-proto, `api/proto/API.md`).      |
-| `just codegen::db-schema`                      | Regenerates `components/backend/ent/**` and `components/backend/Schema.md` from `db/schema/*.go`.   |
-| `just clean::state`                            | Deletes `.devenv/state/postgres` and `.devenv/state/keycloak` — clean database and realm next start.|
-| `just clean::build`                            | Removes component build artifacts.                                                                 |
-| `just clean::all`                              | Destroys **all** gitignored files (`.devenv`, `node_modules`, generated code). Prompts first.       |
-| `just check::lint\|test\|format -c <component>`| Per-component lint/test/format; components are `backend` and `frontend`.                            |
+| Command                                         | Effect                                                                                               |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `just codegen::proto`                           | Wipes the two generated dirs, then `buf generate` (Go, Go-gRPC, ts-proto, `api/proto/API.md`).       |
+| `just codegen::db-schema`                       | Regenerates `components/backend/ent/**` and `components/backend/Schema.md` from `db/schema/*.go`.    |
+| `just clean::state`                             | Deletes `.devenv/state/postgres` and `.devenv/state/keycloak` — clean database and realm next start. |
+| `just clean::build`                             | Removes component build artifacts.                                                                   |
+| `just clean::all`                               | Destroys **all** gitignored files (`.devenv`, `node_modules`, generated code). Prompts first.        |
+| `just check::lint\|test\|format -c <component>` | Per-component lint/test/format; components are `backend` and `frontend`.                             |
 
 ## Dev users
 
@@ -131,17 +131,17 @@ All Keycloak users share the password `aliceandbob`
 `tools/configs/keycloak/realm-hackagon.json`). The Keycloak admin console at
 http://localhost:8180 uses `admin`/`admin`.
 
-| Username         | Role in the dev data                         |
-| ---------------- | ---------------------------------------------- |
-| `hackagon-admin` | Global admin; creator of H2 and H3             |
-| `alice`          | Organizer; creator of H1                       |
-| `bob`            | Confirmed participant                          |
-| `charles`        | Waitlisted viewer                              |
+| Username         | Role in the dev data               |
+| ---------------- | ---------------------------------- |
+| `hackagon-admin` | Global admin; creator of H2 and H3 |
+| `alice`          | Organizer; creator of H1           |
+| `bob`            | Confirmed participant              |
+| `charles`        | Waitlisted viewer                  |
 
 The backend also inserts a DB row for the admin on startup, keyed by
 `server.adminkeycloakid` in `components/backend/data/test/config/config.yaml`.
-Logging in works without seeding, but the users then have no hackathons,
-teams or roles.
+Logging in works without seeding, but the users then have no hackathons, teams
+or roles.
 
 ## Seeding
 
@@ -179,13 +179,13 @@ Native-Nix users who never ran `post-create.sh` must create it by hand.
 
 ## Object store (optional today)
 
-Uploaded files get an S3-compatible home in development: the `rustfs`
-container, endpoint `http://rustfs:9000` from inside the devcontainer
+Uploaded files get an S3-compatible home in development: the `rustfs` container,
+endpoint `http://rustfs:9000` from inside the devcontainer
 (`http://localhost:9000` from the host), bucket `hackagon-dev`, dev-only keys
 `hackagon-dev` / `hackagon-dev-secret`. It is configured under `storage:` in
 `components/backend/data/test/config/config.yaml`, but **no handler reads it
-yet** — the store is provisioned, the upload path is not built, so skipping
-this changes nothing about the running app today.
+yet** — the store is provisioned, the upload path is not built, so skipping this
+changes nothing about the running app today.
 
 ```bash
 docker compose -f .devcontainer/docker-compose.yml up -d rustfs
@@ -199,8 +199,8 @@ Full reference — reset, console URL, deployment differences — in
 ## Gotchas
 
 - **Casbin does not reload after external seeding.** `NewRBACEnforcer`
-  (`components/backend/internal/middleware/rbac.go`) calls `LoadPolicy()` once at
-  startup and no watcher is installed, so roles that `just db::seed` writes
+  (`components/backend/internal/middleware/rbac.go`) calls `LoadPolicy()` once
+  at startup and no watcher is installed, so roles that `just db::seed` writes
   straight into Postgres are invisible to a running backend — badges render
   wrong and private hackathons disappear. Restart it afterwards:
 
@@ -212,6 +212,7 @@ Full reference — reset, console URL, deployment differences — in
   ```
 
   (This is exactly what `.claude/skills/hackathon-e2e/scripts/seed.sh` does.)
+
 - **First boot is slow.** The first `just develop` downloads the whole flake
   toolchain (multi-GB); in the devcontainer the `nix-store` volume caches it.
   The frontend also needs a few minutes on first boot (`pnpm install` +

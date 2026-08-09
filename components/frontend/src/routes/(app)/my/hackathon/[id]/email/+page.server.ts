@@ -47,7 +47,8 @@ function formError(e: unknown) {
   if (e instanceof ClientError) {
     if (e.code === Status.PERMISSION_DENIED)
       return fail(403, { message: "Only this event's organisers can do that." })
-    if (e.code === Status.INVALID_ARGUMENT) return fail(400, { message: e.details })
+    if (e.code === Status.INVALID_ARGUMENT)
+      return fail(400, { message: e.details })
   }
   throw e
 }
@@ -64,7 +65,9 @@ export const load: PageServerLoad = async (event) => {
   }
 
   // Prefilled, because Set replaces the whole map — see GetEmailTemplates.
-  const { templates } = await config.getEmailTemplates({ hackathonId: event.params.id })
+  const { templates } = await config.getEmailTemplates({
+    hackathonId: event.params.id,
+  })
 
   // Audiences are derived from the roster rather than typed by hand: the point
   // of composing here rather than in a mail client is that the address list is
@@ -119,7 +122,10 @@ export const actions: Actions = {
     }
 
     try {
-      await config.setEmailTemplates({ hackathonId: event.params.id, templates })
+      await config.setEmailTemplates({
+        hackathonId: event.params.id,
+        templates,
+      })
     } catch (e) {
       return formError(e)
     }
