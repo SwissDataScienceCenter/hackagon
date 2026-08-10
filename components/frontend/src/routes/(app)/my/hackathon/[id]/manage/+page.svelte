@@ -17,15 +17,23 @@
     // The backend decides either way; this only decides whether to offer it.
     const mayEdit = $derived(canEditHackathon(data.myMembership ?? undefined, data.isGlobalAdmin));
 
-    // The other organiser destinations, minus this page and minus Participants,
-    // which the People card above already leads to — and leads to better, since it
-    // says how many are waiting. Read from `manageNav` rather than listed again
-    // here, so an entry added to the sidebar reaches these tiles too.
-    const HANDLED_ABOVE = ['manage:hackathon', 'manage:participants'];
+    // The other organiser destinations, minus this page. Read from `manageNav`
+    // rather than listed again here, so an entry added to the sidebar reaches
+    // these tiles too and is never described in two places.
+    //
+    // Approving is the organiser action most easily forgotten, because nothing
+    // about a waitlisted participant is visible from anywhere else — so the count
+    // rides on the tile that leads to it rather than in a band of its own. It is
+    // the one number on this page that asks for something to be done, hence the
+    // same warning variant as the "!" this page's own sidebar entry carries.
     const shortcuts = $derived(
-        manageNav(data.hackathonId, data.myMembership ?? undefined, data.isGlobalAdmin).filter(
-            (i) => !HANDLED_ABOVE.includes(i.id)
-        )
+        manageNav(data.hackathonId, data.myMembership ?? undefined, data.isGlobalAdmin)
+            .filter((i) => i.id !== 'manage:hackathon')
+            .map((i) =>
+                i.id === 'manage:participants' && data.waitingCount > 0
+                    ? { ...i, badge: `${data.waitingCount} waiting`, badgeVariant: 'badge-warning' }
+                    : i
+            )
     );
 
     // The one phase action, and which phase it writes. All three cases are the
@@ -54,12 +62,6 @@
             : undefined;
     });
 
-    const peopleLabel = $derived(
-        data.participantCount === 1 ? '1 participant' : `${data.participantCount} participants`
-    );
-    const waitingLabel = $derived(
-        data.waitingCount === 1 ? '1 is waiting' : `${data.waitingCount} are waiting`
-    );
 </script>
 
 <!--
@@ -195,42 +197,6 @@
         saved={form?.saved ?? false}
     />
 
-    <!-- Who is here, and whether anyone is stuck. This stands in for the
-         Participants tile rather than sitting beside it: that tile named the
-         screen and not the queue, so an organiser had to open it to learn whether
-         anyone was waiting. The count is the point.
-
-         "Cannot open", not "cannot act": `member` arrives with
-         ApproveParticipant, not with Join, so a waitlisted user holds no read on
-         anything in the hackathon. -->
-    <section class="flex flex-col gap-2">
-        <span class="meta">People</span>
-        <div class="card flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-            <div class="flex min-w-0 flex-col gap-0.5">
-                <span class="tnum text-sm text-ink">{peopleLabel}</span>
-                <span class="text-xs text-ink-3">
-                    {#if data.waitingCount > 0}
-                        {waitingLabel} for approval, and cannot open anything here until
-                        they have it.
-                    {:else}
-                        Everyone here is approved.
-                    {/if}
-                </span>
-            </div>
-            <!-- Tonal warning rather than the accent: a state that wants clearing,
-                 and the accent belongs to the phase action above. -->
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/participants/manage`)}
-                class="btn btn-sm no-underline {data.waitingCount > 0
-                    ? 'btn-warning'
-                    : 'btn-outline'}"
-            >
-                {data.waitingCount > 0 ? `Review ${data.waitingCount} waiting` : 'Manage participants'}
-                <ArrowRight class="h-3 w-3 shrink-0" aria-hidden="true" />
-            </a>
-        </div>
-    </section>
-
     <!-- The rest of the organiser's destinations, as tiles. The sidebar lists the
          same entries; this is the landing page for someone who came to run the
          hackathon rather than to find one screen of it. -->
@@ -255,6 +221,11 @@
                         <Icon class="h-4 w-4" />
                     </span>
                     <h3 class="m-0 flex-1 text-sm leading-snug text-ink">{item.label}</h3>
+                    {#if item.badge}
+                        <span class="badge shrink-0 {item.badgeVariant ?? 'badge-neutral'}">
+                            {item.badge}
+                        </span>
+                    {/if}
                     <ArrowRight
                         class="h-4 w-4 shrink-0 text-ink-3 transition-transform
                                group-hover:translate-x-0.5"
