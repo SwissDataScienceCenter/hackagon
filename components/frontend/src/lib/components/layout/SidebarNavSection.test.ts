@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { render, screen } from "@testing-library/svelte"
+import { fireEvent, render, screen } from "@testing-library/svelte"
 import Users from "lucide-svelte/icons/users"
 import SidebarNavSection from "./SidebarNavSection.svelte"
 import type { NavItem } from "$lib/navigation/items"
@@ -173,6 +173,72 @@ describe("SidebarNavSection", () => {
       })
 
       rendersNothing(container)
+    })
+  })
+
+  // Folding narrows the section rather than removing it: hiding every row leaves
+  // a heading nobody who did not already know about it would open.
+  describe("with a parent item", () => {
+    const parented = (extra: Record<string, unknown> = {}) => ({
+      label: "Manage",
+      parentItem: item("hackathon"),
+      items: [item("teams"), item("timeline")],
+      collapsed: false,
+      ...extra,
+    })
+
+    it("keeps the parent on the rail while its items are folded away", () => {
+      render(SidebarNavSection, parented({ folded: true }))
+
+      expect(
+        screen.getByRole("link", { name: "hackathon" }),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole("link", { name: "teams" })).toBeNull()
+    })
+
+    it("shows the items when unfolded", () => {
+      render(SidebarNavSection, parented({ folded: false }))
+
+      expect(screen.getByRole("link", { name: "teams" })).toBeInTheDocument()
+    })
+
+    // A sibling of the link rather than part of it: the parent row is a page of
+    // its own and stays reachable while the items under it are folded.
+    it("discloses the items from a control beside the parent link", async () => {
+      let toggled = 0
+      render(
+        SidebarNavSection,
+        parented({ folded: true, onToggleFold: () => (toggled += 1) }),
+      )
+
+      const chevron = screen.getByRole("button", { name: /Show hackathon/ })
+      expect(chevron).toHaveAttribute("aria-expanded", "false")
+
+      await fireEvent.click(chevron)
+      expect(toggled).toBe(1)
+    })
+
+    it("renders a parent-only section that has no items of its own", () => {
+      render(SidebarNavSection, {
+        label: "Manage",
+        parentItem: item("hackathon"),
+        items: [],
+        collapsed: false,
+      })
+
+      expect(
+        screen.getByRole("link", { name: "hackathon" }),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole("button")).toBeNull()
+    })
+
+    // No chevron is drawn there, so a stored "folded" would blank the icons with
+    // no control left to bring them back.
+    it("ignores folded on the icon rail", () => {
+      render(SidebarNavSection, parented({ collapsed: true, folded: true }))
+
+      expect(screen.getByRole("link", { name: "teams" })).toBeInTheDocument()
+      expect(screen.queryByRole("button")).toBeNull()
     })
   })
 })
