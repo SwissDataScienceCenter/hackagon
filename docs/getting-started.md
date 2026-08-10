@@ -177,21 +177,34 @@ printf 'oidc:\n  clientSecret: "%s"\n  authSecret: "%s"\n' \
 `components/frontend/data/test/config/secrets.yaml.example` shows the shape.
 Native-Nix users who never ran `post-create.sh` must create it by hand.
 
-## Object store (optional today)
+## Object store (optional, but uploads need it)
 
 Uploaded files get an S3-compatible home in development: the `rustfs` container,
 endpoint `http://rustfs:9000` from inside the devcontainer
 (`http://localhost:9000` from the host), bucket `hackagon-dev`, dev-only keys
-`hackagon-dev` / `hackagon-dev-secret`. It is configured under `storage:` in
-`components/backend/data/test/config/config.yaml`, but **no handler reads it
-yet** — the store is provisioned, the upload path is not built, so skipping this
-changes nothing about the running app today.
+`hackagon-dev` / `hackagon-dev-secret`, configured under `storage:` in
+`components/backend/data/test/config/config.yaml`.
+
+**Optional in the sense that the app boots and serves without it — not in the
+sense that nothing uses it.** `StorageService` is registered and the event-logo
+and page-media uploaders call `CreateUploadUrl`. Without the container the
+backend still starts (the client is built from config and performs no I/O), but
+every upload fails at use time with a connection error, and `/objects/*` — the
+same-origin route Vite proxies to `rustfs:9000` — answers **500**. Nothing warns
+you at boot; the failure only shows up when someone uploads.
 
 ```bash
 docker compose -f .devcontainer/docker-compose.yml up -d rustfs
 bash .devcontainer/rustfs-init.sh             # create the bucket (idempotent)
 bash .devcontainer/rustfs-init.sh --selftest   # PUT/GET/compare/list proof
 ```
+
+Running the backend **natively** (no devcontainer)? Point it at the published
+host port with `HACKAGON_STORAGE_ENDPOINT=http://localhost:9000`. Note that this
+only fixes the backend: the `/objects` proxy target in
+`components/frontend/vite.config.ts` is the literal `http://rustfs:9000` and is
+not configurable, so served images need that name to resolve (a compose network,
+or a hosts entry).
 
 Full reference — reset, console URL, deployment differences — in
 `.devcontainer/README.md`.

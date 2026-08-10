@@ -11,9 +11,11 @@ nodes from the table below, then run the load profiles at the end.
 
 The application runs in one process-compose supervisor, on one machine (or one
 devcontainer). No replicas, no load balancer, no cache, no queue. Object storage
-does exist now, but only as a dev container (`rustfs`, S3-compatible) that
-nothing in the app reads yet — the storage layer is provisioned and proven, the
-upload path is not built.
+exists as a dev container (`rustfs`, S3-compatible) and **is wired up**:
+`StorageService` is registered, `CreateUploadUrl`/`CreateDownloadUrl` presign,
+and the event-logo and page-media uploaders in the frontend use them. The app
+still boots and serves with no object store at all — only the upload and
+presigned-download paths fail.
 
 ```mermaid
 flowchart LR
@@ -50,18 +52,18 @@ missing node) in the paperdraw model:
 Drag these nodes and wire them in this order. Parameters are starting points for
 an event of ~100 participants (SDSC's announced capacity).
 
-| #   | paperdraw node                    | Represents                        | Suggested config                                                                |
-| --- | --------------------------------- | --------------------------------- | ------------------------------------------------------------------------------- |
-| 1   | Client / traffic source           | Participants + anonymous visitors | see load profiles below                                                         |
-| 2   | Load balancer                     | TLS terminator / ingress          | round-robin, health checks                                                      |
-| 3   | Web/App server ×2                 | SvelteKit SSR (BFF)               | stateless, scale freely; SSR renders every page                                 |
-| 4   | API gateway _(optional)_          | —                                 | only if the gRPC API is ever exposed directly; today the BFF is the only client |
-| 5   | Service ×1–2                      | Go gRPC backend                   | ⚠ **replicas > 1 only after I1** — model the divergence as a chaos scenario    |
-| 6   | Cache                             | _(not built)_                     | policy/session cache; also the natural home for the casbin watcher              |
-| 7   | Database (primary + read replica) | Postgres                          | connection pool ≈ 2× backend replicas; reads dominate (public pages, rosters)   |
-| 8   | Service + DB                      | Keycloak + its Postgres           | token issuance spikes at registration open and event-day check-in               |
-| 9   | Queue                             | _(not built)_                     | notification service — confirmations, reminders, results                        |
-| 10  | Object store                      | _(not built)_                     | media uploads; links-only until then                                            |
+| #   | paperdraw node                    | Represents                            | Suggested config                                                                |
+| --- | --------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
+| 1   | Client / traffic source           | Participants + anonymous visitors     | see load profiles below                                                         |
+| 2   | Load balancer                     | TLS terminator / ingress              | round-robin, health checks                                                      |
+| 3   | Web/App server ×2                 | SvelteKit SSR (BFF)                   | stateless, scale freely; SSR renders every page                                 |
+| 4   | API gateway _(optional)_          | —                                     | only if the gRPC API is ever exposed directly; today the BFF is the only client |
+| 5   | Service ×1–2                      | Go gRPC backend                       | ⚠ **replicas > 1 only after I1** — model the divergence as a chaos scenario    |
+| 6   | Cache                             | _(not built)_                         | policy/session cache; also the natural home for the casbin watcher              |
+| 7   | Database (primary + read replica) | Postgres                              | connection pool ≈ 2× backend replicas; reads dominate (public pages, rosters)   |
+| 8   | Service + DB                      | Keycloak + its Postgres               | token issuance spikes at registration open and event-day check-in               |
+| 9   | Queue                             | _(not built)_                         | notification service — confirmations, reminders, results                        |
+| 10  | Object store                      | RustFS in dev; managed bucket in prod | media uploads: presigned PUT from the browser, public-read imagery prefixes     |
 
 ### Load profiles worth simulating
 

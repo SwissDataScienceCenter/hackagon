@@ -68,3 +68,7 @@ components/frontend/src/lib/server/grpc/generated
 # working tree differed from HEAD and a `git add -A` committed an issuer that
 # dies with the tunnel. That happened.
 config.local.yaml
+
+# Fresh-clone scratch area used to verify the from-clean-clone path.
+# Never committed; it holds a second checkout plus its own container state.
+.fresh-clone/

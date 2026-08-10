@@ -5,6 +5,81 @@ everything else (Go, pnpm, buf, process-compose, Keycloak, Postgres, …) comes
 from the repo's flake (`tools/nix`) exactly as on a native setup — so `just`
 commands behave identically inside and outside the container.
 
+## Required vs optional — read this first
+
+**Required to develop and run Hackagon: Nix (with flakes) and git. That is the
+whole list.** Go, pnpm, buf, process-compose, Keycloak, Postgres, psql, grpcurl
+and `just` itself all come out of `tools/nix`. Keycloak and Postgres run as
+devenv **processes**, not containers (`tools/nix/hackagon/lib/toolchain.nix`),
+and nothing in `justfile`, `tools/just/*.just` or `tools/deploy/` shells out to
+Docker or Podman. So on Linux (or macOS) with Nix installed there is no
+container runtime in the picture at all.
+
+Everything below is **optional**, and here is what each piece buys you and what
+you lose without it:
+
+| Piece                                    | Buys you                                                                  | Without it                                                                                                                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| This devcontainer (Docker)               | A Linux box with Nix on a Windows/macOS host; pinned browser libs for e2e | Nothing, if you are on Linux. On Windows you need _some_ Linux (WSL2 works) because Nix does not run natively there.                                                                            |
+| `rustfs` object store (Docker)           | File uploads: event logos, page media, submission attachments             | The app still **boots and serves** (verified: backend `health.HealthService/Check` OK, frontend `/` 200). Uploads fail at use time and `/objects/*` answers **500**. Nothing warns you at boot. |
+| Cloudflare tunnel (`tunnel`+`caddy`)     | A public `*.trycloudflare.com` URL with working OIDC login                | Localhost only. No effect on anything else.                                                                                                                                                     |
+| OpenReplay rig (`.claude/skills`)        | Session replay for debugging                                              | Nothing — session replay is **off unless** a `replay:` block exists in the frontend `config.yaml` (`src/lib/schemas/config-schema.ts`).                                                         |
+| `services` compose profile               | Postgres + Keycloak as real containers instead of devenv processes        | Nothing; the devenv copies are the default and the two sets fight over ports, which is why the profile is opt-in.                                                                               |
+| `.claude/` skills (e2e, tunnel, docs, …) | The Playwright suites, the recipe spec, the tunnel and docs tooling       | Nothing in the app's build, test or run path. Grep confirms: outside `.claude/` the only references to it are explanatory comments.                                                             |
+
+### Minimal path from a clean machine to a running app
+
+Generated code is **not committed**, so a fresh clone must produce it before
+anything compiles. This is the whole sequence:
+
+```bash
+git clone https://github.com/SwissDataScienceCenter/hackagon.git
+cd hackagon
+
+# codegen + deps (order is load-bearing: ts_proto comes from node_modules,
+# and `go mod tidy` only resolves once the generated packages exist)
+just develop bash -c "cd components/frontend && pnpm install --frozen-lockfile"
+just develop just codegen::proto
+just develop just codegen::db-schema
+just develop bash -c "cd components/backend && GOWORK=off go mod tidy"
+
+# dev secrets for the frontend (gitignored; without it every request 500s)
+printf 'oidc:\n  clientSecret: "%s"\n  authSecret: "%s"\n' \
+    "$(openssl rand -base64 32)" "$(openssl rand -base64 32)" \
+    > components/frontend/data/test/config/secrets.yaml
+
+just develop just deploy::up     # keycloak + postgres + backend + frontend
+just develop just db::seed       # optional dev fixture
+just develop just deploy::proc-comp process restart backend   # casbin reload
+```
+
+`.devcontainer/bootstrap.sh` is exactly those first four commands;
+`post-create.sh` runs it and writes the secrets too. The backend restart after
+seeding is not optional: casbin loads its policy once at startup and the seed
+writes roles straight into Postgres.
+
+⚠ **The bootstrap leaves the tree dirty.** On a clean clone,
+`GOWORK=off go mod tidy` prunes ~26 lines from the committed
+`components/backend/go.sum`, so your first `git status` is not clean. The build
+is unaffected. `just ci::codegen-check` runs the same command followed by
+`git diff --exit-code`, so this needs resolving rather than ignoring.
+
+**Budget the first run.** It downloads and partly _compiles_ the toolchain —
+devenv's own Rust binaries build from source, because the flake declares its
+caches under `extra-trusted-substituters` (permission to use) rather than
+`extra-substituters` (actually use them). Measured here on a busy 48 GB machine:
+bootstrap ≈ 12 minutes to a ~10 GB Nix store, then `deploy::up` ≈ 5 more minutes
+before process-compose reports the stack started (Keycloak's `kc.sh build` runs
+in that window), and the frontend needs a few minutes more before Vite listens.
+
+**On the native path.** These commands are what the container runs — the
+container adds nothing but Nix — but the run behind this document was performed
+in the devcontainer on a Windows host, where native Nix is not an option. The
+"no container runtime" claim above is read off the configuration
+(`toolchain.nix` runs Keycloak and Postgres as devenv processes; no recipe in
+`justfile`, `tools/just/` or `tools/deploy/` invokes docker or podman), not off
+an executed native Linux run.
+
 ## Usage
 
 - **VS Code**: "Dev Containers: Reopen in Container". Nix is installed by the
@@ -18,10 +93,18 @@ commands behave identically inside and outside the container.
   # inside — install Nix once (the feature would normally do this):
   sudo mkdir -p /nix && sudo chown "$(id -u):$(id -g)" /nix
   sh <(curl -fsSL https://nixos.org/nix/install) --no-daemon
+  # mkdir first: the installer does not create ~/.config/nix, so `tee` into it
+  # fails with "No such file or directory" and the flake settings never land.
+  mkdir -p ~/.config/nix
   printf 'experimental-features = nix-command flakes\nsandbox = false\n' \
     | tee -a ~/.config/nix/nix.conf >/dev/null
   cd /workspaces/hackagon && bash .devcontainer/post-create.sh
   ```
+
+  The installer writes its PATH line into `~/.profile` and `~/.zshrc`, not
+  `~/.bashrc`; `post-create.sh` adds the `~/.bashrc` line itself. Scripted
+  `docker compose exec` calls after this must therefore use a **login** shell
+  (`bash -lc '…'`) or `just` will not be on `PATH`.
 
 ## Bootstrap (what post-create does)
 
@@ -60,6 +143,32 @@ so an empty `.env` (or none) gives the standard setup.
 
 Optional features (docker-in-docker, …) can be enabled by uncommenting them in
 `devcontainer.json`.
+
+### Two checkouts at once
+
+Nothing stops a second checkout running beside the first, and you do not have to
+stop the first one — but the defaults collide on **three** axes: the compose
+project name (which prefixes containers and volumes), the network name, and the
+published host ports. Override all three in the second checkout's
+`.devcontainer/.env`. The in-container ports never change (3000/8081/8180/5432
+and `rustfs:9000`), so no checked-in config needs touching:
+
+```ini
+COMPOSE_PROJECT_NAME=hackagon-fresh
+HACKAGON_DEV_NETWORK=hackagon-fresh
+HACKAGON_BACKEND_PORT=13000
+HACKAGON_FRONTEND_PORT=18081
+HACKAGON_KEYCLOAK_PORT=18180
+HACKAGON_POSTGRES_PORT=15433
+HACKAGON_RUSTFS_PORT=19000
+HACKAGON_RUSTFS_CONSOLE_PORT=19001
+```
+
+This was executed: two full stacks — each with its own Postgres, Keycloak,
+backend, frontend and object store — served simultaneously from one host, and
+the e2e suite ran in the second without touching the first. The cost is a second
+Nix store (~10 GB): the `nix-store` volume is per project, so the new checkout
+re-downloads the toolchain.
 
 ## Ports
 

@@ -18,7 +18,7 @@ Keycloak authentication.
 ### Prerequisites
 
 - Nix development shell (`just dev` from repo root)
-- Keycloak running (`just up` from repo root)
+- Keycloak running (`just deploy::up` from repo root)
 - Config files in `data/test/config/` (see Configuration below)
 
 ### Development

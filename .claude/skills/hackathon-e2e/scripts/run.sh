@@ -102,7 +102,15 @@ if [ -f "$AUTH_WIRE" ]; then
   # never carries a hostname that dies with the tunnel. The file's absence is
   # the "no tunnel wired" signal — sed on a missing file is silenced below.
   FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
-  WIRED_URL="$(sed -n 's|^[[:space:]]*issuer:[[:space:]]*\(https://[^/]*\)/realms/.*|\1|p' "$FRONTEND_LOCAL" 2>/dev/null | head -1)"
+  # Test -f FIRST. `2>/dev/null` hides sed's complaint but not its exit code,
+  # and under `set -euo pipefail` a missing file made this assignment kill the
+  # script before it printed a single word — which is every FRESH CLONE, since
+  # config.local.yaml only exists once auth-wire.sh has written one. It went
+  # unnoticed because every machine that had ever wired a tunnel had the file.
+  WIRED_URL=""
+  if [ -f "$FRONTEND_LOCAL" ]; then
+    WIRED_URL="$(sed -n 's|^[[:space:]]*issuer:[[:space:]]*\(https://[^/]*\)/realms/.*|\1|p' "$FRONTEND_LOCAL" | head -1)"
+  fi
 
   bash "$AUTH_WIRE" --restore ||
     echo "warn: could not restore OIDC issuers; logins may fail if a tunnel is wired" >&2

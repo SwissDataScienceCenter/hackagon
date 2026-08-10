@@ -18,8 +18,8 @@ Keycloak runs as a local dev service managed by devenv/process-compose.
 
 ```bash
 # From repo root
-just up       # Start Keycloak (and other services)
-just down     # Stop all services
+just deploy::up   # Start Keycloak (and other services)
+just down         # Stop all services
 
 # Verify Keycloak is running
 curl http://localhost:8180/realms/hackagon/.well-known/openid-configuration
@@ -34,9 +34,9 @@ curl http://localhost:8180/realms/hackagon/.well-known/openid-configuration
 
 ## Test Users
 
-All passwords are `aliceandbob`. Run `just seed` from the repo root to populate
-the matching DB rows (hackathons, teams, submissions) for these users — without
-seeding, they can log in but have no associated data.
+All passwords are `aliceandbob`. Run `just db::seed` from the repo root to
+populate the matching DB rows (hackathons, teams, submissions) for these users —
+without seeding, they can log in but have no associated data.
 
 | Username       | Role                              |
 | -------------- | --------------------------------- |
