@@ -68,9 +68,19 @@
                 <input type="date" name="endsAt" class="field" />
             </label>
 
+            <!-- A link only, and deliberately: an upload is keyed under
+                 `hackathons/<id>/…`, and this hackathon has no id until this
+                 form is submitted. Presigning against an id that does not exist
+                 yet would mean either trusting a client-chosen path or filing
+                 the object somewhere it can never be deleted from. Upload comes
+                 one screen later, on the event's own edit page. -->
             <label class="field-label sm:col-span-2">
                 Logo URL (optional)
                 <input type="url" name="logo" placeholder="https://…" class="field" />
+                <span class="font-normal text-ink-3">
+                    Paste a link, or leave it empty and upload a logo from the event's
+                    Edit page once it exists.
+                </span>
             </label>
         </div>
 

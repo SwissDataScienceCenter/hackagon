@@ -1,7 +1,6 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
-import { UploadKind } from "$lib/server/grpc/generated/storage/entities/upload_kind"
 import { canEditHackathon } from "$lib/navigation"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -17,63 +16,11 @@ export const load: PageServerLoad = async (event) => {
 }
 
 export const actions: Actions = {
-  // Hands back a signed URL; it never sees the file. The browser PUTs the
-  // bytes straight to the object store's same-origin /objects path, so a 15 MB
-  // logo does not occupy an app-server request, and SvelteKit's body-size limit
-  // has nothing to do with what an organiser may upload.
-  //
-  // The KIND is decided here, not sent by the page: this route edits a
-  // hackathon, so the only thing it can ask for is that hackathon's logo. The
-  // backend re-derives the key from the id and re-checks the permission
-  // regardless — this is convenience, not the control.
-  presignLogo: async (event) => {
-    const { storage } = requireGrpc(event.locals.grpc)
-    const form = await event.request.formData()
-
-    const filename = String(form.get("filename") ?? "")
-    const contentType = String(form.get("contentType") ?? "")
-    const sizeBytes = Number(form.get("sizeBytes") ?? 0)
-
-    if (
-      !filename ||
-      !contentType ||
-      !Number.isFinite(sizeBytes) ||
-      sizeBytes <= 0
-    ) {
-      return fail(400, { uploadMessage: "Pick a file first" })
-    }
-
-    try {
-      const result = await storage.createUploadUrl({
-        kind: UploadKind.UPLOAD_KIND_HACKATHON_LOGO,
-        ownerId: event.params.id,
-        filename,
-        contentType,
-        sizeBytes: Math.trunc(sizeBytes),
-      })
-
-      return { uploadUrl: result.uploadUrl, publicUrl: result.publicUrl }
-    } catch (e) {
-      // INVALID_ARGUMENT here is a real answer, not a bug: it is the size
-      // ceiling and the content-type allowlist refusing the file BEFORE it is
-      // transferred. Surfacing `details` is what makes that legible.
-      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { uploadMessage: e.details })
-      }
-      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-        return fail(403, {
-          uploadMessage: "You don't have permission to edit this hackathon",
-        })
-      }
-      if (e instanceof ClientError && e.code === Status.UNAVAILABLE) {
-        return fail(503, {
-          uploadMessage: "File storage is not configured on this server",
-        })
-      }
-      throw e
-    }
-  },
-
+  // The logo upload is NOT here. It was a `presignLogo` action, and an action
+  // can only be reached from the route that declares it — which is why the
+  // logo uploader could not become a component and stayed the only one in the
+  // app. It lives at `./logo` (+server.ts) now, alongside `./media`, and the
+  // page mounts the shared `ImageUploadField` against it.
   edit: async (event) => {
     const { hackathon } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()

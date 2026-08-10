@@ -36,6 +36,7 @@
         cancelHref={backHref}
         submitLabel="Save changes"
         message={form?.message}
+        uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`}
     />
 
     <div class="flex flex-col gap-2 border-t border-line pt-6">

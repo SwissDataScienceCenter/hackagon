@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import ImageUploadField from '$lib/components/forms/ImageUploadField.svelte';
 
     const { data, form } = $props();
 
@@ -19,6 +20,14 @@
 
         return stored ?? '';
     }
+
+    // The picture is the one field the uploader WRITES, so it cannot be a plain
+    // `value=` attribute. A WRITABLE `$derived` is exactly the shape: it follows
+    // the same rule as every other field here, and an upload may overwrite it
+    // until one of its dependencies changes. Neither `form` nor the stored value
+    // moves during an upload, so a picture just chosen is never clobbered — and
+    // a rejected save re-echoes what the person had, like the rest of the form.
+    let avatarUrl = $derived(keep('avatarUrl', data.user?.avatarUrl));
 </script>
 
 <svelte:head><title>Your account · Hackagon</title></svelte:head>
@@ -98,21 +107,29 @@
                     </span>
                 </label>
 
-                <label class="flex flex-col gap-1">
-                    <span class="field-label">Profile picture</span>
-                    <input
-                        name="avatarUrl"
-                        class="field"
-                        type="url"
-                        maxlength="500"
-                        placeholder="https://…"
-                        value={keep('avatarUrl', data.user.avatarUrl)}
-                    />
-                    <span class="text-meta text-ink-3">
-                        A link, not an upload — there is no file storage yet. http or https
-                        only.
-                    </span>
-                </label>
+                <!-- Upload, or paste a link. The picture goes from this browser
+                     straight to the object store under `users/<your-id>/avatar/`
+                     — a prefix `DeleteAccount` purges, so leaving really does
+                     take your face with it. The field carries the PATH it comes
+                     back as, never the presigned URL, which expires.
+
+                     The caption stays a `for`-labelled text input rather than a
+                     wrapper `<label>`: with the file control inside it, the
+                     accessible name "Profile picture" would match two elements
+                     and the field would stop being addressable. -->
+                <ImageUploadField
+                    name="avatarUrl"
+                    bind:value={avatarUrl}
+                    endpoint="/account/avatar"
+                    label="Profile picture"
+                    id="avatar-url"
+                    buttonLabel="Upload a picture"
+                    fileLabel="Choose an image file for your account"
+                    maxMb={5}
+                    previewAlt="Your profile picture"
+                    previewClass="h-20 w-20 rounded-full border border-line object-cover"
+                    hint="PNG, JPEG, WebP or GIF."
+                />
 
                 {#if form?.profileMessage}
                     <p class="m-0 text-xs text-danger-ink" role="alert">{form.profileMessage}</p>

@@ -29,7 +29,13 @@
         </p>
     </div>
 
-    <TrackForm track={data.track} cancelHref={backHref} submitLabel="Save changes" message={form?.message} />
+    <TrackForm
+        track={data.track}
+        cancelHref={backHref}
+        submitLabel="Save changes"
+        message={form?.message}
+        uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`}
+    />
 
     <div class="flex flex-col gap-2 border-t border-line pt-6">
         <h2 class="m-0 meta">Delete this track</h2>

@@ -42,5 +42,6 @@
         submitLabel="Add phase"
         message={form?.message}
         datesEditable={false}
+        uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`}
     />
 </div>

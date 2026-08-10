@@ -32,13 +32,16 @@
     <div class="flex min-w-0 flex-col gap-1">
         <h2 class="m-0 text-lg font-bold text-ink">Photos</h2>
         <!--
-          No fabricated gallery: the platform stores no images. Media is
-          links-first until blob storage lands, so a gallery is an event page
-          the organizers publish with links to wherever the photos live.
+          Still no fabricated gallery: a gallery is an event PAGE the organizers
+          publish, and this tab shows those pages as published. What changed is
+          where the pictures come from — the page editor uploads them into this
+          event's own media prefix (hackathons/<id>/media/, which goes when the
+          event goes), so they no longer have to be hosted somewhere else.
         -->
         <p class="m-0 max-w-2xl text-xs text-ink-3">
-            Hackagon has no photo upload — event galleries are published as event pages
-            linking to wherever the photos live. Those pages are shown here as published.
+            Galleries are event pages the organizers publish. Images can be uploaded
+            straight into a page from its editor, or linked from wherever they already
+            live. Those pages are shown here as published.
         </p>
     </div>
 

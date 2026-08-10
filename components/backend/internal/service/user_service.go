@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"log/slog"
-	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -126,22 +125,12 @@ func (s *UserService) EditProfile(
 		upd = upd.SetDietary(strings.TrimSpace(req.GetDietary()))
 	}
 	if req.AvatarUrl != nil {
-		// Scheme check rather than a proto `uri: true` constraint, which would
-		// reject the empty string and make the picture impossible to remove.
-		//
-		// This value is interpolated into an <img src>, so `javascript:` and
-		// `data:` must not survive: the first executes, and the second lets a
-		// user store arbitrary payloads in a field other people's browsers
-		// fetch. http/https only, or empty.
+		// An uploaded picture arrives as the root-relative path StorageService
+		// minted (`/objects/…`), a pasted one as an absolute link; both are
+		// accepted, and every other scheme is refused. See checkImageRef.
 		avatar := strings.TrimSpace(req.GetAvatarUrl())
-		if avatar != "" {
-			parsed, perr := url.Parse(avatar)
-			if perr != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-				return nil, status.Error(
-					codes.InvalidArgument,
-					"avatar_url must be an http or https link",
-				)
-			}
+		if err := checkImageRef("avatar_url", avatar); err != nil {
+			return nil, err
 		}
 		upd = upd.SetAvatarURL(avatar)
 	}

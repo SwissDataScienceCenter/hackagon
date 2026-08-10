@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import ImageUploadField from '$lib/components/forms/ImageUploadField.svelte';
     import Plus from 'lucide-svelte/icons/plus';
     import Trash2 from 'lucide-svelte/icons/trash-2';
     import type { ActionData, PageData } from './$types';
@@ -11,6 +12,11 @@
             ? data.prizes.map((p) => ({ rank: p.rank, title: p.title, image: p.image }))
             : [{ rank: 1, title: '', image: '' }]
     );
+
+    // The prize picture is event media, so it files under
+    // `hackathons/<id>/media/` and goes when the event does — the same prefix
+    // the page editor uploads into, and the same organiser-only permission.
+    const mediaEndpoint = `/my/hackathon/${data.hackathon.id}/media`;
 
     let confirmingFinalize = $state(false);
 </script>
@@ -42,20 +48,29 @@
         </div>
 
         {#each rows as row, i (i)}
-            <div class="grid gap-2 sm:grid-cols-[3rem_6rem_1fr_auto] sm:items-end">
-                <!-- The prize's picture. Not editable here yet, but it MUST be
-                     submitted: Set replaces the whole table, so a row that came
-                     back without its image would lose it on the next save. -->
-                <input type="hidden" name="image" value={row.image ?? ''} />
-                {#if row.image}
-                    <img
-                        src={row.image}
-                        alt=""
-                        class="h-12 w-12 rounded-field object-cover object-center"
-                    />
-                {:else}
-                    <div class="h-12 w-12 rounded-field border border-dashed border-line"></div>
-                {/if}
+            <div class="grid gap-2 sm:grid-cols-[10rem_6rem_1fr_auto] sm:items-end">
+                <!-- The prize's picture — the trophy, the sponsor's award, the
+                     plaque. `allowUrl={false}` keeps one input named `image` per
+                     row, which is what the action's positional `getAll("image")`
+                     needs; the hidden input still round-trips a picture set by a
+                     seeder or an earlier upload, because Set replaces the whole
+                     table and a row handed back without its image would lose it.
+
+                     It used to be that hidden input ALONE: the value survived a
+                     save and there was no way for a person to choose one. -->
+                <ImageUploadField
+                    name="image"
+                    bind:value={row.image}
+                    endpoint={mediaEndpoint}
+                    label="Picture"
+                    id={`prize-image-${i}`}
+                    buttonLabel="Upload picture"
+                    fileLabel={`Choose a picture for prize ${i + 1}`}
+                    allowUrl={false}
+                    compact
+                    previewAlt=""
+                    previewClass="h-12 w-12 rounded-field object-cover object-center"
+                />
                 <label class="flex flex-col gap-1">
                     <span class="field-label">Rank</span>
                     <!-- Rank orders the table; it is not a unique key, so two

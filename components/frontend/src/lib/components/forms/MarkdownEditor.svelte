@@ -1,5 +1,6 @@
 <script lang="ts">
     import MarkdownContent from './MarkdownContent.svelte';
+    import { IMAGE_ACCEPT, UploadError, altFromFilename, uploadImage } from '$lib/upload';
 
     let {
         id,
@@ -53,55 +54,12 @@
     }
 
     /**
-     * Re-encode to WebP in the browser, before anything is uploaded.
+     * Insert an uploaded image at the caret.
      *
-     * Done here rather than server-side for two reasons: the bytes are already
-     * in the page, and the presign's size and content-type are CONDITIONS on
-     * the signature — converting after signing would guarantee a mismatch, and
-     * converting on the server would mean sending the large original first,
-     * which is what presigned uploads exist to avoid.
-     *
-     * Returns the original untouched when conversion is not appropriate:
-     *   - GIF, because a canvas keeps only the first frame and a silently
-     *     de-animated GIF is worse than a larger file.
-     *   - already-WebP, which has nothing to gain.
-     *   - any failure at all — an older browser, a decode error, or a result
-     *     that came out BIGGER than the original, which happens with flat
-     *     graphics. Uploading the original is always the safe answer.
+     * The upload itself — WebP re-encoding, the presign, the direct PUT — lives
+     * in `$lib/upload`, shared with every other surface that accepts a picture.
+     * It started here, and being here is why nothing else had an uploader.
      */
-    async function toWebp(file: File): Promise<File> {
-        if (file.type === 'image/gif' || file.type === 'image/webp') return file;
-        try {
-            const bitmap = await createImageBitmap(file);
-            // Cap the long edge: photographs off a phone are 4000px+, and no
-            // markdown page renders them above about 1600 CSS pixels.
-            const MAX = 2000;
-            const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
-            const w = Math.round(bitmap.width * scale);
-            const h = Math.round(bitmap.height * scale);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return file;
-            ctx.drawImage(bitmap, 0, 0, w, h);
-            bitmap.close?.();
-
-            const blob = await new Promise<Blob | null>((resolve) =>
-                canvas.toBlob(resolve, 'image/webp', 0.85)
-            );
-            // A browser without WebP encoding returns a PNG instead of null,
-            // so check the type rather than trusting the request.
-            if (!blob || blob.type !== 'image/webp' || blob.size >= file.size) return file;
-
-            const name = file.name.replace(/\.[^.]+$/, '') + '.webp';
-            return new File([blob], name, { type: 'image/webp' });
-        } catch {
-            return file;
-        }
-    }
-
     async function upload(event: Event) {
         const input = event.currentTarget as HTMLInputElement;
         const original = input.files?.[0];
@@ -110,43 +68,12 @@
         uploading = true;
         uploadError = '';
         try {
-            const file = await toWebp(original);
-            const presign = await fetch(uploadEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filename: file.name,
-                    contentType: file.type,
-                    sizeBytes: file.size,
-                }),
-            });
-            if (!presign.ok) {
-                // The server's message names the real limit or rejected type.
-                uploadError = (await presign.text()) || 'Could not start the upload';
-                return;
-            }
-            const { uploadUrl, publicUrl } = await presign.json();
-
-            // Straight to the object store. The declared content type is baked
-            // into the signature, so it has to be sent back exactly.
-            const put = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': file.type },
-                body: file,
-            });
-            if (!put.ok) {
-                uploadError = `Upload failed (${put.status})`;
-                return;
-            }
-
-            // Alt text from the filename: empty alt on a content image is a
-            // hole for anyone using a screen reader, and the person who picked
-            // the file is the only one who knows what it shows.
-            // From the name the PERSON chose, not the converted one.
-            const alt = original.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-            insertAtCaret(`![${alt}](${publicUrl})`);
-        } catch {
-            uploadError = 'Could not reach the object store';
+            const { publicUrl } = await uploadImage(uploadEndpoint, original);
+            insertAtCaret(`![${altFromFilename(original.name)}](${publicUrl})`);
+        } catch (e) {
+            // The backend's message names the real limit or the rejected type.
+            uploadError =
+                e instanceof UploadError ? e.message : 'Could not reach the object store';
         } finally {
             uploading = false;
             // Clear it, or picking the SAME file twice fires no change event.
@@ -187,7 +114,8 @@
                 {uploading ? 'Uploading…' : 'Insert image'}
                 <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    accept={IMAGE_ACCEPT}
+                    aria-label="Choose a file to insert"
                     class="hidden"
                     disabled={uploading}
                     onchange={upload}

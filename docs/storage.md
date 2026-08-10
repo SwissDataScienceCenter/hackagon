@@ -112,8 +112,51 @@ Delete-by-prefix runs in `HackathonService.Delete` and
 `UserService.DeleteAccount`, after the row is gone and unable to fail the
 delete, exactly as above.
 
-**Still to come:** the uploader exists for the event logo only — the smallest
-surface that proves the whole path — on the hackathon edit page. Avatars,
-gallery photos and submission attachments are all authorized and keyed by the
-service already; each needs only its own UI. `CreateDownloadUrl` likewise has no
-caller yet, because nothing uploads a private object to read back.
+## One uploader, not five
+
+`src/lib/upload.ts` (re-encode, presign, PUT) and
+`components/forms/ImageUploadField.svelte` (the control) are the only copy of
+the browser half. That matters more than it sounds: the flow was born inside
+`MarkdownEditor.svelte`, and because using it elsewhere meant copying sixty
+lines of canvas work and protocol detail, the event logo stayed the only other
+uploader for weeks — and it was a bare `<input type="file">` under a full-width
+URL box, which organisers read as "there is only a URL field".
+
+Two shapes on the server side are worth keeping:
+
+- `$lib/server/upload.ts` holds the RPC call and the four error translations
+  once. What a ROUTE decides is only the two things that must never come from a
+  client: the upload KIND and the OWNER id.
+- presigning is an **endpoint** (`+server.ts`), not a form action. An action is
+  reachable only from the route that declares it, so a shared component cannot
+  call one — that is the mechanical reason the logo uploader could not be
+  reused, and why `presignLogo` became `./logo`.
+
+Anything that stores a picture must accept the root-relative path back.
+`UserService.EditProfile` validated `avatar_url` as http/https only, so the
+upload worked and *saving the result* answered `InvalidArgument`; `checkImageRef`
+now takes an absolute link or a `/objects/…` path, and still refuses
+`javascript:`, `data:`, `//host` and `/\host`.
+
+**Where upload is offered:** the event logo and every markdown editor inside an
+event (pages, phases, tracks, the event description), profile pictures, and each
+row of the prize table.
+
+**Still to come:**
+
+- **Project images.** The propose and edit forms take a URL. They are reachable
+  by the PROPOSER, who is a plain Member — and `HACKATHON_MEDIA` authorizes on
+  hackathon `Write`, which Members do not have. Offering upload there means a
+  project-scoped kind, not a new form.
+- **Submission attachments.** `UPLOAD_KIND_SUBMISSION_ATTACHMENT` is
+  authorized and keyed, but `owner_id` is the SUBMISSION, so a file can only be
+  attached to a submission that already exists — today's form fixes the
+  structured answers at create. It also needs somewhere to keep the key
+  (`Submission.form` is `map[string]string`, so a `file` field could hold one)
+  and a link that mints a `CreateDownloadUrl`, which is still the one RPC with
+  no caller.
+- **Platform pages.** `/manage/pages` is the only markdown editor with no
+  uploader at all: a site page belongs to no event, so there is no owning
+  entity to derive a prefix from and nothing whose deletion would purge it. That
+  is a fourth prefix and a deletion story, i.e. a decision for this document
+  rather than a missing form.

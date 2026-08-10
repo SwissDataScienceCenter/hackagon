@@ -6,7 +6,8 @@
         track,
         cancelHref,
         submitLabel,
-        message
+        message,
+        uploadEndpoint
     }: {
         track: {
             name: string;
@@ -17,6 +18,8 @@
         submitLabel: string;
         /** Failure text from the action, if the last submit failed. */
         message?: string;
+        /** Presign endpoint for inline image uploads; see MarkdownEditor. */
+        uploadEndpoint?: string;
     } = $props();
 </script>
 
@@ -55,6 +58,7 @@
             rows={10}
             required
             placeholder="What kind of projects belong in this track?"
+            {uploadEndpoint}
         />
     </div>
 

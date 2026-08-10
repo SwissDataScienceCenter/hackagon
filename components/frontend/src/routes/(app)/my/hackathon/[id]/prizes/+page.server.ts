@@ -59,9 +59,10 @@ export const actions: Actions = {
     const ranks = form.getAll("rank")
     const titles = form.getAll("title")
     // Set replaces the table wholesale, so anything the form does not send back
-    // is deleted. The image is not editable here yet, which makes carrying it
-    // through mandatory rather than optional: without it, opening this page and
-    // pressing Save silently strips every prize's picture.
+    // is deleted — carrying the image through is mandatory rather than optional.
+    // One input named `image` per row, in row order: it pairs POSITIONALLY with
+    // `rank` and `title`, which is why the row's uploader renders a single
+    // hidden field instead of an upload box and a URL box both.
     const images = form.getAll("image")
     const prizes: { rank: number; title: string; image?: string }[] = []
     for (let i = 0; i < titles.length; i++) {

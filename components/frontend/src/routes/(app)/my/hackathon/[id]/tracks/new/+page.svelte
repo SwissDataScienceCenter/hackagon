@@ -27,5 +27,11 @@
         </p>
     </div>
 
-    <TrackForm track={blank} cancelHref={backHref} submitLabel="Create track" message={form?.message} />
+    <TrackForm
+        track={blank}
+        cancelHref={backHref}
+        submitLabel="Create track"
+        message={form?.message}
+        uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`}
+    />
 </div>

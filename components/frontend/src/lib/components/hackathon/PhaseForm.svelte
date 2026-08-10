@@ -10,6 +10,7 @@
         submitLabel,
         message,
         datesEditable = true,
+        uploadEndpoint,
     }: {
         phase: {
             name: string;
@@ -34,6 +35,8 @@
          * organizer typed without telling them.
          */
         datesEditable?: boolean;
+        /** Presign endpoint for inline image uploads; see MarkdownEditor. */
+        uploadEndpoint?: string;
     } = $props();
 
     // See the TODO in the calling +page.server.ts: `Edit` sets dates but never
@@ -158,6 +161,7 @@
             rows={12}
             required
             placeholder="What should participants be doing in this phase?"
+            {uploadEndpoint}
         />
     </div>
 
