@@ -18,7 +18,7 @@ required beyond the repo itself (Nix dev shell via `just`).
 
 ## The recipe = the product spec
 
-`skills/hackathon-e2e/recipe.jsonl` — **309 actions, one JSON per line**,
+`skills/hackathon-e2e/recipe.jsonl` — **329 actions, one JSON per line**,
 covering platform setup → publication → configuration → registration
 (13-person wave, forms, waitlist) → proposals → teams → event days (no-show,
 same-day walk-in, deadline overrides) → voting (single-choice, ranked, points)
@@ -43,10 +43,25 @@ denied (site pages need the *global* Admin role), publish makes it
 world-readable, duplicate/invalid slugs are rejected, and a `<script>` payload
 pasted into the markdown must not execute (`sitePageSanitized`).
 
-Act sizes: 0 = 15, 1 = 42, 2 = 51, 3 = 13, 4 = 29, 5 = 48, 6 = 43, 7 = 37,
-8 = 31. By kind: 254 `rpc`, 27 `ui.assert`, 27 `ui.flow`, 1 `files.generate`.
+Act sizes: 0 = 15, 1 = 46, 2 = 51, 3 = 13, 4 = 29, 5 = 58, 6 = 45, 7 = 40,
+8 = 32. By kind: 255 `rpc`, 29 `ui.assert`, 39 `ui.flow`, 5 `rpc.race`,
+1 `files.generate`.
 
-## Where things stand (2026-08-08)
+**`rpc.race` fires its `calls` simultaneously** (Promise.all over separately
+spawned grpcurl processes — the synchronous driver would serialize them) and
+judges the aggregate (`race.ok` exact success count, `race.failCodesOneOf`
+order-insensitive multisets). The suite stays strictly serial; the concurrency
+lives inside the one action. Every race is followed by a plain rpc that reads
+the END STATE back (`exportBallotCount`, `ownerCount`, `templatesOneOf`, the
+roster) — "both returned OK" and "there is one row" are different claims. The
+two races that reproduced real bugs before their fixes: one voter's four
+simultaneous single-choice ballots double-voted in 7 of 12 hammer rounds
+(closed by `VoteService.ballotMu`), and two owners demoting each other left
+the event with ZERO owners on the first attempt (closed by
+`HackathonService.ownerMu` + casbin `SyncedEnforcer`). Restore steps after a
+race may need `expect.okOr` — which cleanup applies depends on who won.
+
+## Where things stand (2026-08-10)
 
 Work is on `sketch/06-08-26`. **`.claude/` is gitignored there** and tracked on
 `feat/claude` instead (worktree `../hackagon-wt-claude`) — edit the live copy
@@ -54,25 +69,25 @@ under `.claude/` and sync it across.
 
 | Suite | Result | When |
 | --- | --- | --- |
-| journey (309-action recipe) | **312 passed / 0 failed / 0 skipped** | 2026-08-08 |
-| smoke (76 tests, 16 files) | **80 passed** | 2026-08-08 |
+| journey (329-action recipe) | **333 passed / 0 failed / 0 skipped** | 2026-08-10 |
+| smoke (76 tests, 16 files) | **80 passed** | 2026-08-10 |
+| mobile | **121 passed** | 2026-08-10 |
+| backend `go test ./internal/...` | all ok (service 258 specs) | 2026-08-10 |
 | openreplay (7 tests) | **11 passed** | 2026-08-08 |
 | frontend units (9 files) | **154 passed** | 2026-08-08 |
-| mobile | 14 passed | 2026-08-05 |
 
 Playwright totals include the 4 auth-setup tests every suite depends on, so
-journey's 312 is 4 setup + 308 recipe actions. The recipe file has 309 action
-lines: `loadRecipe()` drops any line carrying a `comment` key without checking
-for an `id` first, and `act8.flow.bob` has one — see the silent-green traps
-below.
+journey's 333 is 4 setup + 329 recipe actions. `loadRecipe()` counts by `id`,
+cross-checks against a textual scan and rejects duplicates, so an action line
+can no longer be silently dropped (see the traps below).
 
 ⚠ **`just check::test -c backend` is currently RED**, and not because a test
 fails. The quitsh runner appends `--ginkgo.v` to every package's test binary;
 `internal/audit` and `internal/storage` are plain `testing` packages with no
 ginkgo bootstrap, so they exit 1 on `flag provided but not defined: -ginkgo.v`
 before running anything. Both pass under a plain `go test`. The three Ginkgo
-suites are green: service 257 of 258 specs, middleware 43/43, capability 37/37.
-CI runs the failing command.
+suites are green: service 258 of 259 specs (one pending), middleware 43/43,
+capability 37/37. CI runs the failing command.
 
 **API-to-UI coverage: 99 of 107 RPC declarations have a frontend caller.** The
 eight without one are accounted for in `docs/testing.md` — `PageService.SetOrder`
@@ -218,9 +233,8 @@ hand.
 
 ## Ways a test reported green while proving nothing
 
-The most expensive category of bug here, because nothing turns red. Most are
-now impossible-by-construction rather than fixed case by case; the last one in
-the list is **still live** and is why the recipe has 309 actions and 308 tests.
+The most expensive category of bug here, because nothing turns red. All of
+these are now impossible-by-construction rather than fixed case by case.
 
 - **A locator that contains the thing it asserts about.** Three times now.
   `12-roles` checked the row, which holds a `<select>` whose options are named
@@ -250,12 +264,18 @@ the list is **still live** and is why the recipe has 309 actions and 308 tests.
   nothing was ever captured — on the first run nothing was. `masking.spec.ts`
   therefore runs an **unmasked control first**, and `consent.spec.ts` asserts the
   positive too (the project key IS in the HTML once granted).
-- ⚠ **An action the loader silently drops — still live.** `loadRecipe()` filters
-  every line with a `comment` key, which is how act banners are removed, and it
-  does not check for an `id` first. `act8.flow.bob` carries a trailing `comment`
-  explaining why it runs where it does, so it has never executed: 309 lines,
-  308 tests. Explanatory prose belongs in `outcome` or `todo` on any line that
-  has an `id`.
+- **An action the loader silently drops — closed.** `loadRecipe()` used to
+  filter every line with a `comment` key, which is how act banners are removed,
+  without checking for an `id` first — `act8.flow.bob` carried a trailing
+  `comment` and had never executed. The loader now keeps every line with an
+  `id`, throws on a line that is neither banner nor action, cross-checks the
+  count against a textual scan of the raw file, and rejects duplicate ids.
+- **A field that moved out from under a check.** `usersLackNames` read
+  `u.name`; the User proto has `username` and `displayName` and no `name`, so
+  every user mapped to undefined and "the deleted profiles are gone" passed no
+  matter who was still in the list. It reads `displayName` now and THROWS when
+  no user in the list has one — absence-assertions need a positive control or
+  they agree with everything.
 
 One hole no option closes: the tracker masks TEXT NODES and input values but
 sends ATTRIBUTE values verbatim. `title={userName}` was shipping the signed-in

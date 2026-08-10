@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process"
+import { execFile, execFileSync } from "node:child_process"
 import {
   GRPC_ADDR,
   KEYCLOAK,
@@ -74,6 +74,68 @@ function runGrpcurl(method: string, data: unknown, token?: string): RpcResult {
     const m = raw.match(/Code:\s*(\w+)/)
     return { ok: false, code: m?.[1], raw }
   }
+}
+
+/**
+ * Non-blocking grpcurl for the CONCURRENCY actions (`rpc.race`).
+ *
+ * `runGrpcurl` uses execFileSync, which blocks the event loop — a Promise.all
+ * over it would fire the calls one after another and prove nothing about
+ * simultaneity. This spawns each grpcurl detached and resolves when it exits,
+ * so N calls genuinely overlap on the server. Tokens must be acquired BEFORE
+ * the race (getTokenFor is memoized), or the first call's token round-trip
+ * skews the start line.
+ */
+function runGrpcurlAsync(
+  method: string,
+  data: unknown,
+  token?: string,
+): Promise<RpcResult> {
+  const args = [
+    "-plaintext",
+    ...(token ? ["-H", `authorization: Bearer ${token}`] : []),
+    "-d",
+    JSON.stringify(data ?? {}),
+    GRPC_ADDR,
+    method,
+  ]
+  return new Promise((resolve) => {
+    execFile(
+      "grpcurl",
+      args,
+      { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (!err) {
+          resolve({
+            ok: true,
+            data: stdout.trim() ? JSON.parse(stdout) : {},
+            raw: stdout,
+          })
+          return
+        }
+        const raw = `${stdout ?? ""}${stderr ?? ""}` || err.message
+        const m = raw.match(/Code:\s*(\w+)/)
+        resolve({ ok: false, code: m?.[1], raw })
+      },
+    )
+  })
+}
+
+/** Async authenticated call — the `rpc.race` building block. */
+export async function rpcAsUserAsync(
+  creds: Credentials,
+  method: string,
+  data: unknown = {},
+): Promise<RpcResult> {
+  return runGrpcurlAsync(method, data, await getTokenFor(creds))
+}
+
+/** Async unauthenticated call. */
+export function rpcAnonymousAsync(
+  method: string,
+  data: unknown = {},
+): Promise<RpcResult> {
+  return runGrpcurlAsync(method, data)
 }
 
 /** Unauthenticated call (backend injects anonymous claims). */

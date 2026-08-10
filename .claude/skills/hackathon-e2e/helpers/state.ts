@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import type { PersonaKey } from "../personas.js"
 
 /** Runtime state shared between scripts and tests: storage states, the
  * capability probe result, and the journey recipe's cross-act state. */

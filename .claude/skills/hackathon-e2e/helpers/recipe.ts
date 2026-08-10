@@ -14,7 +14,15 @@ import {
   type Credentials,
   type PersonaKey,
 } from "../personas.js"
-import { rpcAnonymous, rpcAsUser, ensureRegistered } from "./api.js"
+import {
+  rpcAnonymous,
+  rpcAnonymousAsync,
+  rpcAsUser,
+  rpcAsUserAsync,
+  ensureRegistered,
+  getTokenFor,
+  type RpcResult,
+} from "./api.js"
 import { implemented, probed } from "./capabilities.js"
 import { anonymousContext, contextFor, loginViaKeycloak } from "./login.js"
 import { content, dashboardRow, dashboardSection, homeRow } from "./ui.js"
@@ -54,7 +62,24 @@ export interface FlowStep {
   expectUrl?: string
   expectText?: string
   expectHeading?: string
+  /** The element the selector names is VISIBLE (first match). For facts that
+   * page-wide text cannot state unambiguously — a status badge inside one
+   * card, when the same word appears in a filter dropdown. */
+  expectSelector?: string
+  /** No element matching the selector remains — "the control disappeared
+   * because the action it offered is done" (an Approve button after approval,
+   * an Unassign chip control after unassigning). This is the result-changed
+   * assertion for clicks whose effect is REMOVAL. */
+  expectGoneSelector?: string
   back?: boolean
+}
+
+/** One call inside an `rpc.race` action. */
+export interface RaceCall {
+  actor?: string
+  method: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params?: any
 }
 
 export interface RecipeAction {
@@ -73,15 +98,36 @@ export interface RecipeAction {
   t?: string
   title: string
   actor?: string
-  action: "rpc" | "ui.assert" | "ui.flow" | "files.generate"
+  action: "rpc" | "rpc.race" | "ui.assert" | "ui.flow" | "files.generate"
   method?: string
   assert?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: any
   fresh?: boolean
   steps?: FlowStep[]
+  /** rpc.race only: the calls fired SIMULTANEOUSLY (Promise.all over
+   * separately spawned grpcurl processes). Everything else in the suite stays
+   * strictly serial — the concurrency lives inside this one action. */
+  calls?: RaceCall[]
+  /** rpc.race only: the aggregate verdict. `ok` is the exact number of calls
+   * that must succeed; `failCodesOneOf` lists the acceptable MULTISETS of
+   * failure codes (order-insensitive) — more than one entry when which caller
+   * loses is scheduler-dependent but the loser's code depends on who won.
+   * Aggregate results are necessary, not sufficient: pair every race with a
+   * follow-up rpc that reads the END STATE back ("both returned OK" and
+   * "there is one row" are different claims). */
+  race?: { ok: number; failCodesOneOf?: string[][] }
   save?: Record<string, string>
-  expect?: { ok?: boolean; error?: string; check?: string; checkArgs?: unknown }
+  expect?: {
+    ok?: boolean
+    error?: string
+    check?: string
+    checkArgs?: unknown
+    /** Succeed, OR fail with one of these codes — for restore steps whose
+     * starting state depends on which racer won (e.g. demoting someone the
+     * race may or may not have already demoted). */
+    okOr?: string[]
+  }
   /** Gate this action on DIFFERENT method(s) than the one it calls — for
    * steps whose own RPC works but whose precondition is gated (e.g. checking
    * the user list only after DeleteAccount exists), or that need several
@@ -307,10 +353,72 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
     }
   },
   usersLackNames(data, args) {
-    const names = (data.users ?? []).map((u: { name?: string }) => u.name)
+    // `displayName`, not `name`: the User proto has no `name` field, so the
+    // original read of `u.name` mapped every user to undefined and the
+    // not-toContain below passed no matter who was still in the list — the
+    // deletion assertion was vacuously green. The guard makes that shape
+    // impossible: if the field ever moves again, the check throws instead of
+    // agreeing with everything.
+    const names = (data.users ?? []).map(
+      (u: { displayName?: string }) => u.displayName,
+    )
+    expect(
+      names.filter(Boolean).length,
+      "no user in the list has a displayName — the field this check reads has moved",
+    ).toBeGreaterThan(0)
     for (const n of args.names as string[]) {
       expect(names, `deleted profile '${n}' must not appear in the user list`).not.toContain(n)
     }
+  },
+  /** ExportVotes(JSON) → exactly N ballot rows. The race's end-state read:
+   * bytes come back base64-encoded on the grpcurl wire. */
+  exportBallotCount(data, args) {
+    const rows = JSON.parse(
+      Buffer.from((data.data ?? "") as string, "base64").toString("utf8"),
+    ) as { voter_id: string }[]
+    expect(
+      rows,
+      `expected exactly ${args.count} ballot row(s) in the category`,
+    ).toHaveLength(args.count)
+    if (args.oneVoter) {
+      expect(new Set(rows.map((r) => r.voter_id)).size).toBeLessThanOrEqual(1)
+    }
+  },
+  /** The stored record deep-equals exactly ONE of the candidate payloads —
+   * last-writer-wins is the pinned semantics; a field-mix of two concurrent
+   * writers is the lost-update corruption this exists to catch. */
+  templatesOneOf(data, args) {
+    const stored = data.templates ?? {}
+    const matches = (args.candidates as Record<string, string>[]).filter(
+      (c) => JSON.stringify(sortKeys(c)) === JSON.stringify(sortKeys(stored)),
+    )
+    expect(
+      matches.length,
+      `stored templates are a MIX of concurrent writes (or neither write landed): ${JSON.stringify(stored)}`,
+    ).toBe(1)
+  },
+  /** Roster roles by username — the element that states the fact, not the row
+   * around it. */
+  memberRoles(data, args) {
+    const members: { user?: { username?: string }; role?: string }[] =
+      data.hackathon.members ?? []
+    for (const [username, role] of Object.entries(
+      args.roles as Record<string, string>,
+    )) {
+      const m = members.find((x) => x.user?.username === username)
+      expect(m, `no roster row for '${username}'`).toBeTruthy()
+      expect(m?.role, `role of '${username}'`).toBe(role)
+    }
+  },
+  /** The number of Owners on the roster — the invariant the last-organizer
+   * guard exists for is "never zero", and a concurrent mutual demotion is the
+   * way it broke. */
+  ownerCount(data, args) {
+    const members: { role?: string }[] = data.hackathon.members ?? []
+    const owners = members.filter((m) => m.role === "HACKATHON_ROLE_OWNER")
+    expect(owners, `expected exactly ${args.count} owner(s) on the roster`).toHaveLength(
+      args.count,
+    )
   },
   listHasName(data, args) {
     const names = (data.hackathons ?? []).map((h: { name: string }) => h.name)
@@ -334,6 +442,10 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
       "TODO: implement the 'votingWinner' check in helpers/recipe.ts against the final VoteService.Results response shape.",
     )
   },
+}
+
+function sortKeys(o: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)))
 }
 
 // ─── Named UI assertions (`ui.assert`) ───────────────────────────────────────
@@ -458,6 +570,70 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     }
     await expect(visibleText(content(page), "Final", true).first()).toBeVisible()
   },
+  /**
+   * The home row RENDERS the cover it was passed — pixels, not markup. List
+   * rows once accepted a `logo` prop and never mounted it, and every suite
+   * stayed green because they all asserted on text. `naturalWidth > 0` is the
+   * browser saying image bytes actually arrived and decoded.
+   */
+  async homeRowCover(page, args) {
+    await page.goto("/")
+    const row = homeRow(page, args.name)
+    await expect(row).toBeVisible()
+    const img = row.locator("img").first()
+    await expect(img, "the row was given a cover and rendered no <img>").toBeVisible()
+    await expect
+      .poll(
+        () => img.evaluate((el) => (el as HTMLImageElement).naturalWidth),
+        { message: "the cover <img> decoded to zero pixels (broken src?)" },
+      )
+      .toBeGreaterThan(0)
+  },
+  /**
+   * A gallery upload actually SERVES: presign → PUT the bytes → GET them back,
+   * every hop through the frontend server the suite runs against. The presign
+   * RPC succeeded for months while `/objects` 404'd on the adapter-node build,
+   * so the upload went nowhere and no uploaded image ever loaded — this is the
+   * round trip that would have turned red.
+   */
+  async mediaUploadRoundTrip(page, args) {
+    const id = vars.get("hackathonId")
+    if (!id) throw new MissingVar("hackathonId")
+    const png = generateLogoPng(args.seed ?? 2029)
+    const presign = await rpcAsUser(
+      credsFor("hackagon-admin"),
+      "storage.StorageService/CreateUploadUrl",
+      {
+        kind: "UPLOAD_KIND_HACKATHON_MEDIA",
+        ownerId: id,
+        filename: (args.filename as string) ?? "gallery.png",
+        contentType: "image/png",
+        sizeBytes: png.length,
+      },
+    )
+    expect(presign.ok, `CreateUploadUrl failed: ${presign.raw}`).toBe(true)
+    const uploadUrl: string = presign.data.uploadUrl
+    const publicUrl: string = presign.data.publicUrl
+    expect(uploadUrl, "presign returned no uploadUrl").toBeTruthy()
+    expect(publicUrl, "presign returned no publicUrl").toBeTruthy()
+
+    const put = await page.request.put(uploadUrl, {
+      data: png,
+      headers: { "content-type": "image/png" },
+    })
+    expect(
+      put.status(),
+      `PUT ${uploadUrl} answered ${put.status()} — the /objects path is not being served`,
+    ).toBe(200)
+
+    const get = await page.request.get(publicUrl)
+    expect(
+      get.status(),
+      `GET ${publicUrl} answered ${get.status()} — the uploaded object does not load`,
+    ).toBe(200)
+    const body = await get.body()
+    expect(body.length, "the served object is not the uploaded bytes").toBe(png.length)
+  },
   async teamsPage(page, args) {
     const id = vars.get("hackathonId")
     if (!id) throw new MissingVar("hackathonId")
@@ -526,13 +702,22 @@ async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
       ? rpcAnonymous(a.method!, params)
       : await rpcAsUser(credsFor(a.actor), a.method!, params)
 
-  if (a.expect?.error) {
+  if (a.expect?.okOr) {
+    // Restore steps after a race: which cleanup is needed depends on which
+    // racer won, so "already done" (one specific code) is as good as done.
+    if (!res.ok) {
+      expect(
+        a.expect.okOr,
+        `expected success or one of [${a.expect.okOr.join(", ")}], got ${res.code}: ${res.raw}`,
+      ).toContain(res.code)
+    }
+  } else if (a.expect?.error) {
     expect(res.ok, `expected ${a.expect.error} but the call succeeded`).toBe(false)
     expect(res.code, res.raw).toBe(a.expect.error)
   } else {
     expect(res.ok, `${a.method} failed: ${res.raw}`).toBe(true)
   }
-  if (a.expect?.check) {
+  if (a.expect?.check && (res.ok || !a.expect?.okOr)) {
     const check = CHECKS[a.expect.check]
     if (!check) throw new Error(`unknown check '${a.expect.check}' — add it to CHECKS in helpers/recipe.ts`)
     check(res.data, await resolveDeep(a.expect.checkArgs ?? {}))
@@ -545,6 +730,90 @@ async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
       )
     }
     vars.set(name, v)
+  }
+}
+
+/**
+ * Fire every call in `a.calls` SIMULTANEOUSLY and judge the aggregate.
+ *
+ * The suite is serial by design — the story depends on ordering — and stays
+ * that way: the concurrency lives entirely inside this one action, which runs
+ * at its place in the file like any other. Registration and tokens are warmed
+ * BEFORE the start line (both are memoized), so the racing processes measure
+ * the backend and not Keycloak.
+ *
+ * The aggregate alone proves little — "both returned OK" and "there is one
+ * row" are different claims — so every race in the recipe is followed by a
+ * plain rpc action that reads the end state back (exportBallotCount,
+ * ownerCount, templatesOneOf, the roster).
+ */
+async function runRpcRace(test: AnyTest, a: RecipeAction): Promise<void> {
+  const calls = a.calls ?? []
+  if (calls.length < 2) {
+    throw new Error(`[${a.id}] rpc.race needs at least two calls to race`)
+  }
+  if (!a.race) {
+    throw new Error(`[${a.id}] rpc.race needs a 'race' expectation ({ok, failCodesOneOf?})`)
+  }
+  const methods = [...new Set(calls.map((c) => c.method))]
+  const gates = a.gate ? ([] as string[]).concat(a.gate) : methods
+  const unprobed = gates.filter((g) => !probed(g))
+  if (unprobed.length > 0) {
+    throw new Error(
+      `[${a.id}] gate(s) not in scripts/probe.sh METHODS: ${unprobed.join(", ")}. ` +
+        `Add them there, or this action skips forever and never reports it.`,
+    )
+  }
+  const missing = gates.filter((g) => !implemented(g))
+  if (missing.length > 0) {
+    skipAction(test, a, a.todo ?? `backend does not implement yet: ${missing.join(", ")}`)
+    return
+  }
+
+  const actors = [
+    ...new Set(
+      calls.filter((c) => c.actor && c.actor !== "anonymous").map((c) => c.actor!),
+    ),
+  ]
+  for (const actor of actors) {
+    await ensureRegistered(credsFor(actor))
+    await getTokenFor(credsFor(actor))
+  }
+  const resolved = await resolveDeep(calls)
+
+  const results: RpcResult[] = await Promise.all(
+    resolved.map((c) =>
+      c.actor && c.actor !== "anonymous"
+        ? rpcAsUserAsync(credsFor(c.actor), c.method, c.params ?? {})
+        : rpcAnonymousAsync(c.method, c.params ?? {}),
+    ),
+  )
+
+  const okCount = results.filter((r) => r.ok).length
+  const failCodes = results
+    .filter((r) => !r.ok)
+    .map((r) => r.code ?? "?")
+    .sort()
+  const summary = results
+    .map((r, i) => `#${i + 1}:${r.ok ? "OK" : (r.code ?? "?")}`)
+    .join(" ")
+  const failRaw = results
+    .filter((r) => !r.ok)
+    .map((r) => r.raw.trim())
+    .join("\n---\n")
+
+  expect(
+    okCount,
+    `expected exactly ${a.race.ok} of ${calls.length} concurrent calls to succeed, got ${okCount} (${summary})\n${failRaw}`,
+  ).toBe(a.race.ok)
+
+  if (a.race.failCodesOneOf) {
+    const got = JSON.stringify(failCodes)
+    const allowed = a.race.failCodesOneOf.map((set) => JSON.stringify([...set].sort()))
+    expect(
+      allowed,
+      `the losers' codes were ${got}; allowed multisets: ${allowed.join(" | ")}`,
+    ).toContain(got)
   }
 }
 
@@ -635,6 +904,14 @@ async function runFlow(test: AnyTest, a: RecipeAction, browser: Browser): Promis
             .first(),
         ).toBeVisible()
       }
+      if (step.expectSelector) {
+        await expect(page.locator(step.expectSelector).first()).toBeVisible()
+      }
+      if (step.expectGoneSelector) {
+        // toHaveCount(0) auto-retries: the click above may still be in its
+        // enhance round-trip when this runs.
+        await expect(page.locator(step.expectGoneSelector)).toHaveCount(0)
+      }
     }
   } finally {
     await ctx.close()
@@ -676,6 +953,9 @@ export async function runAction(
         await runRpc(test, a)
         // Remember the event name for downstream file metadata.
         if (a.id === "act1.publish" && a.params?.name) vars.set("hackathonName", a.params.name)
+        break
+      case "rpc.race":
+        await runRpcRace(test, a)
         break
       case "ui.assert":
         await runUiAssert(test, a, browser)

@@ -20,10 +20,12 @@ ensure_toolchain "${BASH_SOURCE[0]}" "$@"
 # as unimplemented.
 METHODS=(
   hackathon.ConfigService/SetEmailTemplates
+  hackathon.ConfigService/GetEmailTemplates
   hackathon.ConfigService/SetBranding
   user.UserService/DeleteAccount
   user.UserService/EditProfile
   hackathon.HackathonService/GetRegistrationResponse
+  hackathon.HackathonService/ListRegistrationResponses
   hackathon.HackathonService/CreateInvite
   hackathon.HackathonService/PreviewInvite
   site.SitePageService/Get
@@ -67,6 +69,7 @@ METHODS=(
   hackathon.TeamService/CreateSubmission
   hackathon.TeamService/EditSubmission
   hackathon.TeamService/FinalizeSubmission
+  hackathon.TeamService/ListSubmissions
   vote.VoteService/CreateVoteCategory
   vote.VoteService/SubmitVote
   vote.VoteService/ListVoteResults
