@@ -1,14 +1,21 @@
 <script lang="ts">
-    import { ArrowRight } from 'lucide-svelte';
+    import { ArrowRight, Pencil } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
     import { manageNav } from '$lib/navigation/items';
+    import { canEditHackathon } from '$lib/utils/hackathonRole';
     import { formatPhaseRange } from '$lib/utils/phase';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const state = $derived(data.hackathonState);
+
+    // Its own check rather than this page's own gate, which is the broader
+    // owner-or-admin: `hackathon:write` also wants the owner confirmed, so a
+    // waitlisted owner reaches this page and would land on a 403 in the form.
+    // The backend decides either way; this only decides whether to offer it.
+    const mayEdit = $derived(canEditHackathon(data.myMembership ?? undefined, data.isGlobalAdmin));
 
     // The other organiser destinations, minus this page. Read from `manageNav`
     // rather than listed again here, so an entry added to the sidebar reaches
@@ -36,11 +43,27 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches the other manage pages).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-title text-ink">Manage Hackathon</h2>
-        <span class="text-xs text-ink-3">
-            What participants may do, and where the hackathon is now.
-        </span>
+    <!-- Editing the hackathon's own record — name, dates, visibility, logo,
+         description — rides in the heading rather than among the tiles below:
+         those lead to the things *inside* a hackathon, this one changes the
+         hackathon itself, which is what this page is named after. Outline, not
+         solid: advancing the phase below is this view's one solid action. -->
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="flex min-w-0 flex-col gap-1">
+            <h2 class="m-0 text-title text-ink">Manage Hackathon</h2>
+            <span class="text-xs text-ink-3">
+                What participants may do, and where the hackathon is now.
+            </span>
+        </div>
+        {#if mayEdit}
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/edit`)}
+                class="btn btn-sm btn-outline no-underline"
+            >
+                <Pencil class="h-3 w-3 shrink-0" aria-hidden="true" />
+                Edit details
+            </a>
+        {/if}
     </div>
 
     <!-- The phase pointer. Its own box above the switches, because the two are

@@ -249,8 +249,9 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * gating any of them. So this never offers a link that then refuses. Add a
  * per-entry gate the day an entry needs a narrower one rather than widening this
  * one: `/edit` would be the first, since `canEditHackathon` also requires the
- * owner be confirmed, which is why it is reached from the dashboard and not
- * listed here. `isWaiting` is deliberately not consulted; nor does the backend.
+ * owner be confirmed — which is why it is offered on the Manage Hackathon page,
+ * behind that check of its own, rather than listed here. `isWaiting` is
+ * deliberately not consulted; nor does the backend.
  *
  * Entries follow the order of the participant entries they extend, and most are
  * nested under that entry's route (`/teams/manage` under `/teams`) so
