@@ -10,8 +10,8 @@
         collapsed,
         activeId,
         accent = 'primary',
-        folded = false,
-        onToggleFold,
+        open = true,
+        onToggle,
     }: {
         /** Omit where a heading would just repeat nearby context. */
         label?: string;
@@ -28,9 +28,9 @@
          *  never both render as active. */
         activeId?: string;
         accent?: 'primary' | 'tertiary';
-        /** Hide `items` under the parent row. Ignored on the icon rail. */
-        folded?: boolean;
-        onToggleFold?: () => void;
+        /** Whether `items` show under the parent row. Ignored on the icon rail. */
+        open?: boolean;
+        onToggle?: () => void;
     } = $props();
 
     const ACTIVE_CLASS = {
@@ -53,14 +53,55 @@
     // A section can be heading-only — an organiser has a role worth naming but
     // no pages to link to yet. Collapsed to the icon rail there is no heading to
     // show, so such a section would be an empty bordered strip: drop it instead.
-    const empty = $derived(items.length === 0 && parentItem === undefined);
-    const hidden = $derived(empty && (collapsed || !label));
+    const hidden = $derived(
+        items.length === 0 && parentItem === undefined && (collapsed || !label)
+    );
 
     // Only folds where there is a parent row to fold into, and never on the icon
     // rail: no room for a chevron there, and entries hidden behind a control that
     // is not drawn are stranded.
     const foldable = $derived(parentItem !== undefined && items.length > 0 && !collapsed);
-    const itemsHidden = $derived(foldable && folded);
+    const showItems = $derived(!foldable || open);
+
+    /** `SLIDE_MS` is the same 200ms, stated twice because only CSS can animate. */
+    const SLIDE_MS = 200;
+    const FOLD_TRANSITION =
+        'transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none';
+
+    // Only a deliberate toggle animates. The restored preference and the
+    // route-driven open both arrive on mount, where a slide would play on every
+    // page load for anyone who left the section open.
+    let animated = $state(false);
+
+    // Clipping is what makes the slide read as a reveal, but it also cuts the 2px
+    // focus ring off a row, so it is only on while there is something to clip.
+    // Timed rather than read from `transitionend`, which never fires for a reader
+    // who asked for reduced motion — the ring would then stay clipped for good.
+    let sliding = $state(false);
+    let slideTimer: ReturnType<typeof setTimeout>;
+
+    function toggle() {
+        animated = true;
+        sliding = true;
+        clearTimeout(slideTimer);
+        slideTimer = setTimeout(() => (sliding = false), SLIDE_MS + 50);
+        onToggle?.();
+    }
+
+    const foldClass = $derived(
+        [
+            showItems && !sliding ? '' : 'overflow-hidden',
+            showItems ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+            animated ? FOLD_TRANSITION : '',
+        ].join(' ')
+    );
+
+    // The hairline is what says these belong to the row above; a bare left margin
+    // reads as stray alignment. Dropped on the icon rail, where every row is
+    // centred and there is nothing to indent from.
+    const indent = $derived(
+        parentItem !== undefined && !collapsed ? 'ml-4 border-l border-line pl-1' : ''
+    );
 </script>
 
 {#snippet row(item: NavItem, extraClass = '')}
@@ -123,45 +164,48 @@
             </div>
         {/if}
 
-        {#if parentItem}
-            {#if foldable}
-                <!-- Link and disclosure as siblings: the row is a page of its own,
-                     and a button nested in an anchor is not clickable. -->
-                <div class="flex items-center gap-0.5">
-                    {@render row(parentItem, 'min-w-0 flex-1')}
-                    <button
-                        type="button"
-                        onclick={onToggleFold}
-                        aria-expanded={!folded}
-                        aria-label={folded
-                            ? `Show ${parentItem.label} pages`
-                            : `Hide ${parentItem.label} pages`}
-                        class="flex size-8 shrink-0 items-center justify-center rounded-control
-                               text-ink-3 transition-colors hover:bg-raised hover:text-ink-2"
-                    >
-                        <ChevronDown
-                            class="h-4 w-4 transition-transform {folded ? '-rotate-90' : ''}"
-                            aria-hidden="true"
-                        />
-                    </button>
-                </div>
-            {:else}
-                {@render row(parentItem)}
-            {/if}
+        {#if parentItem && foldable}
+            <!-- Link and disclosure as siblings: the row is a page of its own, and
+                 a button nested in an anchor is not clickable. -->
+            <div class="flex items-center gap-0.5">
+                {@render row(parentItem, 'min-w-0 flex-1')}
+                <button
+                    type="button"
+                    onclick={toggle}
+                    aria-expanded={open}
+                    aria-label={open
+                        ? `Hide ${parentItem.label} pages`
+                        : `Show ${parentItem.label} pages`}
+                    class="flex size-8 shrink-0 items-center justify-center rounded-control
+                           text-ink-3 transition-colors hover:bg-raised hover:text-ink-2"
+                >
+                    <ChevronDown
+                        class="h-4 w-4 transition-transform duration-200
+                               motion-reduce:transition-none {open ? '' : '-rotate-90'}"
+                        aria-hidden="true"
+                    />
+                </button>
+            </div>
+        {:else if parentItem}
+            {@render row(parentItem)}
         {/if}
 
-        {#if !itemsHidden}
-            <!-- The hairline is what says these belong to the row above; a bare
-                 left margin reads as stray alignment. Dropped on the icon rail,
-                 where every row is centred and there is nothing to indent from. -->
+        <!-- Folded by collapsing a single grid row to 0fr rather than by dropping
+             the entries, which is what gives the fold a height to animate. The
+             rows stay in the DOM while closed, so the wrapper is inert and hidden
+             from the accessibility tree: a link nobody can see must not be the
+             next thing Tab reaches. -->
+        {#if items.length > 0}
             <div
-                class="flex flex-col gap-0.5 {parentItem && !collapsed
-                    ? 'ml-4 border-l border-line pl-1'
-                    : ''}"
+                inert={!showItems}
+                aria-hidden={showItems ? undefined : 'true'}
+                class="grid {foldClass}"
             >
-                {#each items as item (item.id)}
-                    {@render row(item)}
-                {/each}
+                <div class="flex min-h-0 flex-col gap-0.5 {indent}">
+                    {#each items as item (item.id)}
+                        {@render row(item)}
+                    {/each}
+                </div>
             </div>
         {/if}
     </div>

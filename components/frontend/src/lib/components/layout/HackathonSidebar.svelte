@@ -146,18 +146,20 @@
         };
     });
 
+    /** Both preferences are per-browser, so neither is worth a round trip. */
+    function remember(key: string, value: boolean) {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(key, String(value));
+    }
+
     function toggleCollapsed() {
         collapsed = !collapsed;
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('sidebar-collapsed', String(collapsed));
-        }
+        remember('sidebar-collapsed', collapsed);
     }
 
     function toggleManage() {
         manageOpen = !manageOpen;
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('sidebar-manage-open', String(manageOpen));
-        }
+        remember('sidebar-manage-open', manageOpen);
     }
 </script>
 
@@ -270,8 +272,8 @@
                 {activeId}
                 collapsed={effectiveCollapsed}
                 accent="tertiary"
-                folded={!manageOpen}
-                onToggleFold={toggleManage}
+                open={manageOpen}
+                onToggle={toggleManage}
             />
         {/if}
     </nav>

@@ -16,6 +16,15 @@ const item = (id: string, extra: Partial<NavItem> = {}): NavItem => ({
   ...extra,
 })
 
+/** The folded rows' wrapper — the chevron carries an `aria-hidden` of its own. */
+const hiddenWrapper = (container: HTMLElement) =>
+  container.querySelector<HTMLElement>('div[aria-hidden="true"]')
+
+/** jsdom does not implement `inert`, so Svelte leaves it as a property there. */
+const inert = (el: HTMLElement | null) =>
+  el?.hasAttribute("inert") === true ||
+  (el as (HTMLElement & { inert?: boolean }) | null)?.inert === true
+
 describe("SidebarNavSection", () => {
   it("renders one link per item, labelled and linked", () => {
     render(SidebarNavSection, {
@@ -187,8 +196,11 @@ describe("SidebarNavSection", () => {
       ...extra,
     })
 
+    // Queried by role, so this is the accessibility tree and not the markup: the
+    // folded rows are still in the DOM to give the height something to animate
+    // from, and it is `inert` plus `aria-hidden` that puts them out of reach.
     it("keeps the parent on the rail while its items are folded away", () => {
-      render(SidebarNavSection, parented({ folded: true }))
+      render(SidebarNavSection, parented({ open: false }))
 
       expect(
         screen.getByRole("link", { name: "hackathon" }),
@@ -197,9 +209,20 @@ describe("SidebarNavSection", () => {
     })
 
     it("shows the items when unfolded", () => {
-      render(SidebarNavSection, parented({ folded: false }))
+      const { container } = render(SidebarNavSection, parented({ open: true }))
 
       expect(screen.getByRole("link", { name: "teams" })).toBeInTheDocument()
+      expect(hiddenWrapper(container)).toBeNull()
+    })
+
+    // Rendered but unreachable, which only holds while both guards are on the
+    // wrapper: `aria-hidden` alone would leave the links in the tab order.
+    it("puts the folded rows out of reach rather than out of the document", () => {
+      const { container } = render(SidebarNavSection, parented({ open: false }))
+
+      const wrapper = hiddenWrapper(container)
+      expect(wrapper).toContainElement(screen.getByText("teams"))
+      expect(inert(wrapper)).toBe(true)
     })
 
     // A sibling of the link rather than part of it: the parent row is a page of
@@ -208,7 +231,7 @@ describe("SidebarNavSection", () => {
       let toggled = 0
       render(
         SidebarNavSection,
-        parented({ folded: true, onToggleFold: () => (toggled += 1) }),
+        parented({ open: false, onToggle: () => (toggled += 1) }),
       )
 
       const chevron = screen.getByRole("button", { name: /Show hackathon/ })
@@ -232,10 +255,10 @@ describe("SidebarNavSection", () => {
       expect(screen.queryByRole("button")).toBeNull()
     })
 
-    // No chevron is drawn there, so a stored "folded" would blank the icons with
+    // No chevron is drawn there, so a stored "closed" would blank the icons with
     // no control left to bring them back.
-    it("ignores folded on the icon rail", () => {
-      render(SidebarNavSection, parented({ collapsed: true, folded: true }))
+    it("ignores the fold state on the icon rail", () => {
+      render(SidebarNavSection, parented({ collapsed: true, open: false }))
 
       expect(screen.getByRole("link", { name: "teams" })).toBeInTheDocument()
       expect(screen.queryByRole("button")).toBeNull()
