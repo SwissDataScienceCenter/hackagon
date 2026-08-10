@@ -102,6 +102,15 @@ describe("MarkdownEditor panes", () => {
     expect(body.querySelector("li")?.textContent).toBe("Be kind")
   })
 
+  it("does not render the preview while writing", async () => {
+    // Not merely hidden: the preview holds a `$derived` that parses and
+    // sanitizes the whole field, and leaving it mounted means paying for that
+    // on every keystroke to produce markup nobody is looking at.
+    const { container } = await editing("## Rules", 0)
+
+    expect(container.querySelector(".markdown-body")).toBeNull()
+  })
+
   it("keeps the field in the form while the preview is showing", async () => {
     const { container } = await editing("some text", 0)
 

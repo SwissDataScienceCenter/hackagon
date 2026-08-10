@@ -90,11 +90,7 @@ function replaceBlock(edit: Edit, rewrite: (lines: string[]) => Line[]): Edit {
  * With nothing selected it drops in `placeholder` and selects that, so the
  * button is useful before you have typed anything.
  */
-export function toggleWrap(
-  edit: Edit,
-  marker: string,
-  placeholder: string,
-): Edit {
+function toggleWrap(edit: Edit, marker: string, placeholder: string): Edit {
   const { value, start, end } = edit
   const selected = value.slice(start, end)
   const width = marker.length

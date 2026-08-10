@@ -10,6 +10,7 @@
     import Quote from 'lucide-svelte/icons/quote';
 
     import MarkdownContent from './MarkdownContent.svelte';
+    import MarkdownHelp from './MarkdownHelp.svelte';
     import {
         continueList,
         cycleHeading,
@@ -127,16 +128,18 @@
         if (event.key === 'Enter' && !mod && !event.shiftKey && !event.altKey) {
             // Ask first, act second: whether Enter is ours depends on where the
             // caret is, and `preventDefault` has to be decided synchronously.
+            // The answer is then handed to `apply` rather than recomputed, so
+            // the decision and the edit cannot disagree.
             if (!area) return;
-            const handled = continueList({
+            const next = continueList({
                 value: text,
                 start: area.selectionStart,
                 end: area.selectionEnd,
             });
-            if (!handled) return;
+            if (!next) return;
 
             event.preventDefault();
-            void apply(continueList);
+            void apply(() => next);
             return;
         }
 
@@ -164,11 +167,12 @@
                 {/if}
                 {#each group as tool (tool.label)}
                     {@const Icon = tool.icon}
+                    {@const label = hint(tool)}
                     <button
                         type="button"
                         class="btn btn-sm btn-icon btn-quiet"
-                        title={hint(tool)}
-                        aria-label={hint(tool)}
+                        title={label}
+                        aria-label={label}
                         disabled={mode === 'preview'}
                         onclick={() => apply(tool.run)}
                     >
@@ -235,60 +239,23 @@
         class="field field-area {mode === 'preview' ? '' : 'hidden'}"
         style="min-height: {rows * 1.3}rem"
     >
-        {#if text.trim()}
-            <MarkdownContent content={text} />
-        {:else}
-            <p class="m-0 text-ink-3">Nothing to preview yet.</p>
+        <!-- Mounted only while it is showing, unlike the textarea above, which
+             has to stay for the form. `hidden` alone would leave it live: the
+             preview holds no form value but it does hold a `$derived`, so every
+             keystroke would parse and sanitize the whole field to produce
+             markup behind `display: none`. On the 10,000-character
+             descriptions four of these forms allow, that is not free. -->
+        {#if mode === 'preview'}
+            {#if text.trim()}
+                <MarkdownContent content={text} />
+            {:else}
+                <p class="m-0 text-ink-3">Nothing to preview yet.</p>
+            {/if}
         {/if}
     </div>
 
     <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
-        <!-- Closed by default and one line tall: the toolbar covers what most
-             people need, and this is for the things it has no button for. -->
-        <details class="min-w-0 text-xs">
-            <summary class="cursor-pointer text-ink-3 select-none hover:text-ink-2">
-                Formatting help
-            </summary>
-            <dl
-                class="mt-2 grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1.5 text-ink-3"
-            >
-                <dt><code>**bold**</code></dt>
-                <dd class="m-0"><strong class="text-ink">bold</strong></dd>
-
-                <dt><code>_italic_</code></dt>
-                <dd class="m-0"><em>italic</em></dd>
-
-                <dt><code>## Heading</code></dt>
-                <dd class="m-0">a section heading</dd>
-
-                <dt><code>- item</code></dt>
-                <dd class="m-0">a bulleted list — Enter continues it, Enter twice ends it</dd>
-
-                <dt><code>1. item</code></dt>
-                <dd class="m-0">a numbered list, renumbered as you go</dd>
-
-                <dt><code>- [ ] task</code></dt>
-                <dd class="m-0">a checklist</dd>
-
-                <dt><code>[text](https://…)</code></dt>
-                <dd class="m-0">a link</dd>
-
-                <dt><code>![alt](https://…)</code></dt>
-                <dd class="m-0">an image</dd>
-
-                <dt><code>&gt; quote</code></dt>
-                <dd class="m-0">an indented quotation</dd>
-
-                <dt><code>| a | b |</code></dt>
-                <dd class="m-0">a table row — put <code>| --- | --- |</code> under the first</dd>
-
-                <dt><code>---</code></dt>
-                <dd class="m-0">a horizontal divider</dd>
-
-                <dt>Enter</dt>
-                <dd class="m-0">a new line; leave a blank line to start a paragraph</dd>
-            </dl>
-        </details>
+        <MarkdownHelp />
 
         {#if maxlength}
             <!-- Only once it is close enough to matter: a counter sitting at
