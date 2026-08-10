@@ -220,9 +220,9 @@ describe("PHASE_CAPABILITIES", () => {
 })
 
 describe("capabilityDescription", () => {
-  // The switches are rendered from PHASE_CAPABILITIES, so a capability with a
-  // label and no description would render a row that explains nothing.
-  it("describes every capability that has a label", () => {
+  // One table holds both fields, so the pairing is structural — what is left to
+  // check is that nobody left a sentence empty beside a switch.
+  it("describes every capability the switches render", () => {
     for (const c of PHASE_CAPABILITIES) {
       expect(capabilityDescription(c.value)).toBeTruthy()
     }

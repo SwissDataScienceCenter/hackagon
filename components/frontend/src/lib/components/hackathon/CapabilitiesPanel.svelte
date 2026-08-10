@@ -103,8 +103,8 @@
                  checkboxes from server state. Considered and accepted — the two
                  areas are visually distinct, and guarding it would need client
                  state for a small win. -->
-            <!-- Outline, not solid: this panel shares the timeline page with
-                 "Add phase", which is the one action that page is for. -->
+            <!-- Outline, not solid: the solid button on this page moves the phase
+                 marker, and two of them would read as equal footing. -->
             <button type="submit" class="btn btn-sm w-fit btn-outline-accent">
                 Save changes
             </button>
