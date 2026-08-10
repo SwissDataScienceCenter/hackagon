@@ -35,6 +35,10 @@ export const load: PageServerLoad = async (event) => {
     error(403, "Only the hackathon organizer can manage this hackathon")
   }
 
+  // Counted the way Manage Participants counts its rows — it drops a member with
+  // no user too — so the two never disagree about how many are here or waiting.
+  const people = hackathon.members.filter((m) => m.user !== undefined)
+
   return {
     hackathonId: hackathon.id,
     hackathonName: hackathon.name,
@@ -44,6 +48,10 @@ export const load: PageServerLoad = async (event) => {
       value: c as number,
       enabled: hackathonState.enabled.includes(c as number),
     })),
+    // Approving is the one organiser action this page never led to, because the
+    // tile it lived behind named the screen and not the queue.
+    participantCount: people.length,
+    waitingCount: people.filter((m) => m.isWaiting).length,
   }
 }
 
