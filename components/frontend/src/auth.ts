@@ -114,11 +114,31 @@ export const getAuthOptions = (
           }
 
           logger.info("JWT Callback: Token refreshed successfully.")
+
+          // Why `id_token` is neither stored nor carried forward: this object is
+          // encrypted straight into the session cookie, and Auth.js splits that
+          // cookie into chunks once the value passes 3936 bytes (@auth/core
+          // ALLOWED_COOKIE_SIZE 4096, less 160 for attributes). Access + refresh
+          // token alone encrypt to ~3.5 kB, so adding the ~1.2 kB id_token
+          // pushed it to ~5 kB — two ~4 kB Set-Cookie headers, which overflows
+          // a reverse proxy's default 4 kB response-header buffer and turns
+          // every response into a 502. Nothing reads it, so nothing is lost.
+          //
+          // The destructure is what evicts it. Sessions minted before this fix
+          // already carry `idToken`, and the spread below would re-encrypt it on
+          // every refresh — leaving exactly the users who hit the 502 stuck
+          // behind an oversized cookie until they cleared it by hand. It is off
+          // the JWT type deliberately, so this cast is the only place that
+          // admits the legacy field exists.
+          const { idToken, ...carried } = token as CustomJWT & {
+            idToken?: string
+          }
+          void idToken
+
           // Update token with new values
           return {
-            ...token, // Keep existing info like userId, organization, etc.
+            ...carried, // Keep existing info like userId, organization, etc.
             accessToken: refreshedTokens.access_token,
-            idToken: refreshedTokens.id_token, // Keycloak often sends updated id_token
             expiresAt:
               Math.floor(Date.now() / 1000) + refreshedTokens.expires_in,
 
