@@ -41,6 +41,11 @@ components/frontend/src/lib/server/grpc/generated
 # pnpm store created inside containers (bind-mount filesystem boundary)
 .pnpm-store/
 
+# Stray stderr redirects. dbml-error.log was committed empty and unreferenced
+# — nothing in the repo writes it — after someone redirected a validation run
+# once. A tool that needs a log should write it under its own out/ directory.
+*-error.log
+
 # Transient OIDC-config backups made while a login-capable tunnel is wired
 # (cloudflare-tunnel skill, auth-wire.sh)
 *.pretunnel
