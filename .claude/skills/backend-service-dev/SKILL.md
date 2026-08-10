@@ -24,7 +24,7 @@ don't assume, and don't rely on any written inventory. For dev fixture data, use
 ## Proto layout
 
 ```
-api/proto/<domain>/              # hackathon, user, health
+api/proto/<domain>/              # hackathon, user, vote
 ├── <name>_service.proto         # service definition (RPCs)
 ├── entities/                    # nouns (domain types, enums)
 └── messages/<svc>_svc/          # verbs (request/response payloads)
@@ -35,8 +35,8 @@ The `_svc` suffix is a **buf workaround** for path-segment name collisions (buf
 rejects `hackathon/messages/hackathon/`); it means "messages belonging to
 service X". Don't try to tidy it away.
 
-Fully-qualified names come from the proto `package`, not the folder —
-`health.*`, `user.*`, everything else `hackathon.*`.
+Fully-qualified names come from the proto `package`, not the folder — `user.*`,
+`vote.*`, everything else `hackathon.*`.
 
 ## Add or change a handler
 

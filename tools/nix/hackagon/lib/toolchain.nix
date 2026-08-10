@@ -145,7 +145,8 @@ let
                     };
                     readiness_probe = {
                       exec = {
-                        command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 health.HealthService/Check";
+                        # Well-known gRPC health service, not a repo-local proto.
+                        command = "${pkgs.grpcurl}/bin/grpcurl -plaintext localhost:3000 grpc.health.v1.Health/Check";
                       };
                       initial_delay_seconds = 10;
                       timeout_seconds = 5;

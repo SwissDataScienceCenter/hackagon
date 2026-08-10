@@ -35,7 +35,7 @@ just this service directly:
 go run ./cmd/service/ --config-dir ./data/test/config/
 
 # Health check (grpcurl is only on PATH inside the Nix shell)
-grpcurl -plaintext localhost:3000 health.HealthService/Check
+grpcurl -plaintext localhost:3000 grpc.health.v1.Health/Check
 ```
 
 Config precedence is defaults → `config.yaml` → environment. Env vars use the

@@ -25,7 +25,7 @@ help:
     echo ""
     echo -e "  ${cyan}just rpc::unauth${reset} <method> [data]"
     echo -e "  ${dim}Call a gRPC method without authentication${reset}"
-    echo -e "  ${dim}e.g. just rpc::unauth health.HealthService/Check${reset}"
+    echo -e "  ${dim}e.g. just rpc::unauth grpc.health.v1.Health/Check${reset}"
     echo ""
 
 # Call a gRPC method with an access token for a given user.

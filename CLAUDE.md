@@ -34,7 +34,7 @@ Backend skills are at `.claude/skills/`; frontend skills at
 
 ```
 api/proto/
-├── <domain>/                     # hackathon, user, health
+├── <domain>/                     # hackathon, user, vote
 │   ├── <name>_service.proto      # service definition (RPCs)
 │   ├── entities/                 # nouns (domain types, enums)
 │   └── messages/<svc>_svc/       # verbs (request/response payloads)
