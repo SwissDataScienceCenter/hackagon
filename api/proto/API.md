@@ -2310,6 +2310,7 @@ Will become caller-dependent, so clients must not cache it across users. |
 Populated wherever `capabilities` is, which is Get AND List: a facade that appeared on only one of them would be a worse contract than no facade.
 
 Tag 27 because main&#39;s 19 is our `settings` and 1-26 are all in use here. A main client therefore finds `state` at a different number than it expects — the shape is compatible, the address on this message is not, and renumbering shipped fields to fix that would break every caller we have. |
+| max_participants | [int32](#int32) | optional | Maximum number of CONFIRMED participants; people on the waiting list do not consume a place. Absent or 0 means unlimited. When set, Join hands out free places first-come-first-served while nobody is waiting, and a full event queues new registrants instead of refusing them. Organizers may approve past this number — it is their estimate of the room, not a law. |
 
 
 
@@ -2789,6 +2790,7 @@ Clearing deliberately does NOT touch capabilities. Advancing applies the ones sc
 | visibility | [hackathon.entities.Visibility](#hackathon-entities-Visibility) |  |  |
 | description | [string](#string) | optional |  |
 | logo | [string](#string) | optional | A `uri = true` rule here rejected BOTH values this platform actually produces: the empty string (an event with no cover yet, which is every event at Create time) and the root-relative `/objects/...` path that StorageService returns and cmd/seed writes. Only a full absolute URL passed — the one shape we do not generate. Edit.logo never had the rule, so the same value was accepted or refused depending on which RPC you used. |
+| max_participants | [int32](#int32) | optional | Maximum number of CONFIRMED participants. 0 or absent means unlimited. |
 
 
 
@@ -2982,6 +2984,7 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 | starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | logo | [string](#string) | optional | Same rule as Create.logo, so a value is accepted or refused by what it IS rather than by which RPC it arrived on. |
+| max_participants | [int32](#int32) | optional | Absent leaves the capacity unchanged; 0 clears it back to unlimited. Lowering it below the current confirmed count is allowed and removes nobody — the number is the organizer&#39;s estimate, the roster is theirs. |
 
 
 
@@ -3450,6 +3453,8 @@ confirms whether a given hackathon id exists.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+| waitlisted | [bool](#bool) |  | True when this join landed on the waiting list (pending an organizer&#39;s approval or a freed place); false when it took a confirmed place outright. Joining a full event SUCCEEDS and queues — this flag is how a client tells &#34;you&#39;re in&#34; from &#34;you&#39;re number N in the queue&#34;. |
+| queue_position | [int32](#int32) |  | 1-based place in the waiting queue (join order) when waitlisted; 0 when confirmed. An idempotent re-join reports the caller&#39;s current state. |
 
 
 

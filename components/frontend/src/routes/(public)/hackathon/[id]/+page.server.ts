@@ -115,8 +115,9 @@ export const actions: Actions = {
       })
       .catch(() => false)
 
+    let joinResult
     try {
-      await client.join({ hackathonId: event.params.id })
+      joinResult = await client.join({ hackathonId: event.params.id })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
         return fail(403, { message: "You can't join this hackathon" })
@@ -133,6 +134,13 @@ export const actions: Actions = {
     // to them, because joining is only half of signing up.
     if (asksQuestions) redirect(303, `/register/${event.params.id}`)
 
-    return { joined: true }
+    // The backend's verdict travels with the success: a join that lands on the
+    // waiting list of a full event SUCCEEDED, and "you're in" versus "you're
+    // number 4 in the queue" is exactly what the person who clicked wants told.
+    return {
+      joined: true,
+      waitlisted: joinResult.waitlisted,
+      queuePosition: joinResult.queuePosition,
+    }
   },
 }

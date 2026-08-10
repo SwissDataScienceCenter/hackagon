@@ -173,6 +173,12 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		p := h.CurrentPhaseID.String()
 		e.CurrentPhaseId = &p
 	}
+	// Also a plain column. Absent on the wire when unlimited (NULL), so the
+	// one state has one spelling for clients too.
+	if h.MaxParticipants != nil && *h.MaxParticipants > 0 {
+		v := *h.MaxParticipants
+		e.MaxParticipants = &v
+	}
 	// Branding lives on the forms row, so it only arrives when the caller
 	// eager-loaded WithForms(). A missing edge is indistinguishable from no
 	// branding here on purpose: both mean "render the default theme".

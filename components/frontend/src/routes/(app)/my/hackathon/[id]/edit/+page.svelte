@@ -213,6 +213,29 @@
                 />
             </label>
 
+            <!-- Capacity is enforced at Join: while a place is free (and nobody
+                 is queued) joining confirms outright; a full event queues new
+                 registrants. Approving from the waiting list may exceed this
+                 number — it is the organiser's estimate, not a hard wall. -->
+            <label class="{LABEL_CLASS} sm:col-span-2">
+                Capacity (optional)
+                <input
+                    type="number"
+                    name="maxParticipants"
+                    min="0"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="Unlimited"
+                    value={hackathon.maxParticipants ?? ''}
+                    class={FIELD_CLASS}
+                />
+                <span class="text-meta text-ink-3">
+                    Confirmed participants only — the waiting list never counts
+                    against it. Leave empty (or 0) for unlimited; uncapped events
+                    keep the approve-by-hand flow.
+                </span>
+            </label>
+
             {#if hasDates}
                 <p class="m-0 text-xs text-ink-3 sm:col-span-2">
                     Dates can be changed but not removed.

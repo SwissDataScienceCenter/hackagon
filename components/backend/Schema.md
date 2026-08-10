@@ -67,6 +67,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `visibility` | enum(public, private) | yes | no | no | no | Controls whether non-participants can discover this hackathon. |
 | `description` | string | no | no | no | no | Detailed description of the hackathon, supports rich text. |
 | `logo` | string | no | no | no | no | URL or path to the hackathon logo image. |
+| `max_participants` | int32 | no | no | no | no | Maximum number of CONFIRMED participants (is_waiting=false); the waiting list is not counted. Nil or 0 means unlimited — the default, and the behaviour of every row that predates the column, so no existing event is silently capped. |
 | `current_phase_id` | uuid.UUID | no | no | no | no | The phase an organizer has declared current. Nil means fall back to deriving it from phase dates, which is right before the event but wrong during one, where the schedule always slips. |
 
 ### Relationships

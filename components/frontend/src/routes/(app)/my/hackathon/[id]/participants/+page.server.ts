@@ -33,6 +33,9 @@ export const load: PageServerLoad = async (event) => {
   return {
     participants,
     ownerCount,
+    // 0 means unlimited — the page renders the fullness gauge and the
+    // over-capacity warning only when a cap is set.
+    maxParticipants: hackathon.maxParticipants ?? 0,
     mayManage: mayManageParticipants(myMembership ?? undefined, isGlobalAdmin),
   }
 }

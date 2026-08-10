@@ -44,6 +44,14 @@ type HackathonService struct {
 	// AddOwner takes the same lock so a double-add cannot slip a duplicate
 	// grouping row between casbin's own check and insert.
 	ownerMu sync.Mutex
+	// capacityMu serializes every write to the roster a capacity decision
+	// reads. Join's seat check is check-then-act — count the confirmed roster,
+	// then insert — so N simultaneous Joins for the last free place all
+	// counted it free and the event oversold (measured: 6 concurrent joins for
+	// 1 seat confirmed 3 of them). ApproveParticipant and RemoveParticipant
+	// take the same lock because they move the counts Join decides on. Same
+	// single-instance limitation as ownerMu and VoteService.ballotMu.
+	capacityMu sync.Mutex
 }
 
 func NewHackathonService(
@@ -101,6 +109,11 @@ func (s *HackathonService) Create(
 	}
 	if req.GetLogo() != "" {
 		q = q.SetLogo(req.GetLogo())
+	}
+	// 0 and absent both mean unlimited, and unlimited is stored as NULL so the
+	// column has one spelling for it.
+	if req.GetMaxParticipants() > 0 {
+		q = q.SetMaxParticipants(req.GetMaxParticipants())
 	}
 	h, err := q.Save(ctx)
 	if err != nil {
@@ -396,31 +409,15 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Check if user already exists in hackathon (approved or waitlisted)
-	_, err = s.dbClient.Participant.Query().Where(
-		entparticipant.HackathonIDEQ(id),
-		entparticipant.UserID(user.ID),
-	).Only(ctx)
-	if err == nil {
-		// Already a participant - return success with existing hackathon ID
-		return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
-	}
-	if !ent.IsNotFound(err) {
-		slog.Error("check existing participant", "err", err)
-
-		return nil, status.Error(codes.Internal, "couldn't check participant status")
-	}
-
-	// User doesn't have a participant record - create new participant with is_waiting=true (pending approval)
-	_, err = s.dbClient.Participant.Create().
-		SetHackathonID(id).
-		SetUserID(user.ID).
-		SetIsWaiting(true).
-		Save(ctx)
+	// The seat decision and the row that takes it are one unit: everything from
+	// the duplicate check through the insert runs under capacityMu, or two
+	// joins racing for the last free place both count it free and the event
+	// oversells. See capacity.go for the rule this section enforces.
+	s.capacityMu.Lock()
+	waitlisted, queuePos, err := s.joinRoster(ctx, h, user)
+	s.capacityMu.Unlock()
 	if err != nil {
-		slog.Error("create participant", "err", err)
-
-		return nil, status.Errorf(codes.Internal, "couldn't join hackathon")
+		return nil, err
 	}
 
 	// Everyone on the roster holds the Member role; is_waiting carries the
@@ -433,7 +430,109 @@ func (s *HackathonService) Join(
 		return nil, status.Errorf(codes.Internal, "couldn't set hackathon member permission")
 	}
 
-	return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
+	return &msgs.JoinResponse{
+		HackathonId:   h.ID.String(),
+		Waitlisted:    waitlisted,
+		QueuePosition: queuePos,
+	}, nil
+}
+
+// joinRoster writes (or finds) the caller's participant row and reports where
+// they stand: confirmed, or waitlisted at a 1-based queue position.
+//
+// MUST be called holding s.capacityMu — the confirmed/waiting counts it reads
+// and the row it inserts are one atomic decision, and ApproveParticipant /
+// RemoveParticipant move the same counts under the same lock.
+func (s *HackathonService) joinRoster(
+	ctx context.Context,
+	h *ent.Hackathon,
+	user *ent.User,
+) (waitlisted bool, queuePos int32, err error) {
+	// Already on the roster (approved or waitlisted): joining again is a no-op
+	// that reports the current state, so a double-click and a status refresh
+	// are the same request.
+	existing, err := s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(h.ID),
+		entparticipant.UserID(user.ID),
+	).Only(ctx)
+	if err == nil {
+		if !existing.IsWaiting {
+			return false, 0, nil
+		}
+		pos, err := s.queuePositionOf(ctx, h.ID, existing)
+		if err != nil {
+			return false, 0, err
+		}
+
+		return true, pos, nil
+	}
+	if !ent.IsNotFound(err) {
+		slog.Error("check existing participant", "err", err)
+
+		return false, 0, status.Error(codes.Internal, "couldn't check participant status")
+	}
+
+	confirmed, err := s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(h.ID),
+		entparticipant.IsWaitingEQ(false),
+	).Count(ctx)
+	if err != nil {
+		slog.Error("count confirmed participants", "err", err)
+
+		return false, 0, status.Error(codes.Internal, "couldn't count participants")
+	}
+	waiting, err := s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(h.ID),
+		entparticipant.IsWaitingEQ(true),
+	).Count(ctx)
+	if err != nil {
+		slog.Error("count waitlisted participants", "err", err)
+
+		return false, 0, status.Error(codes.Internal, "couldn't count participants")
+	}
+
+	waitlisted = joinLandsWaitlisted(h.MaxParticipants, confirmed, waiting)
+
+	if _, err := s.dbClient.Participant.Create().
+		SetHackathonID(h.ID).
+		SetUserID(user.ID).
+		SetIsWaiting(waitlisted).
+		Save(ctx); err != nil {
+		slog.Error("create participant", "err", err)
+
+		return false, 0, status.Errorf(codes.Internal, "couldn't join hackathon")
+	}
+
+	if !waitlisted {
+		return false, 0, nil
+	}
+
+	// Counted under the lock, so `waiting` is exactly the queue ahead of this
+	// row — no re-read needed.
+	return true, int32(waiting) + 1, nil
+}
+
+// queuePositionOf reports a waitlisted participant's 1-based place in the
+// queue: rows that joined strictly earlier, plus one. Two rows created the
+// same instant share a position, which costs a duplicate number in a corner
+// case rather than an arbitrary tiebreak pretending to be an order.
+func (s *HackathonService) queuePositionOf(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	p *ent.Participant,
+) (int32, error) {
+	ahead, err := s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(hackathonID),
+		entparticipant.IsWaitingEQ(true),
+		entparticipant.CreatedAtLT(p.CreatedAt),
+	).Count(ctx)
+	if err != nil {
+		slog.Error("count queue ahead", "err", err)
+
+		return 0, status.Error(codes.Internal, "couldn't count participants")
+	}
+
+	return int32(ahead) + 1, nil
 }
 
 func (s *HackathonService) ApproveParticipant(
@@ -500,7 +599,12 @@ func (s *HackathonService) ApproveParticipant(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Update participant record to set is_waiting=false (approved)
+	// Update participant record to set is_waiting=false (approved). Under
+	// capacityMu because this raises the confirmed count Join decides on.
+	// Deliberately NO capacity refusal here: the organizer can see the room,
+	// and approving past the cap is their call — the participants page shows
+	// the overshoot so it is a decision, not an accident.
+	s.capacityMu.Lock()
 	_, err = s.dbClient.Participant.Update().
 		Where(
 			entparticipant.HackathonIDEQ(id),
@@ -508,6 +612,7 @@ func (s *HackathonService) ApproveParticipant(
 		).
 		SetIsWaiting(false).
 		Save(ctx)
+	s.capacityMu.Unlock()
 	if err != nil {
 		slog.Error("update participant", "err", err)
 
@@ -587,13 +692,18 @@ func (s *HackathonService) RemoveParticipant(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Delete the participant record
+	// Delete the participant record. Under capacityMu because removing a
+	// confirmed participant frees a place Join decides on. The freed place is
+	// NOT handed to the next waitlisted person automatically — see capacity.go
+	// for why promotion stays the organizer's move.
+	s.capacityMu.Lock()
 	_, err = s.dbClient.Participant.Delete().
 		Where(
 			entparticipant.HackathonIDEQ(id),
 			entparticipant.UserID(user.ID),
 		).
 		Exec(ctx)
+	s.capacityMu.Unlock()
 	if err != nil {
 		slog.Error("delete participant", "err", err)
 
@@ -870,6 +980,15 @@ func (s *HackathonService) Edit(
 	}
 	if req.Logo != nil {
 		update = update.SetLogo(req.GetLogo())
+	}
+	if req.MaxParticipants != nil {
+		if req.GetMaxParticipants() > 0 {
+			update = update.SetMaxParticipants(req.GetMaxParticipants())
+		} else {
+			// 0 clears back to unlimited, stored as NULL — same one spelling
+			// Create uses.
+			update = update.ClearMaxParticipants()
+		}
 	}
 
 	_, err = update.Save(ctx)

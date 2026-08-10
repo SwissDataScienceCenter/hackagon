@@ -38,4 +38,6 @@ message CreateRequest {
       expression: "this == '' || this.startsWith('/') || this.startsWith('http://') || this.startsWith('https://') || this.startsWith('data:image/')"
     }
   ];
+  // Maximum number of CONFIRMED participants. 0 or absent means unlimited.
+  optional int32 max_participants = 7 [(buf.validate.field).int32.gte = 0];
 }

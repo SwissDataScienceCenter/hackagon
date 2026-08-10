@@ -85,16 +85,30 @@
             </a>
         {:else if cta === 'waiting'}
             <h2 class="m-0 text-display">You're on the waitlist</h2>
+            {#if form?.joined && form.waitlisted && form.queuePosition}
+                <!-- Fresh from the Join just made: where exactly they stand. -->
+                <p class="m-0 text-sm text-ink-2" role="status">
+                    You're number {form.queuePosition} in the queue.
+                </p>
+            {/if}
             <p class="m-0 text-sm text-ink-2">
                 An organiser reviews registrations — the full event view opens once yours is
                 confirmed.
             </p>
         {:else if cta === 'join'}
             <h2 class="m-0 text-display">Ready to participate?</h2>
-            <p class="m-0 text-sm text-ink-2">
-                Joining puts you on the list. Organisers confirm participants before the event
-                opens.
-            </p>
+            {#if h.maxParticipants}
+                <p class="m-0 text-sm text-ink-2">
+                    Places are limited ({h.maxParticipants}). Free places go
+                    first-come, first-served — once the event is full, joining adds
+                    you to the waiting list.
+                </p>
+            {:else}
+                <p class="m-0 text-sm text-ink-2">
+                    Joining puts you on the list. Organisers confirm participants before the event
+                    opens.
+                </p>
+            {/if}
             <form method="POST" action="?/join" use:enhance>
                 <button type="submit" class="btn btn-solid">Join this hackathon</button>
             </form>

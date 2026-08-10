@@ -28,6 +28,10 @@ message EditRequest {
       expression: "this == '' || this.startsWith('/') || this.startsWith('http://') || this.startsWith('https://') || this.startsWith('data:image/')"
     }
   ];
+  // Absent leaves the capacity unchanged; 0 clears it back to unlimited.
+  // Lowering it below the current confirmed count is allowed and removes
+  // nobody — the number is the organizer's estimate, the roster is theirs.
+  optional int32 max_participants = 8 [(buf.validate.field).int32.gte = 0];
 
   option (buf.validate.message).cel = {
     id: "starts_at_requires_ends_at"

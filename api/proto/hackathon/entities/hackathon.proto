@@ -98,4 +98,10 @@ message Hackathon {
   // — the shape is compatible, the address on this message is not, and
   // renumbering shipped fields to fix that would break every caller we have.
   HackathonState state = 27;
+  // Maximum number of CONFIRMED participants; people on the waiting list do
+  // not consume a place. Absent or 0 means unlimited. When set, Join hands out
+  // free places first-come-first-served while nobody is waiting, and a full
+  // event queues new registrants instead of refusing them. Organizers may
+  // approve past this number — it is their estimate of the room, not a law.
+  optional int32 max_participants = 28;
 }

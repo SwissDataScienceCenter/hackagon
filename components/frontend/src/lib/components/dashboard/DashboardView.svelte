@@ -66,6 +66,12 @@
          * simply stayed where it was, which reads as a broken button.
          */
         joinError?: string;
+        /**
+         * What the last Join attempt said, if it succeeded: "you're in" or
+         * "you're number N in the queue". Joining a full event succeeds and
+         * queues, so success alone is not the whole answer.
+         */
+        joinNotice?: string;
     }
 
     const {
@@ -76,6 +82,7 @@
         isGlobalAdmin = false,
         globalRoles = [],
         joinError = '',
+        joinNotice = '',
     }: Props = $props();
     const userName = session?.user?.name ?? 'there';
 
@@ -223,6 +230,12 @@
                      per row: the action posts one hackathon at a time and the
                      message names what happened, not which row. -->
                 <p class="m-0 text-sm text-warning-ink" role="alert">{joinError}</p>
+            {/if}
+            {#if joinNotice}
+                <!-- The success twin of joinError: the joined row moved up into
+                     "Your hackathons" with a badge, and this says in words
+                     whether the place is confirmed or queued (and where). -->
+                <p class="m-0 text-sm text-success-ink" role="status">{joinNotice}</p>
             {/if}
 
             {#if otherHackathons.length === 0}

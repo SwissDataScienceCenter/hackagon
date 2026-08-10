@@ -84,9 +84,26 @@ export const actions: Actions = {
     const startsAt = form.get("startsAt")
     const endsAt = form.get("endsAt")
     const logo = form.get("logo")
+    const maxParticipantsRaw = form.get("maxParticipants")
 
     if (typeof name !== "string" || name.trim().length < 3) {
       return fail(400, { message: "Name must be at least 3 characters" })
+    }
+
+    // Empty clears back to unlimited: this form is always prefilled, so a
+    // cleared field is a deliberate removal — the backend reads 0 as "no cap".
+    let maxParticipants = 0
+    if (
+      typeof maxParticipantsRaw === "string" &&
+      maxParticipantsRaw.trim() !== ""
+    ) {
+      const n = Number(maxParticipantsRaw)
+      if (!Number.isInteger(n) || n < 0) {
+        return fail(400, {
+          message: "Capacity must be a whole number of people",
+        })
+      }
+      maxParticipants = n
     }
     if (visibility !== "public" && visibility !== "private") {
       return fail(400, { message: "Visibility is required" })
@@ -129,6 +146,9 @@ export const actions: Actions = {
         // can still be *changed* freely, only full removal silently no-ops.
         startsAt: hasStartsAt ? new Date(startsAt as string) : undefined,
         endsAt: hasEndsAt ? new Date(endsAt as string) : undefined,
+        // Always sent: the field is always on the form, so absence cannot mean
+        // "leave unchanged" here — 0 means unlimited.
+        maxParticipants,
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {

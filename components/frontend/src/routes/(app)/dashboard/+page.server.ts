@@ -57,8 +57,9 @@ export const actions: Actions = {
       })
       .catch(() => false)
 
+    let joinResult
     try {
-      await hackathon.join({ hackathonId })
+      joinResult = await hackathon.join({ hackathonId })
     } catch (e) {
       // A closed window is a clock, not a permission: the backend says
       // FAILED_PRECONDITION so this can say "registration is not open" rather
@@ -86,7 +87,14 @@ export const actions: Actions = {
     if (asksQuestions) redirect(303, `/register/${hackathonId}`)
 
     // Otherwise no redirect: SvelteKit re-runs `load` after an action, so the
-    // hackathon moves into "Your hackathons" with a Waitlisted badge on its own.
-    return { joined: hackathonId }
+    // hackathon moves into "Your hackathons" with its badge on its own. The
+    // backend's verdict rides along — a join that landed on a full event's
+    // waiting list SUCCEEDED, and the page should say "you're in" or "you're
+    // number 4 in the queue" rather than leave the badge to be discovered.
+    return {
+      joined: hackathonId,
+      waitlisted: joinResult.waitlisted,
+      queuePosition: joinResult.queuePosition,
+    }
   },
 }

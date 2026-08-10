@@ -2,6 +2,17 @@
     import DashboardView from '$lib/components/dashboard/DashboardView.svelte';
 
     const { data, form } = $props();
+
+    // The Join action's verdict as one sentence. A join that queued on a full
+    // event SUCCEEDED — the row's badge says "Waitlisted", this says where in
+    // the queue, and a confirmed place is told outright.
+    const joinNotice = $derived(
+        form?.joined
+            ? form.waitlisted
+                ? `You're on the waiting list — number ${form.queuePosition} in the queue.`
+                : "You're in — your place is confirmed."
+            : ''
+    );
 </script>
 
 <div class="mx-auto w-full max-w-7xl">
@@ -19,5 +30,6 @@
         isGlobalAdmin={data.isGlobalAdmin}
         globalRoles={data.globalRoles}
         joinError={form?.message ?? ''}
+        {joinNotice}
     />
 </div>

@@ -6,4 +6,12 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 
 message JoinResponse {
   string hackathon_id = 1;
+  // True when this join landed on the waiting list (pending an organizer's
+  // approval or a freed place); false when it took a confirmed place outright.
+  // Joining a full event SUCCEEDS and queues — this flag is how a client tells
+  // "you're in" from "you're number N in the queue".
+  bool waitlisted = 2;
+  // 1-based place in the waiting queue (join order) when waitlisted; 0 when
+  // confirmed. An idempotent re-join reports the caller's current state.
+  int32 queue_position = 3;
 }

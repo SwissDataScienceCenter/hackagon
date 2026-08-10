@@ -48,6 +48,15 @@ func (Hackathon) Fields() []ent.Field {
 		field.String("logo").
 			Optional().
 			Comment("URL or path to the hackathon logo image."),
+		field.Int32("max_participants").
+			Optional().Nillable().
+			Min(0).
+			Comment(
+				"Maximum number of CONFIRMED participants (is_waiting=false); " +
+					"the waiting list is not counted. Nil or 0 means unlimited — " +
+					"the default, and the behaviour of every row that predates " +
+					"the column, so no existing event is silently capped.",
+			),
 		field.UUID("current_phase_id", uuid.UUID{}).Optional().Nillable().
 			Comment(
 				"The phase an organizer has declared current. Nil means fall back to " +

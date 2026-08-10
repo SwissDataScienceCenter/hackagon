@@ -48,6 +48,18 @@
         data.participants.filter((p) => !p.isWaiting).length
     );
 
+    // Capacity counts CONFIRMED participants only; 0 means uncapped. The three
+    // derived numbers below drive the fullness notices: how many places are
+    // free, and by how much the organiser has (deliberately) overshot.
+    const capacity = $derived(data.maxParticipants ?? 0);
+    const waitingCount = $derived(data.participants.length - confirmedCount);
+    const freePlaces = $derived(
+        capacity > 0 ? Math.max(0, capacity - confirmedCount) : 0
+    );
+    const overBy = $derived(
+        capacity > 0 ? Math.max(0, confirmedCount - capacity) : 0
+    );
+
     const countLabel = $derived(
         filtered.length === 1 ? '1 participant' : `${filtered.length} participants`
     );
@@ -131,10 +143,51 @@
         viewKey="participants"
         filters={FILTERS}
         placeholder="Search participants by name, role…"
-        summary="{confirmedCount} confirmed of {data.participants.length}"
+        summary="{confirmedCount} confirmed of {data.participants.length}{capacity > 0
+            ? ` · capacity ${capacity}`
+            : ''}"
         shown={filtered.length}
         total={data.participants.length}
     />
+
+    <!-- How full the room is, when the event has a capacity. Three states, one
+         visible at a time; approving past the cap is ALLOWED, so the full and
+         over states exist to make the overshoot a decision, not an accident.
+         The free-places state is the manual-promotion contract: a freed place
+         is never handed out automatically, so it must be impossible to miss. -->
+    {#if capacity > 0}
+        {#if overBy > 0}
+            <p
+                class="m-0 rounded-card border border-line bg-raised px-4 py-3 text-sm
+                       text-warning-ink"
+                role="status"
+            >
+                Over capacity: {confirmedCount} confirmed of {capacity}
+                {capacity === 1 ? 'place' : 'places'}.
+            </p>
+        {:else if freePlaces === 0 && data.mayManage && waitingCount > 0}
+            <p
+                class="m-0 rounded-card border border-line bg-raised px-4 py-3 text-sm
+                       text-warning-ink"
+                role="status"
+            >
+                This event is full ({confirmedCount} of {capacity} confirmed).
+                Approving more people will go over capacity.
+            </p>
+        {:else if freePlaces > 0 && data.mayManage && waitingCount > 0}
+            <p
+                class="m-0 rounded-card border border-line bg-raised px-4 py-3 text-sm
+                       text-ink-2"
+                role="status"
+            >
+                {freePlaces}
+                {freePlaces === 1 ? 'place' : 'places'} free — {waitingCount}
+                {waitingCount === 1 ? 'person is' : 'people are'} waiting. Nobody
+                is promoted automatically: approve from the waiting list to hand
+                a place out.
+            </p>
+        {/if}
+    {/if}
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.participants.length === 0}
