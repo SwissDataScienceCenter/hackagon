@@ -264,6 +264,24 @@ Practical consequence for anyone driving this rig by hand: **after wiring, load
 a page and click "Allow recording"**, or the OpenReplay UI will stay empty and
 look broken.
 
+## Three ways this rig looks healthy and records nothing watchable
+
+Found on 2026-08-11, after every session in the UI spun forever. **Not one of
+them could turn a spec red**, because every replay spec measured bytes leaving
+the BROWSER and all three faults are downstream of the ingest endpoint — which
+answered `200` to every batch throughout.
+
+| Fault | How it presents | Fix |
+| --- | --- | --- |
+| the `sink` container was not running | nothing. `docker compose ps` lists what IS there; a service whose container was removed reads exactly like one that was never meant to run. sink writes the raw session file every later stage reads, so no mob file was ever produced. | `up.sh` (or `compose up -d sink-openreplay`). `doctor.sh` now compares `compose config --services` against what is running and fails on the difference. |
+| the object store answered `NoSuchBucket` for `mobs` | uploads failed silently; the bucket, its metadata and previously written objects were all present on disk, and a signed `PUT` still 404'd. | `docker restart minio`. Confirmed by signing a request by hand: 404 before, 200 and 7 kB of zstd after. |
+| `ender`: `batch meta not at the start of batch`, once per session | a `broken batch(es)` warning at session end. `Iterate` (backend/pkg/messages/iterator.go) RETURNS on the first parse error, so a rejected batch is dropped WHOLE. | **Not ours and not fixed** — every batch the tracker posts was verified well-formed (`playable.spec.ts` walks each one and locates every `BatchMetadata`). It costs one batch per session; the recording still lands and plays. |
+
+The lasting guard is `hackathon-e2e/tests/openreplay/playable.spec.ts`, which
+asks the far end whether the session became a recording instead of trusting a
+`200`. It needs `.secrets.env` — reading a stored mob is authenticated — and
+deliberately does NOT self-skip when that file is missing.
+
 ## Masking is proved, not configured
 
 `components/frontend/src/lib/components/observability/SessionReplay.svelte`

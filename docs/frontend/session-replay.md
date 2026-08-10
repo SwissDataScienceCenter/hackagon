@@ -197,3 +197,15 @@ visitor.
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `consent.spec.ts` | A fresh browser records **zero bytes** and is not even sent the project key; clicking _Allow_ in the real banner starts it — the two halves in one run, so the zero cannot be a broken measurement. Withdrawing at `/account` stops it. A DNT browser with consent granted records nothing and never fetches the SDK. The cookie is unreachable from page scripts.                              |
 | `masking.spec.ts` | A sentinel typed into the registration form is absent from the captured bytes — preceded by an **unmasked control run** that finds its own sentinel, because a zero-hit grep otherwise reads identically to "nothing was recorded". Also: the signed-in user's display name is absent (the attribute hole), and no page path is present (the URL decision), each with its own positive control. |
+| `playable.spec.ts` | That a recording can be **watched**. Everything above measures the browser's side of the wire and cannot see the far end at all: a batch OpenReplay's reader rejects is counted, answered `200`, and then discarded whole, so a completely dead pipeline reads exactly like a healthy one from here. This records a real session, reads its id off the tracker's own start response, and waits for the mob file to exist and come back through the two hops the player uses. It records that session on `/invite/<token>` and greps the token out of **both** the wire and the decompressed stored file, so the two properties — playable, and no credential in it — are asserted on the same session. |
+
+The last one is why the others are not enough on their own. Recordings were
+unplayable for three days while every spec above stayed green, because all
+three faults were on OpenReplay's side of the ingest endpoint: its `sink`
+container was not running (a service that is absent looks nothing like a
+service that is unhealthy), its object store answered `NoSuchBucket` to every
+request — PUT included — for a bucket sitting on its own disk until it was
+restarted, and `ender` logged `batch meta not at the start of batch` once per
+session. That last one is upstream and survives the fix; it costs a batch, not
+the recording. `openreplay-stack/scripts/doctor.sh` now names a compose service
+with no container, which is the only one of the three that a preflight can see.

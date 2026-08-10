@@ -119,6 +119,115 @@ export function captureIngest(page: Page): { chunks: Buffer[] } {
   return { chunks }
 }
 
+/**
+ * The session ids OpenReplay minted for this page, in the order it minted
+ * them.
+ *
+ * Read out of the `/v1/web/start` RESPONSE, which is the only place the id
+ * appears on the browser's side of the wire — the tracker keeps it in a
+ * sessionStorage key whose name has changed between versions, and
+ * `tracker.getSessionID()` needs a handle on the instance, which the app
+ * deliberately does not expose. Needed by the playability check, because
+ * "is there a recording" is a question about one specific id and the sessions
+ * list of a shared instance is full of other people's.
+ */
+export function captureSessionIds(page: Page): { ids: string[] } {
+  const ids: string[] = []
+  page.on("response", (res) => {
+    if (!res.url().includes("/v1/web/start")) return
+    void res
+      .json()
+      .then((body: { sessionID?: string }) => {
+        if (body.sessionID && !ids.includes(body.sessionID))
+          ids.push(body.sessionID)
+      })
+      .catch(() => {})
+  })
+
+  return { ids }
+}
+
+export type IngestPost = { url: string; dataType: string; body: Buffer }
+
+/**
+ * Every ingest POST with its URL and `DataType` header kept alongside the
+ * bytes.
+ *
+ * `captureIngest` concatenates, which is right for a grep and useless for a
+ * question about batch STRUCTURE: the tracker sends the first DOM snapshot as
+ * one `visual` batch that is two batches glued together, and tells the server
+ * where the seam is with a `?split=` query parameter. Whether that parameter
+ * is present is a property of the request, not of the bytes, and the
+ * concatenated buffer has thrown it away.
+ */
+export function captureIngestPosts(page: Page): { posts: IngestPost[] } {
+  const posts: IngestPost[] = []
+  page.on("request", (req) => {
+    if (!req.url().includes("/ingest")) return
+    const body = req.postDataBuffer()
+    if (!body) return
+    posts.push({
+      url: req.url(),
+      dataType: req.headers()["datatype"] ?? "",
+      body,
+    })
+  })
+
+  return { posts }
+}
+
+/**
+ * Offsets of every BatchMetadata (message type 81) in one batch.
+ *
+ * The wire format is a varint type followed, for every type EXCEPT 81, by a
+ * 3-byte little-endian body size (`MessageHasSize(t) { return t != 81 }` in
+ * backend/pkg/messages/iterator.go). So the whole batch can be walked without
+ * decoding any bodies, and a type 81 found anywhere but offset 0 is the
+ * "batch meta not at the start of batch" the backend rejects the entire batch
+ * for.
+ */
+export function batchMetaOffsets(batch: Buffer): number[] {
+  const found: number[] = []
+  let i = 0
+  while (i < batch.length) {
+    const start = i
+    let type = 0
+    let shift = 1
+    for (;;) {
+      if (i >= batch.length) return found
+      const b = batch[i++]
+      type += (b & 0x7f) * shift
+      if ((b & 0x80) === 0) break
+      shift *= 128
+    }
+    if (type === 81) {
+      found.push(start)
+      // The header is uint,uint,uint,int,string — walk it rather than guess.
+      for (let field = 0; field < 4; field++) {
+        while (i < batch.length && (batch[i++] & 0x80) !== 0) {
+          /* varint continuation */
+        }
+      }
+      let len = 0
+      let s = 1
+      for (;;) {
+        if (i >= batch.length) return found
+        const b = batch[i++]
+        len += (b & 0x7f) * s
+        if ((b & 0x80) === 0) break
+        s *= 128
+      }
+      i += len
+      continue
+    }
+    if (i + 3 > batch.length) return found
+    const size = batch[i] | (batch[i + 1] << 8) | (batch[i + 2] << 16)
+    i += 3 + size
+  }
+
+  return found
+}
+
 export function writeCapture(name: string, chunks: Buffer[]): string {
   fs.mkdirSync(ARTIFACTS, { recursive: true })
   const file = path.join(ARTIFACTS, `${name}.bin`)

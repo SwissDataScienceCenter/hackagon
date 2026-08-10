@@ -46,6 +46,34 @@ if docker ps --format '{{.Names}}' | grep -q hackagon; then
   soft "the hackagon dev container is running — OpenReplay wants 8 GB *on top* of it"
 fi
 
+# ── a stack that is up: is all of it up? ────────────────────────────────────
+# `docker compose ps` shows what IS there and says nothing about what is not,
+# and a service whose container has been removed reads exactly like a service
+# that was never meant to run. `sink` disappeared that way once: it is the
+# stage that writes the raw session file every later stage reads, so recording
+# kept "working" — the ingest endpoint answered 200 to every batch — and not
+# one session became playable. Nothing anywhere reported a fault.
+#
+# Only meaningful once something is running, so this is silent on a cold
+# machine rather than a wall of failures before the first `up.sh`.
+if [ -f "$VENDOR/docker-compose.yaml" ] &&
+  [ -n "$(compose ps -q 2>/dev/null)" ]; then
+  echo "── running stack"
+  missing=""
+  running="$(compose ps --format '{{.Service}}' 2>/dev/null | sort -u)"
+  while IFS= read -r svc; do
+    [ -n "$svc" ] || continue
+    printf '%s\n' "$running" | grep -qx "$svc" || missing="$missing $svc"
+  done <<EOF
+$(compose config --services 2>/dev/null | sort -u)
+EOF
+  if [ -n "$missing" ]; then
+    bad "not running:$missing — start them with: bash $HERE/up.sh"
+  else
+    ok "every compose service has a running container"
+  fi
+fi
+
 echo ""
 [ "$fail" -eq 0 ] && echo "Preflight passed$([ "$warn" -eq 1 ] && echo " (with warnings)")." \
                   || { echo "Preflight FAILED — fix the ✕ items first."; exit 1; }

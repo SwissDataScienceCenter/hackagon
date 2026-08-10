@@ -78,7 +78,7 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 | smoke (76 tests, 16 files) | **80 passed** | 2026-08-10 |
 | mobile | **121 passed** | 2026-08-10 |
 | backend `go test ./internal/...` | all ok (service 258 specs) | 2026-08-10 |
-| openreplay (7 tests) | **11 passed** | 2026-08-08 |
+| openreplay (9 tests) | **13 passed / 0 skipped** | 2026-08-11 |
 | frontend units (9 files) | **154 passed** | 2026-08-08 |
 
 Playwright totals include the 4 auth-setup tests every suite depends on, so
@@ -269,6 +269,20 @@ these are now impossible-by-construction rather than fixed case by case.
   nothing was ever captured — on the first run nothing was. `masking.spec.ts`
   therefore runs an **unmasked control first**, and `consent.spec.ts` asserts the
   positive too (the project key IS in the HTML once granted).
+- **A measurement that stops at the wire.** The same replay suite was green for
+  three days while **every recorded session was unplayable** — the player spun
+  forever and no recording file was ever written. It could not have noticed:
+  every spec in that folder measures what leaves the BROWSER, and all three
+  faults were on OpenReplay's side of an ingest endpoint that answered `200` to
+  every batch. Its `sink` container was not running (a compose service with no
+  container looks nothing like an unhealthy one); its object store answered
+  `NoSuchBucket` to every request, PUT included, for a bucket on its own disk,
+  until it was restarted; and `ender` rejected one batch per session, which
+  `Iterate` discards WHOLE. `tests/openreplay/playable.spec.ts` now asks the far
+  end — it records a session, reads the id off the tracker's own start response,
+  and waits for the mob file to come back through the player's two hops.
+  Corollary worth keeping: **"the server accepted it" is not "the server can use
+  it"**, and a suite that only ever asks the client cannot tell those apart.
 - **An action the loader silently drops — closed.** `loadRecipe()` used to
   filter every line with a `comment` key, which is how act banners are removed,
   without checking for an `id` first — `act8.flow.bob` carried a trailing

@@ -105,6 +105,27 @@
      * nothing, which is why the assertion lives in
      * `tests/openreplay/masking.spec.ts` (with an unmasked control that DOES
      * transmit the path) and not in this comment.
+     *
+     * IT IS ALSO INNOCENT OF THE THING IT LOOKS GUILTY OF, and that was
+     * measured rather than argued (2026-08-11). Every recorded session was
+     * unplayable while `docker logs ender` repeated `batch meta not at the
+     * start of batch` for each one — an error about the exact message this
+     * function reaches into — so this was the obvious suspect. It is not:
+     * shadowing `document.URL` changes the VALUE of one string field inside
+     * that header and cannot move, duplicate or omit the header itself.
+     * Proved both ways with `tests/openreplay/playable.spec.ts`, which walks
+     * every batch the browser posts and locates each `BatchMetadata`:
+     *
+     *   with this function     batch shape clean; the session became a real
+     *                          4.8 kB mob file, fetched back through the
+     *                          player's own two hops; token absent from the
+     *                          wire AND from the stored recording.
+     *   without it             batch shape byte-for-byte the same shape;
+     *                          THE TOKEN WENT ON THE WIRE.
+     *
+     * The unplayability was three faults in the OpenReplay rig, none of them
+     * on the browser's side (see that spec's header). Do not delete this to
+     * fix a pipeline.
      */
     async function start_without_url(tracker: {
         start: () => Promise<{ success: boolean }>;
