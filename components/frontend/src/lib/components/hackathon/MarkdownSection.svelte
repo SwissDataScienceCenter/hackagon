@@ -1,5 +1,5 @@
 <script lang="ts">
-    import DOMPurify from 'isomorphic-dompurify';
+    import { sanitizeHtml } from '$lib/utils/markdown';
 
     let { content }: { content: string } = $props();
 
@@ -7,7 +7,11 @@
     // passes an indented HTML literal, which markdown would read as a code
     // block. For user-written markdown use MarkdownContent instead; this stays
     // sanitized so a description reaching it cannot smuggle in a script.
-    const html = $derived(DOMPurify.sanitize(content));
+    //
+    // Via the shared helper rather than DOMPurify directly, so that the
+    // external-link rule registered there is visibly in force here too instead
+    // of arriving as a side effect of some other import.
+    const html = $derived(sanitizeHtml(content));
 </script>
 
 <section class="px-4 py-12 sm:px-10 md:px-20">

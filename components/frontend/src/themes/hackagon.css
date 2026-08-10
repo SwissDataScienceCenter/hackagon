@@ -575,4 +575,172 @@
     background-color: color-mix(in oklab, var(--color-accent) 20%, transparent);
     color: var(--color-accent-ink);
   }
+
+  /* ---------------------------------------------------------------
+   * Rendered markdown.
+   *
+   * One definition, shared by the editor's preview pane and the page
+   * that finally shows the text — the two drifting apart is the whole
+   * reason this is not scoped inside a component.
+   *
+   * Size and colour are deliberately left to inherit: this lands in a
+   * card at `text-sm` in one place and `text-xs` in another, so every
+   * length below is in `em` and tracks whatever it is dropped into.
+   * --------------------------------------------------------------- */
+  .markdown-body {
+    font-family: var(--font-sans);
+    overflow-wrap: break-word;
+  }
+  .markdown-body > :first-child {
+    margin-top: 0;
+  }
+  .markdown-body > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* No font-family here: headings keep the mono display voice from the
+   * base layer, which is what stops author prose reading as a document
+   * pasted in from somewhere else. */
+  .markdown-body :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--color-ink);
+    margin: 1.4em 0 0.5em;
+    line-height: 1.3;
+  }
+  .markdown-body h1 {
+    font-size: 1.5em;
+  }
+  .markdown-body h2 {
+    font-size: 1.3em;
+  }
+  .markdown-body h3 {
+    font-size: 1.15em;
+  }
+  .markdown-body h4 {
+    font-size: 1.05em;
+  }
+  .markdown-body :is(h5, h6) {
+    font-size: 1em;
+    color: var(--color-ink-2);
+  }
+
+  .markdown-body p {
+    margin: 0 0 0.85em;
+  }
+
+  /* Preflight strips list markers app-wide, so prose has to ask for them
+   * back — without this a bulleted list renders as plain lines and the
+   * author cannot tell why their list vanished. */
+  .markdown-body :is(ul, ol) {
+    margin: 0 0 0.85em;
+    padding-left: 1.4em;
+  }
+  .markdown-body ul {
+    list-style: disc;
+  }
+  .markdown-body ol {
+    list-style: decimal;
+  }
+  .markdown-body li {
+    margin-bottom: 0.25em;
+  }
+  .markdown-body li::marker {
+    color: var(--color-ink-3);
+  }
+  .markdown-body li > :is(ul, ol) {
+    margin: 0.25em 0 0;
+  }
+
+  /* Task lists: the bullet would sit beside the box and read as a second
+   * marker, so the item gives up its own and reclaims the indent. */
+  .markdown-body li:has(> input[type="checkbox"]) {
+    list-style: none;
+    margin-left: -1.4em;
+  }
+  .markdown-body input[type="checkbox"] {
+    margin-right: 0.5em;
+    accent-color: var(--color-accent);
+  }
+
+  .markdown-body code {
+    background-color: var(--color-raised);
+    border-radius: var(--radius-field);
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+  .markdown-body pre {
+    background-color: var(--color-raised);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    margin: 0 0 0.85em;
+    padding: 0.75em 0.9em;
+    overflow-x: auto;
+  }
+  /* The block already paints the field; the run inside must not paint a
+   * second one on top of it. */
+  .markdown-body pre code {
+    background-color: transparent;
+    padding: 0;
+  }
+
+  .markdown-body blockquote {
+    border-left: 2px solid var(--color-line-strong);
+    margin: 0 0 0.85em;
+    padding-left: 0.9em;
+    color: var(--color-ink-3);
+  }
+
+  /* Underlined, unlike anchors elsewhere in the app: a link buried in a
+   * paragraph is found by its underline, and colour on its own is not
+   * something every reader can use. */
+  .markdown-body a {
+    color: var(--color-accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  /* Tables are GFM's one construct that looks broken rather than merely
+   * plain when unstyled. The scroller earns its keep more than the rules
+   * do: a five-column table inside a card on a phone has to go
+   * somewhere, and `max-content` is what stops it squeezing instead. */
+  .markdown-body table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0 0 0.85em;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+  }
+  .markdown-body :is(th, td) {
+    border: 1px solid var(--color-line);
+    padding: 0.4em 0.6em;
+    text-align: left;
+  }
+  .markdown-body th {
+    background-color: var(--color-raised);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .markdown-body hr {
+    border: 0;
+    border-top: 1px solid var(--color-line);
+    margin: 1.4em 0;
+  }
+
+  .markdown-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-card);
+  }
+
+  .markdown-body strong {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .markdown-body del {
+    color: var(--color-ink-3);
+  }
 }
