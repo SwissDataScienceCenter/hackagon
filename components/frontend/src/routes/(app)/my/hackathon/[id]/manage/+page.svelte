@@ -17,12 +17,14 @@
     // The backend decides either way; this only decides whether to offer it.
     const mayEdit = $derived(canEditHackathon(data.myMembership ?? undefined, data.isGlobalAdmin));
 
-    // The other organiser destinations, minus this page. Read from `manageNav`
-    // rather than listed again here, so an entry added to the sidebar reaches
-    // these tiles too and is never described in two places.
+    // The other organiser destinations, minus this page and minus Participants,
+    // which the People card above already leads to — and leads to better, since it
+    // says how many are waiting. Read from `manageNav` rather than listed again
+    // here, so an entry added to the sidebar reaches these tiles too.
+    const HANDLED_ABOVE = ['manage:hackathon', 'manage:participants'];
     const shortcuts = $derived(
         manageNav(data.hackathonId, data.myMembership ?? undefined, data.isGlobalAdmin).filter(
-            (i) => i.id !== 'manage:hackathon'
+            (i) => !HANDLED_ABOVE.includes(i.id)
         )
     );
 
@@ -193,9 +195,10 @@
         saved={form?.saved ?? false}
     />
 
-    <!-- Who is here, and whether anyone is stuck. A tile named "Manage
-         Participants" was all that led to approving, and it named the screen
-         rather than the queue: the count is the point.
+    <!-- Who is here, and whether anyone is stuck. This stands in for the
+         Participants tile rather than sitting beside it: that tile named the
+         screen and not the queue, so an organiser had to open it to learn whether
+         anyone was waiting. The count is the point.
 
          "Cannot open", not "cannot act": `member` arrives with
          ApproveParticipant, not with Join, so a waitlisted user holds no read on
