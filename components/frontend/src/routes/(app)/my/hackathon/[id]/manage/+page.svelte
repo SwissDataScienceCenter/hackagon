@@ -57,7 +57,7 @@
         </div>
         {#if mayEdit}
             <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/edit`)}
+                href={resolve(`/my/hackathon/${data.hackathonId}/manage/edit`)}
                 class="btn btn-sm btn-outline no-underline"
             >
                 <Pencil class="h-3 w-3 shrink-0" aria-hidden="true" />
