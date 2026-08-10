@@ -24,7 +24,19 @@ result
 .cursor/cli.json
 
 # Claude Code config (machine-specific)
-.claude/
+# The e2e tooling is TRACKED. It was ignored while it lived only in working
+# copies; the recipe is the closest thing this project has to an executable
+# spec, and a spec nobody can review or diff is not one.
+#
+# Runtime state under it stays ignored — regenerated per run, and .secrets.env
+# holds a generated password that must never reach a commit.
+.claude/**/node_modules/
+.claude/**/.state/
+.claude/**/.artifacts/
+.claude/**/out/
+.claude/**/vendor/docker-envs/
+.claude/**/.secrets.env
+.claude/scheduled_tasks.lock
 
 ## Sensitive Information ======================================================
 # All .env files

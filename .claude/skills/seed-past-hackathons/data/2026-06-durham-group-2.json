@@ -1,0 +1,102 @@
+{
+  "slug": "durham-2026-group-2",
+  "name": "Hackathon with Uni Durham — Group 2",
+  "edition": "2026 — Durham, group 2",
+  "platformRef": {
+    "system": "sdsc-hackathons.ch (FlutterFlow + Firestore, project sdschacks)",
+    "collection": "hackathons",
+    "documentId": "tsbDuqqnl8RNQBInCso8",
+    "url": "https://sdsc-hackathons.ch/welcome?hackathonId=tsbDuqqnl8RNQBInCso8"
+  },
+  "visibility": "VISIBILITY_PUBLIC",
+  "startsAt": "2026-06-09T08:30:00+02:00",
+  "endsAt": "2026-06-10T17:00:00+02:00",
+  "venue": "SDSC, Arginine bld, Biopôle, Lausanne",
+  "organizers": ["Swiss Data Science Center (SDSC)"],
+  "partners": ["University of Durham — participating students", "Richemont — industry talk"],
+  "logo": "",
+  "theme": "Prototyping Data Science and AI solutions for real impact",
+  "description": "Welcome to the Hackathons for the amazing students of the University of Durham. This is the first event, happening on June the 9th and 10th. Two days at the SDSC office at Biopôle, Lausanne, prototyping data science and AI solutions for real impact.",
+  "tracks": [],
+  "preEventTimeline": [
+    { "order": 0, "process": "Registrations", "when": "13.05.2026 - 22.05.2026" },
+    { "order": 1, "process": "Propose a project (optional)", "when": "13.05.2026 - 28.05.2026" },
+    { "order": 2, "process": "Choose your team (optional)", "when": "28.05.2026 - 02.06.2026" },
+    { "order": 3, "process": "Hacking time!", "when": "09.06.2026 - 10.06.2026" }
+  ],
+  "phases": [
+    { "name": "Welcome coffee", "description": "Check-in — Plenary room.", "startsAt": "2026-06-09T08:30:00+02:00", "endsAt": "2026-06-09T09:00:00+02:00" },
+    { "name": "Hacking — day 1", "description": "Plenary room, Rubis, Opale, Jade.", "startsAt": "2026-06-09T09:00:00+02:00", "endsAt": "2026-06-09T22:00:00+02:00" },
+    { "name": "Welcome coffee — day 2", "description": "Plenary room.", "startsAt": "2026-06-10T08:30:00+02:00", "endsAt": "2026-06-10T09:00:00+02:00" },
+    { "name": "Industry talk", "description": "Francesco Calabrese, Head of Group Data Office, Richemont — Plenary room.", "startsAt": "2026-06-10T09:00:00+02:00", "endsAt": "2026-06-10T10:00:00+02:00" },
+    { "name": "Hacking — day 2", "description": "Plenary room, Rubis, Opale, Jade.", "startsAt": "2026-06-10T10:00:00+02:00", "endsAt": "2026-06-10T15:30:00+02:00" },
+    { "name": "Presentations & voting", "description": "Presentations, voting and prizes — Plenary room.", "startsAt": "2026-06-10T15:30:00+02:00", "endsAt": "2026-06-10T17:00:00+02:00" }
+  ],
+  "votingCategories": [
+    { "title": "A2Q: Answer Any Question", "numberOfWinners": 1 },
+    { "title": "Analysis of corporate reports", "numberOfWinners": 1 }
+  ],
+  "capabilities": {
+    "can_register": true,
+    "can_propose_project": true,
+    "can_choose_project_preference": true,
+    "can_send_project_submission": true,
+    "can_edit_submission": true,
+    "can_view_proposals": true,
+    "can_vote": false,
+    "results_published": false
+  },
+  "pages": [
+    {
+      "title": "Welcome",
+      "visible": true,
+      "order": 1,
+      "content": "## Hackathon with Uni Durham — Group 2\n\nWelcome to the Hackathons for the amazing students of the **University of Durham**. This is the first event, happening on **June the 9th and 10th**.\n\n**Theme:** Prototyping Data Science and AI solutions for real impact.\n\n**Venue:** SDSC, Arginine bld, Biopôle, Lausanne."
+    },
+    {
+      "title": "Programme",
+      "visible": true,
+      "order": 2,
+      "content": "## Day 1 — Tuesday 9 June 2026\n\n| Time | Session | Where |\n| --- | --- | --- |\n| 08:30–09:00 | Welcome coffee | Plenary room |\n| 09:00–22:00 | Hacking | Plenary room, Rubis, Opale, Jade |\n\n## Day 2 — Wednesday 10 June 2026\n\n| Time | Session | Where |\n| --- | --- | --- |\n| 08:30–09:00 | Welcome coffee | Plenary room |\n| 09:00–10:00 | Industry talk — Francesco Calabrese (Head of Group Data Office, Richemont) | Plenary room |\n| 10:00–15:30 | Hacking | Plenary room, Rubis, Opale, Jade |\n| 15:30–17:00 | Presentations, voting, prizes | Plenary room |"
+    },
+    {
+      "title": "Timeline",
+      "visible": true,
+      "order": 3,
+      "content": "| Step | When |\n| --- | --- |\n| Registrations | 13.05.2026 – 22.05.2026 |\n| Propose a project (optional) | 13.05.2026 – 28.05.2026 |\n| Choose your team (optional) | 28.05.2026 – 02.06.2026 |\n| Hacking time! | 09.06.2026 – 10.06.2026 |"
+    },
+    {
+      "title": "Awards",
+      "visible": true,
+      "order": 4,
+      "content": "Two categories, one winner each:\n\n- **A2Q: Answer Any Question**\n- **Analysis of corporate reports**"
+    },
+    {
+      "title": "FAQ",
+      "visible": true,
+      "order": 5,
+      "content": "### How do I get to the hackathon venue?\n\nThe venue is the SDSC office at Biopôle in Lausanne, next to the metro stop Vennes. The office is in the building Arginine, 6th floor. There will be panels outside and inside the building to guide you. [Google Maps link](https://maps.app.goo.gl/4vF6bTQMPtChxu6x9)\n\n### Am I required to propose a project?\n\nProject proposals are optional. We expect only a few proposals per hackathon, and we expect the proponent to be committed in following up their proposals, find and curate the data (if needed), and lead the teams that will tackle that project."
+    }
+  ],
+  "media": {
+    "images": [
+      {
+        "file": "cover.webp",
+        "source": "https://firebasestorage.googleapis.com/v0/b/sdschacks.appspot.com/o/users%2FQkOuQKtrXVWfC4FakB0r3Xue3L73%2Fuploads%2F1778579821295000.jpg?alt=media&token=3bf824d4-4470-47f6-8f98-58298383de8b",
+        "caption": "Hackathon with Uni Durham — Group 2, cover image",
+        "category": "banner",
+        "credit": "sdsc-hackathons.ch (Firebase Storage)"
+      }
+    ],
+    "note": "Cover image as published on the live platform."
+  },
+  "stats": {},
+  "source": {
+    "urls": [
+      "https://sdsc-hackathons.ch/welcome?hackathonId=tsbDuqqnl8RNQBInCso8",
+      "https://firestore.googleapis.com/v1/projects/sdschacks/databases/(default)/documents/hackathons/tsbDuqqnl8RNQBInCso8"
+    ],
+    "retrieved": "2026-08-05",
+    "note": "Read from the live platform's own Firestore document — authoritative. Same agenda-date caveat as group 1: the source's agenda entries carry May date parts on a June event, so phases are anchored to the real event days with the source times converted from UTC to +02:00. Note group 2 had the full project/preference/submission capabilities enabled, group 1 did not."
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "slug": "energy-data-hackdays-2026-lausanne",
+  "name": "Energy Data Hackdays 2026 — Spring Edition, Lausanne",
+  "edition": "2026 — Spring (Suisse romande)",
+  "visibility": "VISIBILITY_PUBLIC",
+  "startsAt": "2026-05-07T08:00:00+02:00",
+  "endsAt": "2026-05-08T18:00:00+02:00",
+  "venue": "SDSC headquarters, Biopôle, Lausanne (Canton of Vaud)",
+  "organizers": ["Energy Data Innovation Hub (EDIH)", "Swiss Data Science Center (SDSC)"],
+  "partners": [
+    "Swiss Federal Office of Energy (SFOE)",
+    "Romande Energie",
+    "HSLU — Lucerne University of Applied Sciences and Arts",
+    "HEIG-VD"
+  ],
+  "logo": "",
+  "description": "The first Energy Data Hackdays edition in French-speaking Switzerland: around 100 experts spent 36 hours on 5 real-world climate and grid challenges, hosted at SDSC's headquarters at Biopôle in Lausanne. Challenges were contributed by the SFOE, Romande Energie, HSLU, HEIG-VD and SDSC.",
+  "goals": [
+    "Expand the Energy Data Hackdays to French-speaking Switzerland",
+    "Work on real climate and grid challenges with the organizations that own them",
+    "Connect utilities, federal agencies and universities around shared energy data"
+  ],
+  "tracks": [],
+  "challenges": [
+    { "title": "Estimating Hourly Energy Production for Switzerland", "owner": "Swiss Federal Office of Energy (SFOE)" },
+    { "title": "Swiss GlassScan — window-to-wall ratio assessment", "owner": "Swiss Data Science Center (SDSC)" },
+    { "title": "GridPulseMT — day-ahead load forecasting for the Vaud grid", "owner": "Romande Energie" },
+    { "title": "Designing pocket- and grid-friendly electricity communities", "owner": "HSLU" },
+    { "title": "Anticipating grid imbalances in Switzerland's energy transition", "owner": "HEIG-VD" }
+  ],
+  "phases": [
+    { "name": "Day 1 — challenges & hacking", "description": "Challenge presentations, team formation, first hacking block.", "startsAt": "2026-05-07T08:00:00+02:00", "endsAt": "2026-05-07T18:00:00+02:00" },
+    { "name": "Day 2 — hacking & presentations", "description": "Second hacking block, presentations and closing.", "startsAt": "2026-05-08T08:00:00+02:00", "endsAt": "2026-05-08T18:00:00+02:00" }
+  ],
+  "pages": [
+    {
+      "title": "About",
+      "visible": true,
+      "order": 1,
+      "content": "## Energy Data Hackdays — Spring Edition, Lausanne\n\n**SDSC headquarters, Biopôle, Lausanne**, 7–8 May 2026.\n\nThe first edition in **French-speaking Switzerland**: about **100 experts** spent **36 hours** on **5 real-world climate and grid challenges**, contributed by the organizations that live with them.\n\nOrganized by the **Energy Data Innovation Hub** with the **Swiss Data Science Center**, together with the SFOE, Romande Energie, HSLU and HEIG-VD."
+    },
+    {
+      "title": "Challenges",
+      "visible": true,
+      "order": 2,
+      "content": "| Challenge | Contributed by |\n| --- | --- |\n| Estimating Hourly Energy Production for Switzerland | Swiss Federal Office of Energy (SFOE) |\n| Swiss GlassScan — window-to-wall ratio assessment | Swiss Data Science Center |\n| GridPulseMT — day-ahead load forecasting for the Vaud grid | Romande Energie |\n| Designing pocket- and grid-friendly electricity communities | HSLU |\n| Anticipating grid imbalances in Switzerland's energy transition | HEIG-VD |"
+    }
+  ],
+  "media": {
+    "images": [
+      {
+        "file": "thumbnail.webp",
+        "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/69a6a305f05b59eeb20a6ac9_CFE_thumbnail.jpg",
+        "caption": "Energy Data Hackdays 2026 — event thumbnail",
+        "category": "banner",
+        "credit": "SDSC website"
+      },
+      {
+        "file": "edhd-logo.svg",
+        "source": "https://www.energydatahackdays.ch/images/logo/energydata-hackdays-logo.svg",
+        "caption": "Energy Data Hackdays logo",
+        "category": "logo",
+        "credit": "energydatahackdays.ch"
+      },
+      {
+        "file": "hackdays-day2.webp",
+        "source": "https://www.energydatahackdays.ch/images/success-stories/_800x400_crop_center-center_90_none/11970/2509_NZ-EDHD-Tag-2-1-13.webp",
+        "caption": "Energy Data Hackdays — day 2 working session",
+        "category": "ambiance",
+        "credit": "energydatahackdays.ch"
+      }
+    ],
+    "note": "Photo is from the EDHD archive (2025 autumn edition imagery used on the site's success-stories section)."
+  },
+  "stats": {
+    "participants": 100,
+    "challenges": 5,
+    "hoursOfHacking": 36
+  },
+  "source": {
+    "urls": [
+      "https://www.datascience.ch/articles/coding-the-future-energy-data-hackdays-expand-to-french-speaking-switzerland",
+      "https://www.energydatahackdays.ch/"
+    ],
+    "retrieved": "2026-08-05",
+    "note": "Venue, partners, ~100 participants, 36 hours and all five challenge titles verified from the SDSC article. Winners were not published there — omitted. Dates 7–8 May 2026 per energydatahackdays.ch's spring-edition listing."
+  }
+}
