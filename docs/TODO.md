@@ -79,7 +79,12 @@ checklist is the live status.
       breaking change — nothing reads it. The voting page wires up
       `EditSettings` for `voting_enabled` ONLY, with a comment saying why its
       neighbour is left alone.
-- [ ] B4 — persist phase dates on create
+- [x] B4 — persist phase dates on create. Caught end-to-end by the new
+      `act6.phase.current` flow: the recipe created phases WITH dates, every
+      phase rendered undated/"Upcoming", and clearing the current phase could
+      never show "In progress". (`act6.ui.timeline` only asserted names, so it
+      stayed green for months — the assertion has to be on the state, not the
+      list.)
 - [x] B5 — casbin write errors no longer swallowed in team membership ops. NOTE:
       the two stores cannot share a transaction (casbin writes on its own
       connection; an ent tx held across it deadlocks) — compensating writes are
@@ -206,12 +211,27 @@ database where the old index was already absent or dropped by hand. The dev flow
 **One ballot per category is now the handler's job, not the DB's.** The index no
 longer says anything about a second ballot, so `SubmitVote` checks for existing
 (category, voter) rows and answers `AlreadyExists` itself, then clears and
-rewrites inside one transaction. That check is not race-proof the way a unique
-index was: two ballots submitted concurrently by the same voter could both pass
-it. A partial unique index on
-`(category, voter) WHERE vote_type = 'single_choice'` would close it for single
-choice, but ent cannot express one, so it would have to be hand-written SQL
+rewrites inside one transaction. That check was not race-proof the way a unique
+index was — and it was not theoretical: hammering four concurrent single-choice
+submits from one voter (different submissions, so the new index never fires)
+double-voted in **7 of 12 rounds**. `writeBallot` now serializes behind
+`VoteService.ballotMu` — pre-check through commit under one in-process lock —
+which closes it for a single-instance deployment (post-fix: 12 of 12 rounds,
+exactly one row); the journey pins it with `act7.race.doublevote` +
+`act7.race.check`. A partial unique index on
+`(category, voter) WHERE vote_type = 'single_choice'` remains the multi-instance
+fix, but ent cannot express one, so it would have to be hand-written SQL
 outside the schema.
+
+**The last-organizer guard raced the same way** — `RemoveOwner` read the owner
+list, checked it, then removed, so two organizers demoting each other
+concurrently both counted two owners, both passed, and the event was left with
+ZERO owners (reproduced live on the first attempt). `HackathonService.ownerMu`
+now serializes owner-role writes (AddOwner shares it, which also stops a
+double-click promotion slipping a duplicate grouping row between casbin's own
+check and insert), and the casbin enforcer itself became a `SyncedEnforcer` so a
+policy write can no longer race an `Enforce` read on the shared in-memory model.
+Pinned by `act5.race.owner.*` (mutual demotion → exactly one owner survives).
 
 - [x] B15 — implemented, not deleted, and all four now have a caller.
       `AddRole`/`RemoveRole` were the urgent half: `/manage/users` already

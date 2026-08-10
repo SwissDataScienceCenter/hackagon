@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +37,13 @@ type HackathonService struct {
 	// store deletes the event's uploaded imagery when the event goes. nil when
 	// no object store is configured; see purgeObjects.
 	store *objstore.Client
+	// ownerMu serializes owner-role writes. RemoveOwner's last-organizer guard
+	// is check-then-act over casbin — read the owners, refuse if one, then
+	// remove — so two owners demoting each other concurrently both counted two
+	// owners, both passed, and the event ended up with none (measured live).
+	// AddOwner takes the same lock so a double-add cannot slip a duplicate
+	// grouping row between casbin's own check and insert.
+	ownerMu sync.Mutex
 }
 
 func NewHackathonService(
@@ -687,6 +695,9 @@ func (s *HackathonService) AddOwner(
 		return nil, err
 	}
 
+	s.ownerMu.Lock()
+	defer s.ownerMu.Unlock()
+
 	if _, err := s.enforcer.AddRole(user.KeycloakID, m.Owner, h.ID.String()); err != nil {
 		slog.Error("add hackathon owner role", "err", err)
 
@@ -723,6 +734,13 @@ func (s *HackathonService) RemoveOwner(
 	if err != nil {
 		return nil, err
 	}
+
+	// The owners read below and the removal at the bottom are one decision:
+	// without the lock, two owners demoting each other concurrently each
+	// counted two owners, each passed the last-organizer guard, and the event
+	// was left with none.
+	s.ownerMu.Lock()
+	defer s.ownerMu.Unlock()
 
 	owners, err := s.enforcer.HackathonOwners(h.ID.String())
 	if err != nil {

@@ -173,14 +173,23 @@ func (s *PhaseService) Create(
 		return nil, status.Error(codes.Internal, "couldn't start transaction")
 	}
 
-	// Create the phase
-	p, err := txn.Phase.Create().
+	// Create the phase. Dates included: the proto has carried starts_at/ends_at
+	// from the start and Create silently DROPPED them (audit B4) — every phase
+	// was born undated, the timeline never showed one "In progress", and only
+	// an Edit after the fact could add what the caller already said.
+	create := txn.Phase.Create().
 		SetHackathonID(hackathonID).
 		SetName(req.GetName()).
 		SetDescription(req.GetDescription()).
 		SetCreator(user).
-		SetModifier(user).
-		Save(ctx)
+		SetModifier(user)
+	if req.GetStartsAt() != nil {
+		create.SetStartsAt(req.GetStartsAt().AsTime())
+	}
+	if req.GetEndsAt() != nil {
+		create.SetEndsAt(req.GetEndsAt().AsTime())
+	}
+	p, err := create.Save(ctx)
 	if err != nil {
 		if rbErr := txn.Rollback(); rbErr != nil {
 			slog.Error("rollback transaction after create failure", "err", err, "rollback", rbErr)

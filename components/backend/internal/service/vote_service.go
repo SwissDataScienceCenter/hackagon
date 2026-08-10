@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"sort"
 	"strconv"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
@@ -38,6 +39,17 @@ type VoteService struct {
 	vote.UnimplementedVoteServiceServer
 	dbClient *ent.Client
 	enforcer *m.Enforcer
+	// ballotMu serializes writeBallot. The unique index guards
+	// (category, voter, submission), so it says nothing about a SECOND ballot
+	// for a different submission — and the pre-check + delete-and-rewrite in
+	// writeBallot is check-then-act: two concurrent submits from one voter both
+	// passed the pre-check and both wrote (measured: 7 of 12 hammer rounds
+	// ended with two single-choice ballots for one voter in one category).
+	// A partial unique index would close it in the database, but ent cannot
+	// express one; an in-process lock closes it for this single-instance
+	// deployment. One mutex, not per-voter: a ballot write is a few
+	// milliseconds, and votes arrive at human speed.
+	ballotMu sync.Mutex
 }
 
 func NewVoteService(dbClient *ent.Client, enf *m.Enforcer) *VoteService {
@@ -887,6 +899,11 @@ func (s *VoteService) writeBallot(
 	method entvote.VoteType,
 	lines []ballotLine,
 ) ([]*ent.Vote, error) {
+	// The pre-check below and the delete-and-rewrite are one decision; without
+	// this lock two concurrent submits both saw "no ballot yet" and both wrote.
+	s.ballotMu.Lock()
+	defer s.ballotMu.Unlock()
+
 	mine := []predicate.Vote{
 		entvote.HasCategoryWith(entvotecategory.IDEQ(c.ID)),
 		entvote.HasVoterWith(entuser.IDEQ(voterID)),

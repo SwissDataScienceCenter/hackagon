@@ -4,6 +4,7 @@ package service_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
 
@@ -95,6 +97,43 @@ var _ = Describe("PhaseService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(phase.Name).To(Equal("Test Phase"))
 			Expect(phase.Description).To(Equal("Test description"))
+		})
+
+		It("persists the dates it was given (audit B4)", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.AppendToOutgoingContext(
+				context.Background(), "authorization", "Bearer "+token,
+			)
+
+			hackathonClient := hackathonSvc.NewHackathonServiceClient(conn)
+			createHackResp, err := hackathonClient.Create(ctx, &hackathonMsgs.CreateRequest{
+				Name:       "Dated Phase Hackathon",
+				Visibility: 2, // PUBLIC
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			starts := timestamppb.New(time.Date(2027, 3, 1, 9, 0, 0, 0, time.UTC))
+			ends := timestamppb.New(time.Date(2027, 3, 2, 18, 0, 0, 0, time.UTC))
+			resp, err := client.Create(ctx, &phaseMsgs.CreateRequest{
+				HackathonId: createHackResp.GetHackathonId(),
+				Name:        "Dated Phase",
+				Description: "Carries its own schedule",
+				StartsAt:    starts,
+				EndsAt:      ends,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// The proto carried starts_at/ends_at from the beginning and Create
+			// silently dropped both — every phase was born undated and only an
+			// Edit could add what the caller already said.
+			phase, err := dbClient.Phase.Query().
+				Where(entphase.IDEQ(uuid.MustParse(resp.GetPhaseId()))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(phase.StartsAt).NotTo(BeNil())
+			Expect(phase.StartsAt.UTC()).To(Equal(starts.AsTime()))
+			Expect(phase.EndsAt).NotTo(BeNil())
+			Expect(phase.EndsAt.UTC()).To(Equal(ends.AsTime()))
 		})
 
 		It("requires authentication to create", func() {

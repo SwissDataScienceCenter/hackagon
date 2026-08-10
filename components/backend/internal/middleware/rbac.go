@@ -114,8 +114,14 @@ func (p Permission) String() string {
 	}
 }
 
+// Enforcer wraps a casbin.SyncedEnforcer — synced, not plain, because gRPC
+// handlers run concurrently and casbin's in-memory model is not safe for a
+// policy write (Join's AddRole, owner grants) racing an Enforce read. The
+// synced variant takes an RWMutex around both. Check-then-act sequences that
+// span SEVERAL casbin calls (the last-organizer guard) still need their own
+// lock on top; see HackathonService.ownerMu.
 type Enforcer struct {
-	enforcer *casbin.Enforcer
+	enforcer *casbin.SyncedEnforcer
 }
 
 func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
@@ -129,7 +135,7 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 		return nil, fmt.Errorf("failed to load model config: %w", err)
 	}
 
-	e, err := casbin.NewEnforcer(m, a)
+	e, err := casbin.NewSyncedEnforcer(m, a)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create enforcer: %w", err)
 	}
@@ -157,7 +163,7 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 	return &Enforcer{enforcer: e}, nil
 }
 
-func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
+func defaultPolicies(cfg *config.Config, e *casbin.SyncedEnforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons
 		{HackathonOrganizer.String(), "/hackathon/*", Hackathon.String(), Create.String()},
