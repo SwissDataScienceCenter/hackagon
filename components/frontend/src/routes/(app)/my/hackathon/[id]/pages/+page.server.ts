@@ -70,6 +70,44 @@ export const actions: Actions = {
     }
   },
 
+  // What a drag-and-drop reorder submits: the whole sequence in one call, which
+  // is what `SetOrder` insists on — it refuses a list that is not every page of
+  // the hackathon exactly once. MoveUp/MoveDown below stay as the keyboard path.
+  setOrder: async (event) => {
+    const raw = (await event.request.formData()).get("pageIds")
+    if (typeof raw !== "string" || raw === "") {
+      return fail(400, { message: "Invalid page order" })
+    }
+    const pageIds = raw.split(",").filter((id) => id !== "")
+    if (pageIds.length === 0) {
+      return fail(400, { message: "Invalid page order" })
+    }
+
+    const { page } = requireGrpc(event.locals.grpc)
+    try {
+      await page.setOrder({ hackathonId: event.params.id, pageIds })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+        return fail(403, {
+          message: "You don't have permission to reorder pages",
+        })
+      }
+      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+        return fail(404, { message: "Page not found" })
+      }
+      // The list we sent is no longer the hackathon's set of pages — one was
+      // added or deleted elsewhere while this tab held a stale copy. The page
+      // refetches on any failure, so saying so is all that is left to do.
+      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+        return fail(409, {
+          message:
+            "The pages changed while you were reordering. The list has been refreshed — please try again.",
+        })
+      }
+      throw e
+    }
+  },
+
   moveUp: async (event) => {
     const pageId = (await event.request.formData()).get("pageId")
     if (typeof pageId !== "string" || pageId === "") {
