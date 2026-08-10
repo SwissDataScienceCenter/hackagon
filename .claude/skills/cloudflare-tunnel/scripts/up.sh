@@ -7,6 +7,13 @@
 #                         combine with --with-auth). `vite dev` keeps :8081.
 #                         Undo with down.sh or prod-serve.sh stop.
 #   up.sh --port <n>   -> tunnel any local port via host.docker.internal
+#
+# Every hackagon-stack run also ENSURES the tunnel's upstream can serve the
+# public hostname: caddy prefers :8082 and falls back to vite on :8081, but the
+# e2e harness parks an adapter-node build there with ORIGIN=http://localhost:8081
+# — which serves pages through the tunnel and 403s every form POST, so login
+# silently does nothing. prod-serve.sh ensure starts a correct-origin :8082 in
+# that case and refuses rather than hand over a broken link.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$HERE/../../../.." && pwd)"
@@ -32,7 +39,7 @@ while [ $# -gt 0 ]; do
     --with-auth) WITH_AUTH=1 ;;
     --prod) PROD=1 ;;
     -h | --help)
-      sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -90,18 +97,40 @@ if [ -z "$PORT" ]; then
       bash -lc "cd /workspaces/hackagon && bash .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh '$url'"
   fi
 
+  # LAST, and only now: the built server reads config.yaml once into a module
+  # singleton at boot, so the issuer overlay above has to be on disk before it
+  # starts. (Nothing is duplicated by ordering it this way — auth-wire.sh
+  # restarts the built server only when one is ALREADY running, which on this
+  # path it is not.)
+  #
+  # ORIGIN is the tunnel URL, not localhost: SvelteKit rejects any form POST
+  # whose Origin header does not match ORIGIN, so a localhost value would 403
+  # every action a visitor takes through the public link — login first.
+  #
+  # `ensure` runs on EVERY hackagon-stack tunnel, not just `--prod`, because
+  # caddy's fallback to :8081 is only correct when `vite dev` is what is there.
+  # Whenever the adapter-node build holds that port — which is what the e2e
+  # harness leaves behind, and what `hackathon-e2e/scripts/wait-ready.sh` sets
+  # up on every single run — its ORIGIN is http://localhost:8081 and the public
+  # URL serves every page while every form POST 403s. That is silent: the link
+  # looks perfect until somebody tries to sign in, which is exactly what
+  # `devcontainer-up/scripts/start.sh --tunnel` then failed to prove, with
+  # nothing in any log naming the cause. `ensure` starts a correct-origin server
+  # on :8082 only in that case, leaves a vite fallback alone, and exits non-zero
+  # rather than handing over a URL it knows is broken. `--prod` still forces the
+  # built server (and a build) for the request-count win.
   if [ -n "$PROD" ]; then
-    # LAST, and only now: the built server reads config.yaml once into a module
-    # singleton at boot, so the issuer overlay above has to be on disk before it
-    # starts. (Nothing is duplicated by ordering it this way — auth-wire.sh
-    # restarts the built server only when one is ALREADY running, which on this
-    # path it is not.)
-    #
-    # ORIGIN is the tunnel URL, not localhost: SvelteKit rejects any form POST
-    # whose Origin header does not match ORIGIN, so a localhost value would 403
-    # every action a visitor takes through the public link.
-    docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
-      bash -lc "cd /workspaces/hackagon && bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh start '$url'"
+    UPSTREAM_CMD="bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh start '$url'"
+  else
+    UPSTREAM_CMD="bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh ensure '$url'"
+  fi
+  if ! docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
+    bash -lc "cd /workspaces/hackagon && $UPSTREAM_CMD &&
+      echo && echo '==> Tunnel upstream:' &&
+      bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh status"; then
+    echo "error: the tunnel is up but its upstream cannot serve $url correctly." >&2
+    echo "       Fix that before using the link — see the lines above." >&2
+    exit 1
   fi
 
   echo
@@ -111,11 +140,10 @@ if [ -z "$PORT" ]; then
     echo "Public URL (frontend, view-only): $url"
   fi
   if [ -n "$PROD" ]; then
-    echo "Serving:                    PRODUCTION BUILD (adapter-node, :8082)"
     echo "Back to the dev server:     scripts/prod-serve.sh stop  (down.sh does it too)"
   else
-    echo "Serving:                    dev server (vite :8081, unbundled — 150 requests/page)"
-    echo "Faster public pages:        re-run with --prod"
+    echo "Which server answers it:    printed above by prod-serve.sh status"
+    echo "Fewer requests per page:    re-run with --prod (bundled build, 54 vs 150)"
   fi
 else
   name="cf-quicktunnel-$PORT"

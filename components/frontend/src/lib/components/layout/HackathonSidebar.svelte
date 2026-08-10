@@ -134,10 +134,24 @@
      stretches with the page. Stretching left the nav's own overflow-y-auto inert,
      since an unbounded height never overflows, and pushed a long page's content
      pages below the fold. md:self-start keeps the flex row from stretching it back
-     out. -->
+     out.
+
+     pb-[var(--consent-banner-h,0px)] is why the last entries are clickable while
+     the session-replay consent banner is up. This column is anchored to the
+     VIEWPORT — both as the mobile drawer (inset-y-0) and as the desktop sticky
+     column — so it reaches the bottom of the screen at every scroll position, and
+     the banner is drawn over that bottom band. Scrolling frees page content; it
+     can never free this, so "Manage Pages", "Prizes", "Deadlines" and "Manage
+     Forms" were simply not clickable until the ask was answered (found by
+     helpers/reflow.ts on all 21 /my/hackathon/* routes at 1440px). Padding rather
+     than a shorter height so the box still covers the screen — border-box means
+     the nav's own scrollport is what shrinks, and its overflow-y-auto keeps every
+     entry reachable. The variable is published by ReplayConsentBanner.svelte and
+     absent (⇒ 0px) whenever there is no banner. -->
 <aside
     class="fixed inset-y-0 left-0 z-40 flex h-screen w-64 -translate-x-full flex-col
-           border-r border-line bg-surface transition-transform
+           border-r border-line bg-surface pb-[var(--consent-banner-h,0px)]
+           transition-transform
            duration-200 md:sticky md:top-14 md:bottom-auto md:z-auto
            md:h-[calc(100vh-3.5rem)] md:translate-x-0 md:self-start md:transition-[width]
            {mobileOpen ? 'translate-x-0' : ''} {collapsed ? 'md:w-16' : 'md:w-64'}"

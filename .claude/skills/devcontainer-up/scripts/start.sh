@@ -156,6 +156,16 @@ if [ "$WITH_TUNNEL" -eq 1 ]; then
   # The check that matters. Serving HTML proves nothing about OIDC: the failure
   # mode this guards against is a tunnel whose issuers still point at localhost,
   # where every page loads and only signing in is broken.
+  #
+  # It caught a second failure of exactly that shape, one layer down. The stack
+  # step above ends in `wait-ready.sh`, which serves the frontend from the
+  # adapter-node BUILD on :8081 with ORIGIN=http://localhost:8081 — and caddy
+  # falls back to :8081 when nothing holds :8082, so the public URL was served
+  # by a server that 403s every form POST arriving with the tunnel's Origin.
+  # Pages rendered; "Log in" did nothing; this proof timed out with nothing in
+  # any log naming the cause. `cloudflare-tunnel/scripts/up.sh` now calls
+  # `prod-serve.sh ensure <url>` to put a correct-origin server on :8082 in that
+  # case, so the proof below tests OIDC rather than the upstream's ORIGIN.
   if ! bash "$SKILLS/devcontainer-up/scripts/exec.sh" \
     env TUNNEL_BASE_URL="$URL" PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true \
     just nix::develop default bash -c \

@@ -82,6 +82,23 @@
 		# and forth with vite around each run — so every `run.sh` handed the
 		# public URL ~40s of 502 Bad Gateway. A dedicated port removes the
 		# collision entirely: a suite run never touches :8082.
+		#
+		# ⚠ THE FALLBACK IS ONLY CORRECT WHEN :8081 IS VITE, and caddy cannot tell.
+		# vite derives the request origin from the Host header, so it answers a tunnel
+		# hostname correctly. The adapter-node build does not: it was launched with a
+		# FIXED ORIGIN, and the e2e harness always uses http://localhost:8081
+		# (hackathon-e2e/scripts/prod-frontend.sh, which wait-ready.sh starts on every
+		# run). Reached through the tunnel, that server serves every page while
+		# SvelteKit 403s every form POST — the public URL looks perfect and login does
+		# nothing, with nothing in any log to say why.
+		#
+		# Nothing here can fix that, so it is fixed one level up:
+		# cloudflare-tunnel/scripts/up.sh calls `prod-serve.sh ensure <url>`, which
+		# starts a correct-origin server on :8082 whenever a fixed-origin server holds
+		# :8081, leaves a vite fallback alone, and refuses to hand over the link when
+		# it can do neither. Do not "simplify" this fallback away either: a plain
+		# (non---prod) tunnel served by vite is a supported mode and the fallback is
+		# what makes it work.
 		reverse_proxy dev:8082 dev:8081 {
 			# "first available", not round-robin — :8081 is a fallback, not a peer.
 			lb_policy first

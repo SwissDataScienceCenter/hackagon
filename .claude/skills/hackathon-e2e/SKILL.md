@@ -37,6 +37,15 @@ screenshot per page into `.artifacts/mobile/` for visual review. Fresh runs
 seed the fixture; `--no-reset` runs it over whatever world is live (e.g. a
 journey frozen at some act).
 
+It also owns the **layout** contracts (`helpers/reflow.ts`, shared by
+`chrome-reflow.spec.ts` at 6 widths and `full-sweep.spec.ts` at 2 widths ×
+every route): nothing overflows sideways, nothing overlaps, no text is clipped,
+and **the session-replay consent banner is on screen without scrolling and
+covers no control once the document is at its end**. That last one needs the
+banner to EXIST, so `run.sh mobile` adds a no-ingest `replay` block to the
+config overlay when no rig has wired one, and removes it on exit — an assertion
+whose subject is absent verifies nothing.
+
 **Freeze the world at a phase**: `run.sh journey --until-act 4` plays the
 story up to (and including) act 4 and leaves the stack in exactly that state
 — browse it at http://localhost:8081, or publicly via the sibling

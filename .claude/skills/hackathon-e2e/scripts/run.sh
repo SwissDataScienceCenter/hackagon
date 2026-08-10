@@ -120,36 +120,60 @@ if [ -f "$AUTH_WIRE" ]; then
   fi
 fi
 
-# Session replay, borrowed for the duration of the run — same contract as the
-# tunnel above, for the same reason.
+# Session replay is NO LONGER BORROWED AWAY. Do not reintroduce that.
 #
-# The tracker is only wanted by the `openreplay` suite. For every other suite
-# it is not merely irrelevant, it BREAKS them: the consent banner is
-# `fixed bottom-0 z-[60]`, so it sits on top of whatever is at the bottom of
-# the page and swallows clicks aimed at it. `act0.about.publish` clicks the
-# CMS's `visible` checkbox, which lands exactly there — Playwright retried for
-# the full 60s against
+# It used to be: this script read the `replay` block out of the overlay for
+# every suite but `openreplay` and wrote it back on exit, because the consent
+# banner was `fixed bottom-0 z-[60]` with nothing reserving its space — it sat
+# on top of whatever was at the bottom of the page and swallowed clicks aimed
+# at it. `act0.about.publish` clicks the CMS `visible` checkbox, which landed
+# exactly there; Playwright retried for the full 60s against
 #
 #   <div role="region" aria-label="Session recording" …> intercepts pointer events
 #
-# and the journey died on its 10th action with 338 not run. Smoke passed the
-# same wiring, which is what makes this worth automating rather than
-# remembering: whether a suite trips over the banner depends on where its
-# controls happen to sit.
+# and the journey died on its 10th action with 338 not run.
 #
-# Borrowed, not switched off: the block is read out first and written back on
-# EXIT. A run that silently unwired the replay somebody set up on purpose would
-# be the tunnel's old bug in a new place — the UI keeps working, and only the
-# thing you were trying to record stops happening.
+# The banner reserves its own space in the document now (it is `sticky
+# bottom-0`, so the last band of the page belongs to it and content scrolls
+# clear), and `helpers/reflow.ts:expectConsentBannerClearsContent` asserts that
+# at 8 widths across every route. With that fixed there is nothing to borrow:
+# the tracker is consent-gated — the server withholds the ingest endpoint and
+# the project key until a browser clicks "Allow recording", which no suite but
+# `openreplay` ever does — so a wired `replay` block changes exactly ONE thing
+# for the other suites: the ask is on screen, exactly as it is for every
+# first-time visitor. Running against the chrome real people see is the point.
+#
+# The mobile suite needs the OPPOSITE guarantee. Its sweep asserts ABOUT the
+# banner, and an assertion whose subject is absent verifies nothing — the
+# failure mode this repo keeps finding. So when no rig has wired replay, that
+# suite gets a block of its own: enough for the server to render the ask,
+# pointing at a port where nothing listens, removed again on exit. Consent is
+# never granted, so not one byte is ever addressed to it.
 OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
 FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
-REPLAY_BLOCK=""
-if [ "$SUITE" != "openreplay" ] && [ -f "$OVERLAY" ]; then
-  REPLAY_BLOCK="$(bash "$OVERLAY" get "$FRONTEND_LOCAL" replay)"
-  if [ -n "$REPLAY_BLOCK" ]; then
-    bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay >/dev/null
-    echo "note: session replay was wired — off for this run, restored when it finishes"
-  fi
+REPLAY_STUBBED=0
+if [ "$SUITE" = "mobile" ] && [ -f "$OVERLAY" ] &&
+  ! bash "$OVERLAY" has "$FRONTEND_LOCAL" replay; then
+  bash "$OVERLAY" set "$FRONTEND_LOCAL" replay >/dev/null <<'STUB'
+replay:
+  enabled: true
+  # NOTHING LISTENS HERE, and nothing ever will. The tracker is only handed an
+  # ingest endpoint and a project key once a browser has consented, and a
+  # layout sweep never does — this block exists so the SERVER renders the
+  # consent banner, which tests/mobile treats as part of the chrome.
+  # Written by hackathon-e2e/scripts/run.sh, removed when the run ends.
+  ingestPoint: http://127.0.0.1:9/ingest
+  projectKey: mobile-sweep-never-ingests
+  allowInsecureOrigin: true
+STUB
+  REPLAY_STUBBED=1
+  echo "note: no session replay wired — added a no-ingest \`replay\` block so the consent banner renders for this run"
+  # The frontend reads its config once at boot, so the block is inert until it
+  # restarts. Stop the built server here; wait-ready.sh starts a fresh one
+  # below. (reset.sh does this too, but a --no-reset run would otherwise sweep
+  # a server that never saw the block — and every banner assertion would fail
+  # for want of a banner.)
+  bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 || true
 fi
 
 # EXIT, not a success path — a failed or interrupted run must not leave the
@@ -158,16 +182,18 @@ fi
 # boot; that is why re-wiring restores logins through the tunnel and not just
 # on localhost.
 on_exit() {
-  if [ -n "$REPLAY_BLOCK" ]; then
+  if [ "$REPLAY_STUBBED" -eq 1 ]; then
     echo
-    echo "==> Re-wiring session replay"
-    printf '%s\n' "$REPLAY_BLOCK" | bash "$OVERLAY" set "$FRONTEND_LOCAL" replay >/dev/null
-    # The frontend reads its config once at boot, so putting the block back is
-    # inert until the server restarts. Bounce the built one — no docker needed,
-    # which matters because this script runs INSIDE the dev container.
+    echo "==> Removing the no-ingest \`replay\` block this run added"
+    # `remove`, never `rm`: the overlay is shared, and this script has no
+    # business deleting a key it did not write (see config-overlay.sh).
+    bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay >/dev/null
+    # The frontend read the block once at boot, so it keeps rendering the ask
+    # until it restarts. Bounce the built one — no docker needed, which matters
+    # because this script runs INSIDE the dev container.
     bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 &&
       bash "$HERE/prod-frontend.sh" ensure >/dev/null 2>&1 ||
-      echo "warn: replay is wired again but the frontend was not restarted;" \
+      echo "warn: the replay block is gone but the frontend was not restarted;" \
         "run prod-frontend.sh stop && … ensure" >&2
   fi
   if [ -n "$WIRED_URL" ]; then
@@ -177,7 +203,7 @@ on_exit() {
       echo "warn: re-wiring failed; run auth-wire.sh $WIRED_URL by hand" >&2
   fi
 }
-if [ -n "$WIRED_URL" ] || [ -n "$REPLAY_BLOCK" ]; then
+if [ -n "$WIRED_URL" ] || [ "$REPLAY_STUBBED" -eq 1 ]; then
   trap on_exit EXIT
 fi
 

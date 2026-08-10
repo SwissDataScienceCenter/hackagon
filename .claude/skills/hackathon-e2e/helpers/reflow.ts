@@ -5,13 +5,16 @@ import { expect, type Page } from "@playwright/test"
 // tests/mobile/full-sweep.spec.ts owns the every-route sweep). Extracted so
 // the two cannot drift: a check that gets smarter here gets smarter for both.
 //
-// Three properties, each asserted structurally rather than as a screenshot:
+// Four properties, each asserted structurally rather than as a screenshot:
 //  1. no horizontal overflow — the document must never scroll sideways;
 //  2. no two visible elements inside a scope may visibly intersect unless one
 //     contains the other — overlap is how a non-wrapping row fails on a
 //     narrow screen;
 //  3. no text leaf is clipped by its own box (scrollWidth > clientWidth is
-//     exactly what a squeezed "H…" wordmark looks like).
+//     exactly what a squeezed "H…" wordmark looks like);
+//  4. the consent banner — the one piece of chrome that LAYERS over the page —
+//     is on screen without being asked to be, and covers no control once the
+//     document is scrolled to its end (expectConsentBannerClearsContent).
 
 /** Horizontal overflow, with the widest offenders named (same contract as
  * responsive.spec.ts, which owns the 390px battery). */
@@ -239,4 +242,228 @@ export async function expectNoClippedText(
     clipped,
     `${name}: clipped text in ${scope}: ${clipped.join(" | ")}`,
   ).toHaveLength(0)
+}
+
+// ─── The consent banner: visible AND never in the way ────────────────────────
+
+/** The session-replay consent banner. The one piece of chrome that is drawn
+ * OVER the page rather than beside it, so it gets its own contract. */
+export const CONSENT_BANNER = '[aria-label="Session recording"]'
+
+/**
+ * What a person operates. A banner drawn over a paragraph is cosmetic; one
+ * drawn over a checkbox is a dead control, and that is the bug this exists
+ * for: the banner was `fixed bottom-0 z-[60]` with nothing reserving its
+ * space, so on any page whose controls reach the bottom of the viewport they
+ * could not be clicked AT ALL — no scroll position moved them out from under
+ * it, because the document had no room to scroll. The journey died on its 10th
+ * action with 338 not run, Playwright retrying for the full 60s against
+ * `<div role="region" aria-label="Session recording"> intercepts pointer
+ * events` on `/manage/pages`' `visible` checkbox.
+ *
+ * `input:not([type=hidden])` because a hidden input has no box; `summary`
+ * because a native <details> is the disclosure control in this app.
+ */
+const INTERACTIVE = [
+  "a[href]",
+  "button",
+  "input:not([type=hidden])",
+  "select",
+  "textarea",
+  "summary",
+  "label[for]",
+  "[role=button]",
+  "[role=link]",
+  "[role=checkbox]",
+  "[role=switch]",
+  "[role=tab]",
+  "[contenteditable=true]",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",")
+
+/** A rounding allowance, not a design allowance. */
+const TOP_SLACK = 2
+
+/**
+ * TWO claims about the consent banner, and they pull in opposite directions —
+ * which is the whole reason both are asserted:
+ *
+ *  1. IT IS NOTICED. At the top of the page it is fully inside the viewport,
+ *     without anyone scrolling. Moving it into normal flow at the end of a
+ *     long document would make the coverage check below pass trivially and the
+ *     ask invisible, which trades one bug for another.
+ *  2. IT IS NEVER IN THE WAY. With the document scrolled to its end — the
+ *     furthest anything can be moved out from under a viewport-pinned banner —
+ *     no interactive element outside the banner may intersect it. That is the
+ *     reachability property: every control has SOME scroll position at which
+ *     it is clickable, and the last band of the document belongs to the banner
+ *     itself rather than to content.
+ *
+ * Both are checked with consent NOT given (the suites never answer the ask),
+ * which is the state a first-time visitor is in and the only state in which
+ * the banner exists at all. The banner MUST be present: a run where it is
+ * missing verifies nothing here, so its absence fails loudly rather than
+ * passing quietly — `scripts/run.sh mobile` makes sure a `replay` block is
+ * configured for exactly this reason.
+ *
+ * Scroll position is restored, so this can run alongside the other checks
+ * without moving the page under them.
+ */
+export async function expectConsentBannerClearsContent(
+  page: Page,
+  name: string,
+) {
+  await expect(
+    page.locator(CONSENT_BANNER),
+    `${name}: the session-replay consent banner is not on this page, so this ` +
+      `check would verify nothing. It renders when the frontend config has a ` +
+      `\`replay\` block AND this browser has not answered the ask yet — run ` +
+      `the suite through scripts/run.sh (it configures one), and do not grant ` +
+      `consent in a layout test`,
+  ).toBeVisible()
+
+  const probe = async () =>
+    page.evaluate(
+      ({ sel, interactive }) => {
+        const banner = document.querySelector(sel)
+        if (!banner) return null
+        const b = banner.getBoundingClientRect()
+        const TOL = 2
+        const label = (el: Element) => {
+          const cls = (el.getAttribute("class") ?? "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(".")
+          const text = (el.textContent ?? "").trim().slice(0, 24)
+          return `${el.tagName.toLowerCase()}${cls ? "." + cls : ""}${text ? ` "${text}"` : ""}`
+        }
+        /**
+         * The part of an element that is actually PAINTED: its border box,
+         * cut down by every ancestor that clips.
+         *
+         * Without this the check reports elements nobody can see. The
+         * hackathon sidebar's nav is `overflow-y-auto` with ~370px of entries
+         * hanging below its scrollport; those entries have real rects, they
+         * land squarely in the banner's band, and they are invisible — so the
+         * check called the banner a lid on four links that were not on screen
+         * at all, on 21 routes, and went on saying so after the defect was
+         * fixed. An element scrolled out of its own scroller is reached by
+         * scrolling THAT scroller; what matters is whether the scrollport's
+         * visible area is clear of the banner, which is exactly what clipping
+         * to it measures.
+         *
+         * Per-axis, because `overflow-x: auto` on a wide table is the
+         * sanctioned pattern here and says nothing about vertical extent. A
+         * `position: fixed` box escapes ancestor clipping entirely, so it is
+         * returned as-is — those are the elements that CANNOT be scrolled out
+         * from under the banner, and they must stay in.
+         */
+        const painted = (el: Element) => {
+          const r = el.getBoundingClientRect()
+          const box = {
+            top: r.top,
+            bottom: r.bottom,
+            left: r.left,
+            right: r.right,
+          }
+          if (getComputedStyle(el).position === "fixed") return box
+          for (let p = el.parentElement; p; p = p.parentElement) {
+            const cs = getComputedStyle(p)
+            const pr = p.getBoundingClientRect()
+            if (cs.overflowY !== "visible") {
+              box.top = Math.max(box.top, pr.top)
+              box.bottom = Math.min(box.bottom, pr.bottom)
+            }
+            if (cs.overflowX !== "visible") {
+              box.left = Math.max(box.left, pr.left)
+              box.right = Math.min(box.right, pr.right)
+            }
+            if (box.bottom - box.top <= 1 || box.right - box.left <= 1)
+              return null
+            if (cs.position === "fixed") break
+          }
+          return box
+        }
+
+        const covered: string[] = []
+        for (const el of Array.from(document.querySelectorAll(interactive))) {
+          if (banner.contains(el) || el.contains(banner)) continue
+          const cs = getComputedStyle(el)
+          if (
+            cs.display === "none" ||
+            cs.visibility === "hidden" ||
+            Number(cs.opacity) === 0
+          )
+            continue
+          // Closed-<details> content is not rendered, but Firefox still
+          // reports boxes for it (same pardon as expectNoOverlap).
+          const details = el.closest("details")
+          if (details && !details.open && !el.closest("summary")) continue
+          const r = painted(el)
+          if (!r) continue // clipped away by a scroller: not on screen at all
+          if (r.right - r.left <= 1 || r.bottom - r.top <= 1) continue
+          const x = Math.min(r.right, b.right) - Math.max(r.left, b.left)
+          const y = Math.min(r.bottom, b.bottom) - Math.max(r.top, b.top)
+          if (x <= TOL || y <= TOL) continue
+          covered.push(`${label(el)} by ${Math.round(x)}×${Math.round(y)}px`)
+          if (covered.length >= 8) break
+        }
+        return {
+          top: Math.round(b.top),
+          bottom: Math.round(b.bottom),
+          height: Math.round(b.height),
+          viewport: document.documentElement.clientHeight,
+          doc: document.documentElement.scrollHeight,
+          scrollY: Math.round(window.scrollY),
+          covered,
+        }
+      },
+      { sel: CONSENT_BANNER, interactive: INTERACTIVE },
+    )
+
+  // A scroll is applied at layout time, so read it back in a later task rather
+  // than measuring in the same one — a sticky box that has not been re-laid-out
+  // reports its old rect and this whole check becomes a coin toss.
+  const settle = async () => {
+    await page.evaluate(
+      () => new Promise((r) => requestAnimationFrame(() => r(null))),
+    )
+  }
+
+  const restore = await page.evaluate(() => window.scrollY)
+
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await settle()
+  const atTop = await probe()
+
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  )
+  await settle()
+  const atEnd = await probe()
+
+  await page.evaluate((y) => window.scrollTo(0, y), restore)
+
+  if (atTop === null || atEnd === null) return // asserted visible above
+
+  // 1. On screen at the top of the page, whole.
+  expect(
+    atTop.top >= -TOP_SLACK && atTop.bottom <= atTop.viewport + TOP_SLACK,
+    `${name}: the consent banner is not fully on screen at the top of the ` +
+      `page (top=${atTop.top} bottom=${atTop.bottom} viewport=${atTop.viewport}). ` +
+      `An ask nobody sees is not an ask — it must stay pinned to the viewport, ` +
+      `not sit in flow at the end of a long document`,
+  ).toBe(true)
+
+  // 2. Nothing operable underneath it once the document is at its end.
+  expect(
+    atEnd.covered,
+    `${name}: the consent banner covers ${atEnd.covered.length} interactive ` +
+      `element(s) with the document scrolled to its END, so no scroll position ` +
+      `frees them — they cannot be clicked while the ask is up. The banner ` +
+      `must reserve its own ${atEnd.height}px in the document (it is ` +
+      `${atEnd.doc}px tall, viewport ${atEnd.viewport}px): ` +
+      atEnd.covered.join(" | "),
+  ).toEqual([])
 }

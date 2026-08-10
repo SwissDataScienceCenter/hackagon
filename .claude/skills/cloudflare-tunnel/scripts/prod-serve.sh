@@ -6,6 +6,8 @@
 #
 #   prod-serve.sh start <https://public-url>   build, serve it on :8082
 #   prod-serve.sh start <url> --no-build       reuse the existing build/
+#   prod-serve.sh ensure <url>                 make the tunnel's upstream answer
+#                                              as <url> — the minimum that takes
 #   prod-serve.sh stop                         stop the built server
 #   prod-serve.sh status                       what is on :8082 and on :8081
 #   prod-serve.sh origin                       print ORIGIN, exit 1 if not prod
@@ -107,13 +109,33 @@ wait_for() { # <name> <timeout_s> <cmd...>
   echo "ok"
 }
 
+# THE SAME ENTRYPOINT RUNS ON BOTH PORTS, so the only honest way to tell the
+# tunnel's server from the e2e harness's is the PORT it was launched with —
+# `pgrep -f build/service/index.js` matches both. hackathon-e2e/scripts/
+# prod-frontend.sh scopes its own scan to `PORT=8081` for exactly this reason,
+# and this file did not: with no :8082 server up, `prod_pid` returned the
+# HARNESS's :8081 pid, so `stop` — which `down.sh` calls — killed the local
+# stack's frontend while reporting that it had stopped a tunnel upstream, and
+# `ensure`/`start` would have "restarted" it onto another port.
+servers_on_port() { # <port> — pids of our built server launched with that PORT
+  local pid
+  for pid in $({ pgrep -f "$SERVER_ENTRY" 2>/dev/null || true; }); do
+    if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$1"; then
+      echo "$pid"
+    fi
+  done
+  return 0
+}
+
 # A PID alone is not proof: PIDs get recycled, and the file survives a crash.
-# Only treat it as ours when the live process really is the built server.
+# Only treat it as ours when the live process really is the built server ON OUR
+# PORT.
 is_prod_server() { # <pid>
   local pid="${1:-}"
   [ -n "$pid" ] || return 1
   kill -0 "$pid" 2>/dev/null || return 1
-  tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "$SERVER_ENTRY"
+  tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "$SERVER_ENTRY" || return 1
+  tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$PROD_PORT"
 }
 
 prod_pid() {
@@ -127,10 +149,13 @@ prod_pid() {
   fi
   # Fall back to a scan: the pid file can be stale (or absent after a manual
   # launch), but a second copy of the server holding the port would be
-  # invisible. `|| true` because pgrep exits 1 on no match and pipefail would
-  # propagate it into the caller's `$(...)` assignment, which set -e turns into
-  # an abort.
-  { pgrep -f "$SERVER_ENTRY" 2>/dev/null | head -1; } || true
+  # invisible. First line taken in the shell rather than with `| head -1`:
+  # under `set -o pipefail` head's early exit SIGPIPEs the producer, the
+  # pipeline reports 141, and the caller's `$(...)` assignment inherits it —
+  # which `set -e` turns into an abort.
+  local pids
+  pids="$(servers_on_port "$PROD_PORT")" || true
+  printf '%s' "${pids%%$'\n'*}"
 }
 
 prod_html() { curl -fsS --max-time 5 "http://localhost:$PROD_PORT/" 2>/dev/null; }
@@ -148,6 +173,42 @@ dev_html() { curl -fsS --max-time 45 "http://[::1]:$DEV_PORT/" 2>/dev/null; }
 # the document: SvelteKit's entry module imports it, the HTML does not.
 DEV_MARKER="/@fs/"
 PROD_MARKER="/_app/immutable/"
+
+# ── who holds :8081, and with which ORIGIN ──────────────────────────────────
+#
+# This exists because "something serves :8081" is not the question caddy's
+# fallback actually raises. TWO different servers live on that port at
+# different times and they answer the tunnel differently:
+#
+#   vite dev       derives the request origin from the Host header, so it is
+#                  correct on localhost AND on a tunnel hostname. A fine
+#                  fallback, and the reason the fallback exists at all.
+#   the build      was launched with a FIXED ORIGIN, and the e2e harness
+#                  (hackathon-e2e/scripts/prod-frontend.sh) always uses
+#                  http://localhost:8081 — wait-ready.sh starts one on every
+#                  single run. SvelteKit compares every form POST's Origin
+#                  header against that value and answers 403 "cross-site form
+#                  submission forbidden" when they differ. Reached through the
+#                  tunnel it therefore SERVES EVERY PAGE and breaks every
+#                  action, login first — "Log in" does nothing at all. It also
+#                  read its OIDC config once at boot, so on a machine where the
+#                  harness has run it is holding a pre-tunnel issuer too.
+#
+# So a fallback to :8081 is right for one of them and silently wrong for the
+# other, and caddy cannot tell them apart. `ensure` below can.
+dev_port_pid() { # the adapter-node build on :$DEV_PORT, if that is what is there
+  local pids
+  pids="$(servers_on_port "$DEV_PORT")" || true
+  [ -n "$pids" ] || return 1
+  printf '%s' "${pids%%$'\n'*}"
+}
+
+# ORIGIN is baked in at launch and not exposed by the app, so read it back out
+# of the process that was launched with it.
+pid_origin() { # <pid>
+  tr '\0' '\n' <"/proc/${1:-0}/environ" 2>/dev/null |
+    sed -n 's/^ORIGIN=//p' | head -1
+}
 
 # ── start ───────────────────────────────────────────────────────────────────
 cmd_start() {
@@ -234,6 +295,116 @@ cmd_start() {
   echo "  stop:   prod-serve.sh stop  (vite on :$DEV_PORT is untouched either way)"
 }
 
+# ── ensure ──────────────────────────────────────────────────────────────────
+# "Make the tunnel's upstream answer as <url>", doing the least that takes.
+#
+# THE BUG THIS CLOSES. `Caddyfile.tunnel` proxies `dev:8082 dev:8081` with
+# `lb_policy first`, so :8081 is a fallback — and a fallback that is only
+# sometimes correct. On any machine where the e2e harness has run (which is
+# every machine that has run `devcontainer-up/scripts/start.sh`, since
+# wait-ready.sh starts one unconditionally) :8081 holds the adapter-node build
+# with ORIGIN=http://localhost:8081. Caddy served it happily under the tunnel
+# hostname; SvelteKit then 403'd the login form POST, so the public URL rendered
+# every page and "Log in" did nothing. `start.sh --tunnel` ends by PROVING a
+# login round-trip, and that proof timed out with nothing in any log to say why.
+#
+# The alternatives, and why they are worse:
+#
+#   Make the :8081 server ORIGIN-agnostic. adapter-node does support it —
+#   `origin || get_origin(headers)` — but unsetting ORIGIN makes the protocol
+#   default to https for a localhost request (caddy deliberately does not
+#   forward X-Forwarded-Proto to the frontend, and there is no header to read),
+#   so every form POST on http://localhost:8081 would fail the same CSRF check
+#   from the other side. AUTH_URL would still be localhost, which is the
+#   documented cause of "login completes and then does nothing". And it would
+#   not help anyway: that server also read its OIDC issuer once at boot, before
+#   the tunnel was wired.
+#
+#   Make caddy refuse instead of falling back. Dropping `dev:8081` would break
+#   the plain (non-`--prod`) tunnel, where the fallback is `vite dev` and is
+#   perfectly correct — vite derives the origin from the Host header. Caddy
+#   cannot tell the two servers apart, so it cannot refuse only the wrong one.
+#   This function can, and it does the refusing HERE, before a public URL is
+#   handed over: it either fixes the upstream or exits non-zero.
+cmd_ensure() {
+  local want="${1:-}"
+  case "$want" in
+    http://* | https://*) ;;
+    *)
+      echo "usage: prod-serve.sh ensure <http(s)://public-url>" >&2
+      exit 2
+      ;;
+  esac
+  want="${want%/}"
+
+  local pid current
+  pid="$(prod_pid)"
+  if [ -n "$pid" ]; then
+    current="$(cat "$ORIGIN_FILE" 2>/dev/null || true)"
+    [ -n "$current" ] || current="$(pid_origin "$pid")"
+    if [ "$current" = "$want" ] && prod_html >/dev/null 2>&1; then
+      echo "==> :$PROD_PORT already serves ORIGIN=$want — the tunnel's upstream is correct."
+      return 0
+    fi
+    echo "==> :$PROD_PORT serves ORIGIN=${current:-unknown}, not $want — restarting it."
+    start_with_current_bundle "$want"
+    return 0
+  fi
+
+  # Nothing on :8082. Whether that is fine depends entirely on WHO is on :8081.
+  local dev_pid dev_origin dev_body
+  if dev_pid="$(dev_port_pid)"; then
+    dev_origin="$(pid_origin "$dev_pid")"
+    echo "==> :$DEV_PORT holds the adapter-node BUILD (pid $dev_pid, ORIGIN=${dev_origin:-unset})."
+    echo "    caddy would fall back to it, and SvelteKit answers 403 to every form"
+    echo "    POST whose Origin is not its ORIGIN — through $want that means login"
+    echo "    silently does nothing. Starting a correct-origin server on :$PROD_PORT."
+    start_with_current_bundle "$want"
+    return 0
+  fi
+
+  dev_body="$(dev_html || true)"
+  if [ -n "$dev_body" ] && printf '%s' "$dev_body" | grep -q -- "$DEV_MARKER"; then
+    echo "==> :$DEV_PORT is \`vite dev\`, which takes its origin from the request Host"
+    echo "    and is therefore correct on $want as it stands. Nothing to start."
+    return 0
+  fi
+  if [ -n "$dev_body" ]; then
+    # Serving, but not vite and not a process we can read an ORIGIN off (another
+    # namespace, or started by hand). Assume the worst: a fixed origin we cannot
+    # verify is exactly the silent failure this function exists to prevent.
+    echo "==> :$DEV_PORT is serving something whose ORIGIN cannot be read — treating"
+    echo "    it as a fixed origin and taking the tunnel to :$PROD_PORT instead."
+    start_with_current_bundle "$want"
+    return 0
+  fi
+
+  echo "error: nothing is serving on :$PROD_PORT or :$DEV_PORT — the tunnel has no" >&2
+  echo "       upstream and would answer 502. Start the stack first (just up, or" >&2
+  echo "       hackathon-e2e/scripts/up.sh)." >&2
+  return 1
+}
+
+# The bundle is a snapshot of src/, so it has to be rebuilt when src/ moved
+# under it — but rebuilding a current one costs ~40s of a tunnel handover for
+# nothing. Same freshness test as hackathon-e2e/scripts/prod-frontend.sh.
+bundle_is_stale() {
+  [ -f "$FRONTEND_DIR/$SERVER_ENTRY" ] || return 0
+  local newer
+  newer="$(cd "$FRONTEND_DIR" &&
+    find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
+      -newer "$SERVER_ENTRY" -print -quit 2>/dev/null || true)"
+  [ -n "$newer" ]
+}
+
+start_with_current_bundle() { # <origin>
+  if bundle_is_stale; then
+    cmd_start "$1"
+  else
+    cmd_start "$1" --no-build
+  fi
+}
+
 # ── stop ────────────────────────────────────────────────────────────────────
 # Only stops the built server. It never owned :$DEV_PORT, so there is nothing to
 # hand back — caddy notices :$PROD_PORT refusing connections and falls through
@@ -275,9 +446,18 @@ cmd_status() {
   fi
 
   if [ -n "$dev" ] && printf '%s' "$dev" | grep -q -- "$DEV_MARKER"; then
-    echo ":$DEV_PORT  DEV SERVER (vite, via process-compose)"
+    echo ":$DEV_PORT  DEV SERVER (vite, via process-compose) — origin from the Host header"
   elif [ -n "$dev" ]; then
-    echo ":$DEV_PORT  something is serving, but no '$DEV_MARKER' in the markup"
+    # Name the ORIGIN, because that is the difference that decides whether
+    # caddy's fallback is harmless or silently breaks every form POST.
+    local dev_pid dev_origin
+    if dev_pid="$(dev_port_pid)"; then
+      dev_origin="$(pid_origin "$dev_pid")"
+      echo ":$DEV_PORT  adapter-node BUILD (pid $dev_pid) — FIXED origin ${dev_origin:-unset}"
+      echo "       usable as the tunnel's fallback ONLY for that exact origin"
+    else
+      echo ":$DEV_PORT  something is serving, but no '$DEV_MARKER' in the markup"
+    fi
   else
     echo ":$DEV_PORT  not serving"
   fi
@@ -313,6 +493,10 @@ case "${1:-}" in
     shift
     cmd_start "$@"
     ;;
+  ensure)
+    shift
+    cmd_ensure "$@"
+    ;;
   stop)
     shift
     cmd_stop "$@"
@@ -324,7 +508,7 @@ case "${1:-}" in
     cmd_origin
     ;;
   -h | --help | "")
-    sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
   *)

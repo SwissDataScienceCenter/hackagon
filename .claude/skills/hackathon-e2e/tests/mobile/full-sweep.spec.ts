@@ -8,6 +8,8 @@ import {
   expectFitsViewport,
   expectNoOverlap,
   expectNoClippedText,
+  expectConsentBannerClearsContent,
+  CONSENT_BANNER,
 } from "../../helpers/reflow.js"
 
 // EVERY +page.svelte route, reflow-checked at a phone width and a desktop
@@ -46,7 +48,7 @@ const VIEWPORTS = [
   { width: 1440, height: 900 },
 ]
 
-const BANNER = '[aria-label="Session recording"]'
+const BANNER = CONSENT_BANNER
 const SHOTS = ".artifacts/sweep"
 fs.mkdirSync(SHOTS, { recursive: true })
 
@@ -375,6 +377,17 @@ async function sweep(page: Page, name: string, screenshot?: string) {
     allowEllipsis: true,
     allowInsideHorizontalScroller: true,
   })
+
+  // LAST, because it scrolls (and puts the page back). The checks above are
+  // taken at the top of the page; this one is the only claim that depends on
+  // where the document ends.
+  //
+  // Route coverage is the point of running it here rather than only in
+  // chrome-reflow: whether a page trips over a banner drawn on top of it
+  // depends entirely on where that page's controls sit, which is why one suite
+  // passed the same wiring the journey died on. 42 routes × 2 widths asks the
+  // question of every surface in the app.
+  await expectConsentBannerClearsContent(page, name)
 }
 
 const PERSONA_ORDER: Who[] = ["anon", "bob", "alice", "admin"]

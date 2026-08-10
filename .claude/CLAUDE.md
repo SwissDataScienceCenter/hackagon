@@ -66,9 +66,11 @@ race may need `expect.okOr` — which cleanup applies depends on who won.
 
 ## Where things stand (2026-08-10)
 
-Work is on `sketch/06-08-26`. **`.claude/` is gitignored there** and tracked on
-`feat/claude` instead (worktree `../hackagon-wt-claude`) — edit the live copy
-under `.claude/` and sync it across.
+Work is on `sketch/06-08-26`, and **`.claude/` is TRACKED there** as of
+`b57c9240` ("chore: track the e2e tooling on this branch") — no more editing a
+live copy and syncing it into a `feat/claude` worktree. Only the generated
+directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
+`out/`, `.secrets.env`).
 
 | Suite | Result | When |
 | --- | --- | --- |
@@ -427,19 +429,54 @@ view** (`tests/openreplay/capture.ts` does): a reader looking only at
 `config.yaml` finds `enabled` absent on a well-wired machine, every spec in that
 folder self-skips, and the suite reports green having tested nothing.
 
-**Wiring replay breaks every OTHER suite, and `run.sh` now borrows it.** The
-consent banner is `fixed bottom-0 z-[60]`, so it sits on whatever is at the
-bottom of the page and swallows clicks aimed at it: `act0.about.publish` clicks
-the CMS `visible` checkbox, Playwright retried for the full 60 s against
+**The consent banner used to be a lid on the bottom of every page — fixed
+2026-08-10, and the workaround it forced is gone with it.** It was
+`fixed bottom-0 z-[60]`, which takes NO space in the document, so it sat on
+whatever was at the bottom of the viewport and swallowed clicks aimed at it with
+nowhere to scroll them to: `act0.about.publish` clicks the CMS `visible`
+checkbox, Playwright retried for the full 60 s against
 `<div role="region" aria-label="Session recording"> intercepts pointer events`,
 and the journey died on its 10th action with 338 not run. **Smoke passed the
-same wiring** — whether a suite trips over the banner depends on where its
-controls happen to sit, which is exactly why this is automated and not
-remembered. `run.sh` reads the `replay` block out for every suite except
-`openreplay` and writes it back on EXIT (borrowed, not switched off — a run that
-silently unwired somebody's replay would be the tunnel's old bug in a new
-place). The banner covering page controls is a real product issue, unfixed: a
-first-time visitor to `/manage/pages` cannot reach the checkbox either.
+same wiring** — whether a page trips over a banner drawn on top of it depends
+entirely on where that page's controls sit.
+
+It is `sticky bottom-0` now: last in the document, so it pins to the viewport
+while there is page below it and settles into its own space at the end. That
+makes the reserved space exactly its own height at every width and however many
+lines the sentence wraps to — no hard-coded spacer, no measuring script (it
+still works with JS off). `helpers/reflow.ts:expectConsentBannerClearsContent`
+pins BOTH halves at 8 widths across every route: fully on screen at the top of
+the page, and covering nothing operable with the document scrolled to its end.
+Against the `fixed` version it failed at all six chrome widths, naming the
+footer's Privacy/Terms/About/GitHub links.
+
+**The new assertion immediately found a SECOND instance, on 21 routes.**
+Reserving space in the document does nothing for chrome anchored to the
+VIEWPORT: `HackathonSidebar` is `sticky top-14 h-[calc(100vh-3.5rem)]`, so it
+reaches the bottom of the screen at every scroll position and its last four
+entries — Manage Pages, Prizes, Deadlines, Manage Forms — sat under the banner
+with **no scroll position that freed them**. Scrolling frees page content; it
+can never free a viewport-pinned column. That one cannot be solved in CSS alone
+(no element can ask another how tall it is), so the banner publishes its
+measured height as `--consent-banner-h` and the sidebar takes
+`pb-[var(--consent-banner-h,0px)]` — padding, not a shorter box, so the nav's
+own `overflow-y-auto` scrollport is what shrinks. Measured, never hard-coded:
+`bind:offsetHeight` is a ResizeObserver, so a resize or a copy edit moves it
+(`offsetHeight`, because `clientHeight` omits the 1px `border-t` — and a 1px
+overlap sits inside the check's rounding tolerance, i.e. it would be wrong in
+the one way nothing would report). With no JS the fallback is `0px` — the ask
+still works and the document still scrolls clear; only that inset needs a
+script.
+
+`run.sh` therefore **no longer borrows the `replay` block away** for other
+suites — do not reintroduce that. The tracker is consent-gated (the server
+withholds the ingest endpoint and the project key until a browser clicks
+"Allow recording", which no suite but `openreplay` does), so a wired block
+changes exactly one thing for the others: the ask is on screen, exactly as it is
+for every first-time visitor. What run.sh does now is the OPPOSITE for the
+`mobile` suite — it ADDS a no-ingest `replay` block when none is wired, because
+that sweep asserts about the banner and an assertion whose subject is absent
+verifies nothing.
 
 **The tunnel has its own upstream port.** `--prod` used to park the
 adapter-node build on **:8081**, vite's port, so `run.sh` had to evict it for
@@ -454,6 +491,32 @@ the auth re-wire trap. Reload that config with
 `up -d` would recreate `dev` and kill the stack. The remaining trade: the built
 server reads `config.yaml` once at boot, so during a run the public URL keeps
 SERVING but new logins through it fail until the exit re-wire restarts it.
+
+**That fallback is only correct when :8081 is vite, and caddy cannot tell**
+(fixed 2026-08-10). vite derives the request origin from the Host header, so it
+answers a tunnel hostname correctly. The adapter-node build does not — it is
+launched with a FIXED `ORIGIN`, and the harness always uses
+`http://localhost:8081` (`prod-frontend.sh`, which **`wait-ready.sh` starts on
+every run**, so every machine that has ever run a suite or `start.sh` is in this
+state). Caddy served it happily under the tunnel hostname; SvelteKit then 403s
+every form POST whose `Origin` is not its `ORIGIN`, so the public URL rendered
+every page and **"Log in" did nothing**, and `start.sh --tunnel`'s login proof
+timed out with nothing in any log naming the cause. That server had also read
+its OIDC issuer once at boot, before the tunnel was wired, so it was stale
+twice over.
+
+`cloudflare-tunnel/scripts/up.sh` now calls **`prod-serve.sh ensure <url>`** on
+every hackagon-stack tunnel (not just `--prod`): it starts a correct-origin
+:8082 only when a fixed-origin server holds :8081, leaves a vite fallback alone
+— it is the reason the fallback exists — and **exits non-zero rather than hand
+over a link it knows is broken**. `prod-serve.sh status` names :8081's `ORIGIN`
+for the same reason. The alternatives were worse: unsetting `ORIGIN` on the
+harness's server makes adapter-node default the protocol to `https`, which
+fails the same CSRF check from the other side on `http://localhost:8081` (caddy
+deliberately does not forward `X-Forwarded-Proto` to the frontend, so there is
+no header to read), leaves `AUTH_URL` on localhost, and does nothing about the
+stale issuer; and dropping the fallback from `Caddyfile.tunnel` would break the
+plain vite tunnel, which is a supported mode.
 
 `devcontainer-up/scripts/start.sh` is the one-command path — container → stack
 → (optionally) tunnel with auth — and it finishes by driving a real login

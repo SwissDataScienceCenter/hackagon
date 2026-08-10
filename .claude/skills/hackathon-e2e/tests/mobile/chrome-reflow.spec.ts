@@ -3,6 +3,8 @@ import {
   expectFitsViewport,
   expectNoOverlap,
   expectNoClippedText,
+  expectConsentBannerClearsContent,
+  CONSENT_BANNER,
 } from "../../helpers/reflow.js"
 
 // The page chrome — header, footer, consent banner — must REFLOW at every
@@ -31,7 +33,7 @@ const PAGES = ["/", "/about", "/hackathon"]
 // phones rather than letting an ellipsis eat it).
 const WORDMARK_MIN = 390
 
-const BANNER = '[aria-label="Session recording"]'
+const BANNER = CONSENT_BANNER
 
 for (const width of WIDTHS) {
   test.describe(`${width}px`, () => {
@@ -54,6 +56,13 @@ for (const width of WIDTHS) {
           await expectNoOverlap(page, scope, name)
           await expectNoClippedText(page, scope, name)
         }
+
+        // The banner's own contract: on screen at the top, over nothing
+        // operable at the end. Width-swept deliberately — it wraps to two and
+        // three lines as the viewport narrows, so the space it has to reserve
+        // is a different number at every width here and may never be a
+        // hard-coded one.
+        await expectConsentBannerClearsContent(page, name)
 
         // The wordmark: logo always; text whole wherever it is shown, and
         // shown at every width except the deliberate sub-360 drop. (A span
