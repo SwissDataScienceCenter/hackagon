@@ -1,5 +1,6 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { globalRoleLabel } from "$lib/utils/globalRole"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -25,6 +26,13 @@ export const load: PageServerLoad = async (event) => {
   }
 }
 
+// Names the role in the confirmation message. Falls back rather than throwing:
+// the backend accepted the number, so the wording is the only thing at stake if
+// this build has no label for it.
+function roleName(role: number): string {
+  return globalRoleLabel(role) ?? "role"
+}
+
 export const actions: Actions = {
   addRole: async (event) => {
     const { user } = requireGrpc(event.locals.grpc)
@@ -33,7 +41,7 @@ export const actions: Actions = {
     const role = Number(formData.get("role"))
 
     if (typeof userId !== "string" || !userId) {
-      return fail(400, { message: "Missing user" })
+      return fail(400, { success: false, message: "Missing user" })
     }
 
     try {
@@ -41,19 +49,25 @@ export const actions: Actions = {
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
         return fail(403, {
+          success: false,
           message: "You don't have permission to assign roles",
         })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { message: "That user no longer exists" })
+        return fail(404, {
+          success: false,
+          message: "That user no longer exists",
+        })
       }
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { message: e.details })
+        return fail(400, { success: false, message: e.details })
       }
       throw e
     }
 
-    return { assigned: true }
+    // The row redraws with the new badge either way; the message is what makes
+    // the change legible when the row has scrolled out of view on a phone.
+    return { success: true, message: `Granted ${roleName(role)}` }
   },
 
   removeRole: async (event) => {
@@ -63,7 +77,7 @@ export const actions: Actions = {
     const role = Number(formData.get("role"))
 
     if (typeof userId !== "string" || !userId) {
-      return fail(400, { message: "Missing user" })
+      return fail(400, { success: false, message: "Missing user" })
     }
 
     try {
@@ -75,18 +89,22 @@ export const actions: Actions = {
       // that case, but a direct resubmit still lands here.
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
         return fail(403, {
+          success: false,
           message: "You don't have permission to remove roles",
         })
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-        return fail(404, { message: "That user no longer exists" })
+        return fail(404, {
+          success: false,
+          message: "That user no longer exists",
+        })
       }
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-        return fail(400, { message: e.details })
+        return fail(400, { success: false, message: e.details })
       }
       throw e
     }
 
-    return { removed: true }
+    return { success: true, message: `Revoked ${roleName(role)}` }
   },
 }
