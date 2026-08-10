@@ -437,6 +437,21 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
       expect(members.length - waiting.length).toBe(args.approved)
     }
   },
+  /** Join's answer says WHERE the caller landed — a confirmed place, or the
+   * waiting queue and at what position. Joining a full event succeeds, so
+   * "ok" alone proves nothing about which of the two happened; this does.
+   * Proto3 omits false/0 on the grpcurl wire, hence the ?? defaults. */
+  joinOutcome(data, args) {
+    expect(Boolean(data.waitlisted), "waitlisted flag").toBe(args.waitlisted)
+    if (args.position !== undefined) {
+      expect(data.queuePosition ?? 0, "queue position").toBe(args.position)
+    }
+  },
+  /** The capacity field as Edit/Get echo it back; 0 asserts "unlimited"
+   * (proto3 omits the optional field entirely then). */
+  capacityField(data, args) {
+    expect(data.hackathon.maxParticipants ?? 0, "max_participants").toBe(args.value)
+  },
   votingWinner() {
     throw new Error(
       "TODO: implement the 'votingWinner' check in helpers/recipe.ts against the final VoteService.Results response shape.",
@@ -633,6 +648,17 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     ).toBe(200)
     const body = await get.body()
     expect(body.length, "the served object is not the uploaded bytes").toBe(png.length)
+  },
+  /** The participants page states how full a capped event is — the number an
+   * organizer approves against. Takes the hackathon id via args (resolved
+   * {{var:...}}) because the capacity plot runs on its own event, not the
+   * journey's main one. Texts must be VISIBLE: this is the surface that makes
+   * approving past capacity a decision rather than an accident. */
+  async capacityGauge(page, args) {
+    await page.goto(`/my/hackathon/${args.hackathonId as string}/participants`)
+    for (const text of args.textContains as string[]) {
+      await expect(visibleText(content(page), text).first()).toBeVisible()
+    }
   },
   async teamsPage(page, args) {
     const id = vars.get("hackathonId")
