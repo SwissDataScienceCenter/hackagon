@@ -1,0 +1,46 @@
+# Overlay merged on top of the vendored upstream compose:
+#   docker compose -f vendor/docker-compose.yaml -f compose.tunnel.yaml …
+#
+# OpenReplay already ships Caddy as its ingress, so we add exactly one thing:
+# a Cloudflare quick tunnel pointing at it. TLS is terminated at Cloudflare's
+# edge, so Caddy must serve plain HTTP — up.sh sets CADDY_DOMAIN=:80, which
+# makes Caddy listen on 80 for any Host and skip ACME entirely (a
+# trycloudflare hostname could never pass an HTTP-01 challenge here).
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: openreplay-tunnel
+    restart: unless-stopped
+    # --no-autoupdate: the container is disposable; an in-place update would
+    # restart the process and silently mint a NEW public URL.
+    command: tunnel --no-autoupdate --url http://caddy:80
+    depends_on:
+      - caddy
+    # Upstream puts every service on `openreplay-net` and defines no default
+    # network. A service in an overlay that names none of its own therefore
+    # lands on compose's implicit `default` — alone — and `http://caddy:80`
+    # fails to RESOLVE rather than to connect:
+    #   dial tcp: lookup caddy on 127.0.0.11:53: no such host
+    # which Cloudflare renders as a plain 502 on the public URL while every
+    # container reports healthy. `compose config` cannot catch this: the
+    # service resolves fine there, it is only the network membership that is
+    # wrong.
+    networks:
+      - openreplay-net
+
+  # Host ports are pointless when the tunnel is the entrypoint, and 80/443 are
+  # the two most likely to collide with something already running. Publish
+  # nothing by default; set OPENREPLAY_PUBLISH_PORTS=1 to get them back.
+  caddy:
+    ports: !override []
+
+  # Same reasoning, second offender. Upstream publishes 9001 for the object
+  # store's web console, which nothing here uses — everything reaches it over
+  # the compose network. On a machine that already runs the hackagon dev
+  # container it is not merely useless but fatal: devcontainer's own rustfs
+  # holds 9000-9001, so `up` dies with
+  #   Bind for 0.0.0.0:9001 failed: port is already allocated
+  # after the first six containers have started, which reads as a stack
+  # failure rather than a port clash.
+  minio:
+    ports: !override []

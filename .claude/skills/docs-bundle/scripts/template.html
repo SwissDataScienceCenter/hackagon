@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hackagon — documentation</title>
+<style>
+/* ── tokens ───────────────────────────────────────────────────────────────
+   Neutrals carry a slight warm bias so the page reads as paper rather than
+   as a default #fff/#000; the accent is a deep ink-blue that survives both
+   grounds. Everything below is expressed through these, so the dark theme is
+   a re-definition rather than an inversion. */
+:root{
+  color-scheme: light dark;
+  --paper:#faf9f6; --card:#fff; --rule:#e6e4dc; --rule-2:#d2cfc3;
+  --ink:#17171a; --ink-2:#4c4b48; --ink-3:#7b7972;
+  --accent:#1c5aa0; --accent-ink:#123f74; --accent-wash:#e9f0f9;
+  --code-bg:#f2f1ec; --mark:#fde68a; --mark-ink:#3b2f00;
+  --good:#1c6b3a; --warn:#8a5a10; --crit:#9c2828;
+  --shadow:0 1px 2px rgba(20,20,15,.05), 0 8px 24px -12px rgba(20,20,15,.18);
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#121213; --card:#191a1b; --rule:#2a2b2c; --rule-2:#3a3b3d;
+    --ink:#f2f1ec; --ink-2:#c6c5be; --ink-3:#8d8c85;
+    --accent:#7fb0e8; --accent-ink:#a8c9f2; --accent-wash:#17293c;
+    --code-bg:#1e1f21; --mark:#6b5a12; --mark-ink:#ffeaa3;
+    --good:#5fbf85; --warn:#d9a862; --crit:#e58a8a;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:12px}
+body{margin:0;background:var(--paper);color:var(--ink);
+     font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+a:hover{color:var(--accent-ink)}
+
+/* ── shell ─────────────────────────────────────────────────────────────── */
+.wrap{display:flex;align-items:flex-start;max-width:1640px;margin:0 auto}
+nav{position:sticky;top:0;height:100vh;flex:0 0 292px;display:flex;flex-direction:column;
+    border-right:1px solid var(--rule);background:var(--card)}
+main{flex:1;min-width:0;padding:30px 56px 140px;max-width:1240px}
+/* Prose stays readable; tables and figures get the full column. */
+.doc p,.doc li,.doc blockquote{max-width:76ch}
+
+/* ── sidebar ───────────────────────────────────────────────────────────── */
+.side-head{padding:20px 18px 12px;border-bottom:1px solid var(--rule)}
+.brand{font:700 12.5px/1.2 var(--mono);letter-spacing:.09em;text-transform:uppercase}
+.brand span{color:var(--accent)}
+.side-head .meta{margin-top:5px;font:400 10.5px/1.5 var(--mono);color:var(--ink-3)}
+.search{padding:12px 14px;border-bottom:1px solid var(--rule)}
+.search-box{position:relative;display:flex;align-items:center}
+.search input{width:100%;padding:8px 30px 8px 30px;border:1px solid var(--rule-2);border-radius:7px;
+  background:var(--paper);color:var(--ink);font:400 13px var(--sans)}
+.search input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.search .icon{position:absolute;left:9px;width:14px;height:14px;opacity:.5;pointer-events:none}
+.search kbd{position:absolute;right:8px;font:600 10px var(--mono);color:var(--ink-3);
+  border:1px solid var(--rule-2);border-radius:4px;padding:1px 4px;background:var(--card)}
+.search input:not(:placeholder-shown) ~ kbd{display:none}
+.side-scroll{flex:1;overflow-y:auto;padding:12px 12px 40px}
+nav ul{list-style:none;margin:0;padding:0}
+nav>.side-scroll>ul>li{margin-bottom:3px}
+.doc-link{display:block;font:600 13px/1.4 var(--sans);color:var(--ink);text-decoration:none;
+  padding:5px 8px;border-radius:6px}
+.doc-link:hover{background:var(--accent-wash);color:var(--ink)}
+.doc-link.active{background:var(--accent-wash);color:var(--accent-ink);box-shadow:inset 2px 0 0 var(--accent)}
+nav ul ul{margin:1px 0 8px 8px;border-left:1px solid var(--rule);padding-left:10px}
+nav ul ul a{display:block;font:400 12px/1.55 var(--sans);color:var(--ink-2);
+  text-decoration:none;padding:2px 0}
+nav ul ul a:hover{color:var(--accent)}
+nav ul ul a.active{color:var(--accent-ink);font-weight:600}
+
+/* search results replace the nav list */
+#results{display:none}
+#results.on{display:block}
+#nav-list.off{display:none}
+.res-empty{padding:14px 8px;font:400 12.5px var(--sans);color:var(--ink-3)}
+.res{display:block;padding:8px;border-radius:6px;text-decoration:none;color:inherit;margin-bottom:2px}
+.res:hover,.res:focus-visible{background:var(--accent-wash);outline:none}
+.res .r-doc{font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.res .r-head{display:block;font:600 12.5px/1.4 var(--sans);color:var(--ink);margin:1px 0 2px}
+.res .r-snip{display:block;font:400 11.5px/1.5 var(--sans);color:var(--ink-2)}
+.res mark,mark{background:var(--mark);color:var(--mark-ink);border-radius:2px;padding:0 1px}
+.res-count{padding:4px 8px 8px;font:600 10px var(--mono);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-3)}
+
+/* ── cover ─────────────────────────────────────────────────────────────── */
+.cover{padding-bottom:26px;margin-bottom:10px;border-bottom:2px solid var(--rule-2)}
+.cover .eyebrow{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.cover h1{font:600 40px/1.1 var(--display);letter-spacing:-.01em;margin:8px 0 10px;text-wrap:balance}
+.cover .lede{font:400 16px/1.6 var(--sans);color:var(--ink-2);max-width:62ch;margin:0 0 16px}
+.cover .facts{display:flex;flex-wrap:wrap;gap:8px}
+.fact{font:500 11px var(--mono);color:var(--ink-2);background:var(--card);
+  border:1px solid var(--rule);border-radius:999px;padding:4px 10px}
+
+/* ── documents ─────────────────────────────────────────────────────────── */
+.doc{scroll-margin-top:16px;padding-top:38px;margin-top:44px;border-top:1px solid var(--rule)}
+.doc:first-of-type{border-top:none;margin-top:26px;padding-top:0}
+.doc .src{display:inline-block;font:500 10.5px var(--mono);color:var(--ink-3);
+  background:var(--code-bg);border-radius:4px;padding:2px 7px;margin:0 0 10px}
+.doc h1{font:600 30px/1.2 var(--display);letter-spacing:-.005em;margin:0 0 14px;text-wrap:balance}
+.doc h2{font:700 20px/1.3 var(--sans);letter-spacing:-.005em;margin:38px 0 12px;
+  padding-bottom:7px;border-bottom:1px solid var(--rule);scroll-margin-top:14px}
+.doc h3{font:700 15.5px/1.4 var(--sans);margin:26px 0 7px;scroll-margin-top:14px}
+.doc h4{font:700 12px var(--mono);letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);margin:20px 0 6px}
+.anchor{margin-left:8px;font:400 .8em var(--mono);color:var(--ink-3);text-decoration:none;opacity:0;transition:opacity .12s}
+h2:hover .anchor,h3:hover .anchor{opacity:1}
+:target{animation:flash 1.4s ease-out}
+@keyframes flash{from{background:var(--accent-wash)}to{background:transparent}}
+
+blockquote{margin:16px 0;padding:10px 16px;border-left:3px solid var(--accent);
+  background:var(--card);border-radius:0 6px 6px 0;color:var(--ink-2)}
+blockquote p:last-child{margin-bottom:0}
+
+code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);
+  padding:1.5px 5px;border-radius:4px;border:1px solid color-mix(in srgb,var(--rule) 60%,transparent)}
+pre{background:var(--code-bg);border:1px solid var(--rule);border-radius:8px;
+  padding:13px 15px;overflow-x:auto;box-shadow:var(--shadow)}
+pre code{background:none;border:none;padding:0;font-size:12.5px;line-height:1.6}
+
+/* tables: real table layout, own scroll container, sticky header */
+.tablewrap{overflow-x:auto;margin:16px 0;border:1px solid var(--rule);
+  border-radius:8px;background:var(--card);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+th{position:sticky;top:0;background:var(--card);font:700 11.5px var(--sans);
+  letter-spacing:.02em;border-bottom:2px solid var(--rule-2);white-space:nowrap;z-index:1}
+td:first-child{white-space:nowrap}
+td:first-child code{white-space:normal}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:color-mix(in srgb,var(--accent-wash) 45%,transparent)}
+
+img{max-width:100%;height:auto;border:1px solid var(--rule);border-radius:8px;
+  background:var(--card);box-shadow:var(--shadow)}
+figure.mermaid{margin:20px 0;padding:16px;background:var(--card);border:1px solid var(--rule);
+  border-radius:8px;overflow-x:auto;text-align:center;box-shadow:var(--shadow)}
+figure.mermaid svg{max-width:100%;height:auto}
+/* Mermaid renders at build time with fixed colours, so both themes are
+   embedded and CSS picks one. The hand-laid C4 SVGs adapt on their own. */
+.only-dark{display:none}
+@media (prefers-color-scheme: dark){
+  .only-light{display:none}
+  .only-dark{display:inline}
+}
+pre.mermaid-src{border-style:dashed}
+pre.mermaid-src::before{content:"mermaid source (not rendered)";display:block;
+  font:600 10px var(--mono);color:var(--ink-3);margin-bottom:6px}
+hr{border:none;border-top:1px solid var(--rule);margin:30px 0}
+
+.totop{position:fixed;right:22px;bottom:22px;width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--rule-2);background:var(--card);color:var(--ink-2);cursor:pointer;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s;font-size:15px}
+.totop.on{opacity:1;pointer-events:auto}
+.totop:hover{color:var(--accent)}
+
+@media (max-width:1000px){
+  .wrap{flex-direction:column}
+  nav{position:static;height:auto;flex:none;width:100%;border-right:none;border-bottom:1px solid var(--rule)}
+  .side-scroll{max-height:46vh}
+  main{padding:22px 18px 90px;max-width:none}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
+
+@media print{
+  nav,.totop{display:none}
+  body{background:#fff;color:#000;font-size:10.5pt}
+  main{max-width:none;padding:0}
+  .doc{break-before:page;border-top:none;padding-top:0}
+  .doc:first-of-type{break-before:auto}
+  h1,h2,h3{break-after:avoid}
+  pre,figure,.tablewrap,blockquote{break-inside:avoid;box-shadow:none}
+  .only-dark{display:none!important} .only-light{display:inline!important}
+  th{position:static}
+  a{color:#000;text-decoration:none}
+  .anchor{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="side-head">
+    <div class="brand">Hackagon <span>docs</span></div>
+    <div class="meta">{{DOCCOUNT}} documents · {{BRANCH}} @ {{COMMIT}}<br />{{DATE}} · self-contained</div>
+  </div>
+  <div class="search">
+    <div class="search-box">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search the documentation…" autocomplete="off" spellcheck="false" aria-label="Search documentation" />
+      <kbd>/</kbd>
+    </div>
+  </div>
+  <div class="side-scroll">
+    <ul id="nav-list">
+{{NAV}}
+    </ul>
+    <div id="results"></div>
+  </div>
+</nav>
+
+<main>
+  <div class="cover">
+    <div class="eyebrow">SDSC · Hackathon platform</div>
+    <h1>Hackagon documentation</h1>
+    <p class="lede">Everything in <code>docs/</code> as one file — architecture, data model, RBAC, the
+       frontend, the lifecycle, testing and the open work. Images and diagrams are embedded;
+       nothing is fetched when you open it.</p>
+    <div class="facts">
+      <span class="fact">{{DOCCOUNT}} documents</span>
+      <span class="fact">{{BRANCH}} @ {{COMMIT}}</span>
+      <span class="fact">built {{DATE}}</span>
+      <span class="fact">offline · printable</span>
+    </div>
+  </div>
+{{BODY}}
+</main>
+</div>
+
+<button class="totop" id="totop" title="Back to top" aria-label="Back to top">↑</button>
+
+<script id="search-index" type="application/json">{{SEARCH_INDEX}}</script>
+<script>
+(() => {
+  "use strict";
+  const IDX = JSON.parse(document.getElementById("search-index").textContent);
+  const q = document.getElementById("q");
+  const results = document.getElementById("results");
+  const navList = document.getElementById("nav-list");
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  /* Score: every term must appear. Heading and document-title hits outrank
+     body hits, so searching "casbin" surfaces the RBAC sections first. */
+  function search(raw) {
+    const terms = raw.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return [];
+    const out = [];
+    for (const e of IDX) {
+      const hay = (e.d + " " + e.h + " " + e.t).toLowerCase();
+      if (!terms.every((t) => hay.includes(t))) continue;
+      let score = 0, pos = -1;
+      for (const t of terms) {
+        if (e.h.toLowerCase().includes(t)) score += 12;
+        if (e.d.toLowerCase().includes(t)) score += 6;
+        const p = e.t.toLowerCase().indexOf(t);
+        if (p !== -1) { score += 1; if (pos === -1) pos = p; }
+      }
+      out.push({ e, score, pos: pos === -1 ? 0 : pos });
+    }
+    return out.sort((a, b) => b.score - a.score).slice(0, 40);
+  }
+
+  function snippet(text, pos, terms) {
+    const start = Math.max(0, pos - 60);
+    let s = text.slice(start, start + 190);
+    if (start > 0) s = "…" + s;
+    if (start + 190 < text.length) s += "…";
+    s = esc(s);
+    for (const t of terms) {
+      if (!t) continue;
+      s = s.replace(new RegExp("(" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi"), "<mark>$1</mark>");
+    }
+    return s;
+  }
+
+  function render(raw) {
+    const hits = search(raw);
+    const terms = raw.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) {
+      results.classList.remove("on"); navList.classList.remove("off"); results.innerHTML = "";
+      return;
+    }
+    navList.classList.add("off"); results.classList.add("on");
+    if (!hits.length) {
+      results.innerHTML = '<p class="res-empty">No matches for <strong>' + esc(raw) + "</strong>.</p>";
+      return;
+    }
+    results.innerHTML =
+      '<div class="res-count">' + hits.length + (hits.length === 40 ? "+" : "") + " sections</div>" +
+      hits.map(({ e, pos }) =>
+        '<a class="res" href="#' + e.i + '">' +
+          '<span class="r-doc">' + esc(e.d) + "</span>" +
+          (e.h ? '<span class="r-head">' + esc(e.h) + "</span>" : "") +
+          '<span class="r-snip">' + snippet(e.t, pos, terms) + "</span>" +
+        "</a>").join("");
+  }
+
+  let t;
+  q.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => render(q.value.trim()), 90); });
+  q.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") { q.value = ""; render(""); q.blur(); }
+    if (ev.key === "Enter") { const first = results.querySelector(".res"); if (first) first.click(); }
+    if (ev.key === "ArrowDown") { const first = results.querySelector(".res"); if (first) { ev.preventDefault(); first.focus(); } }
+  });
+  addEventListener("keydown", (ev) => {
+    if (ev.target === q) return;
+    if (ev.key === "/" || ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k")) {
+      ev.preventDefault(); q.focus(); q.select();
+    }
+  });
+  results.addEventListener("click", (ev) => {
+    if (ev.target.closest(".res")) setTimeout(() => { q.value = ""; render(""); }, 60);
+  });
+
+  /* Scroll-spy: mark the section currently under the top of the viewport. */
+  const links = new Map();
+  document.querySelectorAll("nav a[href^='#']").forEach((a) => links.set(a.getAttribute("href").slice(1), a));
+  const targets = [...document.querySelectorAll("section.doc, .doc h2[id]")];
+  const spy = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      const id = en.target.id;
+      document.querySelectorAll("nav a.active").forEach((a) => a.classList.remove("active"));
+      const a = links.get(id);
+      if (a) {
+        a.classList.add("active");
+        const parent = a.closest("ul ul")?.previousElementSibling;
+        if (parent && parent.matches("a")) parent.classList.add("active");
+      }
+    }
+  }, { rootMargin: "0px 0px -80% 0px", threshold: 0 });
+  targets.forEach((el) => spy.observe(el));
+
+  const totop = document.getElementById("totop");
+  addEventListener("scroll", () => totop.classList.toggle("on", scrollY > 700), { passive: true });
+  totop.addEventListener("click", () => scrollTo({ top: 0, behavior: "smooth" }));
+})();
+</script>
+</body>
+</html>

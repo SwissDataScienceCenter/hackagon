@@ -1,0 +1,106 @@
+{
+  "slug": "sdsc-ord-2024",
+  "name": "SDSC Hackathon: ORD for the Sciences",
+  "edition": "2024",
+  "platformRef": {
+    "system": "sdsc-hackathons.ch (FlutterFlow + Firestore, project sdschacks)",
+    "collection": "hackathons",
+    "documentId": "vUt8BfDJXaAs0UfOesXI",
+    "archived": true,
+    "url": "https://sdsc-hackathons.ch/welcome?hackathonId=vUt8BfDJXaAs0UfOesXI"
+  },
+  "speakers": [
+    { "name": "Gilles Dubochet", "role": "Opening remarks", "affiliation": "SDSC" },
+    { "name": "Oksana Riba Grognuz", "role": "Opening remarks", "affiliation": "SDSC" },
+    { "name": "Angelika Kalt", "role": "Presentation", "affiliation": "SNSF" },
+    { "name": "Florin Hasler", "role": "Presentation", "affiliation": "opendata.ch" }
+  ],
+  "visibility": "VISIBILITY_PUBLIC",
+  "startsAt": "2024-10-24T08:00:00+02:00",
+  "endsAt": "2024-10-25T20:00:00+02:00",
+  "venue": "BC Building, EPFL, Lausanne",
+  "organizers": ["Swiss Data Science Center (SDSC)", "EPFL Open Science"],
+  "partners": [],
+  "logo": "",
+  "description": "Two days exploring the potential and impact of Open Research Data on the sciences. Participants from academia, industry and the public sector joined forces to unlock the power of open research datasets and infrastructures — optimizing datasets, building analytical models, and sharing code and best practices. Co-organized by SDSC and EPFL Open Science at the BC Building, EPFL, Lausanne. Maximum 100 participants; free participation with mandatory registration.",
+  "goals": [
+    "Harness open research data to shape the future of open research",
+    "Optimize datasets and build analytical models",
+    "Share code and best practices across communities",
+    "Network with data science professionals"
+  ],
+  "platform": {
+    "name": "Renku",
+    "description": "SDSC's open-source knowledge infrastructure for collaborative and reproducible data science, provided to teams for collaboration and GPU access."
+  },
+  "tracks": [
+    {
+      "name": "Research Data Infrastructures (RDI)",
+      "description": "Prototyping new research-data-infrastructure initiatives."
+    },
+    {
+      "name": "Data Science",
+      "description": "Developing tools, models and knowledge on top of open research data."
+    }
+  ],
+  "phases": [
+    { "name": "Check-in & keynotes", "description": "Registration, then keynotes on the importance of open data.", "startsAt": "2024-10-24T08:00:00+02:00", "endsAt": "2024-10-24T10:00:00+02:00" },
+    { "name": "Group work — day 1", "description": "Team formation and project work across both tracks.", "startsAt": "2024-10-24T10:00:00+02:00", "endsAt": "2024-10-24T18:00:00+02:00" },
+    { "name": "Apéro — day 1", "description": "Evening networking.", "startsAt": "2024-10-24T18:00:00+02:00", "endsAt": "2024-10-24T20:00:00+02:00" },
+    { "name": "Group work — day 2", "description": "Continued development up to the submission deadline.", "startsAt": "2024-10-25T08:00:00+02:00", "endsAt": "2024-10-25T15:00:00+02:00" },
+    { "name": "Presentations & voting", "description": "Project submissions, presentations and participant voting.", "startsAt": "2024-10-25T15:00:00+02:00", "endsAt": "2024-10-25T18:00:00+02:00" },
+    { "name": "Awards", "description": "Awards ceremony and closing apéro.", "startsAt": "2024-10-25T18:00:00+02:00", "endsAt": "2024-10-25T20:00:00+02:00" }
+  ],
+  "pages": [
+    {
+      "title": "About",
+      "visible": true,
+      "order": 1,
+      "content": "## ORD for the Sciences\n\nTwo days at the **BC Building, EPFL, Lausanne**, 24–25 October 2024, co-organized by the **Swiss Data Science Center** and **EPFL Open Science**.\n\nThe event explored the potential and impact of Open Research Data on the sciences. Participants from academic, private and public sector organizations joined forces to unlock the power of open research datasets and infrastructures, embracing open principles and fostering innovation.\n\n**20 teams worked on 15 projects** across two tracks, with a maximum of 100 participants."
+    },
+    {
+      "title": "Tracks",
+      "visible": true,
+      "order": 2,
+      "content": "## Research Data Infrastructures (RDI)\n\nPrototyping new research-data-infrastructure initiatives.\n\n## Data Science\n\nDeveloping tools, models and knowledge on top of open research data.\n\nTeams could optimize datasets, build analytical models, and share code and best practices across both tracks."
+    },
+    {
+      "title": "Programme",
+      "visible": true,
+      "order": 3,
+      "content": "## Day 1 — Thursday 24 October 2024\n\nCheck-in, keynotes on the importance of open data, then group work sessions. Food and beverages provided.\n\n## Day 2 — Friday 25 October 2024\n\nContinued development, project submissions, presentations, voting and the awards ceremony. Food and beverages provided."
+    },
+    {
+      "title": "Working environment",
+      "visible": true,
+      "order": 4,
+      "content": "Teams worked on **Renku**, SDSC's open-source knowledge infrastructure for collaborative and reproducible data science — providing shared project environments and GPU access for the duration of the hackathon."
+    },
+    {
+      "title": "Photos",
+      "visible": true,
+      "order": 5,
+      "content": "![Opening ceremony](/images/hackathon-ord-2024/ambiance/ambiance_1.webp)\n\n![Working sessions](/images/hackathon-ord-2024/ambiance/ambiance_3.webp)\n\n![Team collaboration](/images/hackathon-ord-2024/teams/teams_1.webp)\n\n![Award ceremony](/images/hackathon-ord-2024/winners/winners_1.webp)"
+    }
+  ],
+  "media": {
+    "images": [
+      { "file": "banner.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/66e06b37a6a45350730cec9c_ORD%20Hackathon%20Banner_website_v2.png", "caption": "ORD Hackathon 2024 — event banner", "category": "banner", "credit": "SDSC event page" },
+      { "file": "ambiance_1.webp", "source": "repo:components/frontend/static/images/hackathon-ord-2024/ambiance/ambiance_1.webp", "caption": "ORD Hackathon 2024 — Opening ceremony", "category": "ambiance", "credit": "SDSC" },
+      { "file": "ambiance_3.webp", "source": "repo:components/frontend/static/images/hackathon-ord-2024/ambiance/ambiance_3.webp", "caption": "ORD Hackathon 2024 — Working sessions", "category": "ambiance", "credit": "SDSC" },
+      { "file": "teams_1.webp", "source": "repo:components/frontend/static/images/hackathon-ord-2024/teams/teams_1.webp", "caption": "ORD Hackathon 2024 — Team collaboration", "category": "teams", "credit": "SDSC" },
+      { "file": "winners_1.webp", "source": "repo:components/frontend/static/images/hackathon-ord-2024/winners/winners_1.webp", "caption": "ORD Hackathon 2024 — Award ceremony", "category": "winners", "credit": "SDSC" }
+    ],
+    "note": "The four photos also ship in components/frontend/static/images/hackathon-ord-2024/ (the home-page carousel uses them); fetch-media.sh copies them into the skill so this folder is self-contained."
+  },
+  "stats": {
+    "teams": 20,
+    "projects": 15,
+    "maxParticipants": 100
+  },
+  "source": {
+    "urls": ["https://www.datascience.ch/event/sdsc-hackathons-ord-for-the-sciences", "https://sdsc-hackathons.ch/"],
+    "retrieved": "2026-08-05",
+    "note": "Dates, venue, organizers, tracks, team/project counts, capacity and the Renku platform detail verified from the SDSC event page. Individual project names and winners were not published there — omitted rather than invented."
+  }
+}

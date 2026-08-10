@@ -1,0 +1,17 @@
+{
+  "comment": "Extra journey participants (the 'crowd'). Created idempotently in the dev Keycloak realm by scripts/roster.sh; they drive registration/waitlist/capacity dynamics via the API while the four principals (personas.ts) also get browser sessions.",
+  "password": "aliceandbob",
+  "extras": [
+    { "username": "dana.moser", "firstName": "Dana", "lastName": "Moser", "email": "dana.moser@example.org", "affiliation": "ETH Zurich" },
+    { "username": "erik.lindqvist", "firstName": "Erik", "lastName": "Lindqvist", "email": "erik.lindqvist@example.org", "affiliation": "EPFL" },
+    { "username": "fatima.khoury", "firstName": "Fatima", "lastName": "Khoury", "email": "fatima.khoury@example.org", "affiliation": "SDSC" },
+    { "username": "giulia.ricci", "firstName": "Giulia", "lastName": "Ricci", "email": "giulia.ricci@example.org", "affiliation": "Univ. of Bern" },
+    { "username": "hiro.tanaka", "firstName": "Hiro", "lastName": "Tanaka", "email": "hiro.tanaka@example.org", "affiliation": "ETH Zurich" },
+    { "username": "ines.duarte", "firstName": "Ines", "lastName": "Duarte", "email": "ines.duarte@example.org", "affiliation": "EPFL" },
+    { "username": "jonas.weber", "firstName": "Jonas", "lastName": "Weber", "email": "jonas.weber@example.org", "affiliation": "Univ. of Zurich" },
+    { "username": "katya.volkova", "firstName": "Katya", "lastName": "Volkova", "email": "katya.volkova@example.org", "affiliation": "SDSC" },
+    { "username": "liam.obrien", "firstName": "Liam", "lastName": "O'Brien", "email": "liam.obrien@example.org", "affiliation": "Univ. of Bern" },
+    { "username": "mei.chen", "firstName": "Mei", "lastName": "Chen", "email": "mei.chen@example.org", "affiliation": "ETH Zurich" },
+    { "username": "noor.haddad", "firstName": "Noor", "lastName": "Haddad", "email": "noor.haddad@example.org", "affiliation": "EPFL" }
+  ]
+}
