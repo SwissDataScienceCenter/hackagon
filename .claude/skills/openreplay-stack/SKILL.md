@@ -174,15 +174,42 @@ bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore  # OFF
 It reads the live tunnel URL and the project key from OpenReplay's own API
 (a quick tunnel mints a new hostname on every `up.sh`, and a stale
 `ingestPoint` fails silently), writes the `replay:` block, and restarts the
-frontend. `--restore` puts the config back byte-identical. Credentials come
-from `.secrets.env` automatically; `OPENREPLAY_EMAIL` / `OPENREPLAY_PASSWORD`
-in the environment override it, and `OPENREPLAY_PROJECT_KEY` skips the login
-entirely.
+frontend. Credentials come from `.secrets.env` automatically; `OPENREPLAY_EMAIL`
+/ `OPENREPLAY_PASSWORD` in the environment override it, and
+`OPENREPLAY_PROJECT_KEY` skips the login entirely.
+
+Or get the whole thing — stack, rig, wiring and the recording proof — in one
+command: `devcontainer-up/scripts/start.sh --replay`.
+
+**It writes `config.local.yaml`, never the tracked `config.yaml`.** The block
+carries a `*.trycloudflare.com` ingest hostname that is this machine's for the
+next few hours; a `sed` into the tracked file left a wired dev machine with a
+dirty working tree, which is how the tunnel's OIDC issuer once got committed and
+sat dead in HEAD for several commits. The overlay is gitignored and deep-merged
+over `config.yaml` by the same loader, validated by the same schema.
+
+**That file has two writers**, and they do not know about each other:
+`cloudflare-tunnel/scripts/auth-wire.sh` owns `oidc`, this script owns `replay`.
+So `--restore` removes the **block**, not the file —
+`.claude/skills/lib/config-overlay.sh` does the per-key edit for both, and
+deletes the file only when the last key leaves it. Clobbering the overlay would
+be invisible in both directions: dropping `replay` stops recording, and an
+empty OpenReplay UI already looks like the correct default; dropping `oidc`
+leaves the tunnel serving every page and breaks only login. The second one is
+not hypothetical — `hackathon-e2e/scripts/run.sh` calls `auth-wire.sh --restore`
+on the way into every suite run.
+
+⚠ **Anything reading the replay config must read the MERGED view.**
+`tests/openreplay/capture.ts` reads `config.yaml` overlaid with
+`config.local.yaml`, because a reader that only looked at the tracked file would
+find `enabled` absent on a perfectly well-wired machine — every spec in that
+folder would `test.skip`, and the suite would report green having verified
+nothing about masking, consent or Do Not Track.
 
 **Two servers can own :8081.** process-compose's `frontend` is `vite dev`; the
 e2e harness replaces it with the adapter-node build via
 `hackathon-e2e/scripts/prod-frontend.sh`, and after a suite run that is what
-serves. The built server reads `config.yaml` ONCE at boot, so restarting only
+serves. The built server reads its config ONCE at boot, so restarting only
 process-compose's copy succeeds, prints "Process frontend restarted", and
 changes nothing — the page keeps rendering `replay: null`. `wire-frontend.sh`
 bounces both.

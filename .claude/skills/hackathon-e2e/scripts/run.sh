@@ -120,19 +120,65 @@ if [ -f "$AUTH_WIRE" ]; then
   fi
 fi
 
+# Session replay, borrowed for the duration of the run — same contract as the
+# tunnel above, for the same reason.
+#
+# The tracker is only wanted by the `openreplay` suite. For every other suite
+# it is not merely irrelevant, it BREAKS them: the consent banner is
+# `fixed bottom-0 z-[60]`, so it sits on top of whatever is at the bottom of
+# the page and swallows clicks aimed at it. `act0.about.publish` clicks the
+# CMS's `visible` checkbox, which lands exactly there — Playwright retried for
+# the full 60s against
+#
+#   <div role="region" aria-label="Session recording" …> intercepts pointer events
+#
+# and the journey died on its 10th action with 338 not run. Smoke passed the
+# same wiring, which is what makes this worth automating rather than
+# remembering: whether a suite trips over the banner depends on where its
+# controls happen to sit.
+#
+# Borrowed, not switched off: the block is read out first and written back on
+# EXIT. A run that silently unwired the replay somebody set up on purpose would
+# be the tunnel's old bug in a new place — the UI keeps working, and only the
+# thing you were trying to record stops happening.
+OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
+FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
+REPLAY_BLOCK=""
+if [ "$SUITE" != "openreplay" ] && [ -f "$OVERLAY" ]; then
+  REPLAY_BLOCK="$(bash "$OVERLAY" get "$FRONTEND_LOCAL" replay)"
+  if [ -n "$REPLAY_BLOCK" ]; then
+    bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay >/dev/null
+    echo "note: session replay was wired — off for this run, restored when it finishes"
+  fi
+fi
+
 # EXIT, not a success path — a failed or interrupted run must not leave the
 # public link logged-out either. auth-wire.sh also bounces the built server on
 # :8082 when one is up, because it read the issuer out of config.yaml once at
 # boot; that is why re-wiring restores logins through the tunnel and not just
 # on localhost.
-restore_public_link() {
-  echo
-  echo "==> Re-wiring tunnel auth to $WIRED_URL"
-  bash "$AUTH_WIRE" "$WIRED_URL" >/dev/null 2>&1 ||
-    echo "warn: re-wiring failed; run auth-wire.sh $WIRED_URL by hand" >&2
+on_exit() {
+  if [ -n "$REPLAY_BLOCK" ]; then
+    echo
+    echo "==> Re-wiring session replay"
+    printf '%s\n' "$REPLAY_BLOCK" | bash "$OVERLAY" set "$FRONTEND_LOCAL" replay >/dev/null
+    # The frontend reads its config once at boot, so putting the block back is
+    # inert until the server restarts. Bounce the built one — no docker needed,
+    # which matters because this script runs INSIDE the dev container.
+    bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 &&
+      bash "$HERE/prod-frontend.sh" ensure >/dev/null 2>&1 ||
+      echo "warn: replay is wired again but the frontend was not restarted;" \
+        "run prod-frontend.sh stop && … ensure" >&2
+  fi
+  if [ -n "$WIRED_URL" ]; then
+    echo
+    echo "==> Re-wiring tunnel auth to $WIRED_URL"
+    bash "$AUTH_WIRE" "$WIRED_URL" >/dev/null 2>&1 ||
+      echo "warn: re-wiring failed; run auth-wire.sh $WIRED_URL by hand" >&2
+  fi
 }
-if [ -n "$WIRED_URL" ]; then
-  trap restore_public_link EXIT
+if [ -n "$WIRED_URL" ] || [ -n "$REPLAY_BLOCK" ]; then
+  trap on_exit EXIT
 fi
 
 if [ "$RESET" -eq 1 ]; then

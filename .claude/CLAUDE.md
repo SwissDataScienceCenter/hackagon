@@ -411,6 +411,36 @@ guard against a repeat is a spec in `internal/config/config_test.go` asserting
 BOTH tracked configs still say `localhost`; `run.sh` reads the wired URL out of
 the overlay, so the overlay's absence is now the "no tunnel" signal.
 
+**That overlay has TWO writers now, and neither may `rm` it.** `auth-wire.sh`
+owns `oidc`; `openreplay-stack/scripts/wire-frontend.sh` owns `replay` (moved
+there for the same reason — a wired dev machine used to carry a
+`*.trycloudflare.com` ingest hostname in the tracked `config.yaml`). Both go
+through `.claude/skills/lib/config-overlay.sh`, which adds and removes ONE
+top-level key and deletes the file only when the last key leaves it. A whole-file
+`rm` is invisible in both directions: dropping `replay` stops recording, and an
+empty OpenReplay UI already looks like the correct default; dropping `oidc`
+leaves the tunnel serving every page and breaks only login. The second is not
+hypothetical — `run.sh` calls `auth-wire.sh --restore` on the way into every
+suite run, so an `rm` there would unwire replay before the openreplay suite
+could read it. **Anything that READS the replay config must read the merged
+view** (`tests/openreplay/capture.ts` does): a reader looking only at
+`config.yaml` finds `enabled` absent on a well-wired machine, every spec in that
+folder self-skips, and the suite reports green having tested nothing.
+
+**Wiring replay breaks every OTHER suite, and `run.sh` now borrows it.** The
+consent banner is `fixed bottom-0 z-[60]`, so it sits on whatever is at the
+bottom of the page and swallows clicks aimed at it: `act0.about.publish` clicks
+the CMS `visible` checkbox, Playwright retried for the full 60 s against
+`<div role="region" aria-label="Session recording"> intercepts pointer events`,
+and the journey died on its 10th action with 338 not run. **Smoke passed the
+same wiring** — whether a suite trips over the banner depends on where its
+controls happen to sit, which is exactly why this is automated and not
+remembered. `run.sh` reads the `replay` block out for every suite except
+`openreplay` and writes it back on EXIT (borrowed, not switched off — a run that
+silently unwired somebody's replay would be the tunnel's old bug in a new
+place). The banner covering page controls is a real product issue, unfixed: a
+first-time visitor to `/manage/pages` cannot reach the checkbox either.
+
 **The tunnel has its own upstream port.** `--prod` used to park the
 adapter-node build on **:8081**, vite's port, so `run.sh` had to evict it for
 the duration of a suite and put it back on exit — and during each handover

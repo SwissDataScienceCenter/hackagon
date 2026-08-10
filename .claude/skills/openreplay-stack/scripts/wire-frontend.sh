@@ -20,11 +20,28 @@
 # ⚠ This restarts the frontend. Do not run it while an e2e suite is in flight —
 # the pages keep answering 200 through the handover, so the damage shows up as
 # one unrelated-looking test failure and nothing points here.
+#
+# NOTHING TRACKED IS EDITED. The `replay` block goes into config.local.yaml,
+# the gitignored overlay the loader deep-merges over config.yaml
+# (components/frontend/src/lib/server/settings.ts). This used to `sed` the
+# TRACKED config.yaml, which meant a wired dev machine had a dirty working tree
+# holding a `*.trycloudflare.com` ingest hostname that dies in a few hours —
+# the exact shape of a bug this repo has already paid for once, when a `git add
+# -A` committed the tunnel's OIDC issuer and a dead hostname sat in HEAD for
+# several commits.
+#
+# THIS SCRIPT OWNS EXACTLY ONE KEY IN THAT FILE: `replay`. cloudflare-tunnel's
+# auth-wire.sh owns `oidc` in the same file and knows nothing about this one,
+# so --restore removes the BLOCK, never the file: clobbering the overlay would
+# drop the tunnel's issuer, and a tunnel with no issuer keeps serving pages —
+# only signing in breaks, which nobody notices until they try.
+# .claude/skills/lib/config-overlay.sh does the per-key surgery.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
 ROOT_DIR="$(cd "$HERE/../../../.." && pwd)"
-FRONTEND_CFG="$ROOT_DIR/components/frontend/data/test/config/config.yaml"
+FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
+OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
 
 MODE="wire"
 case "${1:-}" in
@@ -34,25 +51,7 @@ case "${1:-}" in
   *) echo "unknown argument: $1" >&2; exit 2 ;;
 esac
 
-# Strip any existing replay block: from the `replay:` line to the next line
-# that starts in column 0 (a new top-level key) or EOF. Rewriting beats
-# patching in place — the block has optional keys, and a sed that edits one
-# line at a time leaves a half-updated block when the shape changes.
-# Trailing blank lines are held back and only emitted when a non-blank line
-# follows, so `--restore` puts the file back BYTE-IDENTICAL. Without that, each
-# wire/restore cycle left a stray newline behind and `git diff` on a config
-# file reported a change nobody made.
-strip_replay() {
-  awk '
-    /^replay:/ { inblock = 1; next }
-    inblock && /^[^[:space:]#]/ { inblock = 0 }
-    inblock { next }
-    /^[[:space:]]*$/ { held = held $0 "\n"; next }
-    { printf "%s", held; held = ""; print }
-  ' "$FRONTEND_CFG"
-}
-
-# The frontend reads config.yaml ONCE at boot, so a rewrite is inert until it
+# The frontend reads its config ONCE at boot, so a rewrite is inert until it
 # restarts — and getting that restart right is the whole trick here.
 #
 # TWO different servers can own :8081. process-compose's `frontend` is `vite
@@ -93,28 +92,28 @@ restart_frontend() {
   echo "      bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop && … ensure" >&2
 }
 
-# Replace the config only if the new content actually differs, and restart only
-# when it did. This script BOUNCES THE FRONTEND, so an "idempotent" re-run is
-# not free: calling `--restore` on an already-restored config while an e2e
-# suite is mid-flight would restart the server the suite is driving. Nothing in
-# the output would say so — the pages keep answering 200 — and the failure
-# would land on whichever test happened to be in the handover.
+# Restart only when the overlay actually changed — config-overlay.sh answers
+# `changed` or `unchanged` for exactly this. This script BOUNCES THE FRONTEND,
+# so an "idempotent" re-run is not free: calling `--restore` on an
+# already-restored config while an e2e suite is mid-flight would restart the
+# server the suite is driving. Nothing in the output would say so — the pages
+# keep answering 200 — and the failure would land on whichever test happened to
+# be in the handover.
 #
 # ⚠ Do not run this while a suite is running, even so.
-apply() { # <new-content-file> <message>
-  if cmp -s "$1" "$FRONTEND_CFG"; then
-    rm -f "$1"
+apply() { # <changed|unchanged> <message>
+  if [ "$1" = "changed" ]; then
+    echo "$2"
+    restart_frontend
+  else
     echo "$2 (already; nothing changed, frontend left alone)"
-    return 0
   fi
-  mv "$1" "$FRONTEND_CFG"
-  echo "$2"
-  restart_frontend
 }
 
 if [ "$MODE" = "restore" ]; then
-  strip_replay > "$FRONTEND_CFG.tmp"
-  apply "$FRONTEND_CFG.tmp" "==> session replay is OFF"
+  # `remove`, never `rm`: the tunnel's `oidc` block may share this file.
+  apply "$(bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay)" \
+    "==> session replay is OFF"
   exit 0
 fi
 
@@ -154,8 +153,10 @@ if [ -z "$key" ]; then
 fi
 [ -n "$key" ] || { echo "error: no project found — sign up at $url/signup first" >&2; exit 1; }
 
+# The whole block, key line included — config-overlay.sh checks that it starts
+# with the key it is being filed under, so a block can never land in the
+# overlay under a name that nothing can remove it by.
 block=$(cat <<YAML
-
 replay:
   enabled: true
   ingestPoint: $url/ingest
@@ -171,8 +172,8 @@ if [ "$MODE" = "print" ]; then
   exit 0
 fi
 
-{ strip_replay; echo "$block"; } > "$FRONTEND_CFG.tmp"
-apply "$FRONTEND_CFG.tmp" "==> session replay is ON"
+apply "$(printf '%s\n' "$block" | bash "$OVERLAY" set "$FRONTEND_LOCAL" replay)" \
+  "==> session replay is ON"
 echo "    ingestPoint  $url/ingest"
 echo "    projectKey   $key"
 echo "    ⚠ visitors to http://localhost:8081 are now ASKED whether to be recorded."

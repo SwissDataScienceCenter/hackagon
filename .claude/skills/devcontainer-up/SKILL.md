@@ -15,6 +15,7 @@ Git Bash on Windows (MSYS path mangling is handled).
 ```bash
 bash .claude/skills/devcontainer-up/scripts/start.sh   # nothing → running stack (see below)
 bash .claude/skills/devcontainer-up/scripts/start.sh --tunnel --seed   # …public, with login, seeded
+bash .claude/skills/devcontainer-up/scripts/start.sh --replay          # …with session replay, proved
 bash .claude/skills/devcontainer-up/scripts/up.sh      # start + make ready (idempotent)
 bash .claude/skills/devcontainer-up/scripts/e2e.sh smoke     # hackathon-e2e inside the container
 bash .claude/skills/devcontainer-up/scripts/e2e.sh journey   # full lifecycle recipe
@@ -24,12 +25,37 @@ bash .claude/skills/devcontainer-up/scripts/down.sh              # stop (volumes
 bash .claude/skills/devcontainer-up/scripts/down.sh --volumes    # full cold reset
 ```
 
-`start.sh` is **the one-command path**: container → stack → optionally a
-Cloudflare quick tunnel with OIDC wired → optionally the seed fixture. It
-exists because the chain has four steps across three skills and the one people
-forget is the last — a tunnel that serves pages but was never auth-wired looks
-completely fine until somebody tries to sign in. It finishes by driving a real
-login round-trip, because serving HTML proves nothing about OIDC.
+`start.sh` is **the one-command path**: container → stack → optionally the seed
+fixture → optionally session replay → optionally a Cloudflare quick tunnel with
+OIDC wired. It exists because the chain has four steps across three skills and
+the one people forget is the last — a tunnel that serves pages but was never
+auth-wired looks completely fine until somebody tries to sign in. It finishes by
+driving a real login round-trip, because serving HTML proves nothing about OIDC.
+
+**`--replay`** is the same idea for session replay: bring up the OpenReplay rig
+(`openreplay-stack/scripts/up.sh`, which creates or reuses its admin account
+from the gitignored `.secrets.env`), point the app at it
+(`wire-frontend.sh` — project key read from OpenReplay's own API, written into
+the gitignored `config.local.yaml`), and then **prove a session records** by
+running the consent spec's first test: it clicks the real "Allow recording"
+banner and counts the bytes the tracker posts to `/ingest`. Opt-in, always: the
+rig is 23 more containers and wants 8 GB on top of the dev stack.
+
+Three things that check are built to catch, none of which a `docker ps` would:
+
+- a **stale `ingestPoint`** — every quick tunnel restart mints a new hostname,
+  and the tracker fails silently against the old one;
+- a **skip reported as a pass** — every spec under `tests/openreplay`
+  self-skips when it cannot see `replay.enabled`, and a skipped Playwright run
+  exits 0, so `start.sh` fails on the word `skipped` as well as on a failure;
+- a **zero-byte capture** — the spec writes what it captured, and `start.sh`
+  reads the file size back rather than trusting the exit code.
+
+`--replay` runs BEFORE the tunnel step deliberately: the proof drives Playwright
+over `localhost:8081` and its `setup` dependency logs every persona in, and a
+wired tunnel repoints both OIDC issuers at the public hostname, so localhost
+logins fail while it is up. Both end up wired — they own different keys in the
+same `config.local.yaml` and neither can remove the other's.
 
 ## What `up.sh` does
 

@@ -65,7 +65,15 @@ the host.
   (`components/backend/internal/config/config.go`,
   `components/frontend/src/lib/server/settings.ts`), merging key by key so an
   overlay naming only the issuer leaves `jwksurl`, `clientId` and `audience`
-  alone. `--restore` is therefore just `rm`. This replaced a `sed` over the two
+  alone. `--restore` removes the **`oidc` block**, and the file only when that
+  was the last key in it — it used to be a plain `rm`, which was right while
+  there was one writer and became a silent bug when session replay
+  (`openreplay-stack/scripts/wire-frontend.sh`) started owning `replay` in the
+  same overlay: `hackathon-e2e/scripts/run.sh` calls `--restore` on the way into
+  EVERY suite run, so an `rm` there would delete the replay wiring and the
+  openreplay suite would self-skip and report green having tested nothing.
+  `.claude/skills/lib/config-overlay.sh` does the per-key surgery for both
+  writers. This replaced a `sed` over the two
   tracked `config.yaml` files with `.pretunnel` backups: while wired, the
   working tree differed from HEAD, and a `git add -A` committed a hostname that
   dies with the tunnel — which happened, and a fresh clone then pointed at a

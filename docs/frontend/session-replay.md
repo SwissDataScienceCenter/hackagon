@@ -162,7 +162,10 @@ OPENREPLAY_PROJECT_KEY=… bash .claude/skills/openreplay-stack/scripts/wire-fro
 bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore   # off again
 ```
 
-That writes into `components/frontend/data/test/config/config.yaml`:
+That writes into `components/frontend/data/test/config/config.local.yaml` — the
+gitignored overlay the loader deep-merges over `config.yaml`, never the tracked
+file itself, because the ingest hostname is a Cloudflare quick tunnel that dies
+in a few hours and has no business in HEAD:
 
 ```yaml
 replay:
@@ -175,6 +178,12 @@ replay:
 
 An absent or incomplete block parses to `{enabled: false}`, so no deployment
 starts recording because somebody forgot a flag.
+
+**That overlay has a second writer** — the Cloudflare tunnel's `auth-wire.sh`
+owns `oidc` in the same file — so `--restore` removes the `replay` *block*, not
+the file. Deleting the file would drop the tunnel's issuer, and a tunnel with no
+issuer keeps serving pages: only signing in breaks, which nobody notices until
+they try. `.claude/skills/lib/config-overlay.sh` does the per-key edit.
 
 ## None of this is claimed, it is asserted
 

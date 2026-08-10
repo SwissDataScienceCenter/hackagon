@@ -27,24 +27,75 @@ export const CONSENT_COOKIE = "hackagon_replay_consent"
 
 export type ReplayConfig = { ingestPoint: string; projectKey: string }
 
-/**
- * The frontend's replay block, or null when replay is off.
- *
- * Read out of config.yaml rather than out of the page, because every spec in
- * this folder self-skips when the rig is not wired and a skip decision has to
- * be available before a browser exists.
- */
-export function replayConfig(): ReplayConfig | null {
-  const cfg = path.join(FRONTEND, "data", "test", "config", "config.yaml")
-  let text: string
+const CONFIG_DIR = path.join(FRONTEND, "data", "test", "config")
+
+function read(file: string): string | null {
   try {
-    text = fs.readFileSync(cfg, "utf8")
+    return fs.readFileSync(file, "utf8")
   } catch {
     return null
   }
-  if (!/^\s*enabled:\s*true\s*$/m.test(text)) return null
-  const ingestPoint = text.match(/^\s*ingestPoint:\s*"?([^"\s]+)"?\s*$/m)?.[1]
-  const projectKey = text.match(/^\s*projectKey:\s*"?([^"\s]+)"?\s*$/m)?.[1]
+}
+
+/**
+ * The scalar entries of one top-level YAML block, or null when there is no
+ * such block.
+ *
+ * Deliberately not a YAML parser: this package has no yaml dependency, the
+ * block is flat, and it is written by one script
+ * (openreplay-stack/scripts/wire-frontend.sh) whose shape is known. The block
+ * ends where the next column-0 key begins, which is exactly the rule
+ * `.claude/skills/lib/config-overlay.sh` writes to.
+ */
+function blockScalars(
+  text: string | null,
+  key: string,
+): Record<string, string> | null {
+  if (text === null) return null
+  const lines = text.split(/\r?\n/)
+  const start = lines.findIndex((l) => l.startsWith(`${key}:`))
+  if (start === -1) return null
+
+  const out: Record<string, string> = {}
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^[^\s#]/.test(lines[i])) break
+    const m = lines[i].match(/^\s+([A-Za-z_][A-Za-z0-9_]*):\s*"?([^"#]*?)"?\s*$/)
+    if (m) out[m[1]] = m[2]
+  }
+
+  return out
+}
+
+/**
+ * The frontend's replay block, or null when replay is off.
+ *
+ * Read out of the config files rather than out of the page, because every spec
+ * in this folder self-skips when the rig is not wired and a skip decision has
+ * to be available before a browser exists.
+ *
+ * READS THE MERGED VIEW, config.yaml overlaid with config.local.yaml, because
+ * that is what the server reads (`mergeConfig` in
+ * components/frontend/src/lib/server/settings.ts). Wiring writes the gitignored
+ * OVERLAY — the tracked config.yaml must never carry a `*.trycloudflare.com`
+ * ingest hostname that dies in a few hours — so a reader that only looked at
+ * config.yaml would find `enabled` absent on a perfectly well-wired machine,
+ * every spec here would `test.skip`, and the suite would report green having
+ * verified nothing about masking, consent or Do Not Track. A skip is the one
+ * outcome this folder must never reach by accident.
+ */
+export function replayConfig(): ReplayConfig | null {
+  const base = blockScalars(read(path.join(CONFIG_DIR, "config.yaml")), "replay")
+  const local = blockScalars(
+    read(path.join(CONFIG_DIR, "config.local.yaml")),
+    "replay",
+  )
+  if (base === null && local === null) return null
+
+  // Same precedence as the loader: the overlay wins key by key, so an overlay
+  // saying `enabled: false` turns off a base that says true.
+  const replay = { ...(base ?? {}), ...(local ?? {}) }
+  if (replay.enabled !== "true") return null
+  const { ingestPoint, projectKey } = replay
 
   return ingestPoint && projectKey ? { ingestPoint, projectKey } : null
 }
