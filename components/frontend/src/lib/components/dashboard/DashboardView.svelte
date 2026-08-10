@@ -191,7 +191,23 @@
                 <div class="card overflow-hidden">
                     {#each myHackathons as h, i (h.id)}
                         {@const mem = h.viewerMembership}
-                        <div class="flex items-center">
+                        {@const href = canOpenHackathon(mem, isGlobalAdmin)
+                            ? `/my/hackathon/${h.id}/overview`
+                            : undefined}
+                        <!-- The hover tint lives here rather than on the link
+                             inside `HackathonRow`, which only spans the row's
+                             own content: the membership badge is its sibling,
+                             so a hover painted in there stopped short of it and
+                             left the line half-lit. Painting the wrapper takes
+                             in the badge, and hovering the badge lights the row
+                             too. Only when there is somewhere to go — an
+                             unopenable row reacting to the pointer would
+                             promise a click it cannot honour. -->
+                        <div
+                            class="flex items-center {href
+                                ? 'transition-colors hover:bg-raised'
+                                : ''}"
+                        >
                             <div class="flex-1">
                                 <!-- Confirmed here: straight to the member view.
                                      Waitlisted, and the row is not a link — joining
@@ -200,9 +216,7 @@
                                      403 until an organiser approves you. The
                                      Waitlisted badge beside it says why. -->
                                 <HackathonRow
-                                    href={canOpenHackathon(mem, isGlobalAdmin)
-                                        ? `/my/hackathon/${h.id}/overview`
-                                        : undefined}
+                                    {href}
                                     name={h.name}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
