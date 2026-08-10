@@ -97,8 +97,12 @@ if [ -f "$AUTH_WIRE" ]; then
   # there silently breaks the public link every single time someone runs the
   # tests — which is exactly what kept happening: the URL still served pages,
   # so it looked fine until somebody tried to log in.
-  FRONTEND_CFG="$ROOT_DIR/components/frontend/data/test/config/config.yaml"
-  WIRED_URL="$(sed -n 's|^[[:space:]]*issuer:[[:space:]]*\(https://[^/]*\)/realms/.*|\1|p' "$FRONTEND_CFG" 2>/dev/null | head -1)"
+  # Read it out of the OVERLAY, not config.yaml: wiring writes the tunnel
+  # issuer to the gitignored config.local.yaml precisely so the tracked file
+  # never carries a hostname that dies with the tunnel. The file's absence is
+  # the "no tunnel wired" signal — sed on a missing file is silenced below.
+  FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
+  WIRED_URL="$(sed -n 's|^[[:space:]]*issuer:[[:space:]]*\(https://[^/]*\)/realms/.*|\1|p' "$FRONTEND_LOCAL" 2>/dev/null | head -1)"
 
   bash "$AUTH_WIRE" --restore ||
     echo "warn: could not restore OIDC issuers; logins may fail if a tunnel is wired" >&2

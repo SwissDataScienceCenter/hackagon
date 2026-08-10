@@ -54,11 +54,24 @@ the host.
   (needs `proxy-headers=xforwarded`, baked into toolchain.nix — one full
   stack restart after first pulling that change), (2) allowlists the tunnel
   origin on the `hackagon-frontend` realm client via the admin API (the
-  committed realm file stays untouched), (3) points frontend `oidc.issuer`
-  and backend `oidc.issuerurl` at the tunnel (keeping `.pretunnel` backups)
+  committed realm file stays untouched), (3) writes frontend `oidc.issuer`
+  and backend `oidc.issuerurl` into each component's **`config.local.yaml`**
   and restarts both processes. `down.sh` (or `auth-wire.sh --restore`)
   undoes all of it. While wired, log in **through the tunnel URL** —
   localhost logins carry the wrong issuer and fail backend validation.
+- **Wiring never touches a tracked file.** `config.local.yaml` sits beside
+  `config.yaml` in the same config dir, is gitignored, optional and partial;
+  both loaders read it **after `config.yaml` and before the environment**
+  (`components/backend/internal/config/config.go`,
+  `components/frontend/src/lib/server/settings.ts`), merging key by key so an
+  overlay naming only the issuer leaves `jwksurl`, `clientId` and `audience`
+  alone. `--restore` is therefore just `rm`. This replaced a `sed` over the two
+  tracked `config.yaml` files with `.pretunnel` backups: while wired, the
+  working tree differed from HEAD, and a `git add -A` committed a hostname that
+  dies with the tunnel — which happened, and a fresh clone then pointed at a
+  tunnel that no longer existed. `config_test.go` in the backend's config
+  package asserts both tracked configs still say `localhost`, so the old shape
+  cannot come back quietly.
 - **`--prod`**: runs the adapter-node **production build** on its OWN port,
   `:8082`, next to `vite dev` on `:8081`. The dev server ships unbundled
   modules — measured on the landing page: **150 requests / 7.7 MB** versus
@@ -101,7 +114,7 @@ the host.
   `scripts/run.sh` restores the localhost issuers for the duration of a run and
   re-wires on exit. In `--prod` mode the public URL keeps SERVING throughout
   (the built server on `:8082` is outside process-compose and holds its config
-  in memory, so the issuer sed does not reach it); only *new logins* through
+  in memory, so rewriting the overlay does not reach it); only *new logins* through
   the tunnel fail until the run ends and the re-wire restarts it. That trade is
   deliberate — **pages must never 502**. Prod mode used to share `:8081` with
   vite, so `run.sh` had to hand the port back and forth around every run and
@@ -122,8 +135,9 @@ the host.
   `ORIGIN`, separately, every form POST 403s as cross-site.
 - **Prod mode is a snapshot.** Source edits do nothing until
   `prod-serve.sh start <url>` rebuilds — there is no hot reload. Config is a
-  snapshot too: `config.yaml` is read once at boot, which is why `auth-wire.sh`
-  restarts the built server after its sed (and why localhost keeps its hot
+  snapshot too: `config.yaml` and its overlay are read once at boot, which is
+  why `auth-wire.sh` restarts the built server after writing the overlay (and
+  why localhost keeps its hot
   reload on `:8081` regardless). `status` reports both ports and which one the
   tunnel is currently served from.
 - The URL is public while up — don't leave tunnels running unattended, and

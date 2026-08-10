@@ -18,24 +18,27 @@ required beyond the repo itself (Nix dev shell via `just`).
 
 ## The recipe = the product spec
 
-`skills/hackathon-e2e/recipe.jsonl` — **329 actions, one JSON per line**,
+`skills/hackathon-e2e/recipe.jsonl` — **344 actions, one JSON per line**,
 covering platform setup → publication → configuration → registration
-(13-person wave, forms, waitlist) → proposals → teams → event days (no-show,
-same-day walk-in, deadline overrides) → voting (single-choice, ranked, points)
-→ prizes (admin final voice) → post-event (winners, gallery uploads, wrap-up
-blog, profile churn). Executed in order by `tests/journey/recipe.spec.ts` via
-`helpers/recipe.ts`.
+(13-person wave, forms, waitlist) → the capacity pilot (a capped side sprint:
+FCFS seats, queue fairness, over-capacity approval, the Join race) →
+proposals → teams → event days (no-show, same-day walk-in, deadline
+overrides) → voting (single-choice, ranked, points) → prizes (admin final
+voice) → post-event (winners, gallery uploads, wrap-up blog, profile churn).
+Executed in order by `tests/journey/recipe.spec.ts` via `helpers/recipe.ts`.
 
-Each action carries: `priority` (P1 215 / P2 85 / P3 9), `outcome`
-(human-readable expectation), an optional `todo` (placeholder note, 24
+Each action carries: `priority` (P1 242 / P2 93 / P3 9), `outcome`
+(human-readable expectation), an optional `todo` (placeholder note, 44
 actions) and an optional `gate` (24 actions — skip until the listed RPCs
 exist, capability-probed at runtime by `scripts/probe.sh`, so actions wake up
 automatically as the backend lands). `implement: false` meant "deliberately
 deferred"; **no action sets it any more** — nothing in the recipe is deferred.
 
 `recipe-player.html` — self-contained animated replay of the recipe (open in
-any browser). Rebuild after recipe edits by re-splicing the JSONL between the
-`<script id="recipe-data">` markers.
+any browser). Rebuild after recipe edits with
+`node scripts/splice-player.mjs`, which re-splices the JSONL between the
+`<script id="recipe-data">` markers, applies the `</` → `<\/` escape, and
+verifies the embedded action count against the file.
 
 **Act 0 — platform setup** runs before any hackathon exists: the admin drafts
 the About page, the draft stays invisible to the public, an organizer is
@@ -43,8 +46,8 @@ denied (site pages need the *global* Admin role), publish makes it
 world-readable, duplicate/invalid slugs are rejected, and a `<script>` payload
 pasted into the markdown must not execute (`sitePageSanitized`).
 
-Act sizes: 0 = 15, 1 = 46, 2 = 51, 3 = 13, 4 = 29, 5 = 58, 6 = 45, 7 = 40,
-8 = 32. By kind: 255 `rpc`, 29 `ui.assert`, 39 `ui.flow`, 5 `rpc.race`,
+Act sizes: 0 = 15, 1 = 46, 2 = 66, 3 = 13, 4 = 29, 5 = 58, 6 = 45, 7 = 40,
+8 = 32. By kind: 266 `rpc`, 32 `ui.assert`, 39 `ui.flow`, 6 `rpc.race`,
 1 `files.generate`.
 
 **`rpc.race` fires its `calls` simultaneously** (Promise.all over separately
@@ -394,6 +397,19 @@ localhost, and tokens carrying the tunnel issuer fail every auth setup. It now
 **re-wires on EXIT**, so a test run no longer silently logs out the public URL.
 The failure was invisible in the worst way: the tunnel kept serving pages, so
 only someone actually signing in found out.
+
+**Wiring writes `config.local.yaml`, never the tracked `config.yaml`.** Both
+loaders read an optional, gitignored overlay beside the base file — backend
+`defaults < config.yaml < config.local.yaml < HACKAGON_* env`, frontend
+`config.yaml < config.local.yaml`, deep-merged and validated by the same
+schema — so `auth-wire.sh` writes one key and `--restore` is an `rm`. It used
+to `sed` the two tracked files and keep `.pretunnel` backups: while wired the
+working tree differed from HEAD, and a `git add -A` committed a hostname that
+dies with the tunnel. That happened — a dead issuer sat committed for several
+commits, and a fresh clone pointed at a tunnel that no longer existed. The
+guard against a repeat is a spec in `internal/config/config_test.go` asserting
+BOTH tracked configs still say `localhost`; `run.sh` reads the wired URL out of
+the overlay, so the overlay's absence is now the "no tunnel" signal.
 
 **The tunnel has its own upstream port.** `--prod` used to park the
 adapter-node build on **:8081**, vite's port, so `run.sh` had to evict it for

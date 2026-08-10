@@ -92,7 +92,7 @@ if [ -z "$PORT" ]; then
 
   if [ -n "$PROD" ]; then
     # LAST, and only now: the built server reads config.yaml once into a module
-    # singleton at boot, so the issuer sed above has to be on disk before it
+    # singleton at boot, so the issuer overlay above has to be on disk before it
     # starts. (Nothing is duplicated by ordering it this way — auth-wire.sh
     # restarts the built server only when one is ALREADY running, which on this
     # path it is not.)

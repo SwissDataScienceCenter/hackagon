@@ -22,7 +22,7 @@ docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
   echo "warn: prod-serve stop skipped (dev container not running?)" >&2
 
 # If a --with-auth run rewired the OIDC issuers, put them back too (no-op
-# when the .pretunnel backups don't exist; skipped if the dev container is
+# when there is no config.local.yaml to delete; skipped if the dev container is
 # down, in which case the next `just up` still needs a manual --restore).
 docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
   bash -lc 'cd /workspaces/hackagon && bash .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh --restore' ||
