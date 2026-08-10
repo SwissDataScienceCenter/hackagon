@@ -37,7 +37,7 @@ export const load: PageServerLoad = async (event) => {
       isMe: myUserId !== undefined && m.user!.id === myUserId,
     }))
 
-  return { participants }
+  return { hackathonId: hackathon.id, participants }
 }
 
 /** The gRPC errors both write paths can return, as SvelteKit failures. */

@@ -44,6 +44,12 @@ export const load: PageServerLoad = async (event) => {
       value: c as number,
       enabled: hackathonState.enabled.includes(c as number),
     })),
+    // Badges the Participants tile, so approving is not something an organiser
+    // has to open a screen to discover. Counted the way Manage Participants counts
+    // its rows — it drops a member with no user too — so the two cannot disagree.
+    waitingCount: hackathon.members.filter(
+      (m) => m.user !== undefined && m.isWaiting,
+    ).length,
   }
 }
 

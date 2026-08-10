@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
@@ -33,6 +34,7 @@
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex min-w-0 flex-col gap-1">
+        <ManageHubBackLink hackathonId={data.hackathonId} />
         <h2 class="m-0 text-title text-ink">Manage Projects</h2>
         <span class="text-xs text-ink-3">
             {countLabel}{#if data.pendingCount > 0}

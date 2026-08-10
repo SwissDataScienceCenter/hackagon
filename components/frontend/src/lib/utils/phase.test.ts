@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   PHASE_CAPABILITIES,
+  capabilityDescription,
   capabilityLabel,
   currentAndNextPhase,
   extraEnabledCapabilities,
@@ -215,6 +216,20 @@ describe("PHASE_CAPABILITIES", () => {
   it("lists the six in enum order, each with a label", () => {
     expect(PHASE_CAPABILITIES.map((c) => c.value)).toEqual([1, 2, 3, 4, 5, 6])
     expect(PHASE_CAPABILITIES.every((c) => c.label.length > 0)).toBe(true)
+  })
+})
+
+describe("capabilityDescription", () => {
+  // One table holds both fields, so the pairing is structural — what is left to
+  // check is that nobody left a sentence empty beside a switch.
+  it("describes every capability the switches render", () => {
+    for (const c of PHASE_CAPABILITIES) {
+      expect(capabilityDescription(c.value)).toBeTruthy()
+    }
+  })
+
+  it("returns undefined for an unknown value", () => {
+    expect(capabilityDescription(99)).toBeUndefined()
   })
 })
 

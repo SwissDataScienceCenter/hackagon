@@ -1,6 +1,6 @@
 <script lang="ts">
     import { CircleAlert } from 'lucide-svelte';
-    import { capabilityLabel } from '$lib/utils/phase';
+    import { capabilityDescription, capabilityLabel } from '$lib/utils/phase';
 
     let {
         currentPhaseName,
@@ -56,25 +56,37 @@
                      role and casbin has no inheritance, so an owner holds none of
                      them and is refused the very actions they switch on here. -->
                 <p class="m-0 text-xs text-ink-3">
-                    Applies to the whole hackathon. Moving between phases never changes
-                    these — they are always explicit.
+                    Each one is a permission held by every participant, for the whole
+                    hackathon. Moving between phases never changes them.
                 </p>
-                <!-- Switches only. A per-capability link to the screen that
-                     handles its consequences was tried and dropped: the Manage
-                     tiles below this panel already reach all of them, and a
-                     second copy beside every checkbox turned a compact grid of
-                     six into a wall of arrows. -->
-                <div class="grid gap-2 pt-2 sm:grid-cols-2">
+                <!-- A row per capability rather than a two-column grid of bare
+                     labels: six terms with nothing beside them read as settings,
+                     when what is being decided is what everyone here may do.
+                     Still no per-capability link to the screen that handles the
+                     consequences — the Manage tiles below reach all of them, and
+                     a second copy beside every switch was a wall of arrows. -->
+                <div class="flex flex-col gap-1 pt-2">
                     {#each capabilities as capability (capability.value)}
-                        <label class="flex items-center gap-2 text-xs text-ink">
+                        <label
+                            class="flex cursor-pointer items-start gap-2.5 rounded-field px-2 py-2
+                                   hover:bg-raised"
+                        >
                             <input
                                 type="checkbox"
                                 name="capabilities"
                                 value={capability.value}
                                 checked={capability.enabled}
-                                class="checkbox shrink-0"
+                                class="checkbox mt-0.5"
                             />
-                            {capabilityLabel(capability.value) ?? 'Unknown'}
+                            <span class="flex min-w-0 flex-col gap-0.5">
+                                <span class="text-xs font-semibold text-ink">
+                                    {capabilityLabel(capability.value) ?? 'Unknown'}
+                                </span>
+                                <span class="text-xs text-ink-3">
+                                    {capabilityDescription(capability.value) ??
+                                        'No description for this capability.'}
+                                </span>
+                            </span>
                         </label>
                     {/each}
                 </div>
@@ -91,8 +103,8 @@
                  checkboxes from server state. Considered and accepted — the two
                  areas are visually distinct, and guarding it would need client
                  state for a small win. -->
-            <!-- Outline, not solid: this panel shares the timeline page with
-                 "Add phase", which is the one action that page is for. -->
+            <!-- Outline, not solid: the solid button on this page moves the phase
+                 marker, and two of them would read as equal footing. -->
             <button type="submit" class="btn btn-sm w-fit btn-outline-accent">
                 Save changes
             </button>

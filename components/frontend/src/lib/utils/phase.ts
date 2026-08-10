@@ -160,24 +160,67 @@ export function currentAndNextPhase<
  * `HackathonState` plus its casbin rows, which only
  * `HackathonService.SetCapabilities` writes. Settled deliberately; see
  * `mydocs/docs/backend-tickets/project-preferences-capability.md`.
+ *
+ * The description is what the label cannot carry: "Set team preferences" reads
+ * as a setting rather than as a permission handed to everyone in the hackathon.
+ * Third person throughout, because capabilities grant to the `Member` role and
+ * casbin has no inheritance — an owner reading "you can" is being lied to.
+ *
+ * One entry each rather than a map per field, so a capability cannot end up with
+ * a label and no sentence beside its switch.
  */
-const CAPABILITY_LABEL: Partial<Record<number, string>> = {
-  1: "Register",
-  2: "Propose projects",
-  3: "Set team preferences",
-  4: "Submit project work",
-  5: "Vote",
-  6: "View results",
-}
+const CAPABILITIES: {
+  value: number
+  label: string
+  description: string
+}[] = [
+  {
+    value: 1,
+    label: "Register",
+    description: "Join this hackathon from the dashboard.",
+  },
+  {
+    value: 2,
+    label: "Propose projects",
+    description: "Propose a project for the organizers to review.",
+  },
+  {
+    value: 3,
+    label: "Set team preferences",
+    description: "Say which projects they would like to work on.",
+  },
+  {
+    value: 4,
+    label: "Submit project work",
+    description: "Hand in work against their team's project.",
+  },
+  {
+    value: 5,
+    label: "Vote",
+    description: "Cast a vote in the categories that are open.",
+  },
+  {
+    value: 6,
+    label: "View results",
+    description: "See the results that have been published.",
+  },
+]
 
 /** The six in enum order, for rendering a checkbox per capability. */
-export const PHASE_CAPABILITIES: { value: number; label: string }[] = [
-  1, 2, 3, 4, 5, 6,
-].map((value) => ({ value, label: CAPABILITY_LABEL[value] as string }))
+export const PHASE_CAPABILITIES: { value: number; label: string }[] =
+  CAPABILITIES
 
 /** Human label for one capability, or undefined if the value is unknown. */
 export const capabilityLabel = (c: number): string | undefined =>
-  CAPABILITY_LABEL[c]
+  CAPABILITIES.find((x) => x.value === c)?.label
+
+/** One line on what a capability permits, or undefined for an unknown value. */
+export const capabilityDescription = (c: number): string | undefined =>
+  CAPABILITIES.find((x) => x.value === c)?.description
+
+/** A value the enum has. Anything else can be neither labelled nor granted. */
+const isKnownCapability = (c: number): boolean =>
+  CAPABILITIES.some((x) => x.value === c)
 
 /**
  * Capabilities a phase says belong to it that are not actually switched on.
@@ -198,9 +241,7 @@ export function unmetPhaseCapabilities(
 ): number[] {
   const on = new Set(enabled)
 
-  return phaseCapabilities.filter(
-    (c) => CAPABILITY_LABEL[c] !== undefined && !on.has(c),
-  )
+  return phaseCapabilities.filter((c) => isKnownCapability(c) && !on.has(c))
 }
 
 /**
@@ -220,7 +261,7 @@ export function extraEnabledCapabilities(
   const planned = new Set(phaseCapabilities)
 
   return enabled
-    .filter((c) => CAPABILITY_LABEL[c] !== undefined && !planned.has(c))
+    .filter((c) => isKnownCapability(c) && !planned.has(c))
     .sort((a, b) => a - b)
 }
 
@@ -240,9 +281,7 @@ export function withPhaseCapabilitiesEnabled(
   enabled: readonly number[],
   phaseCapabilities: readonly number[],
 ): number[] {
-  const known = phaseCapabilities.filter(
-    (c) => CAPABILITY_LABEL[c] !== undefined,
-  )
+  const known = phaseCapabilities.filter(isKnownCapability)
 
   return [...new Set([...enabled, ...known])].sort((a, b) => a - b)
 }

@@ -66,10 +66,10 @@
             Participants <strong>cannot</strong> see these results yet. Turn on
             "view results" under
             <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage`)}
+                href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
                 class="font-semibold text-accent-ink no-underline hover:underline"
             >
-                Manage Timeline
+                Manage Hackathon
             </a>
             when you are ready to publish.
         </p>
