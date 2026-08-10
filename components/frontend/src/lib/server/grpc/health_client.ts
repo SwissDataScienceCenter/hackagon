@@ -85,7 +85,7 @@ export const HealthCheckRequest: MessageFns<HealthCheckRequest> = {
       switch (tag >>> 3) {
         case 1:
           message.service = reader.string()
-          break
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) break
       reader.skip(tag & 7)
@@ -140,7 +140,7 @@ export const HealthCheckResponse: MessageFns<HealthCheckResponse> = {
       switch (tag >>> 3) {
         case 1:
           message.status = reader.int32()
-          break
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) break
       reader.skip(tag & 7)

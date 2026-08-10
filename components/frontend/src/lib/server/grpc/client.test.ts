@@ -2,6 +2,7 @@ import { beforeAll, describe, it, expect } from "vitest"
 import { createAuthorizedGrpc, requireGrpc } from "./client"
 import type { AuthorizedGrpc } from "./client"
 import { initBackendChannel } from "./channel"
+import { HealthCheckResponse, ServingStatus } from "./health_client"
 
 beforeAll(() => {
   initBackendChannel({
@@ -46,5 +47,16 @@ describe("createAuthorizedGrpc", () => {
 
     expect(typeof result.project.propose).toBe("function")
     expect(typeof result.project.edit).toBe("function")
+  })
+})
+
+// health_client.ts is hand-written, so its decoding is not covered by the
+// proto contract the way the generated stubs are.
+describe("HealthCheckResponse", () => {
+  it("should decode the SERVING response the backend sends", () => {
+    // field 1 (status), wire type 0 (varint), value 1 (SERVING)
+    expect(HealthCheckResponse.decode(new Uint8Array([0x08, 0x01]))).toEqual({
+      status: ServingStatus.SERVING,
+    })
   })
 })
