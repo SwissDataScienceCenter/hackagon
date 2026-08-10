@@ -170,6 +170,23 @@ const CAPABILITY_LABEL: Partial<Record<number, string>> = {
   6: "View results",
 }
 
+/**
+ * What switching one on lets a participant do.
+ *
+ * The labels above scan but say nothing about consequence — "Set team
+ * preferences" reads as a setting rather than as a permission handed to everyone
+ * in the hackathon. Third person throughout: capabilities grant to the `Member`
+ * role, and casbin has no inheritance, so an owner reading "you can" is lied to.
+ */
+const CAPABILITY_DESCRIPTION: Partial<Record<number, string>> = {
+  1: "Join this hackathon from the dashboard.",
+  2: "Propose a project for the organizers to review.",
+  3: "Say which projects they would like to work on.",
+  4: "Hand in work against their team's project.",
+  5: "Cast a vote in the categories that are open.",
+  6: "See the results that have been published.",
+}
+
 /** The six in enum order, for rendering a checkbox per capability. */
 export const PHASE_CAPABILITIES: { value: number; label: string }[] = [
   1, 2, 3, 4, 5, 6,
@@ -178,6 +195,10 @@ export const PHASE_CAPABILITIES: { value: number; label: string }[] = [
 /** Human label for one capability, or undefined if the value is unknown. */
 export const capabilityLabel = (c: number): string | undefined =>
   CAPABILITY_LABEL[c]
+
+/** One line on what a capability permits, or undefined for an unknown value. */
+export const capabilityDescription = (c: number): string | undefined =>
+  CAPABILITY_DESCRIPTION[c]
 
 /**
  * Capabilities a phase says belong to it that are not actually switched on.
