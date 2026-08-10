@@ -95,11 +95,11 @@ export const actions: Actions = {
     // Reachable because Create grants the caller the casbin Owner role, which
     // satisfies Get's hackathon:read.
     //
-    // TODO(backend: enroll creator as participant): Create writes no Participant
-    // row, so until it does, the hackathon the organizer just made is missing
-    // from every participant-filtered list — My Hackathons and the sidebar — and
-    // this redirect is the only route to it. The hero also shows no membership
-    // badge, since that comes from the member list Get builds from that table.
+    // No longer the *only* route to the hackathon: Create still writes no
+    // Participant row, so both the dashboard and the hackathon layout fall back
+    // to the owners edge to find it. What ownership alone cannot do is let the
+    // creator take part — voting, proposing and preferences all need the casbin
+    // `member` role, which only ApproveParticipant grants.
     redirect(303, `/my/hackathon/${hackathonId}/overview`)
   },
 }

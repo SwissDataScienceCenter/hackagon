@@ -3,6 +3,7 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
+import { viewerMembership } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { currentAndNextPhase, unmetPhaseCapabilities } from "$lib/utils/phase"
 import { error } from "@sveltejs/kit"
@@ -29,8 +30,17 @@ export const load: LayoutServerLoad = async (event) => {
     error(404, "Hackathon not found")
   }
 
-  const myMembership =
-    result.hackathon.members.find((m) => m.user?.id === platformUserId) ?? null
+  // Falls back to the owners edge rather than reading `members` directly: the
+  // organiser who just created this hackathon has no participant row for `Get` to
+  // report, and without the fallback every gate below — Manage Timeline, Pages,
+  // Participants, project review, publishing results — hides itself from the
+  // owner. See `viewerMembership` for what is and isn't synthesised.
+  const myMembership = viewerMembership(
+    result.hackathon.members,
+    result.hackathon.owners,
+    platformUserId,
+    result.hackathon.createdAt,
+  )
 
   // The sidebar lists this hackathon's content pages. A separate PageService.List
   // rather than reading result.hackathon.pages: List is the authoritative source
