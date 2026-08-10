@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"path"
 	"strings"
@@ -138,6 +139,14 @@ func (c *Config) ConnectionStr() string {
 	}
 }
 
+// Load builds the configuration from four layers, each overriding the one
+// before it:
+//
+//	defaults (below) < config.yaml < config.local.yaml < HACKAGON_* env vars
+//
+// Every layer is a partial: it only has to carry what it changes.
+// config.local.yaml is gitignored and optional — see the comment at its Load
+// call for why it exists.
 func Load(configDir string) (*Config, error) {
 	k := koanf.New(".")
 
@@ -180,13 +189,43 @@ func Load(configDir string) (*Config, error) {
 		return nil, err
 	}
 
-	// Override with YAML config file
-	configPath := path.Join(path.Dir(configDir), "config.yaml")
+	// Override with YAML config file. Both files below are resolved from the
+	// SAME derived directory, so the base and its overlay can never end up
+	// pointing at different places.
+	dir := path.Dir(configDir)
+	configPath := path.Join(dir, "config.yaml")
 	if err := k.Load(file.Provider(configPath), yaml.Parser()); err != nil {
 		if !strings.Contains(err.Error(), "no such file") {
 			return nil, err
 		}
 		slog.Warn("couldn't load config file", "err", err)
+	}
+
+	// Override with the LOCAL OVERLAY: config.local.yaml beside config.yaml,
+	// gitignored, optional, partial. Absent is the normal case and changes
+	// nothing.
+	//
+	// It exists so that machine-specific wiring never has to edit a TRACKED
+	// file. The Cloudflare quick tunnel (.claude/skills/cloudflare-tunnel)
+	// used to rewrite oidc.issuerurl in config.yaml itself and keep a backup
+	// beside it; while wired, the working tree differed from HEAD, and a
+	// `git add -A` committed a hostname that dies with the tunnel — which
+	// happened, and sat committed for several commits. Config.yaml is now
+	// read-only as far as tooling is concerned; the tunnel writes the overlay
+	// and `--restore` deletes it. config_test.go asserts the tracked files
+	// still say localhost.
+	//
+	// Koanf merges maps key by key, so an overlay setting only oidc.issuerurl
+	// leaves jwksurl and algorithm exactly as config.yaml had them.
+	localPath := path.Join(dir, "config.local.yaml")
+	if err := k.Load(file.Provider(localPath), yaml.Parser()); err != nil {
+		// Only "not there" is acceptable — a malformed or unreadable overlay
+		// must fail loudly, or it silently stops taking effect.
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("loading %s: %w", localPath, err)
+		}
+	} else {
+		slog.Info("loaded local config overlay", "path", localPath)
 	}
 
 	// Override with environment variables

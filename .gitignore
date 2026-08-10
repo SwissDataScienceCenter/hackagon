@@ -46,6 +46,13 @@ components/frontend/src/lib/server/grpc/generated
 # once. A tool that needs a log should write it under its own out/ directory.
 *-error.log
 
-# Transient OIDC-config backups made while a login-capable tunnel is wired
-# (cloudflare-tunnel skill, auth-wire.sh)
-*.pretunnel
+# Machine-local config overlay, beside each component's config.yaml
+# (components/*/data/test/config/). Optional and partial: both loaders read it
+# AFTER config.yaml and BEFORE the environment, so absent changes nothing.
+#
+# Anything that has to point this checkout at a machine-specific hostname
+# writes HERE — the cloudflare-tunnel skill's auth-wire.sh above all. It used
+# to rewrite the tracked config.yaml files, so while a tunnel was wired the
+# working tree differed from HEAD and a `git add -A` committed an issuer that
+# dies with the tunnel. That happened.
+config.local.yaml

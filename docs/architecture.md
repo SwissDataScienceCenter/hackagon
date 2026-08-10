@@ -68,6 +68,20 @@ Configuration for each component is loaded from a config directory passed with
   issuer, client id (`hackagon-frontend`), audience (`hackagon-backend`).
 - `components/frontend/data/test/config/secrets.yaml` — gitignored dev secrets;
   without it the frontend answers `500 Server Configuration Error`.
+- `config.local.yaml` (either component) — **optional, gitignored, partial**
+  machine-local overlay, read from the same directory. Precedence is
+  `defaults < config.yaml < config.local.yaml < HACKAGON_* env` on the backend
+  and `config.yaml < config.local.yaml` on the frontend; both merge key by key
+  and validate the merged result, so an overlay naming one key leaves its
+  siblings alone and cannot smuggle in an invalid config. Absent is the normal
+  case and changes nothing.
+
+  It exists so that pointing this checkout at a machine-specific hostname never
+  edits a tracked file. The Cloudflare quick-tunnel wiring
+  (`.claude/skills/cloudflare-tunnel/scripts/auth-wire.sh`) writes the tunnel
+  issuer here; it used to rewrite `config.yaml` itself, and a hostname that
+  dies with the tunnel got committed. `internal/config/config_test.go` asserts
+  both tracked configs still name `localhost`.
 
 ## Request flow
 
