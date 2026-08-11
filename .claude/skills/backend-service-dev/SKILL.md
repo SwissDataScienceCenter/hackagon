@@ -54,7 +54,9 @@ Fully-qualified names come from the proto `package`, not the folder —
    `cmd/service/main.go`, which only calls `service.NewServer`:
    `hackathonSvc.RegisterXServiceServer(server, xService)`
 3. `just api-change` if you touched protos, else `just start`. Then verify over
-   the wire — see **backend-api-explore**.
+   the wire — see **backend-api-explore**. Chain the rebuild and the verifying
+   call into one tool call (`just api-change && just rpc::as …`); the
+   intermediate build output isn't worth a second full context re-read.
 
 ## Ent-to-proto mappers
 
@@ -183,6 +185,11 @@ have been partly fixed without the ticket being updated.
 
 - Don't edit generated code: `internal/proto/**`, `ent/**`, `api/proto/API.md`.
   Regenerate with `just codegen::proto` / `just codegen::db-schema`.
+- Don't **read** generated code either — `ent/**`, `internal/proto/**` and the
+  ~5k-line `API.md` are enormous, and anything you pull into the window is
+  re-billed on every later call in the session. `grep -n` for the symbol and
+  `Read` with `offset`/`limit` around the hit. `Schema.md` (~320 lines) is the
+  cheap human-readable substitute for browsing `ent/**`.
 - Don't run `just codegen::proto` outside the Nix shell — `buf` isn't in PATH.
   Either run it yourself or stage the proto change and ask.
 - Don't skip the casbin check on a mutation handler.
