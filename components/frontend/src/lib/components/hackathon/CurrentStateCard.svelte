@@ -1,7 +1,9 @@
 <script lang="ts">
     import { ArrowRight, Check } from 'lucide-svelte';
     import { capabilityHref } from '$lib/navigation/capabilityLinks';
-    import { PHASE_CAPABILITIES, formatPhaseRange } from '$lib/utils/phase';
+    import { PHASE_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
+    import { nextBoundary } from '$lib/utils/relativeTime';
+    import Countdown from './Countdown.svelte';
 
     let {
         hackathonId,
@@ -49,6 +51,7 @@
 
     const open = $derived(PHASE_CAPABILITIES.filter((c) => enabled.includes(c.value)));
     const closed = $derived(PHASE_CAPABILITIES.filter((c) => !enabled.includes(c.value)));
+    const closedLine = $derived(closed.map((c) => c.label).join(' · '));
 
     // Links only where following one leads somewhere the viewer is let in.
     //
@@ -69,7 +72,13 @@
     const phaseBadge = $derived(declared ? 'Current phase' : 'In progress');
 
     const openHeading = $derived(organiserVoice ? 'Participants can now' : 'You can now');
-    const closedHeading = $derived(organiserVoice ? 'Not open to participants' : 'Not open');
+    const closedHeading = $derived(organiserVoice ? 'Not open to participants' : 'Not open yet');
+
+    // Which boundary to count down to, decided here so the card knows whether
+    // there is one at all. `new Date()` is only ever compared against, never
+    // rendered — the visible clock lives in `Countdown`, which is what keeps this
+    // from becoming a hydration mismatch.
+    const boundary = $derived(nextBoundary(currentPhase, nextPhase, new Date()));
 
     // The two conditions deliberately kept out of the banner (see `stateAlerts`):
     // untidy rather than blocking, so an organiser reads them here without being
@@ -81,45 +90,52 @@
 </script>
 
 <!--
-  What is true of this hackathon at this moment: where we are, and what that
-  lets people do. Deliberately the *actual* capability state rather than the
-  current phase's plan — the participant timeline shows the plan, and the two
-  genuinely disagree, because advancing a phase grants nobody anything.
+  What is true of this hackathon at this moment: where we are, how long that
+  lasts, and what it lets people do. Deliberately the *actual* capability state
+  rather than the current phase's plan — the participant timeline shows the plan,
+  and the two genuinely disagree, because advancing a phase grants nobody
+  anything.
+
+  The open capabilities are rows rather than pills because they are this page's
+  real navigation: each is the way in to the thing a participant came to do. As
+  pills they were 20px targets carrying the same visual weight as the closed list
+  beside them. The closed ones are now one quiet line — worth knowing, not worth
+  a third of the card.
 
   `border-line-strong` rather than the plain `card` its siblings use: this one
-  leads the page and is different in kind from the About and Projects cards
-  below it. Same distinction CapabilitiesPanel draws for the same reason.
+  leads the page and is different in kind from the cards below it. Same
+  distinction CapabilitiesPanel draws for the same reason.
 -->
 <section class="card flex flex-col gap-4 border-line-strong p-5" aria-labelledby="right-now">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <span class="meta" id="right-now">Right now</span>
-        {#if currentPhase}
-            <span class="badge badge-info">{phaseBadge}</span>
-        {/if}
-    </div>
+    <span class="meta">Right now</span>
 
-    {#if currentPhase}
-        <div class="flex flex-col gap-1">
-            <h2 class="m-0 text-section text-ink">{currentPhase.name}</h2>
-            <span class="tnum text-xs text-accent-ink">
+    <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            {#if currentPhase}
+                <h2 class="m-0 text-section text-ink" id="right-now">{currentPhase.name}</h2>
+                <span class="badge badge-info">{phaseBadge}</span>
+            {:else}
+                <h2 class="m-0 text-section text-ink-3" id="right-now">No phase is running</h2>
+            {/if}
+            {#if boundary}
+                <span class="ms-auto"><Countdown {boundary} /></span>
+            {/if}
+        </div>
+
+        {#if currentPhase}
+            <span class="tnum text-xs text-ink-3">
                 {formatPhaseRange(currentPhase.startsAt, currentPhase.endsAt)}
             </span>
             {#if currentPhase.description}
-                <p class="m-0 pt-0.5 text-xs leading-snug text-ink-2">
-                    {currentPhase.description}
-                </p>
+                <p class="prose m-0 pt-1 text-xs">{currentPhase.description}</p>
             {/if}
-        </div>
-    {:else}
-        <p class="m-0 text-sm text-ink-3">
-            No phase is running at the moment.
-        </p>
-    {/if}
+        {/if}
+    </div>
 
     {#if !hasState}
         <!-- Nothing is enabled and nothing can be, so listing six closed
              capabilities would report the same fact six times. -->
-        <p class="m-0 text-xs text-ink-2">
+        <p class="prose m-0 text-xs">
             {organiserVoice
                 ? 'This hackathon has no configuration record, so participants cannot do anything yet.'
                 : 'Nothing is open yet.'}
@@ -129,40 +145,71 @@
             <!-- Ahead of the list, not after it: every capability check also
                  requires a confirmed membership, so an unqualified "you can now"
                  above this line would already have misled them. -->
-            <p class="m-0 text-xs text-warning-ink">
+            <p class="prose m-0 text-xs text-warning-ink">
                 You are on the waitlist — these open once an organiser approves you.
             </p>
         {/if}
 
         {#if open.length > 0}
-            <div class="flex flex-col gap-1.5">
+            <div class="flex flex-col gap-2">
                 <span class="meta">{openHeading}</span>
-                <div class="flex flex-wrap gap-1.5">
-                    {#each open as capability (capability.value)}
-                        {@const href = linked ? capabilityHref(hackathonId, capability.value) : undefined}
-                        <!-- The tick is the "open" signal and stays on both
-                             shapes; the arrow only says it is also a way in. -->
-                        {#if href}
-                            <!-- eslint-disable svelte/no-navigation-without-resolve -- built with
-                                 resolve() in $lib/navigation/capabilityLinks; the rule only
-                                 recognizes a literal resolve() call in the attribute itself. -->
-                            <a {href} class="badge badge-success no-underline hover:underline">
-                                <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                {capability.label}
-                                <ArrowRight class="h-3 w-3 shrink-0" aria-hidden="true" />
-                            </a>
-                            <!-- eslint-enable svelte/no-navigation-without-resolve -->
-                        {:else}
-                            <span class="badge badge-success">
-                                <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                {capability.label}
+                {#each open as capability (capability.value)}
+                    {@const href = linked
+                        ? capabilityHref(hackathonId, capability.value)
+                        : undefined}
+                    {@const description = capabilityDescription(capability.value)}
+                    {#if href}
+                        <!-- eslint-disable svelte/no-navigation-without-resolve -- built with
+                             resolve() in $lib/navigation/capabilityLinks; the rule only
+                             recognizes a literal resolve() call in the attribute itself. -->
+                        <a
+                            {href}
+                            class="group flex items-start gap-3 rounded-card bg-raised p-3
+                                   no-underline hover:bg-overlay"
+                        >
+                            <Check
+                                class="mt-0.5 h-4 w-4 shrink-0 text-success-ink"
+                                aria-hidden="true"
+                            />
+                            <span class="flex min-w-0 flex-col gap-0.5">
+                                <span class="text-sm font-semibold text-ink"
+                                    >{capability.label}</span
+                                >
+                                {#if description}
+                                    <span class="font-sans text-xs text-ink-3">{description}</span>
+                                {/if}
                             </span>
-                        {/if}
-                    {/each}
-                </div>
+                            <ArrowRight
+                                class="mt-0.5 ms-auto h-4 w-4 shrink-0 text-ink-3
+                                       group-hover:text-accent-ink"
+                                aria-hidden="true"
+                            />
+                        </a>
+                        <!-- eslint-enable svelte/no-navigation-without-resolve -->
+                    {:else}
+                        <!-- Open, but with nowhere to send them: `Register` happens
+                             on the dashboard, and a waitlisted viewer would be
+                             refused every destination. Same row without the arrow,
+                             so nothing looks clickable that is not. -->
+                        <div class="flex items-start gap-3 rounded-card bg-raised p-3">
+                            <Check
+                                class="mt-0.5 h-4 w-4 shrink-0 text-success-ink"
+                                aria-hidden="true"
+                            />
+                            <span class="flex min-w-0 flex-col gap-0.5">
+                                <span class="text-sm font-semibold text-ink"
+                                    >{capability.label}</span
+                                >
+                                {#if description}
+                                    <span class="font-sans text-xs text-ink-3">{description}</span>
+                                {/if}
+                            </span>
+                        </div>
+                    {/if}
+                {/each}
             </div>
         {:else}
-            <p class="m-0 text-xs text-ink-2">
+            <p class="prose m-0 text-xs">
                 {organiserVoice
                     ? 'Nothing is switched on for participants.'
                     : 'Nothing is open right now.'}
@@ -170,16 +217,13 @@
         {/if}
 
         {#if closed.length > 0}
-            <div class="flex flex-col gap-1.5">
+            <!-- One line, not a pill each. Closed is the normal state of most of
+                 these for most of the hackathon, so this wants to be readable at
+                 a glance and then ignored. -->
+            <p class="m-0 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-ink-3">
                 <span class="meta">{closedHeading}</span>
-                <div class="flex flex-wrap gap-1.5">
-                    {#each closed as capability (capability.value)}
-                        <!-- Neutral, never danger: closed is the normal state of
-                             most of these for most of the hackathon, not a fault. -->
-                        <span class="badge badge-neutral opacity-70">{capability.label}</span>
-                    {/each}
-                </div>
-            </div>
+                {closedLine}
+            </p>
         {/if}
     {/if}
 
