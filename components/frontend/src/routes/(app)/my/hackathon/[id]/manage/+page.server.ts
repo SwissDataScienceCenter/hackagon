@@ -1,4 +1,5 @@
 import type { Actions, PageServerLoad } from "./$types"
+import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { CAPABILITY_ORDER } from "$lib/server/hackathon/phaseForm"
@@ -49,6 +50,16 @@ export const load: PageServerLoad = async (event) => {
     // its rows — it drops a member with no user too — so the two cannot disagree.
     waitingCount: hackathon.members.filter(
       (m) => m.user !== undefined && m.isWaiting,
+    ).length,
+    // The same idea applied to the other queue nothing else surfaces: a proposed
+    // project sits invisible until someone opens Manage Projects. Free from the
+    // layout's `hackathon.get`, so this page still makes no RPC of its own.
+    //
+    // Deliberately only these two. "Teams with no project" and a submission count
+    // would each need a `TeamService.List` call, and neither is worth giving this
+    // page a round trip it has never had.
+    proposedCount: hackathon.projects.filter(
+      (p) => p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
     ).length,
   }
 }

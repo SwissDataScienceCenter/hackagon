@@ -1,7 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import CurrentStateCard from '$lib/components/hackathon/CurrentStateCard.svelte';
-    import OrganiserOpsCard from '$lib/components/hackathon/OrganiserOpsCard.svelte';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import TrackBreakdown from '$lib/components/hackathon/TrackBreakdown.svelte';
     import { membershipBadgeVariant } from '$lib/utils/hackathonRole';
@@ -11,39 +10,19 @@
 </script>
 
 <!--
-  An organiser gets their queues in the grid's first slot and a participant gets
-  their team. An organiser who is also on a team is the case that needs a snippet:
-  they get both — queues in the grid, team below it — rather than either being
-  silently dropped, and the card is too many props to spell out twice.
--->
-{#snippet participation(team: NonNullable<PageData['myTeam']>)}
-    <ParticipationCard
-        hackathonId={data.hackathon.id}
-        membershipLabel={data.membershipLabel}
-        membershipIsWaiting={data.membershipIsWaiting}
-        teamName={team.name}
-        teamRole={team.role}
-        memberNames={team.memberNames}
-        projectName={team.projectName}
-        projectTrack={team.projectTrack}
-        projectStatus={team.projectStatus}
-        submissionCount={team.submissionCount}
-        canSubmit={data.canSubmit}
-    />
-{/snippet}
-
-<!--
-  Left-aligned and capped, rather than centred: every sibling page sits in the
-  layout's `max-w-7xl` container, so a centred narrower column here slid the
-  content sideways on the way in and out of Overview. Capping without `mx-auto`
-  keeps the left edge where the rest of the hackathon put it while still holding a
-  readable measure.
+  The member's overview, and participant-shaped for every viewer — an organiser
+  reading it sees what a participant sees. Nothing an organiser *acts on* belongs
+  here: their queues and switches live on Manage Hackathon, which is the page
+  named after that job, and which badges each count onto the tile that clears it.
 
   Order is by how fast it changes. "Right now" leads because it is the only thing
-  on the page that is different from one visit to the next; About is last because
-  it is read once, ever, and had been sitting between two things that are not.
+  on the page that differs from one visit to the next; About is last because it is
+  read once, ever, and had been sitting between two things that are not.
+
+  Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects).
+  No width cap of its own — `.prose` caps the one thing here that needs a measure.
 -->
-<div class="flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-10">
+<div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <!-- What a participant came to find out is whether they can act right now,
          and until this card existed the only way to learn it was to try something
          and be refused. `hackathonState` comes from the hackathon layout, so the
@@ -51,7 +30,7 @@
 
          Participant-shaped for everyone, including organisers, who see exactly
          what a participant sees in the third person — their own controls live on
-         Manage Hackathon, and their own queues in the card below. -->
+         Manage Hackathon. -->
     <CurrentStateCard
         hackathonId={data.hackathon.id}
         organiserVoice={data.hackathonState.canManage}
@@ -67,16 +46,20 @@
          values and a short bar chart — and stacked full width they were two
          mostly-empty rectangles. -->
     <div class="grid gap-6 md:grid-cols-2">
-        {#if data.ops}
-            <OrganiserOpsCard
+        {#if data.myTeam}
+            <ParticipationCard
                 hackathonId={data.hackathon.id}
-                awaitingApproval={data.ops.awaitingApproval}
-                proposalsToReview={data.ops.proposalsToReview}
-                teamsWithoutProject={data.ops.teamsWithoutProject}
-                submissionCount={data.ops.submissionCount}
+                membershipLabel={data.membershipLabel}
+                membershipIsWaiting={data.membershipIsWaiting}
+                teamName={data.myTeam.name}
+                teamRole={data.myTeam.role}
+                memberNames={data.myTeam.memberNames}
+                projectName={data.myTeam.projectName}
+                projectTrack={data.myTeam.projectTrack}
+                projectStatus={data.myTeam.projectStatus}
+                submissionCount={data.myTeam.submissionCount}
+                canSubmit={data.canSubmit}
             />
-        {:else if data.myTeam}
-            {@render participation(data.myTeam)}
         {:else}
             <section class="card flex flex-col gap-3 p-5" aria-labelledby="no-team">
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -106,10 +89,6 @@
             tracks={data.trackCounts}
         />
     </div>
-
-    {#if data.ops && data.myTeam}
-        {@render participation(data.myTeam)}
-    {/if}
 
     <section class="card p-5" aria-labelledby="about">
         <h2 class="m-0 mb-3 text-section" id="about">About</h2>

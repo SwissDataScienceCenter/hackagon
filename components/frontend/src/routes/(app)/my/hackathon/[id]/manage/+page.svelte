@@ -23,15 +23,28 @@
     //
     // Approving is the organiser action most easily forgotten, because nothing
     // about a waitlisted participant is visible from anywhere else — so the count
-    // rides on the tile that leads to it rather than in a band of its own. It is
-    // the one number on this page that asks for something to be done, hence the
+    // rides on the tile that leads to it rather than in a band of its own. These
+    // are the numbers on this page that ask for something to be done, hence the
     // same warning variant as the "!" this page's own sidebar entry carries.
+    //
+    // A band of counts was tried on the member overview and taken back out: that
+    // page is participant-shaped for every viewer, and an organiser's queue has no
+    // business on it. Here each count sits on the tile that clears it.
+    // Proposals behave the same way and for the same reason: a proposed project is
+    // invisible from everywhere else, so its count rides the tile that reviews it.
+    const queueBadges: Record<string, string> = $derived({
+        ...(data.waitingCount > 0 ? { 'manage:participants': `${data.waitingCount} waiting` } : {}),
+        ...(data.proposedCount > 0
+            ? { 'manage:projects': `${data.proposedCount} to review` }
+            : {}),
+    });
+
     const shortcuts = $derived(
         manageNav(data.hackathonId, data.myMembership ?? undefined, data.isGlobalAdmin)
             .filter((i) => i.id !== 'manage:hackathon')
             .map((i) =>
-                i.id === 'manage:participants' && data.waitingCount > 0
-                    ? { ...i, badge: `${data.waitingCount} waiting`, badgeVariant: 'badge-warning' }
+                queueBadges[i.id]
+                    ? { ...i, badge: queueBadges[i.id], badgeVariant: 'badge-warning' }
                     : i
             )
     );

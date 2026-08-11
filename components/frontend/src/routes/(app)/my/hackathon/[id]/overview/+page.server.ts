@@ -10,9 +10,9 @@ export const load: PageServerLoad = async (event) => {
   const platformUserId = event.locals.platformUser?.id
 
   // Approved only, so this page's counts agree with what the projects page
-  // actually lists. Counting pending proposals here would make the two disagree —
-  // they get their own count in the organiser tiles below, where a proposal
-  // waiting is the point rather than a discrepancy.
+  // actually lists. Counting pending proposals here would make the two disagree,
+  // and a proposal waiting is an organiser's business — Manage Hackathon badges
+  // that count onto the tile that clears it.
   const approved = hackathon.projects.filter(
     (p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
   )
@@ -46,24 +46,6 @@ export const load: PageServerLoad = async (event) => {
     Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
   )
 
-  // Organiser queues, computed only for whoever can act on them. Every number
-  // comes out of data already fetched — `hackathon.get` for members and projects,
-  // the team list above for teams and their submissions — so the tiles cost no
-  // extra round trip.
-  //
-  // `Team.submissions` is what makes the last one possible: no service reports a
-  // hackathon-wide submission count, and summing the teams is the same answer.
-  const ops = hackathonState.canManage
-    ? {
-        awaitingApproval: hackathon.members.filter((m) => m.isWaiting).length,
-        proposalsToReview: hackathon.projects.filter(
-          (p) => p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
-        ).length,
-        teamsWithoutProject: teams.filter((t) => !t.projectId).length,
-        submissionCount: teams.reduce((n, t) => n + t.submissions.length, 0),
-      }
-    : null
-
   return {
     // Waitlisted members reach this page too — the badge should say so rather
     // than claim they are registered. The flag travels alongside the label so
@@ -94,6 +76,5 @@ export const load: PageServerLoad = async (event) => {
     canSubmit,
     approvedCount: approved.length,
     trackCounts,
-    ops,
   }
 }
