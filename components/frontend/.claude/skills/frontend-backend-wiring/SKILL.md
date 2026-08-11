@@ -207,13 +207,20 @@ prefer the root `just` target for the full set.
 
 ## Verify a wiring end-to-end
 
-The backend is the source of truth, so test it directly. From the repo root:
+The backend is the source of truth, so test it directly. From the repo root — as
+**one** tool call, since each separate call re-bills the whole context window
+(see the context budget in `CLAUDE.md`):
 
 ```bash
-just start                                              # bring the stack up
-just rpc::unauth hackathon.HackathonService/List        # public read
-just rpc::as alice aliceandbob hackathon.HackathonService/Get '{"hackathonId":"…"}'
+just start && \
+  just rpc::unauth hackathon.HackathonService/List | jq -r '.hackathons[].id' && \
+  just rpc::as alice aliceandbob hackathon.HackathonService/Get '{"hackathonId":"…"}' \
+    | jq '{name: .hackathon.name, projects: (.hackathon.projects|length)}'
 ```
+
+`Get` returns the full tree (projects, tracks, pages, phases, members), so pipe
+it through `jq` to keep only the fields you're verifying instead of dropping the
+whole payload into the window.
 
 Dev users all share the password `aliceandbob`: `hackagon-admin` (global admin),
 `alice` (organizer), `bob`, `charles`. A `PERMISSION_DENIED` here is the backend

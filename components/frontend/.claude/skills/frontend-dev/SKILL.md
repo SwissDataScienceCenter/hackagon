@@ -140,6 +140,19 @@ nix run ./tools/nix#treefmt -- <path> [<path> ...] --ci    # 0 = clean, nonzero 
 Lint/build/test a single component the same way CI does, e.g.
 `just check::lint -c frontend`, `just check::test -c frontend`.
 
+**Run the pre-commit gate as one call.** Format, lint and test as three separate
+tool calls cost three full context re-reads for no extra information — and this
+is the chain you run most often. Chain it and read one output:
+
+```bash
+nix run ./tools/nix#treefmt -- <paths> && \
+  just check::lint -c frontend && just check::test -c frontend
+```
+
+`&&` short-circuits, so the first failure is what you see — which is what you
+wanted anyway. Same for inspecting your work before a commit: one
+`git status --short && git diff --stat && git diff` beats three calls.
+
 ## Verify UI changes
 
 Bring the stack up with `just start` from the repo root, then open
@@ -151,6 +164,25 @@ underlying data directly with `just rpc::as alice aliceandbob <svc>/<method>`.
 Public routes (`/`, `/hackathon/[id]`) render without a session and can be
 captured with whatever headless tool you have; if you take a screenshot, **look
 at the PNG** rather than assuming it rendered.
+
+**Screenshots are the single most expensive thing you can put in a session.** A
+full-page retina capture is ~500KB, and once read it is re-billed on every
+subsequent call for the rest of the session — which routinely makes captures the
+largest single consumer of a UI session's budget. So:
+
+- **Downscale before reading.** Never `Read` a raw capture. Resize to ≤1000px
+  wide first; UI regressions are still perfectly visible.
+  ```bash
+  sips -Z 1000 shot.png --out small.png   # macOS, no extra deps
+  ```
+- **One capture, not a set.** A single representative viewport answers "did this
+  render". Don't take top/full/mobile variants unless the change is specifically
+  responsive — that was three reads of the same page in one past session.
+- **Don't re-screenshot after every tweak.** Make the full round of edits, then
+  capture once. Each re-read adds another permanent copy to the window.
+- **Crop instead of full-page** when you're checking one component: capture the
+  viewport, not `fullPage: true`.
+- Write captures to the session scratch dir, not the repo.
 
 If a mutation comes back `PERMISSION_DENIED`, it is very likely capability
 configuration rather than your UI — see the frontend-backend-wiring skill.
