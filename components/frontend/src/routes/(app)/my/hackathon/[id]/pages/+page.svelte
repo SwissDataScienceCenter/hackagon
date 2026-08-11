@@ -7,6 +7,7 @@
         ChevronUp,
         Eye,
         EyeOff,
+        FileText,
         GripVertical,
         Pencil,
         Plus,
@@ -181,7 +182,7 @@
                            transition-opacity active:cursor-grabbing"
                     class:opacity-40={draggingId === page.id}
                 >
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex items-center gap-2">
                         <!-- Pointer affordance only. The arrows beside it do the
                              same job for a keyboard, so the handle itself needs no
                              announcement of its own. -->
@@ -213,41 +214,96 @@
                                 </button>
                             </form>
                         </div>
-                        <h3 class="m-0 text-sm leading-snug text-ink">
-                            {page.title}
-                        </h3>
-                        <form method="POST" action="?/toggleVisible" use:enhance>
-                            <input type="hidden" name="pageId" value={page.id} />
-                            <input type="hidden" name="visible" value={!page.visible} />
-                            <button
-                                type="submit"
-                                aria-label={page.visible
-                                    ? `Hide ${page.title}`
-                                    : `Show ${page.title}`}
-                                class="btn btn-icon btn-sm btn-quiet shrink-0"
-                            >
-                                {#if page.visible}
-                                    <Eye class="h-4 w-4 text-success-ink" aria-hidden="true" />
-                                {:else}
-                                    <EyeOff class="h-4 w-4 text-ink-3" aria-hidden="true" />
+                        <!-- Title, its controls and the excerpt share one column
+                             so the excerpt lines up under the title rather than
+                             under the drag handle. -->
+                        <div class="flex min-w-0 flex-1 flex-col gap-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="m-0 text-sm leading-snug text-ink">
+                                    {page.title}
+                                </h3>
+                                <form method="POST" action="?/toggleVisible" use:enhance>
+                                    <input type="hidden" name="pageId" value={page.id} />
+                                    <input
+                                        type="hidden"
+                                        name="visible"
+                                        value={!page.visible}
+                                    />
+                                    <button
+                                        type="submit"
+                                        aria-label={page.visible
+                                            ? `Hide ${page.title}`
+                                            : `Show ${page.title}`}
+                                        class="btn btn-icon btn-sm btn-quiet shrink-0"
+                                    >
+                                        {#if page.visible}
+                                            <Eye
+                                                class="h-4 w-4 text-success-ink"
+                                                aria-hidden="true"
+                                            />
+                                        {:else}
+                                            <EyeOff
+                                                class="h-4 w-4 text-ink-3"
+                                                aria-hidden="true"
+                                            />
+                                        {/if}
+                                    </button>
+                                </form>
+                                {#if page.phaseName}
+                                    <!-- Which phase points here, not a state of the
+                                         page: neutral rather than one of the status
+                                         hues. -->
+                                    <span class="badge badge-neutral">
+                                        {page.phaseName}
+                                    </span>
                                 {/if}
-                            </button>
-                        </form>
-                        {#if page.phaseName}
-                            <!-- Which phase points here, not a state of the page:
-                                 neutral rather than one of the status hues. -->
-                            <span class="badge badge-neutral">
-                                {page.phaseName}
-                            </span>
-                        {/if}
-                        <a
-                            href={resolve(`/my/hackathon/${data.hackathonId}/pages/${page.id}/edit`)}
-                            class="ml-auto text-xs font-semibold text-accent-ink
-                                   no-underline hover:underline"
-                        >
-                            <Pencil class="inline h-3 w-3 shrink-0" aria-hidden="true" />
-                            Edit<span class="sr-only"> {page.title}</span>
-                        </a>
+                                <!-- View is the excerpt's way out — the whole page,
+                                     rendered as a participant gets it. Quiet beside
+                                     Edit, which is what this screen is for. -->
+                                <div class="ml-auto flex items-center gap-3">
+                                    <a
+                                        href={resolve(`/my/hackathon/${data.hackathonId}/pages/${page.id}`)}
+                                        class="text-xs font-semibold text-ink-3
+                                               no-underline hover:text-ink hover:underline"
+                                    >
+                                        <FileText
+                                            class="inline h-3 w-3 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        View<span class="sr-only"> {page.title}</span>
+                                    </a>
+                                    <a
+                                        href={resolve(`/my/hackathon/${data.hackathonId}/pages/${page.id}/edit`)}
+                                        class="text-xs font-semibold text-accent-ink
+                                               no-underline hover:underline"
+                                    >
+                                        <Pencil
+                                            class="inline h-3 w-3 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        Edit<span class="sr-only"> {page.title}</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <!-- Two lines and no more: what the list is for is
+                                 telling pages apart, and a row that grows with its
+                                 page stops being scannable. Sans, because this is
+                                 the one thing here read as a sentence. -->
+                            {#if page.excerpt}
+                                <p
+                                    class="m-0 line-clamp-2 font-sans text-xs
+                                           leading-snug text-ink-2"
+                                >
+                                    {page.excerpt}
+                                </p>
+                            {:else}
+                                <p class="m-0 text-xs leading-snug text-ink-3">
+                                    {page.hasContent
+                                        ? 'Nothing to quote here'
+                                        : 'No content yet'}
+                                </p>
+                            {/if}
+                        </div>
                     </div>
                 </li>
             {/each}

@@ -1,5 +1,6 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { markdownExcerpt } from "$lib/utils/markdown"
 import { mayManagePages } from "$lib/server/hackathon/capabilities"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { error, fail } from "@sveltejs/kit"
@@ -36,6 +37,14 @@ export const load: PageServerLoad = async (event) => {
       title: p.title,
       visible: p.visible,
       phaseName: phaseNameByPageId.get(p.id),
+      // Flattened here rather than in the row so the bodies — 10 000 characters
+      // each, and every page of the hackathon is in this list — never cross the
+      // wire. The row only ever needs the opening line or two.
+      excerpt: markdownExcerpt(p.content),
+      // An excerpt can come out empty from a page that is not: one holding only
+      // an image with no alt text has nothing to quote. The row needs to tell
+      // those two apart rather than call a written page blank.
+      hasContent: p.content.trim() !== "",
     }))
 
   return { hackathonId: hackathon.id, pages }
