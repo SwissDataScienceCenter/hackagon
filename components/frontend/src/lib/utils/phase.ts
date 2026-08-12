@@ -163,8 +163,13 @@ export function currentAndNextPhase<
  *
  * The description is what the label cannot carry: "Set team preferences" reads
  * as a setting rather than as a permission handed to everyone in the hackathon.
- * Third person throughout, because capabilities grant to the `Member` role and
- * casbin has no inheritance — an owner reading "you can" is being lied to.
+ *
+ * **Pronoun-free throughout**, which is stronger than third person and is what
+ * lets one string serve two surfaces. Capabilities grant to the `Member` role
+ * and casbin has no inheritance, so an owner reading "you can" is being lied to
+ * — but `CurrentStateCard` puts these same sentences under either "You can now"
+ * or "Participants can now" depending on who is reading, and a sentence saying
+ * "they" is then wrong for half its audience. Saying neither works for both.
  *
  * One entry each rather than a map per field, so a capability cannot end up with
  * a label and no sentence beside its switch.
@@ -187,12 +192,12 @@ const CAPABILITIES: {
   {
     value: 3,
     label: "Set team preferences",
-    description: "Say which projects they would like to work on.",
+    description: "Mark preferred projects on the project list.",
   },
   {
     value: 4,
     label: "Submit project work",
-    description: "Hand in work against their team's project.",
+    description: "Hand in work against a team's project.",
   },
   {
     value: 5,
