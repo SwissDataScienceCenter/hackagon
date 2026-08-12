@@ -32,6 +32,6 @@
         cancelHref={backHref}
         submitLabel="Create track"
         message={form?.message}
-        uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`}
+        uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`} browseEndpoint={`/my/hackathon/${data.hackathonId}/media`}
     />
 </div>

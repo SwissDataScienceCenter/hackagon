@@ -58,6 +58,37 @@ The HTML report lands in `.claude/skills/hackathon-e2e/.artifacts/report`
 summary in `.artifacts/results.json` — which survives a `docker exec` whose
 client got interrupted, unlike the console reporter.
 
+## API-to-UI coverage
+
+A mechanical audit that a suite cannot do for you: which declared RPCs have a
+frontend caller at all. An endpoint nobody calls is an endpoint no test can
+reach through the product, and three of them turned out to be missing features
+rather than spare capacity — `CreateSubmission`/`EditSubmission`/
+`FinalizeSubmission` had no caller, so a team could not turn work in.
+
+**Seven RPC declarations have no frontend caller** — every other one in
+`api/proto/**/*_service.proto` does. The denominator moves whenever a service
+gains a method (107 at `833a7388`), so the list below is the part worth keeping
+current, not the ratio. Reproduce per method with
+`grep -rn '\.<method>(' components/frontend/src --include='*.ts'
+--include='*.svelte'`, ignoring hits under `src/lib/server/grpc/generated/`.
+
+The seven, and why each is deliberate:
+
+| RPC | Why nothing calls it |
+| --- | --- |
+| `HackathonService.SetCurrentPhase` | aliases the `AdvancePhase` the timeline calls |
+| `VoteService.GetVoteCategory` | covered by the list endpoint already driving the UI |
+| `VoteService.ListVotes` | same |
+| `TeamService.GetSubmission` | same |
+| `VoteService.SuggestResults` | computes a tally the UI records by hand with `CreateVoteResult` |
+| `StorageService.CreateDownloadUrl` | waits for something private to serve |
+| `ProjectService.RemovePreference` | there is no un-prefer control to call it |
+
+`PageService.SetOrder` left this list on 2026-08-12: drag-and-drop (and the
+keyboard pick-up beside it) on Manage Pages sends the whole sequence in one
+call, where the arrows still send one MoveUp/MoveDown swap each.
+
 ## Executed for this page
 
 From a **clean clone** of `sketch/06-08-26` in its own devcontainer

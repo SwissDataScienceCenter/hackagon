@@ -32,5 +32,5 @@
         </p>
     </div>
 
-    <PageForm uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`} page={blank} cancelHref={backHref} submitLabel="Add page" message={form?.message} />
+    <PageForm uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`} browseEndpoint={`/my/hackathon/${data.hackathonId}/media`} page={blank} cancelHref={backHref} submitLabel="Add page" message={form?.message} />
 </div>

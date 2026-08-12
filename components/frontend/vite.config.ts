@@ -12,6 +12,25 @@ const coverageDir = path.join(
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
 
+  // TEST ONLY, and only because a component test cannot exist without it.
+  //
+  // Vitest resolves imports the way Node does, so `import ... from "svelte"`
+  // picks the package's SERVER entry and `render()` from
+  // @testing-library/svelte dies with `mount(...) is not available on the
+  // server` — the component never mounts, which reads like a broken test rather
+  // than a resolution setting. Preferring the `browser` condition is what
+  // @testing-library/svelte's own vite plugin does; it is spelled out here
+  // because that plugin only INSERTS `browser` into an existing conditions
+  // list and does nothing when there is none.
+  //
+  // Guarded by VITEST so `vite build`, `vite dev` and svelte-check are
+  // untouched. It does apply to the whole test run rather than to component
+  // files only: verified harmless — `markdown.test.ts` runs under
+  // `@vitest-environment node` and still asserts that isomorphic-dompurify
+  // sanitizes with no `window` at all, which is the one thing this could
+  // plausibly have broken.
+  resolve: process.env.VITEST ? { conditions: ["browser"] } : undefined,
+
   optimizeDeps: {
     exclude: ["@sjsf/form", "@sjsf/skeleton3-theme", "@sjsf/basic-theme"],
   },

@@ -11,6 +11,7 @@
         message,
         datesEditable = true,
         uploadEndpoint,
+        browseEndpoint = undefined,
     }: {
         phase: {
             name: string;
@@ -37,6 +38,9 @@
         datesEditable?: boolean;
         /** Presign endpoint for inline image uploads; see MarkdownEditor. */
         uploadEndpoint?: string;
+        /** Listing endpoint for the picker's "already uploaded" half.
+         *  Forwarded to MarkdownEditor; omit it for upload-only. */
+        browseEndpoint?: string;
     } = $props();
 
     // See the TODO in the calling +page.server.ts: `Edit` sets dates but never
@@ -162,6 +166,7 @@
             required
             placeholder="What should participants be doing in this phase?"
             {uploadEndpoint}
+            {browseEndpoint}
         />
     </div>
 

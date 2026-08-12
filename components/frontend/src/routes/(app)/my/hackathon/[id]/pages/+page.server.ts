@@ -1,5 +1,6 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { markdownExcerpt } from "$lib/utils/markdown"
 import { mayManagePages } from "$lib/server/hackathon/capabilities"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { error, fail } from "@sveltejs/kit"
@@ -36,6 +37,19 @@ export const load: PageServerLoad = async (event) => {
       title: p.title,
       visible: p.visible,
       phaseName: phaseNameByPageId.get(p.id),
+      // Flattened here rather than in the row so the bodies — 10 000 characters
+      // each, and every page of the hackathon is in this list — never cross the
+      // wire. The row only ever needs the opening line or two.
+      //
+      // It is also the reason the row cannot be an XSS surface: what arrives is
+      // TEXT that the audited marked -> DOMPurify pipeline already produced and
+      // then had its tags removed, so the row interpolates a string rather than
+      // rendering author markup. See $lib/utils/markdown.
+      excerpt: markdownExcerpt(p.content),
+      // An excerpt can come out empty from a page that is not: one holding only
+      // an image with no alt text has nothing to quote. The row needs to tell
+      // those two apart rather than call a written page blank.
+      hasContent: p.content.trim() !== "",
     }))
 
   return { hackathonId: hackathon.id, pages }
@@ -65,6 +79,50 @@ export const actions: Actions = {
       }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
         return fail(404, { message: "Page not found" })
+      }
+      throw e
+    }
+  },
+
+  // What a reorder submits: the whole sequence in one call, which is what
+  // `SetOrder` insists on — it refuses a list that is not every page of the
+  // hackathon exactly once, and renumbers them inside one transaction.
+  //
+  // One call rather than a run of MoveUp/MoveDown: dragging a page from
+  // position 5 to position 1 is four swaps, and a failure on the third leaves
+  // the order half-applied with nothing to roll it back. This is one write that
+  // either lands or does not. MoveUp/MoveDown below stay for the arrows, which
+  // are a single swap by definition and work with no JavaScript at all.
+  setOrder: async (event) => {
+    const raw = (await event.request.formData()).get("pageIds")
+    if (typeof raw !== "string" || raw === "") {
+      return fail(400, { message: "Invalid page order" })
+    }
+    const pageIds = raw.split(",").filter((id) => id !== "")
+    if (pageIds.length === 0) {
+      return fail(400, { message: "Invalid page order" })
+    }
+
+    const { page } = requireGrpc(event.locals.grpc)
+    try {
+      await page.setOrder({ hackathonId: event.params.id, pageIds })
+    } catch (e) {
+      if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+        return fail(403, {
+          message: "You don't have permission to reorder pages",
+        })
+      }
+      if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+        return fail(404, { message: "Page not found" })
+      }
+      // The list we sent is no longer the hackathon's set of pages — one was
+      // added or deleted elsewhere while this tab held a stale copy. The page
+      // refetches on any failure, so saying so is all that is left to do.
+      if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
+        return fail(409, {
+          message:
+            "The pages changed while you were reordering. The list has been refreshed — please try again.",
+        })
       }
       throw e
     }

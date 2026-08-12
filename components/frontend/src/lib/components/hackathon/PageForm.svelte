@@ -8,6 +8,7 @@
         submitLabel,
         message,
         uploadEndpoint,
+        browseEndpoint = undefined,
     }: {
         page: {
             title: string;
@@ -21,6 +22,9 @@
         message?: string;
         /** Presign endpoint for inline image uploads; see MarkdownEditor. */
         uploadEndpoint?: string;
+        /** Listing endpoint for the picker's "already uploaded" half.
+         *  Forwarded to MarkdownEditor; omit it for upload-only. */
+        browseEndpoint?: string;
     } = $props();
 
     const FIELD_CLASS =
@@ -69,6 +73,7 @@
             maxlength={10000}
             placeholder="What should participants know?"
             {uploadEndpoint}
+            {browseEndpoint}
         />
     </div>
 

@@ -7,7 +7,8 @@
         cancelHref,
         submitLabel,
         message,
-        uploadEndpoint
+        uploadEndpoint,
+        browseEndpoint = undefined
     }: {
         track: {
             name: string;
@@ -20,6 +21,9 @@
         message?: string;
         /** Presign endpoint for inline image uploads; see MarkdownEditor. */
         uploadEndpoint?: string;
+        /** Listing endpoint for the picker's "already uploaded" half.
+         *  Forwarded to MarkdownEditor; omit it for upload-only. */
+        browseEndpoint?: string;
     } = $props();
 </script>
 
@@ -59,6 +63,7 @@
             required
             placeholder="What kind of projects belong in this track?"
             {uploadEndpoint}
+            {browseEndpoint}
         />
     </div>
 

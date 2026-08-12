@@ -502,11 +502,21 @@
     background-color: var(--color-raised);
   }
 
-  /* Absorbs the input recipe that was hand-copied across seven forms. */
-  .field {
-    height: --spacing(9);
+  /* Absorbs the input recipe that was hand-copied across seven forms.
+   *
+   * `.field-area` shares the whole recipe rather than modifying it, because a
+   * class that renders nothing on its own WILL be used on its own — and was, by
+   * eight textareas across four routes. Tailwind's preflight makes a bare
+   * textarea transparent, borderless and `cols`-wide, so each of those drew as
+   * an invisible box the colour of the card behind it, about twenty characters
+   * across. Reported from /manage/pages as "the text entry box is the same
+   * background and doesn't extend to the size of the width"; it was equally
+   * true of the email templates, the vote-category descriptions and the
+   * submission forms. Spelling `field field-area` (which the editors do) still
+   * works and now means the same thing twice. */
+  .field,
+  .field-area {
     width: 100%;
-    padding: 0 --spacing(3);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-field);
     background-color: var(--color-raised);
@@ -514,21 +524,29 @@
     font-family: var(--font-mono);
     font-size: 0.8125rem;
   }
-  .field::placeholder {
+  .field {
+    height: --spacing(9);
+    padding: 0 --spacing(3);
+  }
+  .field::placeholder,
+  .field-area::placeholder {
     color: var(--color-ink-3);
   }
-  .field:focus {
+  .field:focus,
+  .field-area:focus {
     border-color: var(--color-accent);
     outline: none;
   }
-  .field:focus-visible {
+  .field:focus-visible,
+  .field-area:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: -1px;
   }
 
-  /* `.field` for anything that wraps: textareas and the panes rendered beside
-   * them. The fixed control height is what makes it single-line, so this drops
-   * it and pays the padding back vertically. */
+  /* Anything that wraps: textareas and the preview pane rendered beside them.
+   * The fixed control height is what makes `.field` single-line, so this drops
+   * it and pays the padding back vertically. Ordered AFTER `.field` so the two
+   * spelled together resolve to the multi-line box. */
   .field-area {
     height: auto;
     padding: --spacing(2) --spacing(3);

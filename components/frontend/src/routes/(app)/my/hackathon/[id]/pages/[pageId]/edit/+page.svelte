@@ -30,7 +30,7 @@
         </p>
     </div>
 
-    <PageForm uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`} page={data.page} cancelHref={backHref} submitLabel="Save changes" message={form?.message} />
+    <PageForm uploadEndpoint={`/my/hackathon/${data.hackathonId}/media`} browseEndpoint={`/my/hackathon/${data.hackathonId}/media`} page={data.page} cancelHref={backHref} submitLabel="Save changes" message={form?.message} />
 
     <div class="flex flex-col gap-2 border-t border-surface-200-800 pt-6">
         <h2 class="m-0 text-xs font-semibold text-surface-500">Delete this page</h2>

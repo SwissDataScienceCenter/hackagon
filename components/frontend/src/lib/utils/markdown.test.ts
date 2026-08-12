@@ -9,7 +9,11 @@
  */
 
 import { describe, expect, it } from "vitest"
-import { renderMarkdown } from "./markdown"
+import {
+  markdownExcerpt,
+  markdownToPlainText,
+  renderMarkdown,
+} from "./markdown"
 
 describe("renderMarkdown (SSR environment)", () => {
   it("sanitizes without a browser DOM", () => {
@@ -268,5 +272,154 @@ describe("renderMarkdown: iframe embed allowlist", () => {
     expect(html).not.toContain("srcdoc")
     expect(html).not.toContain("sandbox")
     expect(html).not.toContain("alert")
+  })
+})
+
+describe("markdownToPlainText", () => {
+  it("drops the syntax and keeps the words", () => {
+    expect(
+      markdownToPlainText("## Welcome!\n\nBring a **laptop** and a `charger`."),
+    ).toBe("Welcome! Bring a laptop and a charger.")
+  })
+
+  it("puts a space between two blocks rather than joining their words", () => {
+    // "First.Second." would be the giveaway that tags were deleted instead of
+    // replaced — and the same bug glues every list item into one long word.
+    expect(markdownToPlainText("First.\n\nSecond.")).toBe("First. Second.")
+    expect(markdownToPlainText("- one\n- two\n- three")).toBe("one two three")
+  })
+
+  it("shows a link's text, not its URL", () => {
+    expect(markdownToPlainText("See the [rules](https://example.com/x).")).toBe(
+      "See the rules.",
+    )
+  })
+
+  it("unescapes what the renderer escaped", () => {
+    expect(markdownToPlainText("Teams of 3 & up, size < 6")).toBe(
+      "Teams of 3 & up, size < 6",
+    )
+  })
+
+  it("is empty for empty, null or undefined input", () => {
+    expect(markdownToPlainText("")).toBe("")
+    expect(markdownToPlainText(null)).toBe("")
+    expect(markdownToPlainText(undefined)).toBe("")
+  })
+
+  it("is empty for content that is only whitespace", () => {
+    expect(markdownToPlainText("   \n\n  ")).toBe("")
+  })
+
+  it("keeps a tag whole when an attribute value contains a bracket", () => {
+    // A serializer does not escape `>` inside an attribute, so a pattern that
+    // stops at the first one spills the rest of the tag into the text as
+    // `b">rules`. Titles like `3 -> 5 people` are the everyday form of this.
+    expect(markdownToPlainText('See the [rules](/x "a>b") now.')).toBe(
+      "See the rules now.",
+    )
+    expect(markdownToPlainText("![width>height](s.png) caption")).toBe(
+      "width>height caption",
+    )
+  })
+
+  it("reads an image's alt text, so an illustrated page is not a blank one", () => {
+    expect(markdownToPlainText("![Schedule graphic](s.png)")).toBe(
+      "Schedule graphic",
+    )
+    expect(markdownToPlainText("Doors at 09:00 ![](x.png)")).toBe(
+      "Doors at 09:00",
+    )
+  })
+
+  it("takes nothing from an HTML comment", () => {
+    // The sanitizer drops comment nodes, so nothing here strips them by hand.
+    // This is the test that says so — if that ever changes, the hidden text
+    // starts showing up in list rows and this fails.
+    expect(markdownToPlainText("<!-- reviewer note -->Visible")).toBe("Visible")
+  })
+})
+
+// An excerpt is author-controlled content displayed on a management screen, so
+// it is a stored-XSS surface in its own right. It is text, not markup — but it
+// is text produced by rendering, and these say what the rendering threw away.
+// Every one of them asserts a POSITIVE too: "the payload is absent" is a claim
+// an empty string satisfies, and the surrounding words are what prove the
+// excerpt was produced at all.
+describe("markdownToPlainText: XSS defences", () => {
+  it("takes nothing from a script the sanitizer removed", () => {
+    const text = markdownToPlainText("<script>alert(1)</script>Hello")
+
+    expect(text).toBe("Hello")
+    expect(text).not.toContain("alert")
+  })
+
+  it("takes nothing from a script buried mid-paragraph", () => {
+    const text = markdownToPlainText(
+      "Doors at 09:00 <script>window.pwned=1</script> sharp.",
+    )
+
+    expect(text).toContain("Doors at 09:00")
+    expect(text).toContain("sharp.")
+    expect(text).not.toContain("pwned")
+    expect(text).not.toContain("window.")
+  })
+
+  it("takes nothing from a style block", () => {
+    const text = markdownToPlainText(
+      "<style>body{display:none}</style>Schedule",
+    )
+
+    expect(text).toBe("Schedule")
+    expect(text).not.toContain("display:none")
+  })
+
+  it("carries no markup out, so nothing downstream can execute it", () => {
+    // Whatever an author writes, what leaves here is characters. The row
+    // interpolates this (Svelte escapes it); nobody may `{@html}` it.
+    const text = markdownToPlainText(
+      '<img src=x onerror="alert(1)"> <a href="javascript:alert(2)">go</a>',
+    )
+
+    expect(text).toContain("go")
+    expect(text).not.toContain("<")
+    expect(text).not.toContain("onerror")
+    expect(text).not.toContain("javascript:")
+  })
+})
+
+describe("markdownExcerpt", () => {
+  it("leaves content that already fits alone, with no ellipsis", () => {
+    expect(markdownExcerpt("Doors open at 09:00.")).toBe("Doors open at 09:00.")
+  })
+
+  it("cuts at a word boundary and marks the cut", () => {
+    expect(markdownExcerpt("alpha bravo charlie delta", 20)).toBe(
+      "alpha bravo charlie…",
+    )
+  })
+
+  it("marks the cut when only the opening of a long body was parsed", () => {
+    // Flattening stops at 2 000 characters for cost, so a long body whose text
+    // is short still has more page behind it than the excerpt shows. The
+    // ellipsis has to come from that, not only from hitting the cap — otherwise
+    // a 9 000-character page can present itself as complete.
+    const long = `Doors at 09:00.\n\n<!-- ${"x".repeat(2500)} -->`
+    expect(long.length).toBeGreaterThan(2000)
+    expect(markdownExcerpt(long)).toBe("Doors at 09:00.…")
+  })
+
+  it("breaks one very long token rather than returning almost nothing", () => {
+    // The boundary is only worth honouring if it is near the end; a 40-character
+    // URL with a space at index 1 would otherwise leave a one-letter excerpt.
+    expect(markdownExcerpt(`a ${"x".repeat(40)}`, 20)).toBe(
+      `a ${"x".repeat(18)}…`,
+    )
+  })
+
+  it("is empty for empty, null or undefined input", () => {
+    expect(markdownExcerpt("")).toBe("")
+    expect(markdownExcerpt(null)).toBe("")
+    expect(markdownExcerpt(undefined)).toBe("")
   })
 })

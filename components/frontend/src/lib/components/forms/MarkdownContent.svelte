@@ -56,6 +56,42 @@
     .markdown-content :global(a) {
         color: var(--color-accent-ink);
     }
+
+    /* GFM tables. The parser has always produced these (`gfm: true`, and
+       `table`/`th`/`td` are on the sanitizer's allowlist) but nothing styled
+       them, so a correct table rendered as unruled columns that read as one
+       run-on paragraph. The wrapper scrolls rather than the page: a pasted
+       spreadsheet is as wide as it is, and a table that widens its container
+       pushes the whole layout sideways. */
+    .markdown-content :global(table) {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+        margin: 0 0 0.6em;
+        font-size: 0.9375em;
+    }
+    .markdown-content :global(th),
+    .markdown-content :global(td) {
+        border: 1px solid var(--color-line);
+        padding: 0.3em 0.6em;
+        text-align: left;
+    }
+    .markdown-content :global(th) {
+        background: var(--color-raised);
+        font-weight: 600;
+    }
+    /* marked emits align="left|center|right" from the separator row; the
+       allowlist keeps that attribute, so honour it over the default above. */
+    .markdown-content :global(th[align='center']),
+    .markdown-content :global(td[align='center']) {
+        text-align: center;
+    }
+    .markdown-content :global(th[align='right']),
+    .markdown-content :global(td[align='right']) {
+        text-align: right;
+    }
     .markdown-content :global(:first-child) {
         margin-top: 0;
     }

@@ -3,7 +3,12 @@
     import DataToolbar from '$lib/components/data/DataToolbar.svelte';
     import DataTable from '$lib/components/data/DataTable.svelte';
     import RowActions from '$lib/components/data/RowActions.svelte';
+    import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import { matchesQuery, type Column, type ViewMode } from '$lib/utils/dataView';
+
+    // Presigns a `site/media/…` upload; the backend requires the global Admin
+    // role, the same as every mutation on this page. See ./media/+server.ts.
+    const UPLOAD_ENDPOINT = '/manage/pages/media';
 
     const { data, form } = $props();
 
@@ -95,10 +100,19 @@
                     <input name="order" type="number" class="field" value="0" />
                 </label>
             </div>
-            <label>
-                <span class="text-sm">Content (markdown)</span>
-                <textarea name="content" class="field-area min-h-40" rows="8"></textarea>
-            </label>
+            <!-- `for=`/`id=` rather than a wrapping label: buttons are labelable,
+                 so a label around the editor would bind to its Write tab
+                 instead of the textarea. -->
+            <div>
+                <label class="text-sm" for="new-page-content">Content (markdown)</label>
+                <MarkdownEditor
+                    id="new-page-content"
+                    name="content"
+                    rows={10}
+                    placeholder="## What this is&#10;&#10;Markdown. Use Insert image to add a picture."
+                    uploadEndpoint={UPLOAD_ENDPOINT} browseEndpoint={UPLOAD_ENDPOINT}
+                />
+            </div>
             <label class="flex items-center gap-2">
                 <input name="visible" type="checkbox" class="" />
                 <span class="text-sm">Published</span>
@@ -220,10 +234,18 @@
                                     <input name="order" type="number" class="field" value={page.order} />
                                 </label>
                             </div>
-                            <label>
-                                <span class="text-sm">Content (markdown)</span>
-                                <textarea name="content" class="field-area min-h-60" rows="14">{page.content}</textarea>
-                            </label>
+                            <div>
+                                <label class="text-sm" for="content-{page.slug}">
+                                    Content (markdown)
+                                </label>
+                                <MarkdownEditor
+                                    id="content-{page.slug}"
+                                    name="content"
+                                    value={page.content}
+                                    rows={16}
+                                    uploadEndpoint={UPLOAD_ENDPOINT} browseEndpoint={UPLOAD_ENDPOINT}
+                                />
+                            </div>
                             <label class="flex items-center gap-2">
                                 <input name="visible" type="checkbox" class="" checked={page.visible} />
                                 <span class="text-sm">Published</span>
