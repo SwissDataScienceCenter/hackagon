@@ -1,14 +1,13 @@
 <script lang="ts">
-    import NavBar from '$lib/components/layout/NavBar.svelte';
-    import AppFooter from '$lib/components/layout/AppFooter.svelte';
+    // The shell (top bar, page, footer) is AppShell — shared with the (app)
+    // group, so the two halves of the site cannot drift apart again. They did:
+    // only this group mounted the footer, which left the Privacy/Terms/About
+    // links unreachable from every signed-in page.
+    import AppShell from '$lib/components/layout/AppShell.svelte';
 
     const { children, data } = $props();
 </script>
 
-<div class="flex min-h-screen flex-col">
-    <NavBar session={data.session ?? null} />
-    <main class="flex-1">
-        {@render children()}
-    </main>
-    <AppFooter />
-</div>
+<AppShell session={data.session ?? null}>
+    {@render children()}
+</AppShell>

@@ -1,6 +1,9 @@
 <script lang="ts">
-    // Chrome lives in the (public) and (app) group layouts — the root layout only
-    // loads global styles so both groups can render a completely different shell.
+    // Chrome is mounted by the (public) and (app) group layouts — both through
+    // the one AppShell, so the top bar and the footer are the same on either
+    // side of a login — and the root layout only loads global styles. The shell
+    // is not hoisted HERE because the groups differ in what they load and guard
+    // (only (app) has a +layout.server.ts), not in what chrome they wear.
     import '../app.css';
     // ...and mounts session replay, which needs to cover BOTH groups: the
     // dead-control bugs it exists to catch happen on the landing page and the

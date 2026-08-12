@@ -4,6 +4,7 @@ import {
   expectNoOverlap,
   expectNoClippedText,
   expectConsentBannerClearsContent,
+  expectFooterOperable,
   CONSENT_BANNER,
 } from "../../helpers/reflow.js"
 
@@ -56,6 +57,13 @@ for (const width of WIDTHS) {
           await expectNoOverlap(page, scope, name)
           await expectNoClippedText(page, scope, name)
         }
+
+        // The footer's four links, hit-tested at the bottom of the document.
+        // Width-swept for the same reason as the banner below: the footer wraps
+        // from one spaced row into three centred ones as the viewport narrows,
+        // so which link sits where — and what can end up drawn over it — is a
+        // different answer at every width here.
+        await expectFooterOperable(page, name)
 
         // The banner's own contract: on screen at the top, over nothing
         // operable at the end. Width-swept deliberately — it wraps to two and

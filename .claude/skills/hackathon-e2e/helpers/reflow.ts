@@ -14,7 +14,12 @@ import { expect, type Page } from "@playwright/test"
 //     exactly what a squeezed "H…" wordmark looks like);
 //  4. the consent banner — the one piece of chrome that LAYERS over the page —
 //     is on screen without being asked to be, and covers no control once the
-//     document is scrolled to its end (expectConsentBannerClearsContent).
+//     document is scrolled to its end (expectConsentBannerClearsContent);
+//  5. the footer exists on this route and its four links are hit-testable at
+//     the bottom of the document (expectFooterOperable). Presence is a claim
+//     of its own here — the footer is the only inbound link to the platform's
+//     own SitePages, and it was absent from the whole signed-in half of the app
+//     while checks 2 and 3 "passed" on it by returning early.
 
 /** Horizontal overflow, with the widest offenders named (same contract as
  * responsive.spec.ts, which owns the 390px battery). */
@@ -242,6 +247,123 @@ export async function expectNoClippedText(
     clipped,
     `${name}: clipped text in ${scope}: ${clipped.join(" | ")}`,
   ).toHaveLength(0)
+}
+
+// ─── The site footer: present AND clickable ──────────────────────────────────
+
+/**
+ * The links the footer carries. Privacy, Terms and About are SitePages —
+ * `[slug=sitepage]` records authored in /manage/pages — and this footer is the
+ * ONLY inbound link to any of them. A route without it is a route from which
+ * the platform's own pages cannot be reached.
+ */
+export const FOOTER_LINKS = ["Privacy", "Terms", "About", "GitHub"]
+
+/**
+ * TWO claims, and the second is the one that keeps costing money here.
+ *
+ *  1. THE FOOTER IS THERE. Asserted on the <footer> itself, exactly once —
+ *     never on a page-wide getByText("Privacy"), which also matches the
+ *     consent sentence and any prose on a privacy page. It went missing for
+ *     real: the `(public)`/`(app)` route split (5551b8d) gave each group its
+ *     own copy of the shell and only `(public)`'s mounted AppFooter, so the
+ *     entire signed-in half of the app — dashboard, /manage/*, all 21
+ *     /my/hackathon/* pages — shipped without one. Nothing turned red, because
+ *     expectNoOverlap and expectNoClippedText RETURN EARLY when their scope is
+ *     not on the page: the sweep's two "footer" checks had been measuring an
+ *     element that was not there.
+ *
+ *  2. ITS LINKS CAN BE CLICKED, at the bottom of the document, which is the
+ *     only place they ever are. "Visible" is not "operable": the consent
+ *     banner covered these exact four links at every width while it was
+ *     `fixed bottom-0`, and a viewport-anchored sidebar can cover them at any
+ *     scroll position at all. So this hit-tests — `elementFromPoint` at each
+ *     link's own centre must land on that link — which is agnostic about WHAT
+ *     is on top and therefore cannot be defeated by the next thing that is.
+ *
+ * Scroll position is restored, so it composes with the other checks.
+ */
+export async function expectFooterOperable(page: Page, name: string) {
+  const footer = page.locator("footer")
+  await expect(
+    footer,
+    `${name}: expected exactly one <footer>. Zero means this route's layout ` +
+      `group does not mount AppFooter — and the footer is the only way to ` +
+      `reach /privacy, /terms and /about. More than one means a page mounted ` +
+      `its own on top of the shell's`,
+  ).toHaveCount(1)
+  await expect(footer).toBeVisible()
+
+  for (const label of FOOTER_LINKS) {
+    await expect(
+      footer.getByRole("link", { name: label, exact: true }),
+      `${name}: the footer carries no "${label}" link`,
+    ).toHaveCount(1)
+  }
+
+  const restore = await page.evaluate(() => window.scrollY)
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  )
+  // A scroll is applied at layout time; read it back in a later task or a
+  // sticky element reports its pre-scroll rect (same reason as the banner
+  // check below).
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => r(null))),
+  )
+
+  const blocked = await page.evaluate(() => {
+    const f = document.querySelector("footer")
+    if (!f) return null
+    const label = (el: Element) => {
+      const cls = (el.getAttribute("class") ?? "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(".")
+      const aria = el.getAttribute("aria-label")
+      return `${el.tagName.toLowerCase()}${cls ? "." + cls : ""}${aria ? ` [${aria}]` : ""}`
+    }
+    const out: string[] = []
+    for (const a of Array.from(f.querySelectorAll("a[href]"))) {
+      const text = (a.textContent ?? "").trim().slice(0, 20)
+      const r = a.getBoundingClientRect()
+      if (r.width < 1 || r.height < 1) {
+        out.push(`"${text}" has no box (${r.width}x${r.height})`)
+        continue
+      }
+      const x = r.left + r.width / 2
+      const y = r.top + r.height / 2
+      if (
+        x < 0 ||
+        y < 0 ||
+        x > document.documentElement.clientWidth ||
+        y > document.documentElement.clientHeight
+      ) {
+        out.push(
+          `"${text}" is off screen at the END of the document (${Math.round(x)},${Math.round(y)}) — ` +
+            `no scroll position reaches it`,
+        )
+        continue
+      }
+      const hit = document.elementFromPoint(x, y)
+      if (!hit || !(hit === a || a.contains(hit))) {
+        out.push(`"${text}" is covered by ${hit ? label(hit) : "nothing hittable"}`)
+      }
+    }
+    return out
+  })
+
+  await page.evaluate((y) => window.scrollTo(0, y), restore)
+
+  if (blocked === null) return // asserted present above
+  expect(
+    blocked,
+    `${name}: ${blocked.length} footer link(s) cannot be clicked with the ` +
+      `document scrolled to its end — something is drawn on top of them, and ` +
+      `the footer is the only route to the platform's own pages: ` +
+      blocked.join(" | "),
+  ).toEqual([])
 }
 
 // ─── The consent banner: visible AND never in the way ────────────────────────
