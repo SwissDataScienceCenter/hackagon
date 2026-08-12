@@ -52,6 +52,8 @@ just codegen::proto     # buf generate — wipes codegen dirs first (prevents st
 just codegen::db-schema # ent codegen + Schema.md
 just rpc-as <user> <password> <method> [json]   # authed grpcurl
 just rpc-unauth <method> [json]                 # unauthed grpcurl (health)
+just version::show              # declared version + what a build stamps in the footer
+just version::bump patch|minor|major   # edit VERSION, commit, annotated tag
 ```
 
 Dev users (Keycloak password for all is `aliceandbob`): `hackagon-admin` (global
@@ -281,6 +283,12 @@ components** — `$lib/server/` is server-only; use raw numbers with
 **6. Prototype** — `src/lib/components/hackathon/HackathonRow.svelte` is the
 reference for a list-row component. Keep `badge`/`badgePreset` as generic string
 props so the row works for any badge text, not just status labels.
+
+**`VERSION` at the repo root is the only declared version.** Bump it through
+`just version::bump`, never by hand — the recipe is what also commits it, tags
+it, and keeps `components/frontend/package.json` in step. The frontend reads it
+at build time (`vite.config.ts` → `$lib/version` → the footer), so a version
+edited without a rebuild will not show up.
 
 ## Don't
 

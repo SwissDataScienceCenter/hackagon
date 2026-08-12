@@ -66,6 +66,36 @@ to the TUI. `just --list` shows every recipe; module recipes are addressed as
 Full walkthrough, including the devcontainer path:
 [docs/getting-started.md](docs/getting-started.md).
 
+## Versioning
+
+`VERSION` at the repo root holds the product version, and it is the only place
+that version is declared. Releases are semver, tagged `v<x.y.z>`.
+
+```bash
+just version::show                  # declared version + what a build would stamp
+just version::bump patch            # also: minor, major
+just version::tag                   # tag HEAD with the version already in VERSION
+```
+
+`bump` refuses on a dirty tree, edits `VERSION`, keeps
+`components/frontend/package.json` in step, commits as `chore(release): vX.Y.Z`
+and creates the annotated tag. Neither `bump` nor `tag` pushes — they print the
+`git push` you need.
+
+The frontend stamps the version in at build time (`vite.config.ts` reads
+`VERSION`, exposes it as `$lib/version`) and shows it in the footer:
+
+| Build                              | Footer shows           |
+| ---------------------------------- | ---------------------- |
+| clean checkout on the matching tag | `v0.0.1`               |
+| any other commit                   | `v0.0.1+4b87857`       |
+| uncommitted changes                | `v0.0.1+4b87857-dirty` |
+
+Only a release build claims to be the release, so a version quoted in a bug
+report identifies the code that produced it. Reading `VERSION` from a file
+rather than from `git describe` means a shallow clone or an unpacked tarball
+still builds with a truthful version.
+
 ## Component READMEs
 
 - [Frontend](components/frontend/README.md)
