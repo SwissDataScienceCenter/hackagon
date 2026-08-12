@@ -1,7 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
-    import { Check, GripVertical, Pencil, Trash2, X } from 'lucide-svelte';
+    import { Check, Download, GripVertical, Pencil, Trash2, Upload, X } from 'lucide-svelte';
     import type { ActionData, PageData } from './$types';
 
     type Person = {
@@ -122,6 +122,45 @@
         moveToTeamId.value = toTeamId;
         moveForm.requestSubmit();
     }
+
+    // ─── Bulk import ────────────────────────────────────────────────────────
+    // `previewImport` writes nothing: it hands back the plan, which is rendered
+    // below, and only then is there an Apply button. A file picker that mutated
+    // the roster on selection would be irreversible and unreviewable.
+    const preview = $derived(form?.importPreview ?? null);
+    const importResult = $derived(form?.importResult ?? null);
+
+    const STATUS_BADGE: Record<string, string> = {
+        assign: 'badge-info',
+        create: 'badge-success',
+        unassign: 'badge-warning',
+        unchanged: 'badge-neutral',
+        error: 'badge-danger'
+    };
+    const STATUS_LABEL: Record<string, string> = {
+        assign: 'Move',
+        create: 'New team',
+        unassign: 'Unassign',
+        unchanged: 'No change',
+        error: 'Cannot apply'
+    };
+
+    /** "3 joins, 1 new team, 2 leave a team, 6 unchanged" — what Apply will do. */
+    function planSummary(counts: {
+        assign: number;
+        create: number;
+        unassign: number;
+        unchanged: number;
+    }): string {
+        const parts = [
+            counts.assign > 0 && `${counts.assign} moved onto an existing team`,
+            counts.create > 0 && `${counts.create} moved onto a new team`,
+            counts.unassign > 0 && `${counts.unassign} taken off their team`,
+            counts.unchanged > 0 && `${counts.unchanged} unchanged`
+        ].filter(Boolean);
+
+        return parts.length > 0 ? parts.join(', ') : 'nothing to change';
+    }
 </script>
 
 <form
@@ -221,6 +260,204 @@
             {form.message}
         </p>
     {/if}
+
+    <!-- Bulk composition: download the roster as a file, fill it in in a
+         spreadsheet, upload it back. The preview step is not optional — a bulk
+         mutation fired by a file picker cannot be reviewed and cannot be undone. -->
+    <section class="card card-raised flex flex-col gap-3 p-3">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 class="m-0 meta">Import team composition</h3>
+            <!-- Plain links, not forms: both are GETs that return a file, and
+                 the browser's own download handles them. `data-sveltekit-reload`
+                 keeps the router out of the way — it would otherwise try to
+                 treat the response as a page. -->
+            <div class="flex items-center gap-1">
+                <a
+                    class="btn btn-sm btn-ghost no-underline"
+                    href={resolve(`/my/hackathon/${hackathonId}/teams/manage/template/csv`)}
+                    data-sveltekit-reload
+                    download
+                >
+                    <Download class="size-3" /> CSV template
+                </a>
+                <a
+                    class="btn btn-sm btn-ghost no-underline"
+                    href={resolve(`/my/hackathon/${hackathonId}/teams/manage/template/json`)}
+                    data-sveltekit-reload
+                    download
+                >
+                    <Download class="size-3" /> JSON template
+                </a>
+            </div>
+        </div>
+
+        <p class="m-0 text-xs text-ink-3">
+            A CSV or JSON file with the columns <code>user_email</code>, <code>project</code>
+            and <code>team</code>. The template is this event's own roster, already filled in.
+            Anyone the file leaves out keeps the team they are on; a row whose project and team
+            are both empty takes that person off theirs. A team the file names but this event
+            does not have yet is created.
+        </p>
+
+        <form
+            method="POST"
+            action="?/previewImport"
+            enctype="multipart/form-data"
+            class="flex flex-wrap items-center gap-2"
+            use:enhance
+        >
+            <input
+                class="field max-w-full text-xs"
+                type="file"
+                name="file"
+                accept=".csv,.tsv,.json,text/csv,application/json"
+                aria-label="Team composition file"
+                required
+            />
+            <button type="submit" class="btn btn-sm">
+                <Upload class="size-3" /> Preview import
+            </button>
+        </form>
+
+        {#if form?.importError}
+            <p
+                class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2 text-xs
+                       text-danger-ink"
+                role="alert"
+            >
+                {form.importError}
+            </p>
+        {/if}
+
+        {#if importResult}
+            <!-- Applied. The count is what the server MANAGED, not what it
+                 planned, and any failure is named — a bulk write that silently
+                 half-lands leaves the organiser believing the roster is set. -->
+            {#if importResult.failures.length === 0}
+                <p
+                    class="m-0 rounded-card border border-success/40 bg-success/10 px-3 py-2 text-xs
+                           text-success-ink"
+                    role="status"
+                >
+                    Applied {importResult.applied} of {importResult.planned} changes from
+                    {importResult.filename}{importResult.created > 0
+                        ? `, creating ${importResult.created} team${importResult.created === 1 ? '' : 's'}`
+                        : ''}.
+                </p>
+            {:else}
+                <div
+                    class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2 text-xs
+                           text-danger-ink"
+                    role="alert"
+                >
+                    <p class="m-0">
+                        Applied {importResult.applied} of {importResult.planned} changes from
+                        {importResult.filename}; {importResult.failures.length} failed.
+                    </p>
+                    <ul class="m-0 mt-1 list-disc pl-4">
+                        {#each importResult.failures as f, i (i)}
+                            <li>{f.email ? `${f.email}: ` : ''}{f.message}</li>
+                        {/each}
+                    </ul>
+                </div>
+            {/if}
+        {/if}
+
+        {#if preview}
+            {@const counts = preview.plan.counts}
+            <div class="flex flex-col gap-2">
+                {#if counts.errors > 0}
+                    <p
+                        class="m-0 rounded-card border border-danger/40 bg-danger/10 px-3 py-2 text-xs
+                               text-danger-ink"
+                        role="alert"
+                    >
+                        {counts.errors} of {counts.total} rows in {preview.filename} cannot be applied.
+                        Nothing has been changed — fix those rows and preview the file again.
+                    </p>
+                {:else}
+                    <!-- The count and its noun are ONE expression: split across
+                         two lines of markup they render with a newline between
+                         them, which reads fine and defeats any regex written
+                         against "3 rows". -->
+                    <p class="m-0 text-xs text-ink-2" role="status">
+                        {preview.filename}: {counts.total === 1
+                            ? '1 row'
+                            : `${counts.total} rows`} — {planSummary(counts)}. Nothing has been
+                        changed yet.
+                    </p>
+                {/if}
+
+                <div class="w-full overflow-x-auto rounded-card border border-line">
+                    <table class="w-full min-w-[560px] border-collapse text-left text-xs">
+                        <caption class="sr-only">Import preview</caption>
+                        <thead>
+                            <tr class="border-b border-line bg-raised text-ink-3">
+                                <th class="px-3 py-2 font-semibold">Row</th>
+                                <th class="px-3 py-2 font-semibold">Participant</th>
+                                <th class="px-3 py-2 font-semibold">Project</th>
+                                <th class="px-3 py-2 font-semibold">Team</th>
+                                <th class="px-3 py-2 font-semibold">Outcome</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each preview.plan.rows as r (r.row)}
+                                <tr class="border-b border-line last:border-0">
+                                    <td class="px-3 py-2 text-ink-3">{r.row}</td>
+                                    <td class="px-3 py-2 text-ink">
+                                        {r.name || r.email}
+                                        {#if r.name}
+                                            <span class="block text-[0.65rem] text-ink-3">{r.email}</span>
+                                        {/if}
+                                    </td>
+                                    <td class="px-3 py-2 text-ink-2">{r.project || '—'}</td>
+                                    <td class="px-3 py-2 text-ink-2">{r.team || '—'}</td>
+                                    <td class="px-3 py-2">
+                                        <span class="badge {STATUS_BADGE[r.status]}">
+                                            {STATUS_LABEL[r.status]}
+                                        </span>
+                                        <span class="ml-1 text-ink-2">{r.detail}</span>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+
+                {#if counts.errors === 0 && counts.changes > 0}
+                    <form
+                        method="POST"
+                        action="?/applyImport"
+                        class="flex items-center gap-2"
+                        use:enhance={() => {
+                            pending = true;
+                            return async ({ update }) => {
+                                await update();
+                                pending = false;
+                            };
+                        }}
+                    >
+                        <!-- The FILE, not the plan: `applyImport` re-parses and
+                             re-resolves it server-side, so a hidden field can
+                             carry no team or user id of its own choosing. An
+                             HTML attribute value normalises CRLF to LF on the
+                             way through, which the CSV reader handles — it
+                             accepts \r\n, \n and bare \r alike. -->
+                        <input type="hidden" name="filename" value={preview.filename} />
+                        <input type="hidden" name="fileText" value={preview.fileText} />
+                        <button type="submit" class="btn btn-sm btn-primary" disabled={pending}>
+                            Apply {counts.changes}
+                            {counts.changes === 1 ? 'change' : 'changes'}
+                        </button>
+                    </form>
+                {:else if counts.errors === 0}
+                    <p class="m-0 text-xs text-ink-3">
+                        This file matches the current teams exactly — there is nothing to apply.
+                    </p>
+                {/if}
+            </div>
+        {/if}
+    </section>
 
     <!-- Board on the left, people on the right. Stacked below lg, where a
          320px-wide sidebar would leave the drop targets unusable. -->

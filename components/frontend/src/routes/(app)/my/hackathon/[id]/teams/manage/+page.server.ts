@@ -3,6 +3,13 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
+import {
+  MAX_IMPORT_BYTES,
+  initialsOf,
+  parseRosterFile,
+  resolveImport,
+} from "$lib/server/hackathon/teamImport"
+import { importWorld } from "$lib/server/hackathon/teamImportWorld"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -326,15 +333,187 @@ export const actions: Actions = {
 
     return { success: true }
   },
+
+  // Dry run. Reads the uploaded file, resolves every row against the live
+  // roster and reports what WOULD happen — nothing is written here. An
+  // irreversible bulk mutation fired by a file picker is a trap; the organiser
+  // sees the moves, the new teams and the unresolved rows first.
+  //
+  // Access: `importWorld` calls `ExportPreferences` first, which the backend
+  // guards with `Project:Write`, so this action is organiser-only for real and
+  // not merely because `load` refuses to render the page.
+  previewImport: async (event) => {
+    const grpc = requireGrpc(event.locals.grpc)
+    const form = await event.request.formData()
+
+    const file = form.get("file")
+    if (!(file instanceof File) || file.size === 0) {
+      return fail(400, { importError: "Choose a CSV or JSON file to import." })
+    }
+    if (file.size > MAX_IMPORT_BYTES) {
+      return fail(400, {
+        importError: `That file is ${Math.round(file.size / 1024)} KB; the import accepts up to ${Math.round(
+          MAX_IMPORT_BYTES / 1024,
+        )} KB.`,
+      })
+    }
+
+    const text = await file.text()
+    const parsed = parseRosterFile(text, file.name)
+    if (!parsed.ok) {
+      return fail(400, {
+        importError: `${file.name}: ${parsed.message}.`,
+      })
+    }
+
+    let world
+    try {
+      world = await importWorld(grpc, event.params.id)
+    } catch (e) {
+      return importFailure(e)
+    }
+
+    return {
+      importPreview: {
+        filename: file.name,
+        // Echoed back so Apply can re-parse the SAME file. The plan is never
+        // trusted from the client: ids in a hidden field would be a way to
+        // assign anyone to anything.
+        fileText: text,
+        plan: resolveImport(parsed.rows, world),
+      },
+    }
+  },
+
+  // Apply a previewed import.
+  //
+  // Re-parses and re-resolves from scratch against the CURRENT roster, so a
+  // plan that went stale between preview and apply (someone else moved a
+  // person, a team was deleted) is refused rather than replayed. One bad row
+  // still blocks the whole file: the validation half is all-or-nothing on
+  // purpose, because a partial import the organiser believes succeeded is worse
+  // than a rejected one.
+  //
+  // The writes themselves cannot be atomic — team membership lands in two
+  // stores that share no transaction (see teamImport.ts) — so what this reports
+  // is what it managed, per row, and never "done" when anything failed.
+  applyImport: async (event) => {
+    const grpc = requireGrpc(event.locals.grpc)
+    const { team } = grpc
+    const form = await event.request.formData()
+
+    const text = String(form.get("fileText") ?? "")
+    const filename = String(form.get("filename") ?? "import.csv")
+    if (text.trim() === "") {
+      return fail(400, { importError: "Nothing to apply — preview a file first." })
+    }
+
+    const parsed = parseRosterFile(text, filename)
+    if (!parsed.ok) {
+      return fail(400, { importError: `${filename}: ${parsed.message}.` })
+    }
+
+    let world
+    try {
+      world = await importWorld(grpc, event.params.id)
+    } catch (e) {
+      return importFailure(e)
+    }
+
+    const plan = resolveImport(parsed.rows, world)
+    if (plan.counts.errors > 0) {
+      return fail(400, {
+        importError: `The roster changed since the preview — ${plan.counts.errors} of ${plan.counts.total} rows no longer resolve. Nothing was applied.`,
+        importPreview: { filename, fileText: text, plan },
+      })
+    }
+
+    // Create the new teams first: their ids are what the rows below assign into.
+    const newTeamIds: string[] = []
+    const failures: { row: number; email: string; message: string }[] = []
+    for (const [i, t] of plan.creates.entries()) {
+      try {
+        const { teamId } = await team.create({
+          projectId: t.projectId,
+          name: t.name,
+          description: "",
+        })
+        newTeamIds[i] = teamId
+      } catch (e) {
+        failures.push({
+          row: 0,
+          email: "",
+          message: `could not create the team "${t.name}": ${grpcMessage(e)}`,
+        })
+      }
+    }
+
+    let applied = 0
+    for (const row of plan.rows) {
+      if (row.status === "unchanged" || row.status === "error") continue
+      const targetId =
+        row.target?.startsWith("new:") ?
+          newTeamIds[Number(row.target.slice(4))]
+        : (row.target ?? null)
+      if (row.target?.startsWith("new:") && !targetId) {
+        // Its team failed to be created; the failure is already reported above
+        // and re-reporting it per row would bury it.
+        continue
+      }
+
+      try {
+        // Same single-team rule the drag board enforces: leave everything else
+        // first, then join. The backend permits several teams; the product does
+        // not.
+        for (const leaving of row.leave ?? []) {
+          await team.removeUser({ teamId: leaving, userId: row.userId! })
+        }
+        // Not when they are already on it: `team_participants` is keyed on
+        // (user_id, team_id), so a second AddMembers is a constraint violation
+        // and `AssignUser` answers Internal. A row that only sheds a second,
+        // stale membership would otherwise report a failure having done exactly
+        // what was asked.
+        if (targetId && !row.alreadyOnTarget) {
+          await team.assignUser({ teamId: targetId, userId: row.userId! })
+        }
+        applied += 1
+      } catch (e) {
+        failures.push({
+          row: row.row,
+          email: row.email,
+          message: grpcMessage(e),
+        })
+      }
+    }
+
+    return {
+      importResult: {
+        filename,
+        applied,
+        planned: plan.counts.changes,
+        created: newTeamIds.filter(Boolean).length,
+        failures,
+      },
+    }
+  },
 }
 
-/** "AutoML Pipeline Builder" -> "APB". */
-function initialsOf(text: string): string {
-  return (
-    text
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((w) => w[0]?.toUpperCase())
-      .join("") || "?"
-  )
+/** A form failure carrying the gRPC status this surface owes the organiser. */
+function importFailure(e: unknown) {
+  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+    return fail(403, {
+      importError: "Only this event's organizers can import team composition.",
+    })
+  }
+  if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
+    return fail(404, { importError: "Hackathon not found." })
+  }
+  throw e
+}
+
+/** The server's own words, so a failed row says why rather than "failed". */
+function grpcMessage(e: unknown): string {
+  if (e instanceof ClientError) return e.details || e.message
+
+  return e instanceof Error ? e.message : String(e)
 }
