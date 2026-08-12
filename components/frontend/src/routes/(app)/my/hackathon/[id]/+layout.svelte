@@ -67,6 +67,23 @@
     const showHero = $derived($page.route.id?.endsWith('/overview') ?? false);
 </script>
 
+<!-- This row being a FLEX CONTAINER is what keeps HackathonSidebar off the footer
+     that (app)'s AppShell renders below it, and it is worth saying out loud
+     because the obvious reading says otherwise. The sidebar is
+     `md:sticky md:top-14 md:h-[calc(100vh-3.5rem)] md:self-start` — a
+     full-screen-height column — and a sticky box taller than its containing
+     block cannot move at all, so on any page whose content is shorter than the
+     screen it looks like it must overhang this row and be drawn across the
+     footer's logo strip. It cannot: a flex row's height is its tallest item's,
+     and with self-start that item IS the sidebar, so the row grows to the column
+     instead of the column escaping the row.
+     The property therefore comes from flex sizing, not from a rule anyone wrote,
+     and it disappears the moment this column leaves the flow (`md:fixed`) or the
+     row gets a fixed height. tests/smoke/18-footer.spec.ts's
+     expectSidebarClearsFooter asserts the outcome on short leaves as well as
+     /overview — verified by making the aside `md:fixed`, which put it 287x63px
+     over the footer on webinars, invites and prizes while /overview, whose
+     content is taller than the screen, stayed green. -->
 <div class="flex flex-col md:flex-row">
     <HackathonSidebar
         hackathonId={hackathon.id}

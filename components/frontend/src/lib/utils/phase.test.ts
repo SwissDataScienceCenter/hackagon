@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest"
 import {
   PHASE_CAPABILITIES,
   capabilityLabel,
+  currentAndNextPhase,
   extraEnabledCapabilities,
+  formatPhaseRange,
   resolvePhaseStatus,
   toDateTimeLocal,
   unmetPhaseCapabilities,
@@ -229,5 +231,91 @@ describe("toDateTimeLocal", () => {
 
   it("is empty for no date, so the input renders blank", () => {
     expect(toDateTimeLocal(undefined)).toBe("")
+  })
+})
+
+describe("formatPhaseRange", () => {
+  it("reads out both ends when a phase is fully dated", () => {
+    expect(
+      formatPhaseRange(new Date(2026, 2, 1), new Date(2026, 2, 3)),
+    ).toBe("Mar 1, 2026 – Mar 3, 2026")
+  })
+
+  // All four combinations, because both dates are optional in the schema and a
+  // row can carry either alone.
+  it("names the open end when only one date is set", () => {
+    expect(formatPhaseRange(undefined, new Date(2026, 2, 3))).toBe(
+      "Until Mar 3, 2026",
+    )
+    expect(formatPhaseRange(new Date(2026, 2, 1), undefined)).toBe(
+      "From Mar 1, 2026",
+    )
+  })
+
+  it("says so rather than rendering an empty line for an undated phase", () => {
+    expect(formatPhaseRange(undefined, undefined)).toBe("No dates set")
+  })
+})
+
+describe("currentAndNextPhase", () => {
+  // Ids deliberately out of date order, so a result that matched only because
+  // the input arrived sorted would not.
+  const p = (id: string, startsAt: Date, endsAt: Date) => ({
+    id,
+    startsAt,
+    endsAt,
+  })
+  const done = p("done", older, past)
+  const live = p("live", past, future)
+  const soon = p("soon", future, later)
+  const all = [soon, done, live]
+
+  describe("with nothing declared", () => {
+    it("falls back to the phase whose own dates are running", () => {
+      const { current, next, declared } = currentAndNextPhase(all, undefined)
+
+      expect(current?.id).toBe("live")
+      expect(next?.id).toBe("soon")
+      expect(declared).toBe(false)
+    })
+
+    it("offers the first phase not yet over when none is running", () => {
+      const { current, next } = currentAndNextPhase([done, soon], undefined)
+
+      expect(current).toBeUndefined()
+      expect(next?.id).toBe("soon")
+    })
+
+    it("has no next once every phase has ended", () => {
+      const { current, next } = currentAndNextPhase([done], undefined)
+
+      expect(current).toBeUndefined()
+      expect(next).toBeUndefined()
+    })
+  })
+
+  describe("with a phase declared current", () => {
+    // The declaration wins over the dates — same precedence resolvePhaseStatus
+    // applies, so the hub and the timeline cannot name different phases as live.
+    it("takes the declared phase even while another one's dates are running", () => {
+      const { current, next, declared } = currentAndNextPhase(all, "done")
+
+      expect(current?.id).toBe("done")
+      expect(next?.id).toBe("live")
+      expect(declared).toBe(true)
+    })
+
+    it("has no next after the last phase in date order", () => {
+      expect(currentAndNextPhase(all, "soon").next).toBeUndefined()
+    })
+
+    // Answering with a different phase would be worse than answering with none:
+    // the pointer says the organizer has decided.
+    it("resolves to no current phase when the pointer names one that is gone", () => {
+      const { current, declared } = currentAndNextPhase(all, "deleted")
+
+      expect(current).toBeUndefined()
+      expect(declared).toBe(true)
+    })
   })
 })

@@ -30,7 +30,7 @@ test.describe("admin panel screenshots", () => {
       // The one-page organiser cockpit is gone: this design gives each of its
       // sections a route, so the shot list follows them rather than a URL that
       // no longer resolves.
-      { name: "01-edit", path: `/my/hackathon/${id}/edit` },
+      { name: "01-edit", path: `/my/hackathon/${id}/manage/edit` },
       { name: "02-projects", path: `/my/hackathon/${id}/projects` },
       { name: "03-teams", path: `/my/hackathon/${id}/teams` },
       { name: "04-voting", path: `/my/hackathon/${id}/voting` },

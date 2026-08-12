@@ -112,7 +112,10 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, "/dashboard")
+    // Back to the page this form is reached from, which is no longer the
+    // dashboard: the dashboard's job is finding a hackathon, and saving a change
+    // to one should leave you looking at the hackathon you changed.
+    redirect(303, `/my/hackathon/${event.params.id}/manage`)
   },
 
   // Its own action because it is its own RPC: ConfigService.SetBranding writes

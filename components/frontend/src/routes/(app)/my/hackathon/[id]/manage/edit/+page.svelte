@@ -72,11 +72,14 @@
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
+        <!-- Back to where this form is now reached FROM. Its only entry point is
+             Manage Hackathon, and a back link to /overview would send an
+             organiser to the participant view of an event they were configuring. -->
         <a
-            href={resolve(`/my/hackathon/${hackathon.id}/overview`)}
+            href={resolve(`/my/hackathon/${hackathon.id}/manage`)}
             class="w-fit text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
-            &larr; Back to {hackathon.name}
+            &larr; Back to managing {hackathon.name}
         </a>
         <h1 class="m-0 text-title text-ink">Edit Hackathon</h1>
     </div>
@@ -174,13 +177,21 @@
             {/if}
 
             <div class="sm:col-span-2">
+                <!-- Two endpoints, on purpose. The upload files a LOGO
+                     (`hackathons/<id>/logo/`); the browse lists everything the
+                     event has (`hackathons/<id>/`), so a picture already
+                     uploaded into a page can become the logo without a second
+                     copy of it. Both take the same permission — hackathon
+                     `write` — which is why one control can offer both. -->
                 <ImageUploadField
                     name="logo"
                     bind:value={logo}
                     endpoint={`/my/hackathon/${hackathon.id}/logo`}
+                    browseEndpoint={`/my/hackathon/${hackathon.id}/media`}
                     label="Logo (optional)"
                     id="hackathon-logo"
-                    buttonLabel="Upload a logo"
+                    buttonLabel="Choose a logo"
+                    dialogTitle="Event logo"
                     fileLabel="Choose an image file for the event logo"
                     maxMb={LOGO_MAX_MB}
                     previewAlt="Current logo"
@@ -200,7 +211,7 @@
                 rows={16}
                 maxlength={10000}
                 placeholder="What is this hackathon about?"
-                uploadEndpoint={`/my/hackathon/${hackathon.id}/media`}
+                uploadEndpoint={`/my/hackathon/${hackathon.id}/media`} browseEndpoint={`/my/hackathon/${hackathon.id}/media`}
             />
         </div>
 

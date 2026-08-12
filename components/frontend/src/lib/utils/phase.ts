@@ -1,3 +1,10 @@
+import {
+  CAPABILITY_VALUES,
+  capabilityEntry,
+  capabilityLabel,
+  isKnownCapability,
+} from "$lib/utils/capability"
+
 export type PhaseStatus = "completed" | "active" | "upcoming" | "current"
 
 /**
@@ -71,6 +78,15 @@ export function sortPhasesByStart<T extends { startsAt?: Date | undefined }>(
  * PROPOSE_PROJECTS=2, SET_TEAM_PREFERENCES=3, CREATE_PROJECT_SUBMISSIONS=4,
  * VOTE=5, VIEW_RESULTS=6.
  *
+ * **The strings moved to `$lib/utils/capability`**, which holds one row per
+ * capability carrying every form of words the UI has for it. Three files used to
+ * keep their own map keyed by these six numbers and two of them exported a
+ * `capabilityLabel` with different words behind it; a lookup table per file is
+ * how a capability ends up labelled one way beside its switch and another way in
+ * the sentence explaining it. Re-exported from here rather than moved out of the
+ * way, because the phase form and the timeline page ask for capability labels in
+ * phase terms and their imports say so.
+ *
  * Raw numbers, like the other status helpers here, so the form component can
  * render the checkboxes without importing the generated `Capability` enum — it
  * lives under `$lib/server/grpc`, which a `.svelte` file may not touch. Proto
@@ -85,23 +101,17 @@ export function sortPhasesByStart<T extends { startsAt?: Date | undefined }>(
  * now, inherited from a design where phases really were inert.) Settled deliberately; see
  * `mydocs/docs/backend-tickets/project-preferences-capability.md`.
  */
-const CAPABILITY_LABEL: Partial<Record<number, string>> = {
-  1: "Register",
-  2: "Propose projects",
-  3: "Set team preferences",
-  4: "Submit project work",
-  5: "Vote",
-  6: "View results",
-}
 
 /** The six in enum order, for rendering a checkbox per capability. */
-export const PHASE_CAPABILITIES: { value: number; label: string }[] = [
-  1, 2, 3, 4, 5, 6,
-].map((value) => ({ value, label: CAPABILITY_LABEL[value] as string }))
+export const PHASE_CAPABILITIES: { value: number; label: string }[] =
+  CAPABILITY_VALUES.map((value) => ({
+    value,
+    // Non-null because the values come from the table itself. Not a cast: the
+    // list and the labels are the same rows, which is what the table bought.
+    label: capabilityEntry(value)?.label ?? "",
+  }))
 
-/** Human label for one capability, or undefined if the value is unknown. */
-export const capabilityLabel = (c: number): string | undefined =>
-  CAPABILITY_LABEL[c]
+export { capabilityLabel }
 
 /**
  * Capabilities a phase says belong to it that are not actually switched on.
@@ -122,9 +132,7 @@ export function unmetPhaseCapabilities(
 ): number[] {
   const on = new Set(enabled)
 
-  return phaseCapabilities.filter(
-    (c) => CAPABILITY_LABEL[c] !== undefined && !on.has(c),
-  )
+  return phaseCapabilities.filter((c) => isKnownCapability(c) && !on.has(c))
 }
 
 /**
@@ -144,7 +152,7 @@ export function extraEnabledCapabilities(
   const planned = new Set(phaseCapabilities)
 
   return enabled
-    .filter((c) => CAPABILITY_LABEL[c] !== undefined && !planned.has(c))
+    .filter((c) => isKnownCapability(c) && !planned.has(c))
     .sort((a, b) => a - b)
 }
 
@@ -164,9 +172,7 @@ export function withPhaseCapabilitiesEnabled(
   enabled: readonly number[],
   phaseCapabilities: readonly number[],
 ): number[] {
-  const known = phaseCapabilities.filter(
-    (c) => CAPABILITY_LABEL[c] !== undefined,
-  )
+  const known = phaseCapabilities.filter(isKnownCapability)
 
   return [...new Set([...enabled, ...known])].sort((a, b) => a - b)
 }
@@ -187,4 +193,77 @@ export function toDateTimeLocal(d: Date | undefined): string {
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
     `T${pad(d.getHours())}:${pad(d.getMinutes())}`
   )
+}
+
+/**
+ * One phase's dates as a line of prose.
+ *
+ * Ported from main, where the timeline and the organiser's hub both needed it
+ * and each had grown its own copy. Both dates are optional in the schema, so all
+ * four combinations are handled rather than assuming a pair.
+ */
+export function formatPhaseRange(
+  startsAt: Date | undefined,
+  endsAt: Date | undefined,
+): string {
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  if (!startsAt && !endsAt) return "No dates set"
+  if (!startsAt) return `Until ${fmt(endsAt as Date)}`
+  if (!endsAt) return `From ${fmt(startsAt)}`
+
+  return `${fmt(startsAt)} – ${fmt(endsAt)}`
+}
+
+/**
+ * Where the hackathon is now and what comes after it.
+ *
+ * `declared` is the difference between the two ways "now" can be decided, and
+ * the organiser's hub renders it differently: an organizer's `AdvancePhase`
+ * pointer, or — with no pointer set — whichever phase's own dates are running.
+ * Same precedence `resolvePhaseStatus` applies, so the hub and the timeline can
+ * never name different phases as the live one.
+ *
+ * `next` is the phase after `current` in date order, whether or not its dates
+ * have started: with a declaration in play a later phase can already be running
+ * by the clock, and calling it "next" is still what an organizer means. With no
+ * current phase at all the first phase that has not ended is the next one.
+ *
+ * A `currentPhaseId` naming a phase that is not in the list resolves to no
+ * current phase rather than falling back to the dates — the pointer says the
+ * organizer has decided, and quietly answering with a different phase would be
+ * worse than answering with none.
+ */
+export function currentAndNextPhase<
+  T extends {
+    id: string
+    startsAt?: Date | undefined
+    endsAt?: Date | undefined
+  },
+>(
+  phases: readonly T[],
+  currentPhaseId: string | undefined,
+): { current?: T; next?: T; declared: boolean } {
+  const sorted = sortPhasesByStart(phases)
+  const declared = Boolean(currentPhaseId)
+
+  const index = currentPhaseId
+    ? sorted.findIndex((p) => p.id === currentPhaseId)
+    : sorted.findIndex((p) => phaseStatus(p.startsAt, p.endsAt) === "active")
+
+  if (index === -1) {
+    return {
+      current: undefined,
+      next: sorted.find(
+        (p) => phaseStatus(p.startsAt, p.endsAt) !== "completed",
+      ),
+      declared,
+    }
+  }
+
+  return { current: sorted[index], next: sorted[index + 1], declared }
 }

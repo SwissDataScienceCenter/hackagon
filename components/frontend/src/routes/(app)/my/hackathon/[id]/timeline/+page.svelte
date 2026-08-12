@@ -1,7 +1,6 @@
 <script lang="ts">
-    import { Check, FileText, Pencil, Plus, X } from 'lucide-svelte';
+    import { Check, FileText, Pencil, Plus, SlidersHorizontal, X } from 'lucide-svelte';
     import { resolve } from '$app/paths';
-    import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
     import { capabilityLabel } from '$lib/utils/phase';
     import type { ActionData, PageData } from './$types';
 
@@ -41,18 +40,24 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <h2 class="m-0 text-title text-ink">Timeline</h2>
 
-    <!-- Organizer-only, and above the phases: what participants may do is
-         hackathon-wide, so it is not one of the phases and does not sit among
-         them. The loader sends a participant none of the data it needs. -->
+    <!-- The capability switches used to sit here, above the phases. They have
+         moved to Manage Hackathon: what participants may do is hackathon-wide,
+         so it is not one of the phases, and this page is the participant-facing
+         phase list for every viewer — hackathon-wide configuration on top of it
+         was exactly the "buried three clicks deep" arrangement. What is left
+         here is a pointer, so an organiser who came looking still finds them.
+
+         The mismatch warning went with them, but the per-phase ticks below stay:
+         those are about a phase, which is what this list is. -->
     {#if data.mayManage}
-        <CapabilitiesPanel
-            currentPhaseName={data.currentPhaseName}
-            hasState={data.hasState}
-            capabilities={data.capabilities}
-            unmet={data.unmet}
-            message={form?.message}
-            saved={form?.saved ?? false}
-        />
+        <a
+            href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
+            class="flex w-fit items-center gap-2 text-xs font-semibold text-accent-ink
+                   no-underline hover:underline"
+        >
+            <SlidersHorizontal class="h-3 w-3 shrink-0" aria-hidden="true" />
+            What participants can do → Manage Hackathon
+        </a>
     {/if}
 
     <!-- Every phase action lives in this section — add, make current, clear, edit
@@ -76,6 +81,14 @@
             </a>
         {/if}
     </div>
+
+    <!-- A refused "Make current" used to be reported inside the capabilities
+         panel, which was the wrong place for it even while the panel was here
+         and is no place at all now that it has gone. It belongs beside the
+         buttons that can produce it. -->
+    {#if form?.message}
+        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
+    {/if}
 
     {#if data.phases.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">

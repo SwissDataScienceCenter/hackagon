@@ -9,6 +9,7 @@ import {
   expectNoOverlap,
   expectNoClippedText,
   expectConsentBannerClearsContent,
+  expectFooterOperable,
   CONSENT_BANNER,
 } from "../../helpers/reflow.js"
 
@@ -293,6 +294,7 @@ const VISITS: Visit[] = [
   { pattern: "/hackathons/create", persona: "admin", path: () => "/hackathons/create", note: "needs global Admin or HackathonOrganizer" },
   { pattern: "/manage/pages", persona: "admin", path: () => "/manage/pages", note: "global Admin only" },
   { pattern: "/manage/users", persona: "admin", path: () => "/manage/users", note: "global Admin only" },
+  { pattern: "/manage/gallery", persona: "admin", path: () => "/manage/gallery", note: "global Admin only — ALL_MEDIA scope" },
   { pattern: "/register/[id]", persona: "bob", path: () => `/register/${id("h1")}`, note: "form set in beforeAll" },
 
   // Member surfaces on h1 where the member view is the richer/only one.
@@ -328,7 +330,7 @@ const VISITS: Visit[] = [
   { pattern: "/my/hackathon/[id]/photos", persona: "alice", path: () => `/my/hackathon/${id("h1")}/photos` },
   { pattern: "/my/hackathon/[id]/webinars", persona: "alice", path: () => `/my/hackathon/${id("h1")}/webinars` },
   { pattern: "/my/hackathon/[id]/manage", persona: "alice", path: () => `/my/hackathon/${id("h1")}/manage` },
-  { pattern: "/my/hackathon/[id]/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/edit` },
+  { pattern: "/my/hackathon/[id]/manage/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/manage/edit`, note: "nested under manage — its only entry point is the hub's Edit details" },
 
   // Second visit where the member variant is a genuinely different surface:
   // bob gets the BALLOTS (three methods, forms live because voting is open),
@@ -358,6 +360,19 @@ async function sweep(page: Page, name: string, screenshot?: string) {
   // Without a visible <main>, every content check below passes vacuously.
   await expect(page.locator("main"), `${name}: no <main> rendered`).toBeVisible()
 
+  // Same argument for the footer, and it is not hypothetical: expectNoOverlap
+  // and expectNoClippedText below RETURN EARLY when their scope is missing, so
+  // the two "footer" iterations were measuring nothing at all on the 37 routes
+  // that had no footer — the `(app)` group's layout never mounted AppFooter
+  // after the route split. Presence is asserted here, before anything claims to
+  // have inspected it; expectFooterOperable further down adds the hit test.
+  await expect(
+    page.locator("footer"),
+    `${name}: no <footer> rendered — the footer is the only inbound link to ` +
+      `/privacy, /terms and /about, and the chrome checks below silently skip ` +
+      `a scope that is absent`,
+  ).toBeVisible()
+
   await expectFitsViewport(page, name)
 
   // The chrome, held to the strict contract (nothing may overlap or truncate).
@@ -377,6 +392,13 @@ async function sweep(page: Page, name: string, screenshot?: string) {
     allowEllipsis: true,
     allowInsideHorizontalScroller: true,
   })
+
+  // The footer's four links, hit-tested at the bottom of the document — the
+  // only place they ever are. "Present" and "clickable" came apart twice: the
+  // consent banner covered these exact links at every width while it was
+  // `fixed`, and a viewport-anchored sidebar can cover them at any scroll
+  // position. Scrolls and restores, like the check below it.
+  await expectFooterOperable(page, name)
 
   // LAST, because it scrolls (and puts the page back). The checks above are
   // taken at the top of the page; this one is the only claim that depends on

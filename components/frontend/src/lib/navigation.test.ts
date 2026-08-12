@@ -582,12 +582,15 @@ describe("platformNav", () => {
     expect(platformNav({ isGlobalAdmin: false })).toEqual([])
   })
 
-  it("offers user management and the platform CMS to an admin", () => {
+  it("offers user management, the platform CMS and the media library to an admin", () => {
     expect(platformNav({ isGlobalAdmin: true }).map((i) => i.id)).toEqual([
       "platform:users",
       // The CMS had no link anywhere: the editor existed, the footer linked to
       // what it publishes, and the only way in was to type /manage/pages.
       "platform:pages",
+      // Same trap, avoided rather than repeated: /manage/gallery lists every
+      // uploaded picture and would otherwise be reachable only by typing it.
+      "platform:gallery",
     ])
   })
 

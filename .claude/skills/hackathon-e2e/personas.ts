@@ -172,7 +172,13 @@ export const JOURNEY_CAST = {
 
 // ─── Seed fixture expectations (snapshot/smoke mode) ─────────────────────────
 // Derived from cmd/seed/main.go + cmd/seed/README.md. If the seed changes,
-// update this matrix — the smoke suite asserts exactly this.
+// update this matrix — the smoke suite asserts it.
+//
+// What it does NOT say is that the fixture is the whole database. Instances get
+// populated on purpose (skills/seed-past-hackathons puts six real SDSC editions
+// beside these three), so a spec reading this matrix asserts that the fixture's
+// rows are present and correct and that the fixture's forbidden rows are absent
+// — never that a list contains nothing else, and never a total.
 
 export type SeedHackathonKey = "h1" | "h2" | "h3"
 
@@ -197,12 +203,31 @@ export const SEED_HACKATHONS: Record<
   },
 }
 
+/**
+ * What the fixture entitles a persona to SEE on the dashboard.
+ *
+ * Read these as a lower bound plus a prohibition, never as the whole page: a
+ * populated instance (the six real SDSC editions from
+ * skills/seed-past-hackathons, created by hackagon-admin) adds rows to both
+ * sections, and that is a supported state. So the fields below say "these must
+ * be there, with this badge" and "these must NOT be there" — nothing here may
+ * be read as "and nothing else".
+ *
+ * There is deliberately no `connectedCount`. The dashboard states a number and
+ * renders the list it counted; the spec asserts those two against EACH OTHER
+ * (03-dashboard.spec.ts), which is both stronger — it catches a count that
+ * disagrees with its own rows — and immune to a second seeder. The constant
+ * that used to live here said 3 for hackagon-admin on an instance where the
+ * page said 9, and failed every run for a day.
+ */
 export interface DashboardExpectation {
-  /** "You are connected to N hackathon(s)" on the dashboard. */
-  connectedCount: number
-  /** Rows under "Your hackathons" with the membership badge text. */
+  /** Rows that must appear under "Your hackathons", with the badge text. */
   mine: { hackathon: SeedHackathonKey; badge: "Owner" | "Member" | "Waitlisted" }[]
-  /** Rows under "Other hackathons" (public hackathons the persona is not part of). */
+  /**
+   * Fixture hackathons that must appear under "Other hackathons" — public, and
+   * this persona is not in them. Fixture hackathons NOT listed here must be
+   * absent from that section; extra events from other seeders may be present.
+   */
   others: SeedHackathonKey[]
 }
 
@@ -223,7 +248,6 @@ export const SEED_EXPECTATIONS: Record<
 > = {
   admin: {
     dashboard: {
-      connectedCount: 3,
       // Membership badge reflects the per-hackathon casbin role, not the
       // global admin role (GetHackathonRole ignores g2).
       mine: [
@@ -237,7 +261,6 @@ export const SEED_EXPECTATIONS: Record<
   },
   alice: {
     dashboard: {
-      connectedCount: 3,
       mine: [
         { hackathon: "h1", badge: "Owner" },
         { hackathon: "h2", badge: "Member" },
@@ -249,7 +272,6 @@ export const SEED_EXPECTATIONS: Record<
   },
   bob: {
     dashboard: {
-      connectedCount: 2,
       mine: [
         { hackathon: "h1", badge: "Member" },
         { hackathon: "h2", badge: "Member" },
@@ -260,7 +282,6 @@ export const SEED_EXPECTATIONS: Record<
   },
   charles: {
     dashboard: {
-      connectedCount: 1,
       mine: [{ hackathon: "h1", badge: "Waitlisted" }],
       others: ["h2"],
     },

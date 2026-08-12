@@ -292,6 +292,25 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
         "About, privacy and terms — the pages the footer links to. Published " +
         "pages are readable by everyone, drafts by admins only.",
     },
+    // Every picture the platform has been uploaded, across all events and the
+    // platform's own pages. Listed here for the reason Pages is: without an
+    // entry the only way in is to type the URL, and this repo has shipped that
+    // twice.
+    //
+    // Admin-only like the rest of this section, and by the same rule the
+    // backend applies: the listing scope that spans every event authorizes on
+    // the global Admin role. An organiser browses their OWN event's media from
+    // the picker inside that event, which is a different scope and a different
+    // permission.
+    {
+      id: "platform:gallery",
+      label: "Media",
+      icon: Images,
+      href: resolve("/(app)/manage/gallery"),
+      description:
+        "Every image uploaded into an event or a platform page. Reuse one " +
+        "instead of storing the same picture twice.",
+    },
   ]
 }
 
@@ -382,11 +401,17 @@ const MEMBER = 2
  * Deliberately short, and deliberately not padded with stubs: `memberNav` lists
  * only routes that exist and this follows it.
  *
- * Editing the hackathon itself (`/my/hackathon/<id>/edit`) is the one existing
- * organiser route left out, and not by oversight: `canEditHackathon` also
- * requires the owner be confirmed, so it is the first entry that would need a
- * narrower gate than the section's. It reaches that route from the dashboard's
- * edit pencil today. Adding it here means adding that per-entry gate first.
+ * Editing the hackathon itself (`/my/hackathon/<id>/manage/edit`) is the one
+ * existing organiser route left out, and not by oversight: `canEditHackathon`
+ * also requires the owner be confirmed, so it is the first entry that would need
+ * a narrower gate than the section's. It is offered in the Manage Hackathon
+ * heading instead, where that one gate is applied on its own — and being nested
+ * under `/manage` means `activeNavId`'s longest-prefix match leaves the hub
+ * entry lit while the form is open, rather than lighting nothing at all.
+ *
+ * The list is also what the hub renders as tiles, minus its own entry. Nothing
+ * else enumerates these destinations, so an entry added here reaches both
+ * surfaces and is never described in two places.
  */
 export function manageNav(
   hackathonId: string,

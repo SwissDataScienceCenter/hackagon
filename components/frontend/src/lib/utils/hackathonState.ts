@@ -12,8 +12,7 @@
  * server-only. CapabilityState: 1 COMING, 2 OPEN, 3 CLOSED, 4 UNGOVERNED.
  */
 
-const COMING = 1
-const CLOSED = 3
+import { CapabilityState, capabilitySubject } from "$lib/utils/capability"
 
 export interface CapabilityRow {
   capability: number
@@ -26,15 +25,6 @@ export interface StateAlert {
   capability: number
   /** What is wrong, in the organiser's terms. */
   message: string
-}
-
-const LABELS: Partial<Record<number, string>> = {
-  1: "Registration",
-  2: "Proposing projects",
-  3: "Team preferences",
-  4: "Submissions",
-  5: "Voting",
-  6: "Results",
 }
 
 /**
@@ -59,10 +49,11 @@ export function stateAlerts(
     .filter(
       (c) =>
         c.openInPhaseId === currentPhaseId &&
-        (c.state === CLOSED || c.state === COMING),
+        (c.state === CapabilityState.CLOSED ||
+          c.state === CapabilityState.COMING),
     )
     .map((c) => ({
       capability: c.capability,
-      message: `${LABELS[c.capability] ?? "A capability"} is scheduled to open in the current phase but is switched off.`,
+      message: `${capabilitySubject(c.capability) ?? "A capability"} is scheduled to open in the current phase but is switched off.`,
     }))
 }
