@@ -54,6 +54,48 @@ if [ -n "$PORT" ] && [ -n "$PROD" ]; then
   exit 2
 fi
 
+# Make the RUNNING caddy match Caddyfile.tunnel, and prove one route did.
+#
+# caddy loads its config once, at container start. `docker compose up -d caddy`
+# does not re-read the file for an already-running container, and recreating it
+# is not an option on this compose project — `up -d` on anything that shares
+# `dev`'s config can recreate `dev`, which kills the whole stack inside it
+# (container trap 2). So a Caddyfile edit sits on disk, doing nothing, for as
+# long as the container happens to live: days, across many tunnels.
+#
+# That is not a hypothetical. The `/objects` route's `header_up Host` rewrite —
+# REQUIRED, because SigV4 signs the Host and the store recomputes the signature
+# over whatever arrives — was committed and correct while the running config had
+# no `headers` block at all. Every presigned UPLOAD through the public URL
+# answered 403 SignatureDoesNotMatch, and nothing else did: public reads are
+# unsigned, so every page and every image kept working. The report was "Storage
+# rejected the upload (403)" from someone using the app normally.
+#
+# Reload, then ASK CADDY what it is serving. Checking the file proves nothing
+# here — the file was already right. Verifying the reload took is the only part
+# of this that could have caught the bug.
+ensure_caddy_config() {
+  # MSYS_NO_PATHCONV: on a Git Bash host, /etc/caddy/Caddyfile is rewritten to
+  # C:/Program Files/Git/etc/caddy/Caddyfile before docker ever sees it, and the
+  # reload fails with a path nobody typed. Ignored everywhere else.
+  MSYS_NO_PATHCONV=1 docker compose -f "$COMPOSE_FILE" exec -T caddy \
+    caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || {
+    echo "warn: could not reload caddy's config; it is serving whatever it booted with" >&2
+    return 0
+  }
+  # The Host rewrite on the /objects route, read back out of the live config.
+  if docker compose -f "$COMPOSE_FILE" exec -T caddy \
+    sh -c 'wget -qO- http://localhost:2019/config/ 2>/dev/null || curl -sS http://localhost:2019/config/' 2>/dev/null |
+    tr -d ' \n' | grep -q '"strip_path_prefix":"/objects"'; then
+    if ! docker compose -f "$COMPOSE_FILE" exec -T caddy \
+      sh -c 'wget -qO- http://localhost:2019/config/ 2>/dev/null || curl -sS http://localhost:2019/config/' 2>/dev/null |
+      tr -d ' \n' | grep -q 'upstream.hostport'; then
+      echo "warn: caddy's /objects route has no Host rewrite — presigned UPLOADS" >&2
+      echo "      through the public URL will 403 while reads keep working." >&2
+    fi
+  fi
+}
+
 wait_for_url() { # container-name
   local name="$1" url=""
   for _ in $(seq 1 30); do
@@ -89,6 +131,9 @@ if [ -z "$PORT" ]; then
   docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
     bash -lc 'cd /workspaces/hackagon && bash .devcontainer/host-bridge.sh'
   docker compose -f "$COMPOSE_FILE" --profile tunnel up -d tunnel
+  # After caddy exists (compose starts it via depends_on), before anyone is
+  # handed the link: a running container keeps its boot-time config forever.
+  ensure_caddy_config
   name=$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q tunnel)
   url=$(wait_for_url "$name")
   if [ -n "$WITH_AUTH" ]; then

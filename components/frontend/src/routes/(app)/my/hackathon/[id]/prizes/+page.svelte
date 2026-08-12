@@ -62,9 +62,11 @@
                     name="image"
                     bind:value={row.image}
                     endpoint={mediaEndpoint}
+                    browseEndpoint={mediaEndpoint}
                     label="Picture"
                     id={`prize-image-${i}`}
-                    buttonLabel="Upload picture"
+                    buttonLabel="Choose picture"
+                    dialogTitle={`Prize ${i + 1}`}
                     fileLabel={`Choose a picture for prize ${i + 1}`}
                     allowUrl={false}
                     compact

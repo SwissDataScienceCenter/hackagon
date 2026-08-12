@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"path"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,11 +65,49 @@ const (
 	hackathonPrefix = "hackathons/"
 	userPrefix      = "users/"
 	teamPrefix      = "teams/"
+	// sitePrefix is the one prefix that is NOT an owner id, because platform
+	// pages have no owning entity — see authorizeUpload's SITE_MEDIA branch and
+	// docs/storage.md. Nothing purges it for the same reason.
+	sitePrefix = "site/"
 
 	// objectPurgeTimeout bounds the post-commit purge. The row is already
 	// gone; nobody waits minutes to be told the bucket was slow.
 	objectPurgeTimeout = 20 * time.Second
+
+	// How big a listing may be. The page size is a rendering preference, so an
+	// over-large ask is clamped rather than refused.
+	listDefaultPageSize = 60
+	listMaxPageSize     = 200
+	// listScanCap is how many KEYS one ListObjects request will read out of
+	// the store, across every prefix in the scope.
+	//
+	// It exists because the answer is ordered newest-first and S3 orders
+	// lexicographically by key — and every key here ends in a v4 uuid, so the
+	// store's order is noise. Sorting by date means holding the candidates, and
+	// holding candidates means capping how many. Reaching the cap is reported
+	// (`truncated`) rather than hidden: a gallery that silently stops is how
+	// someone concludes their upload failed.
+	listScanCap = 2000
+	// listObjectsTimeout bounds the whole scan. Up to listScanCap/1000 round
+	// trips to the store, and a person is waiting for the grid to appear.
+	listObjectsTimeout = 15 * time.Second
 )
+
+// listableExts is every extension the image allowlist accepts, as a set.
+//
+// Derived from imageTypes rather than restated, so a new image type cannot be
+// accepted by the uploader and then be invisible in the picker that is supposed
+// to offer it back.
+var listableExts = func() map[string]bool {
+	exts := make(map[string]bool)
+	for _, list := range imageTypes {
+		for _, ext := range list {
+			exts[ext] = true
+		}
+	}
+
+	return exts
+}()
 
 // imageTypes is the allowlist for everything that renders in an <img>.
 //
@@ -125,6 +165,12 @@ var uploadRules = map[ents.UploadKind]uploadRule{
 	},
 	ents.UploadKind_UPLOAD_KIND_SUBMISSION_ATTACHMENT: {
 		public: false, maxBytes: 50 * mib, contentTypes: attachmentTypes,
+	},
+	// The same job as HACKATHON_MEDIA — a picture dropped into prose from a
+	// markdown editor — so deliberately the same ceiling and the same allowlist.
+	// A platform page is world-readable, so its imagery has to be too.
+	ents.UploadKind_UPLOAD_KIND_SITE_MEDIA: {
+		public: true, maxBytes: 15 * mib, contentTypes: imageTypes,
 	},
 }
 
@@ -231,17 +277,30 @@ func (s *StorageService) authorizeUpload(
 	kind ents.UploadKind,
 	ownerID, ext string,
 ) (string, error) {
-	id, err := uuid.Parse(ownerID)
-	if err != nil {
-		return "", status.Errorf(codes.InvalidArgument, "invalid owner_id: %v", err)
-	}
 	name := uuid.New().String() + "." + ext
 
 	switch kind {
+	// A platform page (about, privacy, terms) belongs to no event and no person,
+	// so this is the one kind that reads NO owner id: there is nothing to name,
+	// no hackathon domain to scope a casbin check to, and no owner segment in the
+	// key. It authorizes exactly as every SitePageService mutation does — the
+	// GLOBAL Admin role. `owner_id` reaches neither the key nor the decision, so
+	// whatever a caller sends is inert.
+	case ents.UploadKind_UPLOAD_KIND_SITE_MEDIA:
+		if err := s.enforcer.RequireGlobalAdmin(ctx); err != nil {
+			return "", err
+		}
+
+		return sitePrefix + "media/" + name, nil
+
 	// Writing an event's imagery is writing the event: same permission as
 	// renaming it, because the logo is as much the event's identity.
 	case ents.UploadKind_UPLOAD_KIND_HACKATHON_LOGO,
 		ents.UploadKind_UPLOAD_KIND_HACKATHON_MEDIA:
+		id, err := ownerUUID(ownerID)
+		if err != nil {
+			return "", err
+		}
 		if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
 			return "", err
 		}
@@ -265,29 +324,12 @@ func (s *StorageService) authorizeUpload(
 	// so it authorizes on identity: you, or a global admin fixing someone's
 	// profile. There is no casbin object type for users.
 	case ents.UploadKind_UPLOAD_KIND_USER_AVATAR:
-		sub, _, err := m.RequireUser(ctx)
+		id, err := ownerUUID(ownerID)
 		if err != nil {
 			return "", err
 		}
-		owner, err := s.dbClient.User.Query().Where(entuser.IDEQ(id)).Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return "", status.Errorf(codes.NotFound, "user %s not found", id)
-			}
-			slog.Error("query user for upload", "err", err)
-
-			return "", status.Error(codes.Internal, "couldn't query database")
-		}
-		if owner.KeycloakID != sub {
-			admin, err := s.enforcer.IsGlobalAdmin(sub)
-			if err != nil {
-				slog.Error("check global admin", "err", err)
-
-				return "", status.Error(codes.Internal, "authorization error")
-			}
-			if !admin {
-				return "", status.Error(codes.PermissionDenied, "permission denied")
-			}
+		if err := s.authorizeAvatarOwner(ctx, id); err != nil {
+			return "", err
 		}
 
 		return userPrefix + id.String() + "/avatar/" + name, nil
@@ -296,6 +338,10 @@ func (s *StorageService) authorizeUpload(
 	// so a caller cannot file an attachment under a team that is not the one
 	// that owns the submission they were allowed to write.
 	case ents.UploadKind_UPLOAD_KIND_SUBMISSION_ATTACHMENT:
+		id, err := ownerUUID(ownerID)
+		if err != nil {
+			return "", err
+		}
 		subm, err := s.loadSubmission(ctx, id)
 		if err != nil {
 			return "", err
@@ -316,6 +362,52 @@ func (s *StorageService) authorizeUpload(
 	default:
 		return "", status.Error(codes.InvalidArgument, "unsupported upload kind")
 	}
+}
+
+// authorizeAvatarOwner allows a profile picture to be written by its owner, or
+// by a global admin fixing someone's profile. Its own function only to keep
+// authorizeUpload's branches readable at a glance.
+func (s *StorageService) authorizeAvatarOwner(ctx context.Context, id uuid.UUID) error {
+	sub, _, err := m.RequireUser(ctx)
+	if err != nil {
+		return err
+	}
+	owner, err := s.dbClient.User.Query().Where(entuser.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return status.Errorf(codes.NotFound, "user %s not found", id)
+		}
+		slog.Error("query user for upload", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if owner.KeycloakID == sub {
+		return nil
+	}
+
+	admin, err := s.enforcer.IsGlobalAdmin(sub)
+	if err != nil {
+		slog.Error("check global admin", "err", err)
+
+		return status.Error(codes.Internal, "authorization error")
+	}
+	if !admin {
+		return status.Error(codes.PermissionDenied, "permission denied")
+	}
+
+	return nil
+}
+
+// ownerUUID parses the owner id a kind names. Per-branch rather than up front,
+// because SITE_MEDIA names no owner at all and a parse before the switch made
+// "there is nothing to own" indistinguishable from "that is not a uuid".
+func ownerUUID(ownerID string) (uuid.UUID, error) {
+	id, err := uuid.Parse(ownerID)
+	if err != nil {
+		return uuid.Nil, status.Errorf(codes.InvalidArgument, "invalid owner_id: %v", err)
+	}
+
+	return id, nil
 }
 
 // loadSubmission fetches a submission with the team → project → hackathon chain
@@ -367,7 +459,8 @@ func (s *StorageService) CreateDownloadUrl(
 	// Public imagery is world-readable by bucket policy, so its stored path
 	// already works. Signing one would hand out an expiring bearer credential
 	// for something that needs none — refuse, and say where to look instead.
-	if strings.HasPrefix(key, hackathonPrefix) || strings.HasPrefix(key, userPrefix) {
+	if strings.HasPrefix(key, hackathonPrefix) || strings.HasPrefix(key, userPrefix) ||
+		strings.HasPrefix(key, sitePrefix) {
 		return nil, status.Error(codes.InvalidArgument,
 			"this object is public; read it at its stored path instead of signing a URL")
 	}
@@ -412,6 +505,258 @@ func (s *StorageService) CreateDownloadUrl(
 		DownloadUrl: downloadURL,
 		ExpiresAt:   timestamppb.New(expiresAt),
 	}, nil
+}
+
+// ListObjects reports what is already in one scope of the store, newest first,
+// so an image can be REUSED rather than uploaded a second time.
+//
+// The whole access-control surface of the read path is authorizeList, and its
+// rule is one sentence: **you may list a prefix exactly when you may write to
+// it.** Each scope's check is the check authorizeUpload already makes for the
+// kind that files objects there, so "may I see what is in here" and "may I put
+// something in here" cannot drift apart into two rules that disagree.
+//
+// Two prefixes are listable by nobody, whatever their role — `users/…/avatar/`
+// and `teams/…/submissions/`. See ObjectScope in the proto for why; the short
+// version is that one is other people's faces and the other is private by
+// bucket policy and would leak who submitted what through the keys alone.
+func (s *StorageService) ListObjects(
+	ctx context.Context,
+	req *msgs.ListObjectsRequest,
+) (*msgs.ListObjectsResponse, error) {
+	// Authorization FIRST — before the store-configured check, before the
+	// page-token parse, before any I/O.
+	//
+	// The order is the answer's meaning. "Who are you" and "is this server set
+	// up" are different questions, and answering the second one first tells an
+	// anonymous caller something about the deployment in place of the
+	// Unauthenticated they are owed. It also keeps a caller who may not list
+	// this scope from telling a malformed cursor from a well-formed one, and
+	// from costing the store a round trip.
+	prefixes, err := s.authorizeList(ctx, req.GetScope(), req.GetOwnerId())
+	if err != nil {
+		return nil, err
+	}
+
+	if s.store == nil {
+		return nil, status.Error(codes.Unavailable, "object storage is not configured")
+	}
+
+	offset, err := parsePageToken(req.GetPageToken())
+	if err != nil {
+		return nil, err
+	}
+
+	pageSize := int(req.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = listDefaultPageSize
+	}
+	if pageSize > listMaxPageSize {
+		pageSize = listMaxPageSize
+	}
+
+	scanCtx, cancel := context.WithTimeout(ctx, listObjectsTimeout)
+	defer cancel()
+
+	found, truncated, err := s.scanPrefixes(scanCtx, prefixes)
+	if err != nil {
+		slog.Error("list objects", "prefixes", prefixes, "err", err)
+
+		return nil, status.Error(codes.Unavailable, "couldn't read the object store")
+	}
+
+	sortNewestFirst(found)
+
+	if offset > len(found) {
+		offset = len(found)
+	}
+	end := offset + pageSize
+	if end > len(found) {
+		end = len(found)
+	}
+	next := ""
+	if end < len(found) {
+		next = strconv.Itoa(end)
+	}
+
+	objects := make([]*ents.StoredObject, 0, end-offset)
+	for _, info := range found[offset:end] {
+		objects = append(objects, s.storedObjectFromInfo(info))
+	}
+
+	return &msgs.ListObjectsResponse{
+		Objects:       objects,
+		NextPageToken: next,
+		Truncated:     truncated,
+	}, nil
+}
+
+// sortNewestFirst orders a listing the way a person opening a picker reads it:
+// "the one I just uploaded" is at the top.
+//
+// The key breaks ties, and that is not cosmetic. The cursor is an OFFSET into
+// this ordering, so two objects written in the same second that swapped places
+// between two requests would make the second page skip one and repeat another.
+// A store that reports no timestamp at all sorts oldest, which puts the objects
+// we know least about last rather than first.
+func sortNewestFirst(objects []objstore.ObjectInfo) {
+	sort.Slice(objects, func(i, j int) bool {
+		if !objects[i].LastModified.Equal(objects[j].LastModified) {
+			return objects[i].LastModified.After(objects[j].LastModified)
+		}
+
+		return objects[i].Key < objects[j].Key
+	})
+}
+
+// parsePageToken reads the cursor, which is a plain offset into the
+// newest-first ordering.
+//
+// An offset rather than the store's own continuation token, because the answer
+// is not in the store's order: it is re-sorted by date, so a token that means
+// "resume the S3 scan here" would resume a DIFFERENT sequence than the one the
+// caller was reading. The cost is that each page rescans, which is bounded by
+// listScanCap and is the reason that cap is small.
+func parsePageToken(token string) (int, error) {
+	if token == "" {
+		return 0, nil
+	}
+	offset, err := strconv.Atoi(token)
+	if err != nil || offset < 0 {
+		return 0, status.Error(codes.InvalidArgument, "invalid page_token")
+	}
+
+	return offset, nil
+}
+
+// authorizeList turns a scope into the prefixes it covers, and refuses first.
+// The prefixes are returned by this function and never accepted from a caller —
+// same shape as authorizeUpload returning the key.
+func (s *StorageService) authorizeList(
+	ctx context.Context,
+	scope ents.ObjectScope,
+	ownerID string,
+) ([]string, error) {
+	switch scope {
+	// The platform's own imagery: no owner to name, so it authorizes on the
+	// global Admin role — identical to UPLOAD_KIND_SITE_MEDIA and to every
+	// SitePageService mutation.
+	case ents.ObjectScope_OBJECT_SCOPE_SITE_MEDIA:
+		if err := s.enforcer.RequireGlobalAdmin(ctx); err != nil {
+			return nil, err
+		}
+
+		return []string{sitePrefix + "media/"}, nil
+
+	// Every listable prefix at once, for the platform's media library. It spans
+	// events the caller may have no part in, so it takes the only role that is
+	// entitled to look at all of them.
+	case ents.ObjectScope_OBJECT_SCOPE_ALL_MEDIA:
+		if err := s.enforcer.RequireGlobalAdmin(ctx); err != nil {
+			return nil, err
+		}
+
+		return []string{hackathonPrefix, sitePrefix + "media/"}, nil
+
+	// One event's own imagery — logo and page media alike, since the person
+	// picking a picture wants everything the event has. The permission is
+	// hackathon `write`, which is what uploading either of them takes.
+	case ents.ObjectScope_OBJECT_SCOPE_HACKATHON_MEDIA:
+		id, err := ownerUUID(ownerID)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
+			return nil, err
+		}
+		exists, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Exist(ctx)
+		if err != nil {
+			slog.Error("query hackathon for listing", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't query database")
+		}
+		if !exists {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", id)
+		}
+
+		return []string{hackathonPrefix + id.String() + "/"}, nil
+
+	case ents.ObjectScope_OBJECT_SCOPE_UNSPECIFIED:
+		fallthrough
+	default:
+		return nil, status.Error(codes.InvalidArgument, "unsupported object scope")
+	}
+}
+
+// scanPrefixes reads up to listScanCap keys across prefixes and keeps the ones
+// that are images. It reports whether the cap stopped it.
+//
+// The budget counts KEYS READ, not images kept: the cost being bounded is the
+// store round trips, and a prefix full of non-images would otherwise be scanned
+// without limit.
+func (s *StorageService) scanPrefixes(
+	ctx context.Context,
+	prefixes []string,
+) ([]objstore.ObjectInfo, bool, error) {
+	found := make([]objstore.ObjectInfo, 0, listDefaultPageSize)
+	scanned := 0
+
+	for _, prefix := range prefixes {
+		token := ""
+		for {
+			budget := listScanCap - scanned
+			if budget <= 0 {
+				return found, true, nil
+			}
+			batch, next, err := s.store.ListPrefix(ctx, prefix, token, budget)
+			if err != nil {
+				return nil, false, err
+			}
+			scanned += len(batch)
+			for _, info := range batch {
+				if isListableImage(info.Key) {
+					found = append(found, info)
+				}
+			}
+			if next == "" {
+				break
+			}
+			token = next
+		}
+	}
+
+	return found, false, nil
+}
+
+// isListableImage keeps a picture gallery to pictures. Every listable prefix is
+// an imagery prefix by policy, so this only ever filters out strays — the
+// bootstrap script's `_selftest/probe.txt` is the one that exists today — but a
+// gallery is a grid of <img> tags and a row that can only ever render broken is
+// worse than a row that is not there.
+func isListableImage(key string) bool {
+	ext := strings.ToLower(strings.TrimPrefix(path.Ext(key), "."))
+
+	return listableExts[ext]
+}
+
+// storedObjectFromInfo is the ent-to-proto mapper's equivalent for the store:
+// it maps what ListObjectsV2 reported onto the entity, and its one decision is
+// that `url` is the STABLE public path, never a presign. Every listable prefix
+// is public-read, so a signature would be an expiring bearer credential handed
+// out for something that needs none — sixty of them per gallery page, some
+// lapsing while the grid was still on screen.
+func (s *StorageService) storedObjectFromInfo(info objstore.ObjectInfo) *ents.StoredObject {
+	var lastModified *timestamppb.Timestamp
+	if !info.LastModified.IsZero() {
+		lastModified = timestamppb.New(info.LastModified)
+	}
+
+	return &ents.StoredObject{
+		Key:          info.Key,
+		Url:          s.store.PublicURL(info.Key),
+		SizeBytes:    info.SizeBytes,
+		LastModified: lastModified,
+	}
 }
 
 // checkKeyShape rejects the traversal and smuggling shapes before anything is

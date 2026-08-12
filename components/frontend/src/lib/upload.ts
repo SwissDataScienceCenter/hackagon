@@ -13,7 +13,9 @@
  *   - the bytes go STRAIGHT to the object store. The app server only ever sees
  *     the presign request (three numbers and two strings);
  *   - size and content type are conditions ON the presign, so an oversized or
- *     wrong-typed file is refused before a byte moves;
+ *     wrong-typed file is refused before a byte moves. A 403 from the store is
+ *     therefore never "the upload is too big" — it means a PROXY between here
+ *     and the store rewrote a signed header, and in practice that is the Host;
  *   - what comes back and gets stored is a root-relative PATH, never the
  *     presigned URL — presigns expire and are bearer credentials.
  */
@@ -44,11 +46,10 @@ export class UploadError extends Error {}
 /**
  * Re-encode to WebP in the browser, before anything is uploaded.
  *
- * Done here rather than server-side for two reasons: the bytes are already in
- * the page, and the presign's size and content-type are CONDITIONS on the
- * signature — converting after signing would guarantee a mismatch, and
- * converting on the server would mean sending the large original first, which
- * is what presigned uploads exist to avoid.
+ * Done here rather than server-side, and BEFORE the presign: the presign's size
+ * and content-type are CONDITIONS on the signature, so converting after signing
+ * would guarantee a mismatch. Converting on the server would mean sending the
+ * large original first, which is what presigned uploads exist to avoid.
  *
  * Returns the original untouched when conversion is not appropriate:
  *   - GIF, because a canvas keeps only the first frame and a silently

@@ -241,14 +241,22 @@ list_bucket() { # <bucket> [prefix]
 
 # Public-read on the imagery prefixes, private everywhere else.
 #
-# Decided in docs/storage.md: event logos, gallery photos and avatars already
-# render on pages that need no login, so serving them from a public prefix gives
-# stable URLs that never expire and can be cached — which is also what lets them
-# sit in the existing `logo` / `avatar_url` columns with no schema change.
+# Decided in docs/storage.md: event logos, gallery photos, avatars and platform
+# page imagery already render on pages that need no login, so serving them from
+# a public prefix gives stable URLs that never expire and can be cached — which
+# is also what lets them sit in the existing `logo` / `avatar_url` columns with
+# no schema change.
 #
 # Everything NOT listed here (team submissions, exports) stays private and is
 # reached through short-lived presigned GETs, minted only after casbin has
 # approved the read. Verify both halves with --selftest.
+#
+# ⚠ THIS LIST IS THE SECOND HALF OF `public: true` IN uploadRules
+# (components/backend/internal/service/storage_service.go). A kind marked public
+# there but missing a prefix here uploads perfectly and then answers 403 to
+# every read — the backend hands back a `publicUrl` it has no way to know is
+# unreadable. That happened when SITE_MEDIA landed; check_public_policy probes
+# every public prefix now so the next one cannot repeat it.
 put_public_policy() {
     local bucket="$1" body policy status
     body="$(tmpfile)"
@@ -265,7 +273,8 @@ put_public_policy() {
       "Action": "s3:GetObject",
       "Resource": [
         "arn:aws:s3:::${bucket}/hackathons/*",
-        "arn:aws:s3:::${bucket}/users/*"
+        "arn:aws:s3:::${bucket}/users/*",
+        "arn:aws:s3:::${bucket}/site/*"
       ]
     }
   ]
@@ -278,7 +287,7 @@ POLICY
     status="$(s3_request PUT "/${bucket}" "policy=" "$policy" "$body")"
     case "$status" in
     200 | 204)
-        echo "  policy   ${bucket} (public: hackathons/*, users/*)"
+        echo "  policy   ${bucket} (public: hackathons/*, users/*, site/*)"
         ;;
     *)
         echo "  FAILED   ${bucket} policy (HTTP ${status})" >&2
@@ -351,37 +360,48 @@ cmd_status() {
 # not be. Getting this backwards is silent — everything keeps working for
 # signed callers while the private half is world-readable — so it is asserted
 # rather than assumed.
+# EVERY public prefix is probed, not a representative one. `hackathons/*` alone
+# was the check for months and it could not have caught the fault it was written
+# to catch: when `site/*` was added to uploadRules but not to the policy above,
+# this reported a healthy split while every platform-page image 403'd.
+PUBLIC_PREFIXES="hackathons users site"
+PRIVATE_PREFIXES="teams"
+
 check_public_policy() {
-    local bucket="$1" pub priv pub_code priv_code
-    pub="hackathons/_selftest/public-probe.txt"
-    priv="teams/_selftest/private-probe.txt"
+    local bucket="$1" prefix key code failed=0
 
     echo "==> Policy: unsigned reads"
 
     # Real files, not process substitution: the payload is read TWICE — once to
     # hash it for the signature, once by curl to send it — and a pipe is empty
     # the second time, which uploads nothing and then 404s on read.
-    local pub_body priv_body
-    pub_body="$(tmpfile)"
-    priv_body="$(tmpfile)"
-    printf 'public
-' >"$pub_body"
-    printf 'private
-' >"$priv_body"
+    local probe_body
+    probe_body="$(tmpfile)"
+    printf 'probe
+' >"$probe_body"
 
-    s3_request PUT "/${bucket}/${pub}" "" "$pub_body" /dev/null >/dev/null
-    s3_request PUT "/${bucket}/${priv}" "" "$priv_body" /dev/null >/dev/null
+    for prefix in $PUBLIC_PREFIXES $PRIVATE_PREFIXES; do
+        key="${prefix}/_selftest/probe.txt"
+        s3_request PUT "/${bucket}/${key}" "" "$probe_body" /dev/null >/dev/null
+        code="$(curl -s -o /dev/null -w '%{http_code}' "${ENDPOINT}/${bucket}/${key}")"
+        s3_request DELETE "/${bucket}/${key}" "" "" /dev/null >/dev/null
 
-    pub_code="$(curl -s -o /dev/null -w '%{http_code}' "${ENDPOINT}/${bucket}/${pub}")"
-    priv_code="$(curl -s -o /dev/null -w '%{http_code}' "${ENDPOINT}/${bucket}/${priv}")"
+        case " $PUBLIC_PREFIXES " in
+        *" $prefix "*)
+            printf '  %-12s unsigned -> %s (want 200)\n' "${prefix}/*" "$code"
+            [ "$code" = "200" ] || failed=1
+            ;;
+        *)
+            printf '  %-12s unsigned -> %s (want 403)\n' "${prefix}/*" "$code"
+            [ "$code" = "200" ] && failed=1
+            ;;
+        esac
+    done
 
-    s3_request DELETE "/${bucket}/${pub}" "" "" /dev/null >/dev/null
-    s3_request DELETE "/${bucket}/${priv}" "" "" /dev/null >/dev/null
-
-    echo "  hackathons/* unsigned -> ${pub_code} (want 200)"
-    echo "  teams/*      unsigned -> ${priv_code} (want 403)"
-    if [ "$pub_code" != "200" ] || [ "$priv_code" = "200" ]; then
+    if [ "$failed" -ne 0 ]; then
         echo "FAIL — the public/private split is not what docs/storage.md says" >&2
+        echo "       (a prefix marked \`public: true\` in uploadRules must also be" >&2
+        echo "        listed in put_public_policy above)" >&2
         return 1
     fi
 }

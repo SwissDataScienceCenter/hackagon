@@ -15,6 +15,13 @@ import { SEED_HACKATHONS } from "../../personas.js"
 // assert two different things: that the control is reachable, and that the
 // bytes are really there afterwards.
 //
+// RE-SPECIFIED when the picker dialog landed. The file input is no longer on
+// the page: `ImageUploadField` now renders ONE button that opens a modal with
+// two ways in — upload (with drag and drop) and, where a listing scope exists,
+// whatever is already stored. So each test opens the dialog first. That extra
+// click is the point of the change and not overhead: the whole reason for the
+// dialog is that a bare file input could only ever offer one of those two.
+//
 // The last assertion in each test is the one that matters. A presign returning
 // a URL proves nothing — this exact path has previously stored images as
 // `application/x-www-form-urlencoded`, and uploaded nothing at all while
@@ -49,11 +56,25 @@ test.describe("profile picture", () => {
     // them — which is exactly how it failed the first time it was re-run.
     const before = await field.inputValue()
 
-    // The control is a <label> wrapping a hidden input — a styled button
-    // cannot open a file picker — so the input is set directly. Its accessible
-    // name deliberately shares no words with "Profile picture": a page-wide
-    // getByLabel would otherwise match the file control too and the field
-    // above would stop being addressable.
+    // One button opens the picker. Clicked, not `goto`-ed past: a control that
+    // renders is not the same claim as a control you can reach, which is the
+    // lesson the account menu taught this suite.
+    await page.getByRole("button", { name: "Upload a picture" }).click()
+
+    const dialog = page.getByRole("dialog")
+    await expect(dialog).toBeVisible()
+    // Upload-only here, and deliberately: NO listing scope covers
+    // `users/<id>/avatar/`, because that prefix is other people's faces. So the
+    // gallery half must NOT be offered — asserted alongside the positive below,
+    // since "no gallery tab" also passes on a dialog that failed to render.
+    await expect(dialog.getByRole("button", { name: "Choose from gallery" })).toHaveCount(0)
+    await expect(dialog.getByRole("region", { name: /drop an image here/i })).toBeVisible()
+
+    // The control inside the dialog is a <label> wrapping a hidden input — a
+    // styled button cannot open a file picker — so the input is set directly.
+    // Its accessible name deliberately shares no words with "Profile picture":
+    // a page-wide getByLabel would otherwise match the file control too and the
+    // field above would stop being addressable.
     await page
       .getByLabel("Choose an image file for your account")
       .setInputFiles({ name: "bob-face.png", mimeType: "image/png", buffer: PNG })
@@ -122,7 +143,7 @@ test.describe("event logo", () => {
     request,
   }) => {
     const id = await myHackathonId(page, SEED_HACKATHONS.h1.name)
-    await page.goto(`/my/hackathon/${id}/edit`)
+    await page.goto(`/my/hackathon/${id}/manage/edit`)
 
     const field = page.getByLabel("Logo (optional)")
     await expect(field).toBeVisible()
@@ -131,6 +152,15 @@ test.describe("event logo", () => {
     // /objects path" would pass without this test doing anything. Everything
     // below is stated against the value that was there BEFORE.
     const before = await field.inputValue()
+
+    await page.getByRole("button", { name: "Choose a logo" }).click()
+    const dialog = page.getByRole("dialog")
+    await expect(dialog).toBeVisible()
+    // This surface DOES have a listing scope — an event's own media — so both
+    // ways in are on offer. Its own test is below; here it is the control that
+    // proves the avatar dialog's missing tab above is a decision and not a
+    // dialog that simply never renders one.
+    await expect(dialog.getByRole("button", { name: "Choose from gallery" })).toBeVisible()
 
     const filePicker = page.getByLabel("Choose an image file for the event logo")
 
@@ -164,10 +194,11 @@ test.describe("event logo", () => {
     expect(stored).toContain(`/hackathons/${id}/logo/`)
 
     // Uploading stores the object; the form is what stores the PATH. Saving
-    // redirects to the dashboard, so come back and read it off the form.
+    // redirects to Manage Hackathon — the page this form is reached from, and no
+    // longer the dashboard — so come back and read it off the form.
     await page.getByRole("button", { name: "Save changes" }).click()
-    await page.waitForURL("**/dashboard")
-    await page.goto(`/my/hackathon/${id}/edit`)
+    await page.waitForURL(`**/my/hackathon/${id}/manage`)
+    await page.goto(`/my/hackathon/${id}/manage/edit`)
     await expect(page.getByLabel("Logo (optional)")).toHaveValue(stored)
     await expect(page.locator(`img[src="${stored}"]`).first()).toBeVisible()
 

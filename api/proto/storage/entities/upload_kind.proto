@@ -13,15 +13,23 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 //   HACKATHON_MEDIA       hackathons/<hackathon-id>/media/<uuid>.<ext>           public
 //   USER_AVATAR           users/<user-id>/avatar/<uuid>.<ext>                    public
 //   SUBMISSION_ATTACHMENT teams/<team-id>/submissions/<submission-id>/<uuid>.<ext>  private
+//   SITE_MEDIA            site/media/<uuid>.<ext>                                public
 //
 // `owner_id` is read against the kind: the hackathon id for the two hackathon
 // kinds, the platform user id for an avatar, and the SUBMISSION id for an
 // attachment — the team half of that key is looked up server-side, so a caller
 // cannot file an attachment under someone else's team.
+//
+// SITE_MEDIA reads NO owner id, and is the only kind that does not: a platform
+// page (about, privacy, terms) belongs to no event and no person, so there is
+// nothing to name and nothing to scope a casbin domain to. It authorizes on the
+// global Admin role instead — the same rule every SitePageService mutation
+// uses — and its key carries no owner segment at all.
 enum UploadKind {
   UPLOAD_KIND_UNSPECIFIED = 0;
   UPLOAD_KIND_HACKATHON_LOGO = 1;
   UPLOAD_KIND_HACKATHON_MEDIA = 2;
   UPLOAD_KIND_USER_AVATAR = 3;
   UPLOAD_KIND_SUBMISSION_ATTACHMENT = 4;
+  UPLOAD_KIND_SITE_MEDIA = 5;
 }

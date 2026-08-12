@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package storage.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/entities";
+
+// Which slice of the object store a listing covers.
+//
+// The scope is the ONLY placement input a client has, exactly as `UploadKind`
+// is for writes: the backend derives the key prefixes and the authorization
+// rule from it, and a client-supplied prefix is never trusted. There is no
+// "give me the bucket" scope, and adding one would be a mistake — see below.
+//
+//   HACKATHON_MEDIA  hackathons/<owner_id>/   everything one event has uploaded,
+//                                             logos and page imagery alike
+//   SITE_MEDIA       site/media/              the platform pages' imagery
+//   ALL_MEDIA        hackathons/ + site/media/  every listable prefix at once
+//
+// **The rule, stated once: you may LIST a prefix exactly when you may WRITE to
+// it.** Each scope's check is the same check `authorizeUpload` makes for the
+// kind that files objects there — hackathon `write` for the two hackathon
+// kinds, the global Admin role for SITE_MEDIA. That is deliberate and is the
+// same construction docs/storage.md uses for uploads: the answer to "may I see
+// what is in here?" is the same answer as "may I put something in here?" by
+// construction, rather than by two rules that have to be kept in agreement.
+//
+// **Two prefixes are absent on purpose, and they are the reason this is an enum
+// rather than a prefix string.**
+//
+//   users/<id>/avatar/  — other people's faces. Nothing in the product needs to
+//     enumerate them: an avatar is set from the profile that owns it, and a
+//     gallery exists to pick a picture to REUSE somewhere else, which is
+//     precisely what must not be easy to do with someone's photograph. A global
+//     admin fixing one profile still reaches it from that profile.
+//
+//   teams/<id>/submissions/  — private by bucket policy. Those objects have no
+//     stable readable path at all, so a picker row for one would be a broken
+//     image; and the KEYS alone would say which teams turned work in and how
+//     much of it, to anyone allowed to list any scope.
+enum ObjectScope {
+  OBJECT_SCOPE_UNSPECIFIED = 0;
+  // hackathons/<owner_id>/ — `owner_id` is the hackathon. Requires
+  // hackathon `write`, the permission that uploads a logo or page image.
+  OBJECT_SCOPE_HACKATHON_MEDIA = 1;
+  // site/media/ — reads no owner id, for the same reason
+  // UPLOAD_KIND_SITE_MEDIA does not: platform pages belong to no event and no
+  // person. Requires the global Admin role.
+  OBJECT_SCOPE_SITE_MEDIA = 2;
+  // Every listable prefix in one answer, for the platform's media library.
+  // Requires the global Admin role — it spans events the caller may have no
+  // part in, so it takes the only role that is allowed to.
+  OBJECT_SCOPE_ALL_MEDIA = 3;
+}

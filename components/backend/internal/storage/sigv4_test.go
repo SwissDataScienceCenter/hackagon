@@ -103,25 +103,17 @@ func TestCanonicalURIPathStyle(t *testing.T) {
 	}
 }
 
-func TestPresignPutIsStableAndSignsItsConditions(t *testing.T) {
+func TestPresignIsStableAndBindsItsSignedHeaders(t *testing.T) {
 	client := testClient(t)
 	key := "hackathons/abc/logo/x.webp"
 
 	headers := http.Header{}
 	headers.Set("Content-Type", "image/webp")
-	headers.Set("Content-Length", "98028")
 	at := time.Date(2026, 8, 7, 5, 14, 6, 0, time.UTC)
 
 	uri, query := client.presign(http.MethodPut, key, nil, headers, 15*time.Minute, at)
 	if uri != "/hackagon-dev/"+key {
 		t.Fatalf("uri = %q", uri)
-	}
-
-	// The size and the type are CONDITIONS, not decoration: if they ever drop
-	// out of SignedHeaders the store stops checking them and an oversized or
-	// mistyped upload succeeds.
-	if !strings.Contains(query, "X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost") {
-		t.Errorf("content-length and content-type must be signed; query = %q", query)
 	}
 	if !strings.Contains(query, "X-Amz-Expires=900") {
 		t.Errorf("missing expiry; query = %q", query)
@@ -134,12 +126,50 @@ func TestPresignPutIsStableAndSignsItsConditions(t *testing.T) {
 		t.Error("presign is not deterministic for a fixed clock")
 	}
 
-	// A different byte count must produce a different signature, or the
-	// condition is not actually bound to the value.
+	// A signed header must actually be BOUND to its value, or naming it in
+	// SignedHeaders is decoration.
 	other := headers.Clone()
-	other.Set("Content-Length", "98029")
+	other.Set("Content-Type", "image/png")
 	_, changed := client.presign(http.MethodPut, key, nil, other, 15*time.Minute, at)
 	if query == changed {
+		t.Error("signature did not change with a signed header's value")
+	}
+}
+
+// The signed-header SET is what an upload is committed to, and every proxy in
+// front of the store has to preserve all of it — so this asserts on PresignPut
+// itself, not on the low-level signer it happens to call.
+//
+// Both members are load-bearing: content-type decides how the object is served
+// back, and content-length is what refuses an oversized body before it moves.
+// Both have been verified to survive the vite proxy, caddy and Cloudflare's
+// edge, so dropping either to "make uploads work" is fixing the wrong end — a
+// 403 here is a hop rewriting a signed value, and it has always been the HOST.
+func TestPresignPutSignsSizeAndType(t *testing.T) {
+	client := testClient(t)
+
+	url, _ := client.PresignPut("hackathons/abc/logo/x.webp", "image/webp", 98028, 15*time.Minute)
+
+	if !strings.Contains(url, "X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost") {
+		t.Errorf("size and type must both be conditions on the URL; url = %q", url)
+	}
+
+	// And the size must be BOUND to its value, or naming it signs nothing.
+	// Through presign with a fixed clock rather than two PresignPut calls:
+	// X-Amz-Date has second granularity, so two live calls that straddle a
+	// second boundary differ for a legitimate reason — that test would pass a
+	// few thousand times and then fail once.
+	at := time.Date(2026, 8, 7, 5, 14, 6, 0, time.UTC)
+	headers := http.Header{}
+	headers.Set("Content-Type", "image/webp")
+	headers.Set("Content-Length", "98028")
+	_, a := client.presign(http.MethodPut, "hackathons/abc/logo/x.webp", nil, headers, 15*time.Minute, at)
+
+	bigger := headers.Clone()
+	bigger.Set("Content-Length", "98029")
+	_, b := client.presign(http.MethodPut, "hackathons/abc/logo/x.webp", nil, bigger, 15*time.Minute, at)
+
+	if a == b {
 		t.Error("signature did not change with the signed content-length")
 	}
 }

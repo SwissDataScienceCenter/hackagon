@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package storage.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/entities";
+
+// One object already in the store, as a listing reports it.
+//
+// Deliberately NOT a presigned URL. Every scope a listing can cover is
+// public-read by bucket policy, so `url` is the same stable, root-relative path
+// `CreateUploadUrl` handed back when the object was written — the value that
+// belongs in the database. Signing these would hand out a wall of bearer
+// credentials for objects that need none, and they would start expiring while
+// the gallery was still on screen.
+message StoredObject {
+  // The stable object key, e.g. `site/media/<uuid>.webp`.
+  string key = 1;
+  // Root-relative path the object is readable at: `/objects/<bucket>/<key>`.
+  // This is what a picker hands back to a form and what a form stores.
+  string url = 2;
+  int64 size_bytes = 3;
+  // When the object was last written. This is what a listing is ordered by —
+  // newest first — because "the one I just uploaded" is what a person is
+  // looking for. Zero when the store did not report a parseable timestamp.
+  google.protobuf.Timestamp last_modified = 4;
+}

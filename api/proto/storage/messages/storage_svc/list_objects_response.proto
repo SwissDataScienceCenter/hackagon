@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package storage.messages.storage_svc;
+
+import "storage/entities/stored_object.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
+
+message ListObjectsResponse {
+  // Newest first. Only objects whose extension is on the image allowlist are
+  // returned: every listable prefix is an imagery prefix, so a stray `.txt`
+  // left by a bootstrap probe is noise in a picture gallery and nothing else.
+  repeated storage.entities.StoredObject objects = 1;
+  // Pass back as `page_token` for the next page. Empty when this is the last
+  // page of what was scanned.
+  string next_page_token = 2;
+  // True when the scan hit its ceiling, so these objects are a window over an
+  // unknown remainder rather than everything in the scope. Say so on screen:
+  // an exhaustive-looking gallery that silently stops is how someone concludes
+  // their upload failed.
+  bool truncated = 3;
+}

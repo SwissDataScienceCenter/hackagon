@@ -621,6 +621,12 @@
 - [site/site_page_service.proto](#site_site_page_service-proto)
     - [SitePageService](#site-SitePageService)
   
+- [storage/entities/object_scope.proto](#storage_entities_object_scope-proto)
+    - [ObjectScope](#storage-entities-ObjectScope)
+  
+- [storage/entities/stored_object.proto](#storage_entities_stored_object-proto)
+    - [StoredObject](#storage-entities-StoredObject)
+  
 - [storage/entities/upload_kind.proto](#storage_entities_upload_kind-proto)
     - [UploadKind](#storage-entities-UploadKind)
   
@@ -635,6 +641,12 @@
   
 - [storage/messages/storage_svc/create_upload_url_response.proto](#storage_messages_storage_svc_create_upload_url_response-proto)
     - [CreateUploadUrlResponse](#storage-messages-storage_svc-CreateUploadUrlResponse)
+  
+- [storage/messages/storage_svc/list_objects_request.proto](#storage_messages_storage_svc_list_objects_request-proto)
+    - [ListObjectsRequest](#storage-messages-storage_svc-ListObjectsRequest)
+  
+- [storage/messages/storage_svc/list_objects_response.proto](#storage_messages_storage_svc_list_objects_response-proto)
+    - [ListObjectsResponse](#storage-messages-storage_svc-ListObjectsResponse)
   
 - [storage/storage_service.proto](#storage_storage_service-proto)
     - [StorageService](#storage-StorageService)
@@ -7635,6 +7647,109 @@ Admin role: there is no per-hackathon owner for site-wide content.
 
 
 
+<a name="storage_entities_object_scope-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/entities/object_scope.proto
+
+
+ 
+
+
+<a name="storage-entities-ObjectScope"></a>
+
+### ObjectScope
+Which slice of the object store a listing covers.
+
+The scope is the ONLY placement input a client has, exactly as `UploadKind`
+is for writes: the backend derives the key prefixes and the authorization
+rule from it, and a client-supplied prefix is never trusted. There is no
+&#34;give me the bucket&#34; scope, and adding one would be a mistake — see below.
+
+  HACKATHON_MEDIA  hackathons/&lt;owner_id&gt;/   everything one event has uploaded,
+                                            logos and page imagery alike
+  SITE_MEDIA       site/media/              the platform pages&#39; imagery
+  ALL_MEDIA        hackathons/ &#43; site/media/  every listable prefix at once
+
+**The rule, stated once: you may LIST a prefix exactly when you may WRITE to
+it.** Each scope&#39;s check is the same check `authorizeUpload` makes for the
+kind that files objects there — hackathon `write` for the two hackathon
+kinds, the global Admin role for SITE_MEDIA. That is deliberate and is the
+same construction docs/storage.md uses for uploads: the answer to &#34;may I see
+what is in here?&#34; is the same answer as &#34;may I put something in here?&#34; by
+construction, rather than by two rules that have to be kept in agreement.
+
+**Two prefixes are absent on purpose, and they are the reason this is an enum
+rather than a prefix string.**
+
+  users/&lt;id&gt;/avatar/  — other people&#39;s faces. Nothing in the product needs to
+    enumerate them: an avatar is set from the profile that owns it, and a
+    gallery exists to pick a picture to REUSE somewhere else, which is
+    precisely what must not be easy to do with someone&#39;s photograph. A global
+    admin fixing one profile still reaches it from that profile.
+
+  teams/&lt;id&gt;/submissions/  — private by bucket policy. Those objects have no
+    stable readable path at all, so a picker row for one would be a broken
+    image; and the KEYS alone would say which teams turned work in and how
+    much of it, to anyone allowed to list any scope.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| OBJECT_SCOPE_UNSPECIFIED | 0 |  |
+| OBJECT_SCOPE_HACKATHON_MEDIA | 1 | hackathons/&lt;owner_id&gt;/ — `owner_id` is the hackathon. Requires hackathon `write`, the permission that uploads a logo or page image. |
+| OBJECT_SCOPE_SITE_MEDIA | 2 | site/media/ — reads no owner id, for the same reason UPLOAD_KIND_SITE_MEDIA does not: platform pages belong to no event and no person. Requires the global Admin role. |
+| OBJECT_SCOPE_ALL_MEDIA | 3 | Every listable prefix in one answer, for the platform&#39;s media library. Requires the global Admin role — it spans events the caller may have no part in, so it takes the only role that is allowed to. |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_entities_stored_object-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/entities/stored_object.proto
+
+
+
+<a name="storage-entities-StoredObject"></a>
+
+### StoredObject
+One object already in the store, as a listing reports it.
+
+Deliberately NOT a presigned URL. Every scope a listing can cover is
+public-read by bucket policy, so `url` is the same stable, root-relative path
+`CreateUploadUrl` handed back when the object was written — the value that
+belongs in the database. Signing these would hand out a wall of bearer
+credentials for objects that need none, and they would start expiring while
+the gallery was still on screen.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  | The stable object key, e.g. `site/media/&lt;uuid&gt;.webp`. |
+| url | [string](#string) |  | Root-relative path the object is readable at: `/objects/&lt;bucket&gt;/&lt;key&gt;`. This is what a picker hands back to a form and what a form stores. |
+| size_bytes | [int64](#int64) |  |  |
+| last_modified | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | When the object was last written. This is what a listing is ordered by — newest first — because &#34;the one I just uploaded&#34; is what a person is looking for. Zero when the store did not report a parseable timestamp. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="storage_entities_upload_kind-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -7656,11 +7771,18 @@ docs/storage.md, &#34;Keys, not URLs&#34;). A client-supplied path is never trus
   HACKATHON_MEDIA       hackathons/&lt;hackathon-id&gt;/media/&lt;uuid&gt;.&lt;ext&gt;           public
   USER_AVATAR           users/&lt;user-id&gt;/avatar/&lt;uuid&gt;.&lt;ext&gt;                    public
   SUBMISSION_ATTACHMENT teams/&lt;team-id&gt;/submissions/&lt;submission-id&gt;/&lt;uuid&gt;.&lt;ext&gt;  private
+  SITE_MEDIA            site/media/&lt;uuid&gt;.&lt;ext&gt;                                public
 
 `owner_id` is read against the kind: the hackathon id for the two hackathon
 kinds, the platform user id for an avatar, and the SUBMISSION id for an
 attachment — the team half of that key is looked up server-side, so a caller
 cannot file an attachment under someone else&#39;s team.
+
+SITE_MEDIA reads NO owner id, and is the only kind that does not: a platform
+page (about, privacy, terms) belongs to no event and no person, so there is
+nothing to name and nothing to scope a casbin domain to. It authorizes on the
+global Admin role instead — the same rule every SitePageService mutation
+uses — and its key carries no owner segment at all.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
@@ -7669,6 +7791,7 @@ cannot file an attachment under someone else&#39;s team.
 | UPLOAD_KIND_HACKATHON_MEDIA | 2 |  |
 | UPLOAD_KIND_USER_AVATAR | 3 |  |
 | UPLOAD_KIND_SUBMISSION_ATTACHMENT | 4 |  |
+| UPLOAD_KIND_SITE_MEDIA | 5 |  |
 
 
  
@@ -7770,7 +7893,9 @@ actually sent, so a mismatch fails at the store.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | kind | [storage.entities.UploadKind](#storage-entities-UploadKind) |  |  |
-| owner_id | [string](#string) |  | The owning entity, read according to `kind` — see UploadKind. |
+| owner_id | [string](#string) |  | The owning entity, read according to `kind` — see UploadKind.
+
+A uuid WHEN PRESENT, and empty is allowed, because whether an owner exists at all depends on the kind: SITE_MEDIA files a platform page&#39;s imagery, and a platform page belongs to no event and no person. Expressing &#34;required unless kind == SITE_MEDIA&#34; here would need a message-level CEL rule restating the kind table, so the per-kind requirement stays in authorizeUpload, which is where the rest of that table already lives — the kinds that DO name an owner still answer InvalidArgument for an empty one. |
 | filename | [string](#string) |  | The user&#39;s own filename. Used only to cross-check the declared content_type; the stored key gets a fresh uuid and an extension derived from the content type, so nothing a user typed reaches the object store. |
 | content_type | [string](#string) |  |  |
 | size_bytes | [int64](#int64) |  | Exact byte length of the file about to be uploaded, not an estimate. |
@@ -7825,6 +7950,85 @@ This is the value that goes into Hackathon.logo / User.avatar_url: it never expi
 
 
 
+<a name="storage_messages_storage_svc_list_objects_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/messages/storage_svc/list_objects_request.proto
+
+
+
+<a name="storage-messages-storage_svc-ListObjectsRequest"></a>
+
+### ListObjectsRequest
+List what has already been uploaded into one scope.
+
+Nothing here names a prefix: the scope is the whole placement input, and the
+backend derives both the prefixes and the authorization rule from it — see
+ObjectScope, which also records the two prefixes no scope covers.
+
+The answer is bounded whatever is asked for. The store is scanned up to a
+fixed ceiling, the results are ordered newest-first, and `truncated` on the
+response says when the ceiling was reached — a bucket grows without limit and
+a listing that did not bound itself would eventually be the slowest request in
+the application.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| scope | [storage.entities.ObjectScope](#storage-entities-ObjectScope) |  |  |
+| owner_id | [string](#string) |  | The owning entity, read according to `scope` — the hackathon id for HACKATHON_MEDIA, and nothing at all for the other two.
+
+A uuid WHEN PRESENT, and empty is allowed, for the same reason CreateUploadUrlRequest allows it: whether an owner exists depends on the scope, and expressing &#34;required unless scope is …&#34; here would restate the scope table in CEL. The scope that DOES name an owner answers InvalidArgument for an empty one. |
+| page_size | [int32](#int32) |  | How many objects to return. 0 means the server&#39;s default (60); the ceiling is 200 and a larger request is clamped rather than refused, because the number is a rendering preference, not a permission. |
+| page_token | [string](#string) |  | Opaque cursor from a previous response&#39;s `next_page_token`. Empty starts at the newest object. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="storage_messages_storage_svc_list_objects_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## storage/messages/storage_svc/list_objects_response.proto
+
+
+
+<a name="storage-messages-storage_svc-ListObjectsResponse"></a>
+
+### ListObjectsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| objects | [storage.entities.StoredObject](#storage-entities-StoredObject) | repeated | Newest first. Only objects whose extension is on the image allowlist are returned: every listable prefix is an imagery prefix, so a stray `.txt` left by a bootstrap probe is noise in a picture gallery and nothing else. |
+| next_page_token | [string](#string) |  | Pass back as `page_token` for the next page. Empty when this is the last page of what was scanned. |
+| truncated | [bool](#bool) |  | True when the scan hit its ceiling, so these objects are a window over an unknown remainder rather than everything in the scope. Say so on screen: an exhaustive-looking gallery that silently stops is how someone concludes their upload failed. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="storage_storage_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -7852,10 +8056,18 @@ There is deliberately no Delete RPC. Objects are removed by prefix when their
 OWNER is deleted (HackathonService.Delete, UserService.DeleteAccount), which
 is what keeps deletion complete without a manifest of what belongs to whom.
 
+A single-object delete would need that manifest to be safe: an image can be
+referenced from any page&#39;s markdown, any event&#39;s logo column and any prize
+row, and nothing records which. Removing one would break those references
+silently — the row keeps its path and the page renders a hole — so the only
+deletion that exists is the one whose scope is an entity nobody is pointing
+at any more.
+
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | CreateUploadUrl | [messages.storage_svc.CreateUploadUrlRequest](#storage-messages-storage_svc-CreateUploadUrlRequest) | [messages.storage_svc.CreateUploadUrlResponse](#storage-messages-storage_svc-CreateUploadUrlResponse) |  |
 | CreateDownloadUrl | [messages.storage_svc.CreateDownloadUrlRequest](#storage-messages-storage_svc-CreateDownloadUrlRequest) | [messages.storage_svc.CreateDownloadUrlResponse](#storage-messages-storage_svc-CreateDownloadUrlResponse) |  |
+| ListObjects | [messages.storage_svc.ListObjectsRequest](#storage-messages-storage_svc-ListObjectsRequest) | [messages.storage_svc.ListObjectsResponse](#storage-messages-storage_svc-ListObjectsResponse) | What is already in the store, so a picker can offer it instead of a second copy of the same picture. Reads only; see ObjectScope for who may list what. |
 
  
 

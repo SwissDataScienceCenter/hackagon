@@ -22,7 +22,18 @@ message CreateUploadUrlRequest {
     (buf.validate.field).enum.not_in = 0
   ];
   // The owning entity, read according to `kind` — see UploadKind.
-  string owner_id = 2 [(buf.validate.field).string.uuid = true];
+  //
+  // A uuid WHEN PRESENT, and empty is allowed, because whether an owner exists
+  // at all depends on the kind: SITE_MEDIA files a platform page's imagery,
+  // and a platform page belongs to no event and no person. Expressing
+  // "required unless kind == SITE_MEDIA" here would need a message-level CEL
+  // rule restating the kind table, so the per-kind requirement stays in
+  // authorizeUpload, which is where the rest of that table already lives — the
+  // kinds that DO name an owner still answer InvalidArgument for an empty one.
+  string owner_id = 2 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
   // The user's own filename. Used only to cross-check the declared
   // content_type; the stored key gets a fresh uuid and an extension derived
   // from the content type, so nothing a user typed reaches the object store.

@@ -6,6 +6,8 @@ import "storage/messages/storage_svc/create_download_url_request.proto";
 import "storage/messages/storage_svc/create_download_url_response.proto";
 import "storage/messages/storage_svc/create_upload_url_request.proto";
 import "storage/messages/storage_svc/create_upload_url_response.proto";
+import "storage/messages/storage_svc/list_objects_request.proto";
+import "storage/messages/storage_svc/list_objects_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage";
 
@@ -19,7 +21,17 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 // There is deliberately no Delete RPC. Objects are removed by prefix when their
 // OWNER is deleted (HackathonService.Delete, UserService.DeleteAccount), which
 // is what keeps deletion complete without a manifest of what belongs to whom.
+//
+// A single-object delete would need that manifest to be safe: an image can be
+// referenced from any page's markdown, any event's logo column and any prize
+// row, and nothing records which. Removing one would break those references
+// silently — the row keeps its path and the page renders a hole — so the only
+// deletion that exists is the one whose scope is an entity nobody is pointing
+// at any more.
 service StorageService {
   rpc CreateUploadUrl(storage.messages.storage_svc.CreateUploadUrlRequest) returns (storage.messages.storage_svc.CreateUploadUrlResponse);
   rpc CreateDownloadUrl(storage.messages.storage_svc.CreateDownloadUrlRequest) returns (storage.messages.storage_svc.CreateDownloadUrlResponse);
+  // What is already in the store, so a picker can offer it instead of a second
+  // copy of the same picture. Reads only; see ObjectScope for who may list what.
+  rpc ListObjects(storage.messages.storage_svc.ListObjectsRequest) returns (storage.messages.storage_svc.ListObjectsResponse);
 }

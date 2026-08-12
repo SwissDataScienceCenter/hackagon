@@ -117,6 +117,11 @@
                      wrapper `<label>`: with the file control inside it, the
                      accessible name "Profile picture" would match two elements
                      and the field would stop being addressable. -->
+                <!-- No `browseEndpoint`, and that is a decision rather than an
+                     omission: NO listing scope covers `users/<id>/avatar/`, so
+                     there is nothing to browse here. A gallery exists to pick a
+                     picture to reuse, and other people's faces are precisely
+                     what must not be reusable. The picker is upload-only. -->
                 <ImageUploadField
                     name="avatarUrl"
                     bind:value={avatarUrl}

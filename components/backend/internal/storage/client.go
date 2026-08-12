@@ -1,13 +1,15 @@
 // Package storage talks to the S3-compatible object store that holds uploaded
-// files (docs/storage.md). It does two things and no more:
+// files (docs/storage.md). It does three things and no more:
 //
 //   - mint presigned URLs, so the browser uploads and downloads directly and
 //     the file never passes through the app server;
 //   - delete every object under a prefix, which is how a deleted hackathon or
-//     a deleted account takes its images with it.
+//     a deleted account takes its images with it;
+//   - list what is under a prefix, which is what lets a picker offer an image
+//     that is already there instead of a second copy of it.
 //
-// Bytes never flow through this package either — DeletePrefix is the only thing
-// here that opens a socket at all.
+// Bytes never flow through this package either — the listing and the delete are
+// the only things here that open a socket at all.
 package storage
 
 import (
@@ -163,6 +165,19 @@ func (c *Client) directURL(uri, rawQuery string) string {
 // Content-Type also has to be signed for a duller reason: whatever the client
 // sends is what the object is stored as, and a browser that sends none stores
 // images as application/x-www-form-urlencoded and then refuses to render them.
+//
+// Signing these makes every proxy between the browser and the store part of the
+// contract, and that is where uploads actually break. A 403
+// SignatureDoesNotMatch means some hop changed a signed value — in practice the
+// HOST header, which a reverse proxy passes through by default while the
+// signature names the store's own hostname. See the Host rewrite in
+// .devcontainer/Caddyfile.tunnel and `changeOrigin` in vite.config.ts; both
+// exist for this and their absence is invisible on public reads, which are
+// unsigned and keep working.
+//
+// (Content-Length has been verified to survive both of those proxies and
+// Cloudflare's edge, so it stays signed. It was once suspected of being
+// re-chunked away and is not.)
 func (c *Client) PresignPut(
 	key, contentType string,
 	sizeBytes int64,
@@ -204,17 +219,17 @@ func (c *Client) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 	deleted := 0
 	token := ""
 	for page := 0; page < listPageLimit; page++ {
-		keys, next, err := c.listObjects(ctx, prefix, token)
+		objects, next, err := c.ListPrefix(ctx, prefix, token, listPageSize)
 		if err != nil {
 			return deleted, err
 		}
-		for _, key := range keys {
+		for _, obj := range objects {
 			// Belt and braces: the store answered the prefix we asked for, but
 			// this is a delete loop and the cost of checking is nothing.
-			if !strings.HasPrefix(key, prefix) {
+			if !strings.HasPrefix(obj.Key, prefix) {
 				continue
 			}
-			if err := c.deleteObject(ctx, key); err != nil {
+			if err := c.deleteObject(ctx, obj.Key); err != nil {
 				return deleted, err
 			}
 			deleted++
@@ -229,25 +244,39 @@ func (c *Client) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 		ErrUnsafePrefix, listPageLimit, prefix)
 }
 
-// listBucketResult is the subset of the ListObjectsV2 response we read. The
-// XML carries sizes, etags and owners too; none of them matter to a purge.
-type listBucketResult struct {
-	XMLName               xml.Name `xml:"ListBucketResult"`
-	IsTruncated           bool     `xml:"IsTruncated"`
-	NextContinuationToken string   `xml:"NextContinuationToken"`
-	Contents              []struct {
-		Key string `xml:"Key"`
-	} `xml:"Contents"`
+// ObjectInfo is one row of a listing: what the store knows about an object
+// without fetching it. There is no content type here, and that is the store's
+// limitation rather than a choice — ListObjectsV2 does not report one, and a
+// HEAD per object to find out would turn one request into hundreds.
+type ObjectInfo struct {
+	Key       string
+	SizeBytes int64
+	// LastModified is the zero time when the store reported a timestamp this
+	// package could not parse. Callers sort by it, so a zero sorts oldest
+	// rather than crashing a comparison.
+	LastModified time.Time
 }
 
-func (c *Client) listObjects(
+// ListPrefix returns up to maxKeys objects under prefix, plus the continuation
+// token for the next page ("" when there is none).
+//
+// Unlike DeletePrefix this does NOT insist on a trailing slash: an empty prefix
+// is a legitimate whole-bucket listing, and the destructive-mistake this guards
+// against there simply does not exist for a read. The BOUND is the caller's
+// business — nothing here loops.
+func (c *Client) ListPrefix(
 	ctx context.Context,
 	prefix, token string,
-) ([]string, string, error) {
+	maxKeys int,
+) ([]ObjectInfo, string, error) {
+	if maxKeys <= 0 || maxKeys > listPageSize {
+		maxKeys = listPageSize
+	}
+
 	query := url.Values{}
 	query.Set("list-type", "2")
 	query.Set("prefix", prefix)
-	query.Set("max-keys", strconv.Itoa(listPageSize))
+	query.Set("max-keys", strconv.Itoa(maxKeys))
 	if token != "" {
 		query.Set("continuation-token", token)
 	}
@@ -262,9 +291,13 @@ func (c *Client) listObjects(
 		return nil, "", fmt.Errorf("parse ListObjectsV2 response: %w", err)
 	}
 
-	keys := make([]string, 0, len(result.Contents))
+	objects := make([]ObjectInfo, 0, len(result.Contents))
 	for _, item := range result.Contents {
-		keys = append(keys, item.Key)
+		objects = append(objects, ObjectInfo{
+			Key:          item.Key,
+			SizeBytes:    item.Size,
+			LastModified: parseListTime(item.LastModified),
+		})
 	}
 
 	next := ""
@@ -272,7 +305,49 @@ func (c *Client) listObjects(
 		next = result.NextContinuationToken
 	}
 
-	return keys, next, nil
+	return objects, next, nil
+}
+
+// listBucketResult is the subset of the ListObjectsV2 response we read. The
+// XML carries etags and owners too; neither matters to a purge or a gallery.
+type listBucketResult struct {
+	XMLName               xml.Name `xml:"ListBucketResult"`
+	IsTruncated           bool     `xml:"IsTruncated"`
+	NextContinuationToken string   `xml:"NextContinuationToken"`
+	Contents              []struct {
+		Key string `xml:"Key"`
+		// Kept as a string and parsed by hand rather than as a time.Time:
+		// encoding/xml accepts ONLY RFC 3339, and a store that answers in any
+		// other shape would fail the whole unmarshal — losing the keys too,
+		// over a field that is only used to sort. See parseListTime.
+		LastModified string `xml:"LastModified"`
+		Size         int64  `xml:"Size"`
+	} `xml:"Contents"`
+}
+
+// listTimeFormats are the shapes an S3 listing has been seen to use. The first
+// is what the specification says and what both S3 and rustfs emit; the rest are
+// there so an unusual store degrades to "no timestamp" for one object instead
+// of an error for the request.
+var listTimeFormats = []string{
+	time.RFC3339Nano,
+	time.RFC3339,
+	"2006-01-02T15:04:05.000Z",
+	"2006-01-02T15:04:05Z",
+}
+
+func parseListTime(value string) time.Time {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}
+	}
+	for _, layout := range listTimeFormats {
+		if t, err := time.Parse(layout, value); err == nil {
+			return t
+		}
+	}
+
+	return time.Time{}
 }
 
 func (c *Client) deleteObject(ctx context.Context, key string) error {

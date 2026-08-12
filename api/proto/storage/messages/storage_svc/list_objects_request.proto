@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package storage.messages.storage_svc;
+
+import "buf/validate/validate.proto";
+import "storage/entities/object_scope.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/messages/storage_svc";
+
+// List what has already been uploaded into one scope.
+//
+// Nothing here names a prefix: the scope is the whole placement input, and the
+// backend derives both the prefixes and the authorization rule from it — see
+// ObjectScope, which also records the two prefixes no scope covers.
+//
+// The answer is bounded whatever is asked for. The store is scanned up to a
+// fixed ceiling, the results are ordered newest-first, and `truncated` on the
+// response says when the ceiling was reached — a bucket grows without limit and
+// a listing that did not bound itself would eventually be the slowest request in
+// the application.
+message ListObjectsRequest {
+  storage.entities.ObjectScope scope = 1 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+  // The owning entity, read according to `scope` — the hackathon id for
+  // HACKATHON_MEDIA, and nothing at all for the other two.
+  //
+  // A uuid WHEN PRESENT, and empty is allowed, for the same reason
+  // CreateUploadUrlRequest allows it: whether an owner exists depends on the
+  // scope, and expressing "required unless scope is …" here would restate the
+  // scope table in CEL. The scope that DOES name an owner answers
+  // InvalidArgument for an empty one.
+  string owner_id = 2 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // How many objects to return. 0 means the server's default (60); the ceiling
+  // is 200 and a larger request is clamped rather than refused, because the
+  // number is a rendering preference, not a permission.
+  int32 page_size = 3 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 1000
+  }];
+  // Opaque cursor from a previous response's `next_page_token`. Empty starts at
+  // the newest object.
+  string page_token = 4 [(buf.validate.field).string.max_len = 64];
+}
