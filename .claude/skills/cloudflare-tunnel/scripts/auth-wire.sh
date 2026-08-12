@@ -46,6 +46,10 @@ FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml
 BACKEND_LOCAL="$ROOT_DIR/components/backend/data/test/config/config.local.yaml"
 OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
 PROD_SERVE="$HERE/prod-serve.sh"
+# The e2e harness's own :8081 server. Same staleness as :8082 — it reads the
+# issuer once at boot — but it belongs to the other skill, so it is optional
+# here: a machine without the e2e skill still restores correctly.
+E2E_PROD_FRONTEND="$ROOT_DIR/.claude/skills/hackathon-e2e/scripts/prod-frontend.sh"
 KC="http://localhost:8180"
 REALM="hackagon"
 CLIENT="hackagon-frontend"
@@ -147,6 +151,45 @@ restart_prod_server() { # <origin>
       "the old issuer — run prod-serve.sh start $origin --no-build" >&2
 }
 
+# Does the RUNNING backend accept a token minted by the LOCALHOST issuer?
+#
+# The overlay says what the configuration intends; this says what the process is
+# actually doing, and the two disagree whenever a process outlived the config it
+# booted with. That is not a corner case: `run.sh` calls `--restore` on the way
+# into every suite, so a backend started while a tunnel was wired reaches the
+# tests still validating against the tunnel issuer — and the old code skipped
+# the restart precisely BECAUSE the overlay was already clean, i.e. it was most
+# likely to do nothing exactly when the repair was needed.
+#
+# Symptom when it happens: all four auth setups time out and every spec after
+# them is "did not run", which reads like a broken product and is a stale
+# process. It has cost three separate debugging sessions.
+#
+# Asking the far end, not reading the file, is the same lesson the replay suite
+# learned: "the server accepted it" and "the server can use it" are different
+# claims, and only one of them can be read off a config file.
+backend_accepts_localhost() {
+  local token
+  token="$(curl -s --max-time 10 \
+    -X POST "http://localhost:8180/realms/hackagon/protocol/openid-connect/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d client_id=hackagon-backend -d username=alice -d password=aliceandbob \
+    -d grant_type=password -d scope="openid profile" 2>/dev/null |
+    jq -r '.access_token // empty' 2>/dev/null)"
+
+  # No token means Keycloak is down or unreachable, which is a different
+  # problem: answer "fine" so this never restarts the backend for a reason that
+  # has nothing to do with the issuer.
+  if [ -z "$token" ]; then
+    echo "note: could not mint a localhost token (is Keycloak up?) — skipping" \
+      "the backend issuer check" >&2
+    return 0
+  fi
+
+  grpcurl -plaintext -H "authorization: Bearer $token" -max-time 10 \
+    localhost:3000 user.UserService/WhoAmI >/dev/null 2>&1
+}
+
 if [ "${1:-}" = "--restore" ]; then
   # Drop any tunnel-hostname pin left in /etc/hosts (see wire mode below).
   sudo sed -i "/# hackagon-tunnel/d" /etc/hosts 2>/dev/null || true
@@ -175,7 +218,34 @@ if [ "${1:-}" = "--restore" ]; then
     # Note the wording: config.local.yaml may well still EXIST holding somebody
     # else's key (session replay writes `replay` into it). What matters here is
     # only that no `oidc` block was there to remove.
-    echo "Nothing to restore (no oidc overlay — already on localhost)."
+    #
+    # And that says nothing about the PROCESSES. Ask one before claiming it.
+    if backend_accepts_localhost; then
+      echo "Nothing to restore (no oidc overlay, and the backend takes localhost tokens)."
+    else
+      echo "No oidc overlay, but the backend REJECTS a localhost token — it is"
+      echo "still running with an issuer it booted with. Repairing:"
+      # The realm client's redirect URIs are patched by wire mode and are just
+      # as capable of outliving the overlay, so reset them on this path too.
+      patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
+        echo "warn: could not reset realm client (is Keycloak up?)" >&2
+      restart_and_wait
+      # The built server on :8081 reads its issuer once at boot as well, and
+      # `prod-frontend.sh ensure` leaves a running one alone — so a stale one
+      # survives every restart that does not explicitly stop it first.
+      if [ -x "$E2E_PROD_FRONTEND" ]; then
+        bash "$E2E_PROD_FRONTEND" stop >/dev/null 2>&1 || true
+        bash "$E2E_PROD_FRONTEND" ensure >/dev/null 2>&1 ||
+          echo "warn: could not restart the :8081 built server; logins there may" \
+            "still fail — run prod-frontend.sh stop && … ensure" >&2
+      fi
+      if backend_accepts_localhost; then
+        echo "OIDC repaired: the backend now takes localhost tokens."
+      else
+        echo "warn: the backend STILL rejects a localhost token after a restart." >&2
+        echo "      Check components/backend/data/test/config/ for a stray issuer." >&2
+      fi
+    fi
   fi
   exit 0
 fi

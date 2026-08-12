@@ -289,6 +289,43 @@ these are now impossible-by-construction rather than fixed case by case.
   `comment` and had never executed. The loader now keeps every line with an
   `id`, throws on a line that is neither banner nor action, cross-checks the
   count against a textual scan of the raw file, and rejects duplicate ids.
+- **An `or` whose third outcome nobody enumerated — OPEN.**
+  `09-browse-and-join` asserts "either the registration form opens, or the event
+  asks nothing and the dashboard just updates". The join being **REFUSED**
+  satisfies the else-branch too, and that is what happens today: charles's target
+  is `h2`, whose `register` capability is disabled, so the spec drives a Join that
+  always fails and reports green (confirmed in the DB — charles still has exactly
+  one participant row after many runs). Its else-branch must assert the
+  `joinNotice`/badge, or assert the refusal explicitly. A disjunction is only a
+  test if every branch is a SUCCESS; one that also accepts the failure is a
+  tautology. Same file, lines 57-61, plus `05-new-user-funnel:31`: both click
+  "the first Join button on the dashboard", which is the fixture's event only
+  because `just db::seed` ran before the SDSC seeding (`List` orders
+  `created_at ASC`).
+- **A fixture constant that assumed the fixture was the whole database.**
+  `03-dashboard` hard-coded `connectedCount: 3`; the instance also carries the 6
+  SDSC editions, and `HackathonService.Create` enrolls its creator, so
+  `hackagon-admin` is in 9. The two "lists other public hackathons" tests were
+  worse: their whole assertion was the empty-state sentence, i.e. a claim about
+  the fixture's SIZE rather than about the page. Replaced with self-consistent
+  properties — the count the page states equals the rows it renders (a mismatch
+  is a real bug class the constant could never see), and the offered set is
+  checked in both directions against membership with `joined > 0` as the control.
+  Populated instances are a supported state; a spec that only passes on an empty
+  one is coupled to the seeder, not to the product.
+- **A helper that no-ops when its subject is absent.** The mobile sweeps
+  iterated `["header", "footer", BANNER]` and called
+  `expectNoOverlap`/`expectNoClippedText` on each — and both helpers `return`
+  early when `document.querySelector(scope)` is null. The `(app)` route group
+  shipped with NO footer on 37 of 42 routes (the `5551b8d` split gave it its own
+  copy of the shell, minus `AppFooter`), so two checks per route measured an
+  element that did not exist and passed. Worse than a missing test, because the
+  route list *named* the thing: coverage looked complete. A guard clause for "not
+  applicable here" and an assertion are the same shape from the outside — so a
+  sweep over a fixed list of chrome must assert PRESENCE separately from
+  geometry, and the geometry helper's early return must be reserved for scopes
+  that are legitimately optional. This is the same family as the vacuous zero
+  and the unprobed gate: absence agreeing with everything.
 - **A field that moved out from under a check.** `usersLackNames` read
   `u.name`; the User proto has `username` and `displayName` and no `name`, so
   every user mapped to undefined and "the deleted profiles are gone" passed no
@@ -535,6 +572,41 @@ plain vite tunnel, which is a supported mode.
 `devcontainer-up/scripts/start.sh` is the one-command path — container → stack
 → (optionally) tunnel with auth — and it finishes by driving a real login
 round-trip, because serving HTML proves nothing about OIDC.
+
+**A container keeps its boot-time config forever, and the file on disk lies about
+what is running.** `caddy` reads `Caddyfile.tunnel` once, when its container
+starts. `docker compose up -d caddy` does not re-read it for a running
+container, and recreating it is not available here (trap 2 — it can take `dev`
+and the whole stack with it). So a correct, committed Caddyfile can sit next to
+a running config that does not match it, for as long as that container lives.
+
+That shipped a real outage. The `/objects` route's `header_up Host
+{upstream_hostport}` — REQUIRED, because SigV4 signs the Host and the store
+recomputes the signature over whatever arrives — was present and correct in the
+file and **absent from the running config**. Every presigned UPLOAD through the
+public URL answered `403 SignatureDoesNotMatch`; nothing else did, because
+public reads are unsigned. The symptom reaching a person was "Storage rejected
+the upload (403)" on an app whose every page and image worked.
+
+`cloudflare-tunnel/scripts/up.sh` now calls `ensure_caddy_config`: reload, then
+**ask the admin API what is live** (`localhost:2019/config/`) and warn when the
+`/objects` route has no Host rewrite. Checking the file would have proven
+nothing — the file was already right. (`MSYS_NO_PATHCONV=1` on that reload: from
+Git Bash, `/etc/caddy/Caddyfile` is rewritten to
+`C:/Program Files/Git/etc/caddy/Caddyfile` before docker sees it.)
+
+`tests/tunnel/upload.spec.ts` is the independent check, and its existence is the
+lesson: **`smoke/16-image-upload` passed throughout, because it uploads over
+localhost.** A suite that only ever exercises the local path cannot see a fault
+that lives in a proxy only the public path traverses. The spec was verified by
+stripping the rewrite from the running config and watching it fail with the
+user's exact 403.
+
+Two hypotheses were wrong on the way, both worth not re-running: signed
+`content-length` being re-chunked away by a proxy (it survives caddy AND
+Cloudflare — measured), and the browser converting to WebP after presigning
+(`uploadImage` converts first). A 403 from the store is a signed header being
+rewritten in flight, and it has always been the Host.
 
 ⚠ **Do not forward `X-Forwarded-Proto: https` to the frontend** in
 `Caddyfile.tunnel` (Keycloak's route needs it; the frontend's must not have

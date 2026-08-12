@@ -106,7 +106,22 @@ export async function contextFor(
   return browser.newContext({ storageState: storageStatePath(key) })
 }
 
-/** New anonymous browser context (no cookies). */
+/**
+ * New anonymous browser context — genuinely no cookies.
+ *
+ * The empty storage state is REQUIRED, not tidiness. `browser.newContext()`
+ * inherits the enclosing `test.use({ storageState })`, so a bare call inside a
+ * describe that sets a persona returned that PERSONA's session while being
+ * named "anonymous". Measured: inside
+ * `test.use({ storageState: storageStatePath("admin") })` a bare context came
+ * back holding `authjs.session-token`, and an "anonymous" POST to a
+ * global-admin-only endpoint was answered with a valid presign — a hole that
+ * did not exist, asserted by a test that could not have seen one that did.
+ *
+ * `storageState: undefined` does NOT work here: an undefined option reads as
+ * "not specified" and the inherited value survives the merge. An explicit empty
+ * state is the only spelling that overrides it.
+ */
 export async function anonymousContext(browser: Browser): Promise<BrowserContext> {
-  return browser.newContext()
+  return browser.newContext({ storageState: { cookies: [], origins: [] } })
 }
