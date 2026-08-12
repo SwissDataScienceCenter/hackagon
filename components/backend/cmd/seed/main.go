@@ -722,6 +722,15 @@ func seedH2(
 	// the case an upcoming hackathon cannot exercise.
 	if err := seedCapabilities(ctx, db, h, admin,
 		[]capability.Capability{
+			// Register is ON, and this is the fixture's ONLY event a non-member
+			// can join: alice owns h1 and bob and charles are already in it, h3
+			// is private and past, and the archive editions are finished. With
+			// it off, `Join` answered FailedPrecondition to every attempt — so
+			// 05-new-user-funnel and 09-browse-and-join clicked a button that
+			// could not work, and passed anyway because neither asserted that
+			// the join had LANDED. Late-closing registration is a legitimate
+			// state, but it cannot be the state of the only joinable event.
+			capability.Register,
 			capability.ProposeProjects,
 			capability.SetTeamPreferences,
 			capability.CreateProjectSubmissions,

@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { joinIsOffered } from "$lib/server/hackathon/joinOffer"
 import { fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -25,7 +26,12 @@ export const load: PageServerLoad = async (event) => {
   return {
     session: event.locals.session,
     myHackathons: myResult.hackathons,
-    otherHackathons: allResult.hackathons.filter((h) => !myIds.has(h.id)),
+    // `canJoin` per row, from the `capabilities` and `status` List already
+    // returns — see joinOffer.ts. Six finished events used to render a Join
+    // button that could only ever answer FailedPrecondition.
+    otherHackathons: allResult.hackathons
+      .filter((h) => !myIds.has(h.id))
+      .map((h) => ({ ...h, canJoin: joinIsOffered(h) })),
     isGlobalAdmin,
   }
 }

@@ -240,17 +240,42 @@ for (const persona of ALL_PERSONAS) {
         "a hackathon you are already in must never be offered to join",
       ).toEqual([])
 
+      // Every row must ANSWER: a Join button, or the reason there is none.
+      //
+      // Not "every row has a Join button" any more. The dashboard gates that
+      // button on the `capabilities` and `status` List returns, so a finished
+      // event — of which a populated instance has plenty — correctly has none.
+      // But "no button" and "the control failed to render" look identical from
+      // outside, which is why the closed case has to say something rather than
+      // simply be missing.
       for (const id of offered) {
-        // The BUTTON, not the row that contains it: a row whose hackathon is
+        // The CONTROL, not the row that contains it: a row whose hackathon is
         // named "…Join…" would satisfy a text match on the container.
+        const rowEl = others
+          .locator(`a[href="/hackathon/${id}"]`)
+          .locator("xpath=../..")
+        const join = rowEl.getByRole("button", { name: "Join" })
+        const closed = rowEl.getByText("Registration closed")
+
+        const hasJoin = (await join.count()) > 0
+
         await expect(
-          others
-            .locator(`a[href="/hackathon/${id}"]`)
-            .locator("xpath=../..")
-            .getByRole("button", { name: "Join" }),
-          `the row for ${id} should carry its own Join button`,
+          hasJoin ? join : closed,
+          `the row for ${id} offers neither a Join button nor a reason it cannot ` +
+            `be joined — a row that silently loses its control is indistinguishable ` +
+            `from one that failed to render`,
         ).toBeVisible()
       }
+
+      // No blanket "at least one row is joinable" control here, deliberately.
+      // The positive control is the fixture loop above: for a persona who has
+      // an unjoined fixture event, that event MUST carry a Join button, which
+      // is what stops the loop below agreeing with a section nobody can join
+      // anything from. For a persona who has already joined everything
+      // joinable — alice and bob — every remaining row is a finished archive
+      // edition, and "all closed" is then the correct answer rather than a
+      // fault. Asserting otherwise made this test demand a fixture state that
+      // contradicts `expected.dashboard.others` being empty.
     })
   })
 }

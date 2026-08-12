@@ -50,26 +50,59 @@ test.describe("browse hackathons", () => {
 test.describe("joining an event that asks questions", () => {
   test.use({ storageState: storageStatePath("charles") })
 
-  test("lands on the organizer's registration form", async ({ page }) => {
+  test("lands on the organizer's registration form, or actually joins", async ({
+    page,
+  }) => {
     await page.goto("/dashboard")
     await page.waitForLoadState("networkidle")
 
+    // Not `test.skip` on zero. A skip here fired on EVERY run once the
+    // instance carried finished events, and a suite cannot tell "nothing to
+    // join" from "the gate is too strict" — both render zero buttons. The
+    // dashboard now offers Join only where it can succeed, so zero is a
+    // failure of the fixture or of the gate, and either deserves saying.
     const joinable = page.getByRole("button", { name: "Join" })
-    const count = await joinable.count()
-    test.skip(count === 0, "charles has already joined everything in this fixture")
+    await expect(
+      joinable.first(),
+      "the dashboard offers charles no Join button at all — either every " +
+        "public event refuses registration, or joinIsOffered() is too strict. " +
+        "This test proves nothing without one.",
+    ).toBeVisible()
 
     await joinable.first().click()
-
-    // Joining is only half of signing up when an event asks for an
-    // affiliation or a code-of-conduct consent. Either the form opens, or the
-    // event asks nothing and the dashboard just updates — both are correct,
-    // but a form that exists must never be skipped.
     await page.waitForLoadState("networkidle")
+
+    // Joining is only half of signing up when an event asks for an affiliation
+    // or a code-of-conduct consent. Either the form opens, or the event asks
+    // nothing and the join completes — both are correct.
+    //
+    // ⚠ The else-branch must assert a POSITIVE success signal. It used to
+    // assert only `toHaveURL(/\/dashboard/)`, which a REFUSED join satisfies
+    // just as well — and that is what was happening: charles's target had its
+    // `register` capability disabled, so this spec drove a join that always
+    // failed and reported green for months. A disjunction is only a test when
+    // every branch is a success; one that also accepts the failure is a
+    // tautology. The two outcomes are distinguishable because the action
+    // renders them differently: role="status" on success, role="alert" on
+    // refusal.
     if (page.url().includes("/register/")) {
-      await expect(page.getByRole("heading", { name: /Registration|Your registration/ })).toBeVisible()
-      await expect(page.getByRole("button", { name: /Submit registration|Save changes/ })).toBeVisible()
+      await expect(
+        page.getByRole("heading", { name: /Registration|Your registration/ }),
+      ).toBeVisible()
+      await expect(
+        page.getByRole("button", { name: /Submit registration|Save changes/ }),
+      ).toBeVisible()
     } else {
       await expect(page).toHaveURL(/\/dashboard/)
+      await expect(
+        page.getByRole("status"),
+        "a join that asks nothing must SAY it landed — \"you're in\", or which " +
+          "place in the queue. Without this the branch passes on a refusal.",
+      ).toBeVisible()
+      await expect(
+        page.getByRole("alert"),
+        "the join was refused; the button should not have been offered",
+      ).toHaveCount(0)
     }
   })
 })

@@ -23,6 +23,16 @@
         /** The event's cover, shown as the row thumbnail. */
         logo?: string;
         viewerMembership?: HackathonMember;
+        /**
+         * Whether to offer Join on this row. Computed in the dashboard loader
+         * from the `capabilities` and `status` that `List` already returns —
+         * the backend still decides, this only decides what to offer.
+         *
+         * Optional and `false`-checked rather than truthy-checked, so a caller
+         * that does not compute it (the "your hackathons" list, which has no
+         * Join at all) is unaffected rather than silently losing controls.
+         */
+        canJoin?: boolean;
     }
 
     interface SessionProp {
@@ -255,26 +265,42 @@
                                     logo={h.logo}
                                 />
                             </div>
-                            <form
-                                method="POST"
-                                action="?/join"
-                                use:enhance={() => {
-                                    joiningIds.add(h.id);
-                                    return async ({ update }) => {
-                                        await update();
-                                        joiningIds.delete(h.id);
-                                    };
-                                }}
-                            >
-                                <input type="hidden" name="hackathonId" value={h.id} />
-                                <button
-                                    type="submit"
-                                    disabled={joiningIds.has(h.id)}
-                                    class="mr-4 btn btn-sm btn-accent shrink-0"
+                            {#if h.canJoin === false}
+                                <!-- Said, not just withheld. The row otherwise
+                                     loses its control with no explanation, which
+                                     reads as a rendering fault rather than an
+                                     answer — and "closed" is a fact about the
+                                     event that is worth knowing from the list.
+
+                                     A <span>, not a disabled button: a disabled
+                                     control is skipped by keyboard navigation
+                                     and announces nothing, so the reason would
+                                     reach only people who can see it. -->
+                                <span class="mr-4 shrink-0 text-xs text-ink-3">
+                                    Registration closed
+                                </span>
+                            {:else}
+                                <form
+                                    method="POST"
+                                    action="?/join"
+                                    use:enhance={() => {
+                                        joiningIds.add(h.id);
+                                        return async ({ update }) => {
+                                            await update();
+                                            joiningIds.delete(h.id);
+                                        };
+                                    }}
                                 >
-                                    {joiningIds.has(h.id) ? 'Joining…' : 'Join'}
-                                </button>
-                            </form>
+                                    <input type="hidden" name="hackathonId" value={h.id} />
+                                    <button
+                                        type="submit"
+                                        disabled={joiningIds.has(h.id)}
+                                        class="mr-4 btn btn-sm btn-accent shrink-0"
+                                    >
+                                        {joiningIds.has(h.id) ? 'Joining…' : 'Join'}
+                                    </button>
+                                </form>
+                            {/if}
                         </div>
                     {/each}
                 </div>

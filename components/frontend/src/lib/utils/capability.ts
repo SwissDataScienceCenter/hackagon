@@ -167,6 +167,17 @@ export const capabilityHref = (
 export const CAPABILITY_VALUES: number[] = CAPABILITIES.map((c) => c.value)
 
 /**
+ * `Capability.REGISTER` from the proto, named so a caller gating the Join
+ * control does not spell `1` into a route file.
+ *
+ * The literal rather than `CAPABILITIES[0].value`: the enum NUMBER is the
+ * stable fact — it cannot change without a proto change — while the table's
+ * order is presentation and a reorder would silently repoint this at
+ * "Propose projects". A test pins the two together.
+ */
+export const CAPABILITY_REGISTER = 1
+
+/**
  * Rows in the table's order, with anything this build cannot name dropped.
  *
  * The server sends one status per capability it knows about, so a frontend
