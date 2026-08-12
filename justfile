@@ -13,6 +13,7 @@ mod check "./tools/just/check.just"
 mod deploy "./tools/just/deploy.just"
 mod codegen "./tools/just/codegen.just"
 mod clean "./tools/just/clean.just"
+mod version "./tools/just/version.just"
 
 [private]
 default:
