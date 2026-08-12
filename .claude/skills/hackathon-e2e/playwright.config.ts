@@ -25,9 +25,27 @@ export default defineConfig({
   use: {
     ...devices["Desktop Firefox"],
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:8081",
-    trace: "retain-on-failure",
+    // `retain-on-failure` RECORDS for every test and throws the recording away
+    // when it passes — so both of these write continuously to `.artifacts`,
+    // which lives on the 9p bind mount in the devcontainer. That is the slow,
+    // flaky side (see container trap 1), and it has failed a run outright:
+    //
+    //   Error: ENOENT: no such file or directory, open
+    //   '.../.playwright-artifacts-1/traces/…-recording5.trace'
+    //
+    // reported against `act0.about.sanitized` — a SECURITY assertion, which is
+    // the worst possible thing to see a spurious failure on, because the
+    // instinct is to go looking at the sanitizer. The trace file it had just
+    // created was gone by the time it was appended to.
+    //
+    // Overridable so a long serial run (the 463-action journey) can turn the
+    // recording off and stop paying 9p per action: E2E_TRACE=off E2E_VIDEO=off.
+    // Default unchanged, because on a passing run the artifacts cost nothing
+    // and on a failing one they are how anyone diagnoses it. Screenshots stay
+    // on either way — they are written once, only on failure.
+    trace: (process.env.E2E_TRACE as "on" | "off" | "retain-on-failure") ?? "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: (process.env.E2E_VIDEO as "on" | "off" | "retain-on-failure") ?? "retain-on-failure",
   },
   projects: [
     // Logs in every persona through the real Keycloak flow and saves a
