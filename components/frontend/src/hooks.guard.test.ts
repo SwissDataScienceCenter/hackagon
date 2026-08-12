@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { isProtectedRoute } from "./hooks.server"
 import { reservedSlugs } from "$lib/utils/sitePageSlug"
+import { LOGIN_PATH, loginUrlFor } from "$lib/utils/returnTo"
 
 describe("isProtectedRoute", () => {
   it("should protect /manage routes", () => {
@@ -38,6 +39,11 @@ describe("isProtectedRoute", () => {
       "manage",
       "my",
       "register",
+      // The sign-in interstitial. It only became route-owned when it gained a
+      // +page.svelte — before that the segment was derivable by nothing, and a
+      // CMS page called "signin" would have been offered the URL the login
+      // flow bounces every anonymous visitor to.
+      "signin",
     ]) {
       expect(reservedSlugs.has(segment), `${segment} must be reserved`).toBe(
         true,
@@ -67,5 +73,17 @@ describe("isProtectedRoute", () => {
     expect(isProtectedRoute("/signout")).toBe(false)
     expect(isProtectedRoute("/auth")).toBe(false)
     expect(isProtectedRoute("/error")).toBe(false)
+  })
+
+  // The interstitial is where the guard SENDS an anonymous visitor. If it were
+  // ever protected the guard would send them to a page that bounces them to
+  // itself — an infinite redirect on the one route whose job is to end one.
+  // Asserted against the constant the guard actually redirects to, so renaming
+  // the route cannot leave this test agreeing with a path nothing uses.
+  it("never protects the page the guard bounces anonymous visitors to", () => {
+    expect(isProtectedRoute(LOGIN_PATH)).toBe(false)
+    expect(isProtectedRoute(`${LOGIN_PATH}/`)).toBe(false)
+    const parked = loginUrlFor("/my/hackathon/abc/manage")
+    expect(isProtectedRoute(new URL(parked, "http://x").pathname)).toBe(false)
   })
 })

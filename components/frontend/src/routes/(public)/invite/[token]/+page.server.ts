@@ -5,6 +5,7 @@ import {
   publicHackathonClient,
 } from "$lib/server/grpc/client"
 import { ClientError, Status } from "nice-grpc-common"
+import { loginUrlFor } from "$lib/utils/returnTo"
 // Importing the type also pulls in the module augmentation that puts
 // accessToken on Session — the same thing hooks.server.ts relies on.
 import type { CustomSession } from "../../../../auth.d"
@@ -55,11 +56,16 @@ export const actions: Actions = {
     const session = (await event.locals.auth()) as CustomSession | null
     // Public route, so there is no locals.grpc: build a client from the
     // session, or send them to sign in and come straight back here.
+    //
+    // Through the SAME interstitial as the route guards, deliberately. This
+    // redirect happens after someone pressed "Sign in to continue" on the invite
+    // page, so they are mid-flow and the page they land on has to say that the
+    // invitation survives — which is exactly what the interstitial says, naming
+    // this very link as where they are coming back to. Sending them to "/"
+    // instead dropped them on the marketing front page holding an invitation
+    // they could no longer see.
     if (!session?.accessToken) {
-      redirect(
-        302,
-        `/?returnTo=${encodeURIComponent(`/invite/${event.params.token}`)}`,
-      )
+      redirect(302, loginUrlFor(`/invite/${event.params.token}`))
     }
 
     const form = await event.request.formData()

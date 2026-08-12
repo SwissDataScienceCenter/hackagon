@@ -70,9 +70,15 @@ test.describe("sign out", () => {
     await page.waitForURL(/localhost:8081\/($|\?)/, { timeout: 15_000 })
     await expect(page.getByRole("button", { name: "Log in" })).toBeVisible()
 
-    // And the session is really gone, not just visually.
-    await page.goto("/dashboard")
-    await expect(page).toHaveURL(/\/\?returnTo=/)
+    // And the session is really gone, not just visually. Asked as the 303 the
+    // guard answers with, not by landing on it: the /signin interstitial sends
+    // itself to Keycloak a couple of seconds after it renders, so a browser
+    // parked there is mid-navigation by the time an assertion runs. The
+    // redirect is also the stronger claim — it is the SERVER refusing, where a
+    // rendered page could be a cached one.
+    const resp = await page.request.get("/dashboard", { maxRedirects: 0 })
+    expect(resp.status()).toBe(303)
+    expect(resp.headers()["location"]).toBe("/signin?returnTo=%2Fdashboard")
   })
 })
 

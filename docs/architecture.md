@@ -90,7 +90,9 @@ Configuration for each component is loaded from a config directory passed with
    session handle.
 2. Routes are protected by default; only the patterns in `PUBLIC_ROUTE_PATTERNS`
    (`/`, `/hackathon/…`, `/signin`, `/signout`, `/auth/…`, `/error`) are
-   anonymous. Protected routes without a session redirect to `/?returnTo=…`.
+   anonymous. Protected routes without a session redirect to
+   `/signin?returnTo=…` — an interstitial that says what happened, then starts
+   the OIDC flow with the parked path as the post-login destination.
 3. For protected routes, `createAuthorizedGrpc(session.accessToken)`
    (`src/lib/server/grpc/client.ts`) builds nice-grpc clients on the shared
    channel `localhost:3000`, with a middleware that sets the
@@ -132,7 +134,7 @@ sequenceDiagram
     B->>SK: GET /my/hackathon/:id
     SK->>SK: auth() session, protected route guard
     alt no session
-        SK-->>B: 303 /?returnTo=...
+        SK-->>B: 303 /signin?returnTo=...
     end
     SK->>KC: refresh/exchange token (if needed)
     SK->>GS: nice-grpc call<br/>metadata: Authorization Bearer <jwt>
