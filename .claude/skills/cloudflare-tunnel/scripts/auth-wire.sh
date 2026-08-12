@@ -190,6 +190,27 @@ backend_accepts_localhost() {
     localhost:3000 user.UserService/WhoAmI >/dev/null 2>&1
 }
 
+# Restart the e2e harness's :8081 built server, which reads its OIDC issuer
+# ONCE at boot and is what every suite actually logs in through.
+#
+# `prod-frontend.sh ensure` deliberately leaves a running server alone, so a
+# stale one survives any restart that does not stop it first — and
+# `restart_and_wait` above restarts process-compose's services, which :8081 is
+# not one of.
+#
+# This runs on BOTH restore paths, and the split is what made the first version
+# of this fix wrong: repairing only the overlay-absent branch left the COMMON
+# case — a wired tunnel being unwound at the start of every suite run — still
+# handing the tests a server on the tunnel issuer. Symptom either way is four
+# auth setups timing out on `page.waitForURL`.
+bounce_e2e_frontend() {
+  [ -x "$E2E_PROD_FRONTEND" ] || return 0
+  bash "$E2E_PROD_FRONTEND" stop >/dev/null 2>&1 || true
+  bash "$E2E_PROD_FRONTEND" ensure >/dev/null 2>&1 ||
+    echo "warn: could not restart the :8081 built server; logins there may still" \
+      "fail — run prod-frontend.sh stop && prod-frontend.sh ensure" >&2
+}
+
 if [ "${1:-}" = "--restore" ]; then
   # Drop any tunnel-hostname pin left in /etc/hosts (see wire mode below).
   sudo sed -i "/# hackagon-tunnel/d" /etc/hosts 2>/dev/null || true
@@ -210,7 +231,10 @@ if [ "${1:-}" = "--restore" ]; then
     patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
       echo "warn: could not reset realm client (is Keycloak up?)" >&2
     restart_and_wait
-    # No restart_prod_server here — see the comment on it.
+    # No restart_prod_server here — see the comment on it. The e2e harness's
+    # :8081 server IS bounced: unlike :8082 it is what the suites log in
+    # through, and it booted with the issuer we just removed.
+    bounce_e2e_frontend
     echo "OIDC rewired back to localhost."
     echo "NOTE: a built server on :8082 keeps the tunnel issuer it booted with;"
     echo "stop it (prod-serve.sh stop) if you need it on localhost too."
@@ -230,15 +254,7 @@ if [ "${1:-}" = "--restore" ]; then
       patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
         echo "warn: could not reset realm client (is Keycloak up?)" >&2
       restart_and_wait
-      # The built server on :8081 reads its issuer once at boot as well, and
-      # `prod-frontend.sh ensure` leaves a running one alone — so a stale one
-      # survives every restart that does not explicitly stop it first.
-      if [ -x "$E2E_PROD_FRONTEND" ]; then
-        bash "$E2E_PROD_FRONTEND" stop >/dev/null 2>&1 || true
-        bash "$E2E_PROD_FRONTEND" ensure >/dev/null 2>&1 ||
-          echo "warn: could not restart the :8081 built server; logins there may" \
-            "still fail — run prod-frontend.sh stop && … ensure" >&2
-      fi
+      bounce_e2e_frontend
       if backend_accepts_localhost; then
         echo "OIDC repaired: the backend now takes localhost tokens."
       else
