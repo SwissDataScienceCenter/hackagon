@@ -160,7 +160,8 @@ export async function uploadImage(
   } catch {
     throw new UploadError("Could not reach the object store")
   }
-  if (!put.ok) throw new UploadError(`Storage rejected the upload (${put.status})`)
+  if (!put.ok)
+    throw new UploadError(`Storage rejected the upload (${put.status})`)
 
   return { ...signed, file }
 }

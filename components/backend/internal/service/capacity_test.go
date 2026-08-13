@@ -223,7 +223,9 @@ var _ = Describe("Capacity", func() {
 		_, cctx := newJoiner("freed-c")
 		resp, err = client.Join(cctx, &msgs.JoinRequest{HackathonId: hid})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.GetWaitlisted()).To(BeTrue(), "a free place with people waiting belongs to the queue")
+		Expect(
+			resp.GetWaitlisted(),
+		).To(BeTrue(), "a free place with people waiting belongs to the queue")
 		Expect(resp.GetQueuePosition()).To(BeInt32(2))
 
 		// The organizer hands the place out by hand.

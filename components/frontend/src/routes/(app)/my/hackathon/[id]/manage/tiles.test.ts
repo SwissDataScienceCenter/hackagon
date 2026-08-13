@@ -242,13 +242,21 @@ describe("the hub's one phase action", () => {
   })
 
   it("starts the first phase still to come when nothing is running", () => {
-    mount({ declared: false, currentPhase: null, nextPhase: phase("p2", "Judging") })
+    mount({
+      declared: false,
+      currentPhase: null,
+      nextPhase: phase("p2", "Judging"),
+    })
 
     expect(submitLabel()).toMatch(/Start Judging/)
   })
 
   it("offers nothing to advance to past the last phase", () => {
-    mount({ declared: true, currentPhase: phase("p1", "Wrap-up"), nextPhase: null })
+    mount({
+      declared: true,
+      currentPhase: phase("p1", "Wrap-up"),
+      nextPhase: null,
+    })
 
     expect(submitLabel()).toBeUndefined()
   })
@@ -257,11 +265,15 @@ describe("the hub's one phase action", () => {
   // change that leaves the page looking exactly as it did.
   it("offers Clear the marker only against a declaration", () => {
     mount({ declared: true, currentPhase: phase("p1", "Hacking") })
-    expect(screen.getByRole("button", { name: "Clear the marker" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Clear the marker" }),
+    ).toBeInTheDocument()
 
     cleanup()
     mount({ declared: false, currentPhase: phase("p1", "Hacking") })
-    expect(screen.queryByRole("button", { name: "Clear the marker" })).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Clear the marker" }),
+    ).toBeNull()
   })
 
   // The one screen where the difference is actionable, so it is the one screen

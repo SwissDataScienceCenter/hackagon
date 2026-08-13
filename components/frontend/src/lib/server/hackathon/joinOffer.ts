@@ -34,7 +34,9 @@ const STATUS_FINISHED = 3
 export function joinIsOffered(h: JoinableEntry): boolean {
   if (h.status === STATUS_FINISHED) return false
 
-  const register = h.capabilities.find((c) => c.capability === CAPABILITY_REGISTER)
+  const register = h.capabilities.find(
+    (c) => c.capability === CAPABILITY_REGISTER,
+  )
   // Absent means no row governs it, which is UNGOVERNED, which PERMITS — the
   // same answer `capability.State.Allowed` gives on the server. Treating a
   // missing row as "closed" would hide the button on every event that never

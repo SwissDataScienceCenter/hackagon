@@ -43,9 +43,14 @@ describe("AppFooter", () => {
 
     expect(internal.length).toBeGreaterThan(0)
     for (const href of internal) {
-      expect(["/", "/dashboard", "/hackathon", "/about", "/privacy", "/terms"]).toContain(
-        href,
-      )
+      expect([
+        "/",
+        "/dashboard",
+        "/hackathon",
+        "/about",
+        "/privacy",
+        "/terms",
+      ]).toContain(href)
     }
   })
 

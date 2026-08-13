@@ -236,9 +236,9 @@ describe("toDateTimeLocal", () => {
 
 describe("formatPhaseRange", () => {
   it("reads out both ends when a phase is fully dated", () => {
-    expect(
-      formatPhaseRange(new Date(2026, 2, 1), new Date(2026, 2, 3)),
-    ).toBe("Mar 1, 2026 – Mar 3, 2026")
+    expect(formatPhaseRange(new Date(2026, 2, 1), new Date(2026, 2, 3))).toBe(
+      "Mar 1, 2026 – Mar 3, 2026",
+    )
   })
 
   // All four combinations, because both dates are optional in the schema and a

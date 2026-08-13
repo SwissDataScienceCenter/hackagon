@@ -26,7 +26,9 @@ describe("joinIsOffered", () => {
   it("withholds a finished event whatever its capabilities say", () => {
     // Join checks `EndsAt` BEFORE the capability, so an open register flag on a
     // finished event still refuses. The button must agree.
-    expect(joinIsOffered(withRegister(CapabilityState.OPEN, FINISHED))).toBe(false)
+    expect(joinIsOffered(withRegister(CapabilityState.OPEN, FINISHED))).toBe(
+      false,
+    )
   })
 
   it("withholds a closed registration", () => {

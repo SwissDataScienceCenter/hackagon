@@ -111,7 +111,9 @@ describe("originOfKey", () => {
   })
 
   it("does not invent an event id for a key that has none", () => {
-    expect(originOfKey("hackathons/seed/x/cover.webp").hackathonId).toBeUndefined()
+    expect(
+      originOfKey("hackathons/seed/x/cover.webp").hackathonId,
+    ).toBeUndefined()
     expect(originOfKey("something/else.webp")).toEqual({ label: "Uploaded" })
   })
 })
