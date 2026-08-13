@@ -504,6 +504,186 @@ mode" — `clickButton` prefers an exact match now. And `login: true` only works
 with `fresh: true`: with a persona's saved session Keycloak SSOs straight
 through and the helper waits forever for a `#username` field that never renders.
 
+## Mutation testing — making "can this test go red?" a thing that runs
+
+The section above is the expensive one, and every entry in it was found BY
+HAND, once. `.claude/skills/hackathon-e2e/mutations/` turns that hunt into a
+check: a **manifest** of deliberate, reversible breakages, each paired with the
+exact set of tests that MUST notice, and a **runner** that applies one, runs
+the tests, and asserts exactly that set failed.
+
+```bash
+bash .claude/skills/devcontainer-up/scripts/mutate.sh run    # from the host
+bash .claude/skills/hackathon-e2e/scripts/mutate.sh list     # the manifest
+bash .claude/skills/hackathon-e2e/scripts/mutate.sh check    # anchors still match source
+bash .claude/skills/hackathon-e2e/scripts/mutate.sh run owner   # one id, or a prefix
+bash .claude/skills/hackathon-e2e/scripts/mutate.sh restore  # after a run was killed
+```
+
+**`NO REDS` is the result this exists for, and it FAILS the run.** Not a
+curiosity to note and move past: it means nothing in the suite holds that
+property, which is the same fact the sidebar-fold assertion turned out to be
+stating and the same fact `usersLackNames` stated for months. `MISMATCH` fails
+too and names the extras — an over-broad mutation, or coupling nobody knew
+about. Only `EXACT` passes.
+
+### Adding one
+
+Append a line to `mutations/manifest.jsonl`:
+
+```json
+{"id":"cap.allowed.flatten","property":"UNGOVERNED PERMITS. Flattening …",
+ "arena":"go","tier":"fast",
+ "file":"components/backend/internal/capability/capability.go",
+ "find":"\treturn s == StateOpen || s == StateUngoverned",
+ "replace":"\treturn s == StateOpen",
+ "expectReds":["capability::Capability > Allowed > allows an ungoverned capability"],
+ "crossRef":["act5.cap.ungoverned"]}
+```
+
+`find` must match its file **exactly once** — a fragment of real source, tabs
+and all. A manifest whose anchor has drifted is the same disease as a test that
+has stopped asserting, so `apply()` throws rather than skipping, and `check`
+exists to be cheap enough to run on every commit. Two edits in one mutation go
+in `edits: [{file,find,replace}, …]`; that shape exists because
+`markdown.script-survives` has to weaken BOTH `ALLOWED_TAGS` and `FORBID_TAGS`
+— defence in depth, and a half-applied mutation would report the property as
+tested when only the other half held.
+
+Author `expectReds` with `--record`, which prints the observed reds instead of
+judging them, then **read them before you freeze them**: recording is how a
+manifest agrees with whatever the code happens to do. An entry with an empty
+`expectReds` is rejected at load time unless it also says `"gap": true` with a
+`gapReason` — because `expectReds: []` is the one value that would make every
+mutation pass, and that is precisely the vacuous shape this tool is for. A gap
+that later starts producing reds is reported as `GAP CLOSED`, so promoting it
+is prompted rather than remembered.
+
+### Arenas, and why the journey is the last resort
+
+An arena is where the evidence is. Cost is why there is more than one.
+
+| arena | what it runs | cost | identity |
+| --- | --- | --- | --- |
+| `go` | `go test -tags "test unittest"`, six packages | **~9 s** | `pkg::Describe > Context > It` (Ginkgo), `pkg::TestXxx` (plain) |
+| `vitest` | frontend units, narrowed to `arenaConfig.files` | ~10 s narrowed, 60 s full | `file::full test name` |
+| `journey` | `run.sh journey --until-act N` | minutes, + a backend restart or frontend rebuild | the recipe action id |
+| `smoke` | `run.sh smoke` | ~1.4 min against the built frontend | `file::title` |
+
+The **fast tier (`go` + `vitest`) needs no running stack at all** — it drives
+the compilers straight from source — which is what makes 30 mutations a
+five-minute check rather than an afternoon, and means it still works while the
+stack is down, being rebuilt, or in use by somebody else.
+
+Two things make that possible and neither is incidental. **The runner never
+enters `nix develop`**: that shell is a repo-wide mutex costing 44 s unopposed
+on a permanently-dirty worktree (container trap 4), and 30 entries through it
+would cost more than every test they run. `.devenv/profile/bin` already holds
+`go`, `node` and `pnpm` and costs nothing to put on `PATH`. And **the journey
+cannot be `--grep`ped**: it is serial with chained `vars`, so the only lever is
+`--until-act N`, and a backend mutation additionally needs the running server
+rebuilt against it. That is minutes per entry against seconds, so the manifest
+routes a property to the journey only when nothing cheaper can witness it — and
+records the journey action in `crossRef` when a cheap arena is the primary
+witness, so the two are not confused for each other.
+
+### Restoration is verified, not assumed
+
+A mutation left in the tree that then gets committed is the worst outcome this
+tool can produce, so it has three independent recoveries. The runner refuses to
+start when any file it may write is already dirty; it writes the original bytes
+to `.state/backup/` and fsyncs them **before** editing, journals the edit, and
+restores on exit, on signal, and on `restore`. `scripts/mutate.sh` restores
+from the same journal in its own `trap EXIT` and then checks `git status`
+itself — because a trap cannot survive a SIGKILL or a container recreate, and
+the journal on disk is what makes a later `restore` possible at all.
+
+**That check earned its keep on the first multi-edit mutation, by finding a bug
+in the runner itself.** `markdown.script-survives` edits ONE file TWICE, so it
+journals two backups — and the second holds the file as it stood after edit 1,
+i.e. already mutated. Replaying the journal forwards restored the original and
+then overwrote it with the half-mutated copy: every backup on disk intact, the
+journal reading as fully unwound, and `markdown.ts` left broken. Restore runs
+**newest first** now, so each entry undoes exactly the edit that produced it.
+Nothing but a post-restore `git status` could have caught that — the tool
+believed it had cleaned up.
+
+⚠ **The cleanliness check is SCOPED to the files the manifest names**, plus
+`components/`, and that is deliberate twice over. A repo-wide "git status is
+empty" check can never pass in this container (three git-lfs pointer files read
+as permanently modified — trap 4), and it is a check on other people: the first
+run of this tool aborted ten mutations because a second agent added a file
+elsewhere under `.claude/` while it worked. A safety check that cries wolf on
+somebody else's work is a safety check that gets deleted.
+
+### What the first manifest found (2026-08-13, 38 mutations)
+
+**26 caught, 12 with NO REDS.** Every one of the twelve is a backend property,
+and eleven of them cluster into three surfaces that the 6-second Go suite does
+not touch at all:
+
+- **`requireWindowOpen` — all of it.** Deadlines never closing, the
+  now-anchored override ignored, registration opening early: three mutations,
+  zero reds. No Go spec exercises a window in any package.
+- **`RemoveOwner` — all of it.** The last-organizer guard, the
+  cannot-demote-yourself rule, and demotion leaving Member behind: three
+  mutations, zero reds, and a fourth (dropping `ownerMu`) that no unit test
+  could see anyway. Ownership is a casbin fact here with no column to assert
+  against, which is likely why the specs were never written.
+- **`Join`'s guards.** The invite requirement on a private event, the
+  already-finished refusal, and the ROLE a join grants. `join.grants-member`
+  hands every joiner OWNER instead of Member and not one Go spec notices.
+
+Plus `RequireUser` admitting the anonymous subject (the change eight TeamService
+handlers were made for), and `checkContentType`'s allowlist — the rule keeping
+`image/svg+xml` out of an origin we serve.
+
+**These are gaps in the FAST tier, not proof the product is unguarded**: each
+one is pinned by journey actions, listed in the entry's `crossRef`. But that
+means the only thing standing behind window enforcement and the
+last-organizer invariant is a suite that costs minutes, needs the whole stack,
+and cannot be run on a branch. **Those reds are also DEDUCED** — from each
+action's declared `expect.error` — not observed, because no journey mutation
+has been run yet.
+
+The frontend half came out the other way round: all 8 vitest mutations produced
+reds, including a cross-file one — flattening `capabilityAllows` turns
+`joinOffer`'s ungoverned case red as well, which is the two gates agreeing, in
+the test suite, that UNGOVERNED permits.
+
+### The baseline is not green, and that is handled rather than hidden
+
+"Exactly the expected set failed" means nothing against a suite that is not
+green to start with. `internal/service`'s **"Capacity > never oversells the last
+place under simultaneous joins" fails intermittently** under in-memory SQLite
+(roughly one run in five; the error is `Internal: couldn't join hackathon`).
+Left alone it lands in an arbitrary mutation's extras column and reads as
+coupling. So reds are diffed against a baseline taken on the clean tree, and an
+unexpected red is re-checked against a FRESH clean run before it is called
+coupling.
+
+**That re-check is not sufficient on its own, and the first verification run
+proved it**: `cap.gate.removed` came back MISMATCH naming exactly that spec,
+while the fresh sample happened to pass — an intermittent failure that does not
+reproduce in one extra sample is indistinguishable from coupling. A tool that
+randomly fails one entry in five is a tool people stop reading. So the flake is
+also **declared**, in `KNOWN_FLAKY` at the top of the arena section, with the
+reason it is there.
+
+Both paths report; neither drops. Every ignored red is printed **with its
+reason**, because an ignored red is a claim, and a list of tests whose failures
+don't count is precisely the shape that could hide a real one. Adding a line to
+`KNOWN_FLAKY` is a claim about the SUITE that wants justifying — never a way to
+quieten a mutation that is genuinely over-broad.
+
+⚠ **A flaky test can still be a genuine witness, and that trap fired within the
+hour.** That capacity spec hammers concurrent joins against a cap — which is
+precisely what `capacity.oversell-by-one` breaks — so under THAT mutation its
+failure is the evidence, and the first freeze had stripped it as noise. The rule:
+when a listed test really does witness a mutation, it belongs in that mutation's
+`expectReds`, where the excuse cannot reach it (the filter only ever looks at
+reds that are NOT expected). Excusing an extra prints that reminder every time.
+
 ## Container traps (Windows/macOS hosts) — read before touching compose
 
 These cost hours; all of them are handled in `.devcontainer/` (or, for 2b, in
