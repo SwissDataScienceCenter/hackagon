@@ -1,32 +1,37 @@
 <script lang="ts">
+    import { ArrowRight } from 'lucide-svelte';
     import {
         capabilityAction,
         capabilityAllows,
+        capabilityDescription,
         capabilityHref,
         capabilityIsComing,
         capabilityStateLabel,
         knownCapabilityRows,
     } from '$lib/utils/capability';
+    import { formatPhaseRange } from '$lib/utils/phase';
+    import { nextBoundary } from '$lib/utils/relativeTime';
+    import Countdown from './Countdown.svelte';
 
     /**
      * What a participant can do in this hackathon right now.
      *
-     * Adapted from main. The gap it fills: our overview told people about the
-     * event — dates, description, their team — and nothing about the one thing
-     * they came to find out, which is whether the thing they want to do is open
-     * yet. Capability state existed and was rendered nowhere a member could see.
+     * Adapted from main twice over. First adapted the ORIGINAL CurrentStateCard
+     * from main's flat on/off model to this branch's four-state Capability model
+     * — OPEN and UNGOVERNED are both "go ahead" (the server's `Allowed` says so),
+     * COMING gets its own answer with a date because "not yet" and "no longer"
+     * are different plans for someone's afternoon, and CLOSED is left out
+     * entirely because what is over is not news. The organiser's
+     * `CapabilitiesPanel` is where all four are told apart.
      *
-     * Every open capability is a LINK to the page that exercises it, because a
-     * card that says "you can propose a project" and leaves you to find the page
-     * has done half a job.
-     *
-     * **Four states in, three answers out, on purpose.** OPEN and UNGOVERNED are
-     * both "go ahead" — the server's `Allowed` says so, and the reason one has a
-     * row and the other does not is the organiser's business, not a
-     * participant's. COMING is its own answer because "not yet" and "no longer"
-     * are different plans for someone's afternoon. CLOSED is left out entirely:
-     * what is over is not news. The organiser's `CapabilitiesPanel` is where all
-     * four are told apart, because there they are four different things to do.
+     * Second, ported main's later `rebuild the hackathon overview around what
+     * changes`: the countdown to the next phase boundary, the phase's own dates
+     * and description, and third-person wording for an organiser reading their
+     * own event. What did NOT come across from that commit: `enabled: number[]`
+     * (would have collapsed UNGOVERNED back into "closed"), and the `isWaiting`
+     * link gate (this branch lets a waitlisted member propose — see
+     * `.claude/CLAUDE.md`'s pinned policy decisions — so blocking every
+     * capability link for them would be wrong here, not just untested).
      *
      * Raw numbers rather than the generated enum: this is a component, and
      * `$lib/server/**` is server-only.
@@ -34,12 +39,30 @@
     let {
         hackathonId,
         capabilities = [],
-        currentPhaseName = '',
+        currentPhase = null,
+        nextPhase = null,
+        declared = false,
+        organiserVoice = false,
     }: {
         hackathonId: string;
         /** As `Hackathon.capabilities` arrives: `{ capability, state, opensAt? }`. */
         capabilities?: { capability: number; state: number; opensAt?: Date }[];
-        currentPhaseName?: string;
+        currentPhase?: {
+            name: string;
+            description: string;
+            startsAt?: Date;
+            endsAt?: Date;
+        } | null;
+        nextPhase?: { name: string; startsAt?: Date; endsAt?: Date } | null;
+        /** True when an organiser declared this phase, false when the dates did. */
+        declared?: boolean;
+        /**
+         * Voice the card in the third person, the same reason
+         * `CapabilitiesPanel` says "participants, never you": capabilities grant
+         * to `Member` and casbin has no inheritance, so an owner holds none of
+         * what these switch on and "you can now" would be a lie to them.
+         */
+        organiserVoice?: boolean;
     } = $props();
 
     // Named ones only, in the table's order. A capability this build has no
@@ -48,13 +71,36 @@
     const named = $derived(knownCapabilityRows(capabilities));
     const open = $derived(named.filter((c) => capabilityAllows(c.state)));
     const coming = $derived(named.filter((c) => capabilityIsComing(c.state)));
+
+    const phaseBadge = $derived(declared ? 'Current phase' : 'In progress');
+    const openHeading = $derived(organiserVoice ? 'Participants can now' : 'You can now');
+
+    const boundary = $derived(nextBoundary(currentPhase, nextPhase, new Date()));
 </script>
 
-<section class="card flex flex-col gap-3 p-5">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="m-0 text-section text-ink">Right now</h2>
-        {#if currentPhaseName}
-            <span class="badge badge-info">{currentPhaseName}</span>
+<section class="card flex flex-col gap-4 border-line-strong p-5" aria-labelledby="right-now">
+    <span class="meta">Right now</span>
+
+    <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            {#if currentPhase}
+                <h2 class="m-0 text-section text-ink" id="right-now">{currentPhase.name}</h2>
+                <span class="badge badge-info">{phaseBadge}</span>
+            {:else}
+                <h2 class="m-0 text-section text-ink-3" id="right-now">No phase is running</h2>
+            {/if}
+            {#if boundary}
+                <span class="ms-auto"><Countdown {boundary} /></span>
+            {/if}
+        </div>
+
+        {#if currentPhase}
+            <span class="tnum text-xs text-ink-3">
+                {formatPhaseRange(currentPhase.startsAt, currentPhase.endsAt)}
+            </span>
+            {#if currentPhase.description}
+                <p class="prose m-0 pt-1 text-xs">{currentPhase.description}</p>
+            {/if}
         {/if}
     </div>
 
@@ -67,20 +113,52 @@
         </p>
     {:else}
         {#if open.length > 0}
-            <div class="flex flex-col gap-1">
-                <span class="field-label">You can now</span>
-                <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
+            <div class="flex flex-col gap-2">
+                <span class="meta">{openHeading}</span>
+                <ul class="m-0 flex list-none flex-col gap-2 p-0">
                     {#each open as c (c.capability)}
                         {@const href = capabilityHref(hackathonId, c.capability)}
+                        {@const description = capabilityDescription(c.capability)}
                         <li>
                             {#if href}
-                                <a href={href} class="btn btn-sm no-underline">
-                                    {capabilityAction(c.capability)} →
+                                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- built with resolve() in $lib/utils/capability -->
+                                <a
+                                    {href}
+                                    class="group flex items-start gap-3 rounded-card bg-raised
+                                           p-3 no-underline hover:bg-overlay"
+                                >
+                                    <span class="flex min-w-0 flex-col gap-0.5">
+                                        <span class="text-sm font-semibold text-ink"
+                                            >{capabilityAction(c.capability)}</span
+                                        >
+                                        {#if description}
+                                            <span class="font-sans text-xs text-ink-3"
+                                                >{description}</span
+                                            >
+                                        {/if}
+                                    </span>
+                                    <ArrowRight
+                                        class="mt-0.5 ms-auto h-4 w-4 shrink-0 text-ink-3
+                                               group-hover:text-accent-ink"
+                                        aria-hidden="true"
+                                    />
                                 </a>
                             {:else}
-                                <span class="badge badge-success">
-                                    {capabilityAction(c.capability)}
-                                </span>
+                                <!-- Open, but with nowhere to send them: Register
+                                     happens on the dashboard, not a page under this
+                                     hackathon. -->
+                                <div class="flex items-start gap-3 rounded-card bg-raised p-3">
+                                    <span class="flex min-w-0 flex-col gap-0.5">
+                                        <span class="text-sm font-semibold text-ink"
+                                            >{capabilityAction(c.capability)}</span
+                                        >
+                                        {#if description}
+                                            <span class="font-sans text-xs text-ink-3"
+                                                >{description}</span
+                                            >
+                                        {/if}
+                                    </span>
+                                </div>
                             {/if}
                         </li>
                     {/each}
@@ -109,5 +187,12 @@
                 </ul>
             </div>
         {/if}
+    {/if}
+
+    {#if nextPhase}
+        <span class="tnum border-t border-line pt-3 text-xs text-ink-3">
+            Next: <span class="font-semibold text-ink-2">{nextPhase.name}</span>
+            · {formatPhaseRange(nextPhase.startsAt, nextPhase.endsAt)}
+        </span>
     {/if}
 </section>
