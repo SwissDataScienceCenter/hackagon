@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/svelte"
+import { cleanup, render, screen } from "@testing-library/svelte"
 import { tick } from "svelte"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -17,11 +17,14 @@ const OWNER = 1
 const MEMBER = 2
 
 /*
- * The disclosure rule, as against how one section renders
- * (SidebarNavSection.test.ts): Manage Hackathon is always on the rail, the ten
- * screens under it are not, arriving anywhere in the section brings them out,
- * and the chevron works wherever you are — main's earlier version derived the
- * state from the route and so dead-ended on every Manage page.
+ * The Manage section is a flat, always-expanded list (see
+ * SidebarNavSection.test.ts for how one section renders): every organiser
+ * entry manageNav returns is drawn on every page, not disclosed behind a
+ * fold. An earlier version folded the section under Manage Hackathon and
+ * force-opened it on every /manage/* route, which made the sidebar taller
+ * than its fixed, viewport-relative height and forced it to scroll — flat
+ * avoids that, since the rendered height no longer depends on which page
+ * you're on.
  */
 
 const setPath = (pathname: string) =>
@@ -49,17 +52,16 @@ async function renderAt(pathname: string, overrides = {}) {
 const hub = () => screen.queryByRole("link", { name: "Manage Hackathon" })
 const subEntry = () => screen.queryByRole("link", { name: "Manage Teams" })
 
-// Every entry this branch has that main does not. They are the reason the fold
-// exists here at all — ten organiser rows under a five-row participant spine —
-// and the reason to name them one by one is that losing any of them to the port
-// is the failure this whole change had to avoid.
+// Every entry this branch has that main does not — named individually so a
+// future refactor that drops one turns red rather than merely shrinking a
+// count nobody reads back. "New Phase" is deliberately not here: it's a tile
+// on the manage hub page, not one of manageNav's sidebar entries.
 const OURS_ONLY = [
   "Prizes",
   "Deadlines",
   "Manage Forms",
   "Notifications",
   "Invitation Links",
-  "New Phase",
 ]
 
 afterEach(cleanup)
@@ -78,7 +80,7 @@ beforeEach(() => {
   })
 
   // jsdom ships no matchMedia, and the component asks for one on mount to tell a
-  // desktop rail from the mobile drawer. Desktop is where the disclosure lives.
+  // desktop rail from the mobile drawer.
   window.matchMedia = (query: string) =>
     ({
       matches: true,
@@ -93,56 +95,38 @@ beforeEach(() => {
 })
 
 describe("HackathonSidebar's Manage section", () => {
-  it("shows only Manage Hackathon on a participant page", async () => {
+  it("shows every Manage entry on a participant page, not just the hub", async () => {
     await renderAt("/my/hackathon/h1/overview")
 
     expect(hub()).toBeInTheDocument()
-    expect(subEntry()).toBeNull()
-  })
-
-  // The hub counts as entering the section: whoever opens it is looking for what
-  // it leads to.
-  it("shows the rest once Manage Hackathon itself is open", async () => {
-    await renderAt("/my/hackathon/h1/manage")
-
     expect(subEntry()).toBeInTheDocument()
   })
 
-  it("shows the rest on one of the screens under it", async () => {
+  it("shows every Manage entry on one of the screens under it too", async () => {
     await renderAt("/my/hackathon/h1/teams/manage")
 
+    expect(hub()).toBeInTheDocument()
     expect(subEntry()).toBeInTheDocument()
   })
 
   // Nested under /manage, so `activeNavId`'s longest-prefix match keeps the hub
-  // lit — which is also what counts as "inside" and brings the section out.
-  it("counts the edit form nested under it as inside the section", async () => {
+  // lit as the current page even though the list beneath it is flat.
+  it("counts the edit form nested under it as the hub's own active page", async () => {
     await renderAt("/my/hackathon/h1/manage/edit")
 
     expect(subEntry()).toBeInTheDocument()
     expect(hub()).toHaveAttribute("aria-current", "page")
   })
 
-  it("opens from the chevron on a participant page", async () => {
+  // The regression this reverts: a fold control that force-opened on every
+  // Manage page anyway, so it existed only to make the section taller than
+  // the sidebar's fixed height on the pages it mattered on.
+  it("draws no fold control at all", async () => {
     await renderAt("/my/hackathon/h1/overview")
 
-    await fireEvent.click(
-      screen.getByRole("button", { name: /Show Manage Hackathon/ }),
-    )
-
-    expect(subEntry()).toBeInTheDocument()
-  })
-
-  // The regression main hit: pinned open inside Manage, this click did nothing.
-  it("closes again from the chevron while inside the section", async () => {
-    await renderAt("/my/hackathon/h1/manage")
-
-    await fireEvent.click(
-      screen.getByRole("button", { name: /Hide Manage Hackathon/ }),
-    )
-
-    expect(subEntry()).toBeNull()
-    expect(hub()).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Manage Hackathon/ }),
+    ).toBeNull()
   })
 
   it("gives a plain member no Manage section at all", async () => {
@@ -155,8 +139,8 @@ describe("HackathonSidebar's Manage section", () => {
   })
 
   // The port's own failure mode, asserted by name rather than by count: main's
-  // Manage section has none of these, and folding the section is exactly the
-  // kind of change that could drop one without anything turning red.
+  // Manage section has none of these, and a future refactor of this list is
+  // exactly the kind of change that could drop one without anything turning red.
   it("keeps every entry this branch has that main does not", async () => {
     await renderAt("/my/hackathon/h1/manage")
 
@@ -164,7 +148,7 @@ describe("HackathonSidebar's Manage section", () => {
       expect(
         screen.queryByRole("link", { name: label }),
         `"${label}" is one of the organiser entries main's Manage panel does ` +
-          `not have — the port must not lose it`,
+          `not have — it must not be lost`,
       ).toBeInTheDocument()
     }
   })
