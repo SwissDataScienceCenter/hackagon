@@ -76,6 +76,17 @@
     function mayDemote(p: Participant): boolean {
         return data.mayManage && p.isOwner && !p.isSelf && data.ownerCount > 1;
     }
+
+    // "View" opens this person's registration answers. Your own row goes to
+    // your editable form; another person's needs organizer rights, so it is a
+    // read-only ?userId= view offered only to managers — a plain member would
+    // deterministically 403, matching how every organizer-only action here is
+    // hidden rather than left to fail.
+    function viewHref(p: Participant): string | undefined {
+        if (p.isSelf) return `/register/${data.hackathonId}`;
+        if (data.mayManage) return `/register/${data.hackathonId}?userId=${p.id}`;
+        return undefined;
+    }
 </script>
 
 <!-- One definition for both views. The table and the cards used to carry their
@@ -245,7 +256,7 @@
                 <ParticipantCard
                     name={participant.name}
                     role={participant.roleLabel}
-                    profileDetailsHref="#participant-{participant.id}"
+                    profileDetailsHref={viewHref(participant)}
                 >
                     {#snippet actions()}
                         {@render rowActions(participant)}

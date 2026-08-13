@@ -20,10 +20,39 @@
 <svelte:head><title>Registration · {data.name}</title></svelte:head>
 
 <div class="mx-auto w-full max-w-2xl p-4 sm:p-6">
-    <h1 class="text-2xl font-bold">{data.alreadySubmitted ? 'Your registration' : 'Registration'}</h1>
+    <h1 class="text-2xl font-bold">
+        {#if data.readOnly}{data.targetName}'s registration{:else}{data.alreadySubmitted ? 'Your registration' : 'Registration'}{/if}
+    </h1>
     <p class="mt-1 text-sm text-ink-3">{data.name}</p>
 
-    {#if form?.submitted}
+    {#if data.readOnly}
+        <!-- An organizer reading a participant's answers for catering and
+             check-in. Read-only: these are someone else's answers, so the
+             fields are shown as text and there is nothing to submit. -->
+        {#if !data.alreadySubmitted}
+            <p class="mt-6 text-sm text-ink-3">No response yet.</p>
+        {:else}
+            <dl class="mt-6 flex flex-col gap-5">
+                {#each data.fields as f (f.key)}
+                    <div>
+                        <dt class="text-sm font-medium">{f.label}</dt>
+                        <dd class="mt-1 text-sm text-ink-2">
+                            {data.answers[f.key] || '—'}
+                        </dd>
+                    </div>
+                {/each}
+                {#each data.consents as c (c.key)}
+                    <div class="flex items-start gap-2">
+                        <input
+                            type="checkbox" class="mt-1" disabled
+                            checked={data.consentValues[c.key] ?? false}
+                        />
+                        <span class="text-sm">{c.label}</span>
+                    </div>
+                {/each}
+            </dl>
+        {/if}
+    {:else if form?.submitted}
         <div class="card border-success mt-6 p-4">
             <p class="font-semibold">Thanks — your answers are in.</p>
             <p class="mt-1 text-sm">
