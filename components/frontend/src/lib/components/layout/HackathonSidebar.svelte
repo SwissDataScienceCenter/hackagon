@@ -66,6 +66,9 @@
     let collapsed = $state(false);
     let mobileOpen = $state(false);
     let isDesktop = $state(true);
+    // Closed to start with, leaving Manage Hackathon alone under the heading: a
+    // participant spine plus one way in, not a second nav of equal length.
+    let manageOpen = $state(false);
 
     // `collapsed` is a desktop-only preference (persisted below); on a narrow
     // viewport the drawer must always render fully expanded regardless of it.
@@ -89,6 +92,16 @@
     // Manage Pages.
     const activeId = $derived(activeNavId($page.url.pathname, [...items, ...manageItems]));
 
+    // The hub stays on the rail whatever the fold state and carries the
+    // disclosure for the rest — it is how the section is entered, and its "!" is
+    // how an organiser learns something needs attention.
+    const manageHubItem = $derived(manageItems.find((i) => i.id === 'manage:hackathon'));
+    const manageSubItems = $derived(manageItems.filter((i) => i.id !== 'manage:hackathon'));
+
+    // The hub counts as inside, not just the screens under it: opening it is how
+    // an organiser goes looking for the rest.
+    const insideManage = $derived(activeId?.startsWith('manage:') ?? false);
+
     // `membership.role` is sourced from casbin. It is absent for a global admin who
     // never joined, hence the second argument.
     const badge = $derived(hackathonRoleBadge(membership ?? undefined, isGlobalAdmin));
@@ -96,6 +109,14 @@
     $effect(() => {
         if (typeof localStorage === 'undefined') return;
         collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+        manageOpen = localStorage.getItem('sidebar-manage-open') === 'true';
+    });
+
+    // Entering the section opens it, rather than pinning it open while you are in
+    // there: deriving the fold state from the route instead made the chevron a
+    // no-op on every Manage page, which reads as a broken control.
+    $effect(() => {
+        if (insideManage) manageOpen = true;
     });
 
     $effect(() => {
@@ -125,11 +146,20 @@
         };
     });
 
+    /** Both preferences are per-browser, so neither is worth a round trip. */
+    function remember(key: string, value: boolean) {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(key, String(value));
+    }
+
     function toggleCollapsed() {
         collapsed = !collapsed;
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('sidebar-collapsed', String(collapsed));
-        }
+        remember('sidebar-collapsed', collapsed);
+    }
+
+    function toggleManage() {
+        manageOpen = !manageOpen;
+        remember('sidebar-manage-open', manageOpen);
     }
 </script>
 
@@ -222,7 +252,8 @@
         <SidebarNavSection {items} {activeId} collapsed={effectiveCollapsed} />
 
         <!-- Organiser-only. The heading is what makes the difference legible, so
-             unlike the section above this one needs it.
+             unlike the section above this one needs it. Manage Hackathon is always
+             drawn; the screens it leads to are disclosed from it.
 
              Guarded here rather than left to SidebarNavSection, which keeps a
              labelled empty section on purpose so a role chip has somewhere to
@@ -236,10 +267,13 @@
         {#if manageItems.length > 0}
             <SidebarNavSection
                 label="Manage"
-                items={manageItems}
+                parentItem={manageHubItem}
+                items={manageSubItems}
                 {activeId}
                 collapsed={effectiveCollapsed}
                 accent="tertiary"
+                open={manageOpen}
+                onToggle={toggleManage}
             />
         {/if}
     </nav>

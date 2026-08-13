@@ -319,6 +319,11 @@ describe("manageNav", () => {
       ["/my/hackathon/hack-1/participants", "member:participants"],
       ["/my/hackathon/hack-1/participants/manage", "manage:participants"],
       ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
+      // The hackathon's own edit form, for the same reason as the phase forms
+      // below: it is reached from Manage Hackathon and nests under it, so that
+      // entry stays lit rather than nothing being lit at all.
+      ["/my/hackathon/hack-1/manage", "manage:hackathon"],
+      ["/my/hackathon/hack-1/manage/edit", "manage:hackathon"],
       ["/my/hackathon/hack-1/timeline", "member:timeline"],
       ["/my/hackathon/hack-1/timeline/manage", "manage:timeline"],
       // The create and edit forms live under the manage route precisely so they

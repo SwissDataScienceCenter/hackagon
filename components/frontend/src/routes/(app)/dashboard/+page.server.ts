@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { ownerMembership } from "$lib/server/hackathon/membership"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -20,28 +21,45 @@ export const load: PageServerLoad = async (event) => {
   }
   const { isGlobalAdmin } = await event.parent()
 
-  // TODO(backend: enroll creator as participant): myResult is participation, not
-  // ownership, so a hackathon the viewer created never reaches myHackathons. A
-  // public one lands under "other" as though it belonged to someone else; a
-  // private one appears nowhere, since the other list is filtered to public.
-  // Resolves itself once Create writes the Participant row — no change needed
-  // on this side.
+  // Three lists because participation and ownership are separate records and
+  // `Create` only writes the second: it grants the creator the casbin Owner role
+  // and the owners edge, never a Participant row. So a hackathon the viewer made
+  // reaches neither of the first two lists — a public one lands under "other" as
+  // though it belonged to someone else, a private one appears nowhere at all,
+  // and the only route to it is the redirect `create` performs once.
+  //
   // TODO(backend: list-registration-state): neither list says whether a
   // hackathon is taking registrations, so "Other hackathons" cannot tell a Join
   // that will work from one that will be denied. The answer lives in
   // `state.capabilities`, which only `Get` populates — and `Get` needs
   // `hackathon:read`, which is exactly what a non-member does not have. So the
   // button is offered and the refusal reported, rather than guessed at here.
-  const [allResult, myResult] = await Promise.all([
+  const [allResult, myResult, ownedResult] = await Promise.all([
     hackathon.list({ visibilityFilter: Visibility.VISIBILITY_PUBLIC }),
     hackathon.list({ participantId }),
+    hackathon.list({ ownerId: participantId }),
   ])
 
-  const myIds = new Set(myResult.hackathons.map((h) => h.id))
+  const participatingIds = new Set(myResult.hackathons.map((h) => h.id))
+
+  // `viewerMembership` is stated rather than read: List fills it in only for the
+  // participant filter, and these are precisely the hackathons with no
+  // participant row to fill it from. It is not decoration — `canOpenHackathon`
+  // reads it to decide whether the row links anywhere at all, so leaving it
+  // undefined would list a hackathon the viewer owns as dead text.
+  const ownedOnly = ownedResult.hackathons
+    .filter((h) => !participatingIds.has(h.id))
+    .map((h) => ({
+      ...h,
+      viewerMembership: ownerMembership(undefined, h.createdAt),
+    }))
+
+  const myHackathons = [...myResult.hackathons, ...ownedOnly]
+  const myIds = new Set(myHackathons.map((h) => h.id))
 
   return {
     session: event.locals.session,
-    myHackathons: myResult.hackathons,
+    myHackathons,
     otherHackathons: allResult.hackathons.filter((h) => !myIds.has(h.id)),
     isGlobalAdmin,
   }

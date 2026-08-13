@@ -14,6 +14,23 @@ Before making changes:
 4. Make focused, single-purpose commits.
 5. Show the diff + commit message, wait for approval before committing.
 
+## Context budget
+
+Every tool call re-bills the whole context window, so session cost is _number of
+calls × window size_ — a chatty run of cheap commands costs far more than one
+long file.
+
+- **Batch.** Independent probes go in one assistant turn; a dependent sequence
+  goes in one `&&` chain. One command per turn is the default failure mode, and
+  it is the most expensive one. `just nix::develop default …` also pays shell
+  startup per invocation — wrap once around a script.
+- **Grep, don't read.** `grep -n` for the symbol, then `Read` with
+  `offset`/`limit`. Generated trees (`ent/**`, `internal/proto/**`,
+  `grpc/generated/**`, `API.md`) are grep-only.
+- **Downscale screenshots** to ≤1000px before reading — a full-page retina PNG
+  is ~500KB and is re-billed on every later call in the session.
+- **Delegate noisy search to a subagent; `/clear` between unrelated tasks.**
+
 ## Skills — load the one that matches the work
 
 Detailed guidance lives in skills, not here. This file is orientation only.
@@ -79,6 +96,9 @@ just rpc::unauth <method> [json]                # unauthed grpcurl (health)
 
 just check::lint -c backend     # also: build, test, format; -c frontend
 just ci::all                    # everything CI runs, locally
+
+just version::show              # declared version + what a build stamps in the footer
+just version::bump patch|minor|major   # edit VERSION, commit, annotated tag
 ```
 
 Backend listens on **:3000**, frontend on **:8081**. Dev users (Keycloak
@@ -117,6 +137,11 @@ These hold across the whole codebase; the skills explain the mechanisms.
   running server — see **backend-api-explore**. Any inventory committed to a
   markdown file is a snapshot that starts rotting immediately, this one
   included.
+- **`VERSION` at the repo root is the only declared version.** Bump it through
+  `just version::bump`, never by hand — the recipe is what also commits it, tags
+  it, and keeps `components/frontend/package.json` in step. The frontend reads
+  it at build time (`vite.config.ts` → `$lib/version` → the footer), so a
+  version edited without a rebuild will not show up.
 
 ## Don't
 

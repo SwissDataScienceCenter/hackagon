@@ -87,6 +87,8 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, "/dashboard")
+    // Back to the page the form is reached from, so a saved edit lands where the
+    // rest of the hackathon's settings are rather than out on the dashboard.
+    redirect(303, `/my/hackathon/${event.params.id}/manage`)
   },
 }

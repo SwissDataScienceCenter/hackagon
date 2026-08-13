@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
     import { Check, GripVertical, Pencil, Trash2, X } from 'lucide-svelte';
+    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import type { ActionData, PageData } from './$types';
 
     type Person = { id: string; name: string; preferredTitles: string[] };
@@ -166,19 +166,12 @@
 {/snippet}
 
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20" class:opacity-60={pending}>
-    <div class="flex items-center justify-between gap-4">
-        <div class="flex flex-col gap-1">
-            <h2 class="m-0 text-title text-ink">Manage Teams</h2>
-            <p class="m-0 text-xs text-ink-3">
-                Drag a participant onto a team to assign them. Everyone belongs to at most one team.
-            </p>
-        </div>
-        <a
-            href={resolve(`/my/hackathon/${hackathonId}/teams`)}
-            class="btn btn-sm btn-ghost no-underline"
-        >
-            Back to Teams
-        </a>
+    <div class="flex flex-col gap-1">
+        <ManageHubBackLink {hackathonId} />
+        <h2 class="m-0 text-title text-ink">Manage Teams</h2>
+        <p class="m-0 text-xs text-ink-3">
+            Drag a participant onto a team to assign them. Everyone belongs to at most one team.
+        </p>
     </div>
 
     {#if form?.message}

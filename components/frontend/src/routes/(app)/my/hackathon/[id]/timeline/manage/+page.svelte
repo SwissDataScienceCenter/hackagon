@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Check, FileText, Pencil, Plus, Settings2, X } from 'lucide-svelte';
     import { resolve } from '$app/paths';
+    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import { capabilityLabel, formatPhaseRange } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
@@ -42,7 +43,10 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <h2 class="m-0 text-title text-ink">Manage Timeline</h2>
+    <div class="flex min-w-0 flex-col gap-1">
+        <ManageHubBackLink hackathonId={data.hackathonId} />
+        <h2 class="m-0 text-title text-ink">Manage Timeline</h2>
+    </div>
 
     <!-- Every phase action lives in this section — add, make current, clear, edit
          — so there is one place to act on a phase and one place to act on the

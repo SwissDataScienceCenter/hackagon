@@ -3,12 +3,10 @@
     import { enhance } from '$app/forms';
     import { SvelteSet } from 'svelte/reactivity';
     import Plus from 'lucide-svelte/icons/plus';
-    import Pencil from 'lucide-svelte/icons/pencil';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { platformNav, type NavItem } from '$lib/navigation/items';
     import {
-        canEditHackathon,
         canOpenHackathon,
         membershipBadgeLabel,
         membershipBadgeVariant,
@@ -48,8 +46,8 @@
         /**
          * Whether the viewer holds the global admin role.
          *
-         * Gates two things on this page: editing any hackathon regardless of
-         * ownership, and the platform administration section as a whole — the
+         * Gates two things on this page: opening any hackathon regardless of
+         * membership, and the platform administration section as a whole — the
          * settings pages behind it need exactly this role, `UserService.List`
          * denying everyone else. Whole section rather than per tile, since
          * every entry in it needs the same role.
@@ -193,7 +191,23 @@
                 <div class="card overflow-hidden">
                     {#each myHackathons as h, i (h.id)}
                         {@const mem = h.viewerMembership}
-                        <div class="flex items-center">
+                        {@const href = canOpenHackathon(mem, isGlobalAdmin)
+                            ? `/my/hackathon/${h.id}/overview`
+                            : undefined}
+                        <!-- The hover tint lives here rather than on the link
+                             inside `HackathonRow`, which only spans the row's
+                             own content: the membership badge is its sibling,
+                             so a hover painted in there stopped short of it and
+                             left the line half-lit. Painting the wrapper takes
+                             in the badge, and hovering the badge lights the row
+                             too. Only when there is somewhere to go — an
+                             unopenable row reacting to the pointer would
+                             promise a click it cannot honour. -->
+                        <div
+                            class="flex items-center {href
+                                ? 'transition-colors hover:bg-raised'
+                                : ''}"
+                        >
                             <div class="flex-1">
                                 <!-- Confirmed here: straight to the member view.
                                      Waitlisted, and the row is not a link — joining
@@ -202,9 +216,7 @@
                                      403 until an organiser approves you. The
                                      Waitlisted badge beside it says why. -->
                                 <HackathonRow
-                                    href={canOpenHackathon(mem, isGlobalAdmin)
-                                        ? `/my/hackathon/${h.id}/overview`
-                                        : undefined}
+                                    {href}
                                     name={h.name}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
@@ -213,22 +225,18 @@
                                     gradTo={gradient(i).to}
                                 />
                             </div>
-                            <div class="mr-4 flex shrink-0 items-center gap-2">
-                                {#if mem}
-                                    <span class="badge {membershipBadgeVariant(mem.isWaiting)}">
-                                        {membershipBadgeLabel(mem.isWaiting, mem.role)}
-                                    </span>
-                                {/if}
-                                {#if canEditHackathon(mem, isGlobalAdmin)}
-                                    <a
-                                        href={resolve(`/my/hackathon/${h.id}/edit`)}
-                                        aria-label="Edit {h.name}"
-                                        class="btn-icon btn-sm preset-tonal-surface"
-                                    >
-                                        <Pencil class="h-4 w-4" />
-                                    </a>
-                                {/if}
-                            </div>
+                            <!-- The row's only trailing element. Editing a
+                                 hackathon is offered on its own Manage Hackathon
+                                 page, not from here: this list is for finding a
+                                 hackathon, and the edit form belongs beside the
+                                 rest of what an organiser sets. -->
+                            {#if mem}
+                                <span
+                                    class="badge {membershipBadgeVariant(mem.isWaiting)} mr-4 shrink-0"
+                                >
+                                    {membershipBadgeLabel(mem.isWaiting, mem.role)}
+                                </span>
+                            {/if}
                         </div>
                     {/each}
                 </div>

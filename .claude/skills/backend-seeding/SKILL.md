@@ -147,3 +147,18 @@ row is missing: `mydocs/docs/backend-tickets/project-preferences-capability.md`.
 - Re-seed from clean state and verify over the wire with the
   **backend-api-explore** skill, e.g.
   `just rpc::as alice aliceandbob hackathon.HackathonService/List '{}'`.
+
+Chain the re-seed and its verification into **one** tool call — a
+wipe/seed/check cycle run as separate calls re-bills the whole context window
+each time (see the context budget in `CLAUDE.md`), and the intermediate output
+tells you nothing:
+
+```bash
+just clean::state && just db::seed && just db::summary && \
+  just rpc::as alice aliceandbob hackathon.HackathonService/List '{}' \
+    | jq -r '.hackathons[] | "\(.id)  \(.name)"'
+```
+
+Reach for `jq` to project just the fields you're checking rather than letting a
+full `Get` tree — which returns projects, tracks, pages, phases and members —
+land in the window whole.

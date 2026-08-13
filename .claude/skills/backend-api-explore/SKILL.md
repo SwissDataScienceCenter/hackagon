@@ -34,6 +34,51 @@ Symptom if you forget: `grpcurl: command not found` and
 The backend must also be running — `just start` from the repo root; it listens
 on **localhost:3000**. Check with `nc -z localhost 3000`.
 
+## Do the whole recon in one call
+
+The numbered steps below explain each probe in isolation. **Don't run them as
+separate tool calls** — reflection is cheap over the wire and expensive per
+round trip, since every call re-bills the entire context window (see the context
+budget in `CLAUDE.md`). Get the full inventory in one shot, then read:
+
+```bash
+# every service, every RPC, and the handlers actually written — one call
+for s in $(grpcurl -plaintext localhost:3000 list | grep -v ^grpc.reflection); do
+  echo "=== $s"
+  grpcurl -plaintext localhost:3000 list "$s" | sed 's/^/  rpc /'
+done
+echo "=== handlers in internal/service"
+grep -rhoE "^func \(s \*[A-Za-z]+Service\) [A-Za-z]+" \
+  components/backend/internal/service/ | sort
+```
+
+Diff those two lists mentally: an RPC present above but absent below is answered
+by the embedded `UnimplementedXServiceServer`. That single call replaces steps
+1, 2 and the cross-check.
+
+Same discipline for message shapes — batch the `describe` calls for every RPC
+you care about rather than one per turn:
+
+```bash
+for m in hackathon.ProjectService.SetPreference hackathon.TrackService.List; do
+  grpcurl -plaintext localhost:3000 describe "$m"
+done
+```
+
+And when the whole thing needs the Nix wrapper, wrap **once** around a batched
+script, never once per command:
+
+```bash
+just nix::develop default bash -c '
+  grpcurl -plaintext localhost:3000 list
+  just rpc::as alice aliceandbob user.UserService/WhoAmI
+'
+```
+
+If the recon is broad and open-ended ("what does this backend do?"), hand it to
+a subagent instead: its greps and dumps stay in its own window and only the
+findings come back.
+
 ## 1. What services exist? (gRPC reflection)
 
 `reflection.Register(server)` is called in `internal/service/server.go`, so the

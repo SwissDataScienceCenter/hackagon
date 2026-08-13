@@ -2,6 +2,7 @@
     import { Pencil, Plus, Trash2, Trophy } from 'lucide-svelte';
     import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
+    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -11,6 +12,7 @@
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-0.5">
+            <ManageHubBackLink hackathonId={data.hackathonId} />
             <h2 class="m-0 text-title text-ink">Manage Voting</h2>
             <span class="text-xs text-ink-3">
                 {data.categories.length === 1
@@ -39,10 +41,10 @@
             Voting is currently <strong>off</strong> for this hackathon, so participants
             cannot see these categories or cast a vote. Turn it on under
             <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage`)}
+                href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
                 class="font-semibold text-accent-ink no-underline hover:underline"
             >
-                Manage Timeline
+                Manage Hackathon
             </a>.
         </p>
     {/if}
