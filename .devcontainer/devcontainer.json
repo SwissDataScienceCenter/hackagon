@@ -11,7 +11,8 @@
     "ghcr.io/devcontainers/features/nix:1": {
       "multiUser": true,
       "extraNixConfig": "experimental-features = nix-command flakes,sandbox = false"
-    }
+    }, 
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
     // Optional — uncomment to build/run containers inside the dev container:
     // ,"ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
