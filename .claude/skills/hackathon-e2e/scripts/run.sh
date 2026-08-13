@@ -18,6 +18,15 @@
 #   --grep <p>   filter tests by title
 #   --until-act <n>  journey only: play the story up to act <n> and leave the
 #                stack frozen in that state for inspection (1..8)
+#   --reporter=<r>   passed straight to Playwright, as is anything after `--`
+#
+# On reporters: you almost certainly do not need one. playwright.config.ts
+# already runs the json reporter and writes .artifacts/results.json on EVERY
+# run, which is what scripts/embed-run-report.mjs reads. Do not do
+# `run.sh journey --reporter=json > report.json`: everything in this container
+# prints Nix/devenv/quitsh banners to stdout ahead of the test output, so the
+# redirected file does not parse. If you want Playwright to write a second copy
+# itself, set PLAYWRIGHT_JSON_OUTPUT_NAME and pass --reporter=json.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
@@ -27,6 +36,10 @@ SUITE="smoke"
 RESET=1
 HEADED=0
 GREP=""
+# extra flags forwarded verbatim to `playwright test`. --reporter used to hit
+# the catch-all below and exit 2, so the documented "run.sh journey
+# --reporter=json" failed before it started.
+PW_EXTRA=()
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,8 +54,18 @@ while [ $# -gt 0 ]; do
       shift
       export JOURNEY_UNTIL_ACT="${1:?--until-act needs an act number (1..8)}"
       ;;
+    --reporter=*) PW_EXTRA+=("$1") ;;
+    --reporter)
+      shift
+      PW_EXTRA+=("--reporter=${1:?--reporter needs a value}")
+      ;;
+    --)
+      shift
+      PW_EXTRA+=("$@")
+      break
+      ;;
     -h | --help)
-      sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -59,6 +82,7 @@ if [ "$SUITE" = "all" ]; then
   args=()
   [ "$HEADED" -eq 1 ] && args+=(--headed)
   [ -n "$GREP" ] && args+=(--grep "$GREP")
+  args+=("${PW_EXTRA[@]+"${PW_EXTRA[@]}"}")
   bash "${BASH_SOURCE[0]}" smoke "${args[@]+"${args[@]}"}"
   bash "${BASH_SOURCE[0]}" journey "${args[@]+"${args[@]}"}"
   exit 0
@@ -247,6 +271,7 @@ pnpm exec playwright install --with-deps firefox 2>/dev/null ||
 PW_ARGS=(test --project="$SUITE")
 [ "$HEADED" -eq 1 ] && PW_ARGS+=(--headed)
 [ -n "$GREP" ] && PW_ARGS+=(--grep "$GREP")
+PW_ARGS+=("${PW_EXTRA[@]+"${PW_EXTRA[@]}"}")
 
 # Inside the Nix dev shell, ldd is Nix's glibc ldd whose linker does not
 # search /usr/lib — Playwright's host validation then reports every system

@@ -47,6 +47,14 @@
   --elapsed: rgba(255,255,255,.10);
   --playhead-glow: rgba(255,255,255,.5);
   --shadow: rgba(0,0,0,.5);
+  /* the dim labelled regions behind the diagram. Three tokens, not one, because
+     the wash, the outline and the label each need their own strength: a wash
+     faint enough not to compete with the beams leaves a 1px border invisible,
+     and a border strong enough to read would be a loud wash. */
+  --zone-fill: #ffffff;   /* washed over the background at --zone-alpha */
+  --zone-alpha: .055;
+  --zone-line: #2e2e2b;   /* drawn at full opacity, so it is dim by value */
+  --zone-ink: #7e7c76;    /* the region's name — quieter than a node label */
   color-scheme: dark;
 }
 /* LIGHT column — applied when the OS asks for it and nothing overrides, or
@@ -87,6 +95,14 @@
     --elapsed: rgba(0,0,0,.07);
     --playhead-glow: rgba(0,0,0,.35);
     --shadow: rgba(0,0,0,.18);
+    /* re-picked, not reused: white-at-5.5% lifts #0d0d0d and does nothing at
+       all to #f6f6f3, so the light wash is INK at its own strength, and the
+       outline is a value near --line rather than the dark column's #2e2e2b
+       (which would read as a hard black box on paper). */
+    --zone-fill: #14140e;
+    --zone-alpha: .05;
+    --zone-line: #dcdad2;
+    --zone-ink: #6f6d66;
     color-scheme: light;
   }
 }
@@ -123,6 +139,11 @@
   --elapsed: rgba(0,0,0,.07);
   --playhead-glow: rgba(0,0,0,.35);
   --shadow: rgba(0,0,0,.18);
+  /* same re-pick as the media-query column above */
+  --zone-fill: #14140e;
+  --zone-alpha: .05;
+  --zone-line: #dcdad2;
+  --zone-ink: #6f6d66;
   color-scheme: light;
 }
 /* kill the browser's default body margin — no white frame around the app */
@@ -200,6 +221,48 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   padding: 4px 7px; border-radius: 3px; white-space: nowrap;
 }
 .hlp .caption .cflag { font: 700 10px/1 var(--mono); letter-spacing: .08em; white-space: nowrap; }
+
+/* ── zones: dim labelled regions BEHIND the diagram ───────────────────
+   Each names what that area of the stage IS. Membership is derived from the
+   cast table and the entity keys (see ZONES in the script), so the six regions
+   are a partition of the 33 things on the stage — a made-up region would show
+   up immediately as a node in two zones or in none.
+
+   The washes live in ONE group with a group opacity rather than per-rect
+   alpha, and that is load-bearing: two regions genuinely interpenetrate (the
+   principals' name labels reach x=164 and the upload bundle starts at x=156),
+   so with per-rect alpha the overlap would paint twice and draw a visible
+   stripe where there is nothing to see. Inside a single group the same colour
+   over itself is the same colour, and the opacity is applied once at the end.
+
+   The outlines and the labels sit in a SECOND group at full opacity — a 1px
+   border inside a 5% group is not a border — and both layers are
+   pointer-events:none: a zone must never eat a click or a drag aimed at the
+   item drawn on top of it. */
+.hlp .zones, .hlp .zonemarks { pointer-events: none; }
+.hlp .zones { opacity: var(--zone-alpha); }
+.hlp .zones rect { fill: var(--zone-fill); stroke: none; }
+.hlp .zonemarks rect { fill: none; stroke: var(--zone-line); stroke-width: 1; stroke-dasharray: 4 4; }
+.hlp .zonemarks text {
+  font: 600 8.5px var(--sans); letter-spacing: .09em; text-transform: uppercase;
+  fill: var(--zone-ink);
+}
+
+/* ── draggable stage items ────────────────────────────────────────────
+   Pointer events, not HTML5 drag-and-drop: the latter has no SVG story at all
+   and no touch story either. Keyboard is a first-class path (arrows nudge the
+   focused item, Shift for a bigger step), so the ring below is what a keyboard
+   user steers by — it is drawn as an element rather than left to `outline`,
+   which several engines still refuse to paint on an SVG group. */
+.hlp #stage .dnode { cursor: grab; touch-action: none; outline: none; }
+.hlp #stage .dnode.dragging { cursor: grabbing; }
+.hlp #stage .dfocus {
+  fill: none; stroke: var(--k-create); stroke-width: 2; stroke-dasharray: none;
+  opacity: 0; pointer-events: none;
+}
+.hlp #stage .dnode:focus .dfocus, .hlp #stage .dnode:focus-visible .dfocus { opacity: 1; }
+.hlp #stage .dnode.moved .dhandle { opacity: 1; }
+.hlp #stage .dhandle { fill: var(--k-create); opacity: 0; pointer-events: none; }
 
 /* stage svg pieces (classes used from JS) */
 .hlp .node-label { font: 500 10px var(--mono); fill: var(--ink2); }
@@ -398,9 +461,25 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 /* the counts used to stand alone: a user asked us what "carries 24 gate / 65
    todo note" meant, which is a legend stating a number with no meaning. The
    sentence is part of the legend now, not a tooltip on it. */
+/* The block was `max-width: 132ch` at 10px, which was wrong in both directions
+   at once: on a 2000px screen it left half the footer empty (too NARROW as a
+   block) while still running ~180 characters to the line (too WIDE as a
+   measure). Those are different problems and one number cannot fix both — a
+   cap in characters can only ever make the block smaller.
+
+   So the block fills the footer, capped in px so an ultrawide gets whitespace
+   rather than one endless line, and the text flows into COLUMNS. `column-width`
+   is a minimum and a browser only adds a column once two of them fit, so the
+   used measure stays between 62ch and ~124ch — measured 88 characters at 1440
+   and 98 at 2000/2560, i.e. inside the comfortable band at every width from a
+   phone up. */
 .hlp .lgnote {
-  flex: 1 1 100%; margin-top: 5px;
-  font: 400 10px/1.5 var(--sans); color: var(--muted); max-width: 132ch;
+  flex: 1 1 100%; margin-top: 6px;
+  font: 400 10.5px/1.62 var(--sans); color: var(--muted);
+  max-width: min(100%, 1560px);
+  column-width: 62ch;
+  column-gap: 30px;
+  column-rule: 1px solid var(--line);
 }
 .hlp .lgnote b { color: var(--ink2); font-weight: 700; }
 .hlp .lgnote .gk { color: var(--st-crit); font-weight: 700; }
@@ -445,6 +524,15 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 }
 .hlp .hbtn:hover { border-color: var(--muted); color: var(--ink); }
 .hlp .hbtn b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.hlp .hbtn[disabled] { opacity: .42; cursor: default; }
+.hlp .hbtn[disabled]:hover { border-color: var(--line-strong); color: var(--ink2); }
+/* the help button is the one piece of chrome that answers a question rather
+   than changing something, so it is marked rather than just present */
+.hlp .hbtn.ask {
+  border-color: color-mix(in srgb, var(--k-create) 55%, transparent);
+  color: var(--ink);
+}
+.hlp .hbtn.ask:hover { background: color-mix(in srgb, var(--k-create) 16%, transparent); }
 .hlp .hbtn kbd {
   font: 600 9px/1 var(--mono); color: var(--muted);
   border: 1px solid var(--line-strong); border-radius: 3px; padding: 2px 4px;
@@ -526,6 +614,8 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 }
 .hlp .bfilters .fchk { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .hlp .bfilters .fchk input { accent-color: var(--k-create); }
+/* the one-line meaning, beside the jargon rather than only in a tooltip */
+.hlp .bfilters .fgloss { font: 400 9.5px var(--sans); color: var(--muted); white-space: nowrap; }
 .hlp .breset {
   font: 600 10px var(--mono); color: var(--ink2); text-transform: uppercase;
   letter-spacing: .06em; border: 1px solid var(--line-strong); border-radius: 4px;
@@ -719,6 +809,57 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 }
 .hlp .repbox input[type="file"]:focus-visible { outline: 2px solid var(--k-create); outline-offset: 1px; }
 .hlp .repbox code { font: 400 10.5px var(--mono); color: var(--ink); word-break: break-all; }
+/* the built-in snapshot's provenance: when it was produced and against how
+   many actions. A remembered green that outlives its run is the failure mode
+   this box exists to prevent, so the words "snapshot" and the date are part of
+   the control, not a footnote. */
+.hlp .repbox.snap { border-left-color: var(--k-vote); }
+.hlp .repbox .repwhen { font: 400 10.5px/1.5 var(--mono); color: var(--muted); }
+.hlp .repbox .repwhen b { color: var(--ink2); }
+
+/* ── help dialog: the vocabulary, in plain language ────────────────────
+   Same dialog treatment as the settings sheet (focus trap, Esc, focus back to
+   the opener) and stacked above it, because it is reachable from inside it.
+   Every count and every example in here is read off the embedded recipe at
+   runtime — a hard-coded "24 gated actions" goes stale on the next recipe edit
+   with nothing to catch it, which is the same reason the legend counts are
+   tallied off the painted ticks. */
+.hlp .hmodal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; }
+.hlp .hmodal[hidden] { display: none; }
+/* the help sheet borrows .scard/.shead, but never .sbody — that one is a
+   two-track grid for the settings layout and would split the prose in half */
+.hlp .dbody { overflow-y: auto; padding: 14px 16px 18px; }
+.hlp .doc { display: grid; gap: 15px; align-content: start; }
+@media (min-width: 900px) { .hlp .doc { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.hlp .doc section { border-left: 2px solid var(--line-strong); padding-left: 11px; }
+.hlp .doc section.wide { grid-column: 1 / -1; }
+.hlp .doc h4 {
+  font: 700 9.5px var(--mono); letter-spacing: .11em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 7px;
+}
+.hlp .doc p { font: 400 11.5px/1.62 var(--sans); color: var(--ink2); max-width: 92ch; }
+.hlp .doc p + p { margin-top: 6px; }
+.hlp .doc p b { color: var(--ink); }
+.hlp .doc dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 12px; }
+.hlp .doc dt {
+  font: 700 10.5px/1.5 var(--mono); color: var(--ink); white-space: nowrap;
+  display: flex; align-items: baseline; gap: 6px;
+}
+.hlp .doc dt .n {
+  font: 700 9.5px var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--ink2); border: 1px solid var(--line-strong); border-radius: 999px;
+  padding: 1px 5px;
+}
+.hlp .doc dd { font: 400 11.5px/1.55 var(--sans); color: var(--ink2); min-width: 0; }
+.hlp .doc code, .hlp .doc .ex {
+  font: 400 10.5px var(--mono); color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+  padding: 1px 4px; word-break: break-word;
+}
+.hlp .doc .ex { display: block; margin-top: 5px; padding: 7px 8px; color: var(--ink2); line-height: 1.5; }
+.hlp .doc .ex b { color: var(--ink); }
+.hlp .doc .gk { color: var(--st-crit); font-weight: 700; }
+.hlp .doc .tk { color: var(--k-vote); font-weight: 700; }
 
 /* the side panel needs a story below ~700px: the panes stack, the JSON keeps
    its own scrollport, and the selected row stays visible above it */
@@ -772,6 +913,14 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
         title="Choose what the timeline colours encode">
         ⚙ Colours: <b id="btnSettingsMode">—</b> <kbd>C</kbd>
       </button>
+      <button class="hbtn ask" id="btnHelp" aria-haspopup="dialog"
+        title="What the recipe is, and what every field on an action means — gate, todo, expect, priority, actor, save">
+        ? What do these mean <kbd>?</kbd>
+      </button>
+      <button class="hbtn" id="btnResetLayout" disabled
+        title="Drag any item on the diagram to move it; Tab to it and use the arrow keys to nudge it. This puts every moved item back where it started.">
+        ⤺ Reset layout <b id="btnResetLayoutN">0</b>
+      </button>
       <button class="hbtn" id="btnTheme" aria-pressed="false" title="Switch between the dark and light palette">
         <span id="themeIcon">◐</span> <span id="themeLabel">Theme</span>
       </button>
@@ -783,7 +932,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 
   <div class="main">
     <div class="stage-wrap">
-      <svg id="stage" viewBox="0 0 960 680" role="img" aria-label="Animated map of hackathon actors and actions"></svg>
+      <!-- role=group, not role=img: an img is a leaf to assistive tech and its
+           descendants are presentational, which would hide every draggable,
+           focusable item inside it. -->
+      <svg id="stage" viewBox="0 0 960 680" role="group"
+        aria-label="Map of hackathon actors and actions. Every item can be dragged, or focused and nudged with the arrow keys."></svg>
       <div class="caption" id="caption">
         <span class="cid" id="capId">—</span>
         <span class="ctitle" id="capTitle">Press ▶ to replay the full hackathon: publication, a 13-person registration wave, approvals and dropouts, event days, voting, and the archive.</span>
@@ -890,6 +1043,8 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
           title="Download only the actions currently passing the filters, as JSONL">
           ⭳ filtered subset · <b id="dlSubN">0</b>
         </button>
+        <button class="hbtn ask" id="bHelp" aria-haspopup="dialog"
+          title="What gate, todo, expect, priority, actor and save mean">? What do these mean</button>
         <button class="hbtn" id="bSettings" aria-haspopup="dialog"
           title="Choose what the timeline colours encode">⚙ Colours</button>
         <button class="hbtn" id="bClose" title="Close (Esc)">✕ Close</button>
@@ -902,12 +1057,16 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
         <label>Kind <select id="fKind" aria-label="Filter by action kind"></select></label>
         <label>Actor <select id="fActor" aria-label="Filter by actor"></select></label>
         <label>Prio <select id="fPrio" aria-label="Filter by priority"></select></label>
+        <!-- each chip carries its meaning in the label, not only in the title:
+             a reader of the words "has gate" should not have to go looking, and
+             two people asking what it meant is the evidence that a tooltip and
+             a distant paragraph do not answer it. ? opens the long form. -->
         <label class="fchk" title="todo — a free-text design note on the action (why it is written this way, or what to re-specify when a bug behind it is fixed). NOT a gap in the product.">
-          <input type="checkbox" id="fTodo" /> has todo</label>
+          <input type="checkbox" id="fTodo" /> has todo <span class="fgloss">a design note</span></label>
         <label class="fchk" title="gate — the action names the RPCs it needs and self-skips until scripts/probe.sh finds them, so it starts running on its own when the backend lands.">
-          <input type="checkbox" id="fGate" /> has gate</label>
+          <input type="checkbox" id="fGate" /> has gate <span class="fgloss">waits for its RPCs</span></label>
         <label class="fchk" title="the action's expect block names an error code — a denial is the asserted outcome, not a failure.">
-          <input type="checkbox" id="fDenied" /> expects denial</label>
+          <input type="checkbox" id="fDenied" /> expects denial <span class="fgloss">the refusal is the pass</span></label>
         <button class="breset" id="fReset">Reset</button>
       </div>
 
@@ -995,12 +1154,21 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
           </p>
           <div class="repbox" id="sRepBox" style="margin-top:10px">
             <span class="repstat warn" id="sRepStat">No run report loaded — “run outcome” colours everything as unknown.</span>
+            <!-- provenance of the built-in report, written by JS from the block
+                 embedded at the bottom of this file. A snapshot that does not
+                 say WHEN it was taken is a green that outlives its run. -->
+            <p class="repwhen" id="sRepWhen" hidden></p>
             <p>
-              To colour by what actually happened, load a Playwright JSON report
-              from a journey run. Nothing is uploaded and no network is used —
-              the file is read in this tab.
+              To colour by what actually happened <em>now</em>, load a Playwright
+              JSON report from your own journey run — it overrides the built-in
+              snapshot. Nothing is uploaded and no network is used: the file is
+              read in this tab.
             </p>
-            <p><code>bash .claude/skills/hackathon-e2e/scripts/run.sh journey --reporter=json &gt; report.json</code></p>
+            <p><code>bash .claude/skills/hackathon-e2e/scripts/run.sh journey</code> writes
+              <code>.artifacts/results.json</code> on every run (the json reporter is in
+              playwright.config.ts, so no <code>&gt; report.json</code> redirection is
+              needed — and none should be used: every command in this container
+              prints Nix and quitsh noise to stdout first, which would not parse).</p>
             <div class="reprow">
               <input type="file" id="sRepFile" accept=".json,application/json"
                 aria-label="Load a Playwright JSON report" />
@@ -1019,6 +1187,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
             running on its own the moment the RPC lands; nothing has to be
             edited. Drawn as a cap at the <b>top</b> of its tick.
           </p>
+          <p style="margin-top:7px" id="sHelpLink">
+            The whole vocabulary — every field an action can carry, in plain
+            language, with a live example of each — is in
+            <b>? What do these mean</b> in the header.
+          </p>
           <p style="margin-top:7px">
             <span class="tk">todo</span> — a <b>free-text note</b> on the action:
             why it is written the way it is, or what to re-specify when a bug it
@@ -1027,6 +1200,25 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
             cap at the <b>bottom</b> of its tick.
           </p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── help: the vocabulary in plain language ─────────────────────────
+       Two people have now asked what "has gate" means, which is the evidence
+       that a tooltip and a paragraph two panels away do not answer it. The
+       chips and the legend carry a one-line gloss; this is the long form.
+       Everything inside is written by JS from the embedded recipe, so no count
+       and no example in here can go stale against the file. ──────────────── -->
+  <div class="hmodal" id="help" hidden>
+    <div class="mback" id="hback"></div>
+    <div class="scard" role="dialog" aria-modal="true" aria-labelledby="hTitle">
+      <div class="shead">
+        <h3 id="hTitle">What the recipe is, and what every field on an action means</h3>
+        <button class="hbtn" id="hClose" title="Close (Esc)">✕ Close</button>
+      </div>
+      <div class="dbody">
+        <div class="doc" id="hDoc"></div>
       </div>
     </div>
   </div>
@@ -1509,6 +1701,34 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 {"id": "act8.page.cleanup", "priority": "P1", "implement": true, "outcome": "Succeeds.", "act": 8, "t": "T+1wk", "title": "CLEANUP: admin deletes the outdated webinar page", "actor": "hackagon-admin", "action": "rpc", "method": "hackathon.PageService/Delete", "params": {"pageId": "{{var:pageWebinars}}"}, "expect": {"ok": true}}
 {"id": "act8.draft.delete", "priority": "P2", "implement": true, "outcome": "Succeeds. [Skips until the gated capability lands.]", "act": 8, "t": "T+1wk", "title": "CLEANUP: admin deletes the never-announced winter draft event", "actor": "hackagon-admin", "action": "rpc", "method": "hackathon.HackathonService/Delete", "params": {"hackathonId": "{{var:draftId}}"}, "expect": {"ok": true}, "todo": "TODO: runs once HackathonService.Delete lands — pin cascade semantics (participants/pages/teams of a deleted hackathon) when it does."}
 </script>
+
+<!-- ── a real journey run, baked in ─────────────────────────────────────
+     `run outcome` is the only mode that can answer "did it pass", and until
+     this block existed it answered "unknown" for everybody until they found a
+     file to drop on it. This is a REDUCED Playwright report from a real
+     `scripts/run.sh journey`: one entry per action — the outcome and the
+     duration in ms — and the run's own totals. The full report is mostly
+     stdout, attachments and stack frames, none of which this page joins on,
+     and this file is opened from a disk.
+
+     Two things about the markup, both of which have cost hours before:
+
+     1. It sits AFTER the recipe-data block on purpose. splice-player.mjs finds
+        its terminator with indexOf(close, afterOpenMarker), i.e. the FIRST
+        close tag past the recipe's opening marker — which is still the recipe's
+        own. Putting this block first would make the splice overwrite it.
+     2. Every `</` inside is escaped as `<\/`, exactly as the recipe lines are.
+        An inline script ends at the first LITERAL close tag even inside a JSON
+        string, and a Playwright report can carry page snippets in its error
+        messages. Rebuild it with scripts/embed-run-report.mjs, which applies
+        that escape; do not paste a report in by hand.
+
+     So this file now holds THREE literal close tags: the recipe, this report
+     and the program. -->
+<script id="run-report" type="application/json">
+{"kind":"hackagon-journey-run","suite":"journey","generatedAt":"2026-08-13T13:06:58.292Z","recipeActions":463,"specs":467,"durationMs":157695,"totals":{"passed":463,"failed":0,"skipped":0,"flaky":0,"other":0},"status":{"act0.about.absent":["passed",1486],"act0.about.create":["passed",1184],"act0.about.draft.hidden":["passed",834],"act0.about.rogue":["passed",73],"act0.about.anon":["passed",15],"act0.about.publish":["passed",2136],"act0.about.live":["passed",922],"act0.about.xss":["passed",75],"act0.about.sanitized":["passed",889],"act0.privacy.create":["passed",34],"act0.terms.create":["passed",30],"act0.slug.dupe":["passed",29],"act0.slug.invalid":["passed",30],"act0.footer.links":["passed",1622],"act0.ghost":["passed",17],"act1.guard":["passed",333],"act1.publish":["passed",54],"act1.logo.presign":["passed",31],"act1.logo.rogue":["passed",79],"act1.logo.anon":["passed",16],"act1.logo.svg":["passed",30],"act1.logo.toobig":["passed",30],"act1.roundtrip":["passed",43],"act1.config.regform":["passed",33],"act1.config.subform":["passed",33],"act1.config.subform.url":["passed",33],"act1.config.voting":["passed",35],"act1.config.emails":["passed",35],"act1.race.emails":["passed",36],"act1.race.emails.check":["passed",35],"act1.race.emails.restore":["passed",33],"act1.config.branding":["passed",33],"act1.config.windows":["passed",30],"act1.window.early":["passed",67],"act1.prizes":["passed",1813],"act1.admin.whoami":["passed",30],"act1.admin.users":["passed",28],"act1.public":["passed",856],"act1.ui.cover":["passed",360],"act1.typo":["passed",37],"act1.typo.check":["passed",35],"act1.typo.fix":["passed",36],"act1.typo.fixed":["passed",36],"act1.reschedule":["passed",37],"act1.venue":["passed",58],"act1.venue.check":["passed",36],"act1.edit.rogue":["passed",31],"act1.draft.create":["passed",39],"act1.draft.hidden":["passed",305],"act1.draft.api":["passed",20],"act1.draft.hub.noreview":["passed",818],"act1.joinable":["passed",280],"act1.rogue":["passed",30],"act1.flow.anon":["passed",940],"act1.flow.bob":["passed",1657],"act1.flow.abandon":["passed",1179],"act1.signin.deeplink":["passed",658],"act1.signin.offsite":["passed",903],"act1.signin.roundtrip":["passed",3095],"act1.flow.wrongpw":["passed",1796],"act1.flow.joinstub":["passed",856],"act1.page.welcome":["passed",35],"act1.page.conduct":["passed",33],"act1.editor.toolbar":["passed",1180],"act1.editor.table.tsv":["passed",607],"act1.editor.table.csv":["passed",628],"act1.editor.table.semicolon":["passed",653],"act1.editor.table.ambiguous":["passed",579],"act1.editor.table.override":["passed",1247],"act1.editor.table.pipe":["passed",629],"act1.editor.table.ragged":["passed",576],"act1.editor.table.noheader":["passed",638],"act1.editor.table.cancel":["passed",586],"act1.editor.typo":["passed",1396],"act1.editor.fix":["passed",755],"act1.editor.readback":["passed",35],"act1.track.ds":["passed",29],"act1.track.rdi":["passed",31],"act2.window.open":["passed",30],"act2.join.alice":["passed",36],"act2.join.bob":["passed",37],"act2.join.charles":["passed",1937],"act2.join.dana":["passed",100],"act2.join.erik":["passed",98],"act2.join.fatima":["passed",100],"act2.join.giulia":["passed",106],"act2.midway":["passed",35],"act2.pause":["passed",31],"act2.pause.ui":["passed",294],"act2.pause.api":["passed",44],"act2.resume":["passed",35],"act2.resume.ui":["passed",295],"act2.join.hiro":["passed",101],"act2.join.ines":["passed",103],"act2.join.jonas":["passed",96],"act2.join.katya":["passed",99],"act2.join.liam":["passed",97],"act2.join.mei":["passed",99],"act2.form.alice":["passed",33],"act2.form.bob":["passed",33],"act2.form.charles":["passed",80],"act2.form.dana":["passed",33],"act2.form.erik":["passed",33],"act2.form.giulia":["passed",66],"act2.form.hiro":["passed",32],"act2.form.katya":["passed",32],"act2.form.mei":["passed",32],"act2.form.missing":["passed",30],"act2.form.unknown":["passed",31],"act2.form.alice.readback":["passed",31],"act2.form.alice.correct":["passed",33],"act2.form.alice.recheck":["passed",30],"act2.form.bob.snoop":["passed",49],"act2.form.admin.read":["passed",31],"act2.idempotent":["passed",31],"act2.anonymous":["passed",16],"act2.anonymous.register":["passed",14],"act2.roster":["passed",39],"act2.users.grown":["passed",30],"act2.flow.admin.users":["passed",2241],"act2.users.rogue":["passed",31],"act2.flow.alice.users":["passed",891],"act2.join.badid":["passed",48],"act2.join.ghost":["passed",56],"act2.whoami.bob":["passed",31],"act2.ui.waitlisted":["passed",309],"act2.ui.locked":["passed",329],"act2.flow.bob":["passed",1730],"act2.flow.anxious":["passed",1510],"act2.cap.create":["passed",43],"act2.cap.set":["passed",36],"act2.cap.join.room":["passed",38],"act2.cap.race":["passed",94],"act2.cap.roster":["passed",37],"act2.cap.join.full":["passed",40],"act2.cap.remove":["passed",50],"act2.cap.nojump":["passed",38],"act2.cap.ui.queued":["passed",292],"act2.cap.noautopromote":["passed",40],"act2.cap.approve.fill":["passed",46],"act2.cap.approve.over":["passed",51],"act2.cap.roster.final":["passed",35],"act2.cap.ui.gauge":["passed",636],"act2.cap.ui.in":["passed",315],"act3.propose.fair":["passed",39],"act3.propose.litdata":["passed",38],"act3.propose.genomelens":["passed",37],"act3.approve.fair":["passed",34],"act3.approve.litdata":["passed",1294],"act3.rogue":["passed",31],"act3.propose.sensor":["passed",34],"act3.withdraw":["passed",35],"act3.edit.fair":["passed",34],"act3.propose.anonymous":["passed",13],"act3.approve.ghost":["passed",30],"act3.propose.waitlisted":["passed",35],"act3.ui.proposals":["passed",929],"act4.pref.bob":["passed",34],"act4.pref.dana":["passed",33],"act4.export":["passed",32],"act4.team.matterhorn":["passed",33],"act4.team.bernina":["passed",29],"act4.team.anon":["passed",14],"act4.assign.bob":["passed",47],"act4.assign.alice":["passed",36],"act4.assign.dana":["passed",35],"act4.assign.erik":["passed",45],"act4.assign.anon":["passed",15],"act4.removeuser.anon":["passed",14],"act4.pref.erik":["passed",32],"act4.pref.update":["passed",36],"act4.window.prefclose":["passed",32],"act4.window.preflate":["passed",31],"act4.team.placeholder":["passed",30],"act4.team.placeholder.delete":["passed",31],"act4.rebalance.add":["passed",48],"act4.rebalance.remove":["passed",1318],"act4.rebalance.final":["passed",39],"act4.assign.hiro":["passed",48],"act4.assign.ines":["passed",52],"act4.assign.fatima":["passed",52],"act4.team.edit":["passed",38],"act4.team.edit.anon":["passed",17],"act4.team.delete.anon":["passed",14],"act4.ui.teams":["passed",553],"act4.webinars":["passed",32],"act5.approve.alice":["passed",32],"act5.approve.bob":["passed",33],"act5.approve.dana":["passed",32],"act5.approve.erik":["passed",51],"act5.approve.fatima":["passed",43],"act5.approve.giulia":["passed",34],"act5.approve.hiro":["passed",32],"act5.approve.ines":["passed",35],"act5.approve.double":["passed",34],"act5.roster.full":["passed",38],"act5.ui.member":["passed",294],"act5.ui.open":["passed",497],"act5.ui.about":["passed",334],"act5.flow.bob":["passed",2093],"act5.flow.admin":["passed",1642],"act5.flow.alice":["passed",1881],"act5.flow.search":["passed",1740],"act5.pref.reopen":["passed",35],"act5.flow.prefer":["passed",1532],"act5.pref.close":["passed",35],"act5.dropout.before":["passed",36],"act5.dropout.remove":["passed",34],"act5.dropout.after":["passed",29],"act5.dropout.team":["passed",37],"act5.backfill":["passed",65],"act5.backfill.access":["passed",35],"act5.backfill.team":["passed",33],"act5.roster.final":["passed",37],"act5.hub.tiles":["passed",615],"act5.hub.rogue":["passed",844],"act5.hub.review.click":["passed",988],"act5.hub.edit.click":["passed",1107],"act5.flow.reach.manage":["passed",1333],"act5.flow.hub.back":["passed",1051],"act5.hub.title.check":["passed",38],"act5.nav.fold":["passed",1188],"act5.pilot.join.offered":["passed",290],"act5.pilot.phase.wrap":["passed",35],"act5.pilot.hub.start":["passed",443],"act5.pilot.phase.day":["passed",33],"act5.pilot.hub.declare":["passed",1065],"act5.pilot.phase.advance":["passed",1019],"act5.pilot.phase.readback":["passed",38],"act5.pilot.cap.close":["passed",36],"act5.pilot.cap.schedule":["passed",36],"act5.pilot.cap.states":["passed",400],"act5.pilot.cap.readback":["passed",40],"act5.pilot.join.closed":["passed",295],"act5.pilot.join.rpc":["passed",32],"act5.pilot.cap.save":["passed",813],"act5.pilot.cap.save.readback":["passed",39],"act5.pilot.cap.plan":["passed",36],"act5.pilot.cap.unmet.bydates":["passed",1011],"act5.pilot.phase.declare":["passed",38],"act5.pilot.phase.declare.applied":["passed",62],"act5.pilot.cap.plan.again":["passed",36],"act5.pilot.cap.unmet":["passed",549],"act5.pilot.cap.unmet.readback":["passed",40],"act5.pilot.cap.refresh":["passed",786],"act5.pilot.cap.refresh.readback":["passed",39],"act5.cap.dupe":["passed",34],"act5.cap.dupe.check":["passed",40],"act5.cap.empty":["passed",37],"act5.cap.unknown":["passed",32],"act5.cap.badid":["passed",29],"act5.cap.ungoverned":["passed",32],"act5.cap.rogue":["passed",33],"act5.cap.anon":["passed",16],"act5.import.template":["passed",717],"act5.import.badmail":["passed",553],"act5.import.badproject":["passed",1150],"act5.import.dupe":["passed",556],"act5.import.waitlisted":["passed",537],"act5.import.halfrow":["passed",560],"act5.import.semicolon":["passed",567],"act5.import.newteam":["passed",556],"act5.import.malformed":["passed",561],"act5.import.bom":["passed",572],"act5.import.accents":["passed",612],"act5.import.apply":["passed",682],"act5.import.revert":["passed",1330],"act5.import.again":["passed",595],"act5.import.readback":["passed",36],"act5.approve.ghost":["passed",30],"act5.remove.ghost":["passed",31],"act5.approve.badid":["passed",28],"act5.window.regclose":["passed",31],"act5.window.regclosed":["passed",33],"act5.ui.charles":["passed",286],"act5.ui.charles.locked":["passed",237],"act5.rogue.approve":["passed",30],"act5.rogue.remove":["passed",28],"act5.owner.rogue":["passed",31],"act5.owner.waitlisted":["passed",32],"act5.owner.promote":["passed",31],"act5.owner.alice.hub":["passed",460],"act5.owner.alice.media":["passed",40],"act5.owner.alice.other.media":["passed",29],"act5.owner.alice.other.cap":["passed",29],"act5.owner.alice.other.hub":["passed",837],"act5.owner.self":["passed",46],"act5.owner.demote":["passed",32],"act5.owner.last":["passed",32],"act5.race.owner.doubleadd":["passed",35],"act5.race.owner.doubleadd.verify":["passed",38],"act5.race.owner.remove":["passed",45],"act5.race.owner.invariant":["passed",41],"act5.race.owner.restore":["passed",34],"act5.race.owner.restore2":["passed",34],"act5.race.owner.final":["passed",40],"act5.forms.roster":["passed",31],"act5.forms.rogue":["passed",29],"act5.forms.anon":["passed",17],"act5.state.facade":["passed",34],"act5.state.rogue":["passed",32],"act5.state.restore":["passed",34],"act5.phase.alias":["passed",36],"act5.audit":["passed",37],"act6.begin":["passed",33],"act6.ui.active":["passed",311],"act6.flow.anon":["passed",917],"act6.list.active":["passed",19],"act6.noshow":["passed",35],"act6.noshow.access":["passed",39],"act6.walkin.signup":["passed",54],"act6.walkin.override":["passed",33],"act6.walkin.join":["passed",35],"act6.walkin.approve":["passed",970],"act6.walkin.form":["passed",35],"act6.walkin.access":["passed",41],"act6.walkin.team":["passed",39],"act6.ui.teams":["passed",363],"act6.roster.walkin":["passed",46],"act6.announce":["passed",60],"act6.announce.ui":["passed",909],"act6.phase.ideation":["passed",33],"act6.phase.hacking":["passed",32],"act6.phase.judging":["passed",31],"act6.phase.rogue":["passed",28],"act6.ui.timeline":["passed",498],"act6.phase.current":["passed",1279],"act6.hub.now":["passed",470],"act6.hub.advance":["passed",997],"act6.hub.marker.readback":["passed",40],"act6.pages.ids":["passed",30],"act6.pages.movedown":["passed",670],"act6.pages.moveup":["passed",666],"act6.pages.reorder":["passed",591],"act6.pages.reorder.readback":["passed",33],"act6.pages.excerpt":["passed",368],"act6.pages.setorder.partial":["passed",34],"act6.pages.setorder.dupe":["passed",30],"act6.pages.setorder.empty":["passed",27],"act6.pages.setorder.ghost":["passed",30],"act6.pages.setorder.rogue":["passed",27],"act6.pages.setorder.anon":["passed",14],"act6.pages.setorder.restore":["passed",34],"act6.pages.order.final":["passed",32],"act6.flow.day1end":["passed",1019],"act6.flow.day2":["passed",2280],"act6.files":["passed",40],"act6.submit.draft":["passed",1215],"act6.submit.draft.id":["passed",34],"act6.submit.final":["passed",1049],"act6.submit.bernina":["passed",35],"act6.submit.bernina.edit":["passed",49],"act6.submit.bernina.final":["passed",39],"act6.submit.abandoned":["passed",35],"act6.logo.refresh":["passed",34],"act6.logo.check":["passed",37],"act6.submit.rogue":["passed",28],"act6.submit.anon":["passed",13],"act6.submit.edit.anon":["passed",15],"act6.submit.final.anon":["passed",15],"act6.submit.invalid":["passed",32],"act6.window.subclose":["passed",34],"act6.window.sublate":["passed",28],"act6.window.override":["passed",31],"act6.submit.grace":["passed",35],"act6.ui.submissions":["passed",324],"act7.cat.impact":["passed",35],"act7.cat.tech":["passed",31],"act7.cat.demo":["passed",32],"act7.cat.ranked":["passed",31],"act7.cat.points":["passed",34],"act7.voting.open":["passed",1154],"act7.monitor.open":["passed",32],"act7.cast.alice":["passed",38],"act7.cast.bob":["passed",1027],"act7.cast.dana":["passed",41],"act7.cast.erik":["passed",37],"act7.cast.giulia":["passed",37],"act7.cast.hiro":["passed",37],"act7.cast.ines":["passed",37],"act7.cast.jonas":["passed",38],"act7.cast.noor":["passed",36],"act7.cast.alice2":["passed",36],"act7.cast.bob2":["passed",38],"act7.cast.ines2":["passed",40],"act7.cast.giulia2":["passed",40],"act7.race.cat":["passed",34],"act7.race.doublevote":["passed",44],"act7.race.check":["passed",33],"act7.ranked.gap":["passed",31],"act7.ranked.dupe":["passed",30],"act7.ranked.bob":["passed",38],"act7.ranked.wrongmethod":["passed",30],"act7.points.over":["passed",29],"act7.points.bob":["passed",38],"act7.points.ines":["passed",38],"act7.cast.admin":["passed",30],"act7.cast.waitlisted":["passed",31],"act7.cast.double":["passed",35],"act7.close":["passed",32],"act7.cast.late":["passed",83],"act7.result.impact":["passed",33],"act7.result.ranked":["passed",36],"act7.result.points":["passed",35],"act7.results":["passed",31],"act7.prizes.finalize":["passed",30],"act8.end":["passed",32],"act8.ui.finished":["passed",304],"act8.latejoin":["passed",30],"act8.flow.anon":["passed",1021],"act8.audit":["passed",42],"act8.thanks":["passed",36],"act8.thanks.ui":["passed",328],"act8.retention.alice":["passed",325],"act8.prizes.edit":["passed",34],"act8.prizes.rogue":["passed",27],"act8.retention":["passed",989],"act8.flow.charles":["passed",1833],"act8.photos":["passed",35],"act8.media.presign":["passed",28],"act8.media.rogue":["passed",29],"act8.media.svg":["passed",28],"act8.media.upload":["passed",242],"act8.media.upload2":["passed",193],"act8.objects.hackathon":["passed",36],"act8.objects.noowner":["passed",28],"act8.objects.badowner":["passed",28],"act8.objects.rogue":["passed",30],"act8.objects.anon":["passed",14],"act8.objects.site.admin":["passed",36],"act8.objects.site.rogue":["passed",26],"act8.objects.all.admin":["passed",438],"act8.objects.all.rogue":["passed",30],"act8.objects.scope.zero":["passed",29],"act8.objects.page.one":["passed",430],"act8.objects.page.two":["passed",441],"act8.objects.pagesize.max":["passed",404],"act8.objects.pagesize.over":["passed",30],"act8.objects.badtoken":["passed",33],"act8.flow.reach.gallery":["passed",1724],"act8.gallery.admin":["passed",972],"act8.gallery.rogue":["passed",872],"act8.picker.halves":["passed",710],"act8.picker.reject":["passed",527],"act8.picker.cancel":["passed",475],"act8.pilot.finished":["passed",41],"act8.pilot.join.finished":["passed",948],"act8.pilot.join.finished.rpc":["passed",43],"act8.flow.bob":["passed",1229],"act8.ui.winners":["passed",593],"act8.blog":["passed",37],"act8.ui.blog":["passed",316],"act8.profile.rename":["passed",38],"act8.profile.sticks":["passed",30],"act8.profile.blank":["passed",29],"act8.menu.alice":["passed",1710],"act8.menu.admin":["passed",877],"act8.form.ui.edit":["passed",924],"act8.account.liam":["passed",48],"act8.account.mei":["passed",43],"act8.account.check":["passed",32],"act8.page.cleanup":["passed",35],"act8.draft.delete":["passed",41]}}
+</script>
+
 <script>
 (() => {
 "use strict";
@@ -1630,8 +1850,14 @@ ENTITIES.forEach(e => pos[e[0]] = {x:e[2], y:e[3]});
 
 /* ── build the SVG stage ──────────────────────────────────────────── */
 const svg = $("stage");
+/* the four painting layers, in z order. Each carries its own name as a class:
+   the zone layer inserts itself in FRONT of these (see buildZones), and a
+   render check that wants to know whether the zones really ended up behind
+   everything needs to be able to say which group is which. */
 const layers = {}; ["beams","entities","people","fx"].forEach(n => {
-  const g = document.createElementNS(SVGNS,"g"); svg.appendChild(g); layers[n] = g;
+  const g = document.createElementNS(SVGNS,"g");
+  g.setAttribute("class", n);
+  svg.appendChild(g); layers[n] = g;
 });
 function el(tag, attrs, parent){
   const n = document.createElementNS(SVGNS, tag);
@@ -1892,7 +2118,8 @@ const hasGate = a => !!(a.gate && a.gate.length);
    preference is a nicety — so every access is wrapped, never guarded. */
 const LS = {
   get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
-  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} },
+  remove(k){ try { localStorage.removeItem(k); } catch (e) {} }
 };
 
 /* cast groups are read off the PEOPLE table, not listed a second time */
@@ -1900,12 +2127,57 @@ const CAST_GROUP = {}; PEOPLE.forEach(p => CAST_GROUP[p[0]] = p[6]);
 const castMembers = g => PEOPLE.filter(p => p[6] === g).map(p => p[0]);
 const castOf = a => (a.actor && CAST_GROUP[a.actor]) || (a.actor ? "other" : "none");
 
-/* an optional Playwright JSON report — the ONLY source of pass/fail here,
-   because recipe.jsonl has none. Never persisted: a status remembered across
-   reloads would outlive the run that produced it, and a stale green is worse
-   than no green. */
-let report = null;   /* {name, status:{[id]:string}, specs, matched} */
+/* ── the run report: the ONLY source of pass/fail here ─────────────────
+   recipe.jsonl has none, so "did it pass" can only ever come from a real run.
+   Two sources, in this order of authority:
+
+     loaded    a Playwright JSON report the reader picks — always wins
+     embedded  the reduced snapshot spliced in below the recipe
+
+   The embedded one exists because `run outcome` used to answer "unknown" for
+   everybody until someone found a file to drop on it, which made the one mode
+   that can answer the question useless on open. It is REDUCED to what this mode
+   joins on — the action id, the outcome and the duration — since a full
+   Playwright report carries stdout, attachments and stack frames and this file
+   is opened from a disk.
+
+   It is a SNAPSHOT and every surface that uses it says so, with the date it was
+   produced and the recipe size it was produced against: a green that outlives
+   its run is the whole failure mode. A LOADED report is still never persisted,
+   for the same reason. */
+const EMBEDDED = (function readEmbedded(){
+  const node = $("run-report");
+  if (!node) return null;
+  let j;
+  try { j = JSON.parse(node.textContent.split(ESCAPED_CLOSE).join("</")); }
+  catch (e) { return null; }
+  if (!j || !j.status || typeof j.status !== "object") return null;
+  const status = {};
+  for (const id in j.status){
+    const v = j.status[id];
+    status[id] = String(Array.isArray(v) ? v[0] : v);
+  }
+  const matched = EVENTS.filter(a => status[a.id]).length;
+  if (!matched) return null;   /* a snapshot of some other recipe is no snapshot */
+  return {name: "the built-in snapshot", status: status, source: "embedded",
+    specs: j.specs || Object.keys(status).length, matched: matched,
+    when: String(j.generatedAt || ""), suite: String(j.suite || "journey"),
+    actions: +j.recipeActions || 0, totals: j.totals || null,
+    durationMs: +j.durationMs || 0,
+    dur: id => { const v = j.status[id]; return Array.isArray(v) ? +v[1] || 0 : 0; }};
+})();
+let report = EMBEDDED;   /* {name, status:{[id]:string}, specs, matched, source} */
 const runOf = a => (report && report.status[a.id]) || null;
+/* "2026-08-13T09:12:44.000Z" reads as a wall-clock date, not as an ISO string,
+   in the one place a reader has to judge whether a green is old */
+function whenText(r){
+  if (!r || !r.when) return "";
+  const d = new Date(r.when);
+  if (isNaN(+d)) return r.when;
+  const p = n => (n < 10 ? "0" : "") + n;
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate())
+    + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
 
 /* values that exist in THIS file, so a new act, kind or priority needs no edit */
 const ACTS_PRESENT = [...new Set(EVENTS.map(a => +a.act))].sort((x, y) => x - y);
@@ -2088,9 +2360,13 @@ function render(){
   if (!s.status) chip.classList.add("hidden");
   $("unlistedChip").classList.toggle("hidden", s.listed);
   /* entities */
+  /* tabindex follows visibility, not only pointer-events: an item that has not
+     been created yet in the story must not be a stop on the way through the
+     page with the keyboard either */
   const show = (k, on) => { const n = nodeEls[k];
     n.g.setAttribute("opacity", on ? 1 : 0);
-    n.g.style.pointerEvents = on ? "auto" : "none"; };
+    n.g.style.pointerEvents = on ? "auto" : "none";
+    if (n.g.classList.contains("dnode")) n.g.setAttribute("tabindex", on ? "0" : "-1"); };
   show("draft", s.draft); show("placeholder", s.placeholder);
   show("teamM", s.teamM); show("teamB", s.teamB);
   show("subM", s.subM); show("subB", s.subB); show("subScratch", s.subScratch);
@@ -2417,13 +2693,270 @@ function closeModal(){
 }
 $("mClose").addEventListener("click", closeModal);
 $("mback").addEventListener("click", closeModal);
-function makeClickable(key){
-  const n = nodeEls[key]; if (!n) return;
-  n.g.style.cursor = "pointer";
-  n.g.addEventListener("click", () => openModal(key));
+/* ── moving the items: pointer, keyboard, remembered ──────────────────
+   WHAT WINS between a drag and the replay: the drag, always — and by
+   construction rather than by arbitration. Nothing in the animation ever sets a
+   position. render() changes opacity, text and badges only, and animateBeam()
+   reads the CURRENT pos[] table each time it fires. So there is no frame on
+   which an arrangement could be overwritten, and a moved item keeps its place
+   for the rest of the run.
+
+   That is also why a drag writes pos[] and not only a transform: the transform
+   moves the disc, and pos[] is where every beam starts and ends. Move one
+   without the other and the beams keep arriving at the empty coordinates the
+   item used to occupy.
+
+   Pointer events, not HTML5 drag-and-drop — the latter has no SVG story and no
+   touch story. Screen→user coordinates go through the SVG's own CTM, so the
+   letterboxed viewBox scale needs no arithmetic here. Arrow keys do the same
+   operation without a mouse (Shift for a coarse step, Backspace to put one item
+   back), and every offset is remembered through the same wrapped localStorage
+   the theme uses, because file:// can throw on it. */
+const LAYOUT_KEY = "hlp-layout";
+const BASE_POS = {};   /* where the diagram itself puts each item */
+const NODE_BOX = {};   /* its box at rest — used to clamp, to ring, to zone */
+const offsets = {};    /* key → [dx, dy] */
+const DRAG_KEYS = PEOPLE.map(p => p[0]).concat(ENTITIES.map(e => e[0]));
+const offOf = k => offsets[k] || [0, 0];
+const movedKeys = () => DRAG_KEYS.filter(k => offsets[k] && (offsets[k][0] || offsets[k][1]));
+
+/* the group's own geometry, ignoring the ring and the moved-dot this code adds
+   and ignoring children with no geometry at all — an empty <text> (every
+   section hexagon starts with an empty count) reports a 0×0 box AT THE ORIGIN,
+   and unioning that in would stretch a node's box to the top-left corner of the
+   stage and take the clamp and the zone rects with it. */
+function contentBox(g){
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const c of g.children){
+    if (c.tagName === "title") continue;
+    if (c.classList && (c.classList.contains("dfocus") || c.classList.contains("dhandle"))) continue;
+    let b; try { b = c.getBBox(); } catch (e) { continue; }
+    if (!b || (!b.width && !b.height)) continue;
+    x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+    x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+  }
+  if (!isFinite(x0)){ const b = g.getBBox(); return {x: b.x, y: b.y, w: b.width, h: b.height}; }
+  return {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
 }
-PEOPLE.forEach(p => makeClickable(p[0]));
-ENTITIES.forEach(en => makeClickable(en[0]));
+function userPoint(e){
+  const m = svg.getScreenCTM();
+  if (!m) return {x: e.clientX, y: e.clientY};
+  let p;
+  if (typeof DOMPoint === "function") p = new DOMPoint(e.clientX, e.clientY);
+  else { p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; }
+  return p.matrixTransform(m.inverse());
+}
+/* an item dragged off the frame is an item you cannot get back except through
+   Reset layout, so the frame is a hard stop rather than a suggestion */
+function clampOffset(key, dx, dy){
+  const b = NODE_BOX[key];
+  if (!b) return [dx, dy];
+  const clamp = (v, lo, hi) => Math.max(Math.min(v, hi), lo);
+  return [clamp(dx, 2 - b.x, 958 - (b.x + b.w)), clamp(dy, 2 - b.y, 678 - (b.y + b.h))];
+}
+function setOffset(key, dx, dy, clamp){
+  const n = nodeEls[key]; if (!n || !BASE_POS[key]) return;
+  if (clamp !== false){ const c = clampOffset(key, dx, dy); dx = c[0]; dy = c[1]; }
+  offsets[key] = [dx, dy];
+  const on = !!(dx || dy);
+  n.g.setAttribute("transform", on ? "translate(" + dx.toFixed(1) + " " + dy.toFixed(1) + ")" : "");
+  n.g.classList.toggle("moved", on);
+  pos[key].x = BASE_POS[key].x + dx;
+  pos[key].y = BASE_POS[key].y + dy;
+}
+function updateResetBtn(){
+  const n = movedKeys().length, b = $("btnResetLayout");
+  $("btnResetLayoutN").textContent = n;
+  b.disabled = n === 0;
+  b.setAttribute("aria-label", n
+    ? "Reset layout — put the " + n + " moved item" + (n === 1 ? "" : "s") + " back"
+    : "Reset layout — nothing has been moved yet");
+}
+function saveLayout(){
+  const o = {};
+  movedKeys().forEach(k => { o[k] = [Math.round(offsets[k][0]), Math.round(offsets[k][1])]; });
+  if (Object.keys(o).length) LS.set(LAYOUT_KEY, JSON.stringify(o));
+  else LS.remove(LAYOUT_KEY);
+  updateResetBtn();
+}
+function resetLayout(){
+  DRAG_KEYS.forEach(k => { if (offsets[k]) setOffset(k, 0, 0, false); });
+  saveLayout();
+}
+function loadLayout(){
+  const raw = LS.get(LAYOUT_KEY); if (!raw) return;
+  let o; try { o = JSON.parse(raw); } catch (e) { return; }
+  if (!o || typeof o !== "object") return;
+  for (const k in o){
+    if (!nodeEls[k] || !Array.isArray(o[k])) continue;
+    setOffset(k, +o[k][0] || 0, +o[k][1] || 0);
+  }
+}
+
+let drag = null, swallowClick = false;
+function wireNode(key){
+  const n = nodeEls[key]; if (!n) return;
+  const b = contentBox(n.g);
+  NODE_BOX[key] = b;
+  BASE_POS[key] = {x: pos[key].x, y: pos[key].y};
+  const label = PERSON_NAME[key] || ENTITY_NAME[key] || key;
+
+  /* the focus ring is an ELEMENT, not an `outline`: engines still disagree about
+     painting an outline on an SVG group, and a keyboard user with no visible
+     focus has no way to know which item the arrows will move. First child, so
+     it draws behind the item it rings. */
+  const ring = el("rect", {class: "dfocus", rx: 6,
+    x: (b.x - 5).toFixed(1), y: (b.y - 5).toFixed(1),
+    width: (b.w + 10).toFixed(1), height: (b.h + 10).toFixed(1)}, n.g);
+  n.g.insertBefore(ring, n.g.firstChild);
+  /* a moved item marks itself, so "Reset layout · 3" is checkable against the
+     picture instead of being a number to trust */
+  el("circle", {class: "dhandle", cx: (b.x - 3).toFixed(1), cy: (b.y - 3).toFixed(1), r: 2.6}, n.g);
+
+  n.g.classList.add("dnode");
+  n.g.dataset.node = key;
+  n.g.setAttribute("tabindex", "0");
+  n.g.setAttribute("role", "button");
+  n.g.setAttribute("aria-label", label
+    + " — Enter opens its history; the arrow keys move it, Backspace puts it back");
+  el("title", {}, n.g).textContent = label
+    + " — drag to move it, or Tab to it and nudge with the arrow keys. Click for its history.";
+
+  n.g.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    swallowClick = false;
+    const p = userPoint(e), o = offOf(key);
+    drag = {key: key, px: p.x, py: p.y, dx: o[0], dy: o[1], moved: false};
+    n.g.classList.add("dragging");
+    try { n.g.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  n.g.addEventListener("pointermove", e => {
+    if (!drag || drag.key !== key) return;
+    const p = userPoint(e);
+    const nx = drag.dx + (p.x - drag.px), ny = drag.dy + (p.y - drag.py);
+    /* a 2px threshold, so a click that trembles still opens the modal */
+    if (!drag.moved && Math.hypot(nx - drag.dx, ny - drag.dy) > 2) drag.moved = true;
+    if (drag.moved) setOffset(key, nx, ny);
+  });
+  const finish = () => {
+    if (!drag || drag.key !== key) return;
+    n.g.classList.remove("dragging");
+    if (drag.moved){ swallowClick = true; saveLayout(); }
+    drag = null;
+  };
+  n.g.addEventListener("pointerup", finish);
+  n.g.addEventListener("pointercancel", finish);
+  n.g.addEventListener("click", () => {
+    if (swallowClick){ swallowClick = false; return; }   /* that was a drag */
+    openModal(key);
+  });
+  n.g.addEventListener("keydown", e => {
+    const STEP = e.shiftKey ? 16 : 4;
+    let dx = 0, dy = 0;
+    if (e.key === "ArrowLeft") dx = -STEP;
+    else if (e.key === "ArrowRight") dx = STEP;
+    else if (e.key === "ArrowUp") dy = -STEP;
+    else if (e.key === "ArrowDown") dy = STEP;
+    else if (e.key === "Enter" || e.code === "Space"){
+      e.preventDefault(); e.stopPropagation(); openModal(key); return;
+    } else if (e.key === "Backspace" || e.key === "Delete"){
+      e.preventDefault(); e.stopPropagation();
+      setOffset(key, 0, 0, false); saveLayout(); return;
+    } else return;
+    /* the transport listens for arrows on the document: a nudge must not also
+       step the story, so the focused item keeps the key */
+    e.preventDefault(); e.stopPropagation();
+    const o = offOf(key);
+    setOffset(key, o[0] + dx, o[1] + dy);
+    saveLayout();
+  });
+}
+DRAG_KEYS.forEach(wireNode);
+
+/* ── the regions behind the diagram ───────────────────────────────────
+   Six dim, labelled areas saying what each part of the stage IS. Membership is
+   DERIVED, never listed twice: the cast groups come off the PEOPLE table's own
+   group column, the platform's ring is every entity key beginning with "sec",
+   and the bottom band is the teams, their submissions and the upload bundle.
+   Together they are a PARTITION of all the items on the stage, which is the
+   property that keeps the taxonomy honest — an invented region would leave a
+   node in two zones or in none, and the render harness asserts exactly that.
+
+   Rects come from the items' own boxes, so moving a cast member in the table
+   moves its region with it. They are NOT recomputed after a drag: a zone names
+   an AREA, so dragging an item out of one is a fact about the item and not
+   about the area. Two of them overlap slightly and that is real — the
+   principals' name labels reach x=164 and the upload bundle starts at x=156 —
+   which is why the washes share one opacity group (see the CSS). */
+const ZONES = [
+  {key: "admin", label: "platform admin", side: "t", align: "l",
+   pad: {t: 8, r: 14, b: 8, l: 14},
+   of: PEOPLE.filter(p => p[6] === "admin").map(p => p[0])},
+  {key: "draft", label: "private draft", side: "t", align: "l",
+   pad: {t: 8, r: 16, b: 8, l: 16},
+   of: ["draft"]},
+  {key: "platform", label: "the platform & its sections", side: "t", align: "l",
+   pad: {t: 8, r: 8, b: 1, l: 8},
+   of: ["platform"].concat(ENTITIES.filter(e => e[0].indexOf("sec") === 0).map(e => e[0]))},
+  /* wider pads than the rest, and not for looks: the label has to FIT inside
+     the box it names, and this column is only as wide as a name label.
+     The visitor is its own region rather than the fourth member of this one —
+     it is a signed-OUT session, the cast table gives it its own group and its
+     own dashed ring, and folding it in here would stretch this box to the
+     bottom of the frame, where the caption bar covers the label. */
+  {key: "principals", label: "principals", side: "b", align: "l",
+   pad: {t: 8, r: 14, b: 6, l: 14},
+   of: PEOPLE.filter(p => p[6] === "principal").map(p => p[0])},
+  {key: "visitor", label: "anonymous visitor", side: "t", align: "l",
+   pad: {t: 8, r: 41, b: 6, l: 41},
+   of: PEOPLE.filter(p => p[6] === "anon").map(p => p[0])},
+  {key: "crowd", label: "the registration crowd", side: "b", align: "l",
+   pad: {t: 8, r: 10, b: 6, l: 10},
+   of: PEOPLE.filter(p => p[6] === "extra").map(p => p[0])},
+  {key: "work", label: "teams, submissions & uploads", side: "b", align: "r",
+   pad: {t: 0, r: 8, b: 6, l: 0},
+   of: ["teamM", "teamB", "placeholder", "subM", "subB", "subScratch", "assets"]}
+];
+(function buildZones(){
+  const fills = document.createElementNS(SVGNS, "g");
+  const marks = document.createElementNS(SVGNS, "g");
+  fills.setAttribute("class", "zones"); marks.setAttribute("class", "zonemarks");
+  fills.setAttribute("aria-hidden", "true"); marks.setAttribute("aria-hidden", "true");
+  const STRIP = 15;   /* a clear band for the label, so it never lands on an item */
+  ZONES.forEach(z => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    z.of.forEach(k => {
+      const b = NODE_BOX[k]; if (!b) return;
+      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
+      x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+    });
+    if (!isFinite(x0)) return;
+    const p = z.pad;
+    const X = x0 - p.l, W = (x1 + p.r) - X;
+    let Y = y0 - p.t, H = (y1 + p.b) - Y;
+    if (z.side === "t"){ Y -= STRIP; H += STRIP; } else { H += STRIP; }
+    z.rect = {x: X, y: Y, w: W, h: H};
+    [fills, marks].forEach(parent => {
+      const r = el("rect", {x: X.toFixed(1), y: Y.toFixed(1),
+        width: W.toFixed(1), height: H.toFixed(1), rx: 7}, parent);
+      r.setAttribute("data-zone", z.key);
+    });
+    const t = el("text", {class: "zone-label",
+      x: (z.align === "r" ? X + W - 8 : X + 8).toFixed(1),
+      y: (z.side === "t" ? Y + 11 : Y + H - 5).toFixed(1)}, marks);
+    if (z.align === "r") t.setAttribute("text-anchor", "end");
+    t.setAttribute("data-zone", z.key);
+    t.textContent = z.label;
+  });
+  /* first children: behind the beams, the entities and the people */
+  svg.insertBefore(marks, svg.firstChild);
+  svg.insertBefore(fills, svg.firstChild);
+})();
+
+loadLayout();
+updateResetBtn();
+$("btnResetLayout").addEventListener("click", resetLayout);
 
 /* ── transport / engine ───────────────────────────────────────────── */
 let cursor = 0, playing = false, timer = null;
@@ -2473,7 +3006,13 @@ document.addEventListener("keydown", e => {
      cycles inside it, and none of the transport shortcuts fire underneath —
      Space in the middle of a search term must not start playback */
   /* settings stacks ON TOP of the browser (it is reachable from inside it), so
-     it is asked about first — the topmost dialog owns Esc and Tab */
+     it is asked about first — the topmost dialog owns Esc and Tab. Help stacks
+     above both, for the same reason: it opens from either of them. */
+  if (helpOpen()){
+    if (e.key === "Escape"){ e.preventDefault(); closeHelp(); return; }
+    trapTab($("help").querySelector(".scard"), e);
+    return;
+  }
   if (settingsOpen()){
     if (e.key === "Escape"){ e.preventDefault(); closeSettings(); return; }
     trapTab($("settings").querySelector(".scard"), e);
@@ -2496,6 +3035,9 @@ document.addEventListener("keydown", e => {
   if (e.key === "r" || e.key === "R"){ setPlaying(false); seek(0, true); }
   if (e.key === "b" || e.key === "B"){ e.preventDefault(); openBrowser(); }
   if (e.key === "c" || e.key === "C"){ e.preventDefault(); openSettings(); }
+  /* both, because "?" is the conventional key and needs a Shift nobody should
+     have to find on a phone keyboard or a non-US layout */
+  if (e.key === "?" || e.key === "h" || e.key === "H"){ e.preventDefault(); openHelp(); }
 });
 
 /* ── scrubber (segments ∝ actions per act) + acts strip on top ────── */
@@ -2624,6 +3166,15 @@ function renderLegend(){
   modeBtn.innerHTML = "⚙ colour = <em>" + esc(mode.label) + "</em>";
   modeBtn.addEventListener("click", openSettings);
   box.appendChild(modeBtn);
+  /* and the question the words below raise, answered from where they are read:
+     "gate" and "todo" are in this legend, so the way to what they mean is too */
+  const askBtn = document.createElement("button");
+  askBtn.className = "lmode"; askBtn.id = "tlHelp";
+  askBtn.setAttribute("aria-haspopup", "dialog");
+  askBtn.title = "What gate, todo, expect, priority, actor and save mean";
+  askBtn.innerHTML = "? <em>what these words mean</em>";
+  askBtn.addEventListener("click", openHelp);
+  box.appendChild(askBtn);
 
   const item = (it, n, caps) => {
     const s = document.createElement("span");
@@ -2664,14 +3215,19 @@ function renderLegendNote(tal){
   }
   if (mode.id === "run"){
     s += report
-      ? " Coloured from <b>" + esc(report.name) + "</b>: " + report.matched + " of "
-        + EVENTS.length + " actions matched a spec in it."
+      ? " Coloured from <b>" + esc(report.name) + "</b>"
+        + (report.when ? " — the " + esc(whenText(report)) + " " + esc(report.suite)
+            + " run, a <b>snapshot</b> built into this file rather than a live result" : "")
+        + ": " + report.matched + " of " + EVENTS.length + " actions matched a spec in it."
       : " <b>No run report loaded</b>, so every tick is “not in the report”. "
         + "recipe.jsonl has no status field — load a Playwright JSON report from "
         + "⚙ Colours to see what actually happened.";
   } else {
     s += " None of this is pass/fail: the recipe records <b>intent</b>, not "
-       + "results — for outcomes, load a run report from ⚙ Colours.";
+       + "results — for outcomes switch to <b>run outcome</b>"
+       + (EMBEDDED ? ", coloured from the " + esc(whenText(EMBEDDED)) + " journey run "
+           + "embedded in this file, or load your own report from ⚙ Colours."
+         : ", and load a run report from ⚙ Colours.");
   }
   $("tlNote").innerHTML = s;
   /* the browse dialog's two filter checkboxes use the same two words, so they
@@ -2783,6 +3339,203 @@ $("bSettings").addEventListener("click", openSettings);
 $("sClose").addEventListener("click", closeSettings);
 $("sback").addEventListener("click", closeSettings);
 
+/* ── help dialog: the vocabulary in plain language ─────────────────────
+   Two people asked what "has gate" meant, so the answer is now a first-class
+   surface rather than a tooltip and a paragraph two panels away.
+
+   Every number and every example in here is read off the embedded recipe at the
+   moment the dialog opens. A hard-coded "24 gated actions" is a sentence that
+   goes stale on the next recipe edit with nothing to catch it — the same reason
+   the legend's counts are tallied off the ticks they point at. */
+const pickEx = pred => EVENTS.find(pred) || null;
+function exBox(a, extra){
+  if (!a) return "";
+  return "<span class=\"ex\"><b>" + esc(a.id) + "</b> — " + esc(a.title)
+    + (extra ? "<br>" + extra : "") + "</span>";
+}
+function dt(name, n){
+  return "<dt><code>" + esc(name) + "</code>"
+    + (n === undefined ? "" : "<span class=\"n\">" + n + "</span>") + "</dt>";
+}
+function buildHelp(){
+  const kindN = tallyByPred(MODE_BY_ID.kind);
+  const prioN = tallyByPred(MODE_BY_ID.prio);
+  const expN  = tallyByPred(MODE_BY_ID.expect);
+  const castN = tallyByPred(MODE_BY_ID.cast);
+  const exGate = pickEx(hasGate);
+  const exTodo = pickEx(a => hasTodo(a) && a.todo.length > 70 && a.todo.length < 240);
+  const exRace = pickEx(a => a.action === "rpc.race");
+  const exFlow = pickEx(a => a.action === "ui.flow" && (a.steps || []).length > 3);
+  const exAssert = pickEx(a => a.action === "ui.assert");
+  const exRpc = pickEx(a => a.action === "rpc" && a.expect && a.expect.ok !== undefined);
+  const exFiles = pickEx(a => a.action === "files.generate");
+  const exPD = pickEx(a => a.expect && a.expect.error === "PermissionDenied");
+  const exUN = pickEx(a => a.expect && a.expect.error === "Unauthenticated");
+  const exSave = pickEx(a => a.save);
+  const exVar = pickEx(a => a.id !== (exSave && exSave.id)
+    && /\{\{var:|\{\{hackathonId\}\}/.test(JSON.stringify(a.params || {})));
+  const acts = ACTS_PRESENT.map(n =>
+    "<b>" + n + "</b> " + esc(ACT_NAMES[n] || "") + " (" + EVENTS.filter(a => +a.act === n).length + ")")
+    .join(" · ");
+  const firstT = EVENTS[0].t || "", lastT = EVENTS[EVENTS.length - 1].t || "";
+
+  const S = [];
+  S.push("<section class=\"wide\"><h4>What you are looking at</h4>"
+    + "<p><b>recipe.jsonl is the product spec, written as a test.</b> "
+    + EVENTS.length + " actions, one JSON object per line, executed strictly in "
+    + "file order by <code>tests/journey/recipe.spec.ts</code> against a freshly "
+    + "reset stack. This page replays those same lines. Each action says WHO acts, "
+    + "WHAT they do and WHICH outcome is asserted — and nothing in it records what "
+    + "happened on any particular run.</p>"
+    + "<p>The story runs in nine acts, from " + esc(firstT) + " to " + esc(lastT)
+    + ": " + acts + ". The timeline at the bottom is one tick per action in that "
+    + "order, and the acts strip under it is clickable.</p></section>");
+
+  S.push("<section><h4>The kinds of action</h4><dl>"
+    + dt("rpc", kindN["rpc"] || 0)
+    + "<dd>A single gRPC call made <b>as a named person</b>, over grpcurl with that "
+    + "person's real Keycloak token — so the backend's own permission checks decide "
+    + "the outcome." + exBox(exRpc) + "</dd>"
+    + dt("ui.flow", kindN["ui.flow"] || 0)
+    + "<dd>A real browser walks a path step by step — go here, click that, fill this, "
+    + "expect that — in that person's own signed-in session. Reaching a page by "
+    + "clicking is a different claim from reaching it by URL." + exBox(exFlow) + "</dd>"
+    + dt("ui.assert", kindN["ui.assert"] || 0)
+    + "<dd>A named assertion helper checks a rendered page (the helper's name is the "
+    + "<code>assert</code> field)." + exBox(exAssert) + "</dd>"
+    + dt("rpc.race", kindN["rpc.race"] || 0)
+    + "<dd>Several calls fired <b>simultaneously</b> and judged on the aggregate — how "
+    + "many succeeded, and which error codes came back as a set. Each one is followed "
+    + "by a plain read of the END STATE, because “both returned OK” and “there is one "
+    + "row” are different claims. Two of these reproduced real bugs before their fixes."
+    + exBox(exRace) + "</dd>"
+    + dt("files.generate", kindN["files.generate"] || 0)
+    + "<dd>Writes the deterministic upload bundle the later actions upload."
+    + exBox(exFiles) + "</dd></dl></section>");
+
+  S.push("<section><h4><span class=\"gk\">gate</span> — waits for its RPCs</h4>"
+    + "<p><b>" + N_GATE + " of " + EVENTS.length + " actions carry one.</b> The action "
+    + "names the RPCs it needs and <b>self-skips while they do not exist</b>. "
+    + "<code>scripts/probe.sh</code> asks the running backend for them before the suite "
+    + "starts, so a gated action begins running <b>by itself</b> the moment the RPC "
+    + "lands — nothing has to be edited, and nothing has to be remembered.</p>"
+    + "<p>A gate is only useful if somebody probes it: <code>implemented()</code> cannot "
+    + "tell “the backend said Unimplemented” from “nobody ever asked”, so an action "
+    + "gated on an unprobed RPC would self-skip forever and look fine. "
+    + "<code>runRpc</code> therefore <b>throws</b> on a gate that is missing from the "
+    + "probe list.</p>"
+    + "<p>On the timeline a gate is drawn as a cap at the <b>top</b> of its tick.</p>"
+    + exBox(exGate, exGate && exGate.gate
+        ? "gate: <code>" + esc([].concat(exGate.gate).join(", ")) + "</code>" : "")
+    + "</section>");
+
+  S.push("<section><h4><span class=\"tk\">todo</span> — a design note, not a gap</h4>"
+    + "<p><b>" + N_TODO + " of " + EVENTS.length + " actions carry one.</b> Free text on "
+    + "the action: why it is written the way it is, what a reader would otherwise get "
+    + "wrong, or what to re-specify when a bug it pins gets fixed. Several are "
+    + "justifications for a decision. It is <b>not</b> a count of gaps, <b>not</b> a "
+    + "count of failures, and <b>not</b> a to-do list for the product.</p>"
+    + "<p>Drawn as a cap at the <b>bottom</b> of its tick. One as written:</p>"
+    + exBox(exTodo, exTodo ? "todo: " + esc(exTodo.todo) : "")
+    + "</section>");
+
+  S.push("<section><h4><code>expect</code> — the outcome being asserted</h4>"
+    + "<p><code>{ok: true}</code> means the call is meant to succeed. "
+    + "<code>{error: \"PermissionDenied\"}</code> means <b>the refusal IS the passing "
+    + "outcome</b>: " + N_DENIED + " actions assert an error, and a green run is one "
+    + "where every one of them was refused.</p>"
+    + "<p>Which refusal matters. An <b>anonymous</b> caller gets "
+    + "<code>Unauthenticated</code> (" + (expN.un || 0) + ") and a known caller "
+    + "who may not do it gets <code>PermissionDenied</code> (" + (expN.pd || 0)
+    + ") — “who are you” and “not you” are different answers, and telling an anonymous "
+    + "caller <code>NotFound</code> would let them probe which ids exist.</p>"
+    + exBox(exPD) + exBox(exUN)
+    + "<p style=\"margin-top:6px\">" + (expN.err || 0) + " assert some other code "
+    + "(InvalidArgument, FailedPrecondition, NotFound, AlreadyExists), " + (expN.ok || 0)
+    + " assert success, and " + (expN.none || 0) + " have no <code>expect</code> block at "
+    + "all — a browser flow whose steps carry their own assertions.</p></section>");
+
+  S.push("<section><h4><code>priority</code>, <code>act</code>, <code>t</code></h4><dl>"
+    + dt("priority")
+    + "<dd>How load-bearing the action is: <b>P1</b> " + (prioN.P1 || 0)
+    + ", <b>P2</b> " + (prioN.P2 || 0) + ", <b>P3</b> " + (prioN.P3 || 0)
+    + ". P1 is the spine of the story.</dd>"
+    + dt("act")
+    + "<dd>Which of the nine acts it belongs to. Acts are played in order and every "
+    + "act is its own segment of the timeline.</dd>"
+    + dt("t")
+    + "<dd>Where it sits in the event's own calendar — <code>" + esc(firstT)
+    + "</code> through <code>" + esc(lastT) + "</code>. It is a label, not a clock: "
+    + "dates in params are written as <code>{{now+120d}}</code> and resolved at run "
+    + "time.</dd></dl></section>");
+
+  S.push("<section><h4><code>actor</code> — who is doing it</h4>"
+    + "<p>" + ["admin", "principal", "extra", "anon"].map(g => "<b>"
+        + esc(CAST_STYLE[g].label) + "</b> " + (castN[g] || 0)).join(" · ")
+    + (castN.none ? " · <b>no actor field</b> " + castN.none : "") + ".</p>"
+    + "<p>The principals log in through the real Keycloak flow and have browser "
+    + "sessions; the crowd acts over gRPC with real tokens and no browser. Click any "
+    + "disc on the diagram for that person's own history.</p>"
+    + "<p><b>The same name means different things in different suites.</b> In the "
+    + "seeded smoke fixture alice OWNS the event; in this journey the admin creates it, "
+    + "alice joins it and votes — organisers may not vote. An action written with the "
+    + "wrong cast in mind gets the right error code for the wrong reason.</p></section>");
+
+  S.push("<section><h4><code>save</code> and <code>{{vars}}</code> — how one action feeds the next</h4>"
+    + "<p>An action can save something out of its response under a name, and later "
+    + "actions substitute it into their own params. That is why the suite is strictly "
+    + "<b>serial</b>: the ids live in one worker's memory, so a failure early on leaves "
+    + "everything downstream with nothing to substitute.</p>"
+    + exBox(exSave, exSave && exSave.save
+        ? "save: <code>" + esc(JSON.stringify(exSave.save)) + "</code>" : "")
+    + exBox(exVar, exVar ? "…and a later action substitutes it." : "")
+    + "</section>");
+
+  const mode = curMode();
+  S.push("<section class=\"wide\"><h4>What the colours mean right now</h4>"
+    + "<p>The timeline currently colours by <b>" + esc(mode.label) + "</b> — "
+    + esc(mode.field) + ". That is a <b>setting</b>: <b>⚙ Colours</b> offers "
+    + MODES.length + " encodings, the legend under the timeline is rebuilt from "
+    + "whichever is chosen, and every count in it is tallied off the ticks that were "
+    + "actually drawn — so the legend cannot describe an encoding other than the one "
+    + "on screen.</p>"
+    + "<p><b>None of it is pass/fail.</b> The recipe records intent, not results. "
+    + (EMBEDDED
+        ? "The <b>run outcome</b> mode is coloured from a real journey run — the <b>"
+          + esc(whenText(EMBEDDED)) + "</b> " + esc(EMBEDDED.suite) + " run of "
+          + EMBEDDED.actions + " actions, embedded in this file. It is a <b>snapshot</b>: "
+          + "it says nothing about the code as it stands today, and loading your own "
+          + "report from ⚙ Colours overrides it."
+        : "For outcomes, load a Playwright JSON report from <b>⚙ Colours</b>; with none "
+          + "loaded, <b>run outcome</b> honestly colours everything “not in the "
+          + "report”.")
+    + "</p>"
+    + "<p>The diagram itself is arrangeable: drag any item, or Tab to it and nudge it "
+    + "with the arrow keys (Shift for a bigger step, Backspace to put that one back). "
+    + "The layout is remembered on this machine; <b>⤺ Reset layout</b> in the header "
+    + "puts everything back. The dim labelled boxes behind the items name what each "
+    + "region of the stage is.</p></section>");
+
+  $("hDoc").innerHTML = S.join("");
+}
+let lastFocusHelp = null;
+function helpOpen(){ return !$("help").hidden; }
+function openHelp(){
+  setPlaying(false);
+  lastFocusHelp = document.activeElement;
+  buildHelp();
+  $("help").hidden = false;
+  $("hClose").focus();
+}
+function closeHelp(){
+  $("help").hidden = true;
+  if (lastFocusHelp && lastFocusHelp.focus) lastFocusHelp.focus();
+}
+$("btnHelp").addEventListener("click", openHelp);
+$("bHelp").addEventListener("click", openHelp);
+$("hClose").addEventListener("click", closeHelp);
+$("hback").addEventListener("click", closeHelp);
+
 /* ── an optional Playwright JSON report ───────────────────────────────
    The recipe cannot answer "did it pass" — nothing in it records a result — so
    the only honest way to offer that colouring is to read a real report.
@@ -2793,24 +3546,76 @@ function setReportStatus(kind, text, detail){
   st.className = "repstat " + kind;
   st.textContent = text;
   $("sRepBox").classList.toggle("loaded", kind === "good");
+  $("sRepBox").classList.toggle("snap", !!(report && report.source === "embedded"));
   const d = $("sRepDetail");
   if (detail){ d.hidden = false; d.textContent = detail; } else { d.hidden = true; d.textContent = ""; }
-  $("sRepClear").disabled = !report;
+  describeReport();
 }
-function noReportYet(){
-  setReportStatus("warn",
-    "No run report loaded — “run outcome” colours everything as unknown.", "");
+/* the outcome mix, off the same predicate tally the ticks are painted from */
+function repDetail(r){
+  const t = tallyByPred(MODE_BY_ID.run);
+  return "passed " + (t.passed || 0) + " · failed " + (t.failed || 0)
+    + " · skipped " + (t.skipped || 0) + " · flaky/interrupted " + (t.other || 0)
+    + " · not in the report " + (t.unknown || 0)
+    + ".  Read from " + r.specs + " specs; a loaded report is not remembered across reloads.";
+}
+/* One control, and its LABEL says what it will do — three states on one button
+   is otherwise the kind of thing nobody can predict before clicking it. */
+function describeReport(){
+  const clear = $("sRepClear"), when = $("sRepWhen");
+  const loaded = !!(report && report.source === "loaded");
+  const snap = !!(report && report.source === "embedded");
+  clear.disabled = !report;
+  clear.textContent = loaded && EMBEDDED ? "⤺ Back to the built-in snapshot"
+    : snap ? "✕ Use no report" : "Clear report";
+  clear.title = loaded && EMBEDDED
+      ? "Forget the file you loaded and colour from the snapshot built into this file again"
+    : loaded ? "Forget the loaded report"
+    : snap ? "Colour every tick “not in the report” — the honest answer when nothing has been run"
+    : "Nothing to clear";
+  if (!EMBEDDED){ when.hidden = true; return; }
+  when.hidden = false;
+  const tot = EMBEDDED.totals;
+  when.innerHTML = "Built-in <b>snapshot</b>, not a live result: <b>" + esc(EMBEDDED.suite)
+    + "</b> run of <b>" + esc(whenText(EMBEDDED)) + "</b> against <b>" + EMBEDDED.actions
+    + "</b> recipe actions"
+    + (tot ? " — " + (+tot.passed || 0) + " passed, " + (+tot.failed || 0) + " failed, "
+             + (+tot.skipped || 0) + " skipped" : "")
+    + (EMBEDDED.durationMs ? ", in " + Math.round(EMBEDDED.durationMs / 1000) + "s" : "")
+    + ". " + (snap ? "It is what the colours use now."
+            : loaded ? "The file you loaded overrides it."
+            : "It is switched off — nothing is colouring by outcome.");
+}
+function showReportState(){
+  if (!report){
+    setReportStatus("warn",
+      "No run report loaded — “run outcome” colours everything as unknown.", "");
+  } else if (report.source === "embedded"){
+    setReportStatus("good",
+      "Using the built-in snapshot of the " + whenText(EMBEDDED) + " " + EMBEDDED.suite
+      + " run — " + EMBEDDED.matched + " of " + EVENTS.length + " actions matched.",
+      repDetail(EMBEDDED));
+  } else {
+    setReportStatus("good",
+      "Loaded " + report.name + " — " + report.matched + " of " + EVENTS.length
+      + " actions matched.", repDetail(report));
+  }
 }
 function readReport(file){
   const fr = new FileReader();
-  fr.onerror = () => { report = null; noReportYet();
-    setReportStatus("bad", "Could not read that file.", ""); applyMode(modeId); };
+  /* a file that cannot be used leaves the previous colouring ALONE and says
+     why: blanking the report because someone picked the wrong file in a
+     dialog is a second failure on top of the first */
+  fr.onerror = () => {
+    setReportStatus("bad", "Could not read that file — nothing changed.", "");
+    applyMode(modeId);
+  };
   fr.onload = () => {
     let json;
     try { json = JSON.parse(String(fr.result)); }
     catch (err){
-      report = null;
-      setReportStatus("bad", "That file is not JSON — expected a Playwright JSON report.", "");
+      setReportStatus("bad",
+        "That file is not JSON — expected a Playwright JSON report. Nothing changed.", "");
       applyMode(modeId); return;
     }
     const status = {};
@@ -2829,20 +3634,15 @@ function readReport(file){
     })(json);
     const matched = EVENTS.filter(a => status[a.id]).length;
     if (!matched){
-      report = null;
       setReportStatus("bad",
         "Read " + specs + " specs, but none of their titles start with an action id "
-        + "— is this a journey report?", "");
+        + "— is this a journey report? Nothing changed.", "");
       applyMode(modeId); return;
     }
-    report = {name: file.name, status: status, specs: specs, matched: matched};
-    const t = tallyByPred(MODE_BY_ID.run);
-    setReportStatus("good",
-      "Loaded " + file.name + " — " + matched + " of " + EVENTS.length + " actions matched.",
-      "passed " + (t.passed || 0) + " · failed " + (t.failed || 0)
-      + " · skipped " + (t.skipped || 0) + " · flaky/interrupted " + (t.other || 0)
-      + " · not in the report " + (t.unknown || 0)
-      + ".  Read from " + specs + " specs in the file; not remembered across reloads.");
+    /* a loaded report always outranks the built-in snapshot */
+    report = {name: file.name, status: status, specs: specs, matched: matched,
+      source: "loaded", when: "", suite: "", actions: 0, totals: null, durationMs: 0};
+    showReportState();
     /* loading a report is an unambiguous request to see outcomes */
     applyMode("run", true);
   };
@@ -2852,11 +3652,15 @@ $("sRepFile").addEventListener("change", e => {
   const f = e.target.files && e.target.files[0];
   if (f) readReport(f);
 });
+/* one step back per click: a loaded file falls back to the snapshot, the
+   snapshot falls back to nothing at all */
 $("sRepClear").addEventListener("click", () => {
-  report = null; $("sRepFile").value = "";
-  noReportYet(); applyMode(modeId);
+  $("sRepFile").value = "";
+  report = (report && report.source === "loaded" && EMBEDDED) ? EMBEDDED : null;
+  showReportState();
+  applyMode(modeId);
 });
-noReportYet();
+showReportState();
 
 /* ── downloading JSONL ───────────────────────────────────────────────
    The bytes handed out are the SOURCE LINES kept in RAW_LINE, so the full

@@ -28,7 +28,7 @@ voice) → post-event (winners, gallery uploads, wrap-up blog, profile churn).
 Executed in order by `tests/journey/recipe.spec.ts` via `helpers/recipe.ts`.
 
 Each action carries: `priority` (P1 323 / P2 131 / P3 9), `outcome`
-(human-readable expectation), an optional `todo` (placeholder note, 64
+(human-readable expectation), an optional `todo` (placeholder note, 65
 actions) and an optional `gate` (24 actions — skip until the listed RPCs
 exist, capability-probed at runtime by `scripts/probe.sh`, so actions wake up
 automatically as the backend lands). `implement: false` meant "deliberately
@@ -65,6 +65,42 @@ any browser). Rebuild after recipe edits with
 `node scripts/splice-player.mjs`, which re-splices the JSONL between the
 `<script id="recipe-data">` markers, applies the `</` → `<\/` escape, and
 verifies the embedded action count against the file.
+
+**The file holds THREE inline script blocks now** — the recipe, a real journey
+run, and the program — and the count is asserted, because a fourth appearing by
+accident means a data block truncated the document. The run is what `run
+outcome` colours from on open: `scripts/embed-run-report.mjs` reduces
+`.artifacts/results.json` (written by the json reporter on EVERY run — do not
+redirect a run's stdout, this container prints Nix and quitsh banners ahead of
+it) to the three things the mode joins on, id + outcome + duration, 498 KiB →
+16 KiB. It is a SNAPSHOT and every surface using it says so with its date; a
+report you load by hand overrides it, and "clear" steps back one layer at a
+time — loaded file → built-in snapshot → nothing at all. The `run-report` block
+sits AFTER the recipe block on purpose: `splice-player.mjs` finds its
+terminator with the first close tag past the recipe's opening marker, so a data
+block in front of the recipe would be overwritten by the next splice.
+
+The diagram is arrangeable — drag anything, or Tab to it and nudge with the
+arrow keys — and **the drag wins over the replay by construction**: nothing in
+the animation writes a position (`render()` touches opacity, text and badges
+only) and `animateBeam()` reads the live `pos[]` table, which the drag updates
+along with the transform. Move only the transform and the beams keep arriving
+at the coordinates the item used to occupy. Positions persist through the same
+wrapped `localStorage` the theme uses, and `⤺ Reset layout` in the header is the
+way back. Behind the items are seven dim labelled regions whose membership is
+DERIVED from the cast table and the entity keys and forms a partition of all 33
+items on the stage — an invented region leaves something in two zones or in
+none, which the render harness asserts. Their washes share ONE opacity group:
+two regions genuinely interpenetrate (a principal's name label reaches x=164,
+the upload bundle starts at x=156) and per-rect alpha would paint that overlap
+twice as a visible stripe.
+
+`? What do these mean` opens the vocabulary in plain language — the kinds,
+`gate`, `todo`, `expect`, `priority`, `actor`, `save` — with every count and
+every example read off the embedded recipe at open time rather than typed, and
+the browse dialog's filter chips carry a one-line gloss beside the jargon. Two
+people had asked what "has gate" meant, which is what a tooltip plus a
+paragraph two panels away earns.
 
 **Act 0 — platform setup** runs before any hackathon exists: the admin drafts
 the About page, the draft stays invisible to the public, an organizer is

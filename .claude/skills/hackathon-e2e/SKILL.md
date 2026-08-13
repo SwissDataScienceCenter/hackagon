@@ -315,7 +315,14 @@ recipe.jsonl              THE SCREENPLAY: one action per line, full lifecycle in
                           each with priority/outcome/gate triage fields
 recipe-player.html        self-contained animated replay of the recipe (also published
                           as an artifact); rebuild after recipe edits by re-splicing the
-                          JSONL between the <script id="recipe-data"> markers
+                          JSONL between the <script id="recipe-data"> markers.
+                          Holds THREE inline script blocks — the recipe, a reduced
+                          journey report (run-report), and the program — and every `</`
+                          in the two data blocks is escaped as `<\/`, because a block
+                          ends at the first LITERAL close tag even inside a JSON string
+scripts/splice-player.mjs re-splice recipe.jsonl into the player, count-checked
+scripts/embed-run-report.mjs  reduce .artifacts/results.json (id + outcome + duration)
+                          and splice it in, so `run outcome` colours on open
 personas.ts               principals + seed matrix + JOURNEY_CAST constants
 cast.json                 the 11 extras (incl. the walk-in) (names, emails, shared dev password)
 playwright.config.ts      Firefox-only; setup/smoke/journey/mobile/docs/tunnel/openreplay projects
