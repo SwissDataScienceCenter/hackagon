@@ -114,8 +114,33 @@ describe("Auth.js jwt Callback", () => {
       account: null,
     } as JwtCallbackParams)) as CustomJWT
 
-    expect(result).toBe(mockToken) // Should return the exact same object
+    // Value-equal rather than identical: the callback rebuilds the token to
+    // strip a legacy `idToken`, so the still-valid path returns a copy.
+    expect(result).toEqual(mockToken)
     expect(mockFetch).not.toHaveBeenCalled() // Fetch should not be called
+  })
+
+  it("should strip a legacy idToken without waiting for a refresh", async () => {
+    const mockToken = {
+      sub: "user1",
+      accessToken: "valid_access",
+      refreshToken: "valid_refresh",
+      expiresAt: Math.floor(Date.now() / 1000) + 600, // Nowhere near expiry
+      userId: "user1",
+      // Minted before the cookie-size fix. The refresh path is not reached on
+      // this request, so evicting only there would leave the oversized cookie —
+      // and the 502 — in place until this token neared expiry.
+      idToken: "stale_id",
+    } as CustomJWT & { idToken?: string }
+
+    const result = (await jwtCallback({
+      token: mockToken as JWT,
+      account: null,
+    } as JwtCallbackParams)) as CustomJWT
+
+    expect(result).not.toHaveProperty("idToken")
+    expect(result.accessToken).toBe("valid_access")
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it("should proactively refresh if token expires within 30 seconds", async () => {
