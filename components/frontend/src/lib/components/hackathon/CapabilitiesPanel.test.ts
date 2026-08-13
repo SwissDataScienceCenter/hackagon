@@ -155,15 +155,24 @@ describe("the four capability states", () => {
 })
 
 describe("capabilities with no stored row", () => {
-  it("warns that the server allows them and will refuse the save", () => {
-    // `SetCapabilities` answers NotFound for a capability with no row and
-    // refuses the WHOLE batch, and the form posts all six. An organiser should
-    // read that here rather than deduce it from a 404.
+  it("says the server allows them, and what saving will do about it", () => {
+    // An unticked box and an ungoverned capability are the same pixel and the
+    // opposite fact: nobody switched it on, versus nobody switched it on and
+    // everyone may do it anyway. This sentence is the only thing that tells
+    // them apart, so it has to state the permission — and, since
+    // `SetCapabilities` creates the missing row now rather than refusing the
+    // batch over it, what pressing Save will do. It used to say the save would
+    // be REFUSED, which stopped being true when that was fixed.
     mount(FOUR_STATES)
 
     const warning = screen.getByText(/no stored setting on this hackathon/)
     expect(warning).toHaveTextContent(capabilitySubject(VOTE) as string)
-    expect(warning).toHaveTextContent(/will refuse to save/)
+    expect(warning).toHaveTextContent(/the server allows it right now/)
+    expect(warning).toHaveTextContent(/Saving this form creates the setting/)
+    expect(
+      warning.textContent,
+      "the panel must not still be telling organisers the save will be refused",
+    ).not.toMatch(/refuse/i)
   })
 
   it("says nothing when every capability has a row", () => {

@@ -18,7 +18,7 @@ required beyond the repo itself (Nix dev shell via `just`).
 
 ## The recipe = the product spec
 
-`skills/hackathon-e2e/recipe.jsonl` — **463 actions, one JSON per line**,
+`skills/hackathon-e2e/recipe.jsonl` — **465 actions, one JSON per line**,
 covering platform setup → publication → configuration → registration
 (13-person wave, forms, waitlist) → the capacity pilot (a capped side sprint:
 FCFS seats, queue fairness, over-capacity approval, the Join race) →
@@ -27,8 +27,8 @@ overrides) → voting (single-choice, ranked, points) → prizes (admin final
 voice) → post-event (winners, gallery uploads, wrap-up blog, profile churn).
 Executed in order by `tests/journey/recipe.spec.ts` via `helpers/recipe.ts`.
 
-Each action carries: `priority` (P1 323 / P2 131 / P3 9), `outcome`
-(human-readable expectation), an optional `todo` (placeholder note, 65
+Each action carries: `priority` (P1 325 / P2 131 / P3 9), `outcome`
+(human-readable expectation), an optional `todo` (placeholder note, 66
 actions) and an optional `gate` (24 actions — skip until the listed RPCs
 exist, capability-probed at runtime by `scripts/probe.sh`, so actions wake up
 automatically as the backend lands). `implement: false` meant "deliberately
@@ -40,25 +40,76 @@ three cases — start the first phase, declare the live one, advance past it —
 plus Review N waiting and Edit details), the folded Manage nav, the capability
 panel, `StorageService.ListObjects` across every scope and refusal, the markdown
 toolbar and its paste-a-table converter, bulk team import, Manage Pages
-reordering, and the Join gate with the sign-in interstitial. Two states in that
-set are **unreachable from outside and therefore not asserted**: a capability
-that is `UNGOVERNED` (`Create` seeds a row for all six, so only a hackathon with
-no rows at all reaches that code path — `act5.cap.ungoverned` uses one), and a
+reordering, and the Join gate with the sign-in interstitial. One state in that
+set is **unreachable from outside and therefore not asserted end-to-end**: a
 WAITLISTED owner (`AddOwner` answers `FailedPrecondition` for anyone on the
 waiting list, so `canEditHackathon`'s narrower gate cannot be exercised
-end-to-end). Both are written down in the actions' own `todo`s rather than faked.
+end-to-end). It is written down in the action's own `todo` rather than faked.
 
-**One product divergence the new actions found, pinned as it stands.** The hub's
-plan-vs-reality warning is computed from `currentAndNextPhase`, which falls back
-to the DATES when no phase is declared — but the `Enable it` button behind it
-posts `applyPhaseCapabilities`, which looks the phase up by `current_phase_id`
-and answers `400 "This hackathon has no current phase to take settings from"`
-when that is empty. So the warning is offered in a state where its one action
-cannot work. `act5.pilot.cap.unmet.bydates` pins that refusal; the working path
-(declare the phase, switch its capability off by hand, then click) is
-`act5.pilot.phase.declare` → `act5.pilot.cap.plan.again` → `act5.pilot.cap.unmet`.
-Fixing it will turn the first of those red on purpose — re-specify it, do not
-delete it.
+### Three manage-panel bugs, fixed 2026-08-13
+
+All three were found by the recipe and had been left pinned as they stood.
+
+**1. The hub offered a button that could not work.** The plan-vs-reality warning
+is computed from `currentAndNextPhase`, which falls back to the DATES when no
+phase is declared — while the `Enable it` button behind it posted
+`applyPhaseCapabilities`, which looked the phase up by `current_phase_id` alone
+and answered `400 "no current phase to take settings from"` whenever that was
+empty. Declaring a phase is an explicit act nobody has to perform, so the state
+where the two disagreed is the state most events are in. **The action resolves
+"current" the same way the page does now** — one definition of the word across
+the product. Hiding the warning instead was the alternative and is worse: it is
+TRUE in that state, and gating a true, actionable warning on a marker nobody is
+required to set reports the gap in fewer situations than it exists in. The 400
+survives for the case that is genuinely empty under BOTH meanings.
+
+`act5.pilot.cap.unmet.bydates` used to pin the refusal and now asserts the
+switches move, with `nowBadge: "By dates"` as its positive control — without it
+the action passes against a DECLARED phase, which is what `act5.pilot.cap.unmet`
+already covers. **Two actions had to be ADDED with it**
+(`act5.pilot.cap.bydates.reset` + `.readback`): the by-dates click now switches
+team preferences on, and `act5.pilot.phase.declare.applied` asserts that
+ADVANCING is what switches them on — so without putting the switch back first,
+that claim would have been green whatever `AdvancePhase` did. Re-specifying an
+action can quietly make its NEIGHBOURS vacuous; check what the state it leaves
+behind is the premise of.
+
+**2. `SetCapabilities` refused a whole batch over one ungoverned row.** It
+answered `NotFound` if any capability in the batch had no stored row, and the
+panel posts all six on every save — so one absent row made the capability screen
+unusable, with a 404 as its only explanation and no RPC anywhere that could
+create the missing row. **It creates the row now.** Skipping was the dangerous
+alternative: `UNGOVERNED` is ALLOWED (`capability.State.Allowed` returns true for
+it), so dropping a row the caller asked to set to `false` would report a
+successful save while participants kept the permission — a silent no-op on a
+gate. Refusing-with-a-name is honest and still leaves the panel dead. The schema
+already calls a full set the invariant ("one row per capability per hackathon,
+pre-created on hackathon creation"), so a missing row is a data gap, never a
+decision. The hackathon's existence is checked first, so a bogus id still answers
+`NotFound` — about the HACKATHON, which is the true statement.
+
+That state is unreachable from the API (`Create` seeds all six, nothing deletes
+one), so it is pinned in Go — `hackathon_service_test.go`, "SetCapabilities with
+an ungoverned capability", which deletes a row to get there.
+`act5.cap.ungoverned` was re-specified to what it can actually reach and gained
+`expect.errorMatches`, a new field: the same request answered the same code for a
+different reason before and after, and a status code alone cannot tell those
+apart. The panel's copy changed with it — it used to warn that the save would be
+refused, which stopped being true.
+
+**3. `.chip:hover` (0,2,0) beat `.chip-active` (0,1,0)**, so pointing at the tab
+you were already on erased its accent tint. Fixed with a `.chip-active:hover`
+rule of its own, at (0,2,0) so it also covers the `btn btn-icon btn-quiet` that
+wears `chip-active` in the markdown editor — `.btn-quiet:hover` was erasing that
+one the same way. It wins its tie on SOURCE ORDER and must stay last in the
+layer. `tests/smoke/24-chip-states.spec.ts` asserts the **computed style**, never
+the class: `chip-active` was on the element the whole time the bug shipped, so
+every class-based assertion that could have been written would have passed. It
+measures the pixel the browser actually paints (a 1×1 canvas composited over the
+page background) because Firefox reports `color-mix(in oklab, …)` back as
+`oklab(…)` and `--color-raised` as `rgb(…)` — two syntaxes for the same kind of
+fact, and `fillStyle` silently keeps its old value on a colour it cannot parse,
+which is why the measurement carries a sentinel.
 
 `recipe-player.html` — self-contained animated replay of the recipe (open in
 any browser). Rebuild after recipe edits with
@@ -108,8 +159,8 @@ denied (site pages need the *global* Admin role), publish makes it
 world-readable, duplicate/invalid slugs are rejected, and a `<script>` payload
 pasted into the markdown must not execute (`sitePageSanitized`).
 
-Act sizes: 0 = 15, 1 = 63, 2 = 66, 3 = 13, 4 = 29, 5 = 118, 6 = 62, 7 = 40,
-8 = 57. By kind: 322 `rpc`, 84 `ui.assert`, 50 `ui.flow`, 6 `rpc.race`,
+Act sizes: 0 = 15, 1 = 63, 2 = 66, 3 = 13, 4 = 29, 5 = 120, 6 = 62, 7 = 40,
+8 = 57. By kind: 324 `rpc`, 85 `ui.assert`, 49 `ui.flow`, 6 `rpc.race`,
 1 `files.generate`.
 
 **`rpc.race` fires its `calls` simultaneously** (Promise.all over separately
@@ -136,15 +187,15 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 
 | Suite | Result | When |
 | --- | --- | --- |
-| journey (463-action recipe) | **467 passed / 0 failed / 0 skipped**, twice back to back | 2026-08-13 |
-| smoke | **137 passed / 1 failed / 2 did not run** — see below | 2026-08-13 |
+| journey (465-action recipe) | **469 passed / 0 failed / 0 skipped** | 2026-08-13 |
+| smoke | **139 passed / 1 failed / 2 did not run** — see below | 2026-08-13 |
 | mobile | **121 passed** | 2026-08-10 |
-| backend `go test ./internal/...` | all ok (service 258 specs) | 2026-08-10 |
+| backend `go test ./internal/...` | all ok (service 311/312, capability 37, middleware 43) | 2026-08-13 |
 | openreplay (9 tests) | **13 passed / 0 skipped** | 2026-08-11 |
-| frontend units (9 files) | **154 passed** | 2026-08-08 |
+| frontend units (26 files) | **462 passed** | 2026-08-13 |
 
 Playwright totals include the 4 auth-setup tests every suite depends on, so
-journey's 467 is 4 setup + 463 recipe actions.
+journey's 469 is 4 setup + 465 recipe actions.
 
 ⚠ **smoke is one short of its baseline, deterministically** (2026-08-13, open):
 `22-hackathon-pages.spec.ts:234` "dragging a row saves the whole new order in one
@@ -152,7 +203,7 @@ write". Its first drag (bottom row to the top) passes; the RESTORE drag — the
 same row, now at the top, dragged back to the bottom — lands one position short,
 `[Welcome, Rules & Guidelines, Schedule]` where `[Welcome, Schedule, Rules &
 Guidelines]` was asked for. The two tests after it are the rest of a
-`mode: "serial"` describe, so they never run: 137 + 1 + 2 = 140.
+`mode: "serial"` describe, so they never run: 139 + 1 + 2 = 142.
 
 It is test-side, and the cause is in `dragRowTo` (same file, ~line 74): `endY` is
 computed from the DESTINATION row's bounding box **before the drag starts**,
@@ -171,7 +222,8 @@ worker down after a failing test — and `vars` (hackathonId, team ids, saved
 tokens) lives in that worker's module scope, so every later action self-skips
 with "depends on 'hackathonId' from a step that was skipped or did not run". A
 break-run with serial off therefore reports a flood of skips rather than the
-failures it was looking for: 276 of 467 never ran. To see several deliberate
+failures it was looking for: 276 of 467 never ran (measured when the recipe was
+463 actions long). To see several deliberate
 failures in one sitting, keep serial ON and exclude the already-proven ones with
 `--grep-invert` (assertion-only actions save no vars, so removing them poisons
 nothing). `loadRecipe()` counts by `id`,

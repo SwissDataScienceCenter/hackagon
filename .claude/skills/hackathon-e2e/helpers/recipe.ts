@@ -121,6 +121,13 @@ export interface RecipeAction {
   expect?: {
     ok?: boolean
     error?: string
+    /** With `error`: a case-insensitive regex the refusal's TEXT must match.
+     * A status code says how the server refused, never what it refused about,
+     * and two different faults answering the same code is exactly how a
+     * re-specified action keeps passing while its `outcome` has become a lie —
+     * `SetCapabilities` used to answer NotFound for a missing capability ROW
+     * and now answers it for a missing HACKATHON, from the same request. */
+    errorMatches?: string
     check?: string
     checkArgs?: unknown
     /** Succeed, OR fail with one of these codes — for restore steps whose
@@ -1271,6 +1278,19 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const panel = capabilityPanel(page)
     const warning = panel.locator("div[role=status]").filter({ hasText: "is meant to include" })
 
+    // WHICH of the two meanings of "current" is in play, read off the badge
+    // that states it rather than assumed from the story so far. The button
+    // below used to work only against a DECLARED phase while the warning was
+    // drawn for either — so an action that clicks it without pinning the
+    // resolution proves nothing about the case that was broken, and would go on
+    // passing if a declaration leaked in from an earlier step.
+    if (args.nowBadge) {
+      await expect(
+        phaseCard(page, "Now").locator("span.badge"),
+        "the Now card must state this is the resolution under test",
+      ).toHaveText(args.nowBadge as string)
+    }
+
     await expect(warning, "the mismatch warning did not render").toBeVisible()
     await expect(warning, "it must name the phase whose plan is unmet").toContainText(
       args.phase as string,
@@ -1982,6 +2002,13 @@ async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
   } else if (a.expect?.error) {
     expect(res.ok, `expected ${a.expect.error} but the call succeeded`).toBe(false)
     expect(res.code, res.raw).toBe(a.expect.error)
+    if (a.expect.errorMatches) {
+      expect(
+        res.raw,
+        `the call refused with the right code for an unknown reason — ` +
+          `expected the message to match /${a.expect.errorMatches}/i`,
+      ).toMatch(new RegExp(a.expect.errorMatches, "i"))
+    }
   } else {
     expect(res.ok, `${a.method} failed: ${res.raw}`).toBe(true)
   }

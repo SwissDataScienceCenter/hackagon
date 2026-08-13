@@ -19,7 +19,10 @@ import {
   enabledCapabilities,
   phaseCapabilities,
 } from "$lib/server/hackathon/phaseForm"
-import { withPhaseCapabilitiesEnabled } from "$lib/utils/phase"
+import {
+  currentAndNextPhase,
+  withPhaseCapabilitiesEnabled,
+} from "$lib/utils/phase"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -30,12 +33,12 @@ export function toCapabilityFailure(e: unknown) {
       message: "You don't have permission to change this hackathon",
     })
   }
-  // TODO(backend: project-preferences-capability): on `SetCapabilities` a
-  // NotFound means the hackathon has no HackathonState row — and by then the
-  // casbin policies have already been written, because they are added inside the
-  // capability loop before the state re-read fails (`hackathon_service.go:655`
-  // then `:681`). So a failure reported here may have granted permissions anyway.
-  // No hackathon reachable from the app is in that state, so this is a guard.
+  // On `SetCapabilities` a NotFound now means one thing only: the HACKATHON does
+  // not exist. It used to also mean "one capability in the batch has no stored
+  // row", which refused all six and reported the wrong missing thing; that case
+  // creates the row instead (`hackathon_service.go`, SetCapabilities). So a 404
+  // reaching a viewer here is a hackathon that was deleted under them, and
+  // `e.details` names it.
   if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
     return fail(404, { message: e.details })
   }
@@ -138,6 +141,33 @@ export async function saveCapabilities(
  * Switch on whatever the current phase expects and is off. Additive only — see
  * `withPhaseCapabilitiesEnabled`; nothing is ever switched off here, so this
  * cannot close registration as a side effect of moving through phases.
+ *
+ * "Current" is resolved by `currentAndNextPhase`, which is the SAME answer the
+ * hub used when it drew the warning this button sits under — an organiser's
+ * declaration if there is one, otherwise whichever phase's own dates are
+ * running. It used to be `phases.find(p => p.id === currentPhaseId)`, a second,
+ * narrower definition of the word, and the two disagreed in the state most
+ * hackathons are actually in: declaring a phase is an explicit act nobody has to
+ * perform, so with no marker set the panel named the live phase off the calendar
+ * and offered `Enable it`, and this action answered
+ * `400 "…no current phase to take settings from"` every single time. The
+ * control was offered exactly where it could not work.
+ *
+ * Resolving by dates here rather than hiding the warning, because the warning is
+ * TRUE in that state — the phase the calendar says is running does name a
+ * capability participants cannot use — and hiding a true, actionable warning
+ * behind a marker nobody is required to set would report the gap in fewer
+ * situations than it exists in. Nothing about the phase POINTER moves: this
+ * still writes only capability switches, and declaring a phase stays the
+ * separate, deliberate act it is. `SetCapabilities` is additive here, so the
+ * worst a by-dates resolution can do is switch on something the calendar says
+ * should already be on.
+ *
+ * The 400 survives for the case that is genuinely impossible — no declaration
+ * AND no phase whose dates cover today — where there is no phase to read a plan
+ * from under either meaning of the word. Not reachable from the panel (with no
+ * current phase there are no phase capabilities, so `unmet` is empty and the
+ * warning does not render), so it stays a guard on a direct POST.
  */
 export async function applyPhaseCapabilities(
   event: RequestEvent,
@@ -147,10 +177,15 @@ export async function applyPhaseCapabilities(
 
   try {
     const state = await readState(grpc, hackathonId)
-    const current = state.phases.find((p) => p.id === state.currentPhaseId)
+    const { current } = currentAndNextPhase(
+      state.phases,
+      state.currentPhaseId || undefined,
+    )
     if (!current) {
       return fail(400, {
-        message: "This hackathon has no current phase to take settings from",
+        message:
+          "No phase is current here — none is declared and no phase's dates " +
+          "cover today — so there are no settings to take",
       })
     }
 
