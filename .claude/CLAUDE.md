@@ -18,7 +18,7 @@ required beyond the repo itself (Nix dev shell via `just`).
 
 ## The recipe = the product spec
 
-`skills/hackathon-e2e/recipe.jsonl` — **344 actions, one JSON per line**,
+`skills/hackathon-e2e/recipe.jsonl` — **463 actions, one JSON per line**,
 covering platform setup → publication → configuration → registration
 (13-person wave, forms, waitlist) → the capacity pilot (a capped side sprint:
 FCFS seats, queue fairness, over-capacity approval, the Join race) →
@@ -27,12 +27,38 @@ overrides) → voting (single-choice, ranked, points) → prizes (admin final
 voice) → post-event (winners, gallery uploads, wrap-up blog, profile churn).
 Executed in order by `tests/journey/recipe.spec.ts` via `helpers/recipe.ts`.
 
-Each action carries: `priority` (P1 242 / P2 93 / P3 9), `outcome`
-(human-readable expectation), an optional `todo` (placeholder note, 44
+Each action carries: `priority` (P1 323 / P2 131 / P3 9), `outcome`
+(human-readable expectation), an optional `todo` (placeholder note, 64
 actions) and an optional `gate` (24 actions — skip until the listed RPCs
 exist, capability-probed at runtime by `scripts/probe.sh`, so actions wake up
 automatically as the backend lands). `implement: false` meant "deliberately
 deferred"; **no action sets it any more** — nothing in the recipe is deferred.
+
+**The organiser's own screens (2026-08-12, +119 actions).** The manage hub
+(tiles derived from `manageNav`, the Now/Next box and its ONE action in all
+three cases — start the first phase, declare the live one, advance past it —
+plus Review N waiting and Edit details), the folded Manage nav, the capability
+panel, `StorageService.ListObjects` across every scope and refusal, the markdown
+toolbar and its paste-a-table converter, bulk team import, Manage Pages
+reordering, and the Join gate with the sign-in interstitial. Two states in that
+set are **unreachable from outside and therefore not asserted**: a capability
+that is `UNGOVERNED` (`Create` seeds a row for all six, so only a hackathon with
+no rows at all reaches that code path — `act5.cap.ungoverned` uses one), and a
+WAITLISTED owner (`AddOwner` answers `FailedPrecondition` for anyone on the
+waiting list, so `canEditHackathon`'s narrower gate cannot be exercised
+end-to-end). Both are written down in the actions' own `todo`s rather than faked.
+
+**One product divergence the new actions found, pinned as it stands.** The hub's
+plan-vs-reality warning is computed from `currentAndNextPhase`, which falls back
+to the DATES when no phase is declared — but the `Enable it` button behind it
+posts `applyPhaseCapabilities`, which looks the phase up by `current_phase_id`
+and answers `400 "This hackathon has no current phase to take settings from"`
+when that is empty. So the warning is offered in a state where its one action
+cannot work. `act5.pilot.cap.unmet.bydates` pins that refusal; the working path
+(declare the phase, switch its capability off by hand, then click) is
+`act5.pilot.phase.declare` → `act5.pilot.cap.plan.again` → `act5.pilot.cap.unmet`.
+Fixing it will turn the first of those red on purpose — re-specify it, do not
+delete it.
 
 `recipe-player.html` — self-contained animated replay of the recipe (open in
 any browser). Rebuild after recipe edits with
@@ -46,8 +72,8 @@ denied (site pages need the *global* Admin role), publish makes it
 world-readable, duplicate/invalid slugs are rejected, and a `<script>` payload
 pasted into the markdown must not execute (`sitePageSanitized`).
 
-Act sizes: 0 = 15, 1 = 46, 2 = 66, 3 = 13, 4 = 29, 5 = 58, 6 = 45, 7 = 40,
-8 = 32. By kind: 266 `rpc`, 32 `ui.assert`, 39 `ui.flow`, 6 `rpc.race`,
+Act sizes: 0 = 15, 1 = 63, 2 = 66, 3 = 13, 4 = 29, 5 = 118, 6 = 62, 7 = 40,
+8 = 57. By kind: 322 `rpc`, 84 `ui.assert`, 50 `ui.flow`, 6 `rpc.race`,
 1 `files.generate`.
 
 **`rpc.race` fires its `calls` simultaneously** (Promise.all over separately
@@ -74,15 +100,26 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 
 | Suite | Result | When |
 | --- | --- | --- |
-| journey (329-action recipe) | **333 passed / 0 failed / 0 skipped** | 2026-08-10 |
-| smoke (76 tests, 16 files) | **80 passed** | 2026-08-10 |
+| journey (463-action recipe) | **467 passed / 0 failed / 0 skipped** | 2026-08-12 |
+| smoke | **140 passed / 0 failed** | 2026-08-12 |
 | mobile | **121 passed** | 2026-08-10 |
 | backend `go test ./internal/...` | all ok (service 258 specs) | 2026-08-10 |
 | openreplay (9 tests) | **13 passed / 0 skipped** | 2026-08-11 |
 | frontend units (9 files) | **154 passed** | 2026-08-08 |
 
 Playwright totals include the 4 auth-setup tests every suite depends on, so
-journey's 333 is 4 setup + 329 recipe actions. `loadRecipe()` counts by `id`,
+journey's 467 is 4 setup + 463 recipe actions.
+
+⚠ **`mode: "serial"` in `tests/journey/recipe.spec.ts` is load-bearing for STATE,
+not just for stopping at the first failure.** Without it Playwright tears the
+worker down after a failing test — and `vars` (hackathonId, team ids, saved
+tokens) lives in that worker's module scope, so every later action self-skips
+with "depends on 'hackathonId' from a step that was skipped or did not run". A
+break-run with serial off therefore reports a flood of skips rather than the
+failures it was looking for: 276 of 467 never ran. To see several deliberate
+failures in one sitting, keep serial ON and exclude the already-proven ones with
+`--grep-invert` (assertion-only actions save no vars, so removing them poisons
+nothing). `loadRecipe()` counts by `id`,
 cross-checks against a textual scan and rejects duplicates, so an action line
 can no longer be silently dropped (see the traps below).
 

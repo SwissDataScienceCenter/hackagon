@@ -7,6 +7,7 @@
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
     import Seo from '$lib/components/layout/Seo.svelte';
     import { statusLabel } from '$lib/utils/hackathonStatus';
+    import { loginDestination } from '$lib/utils/returnTo';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -116,10 +117,15 @@
             <h2 class="m-0 text-display">Ready to participate?</h2>
             <p class="m-0 text-sm text-ink-2">You need an account to join.</p>
             <!-- Back to this page after signing in, not to the dashboard: someone
-                 who followed a link to an event wants that event. -->
+                 who followed a link to an event wants that event. Through
+                 loginDestination like every other callbackUrl in the app — a
+                 pathname cannot be an absolute URL, but "every value that
+                 becomes a callbackUrl is validated" is a rule that only holds if
+                 it has no exceptions to remember. -->
             <button
                 class="btn btn-solid"
-                onclick={() => signIn('keycloak', { callbackUrl: page.url.pathname })}
+                onclick={() =>
+                    signIn('keycloak', { callbackUrl: loginDestination(page.url.pathname) })}
             >
                 Log in to join
             </button>

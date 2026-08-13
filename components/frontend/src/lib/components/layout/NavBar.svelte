@@ -8,6 +8,7 @@
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
     import UserCog from 'lucide-svelte/icons/user-cog';
+    import { loginDestination } from '$lib/utils/returnTo';
 
     // The header carries identity, theme and sign-out — no administration entry.
     // That moved to the dashboard's Manage platform section, which is the single
@@ -39,12 +40,29 @@
         $page.url.pathname === '/hackathon' || $page.url.pathname.startsWith('/hackathon/')
     );
 
-    // Where signing in returns you. Back to the page you were on, EXCEPT the
-    // public pages that are not a destination once you have an account: landing
-    // on "/" after a login reads as "nothing happened". Pages with a reason to
-    // return — an event you were about to join — pass their own callbackUrl.
+    // Where signing in returns you.
+    //
+    // A PARKED destination wins. When a guard bounced someone off a deep link it
+    // put that link in `?returnTo=`, and this button used to ignore the query
+    // entirely and compute a destination from the pathname — so the deep link
+    // was dropped by the one control the visitor was being asked to press. That
+    // was the whole reason "log in from a link and you end up somewhere else"
+    // happened.
+    //
+    // Otherwise: back to the page you were on, EXCEPT "/", which is not a
+    // destination once you have an account — landing there after a login reads
+    // as "nothing happened". `loginDestination` supplies the dashboard for that
+    // case and refuses to send anyone back to the interstitial.
+    //
+    // Validated, always: this value becomes an Auth.js callbackUrl, and an
+    // unchecked one is an open redirect off the site.
     const loginReturn = $derived(
-        $page.url.pathname === '/' ? '/dashboard' : $page.url.pathname
+        loginDestination(
+            $page.url.searchParams.get('returnTo') ??
+                ($page.url.pathname === '/'
+                    ? null
+                    : $page.url.pathname + $page.url.search)
+        )
     );
 
     const TAB = 'pb-0.5 text-sm font-medium no-underline hover:text-accent-ink';

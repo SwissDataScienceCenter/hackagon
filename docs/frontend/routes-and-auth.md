@@ -32,9 +32,9 @@ The public and member views of a hackathon live in **disjoint path spaces**:
 
 | Route                         | Purpose                                                                      | Data loaded (server)                                                                                                             | Access                                                                                       |
 | ----------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `/`                           | Marketing home: hero, trending hackathon list, winners, carousel, features   | `(public)/+page.server.ts` — `publicHackathonClient.list({ visibilityFilter: VISIBILITY_PUBLIC })` + `locals.session`            | Public. Signed-in users are redirected to `/dashboard` unless the URL carries `?returnTo=`   |
+| `/`                           | Marketing home: hero, trending hackathon list, winners, carousel, features   | `(public)/+page.server.ts` — `publicHackathonClient.list({ visibilityFilter: VISIBILITY_PUBLIC })` + `locals.session`            | Public, signed in or not. A logged-in caller carrying a legacy `?returnTo=` is forwarded to it |
 | `/hackathon/[id]`             | Public hackathon landing page; "News & Pages" section from backend pages     | `(public)/hackathon/[id]/+page.server.ts` — `publicPageClient.list({ hackathonId })`, failures swallowed to `[]`                 | Anonymous only in practice: any signed-in visitor is 302'd to `/my/hackathon/[id]/overview`  |
-| `/signin`                     | POST-only form action wrapping Auth.js `signIn`                              | none                                                                                                                             | Public (matches `PUBLIC_ROUTE_PATTERNS`)                                                     |
+| `/signin`                     | Sign-in interstitial (GET) + the Auth.js `signIn` form action (POST)         | `(public)/signin/+page.server.ts` — resolves `?returnTo=` to a validated destination; forwards a signed-in caller straight to it  | Public (matches `PUBLIC_ROUTE_PATTERNS`) — it is where the guards SEND anonymous visitors     |
 | `/signout`                    | POST-only form action wrapping Auth.js `signOut`                             | none                                                                                                                             | Public                                                                                       |
 | `/auth/*`                     | Auth.js endpoints (signin, callback, csrf, session), mounted by `authHandle` | n/a                                                                                                                              | Public                                                                                       |
 | `/dashboard`                  | "Your hackathons" / "Other hackathons" + notification sidebar                | `(app)/dashboard/+page.server.ts` — `Promise.all([hackathon.list({visibilityFilter: PUBLIC}), hackathon.list({participantId})])` | Signed in                                                                                    |
@@ -54,12 +54,27 @@ button.
 
 ## Auth flow, end to end
 
-1. **Log in button** — `NavBar.svelte` calls the client helper
-   `signIn('keycloak', { callbackUrl: $page.url.pathname })` from
-   `@auth/sveltekit/client`, which POSTs to Auth.js at `/auth/signin/keycloak`.
-   The `/signin` and `/signout` routes expose the same thing as form actions
-   (`export const actions: Actions = { default: signIn }`), for progressive
-   enhancement; nothing links to them today.
+1. **Where the flow starts.** Two entry points, and they agree on the
+   destination because they call the same helper:
+
+   - **The "Log in" button** — `NavBar.svelte` calls the client helper
+     `signIn('keycloak', { callbackUrl: loginReturn })` from
+     `@auth/sveltekit/client`, which POSTs to Auth.js at
+     `/auth/signin/keycloak`. `loginReturn` is
+     `loginDestination(?returnTo ?? current path)`: a parked destination wins,
+     `/` means "the dashboard", and everything is validated by `safeReturnTo`.
+   - **The `/signin` interstitial** — where both guards send an anonymous
+     visitor. Its page renders a plain `<form method="POST" action="/signin">`
+     carrying `providerId=keycloak` and `redirectTo=<validated destination>`,
+     which is the whole feature with script off. `redirectTo` is not optional:
+     `@auth/sveltekit` falls back to the `Referer` header, which here is the
+     interstitial itself. Once hydrated the page calls the same client helper as
+     the button above (after ~2 s, or immediately on click) rather than
+     submitting the form — SvelteKit 403s a form POST whose `Origin` differs
+     from the server's `ORIGIN`, and a built server on a public hostname with a
+     fixed localhost origin is a state this repo has shipped twice.
+
+   `/signout` still exposes only the form action.
 
 2. **Keycloak authorize** — the provider in `src/auth.ts` sends
    `scope: "openid profile email"`, `audience: config.oidc.audience` (so the
@@ -134,7 +149,7 @@ on every request:
 | 2   | `loggerHandle`       | Per-request child logger with `requestId`/`method`/`path` on `locals.logger`; logs start/finish with duration, at `warn` when status ≥ 400.                        |
 | 3   | `authHandle`         | The Auth.js handle re-exported from `src/auth.ts`. Mounts `/auth/*` and makes `locals.auth()` available.                                                           |
 | 4   | `sessionSetupHandle` | One `locals.auth()` call per request → sanitized `locals.session`; then, for protected routes only: guard, build `locals.grpc`, and resolve `locals.platformUser`. |
-| 5   | `redirectHandle`     | A logged-in user landing on `/` without `?returnTo=` is redirected (303) to `/dashboard`.                                                                          |
+| 5   | `redirectHandle`     | A logged-in user landing on `/?returnTo=X` is forwarded (303) to the validated `X`. Nothing produces that shape any more — the guards park on `/signin` — so this is a backstop for pasted or bookmarked legacy links. |
 
 Outside the chain: `init` runs once at server startup and pings the backend with
 the unauthenticated `healthClient`; `handleError` logs unhandled errors with a
@@ -166,7 +181,8 @@ the behaviour (`/manage/users` protected, `/my/hackathon/abc` protected,
 
 ### What `sessionSetupHandle` does on a protected route
 
-1. No `session.user.id` → `redirect(303, "/?returnTo=<encoded path>")`.
+1. No `session.user.id` → `redirect(303, loginUrlFor(path + search))`, i.e.
+   `/signin?returnTo=<encoded path>`.
 2. `session.error === "RefreshTokenError"` → same redirect (re-auth required).
 3. No `session.accessToken` → same redirect.
 4. `locals.grpc = createAuthorizedGrpc(session.accessToken)`.
@@ -191,12 +207,16 @@ Two independent guards protect `(app)`:
   ```ts
   export const load: LayoutServerLoad = async (event) => {
     if (!event.locals.grpc) {
-      const returnTo = encodeURIComponent(event.url.pathname + event.url.search)
-      redirect(303, `/?returnTo=${returnTo}`)
+      redirect(303, loginUrlFor(event.url.pathname + event.url.search))
     }
     return { session: event.locals.session }
   }
   ```
+
+  `loginUrlFor` (`$lib/utils/returnTo.ts`) is shared with
+  `hooks.server.ts:redirectToLogin` on purpose: two guards with private ideas of
+  where login lives is how a deep link ends up surviving one path and not the
+  other.
 
   A new route added under `(app)` therefore cannot leak through a gap in
   `PUBLIC_ROUTE_PATTERNS`, and every page load below it can rely on
@@ -260,12 +280,19 @@ These are all reproducible from the code as it stands on `sketch/06-08-26`.
   function has no try/catch, so the `PERMISSION_DENIED` escapes to `handleError`
   and renders "500 — An unexpected error occurred." Nothing in the UI links to
   `/manage/users`, so it is reachable only by typing the URL.
-- **`returnTo` is written but never honoured.** Both guards redirect to
-  `/?returnTo=<path>`, but no code reads it as a destination — the only consumer
-  is `redirectHandle`, which merely uses its _presence_ to suppress the `/` →
-  `/dashboard` redirect. `NavBar` then signs in with
-  `callbackUrl: $page.url.pathname`, which for `/?returnTo=…` is just `/`. A
-  deep link followed while logged out always ends at `/dashboard`.
+- ~~**`returnTo` is written but never honoured.**~~ **Fixed.** Both guards used
+  to redirect to `/?returnTo=<path>`, and no code read it as a destination — the
+  only consumer was `redirectHandle`, which merely used its _presence_ to
+  suppress the `/` → `/dashboard` redirect. `NavBar` then signed in with
+  `callbackUrl: $page.url.pathname`, which for `/?returnTo=…` is just `/`, so a
+  deep link followed while logged out always ended at `/dashboard`. The guards
+  now park on `/signin?returnTo=…`; that page resolves the value once
+  (`loginDestination`) and hands it to Auth.js as `redirectTo`, and the NavBar
+  button reads the same query. Pinned end to end by
+  `tests/smoke/23-login-destination.spec.ts`, which follows an anonymous deep
+  link through Keycloak and asserts the final URL is that link — and asserts the
+  dashboard default separately, so an implementation that always chose one of
+  the two fails the other.
 - **`/my/hackathon/[id]` has no index page.** There is a `+layout.server.ts` and
   `+layout.svelte` but no `+page.*`, so the bare URL 404s. All navigation goes
   through `HackathonSubNav`, which always appends a tab segment.

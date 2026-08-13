@@ -1,6 +1,7 @@
 import { redirect } from "@sveltejs/kit"
 import type { LayoutServerLoad } from "./$types"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { loginUrlFor } from "$lib/utils/returnTo"
 
 // Every authenticated route lives under (app), so this load is the single choke
 // point for "you must be signed in". hooks.server.ts already guards by path
@@ -14,9 +15,11 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 // this used to fetch belonged to the sidebar that lived here; that sidebar now
 // renders under my/hackathon/[id], which loads its own.
 export const load: LayoutServerLoad = async (event) => {
+  // Same target and same parked value as hooks.server.ts:redirectToLogin —
+  // through the same helper, because two guards that disagree about where login
+  // lives is how a deep link gets lost on exactly one of the two paths.
   if (!event.locals.grpc) {
-    const returnTo = encodeURIComponent(event.url.pathname + event.url.search)
-    redirect(303, `/?returnTo=${returnTo}`)
+    redirect(303, loginUrlFor(event.url.pathname + event.url.search))
   }
 
   // Global roles come from casbin via WhoAmI, already on locals — no extra RPC.

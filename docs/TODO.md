@@ -243,7 +243,18 @@ Pinned by `act5.race.owner.*` (mutual demotion → exactly one owner survives).
       confirmed participant (the member list is built from that table, so a role
       granted outside it makes an owner absent from the roster)
 - [x] F4 — `returnTo` consumed (with an open-redirect guard; the old ping-pong
-      protection replaced by an explicit `sessionUsable` flag)
+      protection replaced by an explicit `sessionUsable` flag).
+      **Reopened and closed properly 2026-08-12**: only the SERVER half had been
+      built. `redirectHandle` forwarded a logged-in caller from `/?returnTo=X` to
+      X, but nothing ever put a logged-in caller back on `/` carrying the query —
+      `NavBar`'s "Log in" button computed its own `callbackUrl` from the pathname
+      and never read `returnTo`, so the one control the visitor was being asked
+      to press is what dropped the deep link. Both guards now park on
+      `/signin?returnTo=…` (an interstitial that says what happened before it
+      goes), the destination is resolved once by `loginDestination`, and the
+      button reads the same query. `tests/smoke/23-login-destination.spec.ts`
+      follows an anonymous deep link through Keycloak and asserts the final URL
+      is that link, with the dashboard default asserted as its own case
 - [x] F5 — `/my/hackathon/[id]` redirects to `/overview`
 - [x] F7 — gRPC channel address read from config (lazy, memoized)
 - [x] F8 — stale `proto:generate` npm script deleted
@@ -341,8 +352,10 @@ Pinned by `act5.race.owner.*` (mutual demotion → exactly one owner survives).
       (no suite exercises a seeded user's `SetPreference`) but the fixture no
       longer matches production behaviour.
 - [ ] Docs drift from these fixes: `docs/frontend/routes-and-auth.md` still
-      describes `publicHackathonClient` as a const (now an accessor) and the old
-      "redirect to /dashboard unless returnTo" rule.
+      describes `publicHackathonClient` as a const (now an accessor). (The
+      "redirect to /dashboard unless returnTo" rule is corrected — the guards
+      park on `/signin?returnTo=…` and the auth-flow section describes both
+      entry points.)
 
 ### Housekeeping
 

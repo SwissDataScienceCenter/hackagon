@@ -71,7 +71,16 @@ test("anonymous visitors are redirected away from the member view", async ({
 }) => {
   const ctx = await anonymousContext(browser)
   const page = await ctx.newPage()
-  await page.goto(`/my/hackathon/${ids.h1}/overview`)
-  await expect(page).toHaveURL(/\/\?returnTo=/)
+  const target = `/my/hackathon/${ids.h1}/overview`
+  // Asserted on the 303, not on the page it lands on: the /signin interstitial
+  // forwards itself to the identity provider a couple of seconds after it
+  // renders, so a browser sitting there is mid-navigation by the time an
+  // assertion runs. What matters here is that the member view refuses an
+  // anonymous caller AND that the link they wanted survives the refusal.
+  const resp = await page.request.get(target, { maxRedirects: 0 })
+  expect(resp.status()).toBe(303)
+  expect(resp.headers()["location"]).toBe(
+    `/signin?returnTo=${encodeURIComponent(target)}`,
+  )
   await ctx.close()
 })

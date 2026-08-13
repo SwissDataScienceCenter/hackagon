@@ -9,7 +9,7 @@ import {
 } from "@sveltejs/kit"
 import { parseArgs } from "$lib/server/args"
 import { isSitePageSlug, singleSegment } from "$lib/utils/sitePageSlug"
-import { safeReturnTo } from "$lib/utils/returnTo"
+import { loginUrlFor, safeReturnTo } from "$lib/utils/returnTo"
 import { handle as authHandle } from "./auth"
 import { setupLogger, logger } from "$lib/server/logger"
 import { ConfigLoader } from "$lib/server/settings"
@@ -71,10 +71,17 @@ export function isProtectedRoute(pathname: string): boolean {
   return true
 }
 
+// Bounced to the sign-in interstitial (/signin), NOT to the landing page.
+//
+// It used to be `/?returnTo=…`: a visitor who opened a deep link was dropped on
+// the marketing front page with no word about why, and the parked destination
+// was then thrown away — the "Log in" button computed its own callbackUrl from
+// the pathname and never read the query it had just been handed. The
+// interstitial says what happened, names where it is going, and hands the SAME
+// parked value to Auth.js as the post-login destination.
 function redirectToLogin(url: URL, logger: Logger, reason: string) {
-  const returnTo = encodeURIComponent(url.pathname + url.search)
   logger.debug(`HOOKS: ${reason} -> Redirecting to login.`)
-  throw redirect(303, `/?returnTo=${returnTo}`)
+  throw redirect(303, loginUrlFor(url.pathname + url.search))
 }
 
 function hasLoggedInUserContext(
@@ -213,7 +220,13 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// If a logged-in user visits the root page (without returnTo), send them to the dashboard.
+// A logged-in visitor arriving at `/?returnTo=X` is forwarded to X.
+//
+// The guards no longer PRODUCE that shape — they bounce to /signin, which owns
+// the destination now — so this is a backstop for links that still carry it: a
+// bookmarked or pasted `/?returnTo=…`, and anything that predates the change.
+// It stays because it costs one comparison and its absence would silently
+// swallow a destination.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
   // Validated, not taken at face value: `returnTo` comes from the URL, so an
@@ -237,7 +250,7 @@ export const handle = sequence(
   loggerHandle, // Observe Requests via logging
   authHandle, // Setup Authentication (this is imported on a custom Handler)
   sessionSetupHandle, // Sanitize session + guard protected routes + setup gRPC clients
-  redirectHandle, // Logged-in users on / -> /dashboard (unless returnTo is present)
+  redirectHandle, // Logged-in users on /?returnTo=X -> X (legacy links only)
 )
 
 // ----------------------------------------------------------

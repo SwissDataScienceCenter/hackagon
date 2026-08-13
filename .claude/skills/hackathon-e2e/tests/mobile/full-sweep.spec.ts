@@ -341,10 +341,22 @@ const VISITS: Visit[] = [
 /**
  * Routes we deliberately do NOT visit, each with the reason. The coverage
  * test fails on any enumerated route that is in neither list, so adding a
- * route to the app forces a decision here. Empty today — every route is
- * reachable with fixture state plus what beforeAll creates.
+ * route to the app forces a decision here.
  */
-const UNCOVERED: { pattern: string; reason: string }[] = []
+const UNCOVERED: { pattern: string; reason: string }[] = [
+  {
+    pattern: "/signin",
+    reason:
+      "the sign-in interstitial forwards itself to Keycloak about two seconds " +
+      "after it renders — that IS the feature — so it cannot hold still for a " +
+      "full-page screenshot, a dozen geometry probes and a scroll to the end of " +
+      "the document. Every one of those checks would race the navigation and " +
+      "fail (or, worse, pass against a half-unloaded page). Its render is " +
+      "asserted with JavaScript disabled, where it does hold still, by " +
+      "tests/smoke/23-login-destination.spec.ts — including a 360px visit with " +
+      "header, main and footer present and no sideways overflow.",
+  },
+]
 
 // ─── The sweep ───────────────────────────────────────────────────────────────
 

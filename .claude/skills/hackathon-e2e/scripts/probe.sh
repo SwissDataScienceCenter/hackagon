@@ -48,11 +48,18 @@ METHODS=(
   hackathon.HackathonService/RemoveOwner
   hackathon.HackathonService/SetCapabilities
   hackathon.HackathonService/SetCurrentPhase
+  hackathon.HackathonService/EditCapability
+  hackathon.HackathonService/AdvancePhase
   vote.VoteService/SuggestResults
   storage.StorageService/CreateUploadUrl
   storage.StorageService/CreateDownloadUrl
+  storage.StorageService/ListObjects
   hackathon.PageService/Create
   hackathon.PageService/Delete
+  hackathon.PageService/List
+  hackathon.PageService/Get
+  hackathon.PageService/Edit
+  hackathon.PageService/SetOrder
   hackathon.PhaseService/Create
   hackathon.TrackService/Create
   hackathon.ProjectService/Propose
@@ -61,6 +68,7 @@ METHODS=(
   hackathon.ProjectService/Delete
   hackathon.ProjectService/SetPreference
   hackathon.ProjectService/ExportPreferences
+  hackathon.TeamService/List
   hackathon.TeamService/Create
   hackathon.TeamService/Edit
   hackathon.TeamService/Delete
