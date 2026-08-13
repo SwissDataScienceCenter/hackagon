@@ -161,7 +161,12 @@
     </div>
 
     <div class="mt-0 divide-y divide-line">
-        {#if data.hackathons.length === 0}
+        {#if data.listUnavailable}
+            <!-- "Unreachable" is not "empty" — see +page.server.ts. -->
+            <p class="py-6 text-sm text-ink-3" data-testid="listUnavailable">
+                We could not reach the service to load events. Please try again in a moment.
+            </p>
+        {:else if data.hackathons.length === 0}
             <p class="py-6 text-sm text-ink-3">No hackathons available yet.</p>
         {:else}
             {#each data.hackathons as h, i (h.id)}

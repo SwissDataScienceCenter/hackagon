@@ -26,7 +26,30 @@ import type { VoteServiceClient } from "./generated/vote/vote_service"
 import type { SitePageServiceClient } from "./generated/site/site_page_service"
 import type { StorageServiceClient } from "./generated/storage/storage_service"
 
-const channel = createChannel("localhost:3000")
+// ONE channel for the whole process, created at module load and never replaced.
+// grpc-js reconnects by itself, so a backend restart does heal — but on ITS
+// schedule, and that schedule is tuned for a remote service rather than for a
+// supervisor-managed backend on loopback that gets stopped and started several
+// times in a single test run. The defaults are a 1s initial backoff, x1.6 per
+// failure, capped at 120s (`GRPC_INITIAL_RECONNECT_BACKOFF_MS` /
+// `GRPC_MAX_RECONNECT_BACKOFF_MS`), and while the channel is in TRANSIENT_FAILURE
+// waiting out that interval every RPC fails IMMEDIATELY.
+//
+// So a backend that was down for a couple of minutes leaves this server serving
+// errors for up to two more minutes after the backend is demonstrably healthy —
+// and because the public list loads turn any error into an empty array, what
+// reaches the browser is a confident "no hackathons yet" over a fully populated
+// database. That cost hours on 2026-08-13: `grpcurl` returned 8 events while the
+// browse page rendered none, which is indistinguishable from "the seed data is
+// gone" unless you already suspect the channel.
+//
+// The window is what is wrong here, not the reconnect. Cap it: on loopback a
+// failed connect costs nothing, so retrying every 2s means a restarted backend
+// is picked up in about as long as it takes to bind its port.
+const channel = createChannel("localhost:3000", undefined, {
+  "grpc.initial_reconnect_backoff_ms": 200,
+  "grpc.max_reconnect_backoff_ms": 2000,
+})
 
 // Unauthenticated health client for the startup check in hooks.server.ts
 export const healthClient = createClientFactory().create(

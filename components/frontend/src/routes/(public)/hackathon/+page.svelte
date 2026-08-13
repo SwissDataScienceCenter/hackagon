@@ -84,7 +84,15 @@
         people invited to them.
     </p>
 
-    {#if data.hackathons.length === 0}
+    {#if data.listUnavailable}
+        <!-- NOT "no hackathons yet". The list could not be fetched, which is a
+             different fact, and saying the wrong one of the two sent people
+             looking for a wiped database for hours. See +page.server.ts. -->
+        <p class="mt-8 text-ink-3" data-testid="listUnavailable">
+            The hackathon list is temporarily unavailable — we could not reach the service.
+            This is not an empty platform; please try again in a moment.
+        </p>
+    {:else if data.hackathons.length === 0}
         <p class="mt-8 text-ink-3">No hackathons have been published yet.</p>
     {:else}
         <div class="mt-6">

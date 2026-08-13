@@ -136,8 +136,8 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 
 | Suite | Result | When |
 | --- | --- | --- |
-| journey (463-action recipe) | **467 passed / 0 failed / 0 skipped** | 2026-08-12 |
-| smoke | **140 passed / 0 failed** | 2026-08-12 |
+| journey (463-action recipe) | **467 passed / 0 failed / 0 skipped**, twice back to back | 2026-08-13 |
+| smoke | **137 passed / 1 failed / 2 did not run** — see below | 2026-08-13 |
 | mobile | **121 passed** | 2026-08-10 |
 | backend `go test ./internal/...` | all ok (service 258 specs) | 2026-08-10 |
 | openreplay (9 tests) | **13 passed / 0 skipped** | 2026-08-11 |
@@ -145,6 +145,25 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 
 Playwright totals include the 4 auth-setup tests every suite depends on, so
 journey's 467 is 4 setup + 463 recipe actions.
+
+⚠ **smoke is one short of its baseline, deterministically** (2026-08-13, open):
+`22-hackathon-pages.spec.ts:234` "dragging a row saves the whole new order in one
+write". Its first drag (bottom row to the top) passes; the RESTORE drag — the
+same row, now at the top, dragged back to the bottom — lands one position short,
+`[Welcome, Rules & Guidelines, Schedule]` where `[Welcome, Schedule, Rules &
+Guidelines]` was asked for. The two tests after it are the rest of a
+`mode: "serial"` describe, so they never run: 137 + 1 + 2 = 140.
+
+It is test-side, and the cause is in `dragRowTo` (same file, ~line 74): `endY` is
+computed from the DESTINATION row's bounding box **before the drag starts**,
+while the list reorders live on `dragover`. Moving DOWN, everything below the
+lifted row shifts up by one row height, so the pointer arrives at what has become
+the middle row — moving UP shifts the other way and the pre-computed centre still
+lands inside the intended row, which is exactly why one direction passes and the
+other does not. Recompute the destination box mid-drag, or aim past its far edge.
+**Not caused by the 2026-08-13 infrastructure work**: reverting those five
+frontend files to HEAD, rebuilding and re-running the one test reproduces it
+unchanged.
 
 ⚠ **`mode: "serial"` in `tests/journey/recipe.spec.ts` is load-bearing for STATE,
 not just for stopping at the first failure.** Without it Playwright tears the
@@ -515,6 +534,151 @@ containers (`service-bridge.sh` maps them onto localhost inside `dev` so
 checked-in configs keep working). Opt-in: `just up` still starts devenv's
 copies and they would fight over ports. Note `postgres:18+` wants a single
 mount at `/var/lib/postgresql`, not `/var/lib/postgresql/data`.
+
+**4. `nix develop` is a GLOBAL MUTEX on this repo, and every service in the
+stack goes through it** (fixed 2026-08-13). This is the one that poisoned
+several days of test results, and it never once looked like an infrastructure
+problem — it looked like product bugs, at four different places in four runs.
+
+The worktree here is permanently dirty, so every `nix develop` re-fetches and
+re-hashes the whole tree, holding a repo-wide lock while it does
+(`waiting for another Nix process to finish fetching input
+'git+file:///workspaces/hackagon'…`). Measured: **44 s to enter that shell
+unopposed, 80 s with one competitor.** And the stack's own processes are
+`just develop just run` / `just develop just serve`, so entering that shell is
+inside every service's startup — while process-compose's readiness clock is
+already running. **The probe budget is spent waiting for Nix, not on the
+server.** (The probes themselves are fine; they are `${pkgs.grpcurl}/bin/grpcurl`
+and `${pkgs.curl}/bin/curl` by store path and enter no shell.)
+
+⚠ **"Permanently dirty" is not about your edits — it is true with ZERO changes,
+and the cause is that `git-lfs` is not installed in this container.** Three
+files are LFS pointers in HEAD (`components/frontend/static/favicon.png`,
+`static/og-default.jpg`, `tools/configs/keycloak/.../img/favicon.ico`) and hold
+their real bytes in the worktree, smudged by the Windows host the workspace is
+bind-mounted from. Inside `dev` there is no `filter.lfs.smudge`, so git compares
+pointer against content and reports all three modified, always. Nix therefore
+never reaches its clean-revision fast path, and the 44 s floor above is the
+normal state rather than a consequence of active work. **Not fixed:** the durable
+form is `git-lfs` in `.devcontainer/Dockerfile`, which is a container recreate
+(trap 2), and any development session dirties the tree anyway. Worth doing next
+time the image is rebuilt for another reason. The host's own git reports those
+files clean, which is why nobody saw it.
+
+What that budget actually was: probes land ~15 s apart (process-compose's default
+period), so the backend's `failure_threshold: 50` was ~12.7 min — against a
+**COLD backend restart measured at 486 s on a quiet lock.** 64% of the budget
+spent before one competitor is added, each competitor costing ~+36 s.
+
+When the budget runs out process-compose **kills the service**, and both of its
+two possible endings are bad. Reproduced on the real `just develop just run`
+with the budget scaled down:
+
+| how the SIGTERM lands | exit | `restart: on_failure` does | result |
+| --- | --- | --- | --- |
+| the Go signal handler is up | **0** | nothing — 0 is not a failure | **down forever**, recorded as `Completed` |
+| it lands before the handler | **143** | restarts, uncapped | **149 restarts in 151 s** = one `nix develop` per second |
+
+The first is what the logs showed in the wild: `grpc server listening`, then
+`received shutdown signal`, then `exit_code=0` — which reads like a clean stop
+and is a kill. Downstream it was mid-run `NS_ERROR_CONNECTION_REFUSED`, a
+`reset.sh` that printed "State wiped" while data survived, and a stack needing
+manual restarts.
+
+**What generated the contention was a crash loop nobody could see.** Found live:
+process-compose's `frontend` at **54 restarts in 50 minutes**, exit 1,
+`Error: Port 8081 is already in use` — because the harness's own adapter-node
+server holds `[::1]:8081` (that is its job, trap 2b) and nothing had put vite
+down. `prod-frontend.sh ensure`'s fast path ("the built frontend already serves
+:8081 — leaving it alone") returned without touching process-compose, so the
+loop ran forever, one full `nix develop` per round.
+
+⚠ **And `process list` said `frontend Running Ready` throughout.** Its readiness
+probe is `curl http://localhost:8081`, which the OTHER server was answering. **A
+probe on a PORT cannot tell you which PROCESS holds it** — this is the
+infrastructure member of the silent-green family above, and the same trap bit the
+reproduction rig itself (a leftover scratch backend on :3001 made a run report
+Ready in 10 s having tested nothing). The `RESTARTS` column said 54 the whole
+time and nothing read it.
+
+Four changes, no compose change and no rule to remember:
+
+- `prod-frontend.sh`'s `ensure` calls `stop_vite` **unconditionally** — it is the
+  built server that gets left alone, never vite.
+- `toolchain.nix` frontend: `max_restarts = 3`, so a port conflict costs three
+  shell entries rather than one an hour.
+- `toolchain.nix` backend: `restart = "always"` **plus `max_restarts = 3`**
+  (`always` alone converts a permanent outage into an unbounded loop — that is
+  the 149-restarts row), and `failure_threshold` 50 → 150 (~37 min). A generous
+  budget costs nothing when healthy, because probing stops at the first success,
+  and **the thing that should decide "the backend did not come up" is
+  `wait-ready.sh`'s own 300 s timeout, which names the service** — not a
+  supervisor whose only move is to kill a server that was merely slow.
+- `wait-ready.sh` now **reads the restart counters back** and warns, with the
+  exit code, when any service is ≥3. The number was always there.
+
+**5. Two concurrent `pnpm build`s corrupt `components/frontend/build/service`**
+(fixed 2026-08-13; hit by three agents in one day). `pnpm build` is
+`vite build -m production`, `svelte.config.js` sends adapter-node's output to
+`${QUITSH_BUILD_DIR:-build}/service`, and there were **two independent callers
+that both build AND SERVE that one tree** — `hackathon-e2e/prod-frontend.sh` on
+:8081 and `cloudflare-tunnel/prod-serve.sh` on :8082. So they do not merely race
+to build it, they race to replace it while the other is serving it. Symptoms:
+`Unexpected end of JSON input`, then a missing `build/service/server/index.js` at
+boot.
+
+Both callers now go through **`.claude/skills/lib/frontend-build.sh`**, which
+does two things for two different holes: an **exclusive `flock`**, so two builds
+cannot interleave and the second caller waits and then finds the first one's
+fresh output (staleness is re-checked INSIDE the lock — checking it outside is
+how both callers decide to build); and a **build into a temp dir + atomic swap**,
+so `build/service` only ever contains a complete tree. The lock cannot help with
+the second: an interrupted build's writer is gone, not concurrent, and what it
+had written so far stays there looking like a build. `if-stale` is the entry
+point for the harness, `build` for an unconditional rebuild.
+
+Two things measured while building that, both worth keeping:
+
+- **Two concurrent bare builds did NOT reliably corrupt anything** — one attempt
+  with a 5 s stagger left an intact tree, because adapter-node's copy phase is
+  short and the two missed each other. That is consistent with it taking three
+  people in one day to hit; it is a narrow window, not a certainty. The
+  *interrupted* build reproduces every time, which is why the atomic swap is the
+  half with a deterministic proof: killed at the instant `build/service/index.js`
+  was gone, the tree was left with no entry point; through the helper that window
+  **never opens at all**, and a build killed 40 s in leaves `build/service` with
+  the same inode it had before.
+- ⚠ **A directory rename on the 9p bind mount intermittently answers EPERM**
+  (`mv: cannot move '…/build/service' to '…/build/.service-old-352884':
+  Permission denied`), and it is NOT open descriptors — the same rename succeeded
+  a minute later with the same servers running and nothing open under the tree.
+  The swap therefore retries, and rolls the old tree back if the second rename
+  fails, so `build/service` is never left missing. Anything else here that
+  renames a directory on this mount needs the same treatment.
+
+**6. An empty list is not an answer — say "I could not ask"** (fixed
+2026-08-13). The built :8081 server keeps ONE module-scope gRPC channel
+(`lib/server/grpc/client.ts`) for its whole life. grpc-js does reconnect, but on
+a backoff that grows to a **120 s cap**, and every RPC issued while it waits
+fails immediately — so a backend that was down for a few minutes leaves the app
+serving errors for up to two more minutes AFTER the backend is demonstrably
+healthy. The browse page then rendered **0 events while `grpcurl` returned 8 from
+the same database.**
+
+That alone was survivable; what cost the hours was the page's own load doing
+`.catch(() => ({ hackathons: [] }))`, with a comment calling an empty list "a
+calm and truthful thing for a visitor to read during an outage". Calm, yes;
+truthful, no — **"the database is empty" and "I cannot reach the backend" became
+the same page**, and in a container where every run wipes and reseeds the
+database, that is the most expensive confusion available.
+
+Both halves fixed: the channel caps its reconnect backoff at 2 s (a failed
+connect on loopback costs nothing), and the load carries `listUnavailable` so the
+page says which of the two it is. The regression test is
+**`hackathon-e2e/scripts/check-reconnect.sh`** — restart the backend under a
+running :8081, assert the browse page lists its events again, *and* assert that
+while the backend is down the page says unavailable rather than empty. Without
+that second assertion half the script passes against a page that is lying.
 
 ## The tunnel's auth wiring (why login kept breaking)
 

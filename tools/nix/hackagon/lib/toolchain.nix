@@ -131,6 +131,16 @@ let
                 keycloak.process-compose.log_location = createProcCompLog "keycloak";
 
                 backend = lib.mkIf withBackend {
+                  # NOTE: this enters the Nix dev shell, and that is the single
+                  # most expensive fact about this process. Entering it costs
+                  # 44s at best on a dirty worktree, and it takes a REPO-WIDE
+                  # lock while it re-fetches the tree
+                  # ("waiting for another Nix process to finish fetching input
+                  # 'git+file:///workspaces/hackagon'…"), so every other
+                  # `just develop` anywhere on the machine queues behind it.
+                  # The readiness budget below has to cover that wait, because
+                  # the probe clock starts when THIS command is launched, not
+                  # when the server it eventually starts binds a port.
                   exec = "just develop just run";
                   process-compose = {
                     log_location = createProcCompLog "backend";
@@ -141,7 +151,30 @@ let
                       };
                     };
                     availability = {
-                      restart = "on_failure";
+                      # `always`, not `on_failure`, because of how a
+                      # readiness-probe kill actually looks. When the budget
+                      # below runs out process-compose SIGTERMs the process; the
+                      # Go server handles that and exits 0 — and `on_failure`
+                      # does not consider 0 a failure, so the backend stayed
+                      # DOWN and the supervisor recorded it as `Completed`,
+                      # exit_code=0, i.e. as having finished successfully.
+                      # Reproduced 2026-08-13: `grpc server listening` followed
+                      # by `received shutdown signal`, then nothing, forever.
+                      # Every downstream symptom (connection refused mid-run, a
+                      # browse page listing nothing) came from that.
+                      restart = "always";
+                      # LOAD-BEARING, not belt-and-braces. The same kill can
+                      # also land BEFORE the Go signal handler exists, in which
+                      # case the wrapper dies with 143 — which `on_failure`
+                      # does consider a failure. Measured 2026-08-13 with the
+                      # budget scaled down to force it: 149 restarts in 151
+                      # seconds, i.e. one full `nix develop` PER SECOND, which
+                      # starves every other service's startup and is exactly the
+                      # runaway this file is being changed to prevent. An
+                      # uncapped restart policy on a process that enters the Nix
+                      # shell is a self-amplifying outage; cap it and a bad
+                      # start costs 3 attempts and then says so.
+                      max_restarts = 3;
                     };
                     readiness_probe = {
                       exec = {
@@ -150,7 +183,24 @@ let
                       initial_delay_seconds = 10;
                       timeout_seconds = 5;
                       success_threshold = 1;
-                      failure_threshold = 50;
+                      # Was 50. Measured on this container 2026-08-13: probes
+                      # land ~15s apart (process-compose's default period), so
+                      # 50 was a ~12.7 min budget — and a COLD restart of this
+                      # service (enter the Nix shell, build quitsh, build the Go
+                      # service, boot) took 486s on a QUIET lock. That is 64% of
+                      # the budget spent before one competitor for the fetch
+                      # lock is added, and each competitor measured +36s. The
+                      # margin was ~4 minutes on a machine where the frontend
+                      # could take the lock every 55 seconds.
+                      #
+                      # 150 makes it ~37 min. This costs nothing when the
+                      # service is healthy — probing stops at the first success —
+                      # and the thing that should decide "the backend did not
+                      # come up" is the harness's own timeout
+                      # (hackathon-e2e/scripts/wait-ready.sh, 300s, which says
+                      # WHICH service and prints why), not a supervisor whose
+                      # only move is to kill a server that was merely slow.
+                      failure_threshold = 150;
                     };
                   };
                 };
@@ -167,6 +217,33 @@ let
                     };
                     availability = {
                       restart = "on_failure";
+                      # THE RUNAWAY THIS FILE EXISTS TO PREVENT, found live
+                      # 2026-08-13 with 54 restarts in 50 minutes.
+                      #
+                      # `vite dev` binds [::1]:8081. So does the adapter-node
+                      # build the e2e harness serves in its place
+                      # (hackathon-e2e/scripts/prod-frontend.sh — see the comment
+                      # on stop_vite for why it has to). Whenever a previous run
+                      # has left that server up, vite cannot bind, exits 1 with
+                      # "Error: Port 8081 is already in use", and an uncapped
+                      # `on_failure` sends it round again — every ~55s, forever,
+                      # and each round is a full `just develop`, i.e. one
+                      # acquisition of the repo-wide git+file:// fetch lock.
+                      # That is what starved the backend's own startup.
+                      #
+                      # It was also INVISIBLE: `process list` said
+                      # `frontend Running Ready` throughout, because the
+                      # readiness probe below is a plain GET of :8081 and the
+                      # OTHER server was answering it. A probe that measures a
+                      # PORT cannot tell you which PROCESS holds it.
+                      #
+                      # 3 is enough for a genuine transient (a port freed a
+                      # moment later) and small enough that a permanent conflict
+                      # costs three shell entries instead of one an hour.
+                      # `wait-ready.sh` now reads these counters back and says so
+                      # out loud, because the number was there all along and
+                      # nothing was looking at it.
+                      max_restarts = 3;
                     };
                     readiness_probe = {
                       exec = {
