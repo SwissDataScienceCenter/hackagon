@@ -51,7 +51,9 @@ export const load: PageServerLoad = async (event) => {
   let eventNames: Record<string, string> = {}
   try {
     const events = await hackathon.list({})
-    eventNames = Object.fromEntries(events.hackathons.map((h) => [h.id, h.name]))
+    eventNames = Object.fromEntries(
+      events.hackathons.map((h) => [h.id, h.name]),
+    )
   } catch {
     eventNames = {}
   }

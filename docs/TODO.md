@@ -220,8 +220,8 @@ which closes it for a single-instance deployment (post-fix: 12 of 12 rounds,
 exactly one row); the journey pins it with `act7.race.doublevote` +
 `act7.race.check`. A partial unique index on
 `(category, voter) WHERE vote_type = 'single_choice'` remains the multi-instance
-fix, but ent cannot express one, so it would have to be hand-written SQL
-outside the schema.
+fix, but ent cannot express one, so it would have to be hand-written SQL outside
+the schema.
 
 **The last-organizer guard raced the same way** — `RemoveOwner` read the owner
 list, checked it, then removed, so two organizers demoting each other
@@ -243,14 +243,14 @@ Pinned by `act5.race.owner.*` (mutual demotion → exactly one owner survives).
       confirmed participant (the member list is built from that table, so a role
       granted outside it makes an owner absent from the roster)
 - [x] F4 — `returnTo` consumed (with an open-redirect guard; the old ping-pong
-      protection replaced by an explicit `sessionUsable` flag).
-      **Reopened and closed properly 2026-08-12**: only the SERVER half had been
-      built. `redirectHandle` forwarded a logged-in caller from `/?returnTo=X` to
-      X, but nothing ever put a logged-in caller back on `/` carrying the query —
-      `NavBar`'s "Log in" button computed its own `callbackUrl` from the pathname
-      and never read `returnTo`, so the one control the visitor was being asked
-      to press is what dropped the deep link. Both guards now park on
-      `/signin?returnTo=…` (an interstitial that says what happened before it
+      protection replaced by an explicit `sessionUsable` flag). **Reopened and
+      closed properly 2026-08-12**: only the SERVER half had been built.
+      `redirectHandle` forwarded a logged-in caller from `/?returnTo=X` to X,
+      but nothing ever put a logged-in caller back on `/` carrying the query —
+      `NavBar`'s "Log in" button computed its own `callbackUrl` from the
+      pathname and never read `returnTo`, so the one control the visitor was
+      being asked to press is what dropped the deep link. Both guards now park
+      on `/signin?returnTo=…` (an interstitial that says what happened before it
       goes), the destination is resolved once by `loginDestination`, and the
       button reads the same query. `tests/smoke/23-login-destination.spec.ts`
       follows an anonymous deep link through Keycloak and asserts the final URL

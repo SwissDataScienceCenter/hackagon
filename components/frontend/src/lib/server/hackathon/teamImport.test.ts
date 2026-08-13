@@ -20,10 +20,20 @@ const CHARLES = "charles@mail.net"
 function world(): ImportWorld {
   return {
     participants: [
-      { id: "u-alice", email: ALICE, name: "Alice Wonderland", isWaiting: false },
+      {
+        id: "u-alice",
+        email: ALICE,
+        name: "Alice Wonderland",
+        isWaiting: false,
+      },
       { id: "u-bob", email: BOB, name: "Bob Henderson", isWaiting: false },
       { id: "u-admin", email: ADMIN, name: "Hackagon Admin", isWaiting: false },
-      { id: "u-charles", email: CHARLES, name: "Charles Whitfield", isWaiting: true },
+      {
+        id: "u-charles",
+        email: CHARLES,
+        name: "Charles Whitfield",
+        isWaiting: true,
+      },
     ],
     projects: [
       { id: "p-automl", title: "AutoML Pipeline Builder" },
@@ -36,7 +46,12 @@ function world(): ImportWorld {
         projectId: "p-automl",
         memberIds: ["u-alice", "u-admin"],
       },
-      { id: "t-beta", name: "Team Beta", projectId: "p-chatbot", memberIds: [] },
+      {
+        id: "t-beta",
+        name: "Team Beta",
+        projectId: "p-chatbot",
+        memberIds: [],
+      },
     ],
   }
 }
@@ -113,7 +128,9 @@ describe("the template", () => {
   })
 
   it("leaves waitlisted participants out — they cannot be given a team yet", () => {
-    expect(templateRows(world()).map((r) => r.user_email)).not.toContain(CHARLES)
+    expect(templateRows(world()).map((r) => r.user_email)).not.toContain(
+      CHARLES,
+    )
   })
 
   it("falls back to example rows, on a REAL project, when nobody is confirmed", () => {
@@ -194,9 +211,16 @@ describe("the template round trip", () => {
 describe("reading a CSV", () => {
   it("reads the three columns", () => {
     expect(
-      parsed(`user_email,project,team\n${BOB},Multilingual Chatbot,Team Beta\n`),
+      parsed(
+        `user_email,project,team\n${BOB},Multilingual Chatbot,Team Beta\n`,
+      ),
     ).toEqual([
-      { row: 1, userEmail: BOB, project: "Multilingual Chatbot", team: "Team Beta" },
+      {
+        row: 1,
+        userEmail: BOB,
+        project: "Multilingual Chatbot",
+        team: "Team Beta",
+      },
     ])
   })
 
@@ -222,7 +246,9 @@ describe("reading a CSV", () => {
   })
 
   it("reads a semicolon-separated file, which is what Excel writes in Europe", () => {
-    const [row] = parsed(`user_email;project;team\r\n${BOB};Multilingual Chatbot;Team Beta\r\n`)
+    const [row] = parsed(
+      `user_email;project;team\r\n${BOB};Multilingual Chatbot;Team Beta\r\n`,
+    )
 
     expect(row).toEqual({
       row: 1,
@@ -253,17 +279,30 @@ describe("reading a JSON", () => {
   it("reads a bare array", () => {
     expect(
       parsed(
-        JSON.stringify([{ user_email: BOB, project: "Multilingual Chatbot", team: "Team Beta" }]),
+        JSON.stringify([
+          {
+            user_email: BOB,
+            project: "Multilingual Chatbot",
+            team: "Team Beta",
+          },
+        ]),
         "roster.json",
       ),
     ).toEqual([
-      { row: 1, userEmail: BOB, project: "Multilingual Chatbot", team: "Team Beta" },
+      {
+        row: 1,
+        userEmail: BOB,
+        project: "Multilingual Chatbot",
+        team: "Team Beta",
+      },
     ])
   })
 
   it("reads a { rows: [...] } wrapper and camelCase keys", () => {
     const [row] = parsed(
-      JSON.stringify({ rows: [{ userEmail: BOB, project: "X", teamName: "Y" }] }),
+      JSON.stringify({
+        rows: [{ userEmail: BOB, project: "X", teamName: "Y" }],
+      }),
       "roster.json",
     )
 
@@ -290,25 +329,33 @@ describe("reading a JSON", () => {
   })
 
   it("reads JSON out of a file named .csv rather than as one wide column", () => {
-    expect(parsed(JSON.stringify([{ user_email: BOB }]), "roster.csv")[0]?.userEmail).toBe(BOB)
+    expect(
+      parsed(JSON.stringify([{ user_email: BOB }]), "roster.csv")[0]?.userEmail,
+    ).toBe(BOB)
   })
 
   it("says which row is not an object", () => {
-    expect(parseError(JSON.stringify([{ user_email: BOB }, "nope"]), "r.json")).toBe(
-      "row 2 is not an object",
-    )
+    expect(
+      parseError(JSON.stringify([{ user_email: BOB }, "nope"]), "r.json"),
+    ).toBe("row 2 is not an object")
   })
 
   it("refuses a project given as a list", () => {
     expect(
-      parseError(JSON.stringify([{ user_email: BOB, project: ["a", "b"] }]), "r.json"),
+      parseError(
+        JSON.stringify([{ user_email: BOB, project: ["a", "b"] }]),
+        "r.json",
+      ),
     ).toBe('row 1: "project" must be text, not a list')
   })
 })
 
 describe("resolving a file against the event", () => {
   it("plans a join onto an existing team", () => {
-    const plan = resolveImport(rows([BOB, "Multilingual Chatbot", "Team Beta"]), world())
+    const plan = resolveImport(
+      rows([BOB, "Multilingual Chatbot", "Team Beta"]),
+      world(),
+    )
 
     expect(plan.counts.errors).toBe(0)
     expect(forEmail(plan, BOB)).toMatchObject({
@@ -328,7 +375,10 @@ describe("resolving a file against the event", () => {
       world(),
     )
 
-    expect(forEmail(plan, BOB)).toMatchObject({ status: "assign", target: "t-beta" })
+    expect(forEmail(plan, BOB)).toMatchObject({
+      status: "assign",
+      target: "t-beta",
+    })
   })
 
   it("creates a team the event does not have yet, ONCE for however many rows name it", () => {
@@ -342,7 +392,11 @@ describe("resolving a file against the event", () => {
 
     expect(plan.counts.errors).toBe(0)
     expect(plan.creates).toEqual([
-      { projectId: "p-chatbot", projectTitle: "Multilingual Chatbot", name: "Team Gamma" },
+      {
+        projectId: "p-chatbot",
+        projectTitle: "Multilingual Chatbot",
+        name: "Team Gamma",
+      },
     ])
     expect(forEmail(plan, BOB)).toMatchObject({
       status: "create",
@@ -350,11 +404,17 @@ describe("resolving a file against the event", () => {
       detail: 'joins a new team "Team Gamma" under "Multilingual Chatbot"',
     })
     // The admin is on Team Alpha today, so joining the new team means leaving it.
-    expect(forEmail(plan, ADMIN)).toMatchObject({ target: "new:0", leave: ["t-alpha"] })
+    expect(forEmail(plan, ADMIN)).toMatchObject({
+      target: "new:0",
+      leave: ["t-alpha"],
+    })
   })
 
   it("moves someone off their old team on the way to the new one", () => {
-    const plan = resolveImport(rows([ALICE, "Multilingual Chatbot", "Team Beta"]), world())
+    const plan = resolveImport(
+      rows([ALICE, "Multilingual Chatbot", "Team Beta"]),
+      world(),
+    )
 
     expect(forEmail(plan, ALICE)).toMatchObject({
       status: "assign",
@@ -416,13 +476,17 @@ describe("the rows a file can get wrong", () => {
 
     expect(forEmail(plan, "nobody@example.org")).toMatchObject({
       status: "error",
-      detail: 'no participant of this hackathon has the email "nobody@example.org"',
+      detail:
+        'no participant of this hackathon has the email "nobody@example.org"',
     })
     expect(plan.counts.errors).toBe(1)
   })
 
   it("names a project this event does not have", () => {
-    const plan = resolveImport(rows([BOB, "Quantum Blockchain", "Team Beta"]), world())
+    const plan = resolveImport(
+      rows([BOB, "Quantum Blockchain", "Team Beta"]),
+      world(),
+    )
 
     // A different answer to a different question: the person is fine, the
     // project is not, and "row failed" would leave the organiser guessing which.
@@ -433,7 +497,10 @@ describe("the rows a file can get wrong", () => {
   })
 
   it("names someone who is still on the waiting list", () => {
-    const plan = resolveImport(rows([CHARLES, "Multilingual Chatbot", "Team Beta"]), world())
+    const plan = resolveImport(
+      rows([CHARLES, "Multilingual Chatbot", "Team Beta"]),
+      world(),
+    )
 
     expect(forEmail(plan, CHARLES).detail).toBe(
       `${CHARLES} is on the waiting list — approve them before putting them on a team`,
@@ -476,7 +543,10 @@ describe("the rows a file can get wrong", () => {
   })
 
   it("refuses an empty email", () => {
-    const plan = resolveImport(rows(["", "Multilingual Chatbot", "Team Beta"]), world())
+    const plan = resolveImport(
+      rows(["", "Multilingual Chatbot", "Team Beta"]),
+      world(),
+    )
 
     expect(plan.rows[0]).toMatchObject({
       status: "error",
@@ -487,7 +557,10 @@ describe("the rows a file can get wrong", () => {
   it("refuses an ambiguous project title", () => {
     const w = world()
     w.projects.push({ id: "p-clone", title: "Multilingual Chatbot" })
-    const plan = resolveImport(rows([BOB, "Multilingual Chatbot", "Team Beta"]), w)
+    const plan = resolveImport(
+      rows([BOB, "Multilingual Chatbot", "Team Beta"]),
+      w,
+    )
 
     expect(forEmail(plan, BOB).detail).toBe(
       '2 projects are titled "Multilingual Chatbot" — rename one of them before importing',
@@ -496,8 +569,16 @@ describe("the rows a file can get wrong", () => {
 
   it("refuses an ambiguous team name under one project", () => {
     const w = world()
-    w.teams.push({ id: "t-beta2", name: "Team Beta", projectId: "p-chatbot", memberIds: [] })
-    const plan = resolveImport(rows([BOB, "Multilingual Chatbot", "Team Beta"]), w)
+    w.teams.push({
+      id: "t-beta2",
+      name: "Team Beta",
+      projectId: "p-chatbot",
+      memberIds: [],
+    })
+    const plan = resolveImport(
+      rows([BOB, "Multilingual Chatbot", "Team Beta"]),
+      w,
+    )
 
     expect(forEmail(plan, BOB).detail).toBe(
       '2 teams under "Multilingual Chatbot" are named "Team Beta" — rename one of them before importing',
@@ -505,7 +586,10 @@ describe("the rows a file can get wrong", () => {
   })
 
   it("refuses a team name longer than the column can hold", () => {
-    const plan = resolveImport(rows([BOB, "Multilingual Chatbot", "x".repeat(256)]), world())
+    const plan = resolveImport(
+      rows([BOB, "Multilingual Chatbot", "x".repeat(256)]),
+      world(),
+    )
 
     expect(forEmail(plan, BOB).detail).toBe(
       "the team name is 256 characters; the limit is 255",
