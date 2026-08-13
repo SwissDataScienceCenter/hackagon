@@ -238,7 +238,12 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .hlp .legend .ghost i { background: repeating-linear-gradient(90deg, var(--k-vote) 0 3px, transparent 3px 6px); }
 .hlp .legend .denied i { background: var(--st-crit); }
 
-.hlp .roster { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
+/* two columns where two columns fit and one where they do not — auto-fit
+   rather than a hard 1fr 1fr, so a short cast is not split into two stubs and
+   the rail collapsing to full width on a phone does not leave 130px columns.
+   122px, not 134: the rail's own content box is 280px and two 134px tracks plus
+   the gap come to exactly that, which sub-pixel rounding then loses. */
+.hlp .roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 3px 12px; }
 .hlp .person { display: flex; align-items: center; gap: 7px; padding: 2px 0; min-width: 0; }
 .hlp .person .av {
   width: 17px; height: 17px; border-radius: 50%; flex: none;
@@ -318,26 +323,42 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .hlp .seg { position: relative; background: var(--panel); border-radius: 2px; overflow: hidden; min-width: 8px; }
 /* ── timeline ticks: one per action ───────────────────────────────────
    A tick is ~1px wide at 463 across the bar, so a pattern inside one cannot
-   read and hue alone would be the only signal. The pairing is therefore
-   GEOMETRY, which survives at 1px, in greyscale and in print:
-     how the action is DRIVEN  → hue + vertical extent
-       browser (ui.flow/ui.assert) = blue, short bar on the baseline
-       API     (rpc/rpc.race)      = yellow, full height
-       fixture (files.generate)    = grey, full height
-     what the action CARRIES   → a cap, and the two caps sit at opposite ends
-       gate (skips unless its RPCs exist) = red cap at the TOP
-       todo (an open design note)         = violet cap at the BOTTOM */
-.hlp .seg .tick { position: absolute; top: 0; bottom: 0; }
-.hlp .seg .tick.api     { background: color-mix(in srgb, var(--st-warn) var(--tick-strength), var(--panel)); }
-.hlp .seg .tick.ui      { top: 45%; background: color-mix(in srgb, var(--k-create) var(--tick-strength), var(--panel)); }
-.hlp .seg .tick.fixture { background: color-mix(in srgb, var(--k-check) var(--tick-strength), var(--panel)); }
-.hlp .seg .tick.gated::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px;
-  background: var(--st-crit);
+   read and hue alone would be the only signal. Every encoding therefore pairs
+   a hue with GEOMETRY — a vertical extent, which survives at 1px, in
+   greyscale and in print.
+
+   WHAT the hue means is a SETTING now (the ⚙ Colour coding dialog), because
+   the default answer ("how the action is driven") is not the one most people
+   guess. So neither the hue nor the extent may be baked into a class name
+   here: a mode declares, per bucket, a colour and one of the g-* extents
+   below, and paintTick() writes both onto the element. The bar ticks and the
+   legend swatches go through that ONE function, so the legend cannot describe
+   an encoding different from the one being drawn — which is exactly the bug
+   the previous hand-written legend had, on all three of its colours.
+
+   The two caps are fixed, because they always mean the same two fields:
+     gate (skips unless its RPCs exist) = cap at the TOP
+     todo (a free-text design note)     = cap at the BOTTOM */
+.hlp .seg .tick, .hlp .tl-legend .sw i {
+  background: color-mix(in srgb, var(--tc, var(--muted)) var(--tick-strength), var(--panel));
 }
-.hlp .seg .tick.noted::after {
+.hlp .seg .tick { position: absolute; }
+.hlp .tl-legend .sw i { position: absolute; left: 0; right: 0; }
+/* the extent vocabulary — a mode picks one per bucket. Monotone where the
+   buckets are ordered (priority, expectation), distinct where they are not. */
+.hlp .g-full  { top: 0;    bottom: 0; }
+.hlp .g-low   { top: 45%;  bottom: 0; }
+.hlp .g-high  { top: 0;    bottom: 45%; }
+.hlp .g-mid   { top: 27%;  bottom: 27%; }
+.hlp .g-lower { top: 70%;  bottom: 0; }
+.hlp .g-upper { top: 0;    bottom: 70%; }
+.hlp .cap-top::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px;
+  background: var(--ct, var(--st-crit));
+}
+.hlp .cap-bot::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
-  background: var(--k-vote);
+  background: var(--cb, var(--k-vote));
 }
 /* the advancing playhead: a bright bar sweeping left → right over the map */
 .hlp .scrub .elapsed {
@@ -351,9 +372,10 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 }
 
 /* ── timeline legend: sits directly under the acts strip, never in the rail —
-   the colours it explains are 20px above it. Counts are written by JS from the
-   embedded data, so the legend cannot drift from what the ticks encode (the
-   previous hand-written one did, on all three colours). */
+   the colours it explains are 20px above it. Counts are TALLIED off the ticks
+   that were actually drawn (not off a second predicate pass), so the legend
+   cannot drift from what the ticks encode — the previous hand-written one did,
+   on all three colours. */
 .hlp .tl-legend {
   flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 4px 14px;
   align-items: center; margin-top: 7px;
@@ -362,6 +384,27 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   font: 700 8.5px/1 var(--mono); letter-spacing: .11em; text-transform: uppercase;
   color: var(--muted);
 }
+/* what the colours mean RIGHT NOW, named in the legend itself and clickable
+   straight through to the setting that changes it */
+.hlp .tl-legend .lmode {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 700 8.5px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--k-create) 55%, transparent);
+  color: var(--ink);
+}
+.hlp .tl-legend .lmode:hover { background: color-mix(in srgb, var(--k-create) 16%, transparent); }
+.hlp .tl-legend .lmode em { font-style: normal; color: var(--k-create); }
+/* the counts used to stand alone: a user asked us what "carries 24 gate / 65
+   todo note" meant, which is a legend stating a number with no meaning. The
+   sentence is part of the legend now, not a tooltip on it. */
+.hlp .lgnote {
+  flex: 1 1 100%; margin-top: 5px;
+  font: 400 10px/1.5 var(--sans); color: var(--muted); max-width: 132ch;
+}
+.hlp .lgnote b { color: var(--ink2); font-weight: 700; }
+.hlp .lgnote .gk { color: var(--st-crit); font-weight: 700; }
+.hlp .lgnote .tk { color: var(--k-vote); font-weight: 700; }
 .hlp .tl-legend .litem {
   display: inline-flex; align-items: center; gap: 5px;
   font: 400 10px/1.3 var(--sans); color: var(--ink2); white-space: nowrap;
@@ -369,17 +412,12 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .hlp .tl-legend .litem b {
   font: 700 10px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink);
 }
-/* each swatch is a 14x12 slice of the real bar, drawn with the same geometry */
+/* each swatch is a 15x13 slice of the real bar, painted by the same
+   paintTick() that paints the bar — see the tick comment above */
 .hlp .tl-legend .sw {
   position: relative; width: 15px; height: 13px; flex: none;
   background: var(--panel); border-radius: 2px; overflow: hidden;
 }
-.hlp .tl-legend .sw i { position: absolute; left: 0; right: 0; }
-.hlp .tl-legend .sw i.api     { top: 0; bottom: 0; background: color-mix(in srgb, var(--st-warn) var(--tick-strength), var(--panel)); }
-.hlp .tl-legend .sw i.ui      { top: 45%; bottom: 0; background: color-mix(in srgb, var(--k-create) var(--tick-strength), var(--panel)); }
-.hlp .tl-legend .sw i.fixture { top: 0; bottom: 0; background: color-mix(in srgb, var(--k-check) var(--tick-strength), var(--panel)); }
-.hlp .tl-legend .sw i.gated   { top: 0; height: 5px; background: var(--st-crit); }
-.hlp .tl-legend .sw i.noted   { bottom: 0; height: 4px; background: var(--k-vote); }
 /* phase names sit directly under the timeline, aligned with their segments */
 .hlp .acts { display: flex; gap: 2px; margin-top: 4px; }
 .hlp .acts button {
@@ -450,9 +488,12 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 /* ── action browser modal ────────────────────────────────────────────── */
 .hlp .bmodal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; }
 .hlp .bmodal[hidden] { display: none; }
+/* the browser takes the screen: 463 rows and a JSON panel beside them is the
+   one view here that wants every pixel. 95vw/92vh with a max so it does not
+   sprawl on an ultrawide, and the narrow rules below take over under 760px. */
 .hlp .bcard {
   position: relative; display: flex; flex-direction: column;
-  width: min(1200px, calc(100vw - 20px)); height: min(880px, calc(100dvh - 20px));
+  width: min(1880px, 95vw); height: min(1200px, 92dvh);
   background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px;
   box-shadow: 0 16px 48px var(--shadow); overflow: hidden;
 }
@@ -522,9 +563,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .hlp .brow .btitle { font: 400 12px/1.35 var(--sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hlp .brow .bflags { display: inline-flex; gap: 4px; }
 .hlp .bempty { padding: 22px 14px; font: 400 12px var(--sans); color: var(--muted); text-align: center; }
-/* json side panel */
+/* json side panel — the extra width the bigger card buys goes here: params
+   blobs are deep and wrapping them at 430px was most of what made this panel
+   hard to read. Clamped, so it never eats the list on a narrow laptop. */
 .hlp .bdetail {
-  width: 430px; flex: none; border-left: 1px solid var(--line);
+  width: clamp(430px, 38%, 760px); flex: none; border-left: 1px solid var(--line);
   display: flex; flex-direction: column; min-height: 0; background: var(--bg);
 }
 .hlp .bdhead { padding: 11px 13px; border-bottom: 1px solid var(--line); flex: none; }
@@ -567,6 +610,115 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   font: 600 9.5px var(--mono); color: var(--ink2);
   border: 1px solid var(--line-strong); border-radius: 3px; padding: 1px 4px;
 }
+/* the same sentence as the timeline legend's, next to the two filter
+   checkboxes that use the words — the hint bar is where a reader of this
+   dialog is already looking for what a control means */
+.hlp .bhint .fldnote { color: var(--ink2); }
+.hlp .bhint .fldnote .gk { color: var(--st-crit); font-weight: 700; }
+.hlp .bhint .fldnote .tk { color: var(--k-vote); font-weight: 700; }
+
+/* ── export buttons (browser head) ────────────────────────────────────
+   Both carry their row count in the label: the whole point of a subset export
+   is that it is NOT 463, and a button that does not say which it is invites
+   exactly that mistake. */
+.hlp .dlbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 4px; white-space: nowrap;
+  font: 600 10.5px/1 var(--mono); letter-spacing: .03em;
+  border: 1px solid var(--line-strong); color: var(--ink2);
+}
+.hlp .dlbtn:hover { border-color: var(--muted); color: var(--ink); }
+.hlp .dlbtn b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.hlp .dlbtn.primary {
+  border-color: color-mix(in srgb, var(--k-create) 70%, transparent);
+  background: color-mix(in srgb, var(--k-create) 14%, transparent);
+  color: var(--ink);
+}
+.hlp .dlbtn.primary:hover { background: color-mix(in srgb, var(--k-create) 26%, transparent); }
+.hlp .dlbtn[disabled] { opacity: .45; cursor: not-allowed; }
+.hlp .dlbtn[disabled]:hover { border-color: var(--line-strong); color: var(--ink2); }
+
+/* ── settings dialog: what the colours mean ──────────────────────────── */
+.hlp .smodal { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; }
+.hlp .smodal[hidden] { display: none; }
+.hlp .scard {
+  position: relative; display: flex; flex-direction: column;
+  width: min(780px, calc(100vw - 20px)); max-height: 92dvh;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px;
+  box-shadow: 0 16px 48px var(--shadow); overflow: hidden;
+}
+.hlp .shead {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; border-bottom: 1px solid var(--line); flex: none;
+}
+.hlp .shead h3 { font: 700 13px var(--mono); letter-spacing: .05em; flex: 1; }
+.hlp .sbody {
+  overflow-y: auto; padding: 14px 16px 18px;
+  display: grid; gap: 16px 22px; align-content: start;
+}
+/* on anything laptop-sized the two explanation blocks move BESIDE the mode
+   list. Stacked, "pass/fail is not in the recipe" sat below the fold — which is
+   the one sentence in here that has to be read, since the whole dialog exists
+   because someone read the colours as pass/fail. */
+@media (min-width: 900px) {
+  .hlp .scard { width: min(1120px, 95vw); }
+  .hlp .sbody { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+  .hlp .sbody > :first-child { grid-row: span 2; }
+}
+.hlp .sbody h4 {
+  font: 700 9.5px var(--mono); letter-spacing: .11em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
+}
+.hlp .sbody p { font: 400 11.5px/1.6 var(--sans); color: var(--ink2); max-width: 78ch; }
+.hlp .sbody p b { color: var(--ink); }
+.hlp .sbody p .gk { color: var(--st-crit); font-weight: 700; }
+.hlp .sbody p .tk { color: var(--k-vote); font-weight: 700; }
+/* one row per mode: the radio, the name, one line of what it colours by, and
+   a live strip of that mode's own swatches so the choice is previewed */
+.hlp .modes { display: flex; flex-direction: column; gap: 4px; }
+.hlp .mode {
+  display: grid; grid-template-columns: 18px 1fr; gap: 3px 9px; align-items: start;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--panel); cursor: pointer;
+}
+.hlp .mode:hover { border-color: var(--line-strong); }
+.hlp .mode.on {
+  border-color: var(--k-create);
+  background: color-mix(in srgb, var(--k-create) 12%, var(--panel));
+}
+.hlp .mode input { accent-color: var(--k-create); margin-top: 2px; }
+.hlp .mode .mname { font: 700 11.5px var(--mono); color: var(--ink); letter-spacing: .03em; }
+.hlp .mode .mname span { font: 400 10px var(--sans); color: var(--muted); margin-left: 7px; letter-spacing: 0; }
+.hlp .mode .mwhy { grid-column: 2; font: 400 11px/1.5 var(--sans); color: var(--ink2); }
+.hlp .mode .mprev { grid-column: 2; display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 4px; }
+.hlp .mode .mprev .pv { display: inline-flex; align-items: center; gap: 4px; font: 400 9.5px var(--sans); color: var(--muted); }
+.hlp .mode .mprev .sw {
+  position: relative; width: 13px; height: 12px; flex: none;
+  background: var(--bg); border-radius: 2px; overflow: hidden;
+}
+.hlp .mode .mprev .sw i {
+  position: absolute; left: 0; right: 0;
+  background: color-mix(in srgb, var(--tc, var(--muted)) var(--tick-strength), var(--bg));
+}
+/* the run-report input: colouring by observed outcome needs a report, and the
+   recipe is not one — this block says so whether or not a file is loaded */
+.hlp .repbox {
+  border: 1px solid var(--line); border-left: 3px solid var(--st-warn);
+  border-radius: 4px; padding: 11px 12px; display: flex; flex-direction: column; gap: 9px;
+  background: var(--panel);
+}
+.hlp .repbox.loaded { border-left-color: var(--st-good); }
+.hlp .repbox .repstat { font: 600 11px var(--mono); color: var(--ink); }
+.hlp .repbox .repstat.warn { color: var(--st-warn); }
+.hlp .repbox .repstat.good { color: var(--st-good); }
+.hlp .repbox .repstat.bad { color: var(--st-crit); }
+.hlp .repbox .reprow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hlp .repbox input[type="file"] {
+  font: 400 11px var(--sans); color: var(--ink2); max-width: 100%;
+  background: var(--bg); border: 1px solid var(--line-strong); border-radius: 4px; padding: 6px 7px;
+}
+.hlp .repbox input[type="file"]:focus-visible { outline: 2px solid var(--k-create); outline-offset: 1px; }
+.hlp .repbox code { font: 400 10.5px var(--mono); color: var(--ink); word-break: break-all; }
 
 /* the side panel needs a story below ~700px: the panes stack, the JSON keeps
    its own scrollport, and the selected row stays visible above it */
@@ -580,7 +732,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   }
   .hlp .brow { grid-template-columns: 34px 22px 1fr auto; row-gap: 4px; }
   .hlp .brow .bkind, .hlp .brow .bactor { display: none; }
-  .hlp .bhint { display: none; }
+  /* the keycap hints go (there is no physical Tab on a phone) but the
+     gate/todo sentence stays — it is the meaning of two controls above it,
+     and dropping it here is how a count ends up on screen with no meaning */
+  .hlp .bhint > span:not(.fldnote) { display: none; }
+  .hlp .bhead .dlbtn { font-size: 10px; padding: 5px 8px; }
 }
 
 /* narrow screens: stack and let the page scroll naturally */
@@ -611,6 +767,10 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
     <div class="phase">
       <button class="hbtn" id="btnBrowse" aria-haspopup="dialog">
         ☰ Browse all <b id="btnBrowseN">0</b> actions <kbd>B</kbd>
+      </button>
+      <button class="hbtn" id="btnSettings" aria-haspopup="dialog"
+        title="Choose what the timeline colours encode">
+        ⚙ Colours: <b id="btnSettingsMode">—</b> <kbd>C</kbd>
       </button>
       <button class="hbtn" id="btnTheme" aria-pressed="false" title="Switch between the dark and light palette">
         <span id="themeIcon">◐</span> <span id="themeLabel">Theme</span>
@@ -655,8 +815,9 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
           <span class="ghost"><i></i>carries an open note ◌</span>
         </div>
         <p style="margin-top:9px;font:400 10px/1.45 var(--sans);color:var(--muted)">
-          These are the beam colours on the stage. The timeline's own colours are
-          legended under it.
+          These are the beam colours on the stage, and they are fixed. The
+          <em>timeline</em> below encodes whatever the ⚙ Colours setting says,
+          and is legended under itself.
         </p>
       </section>
       <section>
@@ -686,8 +847,11 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
       <div class="scrub" id="scrub" tabindex="0" aria-label="Timeline scrubber"></div>
       <div class="acts" id="actLabels"></div>
     </div>
-    <!-- legend for the ticks 20px above it; filled by JS from the embedded data -->
+    <!-- legend for the ticks 20px above it. Both are written by JS from the
+         SAME tally, and the note spells out every field the legend counts —
+         a count with no stated meaning is what sent a user asking. -->
     <div class="tl-legend" id="tlLegend"></div>
+    <p class="lgnote" id="tlNote"></p>
   </footer>
 
   <div class="modal" id="modal" hidden>
@@ -716,6 +880,18 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
         <span class="bcount" id="bCount" role="status" aria-live="polite"
           data-testid="browser-count">— of —</span>
         <span class="spacer"></span>
+        <!-- exports: the raw source lines, never a re-serialisation, so the
+             full download is byte-identical to recipe.jsonl -->
+        <button class="dlbtn primary" id="dlAll"
+          title="Download the complete recipe.jsonl, byte-identical to the file in the repo (act banners included)">
+          ⭳ recipe.jsonl · all <b id="dlAllN">0</b>
+        </button>
+        <button class="dlbtn" id="dlSub"
+          title="Download only the actions currently passing the filters, as JSONL">
+          ⭳ filtered subset · <b id="dlSubN">0</b>
+        </button>
+        <button class="hbtn" id="bSettings" aria-haspopup="dialog"
+          title="Choose what the timeline colours encode">⚙ Colours</button>
         <button class="hbtn" id="bClose" title="Close (Esc)">✕ Close</button>
       </div>
 
@@ -726,9 +902,12 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
         <label>Kind <select id="fKind" aria-label="Filter by action kind"></select></label>
         <label>Actor <select id="fActor" aria-label="Filter by actor"></select></label>
         <label>Prio <select id="fPrio" aria-label="Filter by priority"></select></label>
-        <label class="fchk"><input type="checkbox" id="fTodo" /> has todo</label>
-        <label class="fchk"><input type="checkbox" id="fGate" /> has gate</label>
-        <label class="fchk"><input type="checkbox" id="fDenied" /> expects denial</label>
+        <label class="fchk" title="todo — a free-text design note on the action (why it is written this way, or what to re-specify when a bug behind it is fixed). NOT a gap in the product.">
+          <input type="checkbox" id="fTodo" /> has todo</label>
+        <label class="fchk" title="gate — the action names the RPCs it needs and self-skips until scripts/probe.sh finds them, so it starts running on its own when the backend lands.">
+          <input type="checkbox" id="fGate" /> has gate</label>
+        <label class="fchk" title="the action's expect block names an error code — a denial is the asserted outcome, not a failure.">
+          <input type="checkbox" id="fDenied" /> expects denial</label>
         <button class="breset" id="fReset">Reset</button>
       </div>
 
@@ -772,6 +951,82 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
         <span><kbd>Home</kbd><kbd>End</kbd> jump</span>
         <span><kbd>Tab</kbd> cycles inside this dialog</span>
         <span><kbd>Esc</kbd> close</span>
+        <!-- filled by JS so the two counts here come from the same tally as
+             the timeline legend's, never from a second hand-written pair -->
+        <span class="fldnote" id="bFieldNote"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── settings: what the timeline colours encode ─────────────────────
+       The default answer is "how the action is driven", which is not what
+       most people guess when they see three colours on a test timeline — so
+       it is a choice, and the legend follows the choice rather than arguing
+       for one reading. ─────────────────────────────────────────────────── -->
+  <div class="smodal" id="settings" hidden>
+    <div class="mback" id="sback"></div>
+    <div class="scard" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+      <div class="shead">
+        <h3 id="sTitle">Colour coding</h3>
+        <button class="hbtn" id="sClose" title="Close (Esc)">✕ Close</button>
+      </div>
+      <div class="sbody">
+        <div>
+          <h4>Colour the timeline by</h4>
+          <div class="modes" id="sModes" role="radiogroup" aria-labelledby="sTitle"></div>
+          <p style="margin-top:9px">
+            The legend under the timeline is rebuilt from whichever of these is
+            selected, and every count in it is tallied off the ticks that were
+            actually drawn — so it always states the encoding you are looking at.
+            The choice is remembered on this machine.
+          </p>
+        </div>
+
+        <div>
+          <h4>Pass / fail — not in the recipe</h4>
+          <p id="sNoRun">
+            <b>recipe.jsonl describes intent, not results.</b> It has no status
+            field: no line in it records whether an action passed, failed or was
+            skipped on any run, so nothing here can colour by that on its own.
+            What the recipe <em>does</em> state is the outcome each action
+            <em>asserts</em> — “expected outcome”, above, colours by that, and
+            the <b id="sDeniedN">—</b> actions that expect an error are asserting
+            that error, not failing.
+          </p>
+          <div class="repbox" id="sRepBox" style="margin-top:10px">
+            <span class="repstat warn" id="sRepStat">No run report loaded — “run outcome” colours everything as unknown.</span>
+            <p>
+              To colour by what actually happened, load a Playwright JSON report
+              from a journey run. Nothing is uploaded and no network is used —
+              the file is read in this tab.
+            </p>
+            <p><code>bash .claude/skills/hackathon-e2e/scripts/run.sh journey --reporter=json &gt; report.json</code></p>
+            <div class="reprow">
+              <input type="file" id="sRepFile" accept=".json,application/json"
+                aria-label="Load a Playwright JSON report" />
+              <button class="dlbtn" id="sRepClear" disabled>Clear report</button>
+            </div>
+            <p id="sRepDetail" hidden></p>
+          </div>
+        </div>
+
+        <div>
+          <h4>The two fields the legend counts</h4>
+          <p>
+            <span class="gk">gate</span> — the action names the RPCs it needs and
+            <b>self-skips until they exist</b>. <code>scripts/probe.sh</code>
+            probes the backend for them at run time, so a gated action starts
+            running on its own the moment the RPC lands; nothing has to be
+            edited. Drawn as a cap at the <b>top</b> of its tick.
+          </p>
+          <p style="margin-top:7px">
+            <span class="tk">todo</span> — a <b>free-text note</b> on the action:
+            why it is written the way it is, or what to re-specify when a bug it
+            pins gets fixed. Several are design justifications, so this is
+            <b>not</b> a count of gaps and not a count of failures. Drawn as a
+            cap at the <b>bottom</b> of its tick.
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -1261,10 +1516,26 @@ const $ = (id) => document.getElementById(id);
 const SVGNS = "http://www.w3.org/2000/svg";
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* ── parse the embedded recipe ────────────────────────────────────── */
-const EVENTS = $("recipe-data").textContent
-  .split("\n").map(s => s.trim()).filter(Boolean)
-  .map(l => JSON.parse(l)).filter(a => a.id);
+/* ── parse the embedded recipe ──────────────────────────────────────
+   The block was spliced in with every `</` rewritten as `<\/` (an inline
+   script ends at the first literal close tag, even inside a JSON string, and
+   act0.about.xss pastes one on purpose). Undoing that ONE substitution gives
+   back the source bytes exactly: recipe.jsonl contains that sequence once and
+   the escaped form never, so the round trip is unambiguous — which is what
+   lets the download hand out the raw source lines instead of a
+   re-serialisation. JSON.stringify would lose the file's `{"id": "…"}` spacing
+   and its key order is only incidentally preserved, so an export built that
+   way is not the file even when it parses to the same objects. */
+const ESCAPED_CLOSE = "<" + "\\" + "/";
+const RECIPE_TEXT = $("recipe-data").textContent
+  .split(ESCAPED_CLOSE).join("</").trim() + "\n";
+const EVENTS = [];      /* parsed actions, in file order */
+const RAW_LINE = [];    /* RAW_LINE[i] is the source line EVENTS[i] came from */
+for (const line of RECIPE_TEXT.split("\n")){
+  if (!line.trim()) continue;
+  const obj = JSON.parse(line);
+  if (obj.id){ EVENTS.push(obj); RAW_LINE.push(line); }
+}
 
 /* act 0 (platform setup — the About page, before any hackathon exists) had no
    entry here, so the acts strip under the timeline rendered "T-4mo undefined" */
@@ -1314,6 +1585,30 @@ const PEOPLE = [
   ["mei.chen","Mei Chen","MC",841,568,15,"extra"],
   ["noor.haddad","Noor Haddad","NH",831,618,15,"extra"]
 ];
+/* ── the crowd, laid out in columns ──────────────────────────────────
+   The eleven extras used to be one file down the right edge, y 118 → 618: it
+   ran the full height of the stage, put Noor 500px from Dana for no reason,
+   and left the right third of the frame as a single thin line. They are a
+   GROUP — the registration wave — so they are drawn as a block.
+
+   The layout is computed from the cast size rather than written into the table
+   above, because two columns is only right for a crowd: a cast of three split
+   across two columns is not a grid, it is a gap. Four or fewer stay in one
+   column, and the x/y in the table are the fallback the loop overwrites. */
+const EXTRAS = (function layoutExtras(){
+  const ex = PEOPLE.filter(p => p[6] === "extra");
+  const cols = ex.length > 4 ? 2 : 1;
+  const rows = Math.ceil(ex.length / cols);
+  const xs = cols === 2 ? [806, 892] : [858];
+  const top = 132, pitch = Math.min(74, Math.floor((596 - top) / Math.max(1, rows)));
+  ex.forEach((p, i) => {
+    p[3] = xs[Math.floor(i / rows)];
+    p[4] = top + (i % rows) * pitch;
+  });
+  return { cols, rows, xs, top, pitch,
+    cx: xs.reduce((a, b) => a + b, 0) / xs.length,
+    bottom: top + (rows - 1) * pitch };
+})();
 const ENTITIES = [
   ["platform","",480,340],["draft","Winter draft",700,120],
   ["teamM","Team Matterhorn",348,522],["teamB","Team Bernina",614,522],
@@ -1361,10 +1656,11 @@ for (const [key, name, ini, x, y, r, group] of PEOPLE){
     "stroke-width": 1.5, "stroke-dasharray": group === "anon" ? "3 3" : "none"}, g);
   el("text", {x:x, y:y+3.5, "text-anchor":"middle", class:"node-label",
     style:"font-weight:700"}, g).textContent = ini;
-  const labelX = group === "extra" ? x - r - 6 : x;
-  const labelY = group === "extra" ? y + 3 : y + r + 13;
-  const anchor = group === "extra" ? "end" : "middle";
-  el("text", {x:labelX, y:labelY, "text-anchor":anchor, class:"node-sub"}, g)
+  /* extras used to hang their name to the LEFT of the circle, which only works
+     for a single file — in the second column that text lands on top of the
+     first column's discs. Under the circle, centred, works for both. */
+  const labelY = group === "extra" ? y + r + 11 : y + r + 13;
+  el("text", {x:x, y:labelY, "text-anchor":"middle", class:"node-sub"}, g)
     .textContent = group === "extra" ? name.split(" ")[0] : name;
   const badge = el("circle", {cx:x + r*0.75, cy:y - r*0.75, r:4.5,
     fill:"var(--muted)", stroke:"var(--bg)", "stroke-width":1.5, opacity:0}, g);
@@ -1434,8 +1730,10 @@ for (const [key, label, x, y] of ENTITIES){
   };
   head(118, 146, "middle", "PRINCIPALS", "browser + API · full sessions",
     "The four checked-in dev-realm users. They log in through the real Keycloak flow, get Playwright storage states, and every UI outcome is asserted through their browsers. The visitor below is any signed-out session.");
-  head(905, 78, "end", "EXTRAS — THE CROWD", "API-only · cast.json",
-    "Ten registrants provisioned into Keycloak by scripts/roster.sh. They act through gRPC with real tokens (full RBAC) but have no browser session — they are the registration wave, the waitlist, the dropout and the churn.");
+  /* centred over the columns the layout actually produced, not over a hard-coded
+     x — one column and two put the block in different places */
+  head(EXTRAS.cx, EXTRAS.top - 42, "middle", "EXTRAS — THE CROWD", "API-only · cast.json",
+    "Eleven registrants provisioned into Keycloak by scripts/roster.sh. They act through gRPC with real tokens (full RBAC) but have no browser session — they are the registration wave, the waitlist, the dropout, the walk-in and the churn.");
 })();
 
 /* ── deterministic state (rebuilt on seek) ────────────────────────── */
@@ -1572,7 +1870,16 @@ function badgeColor(b){
    and blue was "covered backend + frontend" while quietly including the six
    rpc.race actions, which are pure grpcurl. The `gate` field — the only one
    that does mean "skip unless these RPCs exist" — was never read at all.
-   Each tick now carries two independent facts, and the legend states both. */
+
+   Naming the axes fixed the lie but not the mismatch: shown three colours on a
+   test timeline, a reader's first guess is pass / fail / not-implemented, and
+   it is "how the action is driven". So WHAT the hue means is a setting, and
+   every mode below is a first-class encoding with its own legend. What must
+   never come back is a legend describing a different mode than the one drawn,
+   so there is exactly one painter (paintTick) for both the bar and the legend
+   swatches, and the legend's counts are TALLIED OFF THE PAINTED TICKS rather
+   than recomputed from the predicates — a second counting pass is a second
+   thing that can be wrong. */
 function driverOf(a){
   if (a.action === "ui.flow" || a.action === "ui.assert") return "ui";   /* a real browser step */
   if (a.action === "rpc" || a.action === "rpc.race") return "api";      /* driven over grpcurl */
@@ -1580,8 +1887,193 @@ function driverOf(a){
 }
 const hasTodo = a => !!a.todo;
 const hasGate = a => !!(a.gate && a.gate.length);
-function tickClass(a){
-  return "tick " + driverOf(a) + (hasGate(a) ? " gated" : "") + (hasTodo(a) ? " noted" : "");
+
+/* localStorage throws outright on some file:// origins, and a remembered
+   preference is a nicety — so every access is wrapped, never guarded. */
+const LS = {
+  get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+/* cast groups are read off the PEOPLE table, not listed a second time */
+const CAST_GROUP = {}; PEOPLE.forEach(p => CAST_GROUP[p[0]] = p[6]);
+const castMembers = g => PEOPLE.filter(p => p[6] === g).map(p => p[0]);
+const castOf = a => (a.actor && CAST_GROUP[a.actor]) || (a.actor ? "other" : "none");
+
+/* an optional Playwright JSON report — the ONLY source of pass/fail here,
+   because recipe.jsonl has none. Never persisted: a status remembered across
+   reloads would outlive the run that produced it, and a stale green is worse
+   than no green. */
+let report = null;   /* {name, status:{[id]:string}, specs, matched} */
+const runOf = a => (report && report.status[a.id]) || null;
+
+/* values that exist in THIS file, so a new act, kind or priority needs no edit */
+const ACTS_PRESENT = [...new Set(EVENTS.map(a => +a.act))].sort((x, y) => x - y);
+const KINDS_PRESENT = [...new Set(EVENTS.map(a => a.action))].sort();
+const PRIOS_PRESENT = [...new Set(EVENTS.map(a => a.priority || "P?"))].sort();
+
+/* per-value hue + extent. The extent is what survives at 1px, in greyscale and
+   in print, so no mode leans on hue alone; where the buckets are ORDERED
+   (priority, expectation) the extents shrink monotonically with rank. */
+const KIND_STYLE = {
+  "rpc":            {color:"var(--st-warn)",  geom:"g-full"},
+  "rpc.race":       {color:"var(--k-remove)", geom:"g-upper"},
+  "ui.flow":        {color:"var(--k-edit)",   geom:"g-low"},
+  "ui.assert":      {color:"var(--k-create)", geom:"g-mid"},
+  "files.generate": {color:"var(--k-check)",  geom:"g-lower"}
+};
+const PRIO_STYLE = {
+  "P1": {color:"var(--k-create)", geom:"g-full"},
+  "P2": {color:"var(--k-vote)",   geom:"g-low"},
+  "P3": {color:"var(--k-check)",  geom:"g-lower"}
+};
+const CAST_STYLE = {
+  admin:     {color:"var(--k-create)", geom:"g-full",  label:"platform admin"},
+  principal: {color:"var(--k-edit)",   geom:"g-low",   label:"principals · browser sessions"},
+  extra:     {color:"var(--k-join)",   geom:"g-high",  label:"the crowd · API only"},
+  anon:      {color:"var(--k-check)",  geom:"g-mid",   label:"anonymous visitor"},
+  other:     {color:"var(--k-remove)", geom:"g-upper", label:"actor outside the cast"},
+  none:      {color:"var(--muted)",    geom:"g-lower", label:"no actor field"}
+};
+/* acts get a SEQUENTIAL single-hue ramp, never nine more categorical colours
+   that could be mistaken for kinds. Mixing toward --ink walks away from
+   --panel in BOTH themes, so one expression is a legible ramp in each. */
+const actRamp = i => "color-mix(in srgb, var(--k-create) " + (100 - i * 11) + "%, var(--ink))";
+const RUN_STYLE = {
+  passed:  {color:"var(--st-good)",  geom:"g-full",  label:"passed"},
+  failed:  {color:"var(--st-crit)",  geom:"g-high",  label:"failed / timed out"},
+  skipped: {color:"var(--k-vote)",   geom:"g-mid",   label:"skipped"},
+  other:   {color:"var(--st-warn)",  geom:"g-low",   label:"flaky / interrupted"},
+  unknown: {color:"var(--k-check)",  geom:"g-lower", label:"not in the report"}
+};
+const RUN_BUCKET = {passed:"passed", failed:"failed", timedOut:"failed",
+  interrupted:"failed", skipped:"skipped", flaky:"other",
+  expected:"passed", unexpected:"failed"};
+
+const styled = (tab, key, extra) =>
+  Object.assign({key: key, label: key, tip: ""}, tab[key] || {color:"var(--muted)", geom:"g-mid"}, extra || {});
+
+const GATE_TIP = "gate — the action names the RPCs it needs and self-skips while scripts/probe.sh finds them missing, so it starts running on its own when the backend lands. Nothing has to be edited.";
+const TODO_TIP = "todo — a free-text note on the action: why it is written this way, or what to re-specify when a bug it pins is fixed. NOT a gap and NOT a failure.";
+/* prose below quotes these three numbers, so they are counted here rather than
+   typed — a sentence carrying a literal 24 is a sentence that goes stale on the
+   next recipe edit with nothing to catch it */
+const N_GATE = EVENTS.filter(hasGate).length;
+const N_TODO = EVENTS.filter(hasTodo).length;
+const N_DENIED = EVENTS.filter(isDenied).length;
+
+/* ── the colour modes ──────────────────────────────────────────────────
+   Each is {items} in first-match order; `caps` says whether the gate/todo caps
+   are drawn on top of the hue (they are switched off only in the mode where
+   the hue IS gate/todo, so the two never say the same thing twice). */
+const MODES = [
+  { id: "driver", label: "how it is driven", field: "action → browser / gRPC / fixture",
+    why: "The default. Says which harness executes the action, which is the one thing every action has — but it is not pass/fail, and reading it as pass/fail is why this dialog exists.",
+    caps: true,
+    items: [
+      {key:"ui", label:"browser step", color:"var(--k-create)", geom:"g-low",
+       tip:"ui.flow + ui.assert — a real Playwright flow or assertion in a real browser.",
+       pred: a => driverOf(a) === "ui"},
+      {key:"api", label:"gRPC call", color:"var(--st-warn)", geom:"g-full",
+       tip:"rpc + rpc.race — driven over grpcurl with a real Keycloak token.",
+       pred: a => driverOf(a) === "api"},
+      {key:"fixture", label:"fixture file", color:"var(--k-check)", geom:"g-lower",
+       tip:"files.generate — writes the deterministic upload bundle.",
+       pred: a => driverOf(a) === "fixture"}
+    ] },
+  { id: "kind", label: "action kind", field: "the action field, verbatim",
+    why: "The five literal values of `action`, without the browser/API folding the default does — rpc.race and ui.assert get their own colour.",
+    caps: true,
+    items: KINDS_PRESENT.map(k => styled(KIND_STYLE, k,
+      {label: k, tip: "action: " + k, pred: a => a.action === k})) },
+  { id: "prio", label: "priority", field: "P1 / P2 / P3",
+    why: "How load-bearing the action is. The extent shrinks with rank, so the P1 spine reads as a solid band even in greyscale.",
+    caps: true,
+    items: PRIOS_PRESENT.map(p => styled(PRIO_STYLE, p,
+      {label: p, tip: "priority " + p, pred: a => (a.priority || "P?") === p})) },
+  { id: "act", label: "act of the story", field: "act 0 → 8",
+    why: "A sequential ramp over the nine acts. Position already groups them — every act is its own segment of the bar — so this mostly confirms where an act ends, which is exactly what a scrubber wants.",
+    caps: true,
+    items: ACTS_PRESENT.map((n, i) => ({key: "act" + n, label: "act " + n,
+      color: actRamp(i), geom: "g-full",
+      tip: "act " + n + (ACT_NAMES[n] ? " — " + ACT_NAMES[n] : ""),
+      pred: a => +a.act === n})) },
+  { id: "cast", label: "actor", field: "grouped by cast role",
+    why: "Grouped, not one hue per person: seventeen categorical colours are seventeen colours nobody can tell apart. Each row names its members.",
+    caps: true,
+    items: ["admin", "principal", "extra", "anon", "other", "none"].map(g =>
+      styled(CAST_STYLE, g, {key: g, label: CAST_STYLE[g].label,
+        tip: g === "none" ? "the action has no actor field (setup and fixture steps)"
+           : castMembers(g).join(", ") || "no cast member in this group",
+        pred: a => castOf(a) === g})) },
+  { id: "flags", label: "gate / todo", field: "which of the two fields it carries",
+    why: "Promotes the two caps to the hue itself, so the " + N_GATE + " gated and "
+       + N_TODO + " noted actions are findable at a glance instead of read off a 5px cap.",
+    caps: false,
+    items: [
+      {key:"both", label:"gate + todo", color:"var(--k-remove)", geom:"g-full",
+       tip: "carries both — " + GATE_TIP, pred: a => hasGate(a) && hasTodo(a)},
+      {key:"gate", label:"gate only", color:"var(--st-crit)", geom:"g-high",
+       tip: GATE_TIP, pred: a => hasGate(a) && !hasTodo(a)},
+      {key:"todo", label:"todo only", color:"var(--k-vote)", geom:"g-low",
+       tip: TODO_TIP, pred: a => hasTodo(a) && !hasGate(a)},
+      {key:"plain", label:"neither", color:"var(--k-check)", geom:"g-lower",
+       tip: "no gate and no todo — runs unconditionally and needs no note.",
+       pred: a => !hasGate(a) && !hasTodo(a)}
+    ] },
+  { id: "expect", label: "expected outcome", field: "the expect block, as written",
+    why: "The closest the recipe comes to pass/fail — and it is still intent: each of the "
+       + N_DENIED + " actions that expects an error is ASSERTING that error, so red here "
+       + "means “a refusal is the correct answer”, never “this broke”.",
+    caps: true,
+    items: [
+      {key:"pd", label:"expects PermissionDenied", color:"var(--st-crit)", geom:"g-high",
+       tip:"expect.error = PermissionDenied — the caller is known and not allowed.",
+       pred: a => !!(a.expect && a.expect.error === "PermissionDenied")},
+      {key:"un", label:"expects Unauthenticated", color:"var(--k-remove)", geom:"g-mid",
+       tip:"expect.error = Unauthenticated — anonymous callers get 'who are you', never 'not you'.",
+       pred: a => !!(a.expect && a.expect.error === "Unauthenticated")},
+      {key:"err", label:"expects another error", color:"var(--st-warn)", geom:"g-low",
+       tip:"expect.error is set to some other code (InvalidArgument, FailedPrecondition, NotFound, AlreadyExists).",
+       pred: a => !!(a.expect && a.expect.error)},
+      {key:"ok", label:"expects success", color:"var(--st-good)", geom:"g-full",
+       tip:"expect.ok (or expect.okOr) — the call is meant to succeed.",
+       pred: a => !!(a.expect && (a.expect.ok !== undefined || a.expect.okOr !== undefined))},
+      {key:"none", label:"no expect block", color:"var(--k-check)", geom:"g-lower",
+       tip:"no expect field — a ui.flow whose steps carry their own assertions, or a fixture.",
+       pred: a => !a.expect}
+    ] },
+  { id: "run", label: "run outcome", field: "needs a Playwright JSON report",
+    why: "The real pass/fail — from a report you load, never from the recipe. With nothing loaded every tick is 'not in the report', which is the honest answer to 'did it pass'.",
+    caps: true,
+    items: ["passed", "failed", "skipped", "other", "unknown"].map(k =>
+      styled(RUN_STYLE, k, {key: k, label: RUN_STYLE[k].label,
+        tip: k === "unknown"
+          ? "no report loaded, or the report has no spec whose title starts with this action's id."
+          : "the loaded report's last recorded result for this action was " + k + ".",
+        pred: a => (RUN_BUCKET[runOf(a)] || "unknown") === k})) }
+];
+const MODE_BY_ID = {}; MODES.forEach(m => MODE_BY_ID[m.id] = m);
+/* if no bucket claims an action the legend still has to add up to 463, so the
+   miss is a visible row rather than a silently missing tick */
+const NO_BUCKET = {key:"__none", label:"unclassified", color:"var(--muted)",
+  geom:"g-mid", tip:"no bucket in this mode matched this action — this row should always be empty."};
+
+const MODE_KEY = "hlp-colormode";
+let modeId = MODE_BY_ID[LS.get(MODE_KEY)] ? LS.get(MODE_KEY) : "driver";
+const curMode = () => MODE_BY_ID[modeId];
+function bucketFor(a, mode){
+  for (const it of mode.items) if (it.pred(a)) return it;
+  return NO_BUCKET;
+}
+/* the one painter. `base` is "tick" on the bar and "" for a legend swatch, so
+   both get the same geometry class and the same --tc, from the same item. */
+function paintTick(node, base, item, caps){
+  node.className = base + " " + item.geom
+    + (caps && caps.gate ? " cap-top" : "")
+    + (caps && caps.todo ? " cap-bot" : "");
+  node.style.setProperty("--tc", item.color);
+  node.dataset.bucket = item.key;
 }
 function render(){
   const s = state;
@@ -1980,6 +2472,13 @@ document.addEventListener("keydown", e => {
   /* an aria-modal dialog owns the keyboard while it is open: Esc closes, Tab
      cycles inside it, and none of the transport shortcuts fire underneath —
      Space in the middle of a search term must not start playback */
+  /* settings stacks ON TOP of the browser (it is reachable from inside it), so
+     it is asked about first — the topmost dialog owns Esc and Tab */
+  if (settingsOpen()){
+    if (e.key === "Escape"){ e.preventDefault(); closeSettings(); return; }
+    trapTab($("settings").querySelector(".scard"), e);
+    return;
+  }
   if (browserOpen()){
     if (e.key === "Escape"){ e.preventDefault(); closeBrowser(); return; }
     trapTab($("browser").querySelector(".bcard"), e);
@@ -1996,10 +2495,14 @@ document.addEventListener("keydown", e => {
   if (e.code === "ArrowLeft"){ setPlaying(false); seek(cursor - 1); }
   if (e.key === "r" || e.key === "R"){ setPlaying(false); seek(0, true); }
   if (e.key === "b" || e.key === "B"){ e.preventDefault(); openBrowser(); }
+  if (e.key === "c" || e.key === "C"){ e.preventDefault(); openSettings(); }
 });
 
 /* ── scrubber (segments ∝ actions per act) + acts strip on top ────── */
 const segs = [], phaseCells = [];
+const tickEls = [];   /* tickEls[i] is the tick for EVENTS[i] — kept so a mode
+                         change repaints in place, and so the legend can tally
+                         the ticks that exist rather than re-deriving them */
 let playheadEl = null, elapsedEl = null;
 (function buildScrub(){
   const byAct = {};
@@ -2009,13 +2512,15 @@ let playheadEl = null, elapsedEl = null;
     const idx = byAct[act];
     const seg = document.createElement("div");
     seg.className = "seg"; seg.style.flexGrow = idx.length;
-    /* one tick per action: hue+height = how it is driven, caps = todo / gate */
+    /* one tick per action; applyMode() paints hue + extent + caps */
     idx.forEach((ei, j) => {
       const tick = document.createElement("div");
-      tick.className = tickClass(EVENTS[ei]);
+      tick.className = "tick";
       tick.style.left = (j / idx.length * 100) + "%";
       tick.style.width = (100 / idx.length) + "%";
+      tick.title = "#" + (ei + 1) + " " + EVENTS[ei].id;
       seg.appendChild(tick);
+      tickEls[ei] = tick;
     });
     scrub.appendChild(seg);
     seg.title = "Act " + act + " — " + ACT_NAMES[act] + " (" + idx.length + " actions)";
@@ -2060,10 +2565,7 @@ scrubEl.addEventListener("keydown", e => {
    so every access is wrapped rather than guarded. */
 const THEME_KEY = "hlp-theme";
 const lightMQ = matchMedia("(prefers-color-scheme: light)");
-const store = {
-  get(){ try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } },
-  set(v){ try { localStorage.setItem(THEME_KEY, v); } catch (e) {} }
-};
+const store = { get(){ return LS.get(THEME_KEY); }, set(v){ LS.set(THEME_KEY, v); } };
 function effectiveTheme(){
   return document.documentElement.getAttribute("data-theme")
       || (lightMQ.matches ? "light" : "dark");
@@ -2087,39 +2589,318 @@ if (lightMQ.addEventListener) lightMQ.addEventListener("change", () => {
 });
 
 /* ── timeline legend ──────────────────────────────────────────────────
-   Built from EVENTS, never hand-written: the legend it replaces drifted from
-   the code on all three colours, and a count nobody derives is a count that
-   goes stale silently. Each swatch redraws the tick geometry at 15x13 so the
-   height/cap mapping is learnable, and every row names its predicate. */
-(function buildLegend(){
-  const box = $("tlLegend");
-  const count = pred => EVENTS.filter(pred).length;
-  const group = txt => {
+   Rebuilt on every mode change, and every count in it is read back off the
+   PAINTED TICKS — not recomputed from the predicates. A legend that counts
+   something other than what it points at is the bug this file already had
+   once; the only way to make it structurally impossible is to let the legend
+   count the marks themselves. Each swatch is drawn by paintTick, so its hue,
+   its extent and its caps come from the same item the bar used. */
+function tallyPainted(){
+  const t = {}; let gate = 0, todo = 0;
+  tickEls.forEach(el => {
+    const k = el.dataset.bucket;
+    t[k] = (t[k] || 0) + 1;
+    if (el.classList.contains("cap-top")) gate++;
+    if (el.classList.contains("cap-bot")) todo++;
+  });
+  return {t: t, gate: gate, todo: todo};
+}
+function legendSwatch(item, caps){
+  const sw = document.createElement("span"); sw.className = "sw";
+  const i = document.createElement("i");
+  paintTick(i, "", item, caps);
+  sw.appendChild(i);
+  return sw;
+}
+function renderLegend(){
+  const mode = curMode(), box = $("tlLegend"), tal = tallyPainted();
+  box.innerHTML = "";
+  /* the mode is named IN the legend, and the name is the button that changes
+     it — "what do these colours mean" should not need a hunt through a header */
+  const modeBtn = document.createElement("button");
+  modeBtn.className = "lmode"; modeBtn.id = "tlMode";
+  modeBtn.setAttribute("aria-haspopup", "dialog");
+  modeBtn.title = "Change what the timeline colours encode";
+  modeBtn.innerHTML = "⚙ colour = <em>" + esc(mode.label) + "</em>";
+  modeBtn.addEventListener("click", openSettings);
+  box.appendChild(modeBtn);
+
+  const item = (it, n, caps) => {
     const s = document.createElement("span");
-    s.className = "lgroup"; s.textContent = txt; box.appendChild(s);
-  };
-  const item = (parts, label, n, tip) => {
-    const s = document.createElement("span");
-    s.className = "litem"; s.title = tip;
-    const sw = document.createElement("span"); sw.className = "sw";
-    parts.forEach(p => { const i = document.createElement("i"); i.className = p; sw.appendChild(i); });
+    s.className = "litem"; s.dataset.bucket = it.key;
+    s.title = it.tip || it.label;
     const b = document.createElement("b"); b.textContent = n;
-    const t = document.createElement("span"); t.textContent = label;
-    s.append(sw, b, t); box.appendChild(s);
+    const t = document.createElement("span"); t.textContent = it.label;
+    s.append(legendSwatch(it, caps), b, t); box.appendChild(s);
   };
-  group("driven by");
-  item(["ui"], "browser step", count(a => driverOf(a) === "ui"),
-    "ui.flow + ui.assert — a real Playwright flow or assertion. Drawn as a SHORT bar sitting on the baseline.");
-  item(["api"], "gRPC call", count(a => driverOf(a) === "api"),
-    "rpc + rpc.race — driven over grpcurl with a real token. Drawn FULL height.");
-  item(["fixture"], "fixture file", count(a => driverOf(a) === "fixture"),
-    "files.generate — writes the deterministic upload bundle. Drawn full height in neutral grey.");
-  group("carries");
-  item(["api", "gated"], "gate", count(hasGate),
-    "gate — the action names the RPCs it needs and skips when probe.sh finds them absent, so it wakes up on its own when the backend lands. Drawn as a cap at the TOP of the tick.");
-  item(["api", "noted"], "todo note", count(hasTodo),
-    "todo — a design note on the action: why it is written this way, or what to re-specify when a bug behind it is fixed. NOT a gap in the product. Drawn as a cap at the BOTTOM of the tick.");
+  mode.items.forEach(it => item(it, tal.t[it.key] || 0, null));
+  if (tal.t[NO_BUCKET.key]) item(NO_BUCKET, tal.t[NO_BUCKET.key], null);
+  if (mode.caps){
+    const g = document.createElement("span");
+    g.className = "lgroup"; g.textContent = "plus a cap for"; box.appendChild(g);
+    /* the cap rows sit on a representative primary so the cap is shown where it
+       is really drawn — on top of a hue, never floating on its own */
+    const rep = mode.items[0];
+    item({key: "cap-gate", label: "gate", tip: GATE_TIP, color: rep.color, geom: rep.geom},
+      tal.gate, {gate: true});
+    item({key: "cap-todo", label: "todo note", tip: TODO_TIP, color: rep.color, geom: rep.geom},
+      tal.todo, {todo: true});
+  }
+  renderLegendNote(tal);
+}
+/* the sentence under the counts. A user asked us what "carries 24 gate / 65
+   todo note" meant — which is the legend stating two numbers and no meaning.
+   Both fields are spelled out here, in the legend, not in a tooltip. */
+function renderLegendNote(tal){
+  const mode = curMode();
+  let s = "<b>One tick per action</b>, " + EVENTS.length + " of them in file order, "
+        + "grouped into the nine acts. Hue and height = <b>" + esc(mode.label) + "</b>.";
+  if (mode.caps){
+    s += " Caps: <span class=\"gk\">gate</span> (" + tal.gate + ") — the action "
+       + "names the RPCs it needs and <b>self-skips until they exist</b>, so it "
+       + "starts running by itself when the backend lands. "
+       + "<span class=\"tk\">todo</span> (" + tal.todo + ") — a <b>free-text "
+       + "design note</b> on the action, not a gap and not a failure.";
+  }
+  if (mode.id === "run"){
+    s += report
+      ? " Coloured from <b>" + esc(report.name) + "</b>: " + report.matched + " of "
+        + EVENTS.length + " actions matched a spec in it."
+      : " <b>No run report loaded</b>, so every tick is “not in the report”. "
+        + "recipe.jsonl has no status field — load a Playwright JSON report from "
+        + "⚙ Colours to see what actually happened.";
+  } else {
+    s += " None of this is pass/fail: the recipe records <b>intent</b>, not "
+       + "results — for outcomes, load a run report from ⚙ Colours.";
+  }
+  $("tlNote").innerHTML = s;
+  /* the browse dialog's two filter checkboxes use the same two words, so they
+     get the same two numbers from the same tally */
+  const full = tallyByPred(MODE_BY_ID.flags);
+  $("bFieldNote").innerHTML =
+    "<span class=\"gk\">gate</span> = self-skips until its RPCs exist ("
+    + ((full.gate || 0) + (full.both || 0)) + ") · "
+    + "<span class=\"tk\">todo</span> = a design note, not a gap ("
+    + ((full.todo || 0) + (full.both || 0)) + ")";
+}
+/* predicate tally — used only where no ticks are painted for that mode: the
+   settings previews, and the two numbers in the browse hint */
+function tallyByPred(mode){
+  const t = {};
+  EVENTS.forEach(a => { const k = bucketFor(a, mode).key; t[k] = (t[k] || 0) + 1; });
+  return t;
+}
+
+/* ── applying a mode ─────────────────────────────────────────────────── */
+function applyMode(id, persist){
+  if (MODE_BY_ID[id]) modeId = id;
+  const mode = curMode();
+  if (persist) LS.set(MODE_KEY, modeId);
+  tickEls.forEach((el, i) => {
+    const a = EVENTS[i];
+    paintTick(el, "tick", bucketFor(a, mode),
+      mode.caps ? {gate: hasGate(a), todo: hasTodo(a)} : null);
+  });
+  renderLegend();
+  $("btnSettingsMode").textContent = mode.label;
+  $("btnSettings").title = "Timeline colours currently encode: " + mode.label
+    + " — click to change";
+  /* the browse rows carry the same encoding on their left edge, so the setting
+     is felt where the actions are actually read. Mixed down, because 463 rows
+     of a saturated hue is a wall. */
+  rowEls.forEach((row, i) => {
+    row.style.borderLeftColor = "color-mix(in srgb, "
+      + bucketFor(EVENTS[i], mode).color + " 62%, var(--line-strong))";
+  });
+  MODES.forEach(m => {
+    const r = modeRows[m.id]; if (!r) return;
+    r.lab.classList.toggle("on", m.id === modeId);
+    r.radio.checked = m.id === modeId;
+    r.prev.innerHTML = ""; r.prev.appendChild(previewStrip(m));
+  });
+  if (selIdx >= 0) select(selIdx, true);
+}
+function previewStrip(mode){
+  const frag = document.createDocumentFragment();
+  const t = tallyByPred(mode);
+  mode.items.slice(0, 7).forEach(it => {
+    const pv = document.createElement("span"); pv.className = "pv"; pv.title = it.tip || "";
+    const sw = document.createElement("span"); sw.className = "sw";
+    const i = document.createElement("i");
+    paintTick(i, "", it, null);
+    sw.appendChild(i);
+    const tx = document.createElement("span");
+    tx.textContent = it.label + " " + (t[it.key] || 0);
+    pv.append(sw, tx); frag.appendChild(pv);
+  });
+  if (mode.items.length > 7){
+    const more = document.createElement("span");
+    more.className = "pv"; more.textContent = "+" + (mode.items.length - 7) + " more";
+    frag.appendChild(more);
+  }
+  return frag;
+}
+
+/* ── settings dialog ─────────────────────────────────────────────────── */
+const modeRows = {};
+(function buildSettings(){
+  const box = $("sModes");
+  MODES.forEach(m => {
+    const lab = document.createElement("label");
+    lab.className = "mode"; lab.dataset.mode = m.id;
+    const r = document.createElement("input");
+    r.type = "radio"; r.name = "hlp-colour-mode"; r.value = m.id;
+    r.setAttribute("aria-label", m.label + " — " + m.field);
+    r.addEventListener("change", () => { if (r.checked) applyMode(m.id, true); });
+    const nm = document.createElement("span"); nm.className = "mname";
+    nm.textContent = m.label;
+    const fld = document.createElement("span"); fld.textContent = m.field;
+    nm.appendChild(fld);
+    const why = document.createElement("span"); why.className = "mwhy"; why.textContent = m.why;
+    const prev = document.createElement("span"); prev.className = "mprev";
+    lab.append(r, nm, why, prev);
+    box.appendChild(lab);
+    modeRows[m.id] = {lab: lab, radio: r, prev: prev};
+  });
+  $("sDeniedN").textContent = N_DENIED;
 })();
+
+let lastFocusSettings = null;
+function settingsOpen(){ return !$("settings").hidden; }
+function openSettings(){
+  setPlaying(false);
+  lastFocusSettings = document.activeElement;
+  $("settings").hidden = false;
+  const on = modeRows[modeId];
+  (on ? on.radio : $("sClose")).focus();
+}
+function closeSettings(){
+  $("settings").hidden = true;
+  if (lastFocusSettings && lastFocusSettings.focus) lastFocusSettings.focus();
+}
+$("btnSettings").addEventListener("click", openSettings);
+$("bSettings").addEventListener("click", openSettings);
+$("sClose").addEventListener("click", closeSettings);
+$("sback").addEventListener("click", closeSettings);
+
+/* ── an optional Playwright JSON report ───────────────────────────────
+   The recipe cannot answer "did it pass" — nothing in it records a result — so
+   the only honest way to offer that colouring is to read a real report.
+   recipe.spec.ts titles every test `[<id>] <title>`, which is the join key.
+   Read with FileReader: no upload, no fetch, works from file://. */
+function setReportStatus(kind, text, detail){
+  const st = $("sRepStat");
+  st.className = "repstat " + kind;
+  st.textContent = text;
+  $("sRepBox").classList.toggle("loaded", kind === "good");
+  const d = $("sRepDetail");
+  if (detail){ d.hidden = false; d.textContent = detail; } else { d.hidden = true; d.textContent = ""; }
+  $("sRepClear").disabled = !report;
+}
+function noReportYet(){
+  setReportStatus("warn",
+    "No run report loaded — “run outcome” colours everything as unknown.", "");
+}
+function readReport(file){
+  const fr = new FileReader();
+  fr.onerror = () => { report = null; noReportYet();
+    setReportStatus("bad", "Could not read that file.", ""); applyMode(modeId); };
+  fr.onload = () => {
+    let json;
+    try { json = JSON.parse(String(fr.result)); }
+    catch (err){
+      report = null;
+      setReportStatus("bad", "That file is not JSON — expected a Playwright JSON report.", "");
+      applyMode(modeId); return;
+    }
+    const status = {};
+    let specs = 0;
+    (function walk(node){
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node.specs)) node.specs.forEach(sp => {
+        specs++;
+        const m = /^\[([^\]]+)\]/.exec(String(sp.title || ""));
+        if (!m) return;
+        const t = (sp.tests || [])[0] || {};
+        const res = t.results || [];
+        status[m[1]] = String((res[res.length - 1] || {}).status || t.status || "unknown");
+      });
+      if (Array.isArray(node.suites)) node.suites.forEach(walk);
+    })(json);
+    const matched = EVENTS.filter(a => status[a.id]).length;
+    if (!matched){
+      report = null;
+      setReportStatus("bad",
+        "Read " + specs + " specs, but none of their titles start with an action id "
+        + "— is this a journey report?", "");
+      applyMode(modeId); return;
+    }
+    report = {name: file.name, status: status, specs: specs, matched: matched};
+    const t = tallyByPred(MODE_BY_ID.run);
+    setReportStatus("good",
+      "Loaded " + file.name + " — " + matched + " of " + EVENTS.length + " actions matched.",
+      "passed " + (t.passed || 0) + " · failed " + (t.failed || 0)
+      + " · skipped " + (t.skipped || 0) + " · flaky/interrupted " + (t.other || 0)
+      + " · not in the report " + (t.unknown || 0)
+      + ".  Read from " + specs + " specs in the file; not remembered across reloads.");
+    /* loading a report is an unambiguous request to see outcomes */
+    applyMode("run", true);
+  };
+  fr.readAsText(file);
+}
+$("sRepFile").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) readReport(f);
+});
+$("sRepClear").addEventListener("click", () => {
+  report = null; $("sRepFile").value = "";
+  noReportYet(); applyMode(modeId);
+});
+noReportYet();
+
+/* ── downloading JSONL ───────────────────────────────────────────────
+   The bytes handed out are the SOURCE LINES kept in RAW_LINE, so the full
+   export is recipe.jsonl exactly — key order, `{"id": "…"}` spacing and the
+   act-banner comment lines included. Re-serialising with JSON.stringify would
+   produce a file that parses the same and diffs against every line of the
+   original, which is not an export of anything.
+   Blob + createObjectURL, because a data: URI download is size-capped in some
+   browsers and this file must work from file:// with no network at all. */
+function downloadText(text, filename){
+  const url = URL.createObjectURL(new Blob([text], {type: "application/x-ndjson"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+/* a name that records the filter, so two subsets in a Downloads folder are
+   still tellable apart a week later */
+function subsetName(n){
+  const bits = [];
+  const v = id => $(id).value;
+  if (v("fAct") !== "") bits.push("act" + v("fAct"));
+  if (v("fKind")) bits.push(v("fKind").replace(/\./g, "-"));
+  if (v("fActor")) bits.push(v("fActor").replace(/[^a-z0-9]+/gi, "-"));
+  if (v("fPrio")) bits.push(v("fPrio"));
+  if ($("fTodo").checked) bits.push("todo");
+  if ($("fGate").checked) bits.push("gate");
+  if ($("fDenied").checked) bits.push("denied");
+  const q = v("fText").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if (q) bits.push("q-" + q.slice(0, 24));
+  if (!bits.length) bits.push("all");
+  return "recipe-" + bits.join("-").slice(0, 90) + "-" + n + "-actions.jsonl";
+}
+$("dlAll").addEventListener("click", () => downloadText(RECIPE_TEXT, "recipe.jsonl"));
+$("dlSub").addEventListener("click", () => {
+  if (!shown.length) return;
+  /* exactly the rows the header claims, one compact object per line, trailing
+     newline — the same shape the loader in helpers/recipe.ts reads */
+  downloadText(shown.map(i => RAW_LINE[i]).join("\n") + "\n", subsetName(shown.length));
+});
+$("dlAllN").textContent = EVENTS.length;
 
 /* ── action browser ───────────────────────────────────────────────────
    All EVENTS.length actions, filterable, with the selected one's formatted
@@ -2276,6 +3057,13 @@ function applyFilters(){
   bCount.innerHTML = "<b>" + shown.length + "</b> of " + EVENTS.length + " actions";
   bCount.dataset.shown = shown.length;
   bCount.dataset.total = EVENTS.length;
+  /* the export button carries the count it will actually write — a bare
+     "download subset" is how someone ships 463 lines believing they shipped 12 */
+  $("dlSubN").textContent = shown.length;
+  $("dlSub").disabled = !shown.length;
+  $("dlSub").title = shown.length
+    ? "Download these " + shown.length + " actions as JSONL (" + subsetName(shown.length) + ")"
+    : "Nothing matches the filters — nothing to export";
   let empty = $("bEmpty");
   if (!shown.length){
     if (!empty){
@@ -2324,6 +3112,15 @@ function select(i, noScroll){
   if (a.t) meta.appendChild(badge("pbadge", a.t, "when in the story"));
   meta.appendChild(badge("pbadge", driverOf(a) === "ui" ? "BROWSER"
     : driverOf(a) === "api" ? "gRPC" : "FIXTURE", "how the action is driven"));
+  /* which timeline colour this row is currently painted in, named — the row's
+     left edge carries the hue and a hue with no name is a riddle */
+  {
+    const b = bucketFor(a, curMode());
+    const chip = badge("pbadge", "◧ " + b.label,
+      "timeline colour (" + curMode().label + "): " + (b.tip || b.label));
+    chip.style.borderColor = "color-mix(in srgb, " + b.color + " 70%, transparent)";
+    meta.appendChild(chip);
+  }
   if (isDenied(a)) meta.appendChild(badge("flag denied", "✕ DENIED",
     (a.expect && a.expect.error) || "expects an error"));
   if (hasGate(a)) meta.appendChild(badge("flag gate", "⌃ GATE", "gated on RPCs"));
@@ -2423,7 +3220,11 @@ $("bClose").addEventListener("click", closeBrowser);
 $("bback").addEventListener("click", closeBrowser);
 $("btnBrowseN").textContent = EVENTS.length;
 
+/* order matters: applyFilters builds `shown` (which the subset export names and
+   counts), and applyMode paints the ticks, the legend and the row edges — it
+   must run after buildScrub and buildRows have both produced their elements. */
 applyFilters();
+applyMode(modeId);
 seek(0, true);
 })();
 </script>
