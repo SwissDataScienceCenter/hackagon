@@ -26,36 +26,39 @@ for (const persona of ALL_PERSONAS) {
       ).toBeVisible()
 
       await page.goto("/dashboard")
-      await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible()
+      await expect(
+        page.getByRole("heading", { name: /Welcome back/ }),
+      ).toBeVisible()
     })
 
-    test(`the public shell links to the hackathon list and About`, async ({ page }) => {
+    test(`the public shell links to the hackathon list and About`, async ({
+      page,
+    }) => {
       await page.goto("/")
       // The footer is a <nav> too — scope to the header.
       const nav = page.locator("header").getByRole("navigation").first()
 
       // There is no separate "Home" entry: the logo is the platform instance
       // and doubles as home, which is why it was dropped rather than added.
-      await expect(nav.getByRole("link", { name: "Hackathons", exact: true })).toHaveAttribute(
-        "href",
-        "/hackathon",
-      )
-      await expect(nav.getByRole("link", { name: "About", exact: true })).toHaveAttribute(
-        "href",
-        "/about",
-      )
+      await expect(
+        nav.getByRole("link", { name: "Hackathons", exact: true }),
+      ).toHaveAttribute("href", "/hackathon")
+      await expect(
+        nav.getByRole("link", { name: "About", exact: true }),
+      ).toHaveAttribute("href", "/about")
 
       // Your own events are a SEPARATE entry, not the same word pointing
       // somewhere else once you sign in: "Hackathons" named a list and reached
       // the dashboard, so the browse page was unreachable from the chrome for
       // exactly the people who had an account.
-      await expect(nav.getByRole("link", { name: "Dashboard", exact: true })).toHaveAttribute(
-        "href",
-        /\/dashboard$/,
-      )
+      await expect(
+        nav.getByRole("link", { name: "Dashboard", exact: true }),
+      ).toHaveAttribute("href", /\/dashboard$/)
 
       // The logo goes home for everyone, signed in or not.
-      await expect(page.locator("header").locator('a[href="/"]').first()).toBeVisible()
+      await expect(
+        page.locator("header").locator('a[href="/"]').first(),
+      ).toBeVisible()
     })
 
     test(`the nav keeps its shape inside the app`, async ({ page }) => {
@@ -71,10 +74,9 @@ for (const persona of ALL_PERSONAS) {
         ["Hackathons", /\/hackathon$/],
         ["About", /\/about$/],
       ] as const) {
-        await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute(
-          "href",
-          href,
-        )
+        await expect(
+          nav.getByRole("link", { name: label, exact: true }),
+        ).toHaveAttribute("href", href)
       }
     })
   })

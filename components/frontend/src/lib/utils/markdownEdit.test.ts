@@ -105,9 +105,9 @@ describe("toggleLinePrefix", () => {
   })
 
   it("bullets every line the selection touches", () => {
-    expect(show(toggleLinePrefix(state("[one\ntwo\nthree]"), BULLET_LIST))).toBe(
-      "[- one\n- two\n- three]",
-    )
+    expect(
+      show(toggleLinePrefix(state("[one\ntwo\nthree]"), BULLET_LIST)),
+    ).toBe("[- one\n- two\n- three]")
   })
 
   it("numbers a list from one, per line", () => {
@@ -192,9 +192,7 @@ describe("insertBlock", () => {
 
   it("separates the block from a paragraph above it", () => {
     // Glued to the paragraph, markdown reads the table as more paragraph.
-    expect(insertBlock(state("intro|"), TABLE).text).toBe(
-      `intro\n\n${TABLE}\n`,
-    )
+    expect(insertBlock(state("intro|"), TABLE).text).toBe(`intro\n\n${TABLE}\n`)
   })
 
   it("does not add a blank line that is already there", () => {
@@ -204,9 +202,7 @@ describe("insertBlock", () => {
   })
 
   it("separates the block from what follows it", () => {
-    expect(insertBlock(state("|outro"), TABLE).text).toBe(
-      `${TABLE}\n\noutro`,
-    )
+    expect(insertBlock(state("|outro"), TABLE).text).toBe(`${TABLE}\n\noutro`)
   })
 
   it("leaves the caret after the block", () => {

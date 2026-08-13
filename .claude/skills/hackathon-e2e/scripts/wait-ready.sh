@@ -11,7 +11,7 @@ TIMEOUT="${E2E_READY_TIMEOUT:-300}"
 echo "==> Waiting for the stack to be ready (timeout ${TIMEOUT}s per service)..."
 wait_for "postgres" "$TIMEOUT" pg_isready -h 127.0.0.1 -p 5432 -U postgres
 wait_for "keycloak" "$TIMEOUT" curl -fsS \
-  "$KEYCLOAK_URL/realms/hackagon/.well-known/openid-configuration"
+    "$KEYCLOAK_URL/realms/hackagon/.well-known/openid-configuration"
 wait_for "backend" "$TIMEOUT" grpcurl -plaintext "$GRPC_ADDR" list
 # vite is unusable here — see prod-frontend.sh for why, and for the traps in
 # starting the built server by hand. This is UNCONDITIONAL: the guard used to be
@@ -30,10 +30,10 @@ bash "$HERE/prod-frontend.sh" ensure "$FRONTEND_URL"
 # single attempt, printing not one dot, and the run looked hung rather than
 # failed. Bound every attempt so the deadline can actually be reached.
 if ! wait_for "frontend" "$TIMEOUT" curl -fsS --max-time 10 "$FRONTEND_URL"; then
-  echo ""
-  echo "  The frontend did not come up on $FRONTEND_URL." >&2
-  echo "  If it is not part of the process-compose stack, start it manually:" >&2
-  echo "    cd components/frontend && just serve" >&2
-  exit 1
+    echo ""
+    echo "  The frontend did not come up on $FRONTEND_URL." >&2
+    echo "  If it is not part of the process-compose stack, start it manually:" >&2
+    echo "    cd components/frontend && just serve" >&2
+    exit 1
 fi
 echo "==> Stack is ready."

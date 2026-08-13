@@ -26,7 +26,9 @@ const opt = (flag, def) => {
   const i = args.indexOf(flag)
   return i === -1 ? def : args[i + 1]
 }
-const OUT = path.resolve(opt("--out", path.join(SKILL, "out", "hackagon-docs.html")))
+const OUT = path.resolve(
+  opt("--out", path.join(SKILL, "out", "hackagon-docs.html")),
+)
 const QUALITY = Number(opt("--quality", 78))
 const MAX_WIDTH = Number(opt("--max-width", 1400))
 const NO_MERMAID = args.includes("--no-mermaid")
@@ -54,9 +56,16 @@ const ORDER = [
 ]
 
 const slug = (s) =>
-  s.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60)
-const docId = (rel) => "doc-" + rel.replace(/\.md$/, "").replace(/[/\\]/g, "-").toLowerCase()
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  s
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60)
+const docId = (rel) =>
+  "doc-" + rel.replace(/\.md$/, "").replace(/[/\\]/g, "-").toLowerCase()
+const esc = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 async function listDocs() {
   const found = []
@@ -64,19 +73,24 @@ async function listDocs() {
     for (const e of await fs.readdir(dir, { withFileTypes: true })) {
       const p = path.join(dir, e.name)
       if (e.isDirectory()) await walk(p)
-      else if (e.name.endsWith(".md")) found.push(path.relative(DOCS, p).replace(/\\/g, "/"))
+      else if (e.name.endsWith(".md"))
+        found.push(path.relative(DOCS, p).replace(/\\/g, "/"))
     }
   }
   await walk(DOCS)
   const ordered = ORDER.filter((f) => found.includes(f))
   const rest = found.filter((f) => !ORDER.includes(f)).sort()
-  if (rest.length) console.log(`   (not in ORDER, appended: ${rest.join(", ")})`)
+  if (rest.length)
+    console.log(`   (not in ORDER, appended: ${rest.join(", ")})`)
   return [...ordered, ...rest]
 }
 
 // ── images → webp data URIs ─────────────────────────────────────────────────
 const imgCache = new Map()
-let imgBytesIn = 0, imgBytesOut = 0, imgCount = 0, imgMissing = 0
+let imgBytesIn = 0,
+  imgBytesOut = 0,
+  imgCount = 0,
+  imgMissing = 0
 
 async function inlineImage(src, fromDir) {
   if (/^(https?:|data:)/.test(src)) return src // leave remote/inline alone
@@ -108,11 +122,17 @@ async function inlineImage(src, fromDir) {
 }
 
 async function inlineAllImages(html, fromDir) {
-  const srcs = [...html.matchAll(/<img\b[^>]*?\ssrc=["']([^"']+)["']/gi)].map((m) => m[1])
+  const srcs = [...html.matchAll(/<img\b[^>]*?\ssrc=["']([^"']+)["']/gi)].map(
+    (m) => m[1],
+  )
   for (const src of new Set(srcs)) {
     const uri = await inlineImage(src, fromDir)
-    if (uri !== src) html = html.split(`src="${src}"`).join(`src="${uri}"`)
-                                .split(`src='${src}'`).join(`src="${uri}"`)
+    if (uri !== src)
+      html = html
+        .split(`src="${src}"`)
+        .join(`src="${uri}"`)
+        .split(`src='${src}'`)
+        .join(`src="${uri}"`)
   }
   return html
 }
@@ -126,35 +146,77 @@ async function inlineAllImages(html, fromDir) {
 const FONT = 'system-ui,-apple-system,"Segoe UI",sans-serif'
 const THEMES = {
   light: {
-    background: "#faf9f6", primaryColor: "#dbe7f4", primaryTextColor: "#17171a",
-    primaryBorderColor: "#8fb2d6", secondaryColor: "#f3ece0", secondaryBorderColor: "#d3bf9e",
-    tertiaryColor: "#d9ece3", tertiaryBorderColor: "#84b9a2",
-    lineColor: "#7b7972", textColor: "#17171a", mainBkg: "#dbe7f4", nodeBorder: "#8fb2d6",
-    clusterBkg: "#f2f1ec", clusterBorder: "#b6b4aa", titleColor: "#17171a",
-    edgeLabelBackground: "#faf9f6", labelBoxBkgColor: "#dbe7f4", labelBoxBorderColor: "#8fb2d6",
-    actorBkg: "#2c4a63", actorBorder: "#22394c", actorTextColor: "#ffffff",
-    signalColor: "#4c4b48", signalTextColor: "#17171a",
-    loopTextColor: "#17171a", noteBkgColor: "#f3ece0", noteBorderColor: "#d3bf9e",
-    noteTextColor: "#17171a", activationBkgColor: "#dbe7f4", activationBorderColor: "#8fb2d6",
+    background: "#faf9f6",
+    primaryColor: "#dbe7f4",
+    primaryTextColor: "#17171a",
+    primaryBorderColor: "#8fb2d6",
+    secondaryColor: "#f3ece0",
+    secondaryBorderColor: "#d3bf9e",
+    tertiaryColor: "#d9ece3",
+    tertiaryBorderColor: "#84b9a2",
+    lineColor: "#7b7972",
+    textColor: "#17171a",
+    mainBkg: "#dbe7f4",
+    nodeBorder: "#8fb2d6",
+    clusterBkg: "#f2f1ec",
+    clusterBorder: "#b6b4aa",
+    titleColor: "#17171a",
+    edgeLabelBackground: "#faf9f6",
+    labelBoxBkgColor: "#dbe7f4",
+    labelBoxBorderColor: "#8fb2d6",
+    actorBkg: "#2c4a63",
+    actorBorder: "#22394c",
+    actorTextColor: "#ffffff",
+    signalColor: "#4c4b48",
+    signalTextColor: "#17171a",
+    loopTextColor: "#17171a",
+    noteBkgColor: "#f3ece0",
+    noteBorderColor: "#d3bf9e",
+    noteTextColor: "#17171a",
+    activationBkgColor: "#dbe7f4",
+    activationBorderColor: "#8fb2d6",
     sequenceNumberColor: "#ffffff",
-    attributeBackgroundColorOdd: "#faf9f6", attributeBackgroundColorEven: "#f2f1ec",
-    fontFamily: FONT, fontSize: "14px",
+    attributeBackgroundColorOdd: "#faf9f6",
+    attributeBackgroundColorEven: "#f2f1ec",
+    fontFamily: FONT,
+    fontSize: "14px",
   },
   dark: {
     darkMode: true,
-    background: "#121213", primaryColor: "#1e2f42", primaryTextColor: "#f2f1ec",
-    primaryBorderColor: "#3f6187", secondaryColor: "#2c2519", secondaryBorderColor: "#5a4a2c",
-    tertiaryColor: "#17322a", tertiaryBorderColor: "#3d6b58",
-    lineColor: "#8d8c85", textColor: "#f2f1ec", mainBkg: "#1e2f42", nodeBorder: "#3f6187",
-    clusterBkg: "#1b1c1a", clusterBorder: "#4a4b47", titleColor: "#f2f1ec",
-    edgeLabelBackground: "#121213", labelBoxBkgColor: "#1e2f42", labelBoxBorderColor: "#3f6187",
-    actorBkg: "#40607d", actorBorder: "#5a7c9c", actorTextColor: "#ffffff",
-    signalColor: "#c6c5be", signalTextColor: "#f2f1ec",
-    loopTextColor: "#f2f1ec", noteBkgColor: "#2c2519", noteBorderColor: "#5a4a2c",
-    noteTextColor: "#f2f1ec", activationBkgColor: "#1e2f42", activationBorderColor: "#3f6187",
+    background: "#121213",
+    primaryColor: "#1e2f42",
+    primaryTextColor: "#f2f1ec",
+    primaryBorderColor: "#3f6187",
+    secondaryColor: "#2c2519",
+    secondaryBorderColor: "#5a4a2c",
+    tertiaryColor: "#17322a",
+    tertiaryBorderColor: "#3d6b58",
+    lineColor: "#8d8c85",
+    textColor: "#f2f1ec",
+    mainBkg: "#1e2f42",
+    nodeBorder: "#3f6187",
+    clusterBkg: "#1b1c1a",
+    clusterBorder: "#4a4b47",
+    titleColor: "#f2f1ec",
+    edgeLabelBackground: "#121213",
+    labelBoxBkgColor: "#1e2f42",
+    labelBoxBorderColor: "#3f6187",
+    actorBkg: "#40607d",
+    actorBorder: "#5a7c9c",
+    actorTextColor: "#ffffff",
+    signalColor: "#c6c5be",
+    signalTextColor: "#f2f1ec",
+    loopTextColor: "#f2f1ec",
+    noteBkgColor: "#2c2519",
+    noteBorderColor: "#5a4a2c",
+    noteTextColor: "#f2f1ec",
+    activationBkgColor: "#1e2f42",
+    activationBorderColor: "#3f6187",
     sequenceNumberColor: "#ffffff",
-    attributeBackgroundColorOdd: "#121213", attributeBackgroundColorEven: "#1b1c1a",
-    fontFamily: FONT, fontSize: "14px",
+    attributeBackgroundColorOdd: "#121213",
+    attributeBackgroundColorEven: "#1b1c1a",
+    fontFamily: FONT,
+    fontSize: "14px",
   },
 }
 
@@ -162,21 +224,36 @@ const THEMES = {
 async function renderMermaid(blocks) {
   if (!blocks.length || NO_MERMAID) return new Map()
   let chromium, firefox
-  try { ({ chromium, firefox } = await import("playwright")) } catch {
+  try {
+    ;({ chromium, firefox } = await import("playwright"))
+  } catch {
     console.warn("   ! playwright not installed — mermaid blocks stay as code")
     return new Map()
   }
-  const mermaidJs = path.join(SKILL, "node_modules", "mermaid", "dist", "mermaid.min.js")
+  const mermaidJs = path.join(
+    SKILL,
+    "node_modules",
+    "mermaid",
+    "dist",
+    "mermaid.min.js",
+  )
   if (!existsSync(mermaidJs)) {
     console.warn("   ! mermaid package not found — blocks stay as code")
     return new Map()
   }
   let browser
   for (const launcher of [chromium, firefox]) {
-    try { browser = await launcher.launch(); break } catch { /* try the next */ }
+    try {
+      browser = await launcher.launch()
+      break
+    } catch {
+      /* try the next */
+    }
   }
   if (!browser) {
-    console.warn("   ! no browser available to render mermaid — blocks stay as code")
+    console.warn(
+      "   ! no browser available to render mermaid — blocks stay as code",
+    )
     return new Map()
   }
   const page = await browser.newPage()
@@ -185,11 +262,17 @@ async function renderMermaid(blocks) {
 
   const out = new Map()
   for (const mode of ["light", "dark"]) {
-    await page.evaluate((vars) => window.mermaid.initialize({
-      startOnLoad: false, theme: "base", themeVariables: vars,
-      flowchart: { curve: "basis", padding: 14 },
-      sequence: { actorMargin: 46, boxMargin: 8, mirrorActors: false },
-    }), THEMES[mode])
+    await page.evaluate(
+      (vars) =>
+        window.mermaid.initialize({
+          startOnLoad: false,
+          theme: "base",
+          themeVariables: vars,
+          flowchart: { curve: "basis", padding: 14 },
+          sequence: { actorMargin: 46, boxMargin: 8, mirrorActors: false },
+        }),
+      THEMES[mode],
+    )
     for (const [i, code] of blocks.entries()) {
       try {
         const svg = await page.evaluate(
@@ -201,7 +284,9 @@ async function renderMermaid(blocks) {
         out.set(code, entry)
       } catch (e) {
         if (mode === "light")
-          console.warn(`   ! mermaid block ${i + 1} failed to render: ${String(e).split("\n")[0]}`)
+          console.warn(
+            `   ! mermaid block ${i + 1} failed to render: ${String(e).split("\n")[0]}`,
+          )
       }
     }
   }
@@ -253,12 +338,15 @@ for (const doc of docs) {
 
   // Tables keep normal table layout and get their OWN scroll container —
   // `display:block` on <table> is what made wide tables look cropped.
-  html = html.replace(/<table>/g, '<div class="tablewrap"><table>')
-             .replace(/<\/table>/g, "</table></div>")
+  html = html
+    .replace(/<table>/g, '<div class="tablewrap"><table>')
+    .replace(/<\/table>/g, "</table></div>")
 
   // cross-document links → in-page anchors
   html = html.replace(/href="([^"]+\.md)(#[^"]*)?"/g, (m, target, frag) => {
-    const key = path.posix.normalize(path.posix.join(path.posix.dirname(doc.rel), target))
+    const key = path.posix.normalize(
+      path.posix.join(path.posix.dirname(doc.rel), target),
+    )
     const id = linkTargets.get(key) ?? linkTargets.get(target)
     return id ? `href="#${id}"` : m
   })
@@ -269,12 +357,15 @@ for (const doc of docs) {
   html = html.replace(/%%MERMAID_(\d+)%%/g, (m, i) => {
     const code = mermaidBlocks[Number(i)]
     const v = svgs.get(code)
-    if (!v?.light) return `<pre class="mermaid-src"><code>${esc(code)}</code></pre>`
+    if (!v?.light)
+      return `<pre class="mermaid-src"><code>${esc(code)}</code></pre>`
     // Both themes ship; CSS picks one. Print gets the light variant.
-    return `<figure class="mermaid">` +
+    return (
+      `<figure class="mermaid">` +
       `<span class="only-light">${v.light}</span>` +
       (v.dark ? `<span class="only-dark">${v.dark}</span>` : "") +
       `</figure>`
+    )
   })
 
   doc.html = html
@@ -282,16 +373,26 @@ for (const doc of docs) {
 
 // ── assemble ────────────────────────────────────────────────────────────────
 let commit = "unknown"
-try { commit = execSync("git rev-parse --short HEAD", { cwd: ROOT }).toString().trim() } catch {}
+try {
+  commit = execSync("git rev-parse --short HEAD", { cwd: ROOT })
+    .toString()
+    .trim()
+} catch {}
 let branch = ""
-try { branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: ROOT }).toString().trim() } catch {}
+try {
+  branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: ROOT })
+    .toString()
+    .trim()
+} catch {}
 
 const nav = docs
   .map(
-    (d) => `<li><a href="#${d.id}">${esc(d.title)}</a>` +
+    (d) =>
+      `<li><a href="#${d.id}">${esc(d.title)}</a>` +
       (d.outline.length
         ? `<ul>${d.outline.map((h) => `<li><a href="#${h.id}">${esc(h.text)}</a></li>`).join("")}</ul>`
-        : "") + `</li>`,
+        : "") +
+      `</li>`,
   )
   .join("\n")
 
@@ -306,12 +407,13 @@ const body = docs
 
 // ── search index: one entry per h2 section, plain text ──────────────────────
 const stripTags = (h) =>
-  h.replace(/<(script|style)[\s\S]*?<\/\1>/g, " ")
-   .replace(/<svg[\s\S]*?<\/svg>/g, " ")   // diagrams carry no useful prose
-   .replace(/<[^>]+>/g, " ")
-   .replace(/&(nbsp|amp|lt|gt|quot|#39);/g, " ")
-   .replace(/\s+/g, " ")
-   .trim()
+  h
+    .replace(/<(script|style)[\s\S]*?<\/\1>/g, " ")
+    .replace(/<svg[\s\S]*?<\/svg>/g, " ") // diagrams carry no useful prose
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&(nbsp|amp|lt|gt|quot|#39);/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 
 const index = []
 for (const doc of docs) {
@@ -330,7 +432,10 @@ for (const doc of docs) {
   }
 }
 
-const template = await fs.readFile(path.join(SKILL, "scripts", "template.html"), "utf8")
+const template = await fs.readFile(
+  path.join(SKILL, "scripts", "template.html"),
+  "utf8",
+)
 const html = template
   .replace("{{NAV}}", nav)
   .replace("{{BODY}}", body)
@@ -345,7 +450,11 @@ await fs.writeFile(OUT, html)
 
 const kb = (n) => `${(n / 1024).toFixed(0)} KB`
 console.log("")
-console.log(`   images   ${imgCount} inlined, ${kb(imgBytesIn)} → ${kb(imgBytesOut)} webp` +
-  (imgMissing ? ` (${imgMissing} missing)` : ""))
+console.log(
+  `   images   ${imgCount} inlined, ${kb(imgBytesIn)} → ${kb(imgBytesOut)} webp` +
+    (imgMissing ? ` (${imgMissing} missing)` : ""),
+)
 console.log(`   diagrams ${svgs.size} inline SVG`)
-console.log(`   output   ${path.relative(ROOT, OUT)}  ${kb((await fs.stat(OUT)).size)}`)
+console.log(
+  `   output   ${path.relative(ROOT, OUT)}  ${kb((await fs.stat(OUT)).size)}`,
+)

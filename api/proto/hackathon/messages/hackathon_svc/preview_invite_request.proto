@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package hackathon.messages.hackathon_svc;
 
-option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
-
 import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
 
 // Redeeming side of an invite: exchanges the link secret for enough of the
 // hackathon to render its page. Deliberately takes ONLY the token, so it never

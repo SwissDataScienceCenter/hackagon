@@ -119,7 +119,9 @@ test.describe("markdown editor: formatting toolbar", () => {
     await expect(area).toHaveValue("hello world")
   })
 
-  test("bold at an empty caret opens a pair and sits inside it", async ({ page }) => {
+  test("bold at an empty caret opens a pair and sits inside it", async ({
+    page,
+  }) => {
     const area = page.locator("textarea[name=description]")
     await area.fill("")
     await select(area, 0, 0)
@@ -152,7 +154,9 @@ test.describe("markdown editor: formatting toolbar", () => {
     await expect(area).toHaveValue("- one\n- two\n- three")
   })
 
-  test("Ctrl+B, Ctrl+I and Ctrl+K work from the keyboard alone", async ({ page }) => {
+  test("Ctrl+B, Ctrl+I and Ctrl+K work from the keyboard alone", async ({
+    page,
+  }) => {
     const area = page.locator("textarea[name=description]")
 
     await area.fill("hi")
@@ -200,7 +204,9 @@ test.describe("markdown editor: paste a table", () => {
     // clipboard. One cell carries a literal pipe: unescaped, it would end that
     // cell and shift every column after it — silently, in the middle of the
     // data.
-    await panel.locator("textarea").fill("Track\tLead\nClimate\tAlice\na|b\tBob")
+    await panel
+      .locator("textarea")
+      .fill("Track\tLead\nClimate\tAlice\na|b\tBob")
 
     // The shape is read back BEFORE inserting: "it inserted something" and "it
     // found two columns" are different claims.
@@ -231,7 +237,9 @@ test.describe("markdown editor: paste a table", () => {
     ).toHaveText("a|b")
   })
 
-  test("CSV works, and a quoted comma stays inside its cell", async ({ page }) => {
+  test("CSV works, and a quoted comma stays inside its cell", async ({
+    page,
+  }) => {
     const area = page.locator("textarea[name=description]")
     const panel = await openPanel(page)
 
@@ -249,7 +257,9 @@ test.describe("markdown editor: paste a table", () => {
     await expect(cells.nth(0)).toHaveText("Lausanne, VD")
   })
 
-  test("an ambiguous separator is flagged and can be overruled", async ({ page }) => {
+  test("an ambiguous separator is flagged and can be overruled", async ({
+    page,
+  }) => {
     const panel = await openPanel(page)
 
     // European CSV: `;` between fields, `,` as the decimal mark. Splitting on

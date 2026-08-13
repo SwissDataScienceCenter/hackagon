@@ -72,7 +72,7 @@ serving() { curl -fsS -o /dev/null --max-time 5 "http://localhost:$PORT/" 2>/dev
 # bridge, which holds 172.26.0.7:8081 (IPv4) for the whole life of the
 # container and must not read as a conflict.
 port_held() {
-  node -e '
+    node -e '
 const net = require("net");
 const s = net.createServer();
 s.once("error", (e) => process.exit(e.code === "EADDRINUSE" ? 0 : 1));
@@ -84,168 +84,168 @@ s.listen(Number(process.argv[1]), "::1");
 # Our servers only: same entrypoint as the tunnel's :8082 server, told apart by
 # the PORT it was launched with.
 our_servers() {
-  local pid
-  for pid in $({ pgrep -f "$ENTRY" 2>/dev/null || true; }); do
-    if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$PORT"; then
-      echo "$pid"
-    fi
-  done
-  return 0
+    local pid
+    for pid in $({ pgrep -f "$ENTRY" 2>/dev/null || true; }); do
+        if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$PORT"; then
+            echo "$pid"
+        fi
+    done
+    return 0
 }
 
 ours_is_up() {
-  local pid
-  pid="$(cat "$PIDFILE" 2>/dev/null || true)"
-  [ -n "$pid" ] || return 1
-  kill -0 "$pid" 2>/dev/null || return 1
-  tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "$ENTRY"
+    local pid
+    pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+    [ -n "$pid" ] || return 1
+    kill -0 "$pid" 2>/dev/null || return 1
+    tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "$ENTRY"
 }
 
 # setsid forks, so $! can be the launcher rather than the server. Re-resolve, or
 # `stop` chases a PID that has already exited and leaves the real one holding
 # the port.
 resolve_pid() {
-  # Deliberately no `| head -1`. With `set -o pipefail`, head exiting after the
-  # first line SIGPIPEs our_servers, the pipeline reports 141, the assignment
-  # inherits it and `set -e` exits the script — one line after the server came
-  # up healthy, so the caller sees a dead harness and a perfectly good server.
-  # Take the first line in the shell instead, and never fail: a pid we could not
-  # resolve is a worse `stop`, not a reason to abort a working start.
-  local pids
-  pids="$(our_servers)" || true
-  pids="${pids%%$'\n'*}"
-  [ -n "$pids" ] && echo "$pids" >"$PIDFILE"
-  return 0
+    # Deliberately no `| head -1`. With `set -o pipefail`, head exiting after the
+    # first line SIGPIPEs our_servers, the pipeline reports 141, the assignment
+    # inherits it and `set -e` exits the script — one line after the server came
+    # up healthy, so the caller sees a dead harness and a perfectly good server.
+    # Take the first line in the shell instead, and never fail: a pid we could not
+    # resolve is a worse `stop`, not a reason to abort a working start.
+    local pids
+    pids="$(our_servers)" || true
+    pids="${pids%%$'\n'*}"
+    [ -n "$pids" ] && echo "$pids" >"$PIDFILE"
+    return 0
 }
 
 stop_vite() {
-  local sock
-  sock="$(cat "$PC_SOCKET_FILE" 2>/dev/null || true)"
-  if [ -n "$sock" ] && [ -S "$sock" ]; then
-    process-compose --unix-socket "$sock" process stop frontend >/dev/null 2>&1 || true
-  fi
-  # A deliberate stop is not a failure, so `restart: on_failure` leaves it down.
-  # The pkill is for the orphan case: `just deploy::down` pkills
-  # process-compose without freeing :8081, and the socket file is gone by then.
-  pkill -f "vite.js dev" 2>/dev/null || true
+    local sock
+    sock="$(cat "$PC_SOCKET_FILE" 2>/dev/null || true)"
+    if [ -n "$sock" ] && [ -S "$sock" ]; then
+        process-compose --unix-socket "$sock" process stop frontend >/dev/null 2>&1 || true
+    fi
+    # A deliberate stop is not a failure, so `restart: on_failure` leaves it down.
+    # The pkill is for the orphan case: `just deploy::down` pkills
+    # process-compose without freeing :8081, and the socket file is gone by then.
+    pkill -f "vite.js dev" 2>/dev/null || true
 }
 
 stop() {
-  if [ -f "$PIDFILE" ]; then
-    kill "$(cat "$PIDFILE")" 2>/dev/null || true
-    rm -f "$PIDFILE"
-  fi
-  # Anything else of ours holding the port — a run killed mid-flight leaves one.
-  local pid
-  for pid in $(our_servers); do kill "$pid" 2>/dev/null || true; done
-  stop_vite
+    if [ -f "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        rm -f "$PIDFILE"
+    fi
+    # Anything else of ours holding the port — a run killed mid-flight leaves one.
+    local pid
+    for pid in $(our_servers); do kill "$pid" 2>/dev/null || true; done
+    stop_vite
 
-  # Wait for the socket to actually be released. `kill` returns immediately and
-  # node takes a moment to close its listener, so starting straight afterwards
-  # raced and died with EADDRINUSE — which the caller then reported as "the
-  # frontend did not come up", 300 seconds later and pointing at the wrong
-  # thing entirely.
-  for _ in $(seq 1 25); do
-    port_held || return 0
-    sleep 1
-  done
-  # Still held after 25s: escalate, then give it a last moment.
-  for pid in $(our_servers); do kill -9 "$pid" 2>/dev/null || true; done
-  pkill -9 -f "vite.js dev" 2>/dev/null || true
-  sleep 2
+    # Wait for the socket to actually be released. `kill` returns immediately and
+    # node takes a moment to close its listener, so starting straight afterwards
+    # raced and died with EADDRINUSE — which the caller then reported as "the
+    # frontend did not come up", 300 seconds later and pointing at the wrong
+    # thing entirely.
+    for _ in $(seq 1 25); do
+        port_held || return 0
+        sleep 1
+    done
+    # Still held after 25s: escalate, then give it a last moment.
+    for pid in $(our_servers); do kill -9 "$pid" 2>/dev/null || true; done
+    pkill -9 -f "vite.js dev" 2>/dev/null || true
+    sleep 2
 }
 
 # vite served source; the build is a snapshot, so it has to be rebuilt when the
 # source moved under it. Skipping this is how a suite silently tests yesterday's
 # frontend and reports green.
 needs_build() {
-  [ -f "$FRONTEND_DIR/$ENTRY" ] || return 0
-  local newer
-  newer="$(cd "$FRONTEND_DIR" &&
-    find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
-      -newer "$ENTRY" -print -quit 2>/dev/null || true)"
-  [ -n "$newer" ]
+    [ -f "$FRONTEND_DIR/$ENTRY" ] || return 0
+    local newer
+    newer="$(cd "$FRONTEND_DIR" &&
+        find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
+            -newer "$ENTRY" -print -quit 2>/dev/null || true)"
+    [ -n "$newer" ]
 }
 
 launch() {
-  local origin="$1"
-  (
-    cd "$FRONTEND_DIR"
-    PORT="$PORT" HOST="::1" ORIGIN="$origin" AUTH_URL="$origin" \
-      STORAGE_ENDPOINT="$STORE" \
-      setsid nohup node "$ENTRY" \
-        --config-dir ./data/test/config --data-dir ./data/test \
-        >"$LOG" 2>&1 &
-    echo $! >"$PIDFILE"
-  )
+    local origin="$1"
+    (
+        cd "$FRONTEND_DIR"
+        PORT="$PORT" HOST="::1" ORIGIN="$origin" AUTH_URL="$origin" \
+            STORAGE_ENDPOINT="$STORE" \
+            setsid nohup node "$ENTRY" \
+            --config-dir ./data/test/config --data-dir ./data/test \
+            >"$LOG" 2>&1 &
+        echo $! >"$PIDFILE"
+    )
 }
 
 wait_serving() {
-  for _ in $(seq 1 30); do
-    serving && return 0
-    # The server exits in its first second on EADDRINUSE. Sitting out the full
-    # 60s for a process that is already dead is what buried the real error.
-    grep -q "EADDRINUSE" "$LOG" 2>/dev/null && return 1
-    sleep 2
-  done
-  return 1
+    for _ in $(seq 1 30); do
+        serving && return 0
+        # The server exits in its first second on EADDRINUSE. Sitting out the full
+        # 60s for a process that is already dead is what buried the real error.
+        grep -q "EADDRINUSE" "$LOG" 2>/dev/null && return 1
+        sleep 2
+    done
+    return 1
 }
 
 start() {
-  local origin="${1:-http://localhost:$PORT}" attempt
-  mkdir -p "$(dirname "$PIDFILE")"
-  stop
-
-  if needs_build; then
-    echo "==> Building the frontend (build/ is missing or older than src/)..."
-    if ! (cd "$FRONTEND_DIR" && pnpm build) >"$BUILD_LOG" 2>&1; then
-      echo "error: pnpm build failed — see $BUILD_LOG" >&2
-      tail -30 "$BUILD_LOG" >&2
-      return 1
-    fi
-  fi
-
-  for attempt in 1 2 3; do
-    echo "==> Serving the built frontend on :$PORT (origin $origin)..."
-    launch "$origin"
-    if wait_serving; then
-      resolve_pid
-      echo "  ready"
-      return 0
-    fi
-    grep -q "EADDRINUSE" "$LOG" 2>/dev/null || break
-    echo "  :$PORT is still held by something else — freeing it (attempt $attempt/3)" >&2
+    local origin="${1:-http://localhost:$PORT}" attempt
+    mkdir -p "$(dirname "$PIDFILE")"
     stop
-  done
 
-  echo "error: the built frontend did not come up on :$PORT — see $LOG" >&2
-  echo "── $LOG (tail) ─────────────────────────────" >&2
-  tail -30 "$LOG" >&2
-  return 1
+    if needs_build; then
+        echo "==> Building the frontend (build/ is missing or older than src/)..."
+        if ! (cd "$FRONTEND_DIR" && pnpm build) >"$BUILD_LOG" 2>&1; then
+            echo "error: pnpm build failed — see $BUILD_LOG" >&2
+            tail -30 "$BUILD_LOG" >&2
+            return 1
+        fi
+    fi
+
+    for attempt in 1 2 3; do
+        echo "==> Serving the built frontend on :$PORT (origin $origin)..."
+        launch "$origin"
+        if wait_serving; then
+            resolve_pid
+            echo "  ready"
+            return 0
+        fi
+        grep -q "EADDRINUSE" "$LOG" 2>/dev/null || break
+        echo "  :$PORT is still held by something else — freeing it (attempt $attempt/3)" >&2
+        stop
+    done
+
+    echo "error: the built frontend did not come up on :$PORT — see $LOG" >&2
+    echo "── $LOG (tail) ─────────────────────────────" >&2
+    tail -30 "$LOG" >&2
+    return 1
 }
 
 case "${1:-ensure}" in
-  start)
+start)
     shift
     start "${1:-}"
     ;;
-  stop)
+stop)
     stop
     echo "stopped"
     ;;
-  ensure)
+ensure)
     shift
     # "Something answers :8081" is not enough: a cold vite that happens to reply
     # inside the probe window is still unusable for a suite, and a build that
     # predates the last source edit is worse than useless. Only OUR server, up
     # and current, is left alone.
     if ours_is_up && serving && ! needs_build; then
-      echo "==> The built frontend already serves :$PORT — leaving it alone."
+        echo "==> The built frontend already serves :$PORT — leaving it alone."
     else
-      start "${1:-}"
+        start "${1:-}"
     fi
     ;;
-  *)
+*)
     echo "usage: prod-frontend.sh [start|stop|ensure] [origin]" >&2
     exit 1
     ;;

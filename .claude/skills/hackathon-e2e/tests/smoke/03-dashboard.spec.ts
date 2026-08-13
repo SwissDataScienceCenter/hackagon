@@ -114,7 +114,9 @@ for (const persona of ALL_PERSONAS) {
   test.describe(`${persona.key} dashboard`, () => {
     test.use({ storageState: storageStatePath(persona.key) })
 
-    test("states a connected-hackathons count that matches its own list", async ({ page }) => {
+    test("states a connected-hackathons count that matches its own list", async ({
+      page,
+    }) => {
       await page.goto("/dashboard")
       const mine = section(page, "Your hackathons")
       await expect(mine).toBeVisible()
@@ -144,14 +146,19 @@ for (const persona of ALL_PERSONAS) {
       ).toBe(rendered.length)
     })
 
-    test("lists my hackathons with the right membership badge", async ({ page }) => {
+    test("lists my hackathons with the right membership badge", async ({
+      page,
+    }) => {
       await page.goto("/dashboard")
       const mine = section(page, "Your hackathons")
 
       for (const { hackathon, badge } of expected.dashboard.mine) {
         const name = SEED_HACKATHONS[hackathon].name
         const r = row(mine, name)
-        await expect(r, `${name} should be under "Your hackathons"`).toBeVisible()
+        await expect(
+          r,
+          `${name} should be under "Your hackathons"`,
+        ).toBeVisible()
         await expect(
           r.getByText(badge, { exact: true }),
           `${name} should carry the "${badge}" membership badge`,
@@ -166,7 +173,9 @@ for (const persona of ALL_PERSONAS) {
       }
     })
 
-    test("my hackathons link to the member view, not the public page", async ({ page }) => {
+    test("my hackathons link to the member view, not the public page", async ({
+      page,
+    }) => {
       await page.goto("/dashboard")
       const mine = section(page, "Your hackathons")
 
@@ -180,7 +189,9 @@ for (const persona of ALL_PERSONAS) {
       }
     })
 
-    test("offers the public hackathons the persona has not joined, and only those", async ({ page }) => {
+    test("offers the public hackathons the persona has not joined, and only those", async ({
+      page,
+    }) => {
       await page.goto("/dashboard")
       const others = section(page, "Other hackathons")
       const mine = section(page, "Your hackathons")
@@ -199,7 +210,9 @@ for (const persona of ALL_PERSONAS) {
         ).toBeVisible()
         // Scoped to its OWN row — a page-wide "first Join button" passes even
         // when the wrong row has it.
-        await expect(row(others, name).getByRole("button", { name: "Join" })).toBeVisible()
+        await expect(
+          row(others, name).getByRole("button", { name: "Join" }),
+        ).toBeVisible()
       }
       for (const key of ["h1", "h2", "h3"] as SeedHackathonKey[]) {
         if (expected.dashboard.others.includes(key)) continue
@@ -224,7 +237,9 @@ for (const persona of ALL_PERSONAS) {
       if (offered.length === 0) {
         // The empty state is asserted where it is TRUE — when the section
         // rendered nothing — rather than where the fixture predicts it.
-        await expect(others.getByText("No other hackathons available.")).toBeVisible()
+        await expect(
+          others.getByText("No other hackathons available."),
+        ).toBeVisible()
         return
       }
       await expect(
@@ -234,7 +249,10 @@ for (const persona of ALL_PERSONAS) {
 
       // Control for the disjointness below: with an empty "Your hackathons" it
       // would hold no matter what this section offered.
-      expect(joined.length, `${persona.key} should be in at least one hackathon`).toBeGreaterThan(0)
+      expect(
+        joined.length,
+        `${persona.key} should be in at least one hackathon`,
+      ).toBeGreaterThan(0)
       expect(
         offered.filter((id) => joined.includes(id)),
         "a hackathon you are already in must never be offered to join",

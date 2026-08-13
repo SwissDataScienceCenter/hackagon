@@ -59,7 +59,9 @@ function blockScalars(
   const out: Record<string, string> = {}
   for (let i = start + 1; i < lines.length; i++) {
     if (/^[^\s#]/.test(lines[i])) break
-    const m = lines[i].match(/^\s+([A-Za-z_][A-Za-z0-9_]*):\s*"?([^"#]*?)"?\s*$/)
+    const m = lines[i].match(
+      /^\s+([A-Za-z_][A-Za-z0-9_]*):\s*"?([^"#]*?)"?\s*$/,
+    )
     if (m) out[m[1]] = m[2]
   }
 
@@ -84,7 +86,10 @@ function blockScalars(
  * outcome this folder must never reach by accident.
  */
 export function replayConfig(): ReplayConfig | null {
-  const base = blockScalars(read(path.join(CONFIG_DIR, "config.yaml")), "replay")
+  const base = blockScalars(
+    read(path.join(CONFIG_DIR, "config.yaml")),
+    "replay",
+  )
   const local = blockScalars(
     read(path.join(CONFIG_DIR, "config.local.yaml")),
     "replay",

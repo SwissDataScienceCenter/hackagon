@@ -43,9 +43,15 @@ for (const persona of ALL_PERSONAS) {
       const status = resp?.status()
 
       if (matrix[key] === "ok") {
-        expect(status, `${persona.key} must reach the ${name} member view`).toBe(200)
+        expect(
+          status,
+          `${persona.key} must reach the ${name} member view`,
+        ).toBe(200)
       } else {
-        expect(status, `${persona.key} must get 403 on the ${name} member view`).toBe(403)
+        expect(
+          status,
+          `${persona.key} must get 403 on the ${name} member view`,
+        ).toBe(403)
       }
     }
     await ctx.close()

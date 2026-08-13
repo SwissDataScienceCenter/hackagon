@@ -267,7 +267,10 @@ describe("tableFromPaste", () => {
  */
 describe("the generated markdown renders as a real table", () => {
   /** Render a paste through the real pipeline and read the table back. */
-  const render = (input: string, options?: Parameters<typeof tableFromPaste>[1]) => {
+  const render = (
+    input: string,
+    options?: Parameters<typeof tableFromPaste>[1],
+  ) => {
     const converted = tableFromPaste(input, options)
     if (!converted) throw new Error("nothing was converted")
 

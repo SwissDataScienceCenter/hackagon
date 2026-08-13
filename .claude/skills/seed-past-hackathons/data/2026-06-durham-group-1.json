@@ -13,24 +13,73 @@
   "endsAt": "2026-06-03T17:00:00+02:00",
   "venue": "SDSC, Arginine bld, Biopôle, Lausanne",
   "organizers": ["Swiss Data Science Center (SDSC)"],
-  "partners": ["University of Durham — participating students", "Richemont — industry talk"],
+  "partners": [
+    "University of Durham — participating students",
+    "Richemont — industry talk"
+  ],
   "logo": "",
   "theme": "Prototyping Data Science and AI solutions for real impact",
   "description": "Welcome to the Hackathons for the amazing students of the University of Durham. This is the first event, happening on June the 2nd and 3rd. Two days at the SDSC office at Biopôle, Lausanne, prototyping data science and AI solutions for real impact.",
   "tracks": [],
   "preEventTimeline": [
-    { "order": 0, "process": "Registrations", "when": "13.05.2026 - 22.05.2026" },
-    { "order": 1, "process": "Propose a project (optional)", "when": "13.05.2026 - 28.05.2026" },
-    { "order": 2, "process": "Choose your team (optional)", "when": "28.05.2026 - 02.06.2026" },
-    { "order": 3, "process": "Hacking time!", "when": "02.06.2026 - 03.06.2026" }
+    {
+      "order": 0,
+      "process": "Registrations",
+      "when": "13.05.2026 - 22.05.2026"
+    },
+    {
+      "order": 1,
+      "process": "Propose a project (optional)",
+      "when": "13.05.2026 - 28.05.2026"
+    },
+    {
+      "order": 2,
+      "process": "Choose your team (optional)",
+      "when": "28.05.2026 - 02.06.2026"
+    },
+    {
+      "order": 3,
+      "process": "Hacking time!",
+      "when": "02.06.2026 - 03.06.2026"
+    }
   ],
   "phases": [
-    { "name": "Welcome coffee", "description": "Check-in — Plenary room.", "startsAt": "2026-06-02T08:30:00+02:00", "endsAt": "2026-06-02T09:00:00+02:00" },
-    { "name": "Industry talk", "description": "Francesco Calabrese, Head of Group Data Office, Richemont — Plenary room.", "startsAt": "2026-06-02T09:00:00+02:00", "endsAt": "2026-06-02T10:00:00+02:00" },
-    { "name": "Hacking — day 1", "description": "Plenary room, Rubis, Opale, Jade.", "startsAt": "2026-06-02T10:00:00+02:00", "endsAt": "2026-06-02T22:00:00+02:00" },
-    { "name": "Welcome coffee — day 2", "description": "Plenary room.", "startsAt": "2026-06-03T08:30:00+02:00", "endsAt": "2026-06-03T09:00:00+02:00" },
-    { "name": "Hacking — day 2", "description": "Plenary room, Rubis, Opale, Jade.", "startsAt": "2026-06-03T08:30:00+02:00", "endsAt": "2026-06-03T15:30:00+02:00" },
-    { "name": "Presentations & voting", "description": "Presentations, voting and prizes — Plenary room.", "startsAt": "2026-06-03T15:30:00+02:00", "endsAt": "2026-06-03T17:00:00+02:00" }
+    {
+      "name": "Welcome coffee",
+      "description": "Check-in — Plenary room.",
+      "startsAt": "2026-06-02T08:30:00+02:00",
+      "endsAt": "2026-06-02T09:00:00+02:00"
+    },
+    {
+      "name": "Industry talk",
+      "description": "Francesco Calabrese, Head of Group Data Office, Richemont — Plenary room.",
+      "startsAt": "2026-06-02T09:00:00+02:00",
+      "endsAt": "2026-06-02T10:00:00+02:00"
+    },
+    {
+      "name": "Hacking — day 1",
+      "description": "Plenary room, Rubis, Opale, Jade.",
+      "startsAt": "2026-06-02T10:00:00+02:00",
+      "endsAt": "2026-06-02T22:00:00+02:00"
+    },
+    {
+      "name": "Welcome coffee — day 2",
+      "description": "Plenary room.",
+      "startsAt": "2026-06-03T08:30:00+02:00",
+      "endsAt": "2026-06-03T09:00:00+02:00"
+    },
+    {
+      "name": "Hacking — day 2",
+      "description": "Plenary room, Rubis, Opale, Jade.",
+      "startsAt": "2026-06-03T08:30:00+02:00",
+      "endsAt": "2026-06-03T15:30:00+02:00"
+    },
+    {
+      "name": "Presentations & voting",
+      "description": "Presentations, voting and prizes — Plenary room.",
+      "startsAt": "2026-06-03T15:30:00+02:00",
+      "endsAt": "2026-06-03T17:00:00+02:00"
+    }
   ],
   "votingCategories": [
     { "title": "A2Q: Answer Any Question", "numberOfWinners": 1 },

@@ -21,21 +21,21 @@ mkdir -p "$DEST"
 
 # name|Special:FilePath URL (stable redirect to the current original)
 ASSETS=(
-  "example.jpg|https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg"
-  "png-transparency-demo.png|https://commons.wikimedia.org/wiki/Special:FilePath/PNG_transparency_demonstration_1.png"
+    "example.jpg|https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg"
+    "png-transparency-demo.png|https://commons.wikimedia.org/wiki/Special:FilePath/PNG_transparency_demonstration_1.png"
 )
 
 echo "==> Fetching Creative-Commons sample assets from Wikimedia Commons..."
 for entry in "${ASSETS[@]}"; do
-  name="${entry%%|*}"
-  url="${entry#*|}"
-  out="$DEST/$name"
-  if [ -f "$out" ]; then
-    echo "  [=] $name (already downloaded)"
-  else
-    echo "  [v] $name"
-    curl -fsSL -A "hackagon-e2e/1.0 (dev test fixtures)" -o "$out" "$url"
-  fi
+    name="${entry%%|*}"
+    url="${entry#*|}"
+    out="$DEST/$name"
+    if [ -f "$out" ]; then
+        echo "  [=] $name (already downloaded)"
+    else
+        echo "  [v] $name"
+        curl -fsSL -A "hackagon-e2e/1.0 (dev test fixtures)" -o "$out" "$url"
+    fi
 done
 
 cat >"$DEST/ATTRIBUTION.md" <<'EOF'
@@ -51,10 +51,10 @@ attribution with the files:
 EOF
 
 if [ -f "$LOCK" ]; then
-  echo "==> Verifying checksums against the lockfile..."
-  (cd "$DEST" && sha256sum -c "$(basename "$LOCK")")
+    echo "==> Verifying checksums against the lockfile..."
+    (cd "$DEST" && sha256sum -c "$(basename "$LOCK")")
 else
-  echo "==> First fetch — recording checksums (trust-on-first-use)..."
-  (cd "$DEST" && sha256sum ./*.jpg ./*.png >"$(basename "$LOCK")")
+    echo "==> First fetch — recording checksums (trust-on-first-use)..."
+    (cd "$DEST" && sha256sum ./*.jpg ./*.png >"$(basename "$LOCK")")
 fi
 echo "==> CC assets ready in $DEST (see ATTRIBUTION.md)."

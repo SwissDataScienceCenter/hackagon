@@ -11,14 +11,14 @@ source "$HERE/lib.sh"
 
 require_docker
 if ! container_running; then
-  echo "error: devcontainer is not running — start it with scripts/up.sh" >&2
-  exit 1
+    echo "error: devcontainer is not running — start it with scripts/up.sh" >&2
+    exit 1
 fi
 
 if [ $# -eq 0 ]; then
-  compose exec -u "$CONTAINER_USER" -w "$WORKDIR" "$SERVICE" bash -l
+    compose exec -u "$CONTAINER_USER" -w "$WORKDIR" "$SERVICE" bash -l
 else
-  # %q-quote each argument so spaces/quotes survive the bash -lc round-trip.
-  cmd=$(printf "%q " "$@")
-  in_container "$cmd"
+    # %q-quote each argument so spaces/quotes survive the bash -lc round-trip.
+    cmd=$(printf "%q " "$@")
+    in_container "$cmd"
 fi

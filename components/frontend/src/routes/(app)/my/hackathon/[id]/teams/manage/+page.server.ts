@@ -405,7 +405,9 @@ export const actions: Actions = {
     const text = String(form.get("fileText") ?? "")
     const filename = String(form.get("filename") ?? "import.csv")
     if (text.trim() === "") {
-      return fail(400, { importError: "Nothing to apply — preview a file first." })
+      return fail(400, {
+        importError: "Nothing to apply — preview a file first.",
+      })
     }
 
     const parsed = parseRosterFile(text, filename)
@@ -451,9 +453,8 @@ export const actions: Actions = {
     let applied = 0
     for (const row of plan.rows) {
       if (row.status === "unchanged" || row.status === "error") continue
-      const targetId =
-        row.target?.startsWith("new:") ?
-          newTeamIds[Number(row.target.slice(4))]
+      const targetId = row.target?.startsWith("new:")
+        ? newTeamIds[Number(row.target.slice(4))]
         : (row.target ?? null)
       if (row.target?.startsWith("new:") && !targetId) {
         // Its team failed to be created; the failure is already reported above

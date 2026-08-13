@@ -23,17 +23,20 @@ require_vendor
 export COMPOSE_PROFILES=migration
 
 case "${1:-}" in
-  --tunnel)
+--tunnel)
     compose stop tunnel && rm -f "$STATE/tunnel-url"
-    echo "tunnel stopped — the public URL is gone; the stack is still running." ;;
-  --volumes)
+    echo "tunnel stopped — the public URL is gone; the stack is still running."
+    ;;
+--volumes)
     echo "==> stopping and DELETING ALL VOLUMES (recorded sessions included)…"
     compose down --volumes --remove-orphans
     rm -f "$STATE/tunnel-url" "$STATE/env.prepared"
     echo "done. Next up.sh re-randomizes secrets, re-runs migrations, and"
-    echo "re-creates the admin account from .secrets.env (kept on purpose)." ;;
-  *)
+    echo "re-creates the admin account from .secrets.env (kept on purpose)."
+    ;;
+*)
     compose down --remove-orphans
     rm -f "$STATE/tunnel-url"
-    echo "stopped (data volumes kept)." ;;
+    echo "stopped (data volumes kept)."
+    ;;
 esac

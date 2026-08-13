@@ -29,44 +29,44 @@ HEADED=0
 GREP=""
 
 while [ $# -gt 0 ]; do
-  case "$1" in
+    case "$1" in
     smoke | journey | all | mobile | openreplay) SUITE="$1" ;;
     --no-reset) RESET=0 ;;
     --headed) HEADED=1 ;;
     --grep)
-      shift
-      GREP="${1:?--grep needs a pattern}"
-      ;;
+        shift
+        GREP="${1:?--grep needs a pattern}"
+        ;;
     --until-act)
-      shift
-      export JOURNEY_UNTIL_ACT="${1:?--until-act needs an act number (1..8)}"
-      ;;
+        shift
+        export JOURNEY_UNTIL_ACT="${1:?--until-act needs an act number (1..8)}"
+        ;;
     -h | --help)
-      sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
-      exit 0
-      ;;
+        sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
     *)
-      echo "unknown argument: $1 (see --help)" >&2
-      exit 2
-      ;;
-  esac
-  shift
+        echo "unknown argument: $1 (see --help)" >&2
+        exit 2
+        ;;
+    esac
+    shift
 done
 
 if [ "$SUITE" = "all" ]; then
-  # Two independent, fully deterministic runs: seeded smoke, then a clean
-  # journey. Each does its own reset.
-  args=()
-  [ "$HEADED" -eq 1 ] && args+=(--headed)
-  [ -n "$GREP" ] && args+=(--grep "$GREP")
-  bash "${BASH_SOURCE[0]}" smoke "${args[@]+"${args[@]}"}"
-  bash "${BASH_SOURCE[0]}" journey "${args[@]+"${args[@]}"}"
-  exit 0
+    # Two independent, fully deterministic runs: seeded smoke, then a clean
+    # journey. Each does its own reset.
+    args=()
+    [ "$HEADED" -eq 1 ] && args+=(--headed)
+    [ -n "$GREP" ] && args+=(--grep "$GREP")
+    bash "${BASH_SOURCE[0]}" smoke "${args[@]+"${args[@]}"}"
+    bash "${BASH_SOURCE[0]}" journey "${args[@]+"${args[@]}"}"
+    exit 0
 fi
 
 if [ "$SUITE" = "journey" ] && [ "$RESET" -eq 0 ]; then
-  echo "note: the journey suite requires a fresh database — ignoring --no-reset."
-  RESET=1
+    echo "note: the journey suite requires a fresh database — ignoring --no-reset."
+    RESET=1
 fi
 
 echo "════════════════════════════════════════════════════════════"
@@ -92,32 +92,32 @@ WIRED_URL=""
 # longer contend at all. Do not reintroduce a guard here.
 
 if [ -f "$AUTH_WIRE" ]; then
-  # Remember whether a tunnel was wired BEFORE unwiring, and put it back when
-  # the run ends. Restoring localhost is required for the suite, but leaving it
-  # there silently breaks the public link every single time someone runs the
-  # tests — which is exactly what kept happening: the URL still served pages,
-  # so it looked fine until somebody tried to log in.
-  # Read it out of the OVERLAY, not config.yaml: wiring writes the tunnel
-  # issuer to the gitignored config.local.yaml precisely so the tracked file
-  # never carries a hostname that dies with the tunnel. The file's absence is
-  # the "no tunnel wired" signal — sed on a missing file is silenced below.
-  FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
-  # Test -f FIRST. `2>/dev/null` hides sed's complaint but not its exit code,
-  # and under `set -euo pipefail` a missing file made this assignment kill the
-  # script before it printed a single word — which is every FRESH CLONE, since
-  # config.local.yaml only exists once auth-wire.sh has written one. It went
-  # unnoticed because every machine that had ever wired a tunnel had the file.
-  WIRED_URL=""
-  if [ -f "$FRONTEND_LOCAL" ]; then
-    WIRED_URL="$(sed -n 's|^[[:space:]]*issuer:[[:space:]]*\(https://[^/]*\)/realms/.*|\1|p' "$FRONTEND_LOCAL" | head -1)"
-  fi
+    # Remember whether a tunnel was wired BEFORE unwiring, and put it back when
+    # the run ends. Restoring localhost is required for the suite, but leaving it
+    # there silently breaks the public link every single time someone runs the
+    # tests — which is exactly what kept happening: the URL still served pages,
+    # so it looked fine until somebody tried to log in.
+    # Read it out of the OVERLAY, not config.yaml: wiring writes the tunnel
+    # issuer to the gitignored config.local.yaml precisely so the tracked file
+    # never carries a hostname that dies with the tunnel. The file's absence is
+    # the "no tunnel wired" signal — sed on a missing file is silenced below.
+    FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
+    # Test -f FIRST. `2>/dev/null` hides sed's complaint but not its exit code,
+    # and under `set -euo pipefail` a missing file made this assignment kill the
+    # script before it printed a single word — which is every FRESH CLONE, since
+    # config.local.yaml only exists once auth-wire.sh has written one. It went
+    # unnoticed because every machine that had ever wired a tunnel had the file.
+    WIRED_URL=""
+    if [ -f "$FRONTEND_LOCAL" ]; then
+        WIRED_URL="$(sed -n 's|^[[:space:]]*issuer:[[:space:]]*\(https://[^/]*\)/realms/.*|\1|p' "$FRONTEND_LOCAL" | head -1)"
+    fi
 
-  bash "$AUTH_WIRE" --restore ||
-    echo "warn: could not restore OIDC issuers; logins may fail if a tunnel is wired" >&2
+    bash "$AUTH_WIRE" --restore ||
+        echo "warn: could not restore OIDC issuers; logins may fail if a tunnel is wired" >&2
 
-  if [ -n "$WIRED_URL" ]; then
-    echo "note: tunnel auth was wired to $WIRED_URL — it will be re-wired when this run finishes"
-  fi
+    if [ -n "$WIRED_URL" ]; then
+        echo "note: tunnel auth was wired to $WIRED_URL — it will be re-wired when this run finishes"
+    fi
 fi
 
 # Session replay is NO LONGER BORROWED AWAY. Do not reintroduce that.
@@ -153,8 +153,8 @@ OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
 FRONTEND_LOCAL="$ROOT_DIR/components/frontend/data/test/config/config.local.yaml"
 REPLAY_STUBBED=0
 if [ "$SUITE" = "mobile" ] && [ -f "$OVERLAY" ] &&
-  ! bash "$OVERLAY" has "$FRONTEND_LOCAL" replay; then
-  bash "$OVERLAY" set "$FRONTEND_LOCAL" replay >/dev/null <<'STUB'
+    ! bash "$OVERLAY" has "$FRONTEND_LOCAL" replay; then
+    bash "$OVERLAY" set "$FRONTEND_LOCAL" replay >/dev/null <<'STUB'
 replay:
   enabled: true
   # NOTHING LISTENS HERE, and nothing ever will. The tracker is only handed an
@@ -166,14 +166,14 @@ replay:
   projectKey: mobile-sweep-never-ingests
   allowInsecureOrigin: true
 STUB
-  REPLAY_STUBBED=1
-  echo "note: no session replay wired — added a no-ingest \`replay\` block so the consent banner renders for this run"
-  # The frontend reads its config once at boot, so the block is inert until it
-  # restarts. Stop the built server here; wait-ready.sh starts a fresh one
-  # below. (reset.sh does this too, but a --no-reset run would otherwise sweep
-  # a server that never saw the block — and every banner assertion would fail
-  # for want of a banner.)
-  bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 || true
+    REPLAY_STUBBED=1
+    echo 'note: no session replay wired — added a no-ingest `replay` block so the consent banner renders for this run'
+    # The frontend reads its config once at boot, so the block is inert until it
+    # restarts. Stop the built server here; wait-ready.sh starts a fresh one
+    # below. (reset.sh does this too, but a --no-reset run would otherwise sweep
+    # a server that never saw the block — and every banner assertion would fail
+    # for want of a banner.)
+    bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 || true
 fi
 
 # EXIT, not a success path — a failed or interrupted run must not leave the
@@ -182,33 +182,33 @@ fi
 # boot; that is why re-wiring restores logins through the tunnel and not just
 # on localhost.
 on_exit() {
-  if [ "$REPLAY_STUBBED" -eq 1 ]; then
-    echo
-    echo "==> Removing the no-ingest \`replay\` block this run added"
-    # `remove`, never `rm`: the overlay is shared, and this script has no
-    # business deleting a key it did not write (see config-overlay.sh).
-    bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay >/dev/null
-    # The frontend read the block once at boot, so it keeps rendering the ask
-    # until it restarts. Bounce the built one — no docker needed, which matters
-    # because this script runs INSIDE the dev container.
-    bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 &&
-      bash "$HERE/prod-frontend.sh" ensure >/dev/null 2>&1 ||
-      echo "warn: the replay block is gone but the frontend was not restarted;" \
-        "run prod-frontend.sh stop && … ensure" >&2
-  fi
-  if [ -n "$WIRED_URL" ]; then
-    echo
-    echo "==> Re-wiring tunnel auth to $WIRED_URL"
-    bash "$AUTH_WIRE" "$WIRED_URL" >/dev/null 2>&1 ||
-      echo "warn: re-wiring failed; run auth-wire.sh $WIRED_URL by hand" >&2
-  fi
+    if [ "$REPLAY_STUBBED" -eq 1 ]; then
+        echo
+        echo '==> Removing the no-ingest `replay` block this run added'
+        # `remove`, never `rm`: the overlay is shared, and this script has no
+        # business deleting a key it did not write (see config-overlay.sh).
+        bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay >/dev/null
+        # The frontend read the block once at boot, so it keeps rendering the ask
+        # until it restarts. Bounce the built one — no docker needed, which matters
+        # because this script runs INSIDE the dev container.
+        bash "$HERE/prod-frontend.sh" stop >/dev/null 2>&1 &&
+            bash "$HERE/prod-frontend.sh" ensure >/dev/null 2>&1 ||
+            echo "warn: the replay block is gone but the frontend was not restarted;" \
+                "run prod-frontend.sh stop && … ensure" >&2
+    fi
+    if [ -n "$WIRED_URL" ]; then
+        echo
+        echo "==> Re-wiring tunnel auth to $WIRED_URL"
+        bash "$AUTH_WIRE" "$WIRED_URL" >/dev/null 2>&1 ||
+            echo "warn: re-wiring failed; run auth-wire.sh $WIRED_URL by hand" >&2
+    fi
 }
 if [ -n "$WIRED_URL" ] || [ "$REPLAY_STUBBED" -eq 1 ]; then
-  trap on_exit EXIT
+    trap on_exit EXIT
 fi
 
 if [ "$RESET" -eq 1 ]; then
-  bash "$HERE/reset.sh"
+    bash "$HERE/reset.sh"
 fi
 
 bash "$HERE/up.sh"
@@ -217,15 +217,15 @@ bash "$HERE/wait-ready.sh"
 # The openreplay suite asserts against the seed fixture (it gives h1 a
 # registration form and types into it), so it seeds exactly like smoke.
 if [ "$SUITE" = "smoke" ] || [ "$SUITE" = "openreplay" ]; then
-  bash "$HERE/seed.sh"
+    bash "$HERE/seed.sh"
 elif [ "$SUITE" = "mobile" ]; then
-  # Fresh mobile runs use the seeded fixture; --no-reset runs the battery
-  # over whatever world is live (e.g. a journey frozen at some act) without
-  # polluting it with the fixture.
-  if [ "$RESET" -eq 1 ]; then bash "$HERE/seed.sh"; fi
+    # Fresh mobile runs use the seeded fixture; --no-reset runs the battery
+    # over whatever world is live (e.g. a journey frozen at some act) without
+    # polluting it with the fixture.
+    if [ "$RESET" -eq 1 ]; then bash "$HERE/seed.sh"; fi
 else
-  # The journey's extras crowd (cast.json) must exist in Keycloak.
-  bash "$HERE/roster.sh"
+    # The journey's extras crowd (cast.json) must exist in Keycloak.
+    bash "$HERE/roster.sh"
 fi
 
 bash "$HERE/probe.sh"
@@ -233,8 +233,8 @@ bash "$HERE/probe.sh"
 cd "$SKILL_DIR"
 
 if [ ! -d node_modules ]; then
-  echo "==> Installing test dependencies (pnpm)..."
-  pnpm install
+    echo "==> Installing test dependencies (pnpm)..."
+    pnpm install
 fi
 
 # Idempotent: returns quickly when browser + libs are already present.
@@ -242,7 +242,7 @@ fi
 # and Firefox then fails at LAUNCH time, which the fallback cannot catch.
 echo "==> Ensuring Playwright Firefox is installed..."
 pnpm exec playwright install --with-deps firefox 2>/dev/null ||
-  pnpm exec playwright install firefox
+    pnpm exec playwright install firefox
 
 PW_ARGS=(test --project="$SUITE")
 [ "$HEADED" -eq 1 ] && PW_ARGS+=(--headed)
