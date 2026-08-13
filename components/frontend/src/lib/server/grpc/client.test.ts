@@ -2,6 +2,11 @@ import { beforeAll, describe, it, expect } from "vitest"
 import { createAuthorizedGrpc, requireGrpc } from "./client"
 import type { AuthorizedGrpc } from "./client"
 import { initBackendChannel } from "./channel"
+import {
+  HealthCheckRequest,
+  HealthCheckResponse,
+  ServingStatus,
+} from "./health_client"
 
 beforeAll(() => {
   initBackendChannel({
@@ -46,5 +51,40 @@ describe("createAuthorizedGrpc", () => {
 
     expect(typeof result.project.propose).toBe("function")
     expect(typeof result.project.edit).toBe("function")
+  })
+})
+
+// health_client.ts is hand-written, so its decoding is not covered by the
+// proto contract the way the generated stubs are.
+describe("HealthCheckResponse", () => {
+  it("should decode the SERVING response the backend sends", () => {
+    // field 1 (status), wire type 0 (varint), value 1 (SERVING)
+    expect(HealthCheckResponse.decode(new Uint8Array([0x08, 0x01]))).toEqual({
+      status: ServingStatus.SERVING,
+    })
+  })
+
+  // Skipping an unknown field is the whole reason the field arm continues
+  // instead of breaking; a break re-skips the varint it just read.
+  it("should decode a status alongside a field it does not know", () => {
+    // status=SERVING, then field 2 (wire type 2), 2 bytes: "hi"
+    const bytes = new Uint8Array([0x08, 0x01, 0x12, 0x02, 0x68, 0x69])
+
+    expect(HealthCheckResponse.decode(bytes)).toEqual({
+      status: ServingStatus.SERVING,
+    })
+  })
+})
+
+describe("HealthCheckRequest", () => {
+  it("should put the service on the wire so the server is asked about it", () => {
+    const bytes = HealthCheckRequest.encode({ service: "hi" }).finish()
+
+    // field 1 (service), wire type 2 (length-delimited), 2 bytes: "hi"
+    expect(Array.from(bytes)).toEqual([0x0a, 0x02, 0x68, 0x69])
+  })
+
+  it("should send nothing when no service is named, asking after the server", () => {
+    expect(Array.from(HealthCheckRequest.encode({}).finish())).toEqual([])
   })
 })

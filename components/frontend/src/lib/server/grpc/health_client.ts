@@ -67,9 +67,15 @@ function createBaseHealthCheckRequest(): HealthCheckRequest {
 
 export const HealthCheckRequest: MessageFns<HealthCheckRequest> = {
   encode(
-    _: HealthCheckRequest,
+    message: HealthCheckRequest,
     writer: BinaryWriter = new BinaryWriter(),
   ): BinaryWriter {
+    // Without this the field is silently dropped and the server answers about
+    // its overall status, so asking after a named service reads back SERVING
+    // however that service is really doing.
+    if (message.service !== undefined && message.service !== "") {
+      writer.uint32(10).string(message.service)
+    }
     return writer
   },
   decode(
@@ -85,7 +91,7 @@ export const HealthCheckRequest: MessageFns<HealthCheckRequest> = {
       switch (tag >>> 3) {
         case 1:
           message.service = reader.string()
-          break
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) break
       reader.skip(tag & 7)
@@ -140,7 +146,7 @@ export const HealthCheckResponse: MessageFns<HealthCheckResponse> = {
       switch (tag >>> 3) {
         case 1:
           message.status = reader.int32()
-          break
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) break
       reader.skip(tag & 7)

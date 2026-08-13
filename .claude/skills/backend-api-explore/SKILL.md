@@ -89,6 +89,7 @@ grpcurl -plaintext localhost:3000 list
 ```
 
 ```
+grpc.health.v1.Health
 grpc.reflection.v1.ServerReflection
 grpc.reflection.v1alpha.ServerReflection
 hackathon.HackathonService
@@ -97,12 +98,13 @@ hackathon.PhaseService
 hackathon.ProjectService
 hackathon.TeamService
 hackathon.TrackService
-health.HealthService
 user.UserService
+vote.VoteService
 ```
 
-Note the names come from the proto `package`, not the folder: `health.*`,
-`user.*`, and everything else under `hackathon.*`.
+Note the names come from the proto `package`, not the folder: `user.*`,
+`vote.*`, and everything else under `hackathon.*`. `grpc.health.v1.Health` is
+the well-known health service from grpc-go — there is no `api/proto/health/`.
 
 **What this does and doesn't tell you:** it lists services _registered on the
 server_. A service appears here as soon as `server.go` registers it — that is
