@@ -1,0 +1,45 @@
+# Bucket and bucket policy, once, in-cluster.
+#
+# The chart deliberately creates neither (helm-chart/templates/NOTES.txt says
+# so). Without the policy every stored image 403s while uploads succeed, which
+# is the same shape of asymmetric failure as the missing Host rewrite — so the
+# rig sets it and then PROVES both halves in verify.sh: a public prefix
+# readable with no credentials at all, and a private one that is not.
+#
+# The public prefixes are the ones .devcontainer/rustfs-init.sh publishes, and
+# for the same reason: they render on pages that need no login, which is what
+# lets their stable path live in a database column.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: store-init
+  namespace: hackagon-store
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: MC_IMAGE_PLACEHOLDER
+          env:
+            - name: AK
+              valueFrom: { secretKeyRef: { name: store-credentials, key: accessKey } }
+            - name: SK
+              valueFrom: { secretKeyRef: { name: store-credentials, key: secretKey } }
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              until mc alias set s3 http://store.hackagon-store.svc.cluster.local:9000 "$AK" "$SK" >/dev/null 2>&1; do
+                echo "waiting for the store"; sleep 2
+              done
+              mc mb --ignore-existing s3/BUCKET_PLACEHOLDER
+              for p in hackathons users site; do
+                mc anonymous set download "s3/BUCKET_PLACEHOLDER/$p"
+              done
+              # A private object to prove the other half of the policy: teams/*
+              # must NOT be world-readable.
+              echo "private-canary" | mc pipe s3/BUCKET_PLACEHOLDER/teams/canary.txt
+              mc anonymous list s3/BUCKET_PLACEHOLDER

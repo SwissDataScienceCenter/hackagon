@@ -10,7 +10,16 @@ data:
     server:
       port: {{ .Values.backend.config.server.port | quote }}
       adminemail: {{ .Values.backend.config.server.adminemail | replace "{baseDomain}" .Values.baseDomain | quote }}
-      adminkeycloakid: {{ .Values.backend.config.server.adminkeycloakid | quote }}
+      {{- /*
+      Required at RENDER time because it is required at BOOT time:
+      internal/config/config.go refuses the whole configuration with
+      "server.adminkeycloakid is required" when it is empty. Shipped empty in
+      values.yaml, `helm install` succeeded and the backend then sat in
+      CrashLoopBackOff with the reason only in a pod log — observed on a fresh
+      install of the chart's own defaults. Failing here costs the operator ten
+      seconds instead of ten minutes.
+      */}}
+      adminkeycloakid: {{ .Values.backend.config.server.adminkeycloakid | required "backend.config.server.adminkeycloakid is required: the Keycloak `sub` (not the DB UUID) of the platform administrator. The backend refuses to start without it." | quote }}
     database:
       driver: {{ .Values.backend.config.database.driver | quote }}
       host: {{ include "hackagon.postgresqlServiceName" . | quote }}

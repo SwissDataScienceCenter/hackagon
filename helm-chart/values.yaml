@@ -23,6 +23,24 @@ frontend:
       cpu: 500m
       memory: 512Mi
 
+  # -- Header the SvelteKit node adapter reads the public SCHEME from.
+  #
+  # Without it adapter-node ASSUMES "https", and everything built from the
+  # public origin inherits the assumption: the URLs /auth/providers advertises,
+  # the target of the sign-in form, SvelteKit's CSRF comparison, and the
+  # `__Secure-` prefix Auth.js puts on its cookies. On a deployment reached over
+  # plain http that produces a site where every page returns 200 and login is
+  # dead — see the comment in templates/frontend-deployment.yaml.
+  #
+  # ingress-nginx sets X-Forwarded-Proto unconditionally. Empty disables the
+  # lookup and restores the assumption.
+  protocolHeader: "x-forwarded-proto"
+
+  # -- Extra environment for the frontend container, as a list of core v1
+  # EnvVar. For the knobs this chart does not model: ORIGIN, BODY_SIZE_LIMIT,
+  # XFF_DEPTH (adapter-node), NODE_EXTRA_CA_CERTS (node).
+  extraEnv: []
+
   # -- Frontend config.yaml content (non-sensitive settings)
   config:
     log:
@@ -78,6 +96,16 @@ frontend:
   ingress:
     enabled: true
     ingressClass: "webapprouting.kubernetes.azure.com"
+
+    # -- Upstream header buffer for the frontend's routes. The OIDC callback
+    # answers with a chunked, multi-kilobyte Set-Cookie block (the session JWT
+    # carries the Keycloak access and refresh tokens), and nginx's 4k default
+    # answers 502 "upstream sent too big header" rather than truncating —
+    # AFTER the login has actually succeeded, so only the browser ever sees it.
+    # Observed on a real install; see templates/frontend-ingress.yaml. Blank it
+    # for a controller that does not understand the annotation.
+    proxyBufferSize: "16k"
+
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-production
     hosts:
@@ -114,6 +142,10 @@ backend:
     server:
       port: "3000"
       adminemail: "admin@{baseDomain}"
+      # -- REQUIRED. The Keycloak `sub` of the platform administrator — the
+      # subject claim in the JWT, not the DB UUID (the backend has no user row
+      # to look up before the first request). The backend refuses to start
+      # without it, so the chart refuses to render without it.
       adminkeycloakid: ""
     database:
       driver: postgres
@@ -261,10 +293,16 @@ storage:
       # what makes an out-of-cluster store routable from an Ingress at all.
       # Name an existing Service instead when the store runs in this cluster.
       #
-      # ⚠ ingress-nginx can be configured to refuse ExternalName backends
-      # (`disable-service-external-name`, off by default). On a cluster that
-      # sets it, this route 503s: either name an in-cluster Service here, or
-      # set `enabled: false` and let the frontend proxy /objects.
+      # ⚠ ingress-nginx can be configured to refuse ExternalName backends. The
+      # switch is the controller's COMMAND-LINE FLAG
+      # `--disable-svc-external-name` (off by default) — not a ConfigMap key, as
+      # this comment used to say; setting `disable-service-external-name` in the
+      # controller ConfigMap is silently ignored, so a cluster believed to be
+      # locked down might not be. Verified both ways on a real controller
+      # (.claude/skills/k3d-chart-rig): with the flag this route answers 503 and
+      # the upstream disappears; with only the ConfigMap key it keeps serving.
+      # On a cluster that sets the flag: either name an in-cluster Service here,
+      # or set `enabled: false` and let the frontend proxy /objects.
       service:
         name: ""
         port: null
@@ -320,9 +358,25 @@ keycloak:
   proxy:
     headers: xforwarded
 
-  # -- Ingress for Keycloak (managed by parent chart)
+  # -- Ingress for Keycloak, rendered by the PARENT chart (the subchart's own
+  # ingress.public/ingress.admin stay off, so the hostname is decided once).
+  #
+  # This used to be `enabled: false` while the parent rendered the Ingress
+  # unconditionally — the flag was decoration. `true` is what the chart has
+  # always DONE, so no existing deployment changes.
   ingress:
-    enabled: false
+    enabled: true
+    # -- Empty means "the same class that serves the frontend"
+    # (frontend.ingress.ingressClass). This was hard-coded to the AKS
+    # app-routing class, which left Keycloak unreachable on every other
+    # cluster while the app itself came up — a deployment serving the product
+    # and not its login.
+    ingressClass: ""
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+    # -- TLS secret for the Keycloak host. Empty renders no `tls:` block at
+    # all, which is what a cluster with no certificate issuer needs.
+    tlsSecretName: "{releaseName}-keycloak-tls"
 
 # ============================================================
 # PostgreSQL (bitnami) — two databases, two users

@@ -1,0 +1,6 @@
+# Downloaded, pinned toolchain (k3d, helm, kubectl). Binaries, never tracked.
+bin/
+# Cluster kubeconfig, generated passwords, rewritten realm — all per-run.
+.state/
+# Anything the scripts write for a human to read.
+.artifacts/

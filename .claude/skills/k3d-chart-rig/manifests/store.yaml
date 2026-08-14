@@ -1,0 +1,74 @@
+# TEST-ONLY object store for the rig.
+#
+# The chart deploys no store, on purpose (helm-chart/values.yaml says why: a
+# bucket must outlive the release). This is not a chart template and never
+# should be — it is the thing the chart POINTS AT, supplied by the rig so the
+# /objects route has an upstream to prove itself against.
+#
+# It lives in its OWN namespace and is addressed by cluster DNS
+# (store.hackagon-store.svc.cluster.local:9000). That is deliberate: it means
+# `storage.objects.ingress.service.name` stays EMPTY, so the chart renders its
+# ExternalName Service — which is the third claim this rig exists to check.
+# Naming the Service directly would route the same traffic while skipping the
+# object under test.
+#
+# emptyDir, not a PVC: `down.sh` deletes the cluster, so persistence would be a
+# lie. Credentials come from the Secret `store-credentials`, created by up.sh
+# from generated values — nothing here carries one.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hackagon-store
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: store
+  namespace: hackagon-store
+  labels: { app: store }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: store }
+  template:
+    metadata:
+      labels: { app: store }
+    spec:
+      containers:
+        - name: minio
+          image: MINIO_IMAGE_PLACEHOLDER
+          args: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom: { secretKeyRef: { name: store-credentials, key: accessKey } }
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: store-credentials, key: secretKey } }
+            # No browser console needed and one less surface to reason about.
+            - name: MINIO_BROWSER
+              value: "off"
+          ports:
+            - { name: s3, containerPort: 9000 }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: 9000 }
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: store
+  namespace: hackagon-store
+  labels: { app: store }
+spec:
+  type: ClusterIP
+  selector: { app: store }
+  ports:
+    - { name: s3, port: 9000, targetPort: 9000, protocol: TCP }

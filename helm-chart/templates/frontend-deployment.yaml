@@ -31,6 +31,42 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            {{- /*
+            THE PUBLIC ORIGIN. adapter-node does not know what scheme the
+            browser used; it INFERS one, and with neither ORIGIN nor
+            PROTOCOL_HEADER set its inference is the literal string "https".
+            Everything downstream is built from that guess: SvelteKit's CSRF
+            check compares the request's `Origin` header against it, and
+            Auth.js picks its cookie NAMES from it (`__Secure-…` when it
+            believes the connection is secure).
+
+            Observed on a chart install reached over plain http: /auth/providers
+            advertised `https://app…:8090/auth/callback/keycloak`, the sign-in
+            form POSTed to an https URL nothing served, and the CSRF cookie was
+            never stored because it was issued `Secure` over an http
+            connection. Login was dead, and every page still returned 200 —
+            which is exactly why "the pods are Running" is not the test.
+
+            ingress-nginx always sets X-Forwarded-Proto, so reading it makes the
+            scheme OBSERVED instead of assumed, and correct in both directions.
+
+            ⚠ This is not the trap recorded in .claude/CLAUDE.md about
+            X-Forwarded-Proto and the tunnel. That one is about the VITE dev
+            server, which ignores PROTOCOL_HEADER — the header changed what
+            Auth.js believed while `event.url` stayed http, and the two
+            disagreed about the cookie name. adapter-node applies this header to
+            `event.url` itself, so here the two cannot disagree. Keep
+            `frontend.config.cookies.useSecure` in step with the real scheme
+            anyway.
+
+            HOST_HEADER is deliberately left at its default (`host`): ingress
+            controllers forward the requested host including its port, and a
+            missing X-Forwarded-Host would leave the origin undefined.
+            */}}
+            {{- with .Values.frontend.protocolHeader }}
+            - name: PROTOCOL_HEADER
+              value: {{ . | quote }}
+            {{- end }}
             {{- if .Values.storage.enabled }}
             {{- /*
             The app owns `/objects/*` as a FALLBACK route
@@ -46,6 +82,15 @@ spec:
             */}}
             - name: STORAGE_ENDPOINT
               value: {{ include "hackagon.storageEndpointURL" . | quote }}
+            {{- end }}
+            {{- /*
+            Escape hatch. adapter-node reads several more environment variables
+            (ORIGIN, ADDRESS_HEADER, XFF_DEPTH, BODY_SIZE_LIMIT) and node itself
+            reads NODE_EXTRA_CA_CERTS; a topology this chart did not anticipate
+            needs somewhere to say so without a template change.
+            */}}
+            {{- with .Values.frontend.extraEnv }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
             - name: http
