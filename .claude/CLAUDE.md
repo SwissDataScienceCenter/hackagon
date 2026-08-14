@@ -257,11 +257,26 @@ vote binds.
 
 This design has **no account menu at all** — identity is a monogram and sign-out
 is a top-bar button — so `02-login` and `07-account-menu` were re-specified
-rather than repaired. Nav IA is one meaning per entry: Dashboard (yours),
-Hackathons (all, searchable), About; the wordmark goes home for everyone.
+rather than repaired. Nav IA is one meaning per entry: Dashboard (yours) and
+**All Hackathons** (all, searchable); the wordmark goes home for everyone.
 "Hackathons" used to resolve to the dashboard when signed in and the browse page
 when not, so the same word meant two things and the browse page was unreachable
 from the chrome for exactly the people with an account.
+
+**Two distinct labels were not enough** (fixed 2026-08-13). Pointing the two
+entries at two destinations stopped them fighting, but "Dashboard" and
+"Hackathons" are both nouns for a list of hackathons and neither word says
+*whose* — and the bar's own wordmark reads "Hackathons" too, so the noun appeared
+twice, once as the platform and once as a page inside it. The pair is separated
+three ways now: the label states the scope (`All Hackathons`), an icon carries it
+pre-reading (`layout-dashboard` vs `compass`), and a one-line hint spells it out —
+as a `title` on the bar, as visible text in the mobile panel, where there is no
+hover to reveal a tooltip. **About left the navbar in the same change**: the page
+stays (it is CMS-backed and organiser-editable), `AppFooter`'s Platform column
+links it from every route in both groups — `AppShell` mounts that footer for
+`(app)` as well as `(public)` — and Privacy and Terms are the same kind of page
+and were never in the bar either. Absent-everywhere is what the "every entry on
+every page" rule asks for; absent-only-once-you-sign-in is what it forbids.
 
 **3. Bringing `origin/main` in (2026-08-06)** —
 `docs/review-main-2026-08-06.md`: 183 commits, 746 files, reviewed from code on
