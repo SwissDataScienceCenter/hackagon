@@ -5,6 +5,8 @@
      * "open my own mail client" or "paste into whatever I use" — this builds
      * both, rather than leaving the copy inert in the database.
      */
+    import { SvelteSet } from 'svelte/reactivity';
+
     interface Recipient {
         email: string;
         name: string;
@@ -38,7 +40,7 @@
     const filledBody = $derived(fill(body));
 
     const unresolved = $derived.by(() => {
-        const found = new Set<string>();
+        const found = new SvelteSet<string>();
         for (const m of `${filledSubject}\n${filledBody}`.matchAll(PER_RECIPIENT)) {
             found.add(m[0]);
         }
@@ -102,6 +104,7 @@
                     Too many recipients for a mail link — use the copy buttons
                 </span>
             {:else}
+                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- mailto: is an external scheme, not an app route -->
                 <a href={mailto} class="btn btn-sm btn-accent">
                     Open in email client
                 </a>

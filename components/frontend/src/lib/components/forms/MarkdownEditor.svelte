@@ -430,7 +430,7 @@
                     bind:this={pasteArea}
                     bind:value={pasted}
                     rows={4}
-                    placeholder={'Name\tRole\nAlice\tOrganizer'}
+                    placeholder="Name&#9;Role&#10;Alice&#9;Organizer"
                     class="field field-area font-mono"
                 ></textarea>
             </label>

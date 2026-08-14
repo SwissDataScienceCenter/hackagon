@@ -177,6 +177,7 @@
                                 editing = page.slug;
                             }}>Edit</button
                         >
+                        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- SitePage slug, not a typed route -->
                         <a href="/{page.slug}" target="_blank" rel="noopener">View page</a>
                         <form method="POST" action="?/delete" use:enhance>
                             <input type="hidden" name="slug" value={page.slug} />
@@ -252,6 +253,7 @@
                             </label>
                             <div class="flex flex-wrap gap-2">
                                 <button type="submit" class="btn btn-sm btn-accent">Save changes</button>
+                                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- SitePage slug, not a typed route -->
                                 <a href="/{page.slug}" class="btn btn-sm" target="_blank" rel="noopener">
                                     View page
                                 </a>

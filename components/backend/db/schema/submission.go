@@ -36,7 +36,10 @@ func (Submission) Fields() []ent.Field {
 			Comment("Result or output of the submission (e.g. a URL)."),
 		field.JSON("form", map[string]string{}).
 			Optional().
-			Comment("Structured answers keyed by the organizer's submission form fields (ConfigService.SetSubmissionForm). Validated on write against that schema."),
+			Comment(
+				"Structured answers keyed by the organizer's submission form fields " +
+					"(ConfigService.SetSubmissionForm). Validated on write against that schema.",
+			),
 		field.Enum("status").
 			Values("draft", "final").
 			Comment("Whether the submission is a draft or final."),
