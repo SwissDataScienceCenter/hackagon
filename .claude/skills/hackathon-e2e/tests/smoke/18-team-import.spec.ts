@@ -99,7 +99,9 @@ async function resetBob(hackathonId: string): Promise<string> {
     )
   }
 
-  const teams = await rpcAs("alice", "hackathon.TeamService/List", { hackathonId })
+  const teams = await rpcAs("alice", "hackathon.TeamService/List", {
+    hackathonId,
+  })
   for (const t of teams.data?.teams ?? []) {
     if ((t.members ?? []).some((m: { id?: string }) => m.id === bobId)) {
       await rpcAs("alice", "hackathon.TeamService/RemoveUser", {
@@ -194,7 +196,11 @@ test.describe("team import", () => {
 
     // A format the endpoint does not know is a 404, not a silent CSV.
     expect(
-      (await request.get(`/my/hackathon/${hackathonId}/teams/manage/template/xlsx`)).status(),
+      (
+        await request.get(
+          `/my/hackathon/${hackathonId}/teams/manage/template/xlsx`,
+        )
+      ).status(),
     ).toBe(404)
   })
 
@@ -205,7 +211,9 @@ test.describe("team import", () => {
     // The guard: download, upload the SAME bytes, and require that every row
     // resolves. Nothing is applied — this is about the two halves agreeing.
     const csv = await (
-      await request.get(`/my/hackathon/${hackathonId}/teams/manage/template/csv`)
+      await request.get(
+        `/my/hackathon/${hackathonId}/teams/manage/template/csv`,
+      )
     ).text()
 
     await uploadAndPreview(page, file("teams.csv", csv))
@@ -288,7 +296,9 @@ test.describe("team import", () => {
     await expect(unassignAlice("Team Alpha")).toHaveCount(1)
 
     const csv = await (
-      await request.get(`/my/hackathon/${hackathonId}/teams/manage/template/csv`)
+      await request.get(
+        `/my/hackathon/${hackathonId}/teams/manage/template/csv`,
+      )
     ).text()
     await uploadAndPreview(page, file("teams.csv", csv))
     await expect(
@@ -332,7 +342,10 @@ test.describe("team import", () => {
 
     // The preview states the effect before anything happens.
     await expect(
-      outcome(page, `joins a new team "${teamName}" under "Multilingual Chatbot"`),
+      outcome(
+        page,
+        `joins a new team "${teamName}" under "Multilingual Chatbot"`,
+      ),
     ).toBeVisible()
     await expect(
       teamBadge(page, "Bob Henderson"),
@@ -359,7 +372,9 @@ test.describe("team import", () => {
 
     // Clean up the team this test created: the smoke suite shares one database.
     page.on("dialog", (d) => d.accept())
-    await content(page).getByRole("button", { name: `Delete ${teamName}` }).click()
+    await content(page)
+      .getByRole("button", { name: `Delete ${teamName}` })
+      .click()
     await expect(
       content(page).getByRole("button", { name: `Delete ${teamName}` }),
     ).toHaveCount(0)
@@ -393,7 +408,9 @@ test.describe("team import", () => {
     ).toBeVisible()
     // The good row is still resolved and shown — the organiser sees the whole
     // file judged, not just the first failure.
-    await expect(outcome(page, 'joins "Team Beta" (Multilingual Chatbot)')).toBeVisible()
+    await expect(
+      outcome(page, 'joins "Team Beta" (Multilingual Chatbot)'),
+    ).toBeVisible()
 
     await expect(content(page).getByRole("alert")).toContainText(
       "1 of 2 rows in mixed.csv cannot be applied",
@@ -427,7 +444,10 @@ test.describe("team import", () => {
     // A different answer to a different question: the person resolved, the
     // project did not, and "row 1 failed" would leave the organiser guessing.
     await expect(
-      outcome(page, 'no project of this hackathon is titled "Quantum Blockchain"'),
+      outcome(
+        page,
+        'no project of this hackathon is titled "Quantum Blockchain"',
+      ),
     ).toBeVisible()
     await expect(
       content(page).getByRole("button", { name: /^Apply/ }),

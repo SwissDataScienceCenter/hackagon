@@ -45,10 +45,13 @@ OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
 
 MODE="wire"
 case "${1:-}" in
-  --restore) MODE="restore" ;;
-  --print) MODE="print" ;;
-  "") ;;
-  *) echo "unknown argument: $1" >&2; exit 2 ;;
+--restore) MODE="restore" ;;
+--print) MODE="print" ;;
+"") ;;
+*)
+    echo "unknown argument: $1" >&2
+    exit 2
+    ;;
 esac
 
 # The frontend reads its config ONCE at boot, so a rewrite is inert until it
@@ -67,29 +70,29 @@ esac
 # need the Nix dev shell (a bare `just deploy::proc-comp` there dies with
 # `process-compose: command not found`).
 in_shell() { # run a command in the dev shell, wherever this script started
-  local pc="$ROOT_DIR/.claude/skills/devcontainer-up/scripts/exec.sh"
-  if command -v process-compose >/dev/null 2>&1; then
-    (cd "$ROOT_DIR" && bash -c "$1")
-  elif [ -f "$pc" ]; then
-    (cd "$ROOT_DIR" && MSYS_NO_PATHCONV=1 bash "$pc" just nix::develop default bash -c "$1")
-  else
-    return 1
-  fi
+    local pc="$ROOT_DIR/.claude/skills/devcontainer-up/scripts/exec.sh"
+    if command -v process-compose >/dev/null 2>&1; then
+        (cd "$ROOT_DIR" && bash -c "$1")
+    elif [ -f "$pc" ]; then
+        (cd "$ROOT_DIR" && MSYS_NO_PATHCONV=1 bash "$pc" just nix::develop default bash -c "$1")
+    else
+        return 1
+    fi
 }
 
 restart_frontend() {
-  local ok=1
-  in_shell 'just deploy::proc-comp process restart frontend' >/dev/null 2>&1 && ok=0
-  # The built server, when the e2e harness put one there.
-  if in_shell 'test -s .output/run/e2e-prod-frontend.pid' >/dev/null 2>&1; then
-    in_shell 'bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop &&
+    local ok=1
+    in_shell 'just deploy::proc-comp process restart frontend' >/dev/null 2>&1 && ok=0
+    # The built server, when the e2e harness put one there.
+    if in_shell 'test -s .output/run/e2e-prod-frontend.pid' >/dev/null 2>&1; then
+        in_shell 'bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop &&
               bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh ensure' >/dev/null 2>&1 && ok=0
-  fi
-  [ "$ok" -eq 0 ] && return 0
-  echo "note: restart the frontend for this to take effect:" >&2
-  echo "      just deploy::proc-comp process restart frontend" >&2
-  echo "      (or, if the e2e built server is serving :8081)" >&2
-  echo "      bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop && … ensure" >&2
+    fi
+    [ "$ok" -eq 0 ] && return 0
+    echo "note: restart the frontend for this to take effect:" >&2
+    echo "      just deploy::proc-comp process restart frontend" >&2
+    echo "      (or, if the e2e built server is serving :8081)" >&2
+    echo "      bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop && … ensure" >&2
 }
 
 # Restart only when the overlay actually changed — config-overlay.sh answers
@@ -102,24 +105,27 @@ restart_frontend() {
 #
 # ⚠ Do not run this while a suite is running, even so.
 apply() { # <changed|unchanged> <message>
-  if [ "$1" = "changed" ]; then
-    echo "$2"
-    restart_frontend
-  else
-    echo "$2 (already; nothing changed, frontend left alone)"
-  fi
+    if [ "$1" = "changed" ]; then
+        echo "$2"
+        restart_frontend
+    else
+        echo "$2 (already; nothing changed, frontend left alone)"
+    fi
 }
 
 if [ "$MODE" = "restore" ]; then
-  # `remove`, never `rm`: the tunnel's `oidc` block may share this file.
-  apply "$(bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay)" \
-    "==> session replay is OFF"
-  exit 0
+    # `remove`, never `rm`: the tunnel's `oidc` block may share this file.
+    apply "$(bash "$OVERLAY" remove "$FRONTEND_LOCAL" replay)" \
+        "==> session replay is OFF"
+    exit 0
 fi
 
 require_docker
 url="$(tunnel_url || true)"
-[ -n "$url" ] || { echo "error: no OpenReplay tunnel running — scripts/up.sh first" >&2; exit 1; }
+[ -n "$url" ] || {
+    echo "error: no OpenReplay tunnel running — scripts/up.sh first" >&2
+    exit 1
+}
 
 # The project key, by preference from OpenReplay's own API. The credentials
 # normally come from .secrets.env (written by signup.sh, which up.sh runs);
@@ -133,30 +139,37 @@ url="$(tunnel_url || true)"
 #        -tAc "select project_key from public.projects;"'
 key="${OPENREPLAY_PROJECT_KEY:-}"
 if [ -z "$key" ]; then
-  load_secrets
-  email="${OPENREPLAY_EMAIL:-}"
-  password="${OPENREPLAY_PASSWORD:-}"
-  [ -n "$email" ] && [ -n "$password" ] || {
-    echo "error: no credentials — expected $SECRETS_FILE (written by signup.sh)," >&2
-    echo "       or OPENREPLAY_EMAIL + OPENREPLAY_PASSWORD in the environment," >&2
-    echo "       or OPENREPLAY_PROJECT_KEY to skip the login entirely" >&2
-    exit 1
-  }
+    load_secrets
+    email="${OPENREPLAY_EMAIL:-}"
+    password="${OPENREPLAY_PASSWORD:-}"
+    [ -n "$email" ] && [ -n "$password" ] || {
+        echo "error: no credentials — expected $SECRETS_FILE (written by signup.sh)," >&2
+        echo "       or OPENREPLAY_EMAIL + OPENREPLAY_PASSWORD in the environment," >&2
+        echo "       or OPENREPLAY_PROJECT_KEY to skip the login entirely" >&2
+        exit 1
+    }
 
-  jwt="$(curl -fsS -X POST "$url/api/login" -H 'Content-Type: application/json' \
-    -d "{\"email\":\"$email\",\"password\":\"$password\"}" |
-    sed -n 's/.*"jwt":"\([^"]*\)".*/\1/p')"
-  [ -n "$jwt" ] || { echo "error: OpenReplay login failed for $email" >&2; exit 1; }
+    jwt="$(curl -fsS -X POST "$url/api/login" -H 'Content-Type: application/json' \
+        -d "{\"email\":\"$email\",\"password\":\"$password\"}" |
+        sed -n 's/.*"jwt":"\([^"]*\)".*/\1/p')"
+    [ -n "$jwt" ] || {
+        echo "error: OpenReplay login failed for $email" >&2
+        exit 1
+    }
 
-  key="$(curl -fsS "$url/api/projects" -H "Authorization: Bearer $jwt" |
-    sed -n 's/.*"projectKey":"\([^"]*\)".*/\1/p' | head -1)"
+    key="$(curl -fsS "$url/api/projects" -H "Authorization: Bearer $jwt" |
+        sed -n 's/.*"projectKey":"\([^"]*\)".*/\1/p' | head -1)"
 fi
-[ -n "$key" ] || { echo "error: no project found — sign up at $url/signup first" >&2; exit 1; }
+[ -n "$key" ] || {
+    echo "error: no project found — sign up at $url/signup first" >&2
+    exit 1
+}
 
 # The whole block, key line included — config-overlay.sh checks that it starts
 # with the key it is being filed under, so a block can never land in the
 # overlay under a name that nothing can remove it by.
-block=$(cat <<YAML
+block=$(
+    cat <<YAML
 replay:
   enabled: true
   ingestPoint: $url/ingest
@@ -168,16 +181,16 @@ YAML
 )
 
 if [ "$MODE" = "print" ]; then
-  echo "$block"
-  exit 0
+    echo "$block"
+    exit 0
 fi
 
 apply "$(printf '%s\n' "$block" | bash "$OVERLAY" set "$FRONTEND_LOCAL" replay)" \
-  "==> session replay is ON"
+    "==> session replay is ON"
 echo "    ingestPoint  $url/ingest"
 echo "    projectKey   $key"
 echo "    ⚠ visitors to http://localhost:8081 are now ASKED whether to be recorded."
-echo "      Nothing is recorded until somebody clicks \"Allow recording\" in the"
+echo '      Nothing is recorded until somebody clicks "Allow recording" in the'
 echo "      banner — so an empty OpenReplay UI after wiring is the correct default,"
 echo "      not a broken ingest. What is recorded is masked; see"
 echo "      components/frontend/src/lib/components/observability/SessionReplay.svelte"

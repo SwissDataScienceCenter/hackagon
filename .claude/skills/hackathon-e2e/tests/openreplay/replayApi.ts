@@ -22,12 +22,7 @@ import { SKILL_DIR } from "../../helpers/state.js"
  * hard-coded, never in a fixture.
  */
 
-const SECRETS = path.join(
-  SKILL_DIR,
-  "..",
-  "openreplay-stack",
-  ".secrets.env",
-)
+const SECRETS = path.join(SKILL_DIR, "..", "openreplay-stack", ".secrets.env")
 
 export type ReplayAdmin = { baseUrl: string; jwt: string; projectId: number }
 
@@ -125,9 +120,11 @@ export function mobPlaintext(body: Buffer): Buffer {
   if (!body.subarray(0, 4).equals(ZSTD_MAGIC)) return body
   // Added in Node 22.15; the container runs 22.22. Typed by hand because the
   // repo's @types/node predates it.
-  const unzstd = (zlib as unknown as {
-    zstdDecompressSync?: (b: Buffer) => Buffer
-  }).zstdDecompressSync
+  const unzstd = (
+    zlib as unknown as {
+      zstdDecompressSync?: (b: Buffer) => Buffer
+    }
+  ).zstdDecompressSync
   if (typeof unzstd !== "function") return body
 
   return unzstd(body)
@@ -163,7 +160,11 @@ export async function fetchFirstMob(
     return { ok: false, status: 0, detail: `first-mob: ${String(e)}` }
   }
   if (!res.ok) {
-    return { ok: false, status: res.status, detail: `first-mob: ${await res.text()}` }
+    return {
+      ok: false,
+      status: res.status,
+      detail: `first-mob: ${await res.text()}`,
+    }
   }
   const payload = (await res.json()) as { data?: { domURL?: string[] } }
   const url = payload.data?.domURL?.[0]

@@ -46,13 +46,19 @@ async function expectImagesRender(page: Page, name: string) {
       .filter((img) => img.complete && img.naturalWidth === 0)
       .map((img) => img.getAttribute("src") ?? "(no src)"),
   )
-  expect(broken, `${name} has broken images: ${broken.join(", ")}`).toHaveLength(0)
+  expect(
+    broken,
+    `${name} has broken images: ${broken.join(", ")}`,
+  ).toHaveLength(0)
 }
 
 async function snap(page: Page, name: string) {
   await page.waitForLoadState("networkidle").catch(() => {})
   // Screenshot FIRST so the visual evidence exists even when checks fail.
-  await page.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: true })
+  await page.screenshot({
+    path: path.join(SHOTS, `${name}.png`),
+    fullPage: true,
+  })
   await expectFitsViewport(page, name)
   await expectImagesRender(page, name)
 }
@@ -79,7 +85,9 @@ test.describe("member surfaces (bob)", () => {
 
   test("dashboard", async ({ page }) => {
     await page.goto("/dashboard")
-    await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: /Welcome back/ }),
+    ).toBeVisible()
     await snap(page, "03-dashboard")
   })
 
@@ -108,7 +116,9 @@ test.describe("member surfaces (bob)", () => {
       test.skip((await row.count()) === 0, "bob is in no hackathon here")
       await row.click()
       await page.waitForURL(/\/my\/hackathon\/[^/]+\//)
-      const base = page.url().replace(/\/my\/hackathon\/([^/]+)\/.*$/, "/my/hackathon/$1")
+      const base = page
+        .url()
+        .replace(/\/my\/hackathon\/([^/]+)\/.*$/, "/my/hackathon/$1")
       const resp = await page.goto(`${base}/${tab}`)
       test.skip((resp?.status() ?? 500) >= 400, `${tab} not reachable for bob`)
       await snap(page, `04-member-${tab.replace("/", "-")}`)

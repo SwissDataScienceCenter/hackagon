@@ -13,14 +13,17 @@ import { ensureStateDir, storageStatePath } from "../helpers/state.js"
 setup.beforeAll(() => ensureStateDir())
 
 for (const persona of ALL_PERSONAS) {
-  setup(`authenticate ${persona.key} (${persona.username})`, async ({ page }) => {
-    await loginViaKeycloak(page, persona)
+  setup(
+    `authenticate ${persona.key} (${persona.username})`,
+    async ({ page }) => {
+      await loginViaKeycloak(page, persona)
 
-    await page.goto("/dashboard")
-    await expect(
-      page.getByRole("heading", { name: /Welcome back/ }),
-    ).toBeVisible()
+      await page.goto("/dashboard")
+      await expect(
+        page.getByRole("heading", { name: /Welcome back/ }),
+      ).toBeVisible()
 
-    await page.context().storageState({ path: storageStatePath(persona.key) })
-  })
+      await page.context().storageState({ path: storageStatePath(persona.key) })
+    },
+  )
 }

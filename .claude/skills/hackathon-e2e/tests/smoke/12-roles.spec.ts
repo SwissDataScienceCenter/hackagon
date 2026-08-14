@@ -36,7 +36,10 @@ test.describe("global roles", () => {
 
     // And take it away again.
     const after = page.locator("tr").filter({ hasText: "Bob Henderson" })
-    await after.getByRole("button", { name: /Revoke|Remove/ }).first().click()
+    await after
+      .getByRole("button", { name: /Revoke|Remove/ })
+      .first()
+      .click()
     await page.waitForLoadState("networkidle")
     // The BADGE, not the row: the row also holds the grant picker, whose
     // options are named after the very roles being asserted about. Twice now
@@ -77,9 +80,9 @@ test.describe("global roles", () => {
     await page.waitForLoadState("networkidle")
 
     const granted = page.locator("tr").filter({ hasText: "Bob Henderson" })
-    await expect(
-      granted.getByRole("button", { name: /^Revoke/ }),
-    ).toHaveCount(1)
+    await expect(granted.getByRole("button", { name: /^Revoke/ })).toHaveCount(
+      1,
+    )
 
     // Leave the fixture as we found it.
     await granted.getByRole("button", { name: /^Revoke/ }).click()

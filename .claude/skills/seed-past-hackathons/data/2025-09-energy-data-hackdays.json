@@ -6,7 +6,10 @@
   "startsAt": "2025-09-11T08:00:00+02:00",
   "endsAt": "2025-09-12T18:00:00+02:00",
   "venue": "FHNW Campus Brugg-Windisch, Switzerland",
-  "organizers": ["Energy Data Innovation Hub (EDIH)", "Swiss Data Science Center (SDSC)"],
+  "organizers": [
+    "Energy Data Innovation Hub (EDIH)",
+    "Swiss Data Science Center (SDSC)"
+  ],
   "partners": ["FHNW — host venue"],
   "logo": "",
   "description": "Almost 32 hours of team-based hacking and co-creation on 12 real-world challenges from energy utilities, startups, public agencies and research institutions. Developers, data scientists, designers, researchers, energy professionals and creative minds tackle real energy problems with data and technology. SDSC provides Renku, its collaborative data science platform, so teams can organize data and code and reach compute resources for rapid experimentation.",
@@ -21,8 +24,18 @@
   },
   "tracks": [],
   "phases": [
-    { "name": "Day 1 — kickoff & hacking", "description": "Challenge presentations, team formation and the first hacking block.", "startsAt": "2025-09-11T08:00:00+02:00", "endsAt": "2025-09-11T18:00:00+02:00" },
-    { "name": "Day 2 — hacking & results", "description": "Second hacking block, presentations and closing.", "startsAt": "2025-09-12T08:00:00+02:00", "endsAt": "2025-09-12T18:00:00+02:00" }
+    {
+      "name": "Day 1 — kickoff & hacking",
+      "description": "Challenge presentations, team formation and the first hacking block.",
+      "startsAt": "2025-09-11T08:00:00+02:00",
+      "endsAt": "2025-09-11T18:00:00+02:00"
+    },
+    {
+      "name": "Day 2 — hacking & results",
+      "description": "Second hacking block, presentations and closing.",
+      "startsAt": "2025-09-12T08:00:00+02:00",
+      "endsAt": "2025-09-12T18:00:00+02:00"
+    }
   ],
   "pages": [
     {
@@ -55,7 +68,10 @@
     "hoursOfHacking": 32
   },
   "source": {
-    "urls": ["https://www.datascience.ch/event/energy-hack-days-2025", "https://www.energydatahackdays.ch/"],
+    "urls": [
+      "https://www.datascience.ch/event/energy-hack-days-2025",
+      "https://www.energydatahackdays.ch/"
+    ],
     "retrieved": "2026-08-05",
     "note": "Dates, venue, organizers, challenge count, 32-hour format and the Renku detail verified from the SDSC event page. Participant count, individual challenge titles and winners were not published there — omitted rather than invented."
   }

@@ -28,7 +28,9 @@ function toolbar(page: Page) {
 test.describe("platform pages list", () => {
   test.use({ storageState: storageStatePath("admin") })
 
-  test("searches by title and clears back to the full list", async ({ page }) => {
+  test("searches by title and clears back to the full list", async ({
+    page,
+  }) => {
     await open(page, "/manage/pages")
     const rows = page.getByRole("heading", { level: 2 })
 
@@ -37,12 +39,16 @@ test.describe("platform pages list", () => {
 
     await toolbar(page).search.fill("privacy")
     await expect(page.getByRole("heading", { name: "Privacy" })).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Terms of use" })).toHaveCount(0)
+    await expect(
+      page.getByRole("heading", { name: "Terms of use" }),
+    ).toHaveCount(0)
     // The count line is what tells you a filter is hiding things.
     await expect(page.getByText(/Showing \d+ of \d+/)).toBeVisible()
 
     await page.getByRole("button", { name: "clear" }).click()
-    await expect(page.getByRole("heading", { name: "Terms of use" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Terms of use" }),
+    ).toBeVisible()
   })
 
   test("searches the page CONTENT, not just the title", async ({ page }) => {
@@ -63,13 +69,17 @@ test.describe("platform pages list", () => {
     await expect(page.getByRole("heading", { name: "Privacy" })).toBeVisible()
   })
 
-  test("switches to the table and offers row actions there", async ({ page }) => {
+  test("switches to the table and offers row actions there", async ({
+    page,
+  }) => {
     await open(page, "/manage/pages")
     await toolbar(page).table.click()
 
     const table = page.getByRole("table")
     await expect(table).toBeVisible()
-    await expect(table.getByRole("columnheader", { name: /Title/ })).toBeVisible()
+    await expect(
+      table.getByRole("columnheader", { name: /Title/ }),
+    ).toBeVisible()
     await expect(table.getByRole("cell", { name: "/privacy" })).toBeVisible()
 
     // Actions live behind a per-row menu so the row stays one line.
@@ -106,20 +116,30 @@ test.describe("platform pages list", () => {
 test.describe("users list", () => {
   test.use({ storageState: storageStatePath("admin") })
 
-  test("defaults to the table and searches across name, handle and email", async ({ page }) => {
+  test("defaults to the table and searches across name, handle and email", async ({
+    page,
+  }) => {
     await open(page, "/manage/users")
     await expect(page.getByRole("table")).toBeVisible()
 
     await toolbar(page).search.fill("alice")
-    await expect(page.getByRole("cell", { name: "Alice Wonderland" })).toBeVisible()
-    await expect(page.getByRole("cell", { name: "Bob Henderson" })).toHaveCount(0)
+    await expect(
+      page.getByRole("cell", { name: "Alice Wonderland" }),
+    ).toBeVisible()
+    await expect(page.getByRole("cell", { name: "Bob Henderson" })).toHaveCount(
+      0,
+    )
   })
 
   test("filters by global role", async ({ page }) => {
     await open(page, "/manage/users")
     await page.getByLabel("Role").selectOption("1")
-    await expect(page.getByRole("cell", { name: "Hackagon Admin" })).toBeVisible()
-    await expect(page.getByRole("cell", { name: "Bob Henderson" })).toHaveCount(0)
+    await expect(
+      page.getByRole("cell", { name: "Hackagon Admin" }),
+    ).toBeVisible()
+    await expect(page.getByRole("cell", { name: "Bob Henderson" })).toHaveCount(
+      0,
+    )
   })
 
   test("switches to cards", async ({ page }) => {
@@ -135,7 +155,11 @@ test.describe("participants list", () => {
 
   test("filters the roster by membership state", async ({ page }) => {
     await open(page, "/dashboard")
-    await page.locator("a").filter({ hasText: "AI Innovation Challenge 2026" }).first().click()
+    await page
+      .locator("a")
+      .filter({ hasText: "AI Innovation Challenge 2026" })
+      .first()
+      .click()
     await page.getByRole("link", { name: "Participants" }).first().click()
     await page.waitForLoadState("networkidle")
 
@@ -151,7 +175,11 @@ test.describe("participants list", () => {
 
   test("shows the roster as one sortable table", async ({ page }) => {
     await open(page, "/dashboard")
-    await page.locator("a").filter({ hasText: "AI Innovation Challenge 2026" }).first().click()
+    await page
+      .locator("a")
+      .filter({ hasText: "AI Innovation Challenge 2026" })
+      .first()
+      .click()
     await page.getByRole("link", { name: "Participants" }).first().click()
     await page.waitForLoadState("networkidle")
 
@@ -160,7 +188,9 @@ test.describe("participants list", () => {
     await expect(table).toBeVisible()
     // Confirmed and waitlisted are one list here, with the split as a column:
     // sorting across two separate tables would not sort anything.
-    await expect(table.getByRole("columnheader", { name: /Status/ })).toBeVisible()
+    await expect(
+      table.getByRole("columnheader", { name: /Status/ }),
+    ).toBeVisible()
     await expect(table.getByText("Waitlisted").first()).toBeVisible()
   })
 })

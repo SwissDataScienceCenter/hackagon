@@ -133,8 +133,10 @@ export async function expectNoOverlap(
           const A = items[i]
           const B = items[j]
           if (A.el.contains(B.el) || B.el.contains(A.el)) continue
-          const x = Math.min(A.r.right, B.r.right) - Math.max(A.r.left, B.r.left)
-          const y = Math.min(A.r.bottom, B.r.bottom) - Math.max(A.r.top, B.r.top)
+          const x =
+            Math.min(A.r.right, B.r.right) - Math.max(A.r.left, B.r.left)
+          const y =
+            Math.min(A.r.bottom, B.r.bottom) - Math.max(A.r.top, B.r.top)
           if (x <= TOL || y <= TOL) continue
           if (skipContainment && (contains(A.r, B.r) || contains(B.r, A.r)))
             continue
@@ -348,7 +350,9 @@ export async function expectFooterOperable(page: Page, name: string) {
       }
       const hit = document.elementFromPoint(x, y)
       if (!hit || !(hit === a || a.contains(hit))) {
-        out.push(`"${text}" is covered by ${hit ? label(hit) : "nothing hittable"}`)
+        out.push(
+          `"${text}" is covered by ${hit ? label(hit) : "nothing hittable"}`,
+        )
       }
     }
     return out

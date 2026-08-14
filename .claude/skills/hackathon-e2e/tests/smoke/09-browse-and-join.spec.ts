@@ -10,9 +10,13 @@ test.describe("browse hackathons", () => {
     await page.goto("/hackathon")
     await page.waitForLoadState("networkidle")
 
-    await expect(page.getByRole("heading", { name: "Hackathons", level: 1 })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Hackathons", level: 1 }),
+    ).toBeVisible()
     // Panels link to the public event page.
-    const card = page.locator('a[href^="/hackathon/"]').filter({ hasText: SEED_HACKATHONS.h1.name })
+    const card = page
+      .locator('a[href^="/hackathon/"]')
+      .filter({ hasText: SEED_HACKATHONS.h1.name })
     await expect(card.first()).toBeVisible()
 
     // Private events are filtered server-side, not hidden in the UI.
@@ -37,7 +41,11 @@ test.describe("browse hackathons", () => {
   test("a panel opens the event", async ({ page }) => {
     await page.goto("/hackathon")
     await page.waitForLoadState("networkidle")
-    await page.locator('a[href^="/hackathon/"]').filter({ hasText: SEED_HACKATHONS.h1.name }).first().click()
+    await page
+      .locator('a[href^="/hackathon/"]')
+      .filter({ hasText: SEED_HACKATHONS.h1.name })
+      .first()
+      .click()
     await expect(page).toHaveURL(/\/hackathon\/[0-9a-f-]+$/)
     // The event page also renders a "Welcome to <name>" page heading, so
     // match the hero exactly rather than by substring.
@@ -96,7 +104,7 @@ test.describe("joining an event that asks questions", () => {
       await expect(page).toHaveURL(/\/dashboard/)
       await expect(
         page.getByRole("status"),
-        "a join that asks nothing must SAY it landed — \"you're in\", or which " +
+        'a join that asks nothing must SAY it landed — "you\'re in", or which ' +
           "place in the queue. Without this the branch passes on a refusal.",
       ).toBeVisible()
       await expect(

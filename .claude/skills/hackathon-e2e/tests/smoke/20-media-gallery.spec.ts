@@ -39,7 +39,9 @@ test.describe("the platform media library", () => {
     await platform.getByRole("link", { name: /^Media/ }).click()
 
     await expect(page).toHaveURL(/\/manage\/gallery/)
-    await expect(page.getByRole("heading", { name: "Media library" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Media library" }),
+    ).toBeVisible()
 
     // The store is seeded with three event covers by .devcontainer/rustfs-init.sh
     // before anything else runs, so there is always something to list. If this
@@ -55,7 +57,9 @@ test.describe("the platform media library", () => {
     expect(await origins.count()).toBeGreaterThan(0)
     const labels = await origins.allInnerTexts()
     expect(
-      labels.some((l) => /Event (logo|image)|Seeded cover|Platform page/.test(l)),
+      labels.some((l) =>
+        /Event (logo|image)|Seeded cover|Platform page/.test(l),
+      ),
       `no tile said where it came from; got ${JSON.stringify(labels)}`,
     ).toBe(true)
   })
@@ -82,7 +86,11 @@ test.describe("the platform media library", () => {
       await bobPage.getByRole("button", { name: "Upload a picture" }).click()
       await bobPage
         .getByLabel("Choose an image file for your account")
-        .setInputFiles({ name: "bob-gallery.png", mimeType: "image/png", buffer: PNG })
+        .setInputFiles({
+          name: "bob-gallery.png",
+          mimeType: "image/png",
+          buffer: PNG,
+        })
       await expect(field).not.toHaveValue(before, { timeout: 20_000 })
       avatarPath = await field.inputValue()
     } finally {
@@ -134,7 +142,9 @@ test.describe("the platform media library", () => {
     // Stated on screen rather than left to be inferred: this page is not an
     // inventory of the bucket, and reading it as one would be wrong.
     await expect(
-      page.getByText(/Profile pictures and team submission files are deliberately not listed/i),
+      page.getByText(
+        /Profile pictures and team submission files are deliberately not listed/i,
+      ),
     ).toBeVisible()
     await expect(page.getByText(/There is also no delete/i)).toBeVisible()
 
@@ -195,7 +205,11 @@ test.describe("who may list what", () => {
     await expect(dialog).toBeVisible()
     await page
       .getByLabel("Choose an image file for the event logo")
-      .setInputFiles({ name: "reusable-mark.png", mimeType: "image/png", buffer: PNG })
+      .setInputFiles({
+        name: "reusable-mark.png",
+        mimeType: "image/png",
+        buffer: PNG,
+      })
     await expect(dialog).toBeHidden({ timeout: 20_000 })
     const uploaded = await field.inputValue()
     expect(uploaded).toMatch(/^\/objects\//)
@@ -224,13 +238,18 @@ test.describe("who may list what", () => {
     // this listing exists is to hand back something that renders.
     const got = await request.get(chosen)
     expect(got.status()).toBe(200)
-    expect(got.headers()["content-type"]).toMatch(/^image\/(webp|png|jpeg|gif)$/)
+    expect(got.headers()["content-type"]).toMatch(
+      /^image\/(webp|png|jpeg|gif)$/,
+    )
     expect((await got.body()).length).toBeGreaterThan(0)
     // The FIELD's preview, addressed by its own alt text — not
     // `img[src=…].first()`, which matched the dialog's (now hidden) thumbnail
     // of the very same object and reported "hidden" for a picture that was on
     // screen. Assert on the element that states the fact.
-    await expect(page.getByAltText("Current logo")).toHaveAttribute("src", chosen)
+    await expect(page.getByAltText("Current logo")).toHaveAttribute(
+      "src",
+      chosen,
+    )
   })
 })
 
@@ -259,12 +278,17 @@ test.describe("the picker dialog itself", () => {
     // accept what they are holding, and it is driven by a dragenter counter that
     // a single boolean got wrong (it flickered off over the button inside).
     const armedBefore = await zone.evaluate((el) => el.className)
-    await zone.dispatchEvent("dragenter", { dataTransfer: await page.evaluateHandle(() => new DataTransfer()) })
+    await zone.dispatchEvent("dragenter", {
+      dataTransfer: await page.evaluateHandle(() => new DataTransfer()),
+    })
     await expect
-      .poll(async () => (await zone.evaluate((el) => el.className)) !== armedBefore, {
-        timeout: 5_000,
-        message: "the drop target never showed that it was armed",
-      })
+      .poll(
+        async () => (await zone.evaluate((el) => el.className)) !== armedBefore,
+        {
+          timeout: 5_000,
+          message: "the drop target never showed that it was armed",
+        },
+      )
       .toBe(true)
 
     // Now the drop. The file is built in page context because a File cannot

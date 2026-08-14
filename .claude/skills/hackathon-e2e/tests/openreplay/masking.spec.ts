@@ -71,10 +71,7 @@ test.describe("OpenReplay masking", () => {
     // The tracker's own ESM bundle, injected into the page. Same library, same
     // version, same ingest — only the options differ.
     const trackerSrc = fs.readFileSync(
-      path.join(
-        FRONTEND,
-        "node_modules/@openreplay/tracker/dist/lib/index.js",
-      ),
+      path.join(FRONTEND, "node_modules/@openreplay/tracker/dist/lib/index.js"),
       "utf8",
     )
 
@@ -173,15 +170,33 @@ test.describe("OpenReplay masking", () => {
       const h1 = (
         listed.data.hackathons as { id: string; name: string }[]
       ).find((h) => h.name === SEED_HACKATHONS.h1.name)
-      expect(h1, "seed hackathon h1 not found — did `just db::seed` run?").toBeTruthy()
+      expect(
+        h1,
+        "seed hackathon h1 not found — did `just db::seed` run?",
+      ).toBeTruthy()
 
-      const set = await rpcAs("alice", "hackathon.ConfigService/SetRegistrationForm", {
-        hackathonId: h1!.id,
-        fields: [
-          { key: "diet", label: "Dietary requirements", type: "text", required: false },
-        ],
-        consents: [{ key: "conduct", label: "I accept the Code of Conduct", required: true }],
-      })
+      const set = await rpcAs(
+        "alice",
+        "hackathon.ConfigService/SetRegistrationForm",
+        {
+          hackathonId: h1!.id,
+          fields: [
+            {
+              key: "diet",
+              label: "Dietary requirements",
+              type: "text",
+              required: false,
+            },
+          ],
+          consents: [
+            {
+              key: "conduct",
+              label: "I accept the Code of Conduct",
+              required: true,
+            },
+          ],
+        },
+      )
       expect(set.ok, set.raw).toBe(true)
 
       // Recording is opt-in now. Grant it, or the tracker never starts and
@@ -294,7 +309,9 @@ test.describe("OpenReplay masking", () => {
       // this test kills, and "an unreachable ingest does not break the page"
       // would be true about a page that never contacted it.
       await grantConsent(context, baseURL ?? "http://localhost:8081")
-      await page.route("**/ingest/**", (route) => route.abort("connectionrefused"))
+      await page.route("**/ingest/**", (route) =>
+        route.abort("connectionrefused"),
+      )
 
       await page.goto("/dashboard")
       await expect(page.getByRole("heading").first()).toBeVisible()

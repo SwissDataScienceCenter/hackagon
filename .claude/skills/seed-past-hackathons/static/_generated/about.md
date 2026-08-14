@@ -17,9 +17,9 @@ that which do not fit in a room:
   work on, and the organisers use those preferences to build balanced teams.
 - **Submissions.** Each team turns in what it built — a repository, a demo, a
   short write-up — before the deadline the organisers set.
-- **A vote, and a decision.** Participants vote on the submissions. The tally
-  is advisory: an organiser records the actual awards, because a jury that
-  cannot overrule its own count is not a jury.
+- **A vote, and a decision.** Participants vote on the submissions. The tally is
+  advisory: an organiser records the actual awards, because a jury that cannot
+  overrule its own count is not a jury.
 
 ### The archive
 
@@ -36,6 +36,6 @@ research. The platform itself is developed in the open at
 
 ### Getting in touch
 
-Questions about an event go to its organisers, who are listed on the event's
-own page. Anything about the platform itself belongs in the repository's issue
+Questions about an event go to its organisers, who are listed on the event's own
+page. Anything about the platform itself belongs in the repository's issue
 tracker.

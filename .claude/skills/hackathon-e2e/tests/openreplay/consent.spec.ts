@@ -160,7 +160,8 @@ test.describe("session replay consent", () => {
 
       await expect
         .poll(() => bytes(cap.chunks), {
-          message: "consented, but nothing was recorded — there is nothing to withdraw",
+          message:
+            "consented, but nothing was recorded — there is nothing to withdraw",
           timeout: 30_000,
         })
         .toBeGreaterThan(0)

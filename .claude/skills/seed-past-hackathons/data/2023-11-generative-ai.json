@@ -26,10 +26,26 @@
     "Renku"
   ],
   "preEventTimeline": [
-    { "order": 1, "process": "Registration", "when": "Anytime, until 80 spots taken — register, validate email, await confirmation" },
-    { "order": 2, "process": "Propose a project", "when": "Until 6 November, noon — organizers validate proposals" },
-    { "order": 3, "process": "Project preferences", "when": "8–14 November — select 3 preferred projects; organizers form teams" },
-    { "order": 4, "process": "Preparation", "when": "2nd half of November — Microsoft/SDSC webinars, dataset preparation" }
+    {
+      "order": 1,
+      "process": "Registration",
+      "when": "Anytime, until 80 spots taken — register, validate email, await confirmation"
+    },
+    {
+      "order": 2,
+      "process": "Propose a project",
+      "when": "Until 6 November, noon — organizers validate proposals"
+    },
+    {
+      "order": 3,
+      "process": "Project preferences",
+      "when": "8–14 November — select 3 preferred projects; organizers form teams"
+    },
+    {
+      "order": 4,
+      "process": "Preparation",
+      "when": "2nd half of November — Microsoft/SDSC webinars, dataset preparation"
+    }
   ],
   "visibility": "VISIBILITY_PUBLIC",
   "startsAt": "2023-11-30T08:00:00+01:00",
@@ -53,17 +69,55 @@
     { "name": "Valerio Rossetti", "role": "Principal Data Scientist" },
     { "name": "Sean Murphy", "role": "Sr. Systems Engineer" },
     { "name": "Luis Salamanca", "role": "Lead Data Scientist" },
-    { "name": "Carlos Vivar Ríos", "role": "Senior Open Research Data Engineer" }
+    {
+      "name": "Carlos Vivar Ríos",
+      "role": "Senior Open Research Data Engineer"
+    }
   ],
   "tracks": [],
   "phases": [
-    { "name": "Check-in", "description": "Registration desk opens.", "startsAt": "2023-11-30T08:00:00+01:00", "endsAt": "2023-11-30T09:00:00+01:00" },
-    { "name": "Keynote", "description": "Opening keynote by Dr. Yannic Kilcher (DeepJudge).", "startsAt": "2023-11-30T09:00:00+01:00", "endsAt": "2023-11-30T10:00:00+01:00" },
-    { "name": "Group work — day 1", "description": "Team formation and PoC development (break for lunch 13:00–14:00).", "startsAt": "2023-11-30T10:00:00+01:00", "endsAt": "2023-11-30T18:00:00+01:00" },
-    { "name": "Apéro — day 1", "description": "Evening networking.", "startsAt": "2023-11-30T18:00:00+01:00", "endsAt": "2023-11-30T20:00:00+01:00" },
-    { "name": "Group work — day 2", "description": "Continued development through to the submission deadline (lunch 13:00–14:00).", "startsAt": "2023-12-01T08:00:00+01:00", "endsAt": "2023-12-01T15:00:00+01:00" },
-    { "name": "Presentations & voting", "description": "Project presentations followed by participant voting.", "startsAt": "2023-12-01T15:30:00+01:00", "endsAt": "2023-12-01T18:00:00+01:00" },
-    { "name": "Awards apéro", "description": "Results and closing apéro.", "startsAt": "2023-12-01T18:00:00+01:00", "endsAt": "2023-12-01T20:00:00+01:00" }
+    {
+      "name": "Check-in",
+      "description": "Registration desk opens.",
+      "startsAt": "2023-11-30T08:00:00+01:00",
+      "endsAt": "2023-11-30T09:00:00+01:00"
+    },
+    {
+      "name": "Keynote",
+      "description": "Opening keynote by Dr. Yannic Kilcher (DeepJudge).",
+      "startsAt": "2023-11-30T09:00:00+01:00",
+      "endsAt": "2023-11-30T10:00:00+01:00"
+    },
+    {
+      "name": "Group work — day 1",
+      "description": "Team formation and PoC development (break for lunch 13:00–14:00).",
+      "startsAt": "2023-11-30T10:00:00+01:00",
+      "endsAt": "2023-11-30T18:00:00+01:00"
+    },
+    {
+      "name": "Apéro — day 1",
+      "description": "Evening networking.",
+      "startsAt": "2023-11-30T18:00:00+01:00",
+      "endsAt": "2023-11-30T20:00:00+01:00"
+    },
+    {
+      "name": "Group work — day 2",
+      "description": "Continued development through to the submission deadline (lunch 13:00–14:00).",
+      "startsAt": "2023-12-01T08:00:00+01:00",
+      "endsAt": "2023-12-01T15:00:00+01:00"
+    },
+    {
+      "name": "Presentations & voting",
+      "description": "Project presentations followed by participant voting.",
+      "startsAt": "2023-12-01T15:30:00+01:00",
+      "endsAt": "2023-12-01T18:00:00+01:00"
+    },
+    {
+      "name": "Awards apéro",
+      "description": "Results and closing apéro.",
+      "startsAt": "2023-12-01T18:00:00+01:00",
+      "endsAt": "2023-12-01T20:00:00+01:00"
+    }
   ],
   "pages": [
     {
@@ -87,15 +141,36 @@
   ],
   "media": {
     "images": [
-      { "file": "event.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/64dddef6af87ca4d1450fa7a_SDSC-Hackathon_Richemont2023_1.JPG", "caption": "SDSC Hackathon 2023 — event photo", "category": "ambiance", "credit": "SDSC event page" },
-      { "file": "keynote-yannic-kilcher.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/65142ae0b7664864dac6914e_YannicKilcher.jpeg", "caption": "Keynote — Dr. Yannic Kilcher (CTO & Co-founder, DeepJudge)", "category": "speaker", "credit": "SDSC event page" },
-      { "file": "partner-microsoft.webp", "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/65142b3f28f6b5905514d79f_logo-microsoft-scaled.jpeg", "caption": "Supporting partner — Microsoft", "category": "logo", "credit": "SDSC event page" }
+      {
+        "file": "event.webp",
+        "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/64dddef6af87ca4d1450fa7a_SDSC-Hackathon_Richemont2023_1.JPG",
+        "caption": "SDSC Hackathon 2023 — event photo",
+        "category": "ambiance",
+        "credit": "SDSC event page"
+      },
+      {
+        "file": "keynote-yannic-kilcher.webp",
+        "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/65142ae0b7664864dac6914e_YannicKilcher.jpeg",
+        "caption": "Keynote — Dr. Yannic Kilcher (CTO & Co-founder, DeepJudge)",
+        "category": "speaker",
+        "credit": "SDSC event page"
+      },
+      {
+        "file": "partner-microsoft.webp",
+        "source": "https://cdn.prod.website-files.com/63f1f58039379743bd96333e/65142b3f28f6b5905514d79f_logo-microsoft-scaled.jpeg",
+        "caption": "Supporting partner — Microsoft",
+        "category": "logo",
+        "credit": "SDSC event page"
+      }
     ],
     "note": "Pulled from the SDSC event page for this edition. The event photo is captioned 'Richemont2023' on the CDN — SDSC's own event photography."
   },
   "stats": {},
   "source": {
-    "urls": ["https://www.datascience.ch/event/hackathon-2023", "https://sdsc-hackathons.ch/"],
+    "urls": [
+      "https://www.datascience.ch/event/hackathon-2023",
+      "https://sdsc-hackathons.ch/"
+    ],
     "retrieved": "2026-08-05",
     "note": "Programme, venue, keynote, team and partner verified from the SDSC event page. Team/project counts and winners were not published there — left empty rather than invented."
   }

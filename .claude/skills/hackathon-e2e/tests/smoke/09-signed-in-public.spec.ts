@@ -38,13 +38,17 @@ test.describe("public pages while signed in", () => {
     expect(failures, `server errors:\n${failures.join("\n")}`).toEqual([])
   })
 
-  test("the nav still offers Dashboard from a public page", async ({ page }) => {
+  test("the nav still offers Dashboard from a public page", async ({
+    page,
+  }) => {
     await page.goto("/hackathon")
     const nav = page.locator("header").getByRole("navigation").first()
 
     // The public shell renders the same NavBar; a member on it must be able to
     // get back to their own events without editing the URL.
-    await expect(nav.getByRole("link", { name: "Dashboard", exact: true })).toBeVisible()
+    await expect(
+      nav.getByRole("link", { name: "Dashboard", exact: true }),
+    ).toBeVisible()
     await nav.getByRole("link", { name: "Dashboard", exact: true }).click()
     await expect(page).toHaveURL(/\/dashboard$/)
   })
@@ -63,6 +67,8 @@ test.describe("public pages while signed in", () => {
 
     // Not "Join": she is already in. The call to action is the one thing on
     // this page that depends on who is reading it.
-    await expect(page.getByRole("link", { name: "Open your event view" })).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: "Open your event view" }),
+    ).toBeVisible()
   })
 })
