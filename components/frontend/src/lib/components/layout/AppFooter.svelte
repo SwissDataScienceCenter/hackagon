@@ -99,9 +99,23 @@
             <nav class="flex flex-col gap-3" aria-label="Swiss Data Science Center">
                 <h2 class="meta">SDSC</h2>
                 {#each SDSC_LINKS as link (link.href)}
+                    <!-- The sr-only suffix APPENDS to the accessible name, so the
+                         visible word stays contained in it and voice control
+                         ("click Events") keeps working — the opposite trade to an
+                         aria-label, which would replace the label a sighted person
+                         reads (WCAG 2.5.3, and the reason the About collision was
+                         fixed in visible text instead).
+                         target="_blank" is the ONLY signal today that these leave
+                         the site, and nothing announces it: the nav landmark is
+                         named "Swiss Data Science Center", but a screen reader's
+                         link list is a flat list of NAMES and landmark context is
+                         exactly what it discards — the same reason "About" and
+                         "About" collided one column apart. -->
                     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute off-site URL; resolve() is for app routes -->
                     <a href={link.href} class={LINK} target="_blank" rel="noopener noreferrer">
-                        {link.label}
+                        {link.label}<span class="sr-only">
+                            (datascience.ch, opens in a new tab)</span
+                        >
                     </a>
                 {/each}
             </nav>
@@ -112,15 +126,22 @@
              asset-level swap, not a hand-rolled colour mode. -->
         <div class="flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
             <span class="meta">A joint venture of</span>
+            <!-- These two already NAME their destination, through the image alt
+                 that is their whole accessible name — so they take the bare "opens
+                 in a new tab" and not the host suffix the SDSC column carries.
+                 Saying "ethz.ch" after "ETH Zurich" is the doubling-up that makes
+                 a link list harder to read, not easier. -->
             <a href="https://ethz.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
                 <img
                     src="/images/logos/eth-zurich.svg"
                     alt="ETH Zurich"
                     class="h-4 invert dark:invert-0"
                 />
+                <span class="sr-only"> (opens in a new tab)</span>
             </a>
             <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
                 <img src="/images/logos/epfl.svg" alt="EPFL" class="h-4 invert dark:invert-0" />
+                <span class="sr-only"> (opens in a new tab)</span>
             </a>
         </div>
     </div>
@@ -153,9 +174,15 @@
                 <div class="flex items-center gap-1">
                     {#each SOCIALS as social (social.href)}
                         {@const Icon = social.icon}
+                        <!-- Icon-only, so aria-label is the ENTIRE accessible name
+                             and an sr-only child would be ignored — it is extended
+                             rather than added to. There is no visible text label
+                             here for it to contradict, which is why replacing the
+                             name is safe on these three and wrong on the five
+                             above. `title` stays the sighted tooltip. -->
                         <a
                             href={social.href}
-                            aria-label={social.label}
+                            aria-label="{social.label} (opens in a new tab)"
                             title={social.label}
                             target="_blank"
                             rel="noopener noreferrer"

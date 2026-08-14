@@ -5,6 +5,7 @@ import { rpcAnonymous } from "../../helpers/api.js"
 import {
   expectFooterLinkNamesUnique,
   expectFooterOperable,
+  expectNewTabLinksAnnounced,
   footerLinkNames,
 } from "../../helpers/reflow.js"
 
@@ -53,7 +54,12 @@ import {
  */
 const SITE_PAGES = [
   { label: "Privacy", nav: "Legal", href: "/privacy", title: "Privacy" },
-  { label: "Terms of use", nav: "Legal", href: "/terms", title: "Terms of use" },
+  {
+    label: "Terms of use",
+    nav: "Legal",
+    href: "/terms",
+    title: "Terms of use",
+  },
   {
     label: "About Hackagon",
     nav: "Platform",
@@ -184,7 +190,11 @@ test.describe("the footer reaches every signed-in page", () => {
   test.describe("as a global admin", () => {
     test.use({ storageState: storageStatePath(PERSONAS.admin.key) })
 
-    for (const path of ["/manage/pages", "/manage/users", "/hackathons/create"]) {
+    for (const path of [
+      "/manage/pages",
+      "/manage/users",
+      "/hackathons/create",
+    ]) {
       test(`${path} carries a usable footer`, async ({ page }) => {
         await page.goto(path)
         await page.waitForLoadState("networkidle").catch(() => {})
@@ -283,6 +293,31 @@ test.describe("the footer's links resolve from inside the app", () => {
     ).toEqual([])
   })
 
+  test("every footer link that opens in a new tab says so in its name", async ({
+    page,
+  }) => {
+    // `target="_blank"` moves you to a new tab and announces NOTHING. Sighted
+    // visitors get no icon; a screen reader gets no word. The nav landmark is
+    // named "Swiss Data Science Center", which would say it — and a link list is
+    // a flat list of NAMES with landmark context thrown away, which is the same
+    // reason two "About"s collided one column apart (the test below).
+    //
+    // ⚠ Asserted as a PROPERTY over whatever opens a new tab, never against the
+    // five datascience.ch links it was written for. A five-entry list would be a
+    // claim about how many off-site links the footer HAS — exactly the mistake
+    // the uniqueness check already made once, when a five-entry constant broke
+    // the day develop grew the footer to fourteen links.
+    //
+    // Both shells, same reason as the uniqueness check below: the footer is
+    // mounted by AppShell and a page adding a link of its own would break this
+    // on one side only.
+    for (const path of ["/hackathon", "/dashboard"]) {
+      await page.goto(path)
+      await page.waitForLoadState("networkidle").catch(() => {})
+      await expectNewTabLinksAnnounced(page, `smoke ${path}`)
+    }
+  })
+
   test("no two footer links answer to the same name", async ({ page }) => {
     // The one thing a screen reader's link list is: a flat list of NAMES. Our
     // /about and datascience.ch/about were both "About" in it (develop's
@@ -334,7 +369,9 @@ test.describe("the footer's links resolve from inside the app", () => {
     ).rejects.toThrow()
   })
 
-  test("CONTROL: a lid over the page bottom fails the check", async ({ page }) => {
+  test("CONTROL: a lid over the page bottom fails the check", async ({
+    page,
+  }) => {
     await page.goto("/dashboard")
     await page.waitForLoadState("networkidle").catch(() => {})
 
@@ -392,16 +429,30 @@ test.describe("the footer's links resolve from inside the app", () => {
     // datascience.ch's. Reproduced in the live DOM rather than by reverting the
     // component, so the proof runs on every suite rather than once for whoever
     // happened to be watching.
+    //
+    // ⚠ It takes TWO mutations now, and that is the point rather than an
+    // inconvenience: TWO independent fixes hold this pair apart. `fbc81add`
+    // renamed ours to "About Hackagon", and the off-site suffix added later
+    // renames theirs to "About (datascience.ch, opens in a new tab)". Undoing
+    // only one leaves the names distinct — which is how this control started
+    // reporting green the day the suffix landed, having stopped reproducing
+    // anything. A control that no longer reaches the defect is the same
+    // vacuous shape as the check it is guarding.
     const collided = await page.evaluate(() => {
       const own = document.querySelector('footer a[href="/about"]')
-      if (!own) return false
+      const sdsc = document.querySelector(
+        'footer a[href="https://datascience.ch/about"]',
+      )
+      if (!own || !sdsc) return false
       own.textContent = "About"
+      sdsc.querySelector(".sr-only")?.remove()
+      sdsc.textContent = "About"
       return true
     })
     expect(
       collided,
-      "the footer has no link to /about — this control cannot reproduce the " +
-        "collision, so it is not proving the check can fail",
+      "the footer is missing /about or datascience.ch/about — this control " +
+        "cannot reproduce the collision, so it is not proving the check can fail",
     ).toBe(true)
 
     await expect(
@@ -411,6 +462,42 @@ test.describe("the footer's links resolve from inside the app", () => {
         "names shows the clash, which is why this check reads names rather than " +
         "columns",
     ).rejects.toThrow(/"About" does not name exactly one link/)
+  })
+
+  test("CONTROL: a new-tab link with no announcement fails the check", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard")
+    await page.waitForLoadState("networkidle").catch(() => {})
+
+    // Positive control first, on the footer as it ships — otherwise a helper
+    // that threw unconditionally would look like a good check.
+    await expectNewTabLinksAnnounced(page, "control (all announced)")
+
+    // Now put ONE link back in the state every off-site link shipped in until
+    // this was fixed: target="_blank" and nothing that says so. Stripping the
+    // suffix in the live DOM rather than reverting the component means the
+    // proof runs on every suite instead of once for whoever was watching.
+    const stripped = await page.evaluate(() => {
+      const a = document.querySelector<HTMLAnchorElement>(
+        'footer a[target="_blank"][href*="datascience.ch"]',
+      )
+      if (!a) return null
+      a.querySelector(".sr-only")?.remove()
+      return a.href
+    })
+    expect(
+      stripped,
+      "no datascience.ch link opens in a new tab — this control cannot " +
+        "reproduce the defect, so it is not proving the check can fail",
+    ).not.toBeNull()
+
+    await expect(
+      expectNewTabLinksAnnounced(page, "control (suffix stripped)"),
+      "the link is still visible, still correctly labelled on screen and still " +
+        "reachable — only the flat list of names shows that it silently leaves " +
+        "the site, which is why this check reads names rather than markup",
+    ).rejects.toThrow(/without saying so in its accessible name/)
   })
 
   test("the footer is the same footer on both sides of the login", async ({

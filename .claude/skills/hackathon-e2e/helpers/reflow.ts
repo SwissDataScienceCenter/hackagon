@@ -137,8 +137,10 @@ export async function expectNoOverlap(
           const A = items[i]
           const B = items[j]
           if (A.el.contains(B.el) || B.el.contains(A.el)) continue
-          const x = Math.min(A.r.right, B.r.right) - Math.max(A.r.left, B.r.left)
-          const y = Math.min(A.r.bottom, B.r.bottom) - Math.max(A.r.top, B.r.top)
+          const x =
+            Math.min(A.r.right, B.r.right) - Math.max(A.r.left, B.r.left)
+          const y =
+            Math.min(A.r.bottom, B.r.bottom) - Math.max(A.r.top, B.r.top)
           if (x <= TOL || y <= TOL) continue
           if (skipContainment && (contains(A.r, B.r) || contains(B.r, A.r)))
             continue
@@ -375,7 +377,9 @@ export async function expectFooterOperable(page: Page, name: string) {
       }
       const hit = document.elementFromPoint(x, y)
       if (!hit || !(hit === a || a.contains(hit))) {
-        out.push(`"${text}" is covered by ${hit ? label(hit) : "nothing hittable"}`)
+        out.push(
+          `"${text}" is covered by ${hit ? label(hit) : "nothing hittable"}`,
+        )
       }
     }
     return out
@@ -395,11 +399,12 @@ export async function expectFooterOperable(page: Page, name: string) {
 
 // ─── Footer link NAMES: what a screen reader's link list would show ──────────
 
-/** One link, as a link list would list it: its destination and the name a
- * screen reader announces for it. */
+/** One link, as a link list would list it: its destination, the name a screen
+ * reader announces for it, and whether following it leaves the current tab. */
 export interface NamedLink {
   href: string
   name: string
+  target: string
 }
 
 /**
@@ -425,28 +430,48 @@ export interface NamedLink {
  * Whitespace is normalised for the same reason: an accessible name is
  * collapsed and trimmed, and these labels sit on their own indented lines in
  * the markup.
+ *
+ * ⚠ Content is gathered in DOCUMENT ORDER, which the first version was not: it
+ * read `textContent` and then appended every `alt`, so a link whose image comes
+ * BEFORE its text was named back to front. That is not academic either — the
+ * parent-institution logos are `<a><img alt="ETH Zurich"><span class="sr-only">
+ * (opens in a new tab)</span></a>`, and the old order called that
+ * "(opens in a new tab) ETH Zurich", a name no screen reader would ever say.
+ * The uniqueness check below hands these names back to Playwright's own engine
+ * to be counted, so a back-to-front name does not read as a wrong name — it
+ * comes back with a count of 0 and reads as a MISSING link.
  */
 export async function footerLinkNames(page: Page): Promise<NamedLink[]> {
   return page
     .locator("footer")
     .getByRole("link")
     .evaluateAll((els) =>
-      els.map((e) => ({
-        href: e.getAttribute("href") ?? "",
-        name: (
-          e.getAttribute("aria-label") ??
-          [
-            (e.textContent ?? "").trim(),
-            ...Array.from(e.querySelectorAll("img")).map(
-              (i) => i.getAttribute("alt") ?? "",
-            ),
-          ]
-            .filter(Boolean)
-            .join(" ")
-        )
-          .replace(/\s+/g, " ")
-          .trim(),
-      })),
+      els.map((e) => {
+        // Depth-first over child nodes: text as itself, <img> as its alt, and
+        // anything carrying its own aria-label as that label (it names its
+        // subtree, so recursing past it would double-count).
+        const parts: string[] = []
+        const walk = (n: Node) => {
+          for (const c of Array.from(n.childNodes)) {
+            if (c.nodeType === Node.TEXT_NODE) parts.push(c.textContent ?? "")
+            else if (c.nodeType === Node.ELEMENT_NODE) {
+              const el = c as Element
+              if (el.tagName === "IMG") parts.push(el.getAttribute("alt") ?? "")
+              else if (el.hasAttribute("aria-label"))
+                parts.push(el.getAttribute("aria-label") ?? "")
+              else walk(el)
+            }
+          }
+        }
+        walk(e)
+        return {
+          href: e.getAttribute("href") ?? "",
+          target: e.getAttribute("target") ?? "",
+          name: (e.getAttribute("aria-label") ?? parts.join(" "))
+            .replace(/\s+/g, " ")
+            .trim(),
+        }
+      }),
     )
 }
 
@@ -508,6 +533,53 @@ export async function expectFooterLinkNamesUnique(page: Page, name: string) {
         `computation have drifted apart, which is a bug in this helper`,
     ).toHaveCount(1)
   }
+}
+
+/**
+ * A link that moves you to a new tab must SAY so in its accessible name.
+ *
+ * `target="_blank"` is a silent instruction: it changes where you end up and
+ * announces nothing. Sighted visitors get no icon here, and a screen reader
+ * gets no word — the SDSC column's nav landmark is named "Swiss Data Science
+ * Center", which would tell you, and a link list is a flat list of NAMES with
+ * exactly that context thrown away. Same failure mode as the two "About"s one
+ * column apart that `expectFooterLinkNamesUnique` exists for.
+ *
+ * ⚠ A PROPERTY over whatever opens a new tab, never a list of the five links it
+ * was written for. A list would be an assertion about how many off-site links
+ * the footer HAS — which is the mistake the uniqueness check shipped once, when
+ * its five-entry constant broke the day the footer grew to fourteen links.
+ *
+ * The fix it asks for is a visually-hidden suffix INSIDE the anchor, which
+ * appends to the accessible name and leaves the visible word contained in it.
+ * An aria-label would replace that word, so "click Events" would stop working
+ * for voice control (WCAG 2.5.3) — the same trade that made the About
+ * collision a visible-text fix. Icon-only anchors are the exception and may
+ * extend their aria-label: there is no visible text there to contradict.
+ */
+export async function expectNewTabLinksAnnounced(page: Page, name: string) {
+  const newTab = (await footerLinkNames(page)).filter(
+    (l) => l.target === "_blank",
+  )
+
+  // Positive control: every assertion here is an absence, and an empty array
+  // satisfies all of them.
+  expect(
+    newTab.length,
+    `${name}: no footer link opens in a new tab at all — SDSC's five content ` +
+      `links, the two parent-institution logos and the three social icons all ` +
+      `do, so an empty set means the off-site row is gone rather than fixed`,
+  ).toBeGreaterThanOrEqual(4)
+
+  expect(
+    newTab
+      .filter((l) => !/opens in a new tab/i.test(l.name))
+      .map((l) => `${l.name || "(unnamed)"} → ${l.href}`),
+    `${name}: a footer link opens in a new tab without saying so in its ` +
+      `accessible name. Append a visually-hidden suffix inside the anchor ` +
+      `(class="sr-only"), which ADDS to the name; an aria-label would REPLACE ` +
+      `the visible word and break voice control`,
+  ).toEqual([])
 }
 
 // ─── The consent banner: visible AND never in the way ────────────────────────
