@@ -16,6 +16,13 @@ export const load: PageServerLoad = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
   const hackathonId = event.params.id
 
+  // An organizer reading another participant's answers, read-only. Absent, the
+  // caller reads their own editable form. `?userId=` is a query param rather
+  // than a route segment because the destination is the same form, one person
+  // over — the backend's Write check on GetRegistrationResponse is what gates it.
+  const targetUserId = event.url.searchParams.get("userId") || undefined
+  const readOnly = targetUserId !== undefined
+
   // Prefer the member view when the caller can see it (private events, or
   // confirmed members): Get carries the same schema plus their membership.
   let found
@@ -46,7 +53,31 @@ export const load: PageServerLoad = async (event) => {
   // Answers already on file, so the form opens filled in and can be corrected
   // rather than re-typed from memory. Its own RPC, not part of Get: Get denies
   // waitlisted users, who are exactly the people still reviewing their form.
-  const existing = await hackathon.getRegistrationResponse({ hackathonId })
+  // With a userId this reads someone else's answers; the backend refuses a
+  // non-organizer caller, which surfaces as the 403 below.
+  let existing
+  try {
+    existing = await hackathon.getRegistrationResponse({
+      hackathonId,
+      userId: targetUserId,
+    })
+  } catch (e) {
+    if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED)
+      error(403, "You don't have permission to view this registration")
+    if (e instanceof ClientError && e.code === Status.NOT_FOUND)
+      error(404, "That participant is not registered here")
+    throw e
+  }
+
+  // The heading names the person whose answers these are. `found.members` comes
+  // from Get, which only a confirmed member (the organizer here) reaches, so
+  // the roster is present exactly when a userId can be.
+  const targetName = readOnly
+    ? found.members.find((m) => m.user?.id === targetUserId)?.user
+        ?.displayName ||
+      found.members.find((m) => m.user?.id === targetUserId)?.user?.username ||
+      "This participant"
+    : undefined
 
   // Struct values arrive as unknown; the form only ever renders text, and a
   // list field (`tags`) round-trips as a comma-separated string.
@@ -63,6 +94,8 @@ export const load: PageServerLoad = async (event) => {
     alreadySubmitted: existing.submitted,
     answers,
     consentValues: existing.consents ?? {},
+    readOnly,
+    targetName,
   }
 }
 
