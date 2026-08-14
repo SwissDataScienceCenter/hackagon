@@ -10,24 +10,9 @@ import {
   resolveImport,
 } from "$lib/server/hackathon/teamImport"
 import { importWorld } from "$lib/server/hackathon/teamImportWorld"
+import { labelledAnswers } from "$lib/utils/registrationAnswers"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
-
-/**
- * One answer, as a string an organiser can read and a filter can match.
- *
- * Registration answers arrive as a protobuf Struct, so a value is whatever the
- * organiser's field type produced — text, a number, a checkbox, a multi-select.
- * Rendering the raw JSON would put `["a","b"]` on screen.
- */
-function formatAnswer(value: unknown): string {
-  if (value === null || value === undefined) return ""
-  if (Array.isArray(value))
-    return value.map(formatAnswer).filter(Boolean).join(", ")
-  if (typeof value === "boolean") return value ? "Yes" : "No"
-  if (typeof value === "object") return JSON.stringify(value)
-  return String(value).trim()
-}
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
@@ -79,16 +64,10 @@ export const load: PageServerLoad = async (event) => {
       hackathonId: event.params.id,
     })
     for (const r of responses) {
-      const fields = Object.entries(r.responses ?? {})
-        .map(([key, value]) => ({
-          // The stored key is the organiser's field id; show the label they
-          // wrote for it, falling back to the key so a question removed from
-          // the schema still reads as something rather than vanishing.
-          label: registrationFields.find((f) => f.key === key)?.label ?? key,
-          value: formatAnswer(value),
-        }))
-        .filter((f) => f.value !== "")
-      answersByUser.set(r.userId, fields)
+      answersByUser.set(
+        r.userId,
+        labelledAnswers(r.responses, registrationFields),
+      )
     }
   } catch {
     // Left empty on purpose — see above.
