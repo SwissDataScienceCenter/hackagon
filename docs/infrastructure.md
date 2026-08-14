@@ -92,6 +92,9 @@ far more informative than uniform traffic:
 
 ## See also
 
+- [deployment.md](deployment.md) — the Helm chart that puts this topology on a
+  cluster, what an operator must supply, and what installing it for the first
+  time found.
 - [architecture.md](architecture.md) — the request flow and codegen pipelines
   behind this topology.
 - [getting-started.md](getting-started.md) — how to run the dev stack shown

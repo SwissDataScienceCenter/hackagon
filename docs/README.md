@@ -28,6 +28,7 @@ per-hackathon RBAC. The whole stack runs locally under a Nix dev shell driven by
 | [roadmap.md](roadmap.md)                                   | What is MVP vs Core, the designed user flow scored step by step, and what is explicitly unscheduled.                         |
 | [glossary.md](glossary.md)                                 | The domain vocabulary, code-grounded — including the collision-prone terms (capability, member, phase…).                     |
 | [infrastructure.md](infrastructure.md)                     | What runs today vs what production needs; a paperdraw.dev build sheet with real load profiles.                               |
+| [deployment.md](deployment.md)                             | The Helm chart: what an operator must supply, what will bite them, and the k3d rig that proved it (two modes, what each can prove). |
 
 ## Generated references
 
