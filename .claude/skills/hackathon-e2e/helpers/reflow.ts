@@ -15,7 +15,7 @@ import { expect, type Page } from "@playwright/test"
 //  4. the consent banner — the one piece of chrome that LAYERS over the page —
 //     is on screen without being asked to be, and covers no control once the
 //     document is scrolled to its end (expectConsentBannerClearsContent);
-//  5. the footer exists on this route and its four links are hit-testable at
+//  5. the footer exists on this route and its links are hit-testable at
 //     the bottom of the document (expectFooterOperable). Presence is a claim
 //     of its own here — the footer is the only inbound link to the platform's
 //     own SitePages, and it was absent from the whole signed-in half of the app
@@ -252,12 +252,33 @@ export async function expectNoClippedText(
 // ─── The site footer: present AND clickable ──────────────────────────────────
 
 /**
- * The links the footer carries. Privacy, Terms and About are SitePages —
- * `[slug=sitepage]` records authored in /manage/pages — and this footer is the
- * ONLY inbound link to any of them. A route without it is a route from which
- * the platform's own pages cannot be reached.
+ * The links the footer carries, each with the nav landmark that owns it.
+ *
+ * Privacy, Terms of use and About are SitePages — `[slug=sitepage]` records
+ * authored in /manage/pages — and this footer is the ONLY inbound link to any
+ * of them. A route without it is a route from which the platform's own pages
+ * cannot be reached.
+ *
+ * ⚠ Scoped to a landmark rather than searched footer-wide, and that is not
+ * tidiness. develop's rebuilt footer (`02658384`) carries the SDSC org site's
+ * own links beside ours, and one of them is ALSO named exactly "About"
+ * (datascience.ch/about, next to our /about). A footer-wide
+ * `getByRole("link", { name: "About", exact: true })` matches both, so the
+ * count assertion below would fail on a footer that is perfectly correct — and,
+ * worse, a `.first()` would have silently followed whichever the DOM happened
+ * to order first. The landmark is the thing that says WHICH About this is.
+ *
+ * The duplicate name is worth fixing in the product too (two links with the
+ * same accessible name in one region is exactly what a screen-reader link list
+ * cannot disambiguate); reported rather than worked around silently.
  */
-export const FOOTER_LINKS = ["Privacy", "Terms", "About", "GitHub"]
+export const FOOTER_LINKS: { label: string; nav: string }[] = [
+  { label: "Hackathons", nav: "Platform" },
+  { label: "Dashboard", nav: "Platform" },
+  { label: "About", nav: "Platform" },
+  { label: "Privacy", nav: "Legal" },
+  { label: "Terms of use", nav: "Legal" },
+]
 
 /**
  * TWO claims, and the second is the one that keeps costing money here.
@@ -294,10 +315,12 @@ export async function expectFooterOperable(page: Page, name: string) {
   ).toHaveCount(1)
   await expect(footer).toBeVisible()
 
-  for (const label of FOOTER_LINKS) {
+  for (const { label, nav } of FOOTER_LINKS) {
     await expect(
-      footer.getByRole("link", { name: label, exact: true }),
-      `${name}: the footer carries no "${label}" link`,
+      footer
+        .getByRole("navigation", { name: nav })
+        .getByRole("link", { name: label, exact: true }),
+      `${name}: the footer's "${nav}" nav carries no "${label}" link`,
     ).toHaveCount(1)
   }
 

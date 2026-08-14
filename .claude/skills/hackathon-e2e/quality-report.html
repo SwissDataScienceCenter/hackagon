@@ -186,7 +186,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
 <header class="topbar">
   <div class="brand">Hackagon <span>· e2e quality report</span></div>
-  <div class="topmeta">sketch/06-08-26 @ d3737691 · 2026-08-14</div>
+  <div class="topmeta">sketch/06-08-26 @ a9caa83e · 2026-08-14</div>
   <nav>
     <a class="btn" href="recipe-player.html">▶ Recipe player</a>
     <button class="btn" id="btnTheme" type="button" aria-pressed="false">
@@ -202,7 +202,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
     <div class="fig"><span class="num" data-claim="recipe.actions" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a></div>
     <p class="small" style="color:var(--muted);margin:.3rem 0 0">recipe actions</p>
   </div>
-  <p class="cap">Every one of them ran, in order, in the last journey suite — <span class="num" data-claim="journey.recipeSpecsHero" data-value="465">465</span><a class="src" href="#src-B" title="Source B">B</a> specs on <span class="num" data-claim="journey.day" data-value="2026-08-13">2026-08-13</span><a class="src" href="#src-B" title="Source B">B</a>, <span class="num" data-claim="journey.unexpectedHero" data-value="0">0</span><a class="src" href="#src-B" title="Source B">B</a> failed and
+  <p class="cap">Every one of them ran, in order, in the last journey suite — <span class="num" data-claim="journey.recipeSpecsHero" data-value="undefined">undefined</span><a class="src" href="#src-B" title="Source B">B</a> specs on <span class="num" data-claim="journey.day" data-value="2026-08-14">2026-08-14</span><a class="src" href="#src-B" title="Source B">B</a>, <span class="num" data-claim="journey.unexpectedHero" data-value="22">22</span><a class="src" href="#src-B" title="Source B">B</a> failed and
   <span class="num" data-claim="journey.skippedHero" data-value="0">0</span><a class="src" href="#src-B" title="Source B">B</a> skipped. The recipe is the product spec: it is
   what this report is mostly about, and what the numbers below qualify.</p>
 </div>
@@ -216,10 +216,10 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
   <div class="tiles">
 <article class="tile">
     <h3>journey — the lifecycle recipe</h3>
-    <p class="val"><span class="num" data-claim="journey.expected" data-value="469">469</span><a class="src" href="#src-B" title="Source B">B</a><span class="unit">specs passed</span></p>
-    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.unexpected" data-value="0">0</span>&nbsp;failed</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.skipped" data-value="0">0</span>&nbsp;skipped</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.flaky" data-value="0">0</span>&nbsp;flaky</span></p>
-    <p class="when">observed <span class="num" data-claim="journey.when" data-value="2026-08-13">2026-08-13</span><a class="src" href="#src-B" title="Source B">B</a></p>
-    <p class="note"><span class="num" data-claim="journey.setupSpecs" data-value="4">4</span><a class="src" href="#src-B" title="Source B">B</a> auth-setup + <span class="num" data-claim="journey.recipeSpecs" data-value="465">465</span><a class="src" href="#src-B" title="Source B">B</a> recipe actions, serial, in <span class="num" data-claim="journey.minutes" data-value="2.6">2.6</span><a class="src" href="#src-B" title="Source B">B</a> min.</p>
+    <p class="val"><span class="num" data-claim="journey.expected" data-value="120">120</span><a class="src" href="#src-B" title="Source B">B</a><span class="unit">specs passed</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.unexpected" data-value="22">22</span>&nbsp;failed</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.skipped" data-value="0">0</span>&nbsp;skipped</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.flaky" data-value="0">0</span>&nbsp;flaky</span></p>
+    <p class="when">observed <span class="num" data-claim="journey.when" data-value="2026-08-14">2026-08-14</span><a class="src" href="#src-B" title="Source B">B</a></p>
+    <p class="note"><span class="num" data-claim="journey.setupSpecs" data-value="4">4</span><a class="src" href="#src-B" title="Source B">B</a> auth-setup + <span class="num" data-claim="journey.recipeSpecs" data-value="undefined">undefined</span><a class="src" href="#src-B" title="Source B">B</a> recipe actions, serial, in <span class="num" data-claim="journey.minutes" data-value="10.3">10.3</span><a class="src" href="#src-B" title="Source B">B</a> min.</p>
   </article>
 <article class="tile">
     <h3>smoke — the seeded fixture</h3>
@@ -258,15 +258,10 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
   </article>
   </div>
 
-  <div class="callout good">
-    <h3>The run and the recipe are the same list</h3>
-    <p>The <span class="num" data-claim="xcheck.runIds" data-value="465">465</span><a class="src" href="#src-B" title="Source B">B</a> spec titles in the run report carry an
-           <code>[id]</code> prefix, and that sequence is identical — same members, same order — to the
-           <span class="num" data-claim="xcheck.recipeIds" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a> action ids in <code>recipe.jsonl</code>.
-           The recipe's count and the run's count are therefore the same
-           <span class="num" data-claim="xcheck.same" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a> things, which is the claim a headline number
-           normally leaves unproven — a suite can pass every test it ran while never running the ones
-           that matter.</p>
+  <div class="callout crit">
+    <h3>The run and the recipe DISAGREE</h3>
+    <p>465 recipe action(s) never ran and 0 spec(s) have no
+           action. This build should not be trusted until that is explained.</p>
   </div>
 </section>
 
@@ -290,7 +285,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
     </article>
     <article class="tile"><h3>Expected refusals</h3>
       <p class="val"><span class="num" data-claim="recipe.denials" data-value="87">87</span><a class="src" href="#src-A" title="Source A">A</a><span class="unit">declare an error</span></p>
-      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.gates" data-value="24">24</span>&nbsp;gated</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.todos" data-value="66">66</span>&nbsp;carry a todo</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.gates" data-value="24">24</span>&nbsp;gated</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.todos" data-value="67">67</span>&nbsp;carry a todo</span></p>
       <p class="note">A gated action skips until its RPC probes as present, then wakes up on its own.</p>
     </article>
     <article class="tile"><h3>Surface reached</h3>
@@ -753,7 +748,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-A">
     <th scope="row" class="srckey">A</th>
     <td class="mono">.claude/skills/hackathon-e2e/recipe.jsonl</td>
-    <td class="numcell small mono">252.7 KiB</td>
+    <td class="numcell small mono">253.6 KiB</td>
     <td class="small mono">2026-08-14</td>
     <td class="small"><span class="num" data-claim="src.actionLines" data-value="465">465</span> action lines + <span class="num" data-claim="src.bannerLines" data-value="12">12</span> comment banners (<span class="num" data-claim="src.actSections" data-value="11">11</span> of them act headings): kinds,
       priorities, actors, gates, todos, expected status codes, and every RPC the recipe calls.</td>
@@ -761,8 +756,8 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-B">
     <th scope="row" class="srckey">B</th>
     <td class="mono">.claude/skills/hackathon-e2e/.artifacts/results.json</td>
-    <td class="numcell small mono">500.6 KiB</td>
-    <td class="small mono">2026-08-13</td>
+    <td class="numcell small mono">312.7 KiB</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">Playwright's json reporter from the last journey run: stats block, per-project spec counts, and the [id] prefix on every spec title.</td>
   </tr>
 <tr id="src-C">
@@ -820,7 +815,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
 <footer>
   <p>Generated by <code>.claude/skills/hackathon-e2e/scripts/build-quality-report.mjs</code> from
-  sketch/06-08-26 @ d3737691 (2026-08-14). No wall-clock is embedded, so two builds over one
+  sketch/06-08-26 @ a9caa83e (2026-08-14). No wall-clock is embedded, so two builds over one
   tree are byte-identical. This is the status report; the animated replay of the recipe is
   <a href="recipe-player.html">recipe-player.html</a>.</p>
 </footer>

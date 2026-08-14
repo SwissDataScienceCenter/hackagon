@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test"
 import { PERSONAS, SEED_HACKATHONS } from "../../personas.js"
 import { storageStatePath } from "../../helpers/state.js"
 import { rpcAnonymous } from "../../helpers/api.js"
-import { expectFooterOperable, FOOTER_LINKS } from "../../helpers/reflow.js"
+import { expectFooterOperable } from "../../helpers/reflow.js"
 
 // The site footer on the SIGNED-IN half of the app, and what it is FOR.
 //
@@ -28,11 +28,21 @@ import { expectFooterOperable, FOOTER_LINKS } from "../../helpers/reflow.js"
 // the hackathon sidebar is anchored to the VIEWPORT, so it can be drawn over a
 // footer that is at the bottom of the document.
 
-/** slug -> the <h1> the SitePage renders (cmd/seed/main.go, seedSitePages). */
+/**
+ * slug -> the <h1> the SitePage renders (cmd/seed/main.go, seedSitePages), and
+ * the footer nav landmark that links to it.
+ *
+ * ⚠ `nav` is load-bearing, not decoration. develop's rebuilt footer (`02658384`)
+ * puts the SDSC org site's links beside ours and one of THEM is also named
+ * exactly "About" (datascience.ch/about). Footer-wide, `name: "About"` matches
+ * two links pointing at two different places; the landmark is what says which
+ * one this test means. The label also moved: "Terms" is "Terms of use" now, so
+ * the link text and the page's <h1> finally agree.
+ */
 const SITE_PAGES = [
-  { label: "Privacy", href: "/privacy", title: "Privacy" },
-  { label: "Terms", href: "/terms", title: "Terms of use" },
-  { label: "About", href: "/about", title: "About Hackagon" },
+  { label: "Privacy", nav: "Legal", href: "/privacy", title: "Privacy" },
+  { label: "Terms of use", nav: "Legal", href: "/terms", title: "Terms of use" },
+  { label: "About", nav: "Platform", href: "/about", title: "About Hackagon" },
 ]
 
 let h1Id = ""
@@ -179,11 +189,13 @@ test.describe("the footer's links resolve from inside the app", () => {
       await page.goto("/dashboard")
       await page.waitForLoadState("networkidle").catch(() => {})
 
-      // Scoped to the <footer>, never page-wide: "Privacy" and "About" also
-      // appear in the consent sentence and in the header nav, and a check that
-      // matches those would pass with no footer at all.
+      // Scoped to the <footer> and then to its nav landmark, never page-wide:
+      // "Privacy" and "About" also appear in the consent sentence, and a check
+      // that matches those would pass with no footer at all. The landmark is
+      // the second half of that — see SITE_PAGES on the duplicate "About".
       const link = page
         .locator("footer")
+        .getByRole("navigation", { name: target.nav })
         .getByRole("link", { name: target.label, exact: true })
       await expect(link).toHaveAttribute("href", target.href)
 
@@ -203,18 +215,73 @@ test.describe("the footer's links resolve from inside the app", () => {
     }
   })
 
-  test("the GitHub link points off-site and nowhere else", async ({ page }) => {
-    // Not followed — an external navigation in a suite that has no network
-    // contract with github.com is a flake waiting to happen. The href is the
-    // whole claim.
+  test("every off-site link points off-site, and can be named", async ({
+    page,
+  }) => {
+    // Re-specified for develop's rebuilt footer (`02658384`). There is no
+    // GitHub link any more — the off-site row is SDSC's own channels, three
+    // ICON-ONLY anchors — so the old test is retired rather than repaired: its
+    // subject left the product. What replaced it is a stronger claim about the
+    // same row, and one this footer can actually break.
+    //
+    //  1. every off-site anchor is absolute https. Same reason as before: a
+    //     relative href here would silently resolve against our own origin.
+    //  2. every one of them has an ACCESSIBLE NAME. That is new and it is the
+    //     point: an icon-only link whose aria-label is dropped is invisible to
+    //     a screen reader and to every name-based locator, and it looks
+    //     completely fine on screen. `getByRole("link")` returns it either way,
+    //     so the name has to be read back explicitly.
+    //
+    // Not followed — an external navigation in a suite with no network contract
+    // with linkedin.com is a flake waiting to happen. The href is the claim.
     await page.goto("/dashboard")
-    const href = await page
+    const offsite = await page
       .locator("footer")
-      .getByRole("link", { name: "GitHub", exact: true })
-      .getAttribute("href")
-    expect(href, "the footer's GitHub link must be an absolute https URL").toMatch(
-      /^https:\/\/github\.com/,
-    )
+      .getByRole("link")
+      .evaluateAll((els) =>
+        els
+          .map((e) => ({
+            href: e.getAttribute("href") ?? "",
+            // aria-label wins, then the link's CONTENT — and content includes
+            // the alt text of any image inside it. Reading textContent alone
+            // called the two parent-institution logos nameless on the first
+            // run; they are `<a><img alt="ETH Zurich"></a>`, which names the
+            // link perfectly well. A check that reports a correct page as
+            // broken gets deleted, so it computes the name the way a screen
+            // reader does.
+            name: (
+              e.getAttribute("aria-label") ??
+              [
+                (e.textContent ?? "").trim(),
+                ...Array.from(e.querySelectorAll("img")).map(
+                  (i) => i.getAttribute("alt") ?? "",
+                ),
+              ]
+                .filter(Boolean)
+                .join(" ")
+            ).trim(),
+          }))
+          .filter((l) => /^https?:/.test(l.href)),
+      )
+
+    // Positive control: a footer whose off-site row went missing would satisfy
+    // both assertions below with an empty array, which is the vacuous shape
+    // this repo keeps paying for.
+    expect(
+      offsite.length,
+      "the footer carries no off-site links at all — SDSC's channels and the " +
+        "two parent-institution logos should all be here",
+    ).toBeGreaterThanOrEqual(4)
+
+    expect(
+      offsite.filter((l) => !l.href.startsWith("https://")),
+      "an off-site footer link is not absolute https",
+    ).toEqual([])
+    expect(
+      offsite.filter((l) => l.name === "").map((l) => l.href),
+      "an off-site footer link has no accessible name — icon-only anchors need " +
+        "aria-label, and nothing on screen shows when one is lost",
+    ).toEqual([])
   })
 
   // ─── Controls: each assertion above, shown failing ─────────────────────────
@@ -313,10 +380,21 @@ test.describe("the footer's links resolve from inside the app", () => {
     const publicLabels = await labelsOn("/hackathon")
     const appLabels = await labelsOn("/dashboard")
 
+    // This used to compare the public footer against the FOOTER_LINKS constant,
+    // which made the test a claim about the footer's SIZE — and develop's
+    // rebuild (`02658384`) grew it from four links to fourteen, so the constant
+    // was wrong the moment a copy edit landed rather than when anything broke.
+    // Same disease as `03-dashboard`'s `connectedCount: 3`.
+    //
+    // The property was always the EQUALITY: one AppShell, so one footer. That
+    // is asserted directly now, and the presence of the named links is
+    // expectFooterOperable's job — which runs on both of these routes already
+    // and does it through the nav landmarks.
     expect(
-      publicLabels,
-      "the public footer lost a link — FOOTER_LINKS is the contract both sides share",
-    ).toEqual(FOOTER_LINKS)
+      publicLabels.length,
+      "the public footer has no links at all — two empty lists are equal, and " +
+        "that is the one way this check could agree with a footer that is gone",
+    ).toBeGreaterThan(4)
     expect(
       appLabels,
       "the signed-in footer differs from the public one; they are supposed to " +
