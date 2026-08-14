@@ -39,11 +39,12 @@ const JOURNAL = path.join(STATE, "journal.json")
 const BACKUPS = path.join(STATE, "backup")
 const MANIFEST = path.join(HERE, "manifest.jsonl")
 
-// The Nix dev shell is a repo-wide mutex here — 44s to enter unopposed, 80s
-// with one competitor (container trap 4). Every binary this runner needs is
-// already in devenv's profile, which is a plain directory of symlinks and
-// costs nothing to put on PATH. Never call `just nix::develop` from this file:
-// a 30-mutation run would spend half an hour re-hashing the worktree.
+// The Nix dev shell is a repo-wide mutex here — ~5s to enter unopposed
+// (re-measured 2026-08-14) and serializing under contention (container trap 4).
+// Every binary this runner needs is already in devenv's profile, which is a
+// plain directory of symlinks and costs nothing to put on PATH. Never call
+// `just nix::develop` from this file: one shell entry per mutation is pure
+// overhead against a tier whose whole point is costing seconds.
 const DEVENV_BIN = path.join(ROOT, ".devenv/profile/bin")
 const ENV = {
   ...process.env,

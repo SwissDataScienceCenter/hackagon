@@ -577,9 +577,9 @@ five-minute check rather than an afternoon, and means it still works while the
 stack is down, being rebuilt, or in use by somebody else.
 
 Two things make that possible and neither is incidental. **The runner never
-enters `nix develop`**: that shell is a repo-wide mutex costing 44 s unopposed
-on a permanently-dirty worktree (container trap 4), and 30 entries through it
-would cost more than every test they run. `.devenv/profile/bin` already holds
+enters `nix develop`**: that shell is a repo-wide mutex, ~5 s unopposed and
+serializing under contention (container trap 4), so 38 entries through it would
+cost more than every test they run. `.devenv/profile/bin` already holds
 `go`, `node` and `pnpm` and costs nothing to put on `PATH`. And **the journey
 cannot be `--grep`ped**: it is serial with chained `vars`, so the only lever is
 `--until-act N`, and a backend mutation additionally needs the running server
@@ -610,12 +610,14 @@ Nothing but a post-restore `git status` could have caught that — the tool
 believed it had cleaned up.
 
 ⚠ **The cleanliness check is SCOPED to the files the manifest names**, plus
-`components/`, and that is deliberate twice over. A repo-wide "git status is
-empty" check can never pass in this container (three git-lfs pointer files read
-as permanently modified — trap 4), and it is a check on other people: the first
-run of this tool aborted ten mutations because a second agent added a file
-elsewhere under `.claude/` while it worked. A safety check that cries wolf on
-somebody else's work is a safety check that gets deleted.
+`components/`, and that is deliberate. It was originally scoped for two reasons
+and one of them has since been fixed: a repo-wide "git status is empty" check
+could never pass while three git-lfs pointer files read as permanently modified,
+and `git-lfs` in the image closed that (trap 4). The reason that remains is a
+check on **other people**: the first run of this tool aborted ten mutations
+because a second agent added a file elsewhere under `.claude/` while it worked. A
+safety check that cries wolf on somebody else's work is a safety check that gets
+deleted.
 
 ### What the first manifest found (2026-08-13, 38 mutations)
 
@@ -749,9 +751,10 @@ Smoke drops from 3.0 m to 1.4 m against it. Three traps in that one command:
 first, and check for a leftover vite still holding `[::1]:8081`.
 
 `E2E_BASE_URL` retargets the whole harness (`lib.sh` derives `FRONTEND_URL` from
-it), but prefer serving on **:8081**: Keycloak's `hackagon-dev` client only
-allows `localhost:8081/*` redirect URIs, so :8082 dies at login with
-`Invalid parameter: redirect_uri`.
+it), but prefer serving on **:8081**: the realm export's `hackagon-frontend`
+client — realm `hackagon`, not `hackagon-dev`, which is the bucket and network
+name — allows exactly one redirect URI, `http://localhost:8081/*`, so :8082 dies
+at login with `Invalid parameter: redirect_uri`.
 
 **3. Do not gate sidecars on `dev`'s health.** `dev` is healthy only once
 someone runs `just up`, which compose does not manage, so
@@ -773,30 +776,37 @@ stack goes through it** (fixed 2026-08-13). This is the one that poisoned
 several days of test results, and it never once looked like an infrastructure
 problem — it looked like product bugs, at four different places in four runs.
 
-The worktree here is permanently dirty, so every `nix develop` re-fetches and
-re-hashes the whole tree, holding a repo-wide lock while it does
+Every `nix develop` takes a repo-wide lock while it fetches and hashes the tree
 (`waiting for another Nix process to finish fetching input
-'git+file:///workspaces/hackagon'…`). Measured: **44 s to enter that shell
-unopposed, 80 s with one competitor.** And the stack's own processes are
+'git+file:///workspaces/hackagon'…`), and the stack's own processes are
 `just develop just run` / `just develop just serve`, so entering that shell is
 inside every service's startup — while process-compose's readiness clock is
 already running. **The probe budget is spent waiting for Nix, not on the
 server.** (The probes themselves are fine; they are `${pkgs.grpcurl}/bin/grpcurl`
 and `${pkgs.curl}/bin/curl` by store path and enter no shell.)
 
-⚠ **"Permanently dirty" is not about your edits — it is true with ZERO changes,
-and the cause is that `git-lfs` is not installed in this container.** Three
-files are LFS pointers in HEAD (`components/frontend/static/favicon.png`,
-`static/og-default.jpg`, `tools/configs/keycloak/.../img/favicon.ico`) and hold
-their real bytes in the worktree, smudged by the Windows host the workspace is
-bind-mounted from. Inside `dev` there is no `filter.lfs.smudge`, so git compares
-pointer against content and reports all three modified, always. Nix therefore
-never reaches its clean-revision fast path, and the 44 s floor above is the
-normal state rather than a consequence of active work. **Not fixed:** the durable
-form is `git-lfs` in `.devcontainer/Dockerfile`, which is a container recreate
-(trap 2), and any development session dirties the tree anyway. Worth doing next
-time the image is rebuilt for another reason. The host's own git reports those
-files clean, which is why nobody saw it.
+⚠ **THE 44 s FLOOR THIS ONCE CLAIMED WAS WRONG — corrected 2026-08-13, re-measured
+2026-08-14.** `just nix::develop default true` in this container is **~4.6–5.0 s
+steady state**, and *clean versus dirty is not the variable*: one modified
+tracked file measured 4.7–5.0 s, identical to a clean tree. The first entry after
+a tree edit runs 4.7–10.6 s. The 44 s was almost certainly sampled while
+`frontend` was crash-looping through one full `nix develop` per round — i.e. it
+measured the contention, not the floor, and capping `max_restarts` removed it.
+
+The cost that IS real is self-inflicted and small: `tools/just/devenv.sh`
+rewrites `.devenv/state/pwd` on every invocation, so the `devenv-root` flake
+input gets a new `lastModified` and Nix's eval cache misses every run. Against a
+fixed root file the same call drops to 3.2–4.5 s — about 1.7 s of every entry.
+
+**`git-lfs` is in the image now** (`.devcontainer/Dockerfile`, 2026-08-13), so
+the three LFS-tracked binaries (`components/frontend/static/favicon.png`,
+`static/og-default.jpg`, `tools/configs/keycloak/.../img/favicon.ico`) no longer
+read as permanently modified — the worktree held their real bytes, smudged by the
+Windows host, while HEAD held a pointer, and a container with no
+`filter.lfs.smudge` compared the two and reported ` M` forever. It was A/B'd
+directly: the tree goes genuinely clean, Nix stops printing
+`warning: Git tree … is dirty`, and **the time does not move.** Keep it for the
+truthful `git status` — several tools read it — not for speed.
 
 What that budget actually was: probes land ~15 s apart (process-compose's default
 period), so the backend's `failure_threshold: 50` was ~12.7 min — against a

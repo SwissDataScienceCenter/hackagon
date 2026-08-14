@@ -133,8 +133,10 @@ let
                 backend = lib.mkIf withBackend {
                   # NOTE: this enters the Nix dev shell, and that is the single
                   # most expensive fact about this process. Entering it costs
-                  # 44s at best on a dirty worktree, and it takes a REPO-WIDE
-                  # lock while it re-fetches the tree
+                  # ~5s unopposed (re-measured 2026-08-14; the 44s once written
+                  # here was sampled during the frontend crash loop below, not a
+                  # floor), and it takes a REPO-WIDE lock while it re-fetches
+                  # the tree
                   # ("waiting for another Nix process to finish fetching input
                   # 'git+file:///workspaces/hackagon'…"), so every other
                   # `just develop` anywhere on the machine queues behind it.

@@ -31,7 +31,7 @@
 #                   this container localhost is ::1.
 #   AUTH_URL  must accompany ORIGIN, or login completes and then does nothing.
 #
-# :8081 rather than :8082 because Keycloak's hackagon-dev client only allows
+# :8081 rather than :8082 because Keycloak's hackagon-frontend client only allows
 # redirect URIs on 8081; moving the app dies at login with
 # "Invalid parameter: redirect_uri". :8082 belongs to the cloudflare-tunnel
 # skill's own built server, which is why everything here is scoped to servers
@@ -123,11 +123,11 @@ resolve_pid() {
 # This is not tidiness — an un-stopped vite next to our server on :8081 is the
 # single most expensive failure mode this container has. vite cannot bind, exits
 # 1, and `availability.restart` sends it round again; each round is a full
-# `just develop` = `nix develop` on a DIRTY worktree, which takes the repo-wide
-# fetch lock on `git+file:///workspaces/hackagon`. Measured 2026-08-13: 44 s to
-# enter that shell unopposed, 80 s with one competitor, and a stack found in
-# this state had 54 restarts in 50 minutes — a lock acquisition every ~55 s,
-# forever. Everything else that enters the shell then queues behind it: the
+# `just develop` = `nix develop`, which takes the repo-wide fetch lock on
+# `git+file:///workspaces/hackagon`. Entering that shell is ~5 s unopposed
+# (re-measured 2026-08-14) and serializes everything else that wants the lock,
+# and a stack found in this state had 54 restarts in 50 minutes — a lock
+# acquisition every ~55 s, forever. Everything else that enters the shell then queues behind it: the
 # backend's own start command is `just develop just run`, and its readiness
 # budget is spent WAITING FOR NIX rather than on the server. When the budget
 # runs out process-compose SIGTERMs it, the Go server shuts down gracefully,

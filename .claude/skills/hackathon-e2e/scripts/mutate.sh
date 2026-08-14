@@ -21,10 +21,10 @@
 #     A mutation left in the tree that then gets committed is the worst outcome
 #     this tool can produce, so it gets two locks rather than one.
 #  2. Keeping `nix develop` out of the loop. Every other script here calls
-#     ensure_toolchain, which re-enters the dev shell — a repo-wide mutex that
-#     costs 44s unopposed on a permanently-dirty worktree (container trap 4).
+#     ensure_toolchain, which re-enters the dev shell — a repo-wide mutex,
+#     ~5s unopposed and serializing under contention (container trap 4).
 #     devenv's profile has go, node and pnpm already and costs nothing, so the
-#     fast tier runs 30 mutations in the time one `nix develop` takes.
+#     fast tier spends its seconds on tests rather than on shell entries.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(dirname "$HERE")"
