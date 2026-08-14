@@ -56,7 +56,9 @@ async function expectDrawsAsField(area: Locator, what: string): Promise<void> {
     return {
       background: own.backgroundColor,
       borderTopWidth: own.borderTopWidth,
-      behindBackground: behind ? getComputedStyle(behind).backgroundColor : "none",
+      behindBackground: behind
+        ? getComputedStyle(behind).backgroundColor
+        : "none",
       width: el.getBoundingClientRect().width,
       wrapperWidth: wrapper ? wrapper.getBoundingClientRect().width : 0,
     }
@@ -92,7 +94,11 @@ async function deletePageIfPresent(
   await page.waitForLoadState("networkidle")
   const row = page.locator(".card", { hasText: TITLE })
   if ((await row.count()) > 0) {
-    await row.first().locator('form[action="?/delete"]').getByRole("button").click()
+    await row
+      .first()
+      .locator('form[action="?/delete"]')
+      .getByRole("button")
+      .click()
     await expect(page.locator(".card", { hasText: TITLE })).toHaveCount(0)
   }
 }
@@ -140,17 +146,19 @@ test.describe("platform page editor", () => {
     // NEW place this content gets rendered — in the admin's own browser, with
     // the admin's session — so it has to go through the same sanitizing
     // pipeline the public page does.
-    await form.locator("textarea[name=content]").fill(
-      [
-        "## Be excellent to each other",
-        "",
-        "Harassment is **not tolerated** at any Hackagon event.",
-        "",
-        '<script>window.__pwned = true</script>',
-        "",
-        '<img src=x onerror="window.__pwned = true">',
-      ].join("\n"),
-    )
+    await form
+      .locator("textarea[name=content]")
+      .fill(
+        [
+          "## Be excellent to each other",
+          "",
+          "Harassment is **not tolerated** at any Hackagon event.",
+          "",
+          "<script>window.__pwned = true</script>",
+          "",
+          '<img src=x onerror="window.__pwned = true">',
+        ].join("\n"),
+      )
 
     // Set the sentinel AFTER typing and BEFORE rendering, so a truthy value can
     // only have come from the preview.
@@ -222,7 +230,11 @@ test.describe("platform page editor", () => {
     // open a file picker — so the input is set directly.
     await form
       .locator("input[type=file]")
-      .setInputFiles({ name: "venue-photo.png", mimeType: "image/png", buffer: PNG })
+      .setInputFiles({
+        name: "venue-photo.png",
+        mimeType: "image/png",
+        buffer: PNG,
+      })
 
     // The editor's own error line FIRST. Without it the failure reads "the
     // textarea did not change", which is the symptom; the component already
@@ -249,7 +261,9 @@ test.describe("platform page editor", () => {
       )
       .toBe(true)
     if (await uploadError.count()) {
-      throw new Error(`upload reported: ${await uploadError.first().innerText()}`)
+      throw new Error(
+        `upload reported: ${await uploadError.first().innerText()}`,
+      )
     }
 
     const value = await content.inputValue()
@@ -264,9 +278,10 @@ test.describe("platform page editor", () => {
     // borrowing HACKATHON_MEDIA would have needed a hackathon id and an
     // organiser's Write permission that no site page can supply.
     expect(url).toContain("/site/media/")
-    expect(url, "a platform page must not file media under an event").not.toContain(
-      "/hackathons/",
-    )
+    expect(
+      url,
+      "a platform page must not file media under an event",
+    ).not.toContain("/hackathons/")
 
     // The bytes are really there. Content-Type too: an image stored under the
     // wrong type is one the browser refuses to render, which looks like a
@@ -319,7 +334,9 @@ test.describe("platform page editor", () => {
     // Positive control first. Without it "403 for everybody" — a broken route,
     // a wrong kind, a typo in the path — reads exactly like a working rule.
     await page.goto("/manage/pages")
-    const asAdmin = await page.request.post("/manage/pages/media", { data: body })
+    const asAdmin = await page.request.post("/manage/pages/media", {
+      data: body,
+    })
     expect(asAdmin.status(), await asAdmin.text()).toBe(200)
     const presigned = (await asAdmin.json()) as {
       uploadUrl?: string

@@ -48,9 +48,10 @@ test.describe("anonymous visitor", () => {
     // made there races the navigation. `maxRedirects: 0` asks the guard directly.
     for (const target of ["/dashboard", "/my/hackathon/some-id/overview"]) {
       const resp = await page.request.get(target, { maxRedirects: 0 })
-      expect(resp.status(), `${target} should bounce an anonymous visitor`).toBe(
-        303,
-      )
+      expect(
+        resp.status(),
+        `${target} should bounce an anonymous visitor`,
+      ).toBe(303)
       expect(
         resp.headers()["location"],
         `${target} must be parked on the interstitial, not discarded`,

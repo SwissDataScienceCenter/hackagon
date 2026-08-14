@@ -163,11 +163,25 @@ func TestPresignPutSignsSizeAndType(t *testing.T) {
 	headers := http.Header{}
 	headers.Set("Content-Type", "image/webp")
 	headers.Set("Content-Length", "98028")
-	_, a := client.presign(http.MethodPut, "hackathons/abc/logo/x.webp", nil, headers, 15*time.Minute, at)
+	_, a := client.presign(
+		http.MethodPut,
+		"hackathons/abc/logo/x.webp",
+		nil,
+		headers,
+		15*time.Minute,
+		at,
+	)
 
 	bigger := headers.Clone()
 	bigger.Set("Content-Length", "98029")
-	_, b := client.presign(http.MethodPut, "hackathons/abc/logo/x.webp", nil, bigger, 15*time.Minute, at)
+	_, b := client.presign(
+		http.MethodPut,
+		"hackathons/abc/logo/x.webp",
+		nil,
+		bigger,
+		15*time.Minute,
+		at,
+	)
 
 	if a == b {
 		t.Error("signature did not change with the signed content-length")

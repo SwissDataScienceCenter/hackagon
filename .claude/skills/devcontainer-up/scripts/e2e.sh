@@ -12,7 +12,7 @@ source "$HERE/lib.sh"
 
 require_docker
 if ! container_running; then
-  bash "$HERE/up.sh"
+    bash "$HERE/up.sh"
 fi
 
 args=""

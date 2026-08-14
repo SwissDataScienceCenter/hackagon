@@ -297,9 +297,9 @@ describe("MarkdownEditor: paste a table", () => {
     mount()
     const { panel } = await openPanel()
 
-    expect(
-      panel.querySelector("button[disabled]")?.textContent?.trim(),
-    ).toBe("Insert table")
+    expect(panel.querySelector("button[disabled]")?.textContent?.trim()).toBe(
+      "Insert table",
+    )
   })
 
   it("inserts a table the Preview pane renders as a real <table>", async () => {
@@ -429,7 +429,9 @@ describe("MarkdownEditor: paste a table", () => {
     await tick()
     await tick()
 
-    expect(field().value).toMatch(/^before\n\n\| a\s+\| b\s+\|\n\| -+ \| -+ \|\n\nafter$/)
+    expect(field().value).toMatch(
+      /^before\n\n\| a\s+\| b\s+\|\n\| -+ \| -+ \|\n\nafter$/,
+    )
   })
 
   it("closes on Escape and gives focus back to the control that opened it", async () => {

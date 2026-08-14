@@ -38,7 +38,9 @@ export function safeReturnTo(value: string | null | undefined): string | null {
 export function loginUrlFor(target: string | null | undefined): string {
   const safe = safeReturnTo(target)
 
-  return safe ? `${LOGIN_PATH}?returnTo=${encodeURIComponent(safe)}` : LOGIN_PATH
+  return safe
+    ? `${LOGIN_PATH}?returnTo=${encodeURIComponent(safe)}`
+    : LOGIN_PATH
 }
 
 /**
@@ -49,9 +51,7 @@ export function loginUrlFor(target: string | null | undefined): string {
  * and "the dashboard", so a change that breaks one cannot silently pass the
  * other — both the guard's round trip and the plain "Log in" button call it.
  */
-export function loginDestination(
-  returnTo: string | null | undefined,
-): string {
+export function loginDestination(returnTo: string | null | undefined): string {
   const target = safeReturnTo(returnTo)
   if (!target) return DEFAULT_LOGIN_DESTINATION
 

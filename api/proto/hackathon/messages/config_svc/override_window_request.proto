@@ -12,7 +12,12 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 message OverrideWindowRequest {
   string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
   // Which window to extend: "registration" or "submissions".
-  string window = 2 [(buf.validate.field).string = {in: ["registration", "submissions"]}];
+  string window = 2 [(buf.validate.field).string = {
+    in: [
+      "registration",
+      "submissions"
+    ]
+  }];
   int32 extend_minutes = 3 [
     (buf.validate.field).int32.gt = 0,
     (buf.validate.field).int32.lte = 1440

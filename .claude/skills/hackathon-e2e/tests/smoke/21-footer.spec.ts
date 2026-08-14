@@ -157,7 +157,11 @@ test.describe("the footer reaches every signed-in page", () => {
   test.describe("as a global admin", () => {
     test.use({ storageState: storageStatePath(PERSONAS.admin.key) })
 
-    for (const path of ["/manage/pages", "/manage/users", "/hackathons/create"]) {
+    for (const path of [
+      "/manage/pages",
+      "/manage/users",
+      "/hackathons/create",
+    ]) {
       test(`${path} carries a usable footer`, async ({ page }) => {
         await page.goto(path)
         await page.waitForLoadState("networkidle").catch(() => {})
@@ -212,9 +216,10 @@ test.describe("the footer's links resolve from inside the app", () => {
       .locator("footer")
       .getByRole("link", { name: "GitHub", exact: true })
       .getAttribute("href")
-    expect(href, "the footer's GitHub link must be an absolute https URL").toMatch(
-      /^https:\/\/github\.com/,
-    )
+    expect(
+      href,
+      "the footer's GitHub link must be an absolute https URL",
+    ).toMatch(/^https:\/\/github\.com/)
   })
 
   // ─── Controls: each assertion above, shown failing ─────────────────────────
@@ -251,7 +256,9 @@ test.describe("the footer's links resolve from inside the app", () => {
     ).rejects.toThrow()
   })
 
-  test("CONTROL: a lid over the page bottom fails the check", async ({ page }) => {
+  test("CONTROL: a lid over the page bottom fails the check", async ({
+    page,
+  }) => {
     await page.goto("/dashboard")
     await page.waitForLoadState("networkidle").catch(() => {})
 

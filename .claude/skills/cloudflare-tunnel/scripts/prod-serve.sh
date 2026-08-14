@@ -84,29 +84,29 @@ ORIGIN_FILE="$RUN_DIR/frontend-prod.origin"
 # Toolchain (just, process-compose, node, pnpm) — re-exec in the Nix dev shell
 # when invoked from a plain shell (same trick as auth-wire.sh).
 if ! command -v process-compose >/dev/null 2>&1 || ! command -v node >/dev/null 2>&1; then
-  if [ -n "${HACKAGON_TUNNEL_NIX_WRAPPED:-}" ]; then
-    echo "error: toolchain not found even inside the Nix dev shell" >&2
-    exit 1
-  fi
-  export HACKAGON_TUNNEL_NIX_WRAPPED=1
-  cd "$ROOT_DIR"
-  exec just nix::develop default bash "$HERE/$(basename "${BASH_SOURCE[0]}")" "$@"
+    if [ -n "${HACKAGON_TUNNEL_NIX_WRAPPED:-}" ]; then
+        echo "error: toolchain not found even inside the Nix dev shell" >&2
+        exit 1
+    fi
+    export HACKAGON_TUNNEL_NIX_WRAPPED=1
+    cd "$ROOT_DIR"
+    exec just nix::develop default bash "$HERE/$(basename "${BASH_SOURCE[0]}")" "$@"
 fi
 
 wait_for() { # <name> <timeout_s> <cmd...>
-  local name="$1" timeout="$2" start
-  shift 2
-  start=$(date +%s)
-  printf "  waiting for %-16s " "$name"
-  until "$@" >/dev/null 2>&1; do
-    if [ $(($(date +%s) - start)) -ge "$timeout" ]; then
-      echo "FAILED (timeout after ${timeout}s)"
-      return 1
-    fi
-    printf "."
-    sleep 2
-  done
-  echo "ok"
+    local name="$1" timeout="$2" start
+    shift 2
+    start=$(date +%s)
+    printf "  waiting for %-16s " "$name"
+    until "$@" >/dev/null 2>&1; do
+        if [ $(($(date +%s) - start)) -ge "$timeout" ]; then
+            echo "FAILED (timeout after ${timeout}s)"
+            return 1
+        fi
+        printf "."
+        sleep 2
+    done
+    echo "ok"
 }
 
 # THE SAME ENTRYPOINT RUNS ON BOTH PORTS, so the only honest way to tell the
@@ -118,44 +118,44 @@ wait_for() { # <name> <timeout_s> <cmd...>
 # stack's frontend while reporting that it had stopped a tunnel upstream, and
 # `ensure`/`start` would have "restarted" it onto another port.
 servers_on_port() { # <port> — pids of our built server launched with that PORT
-  local pid
-  for pid in $({ pgrep -f "$SERVER_ENTRY" 2>/dev/null || true; }); do
-    if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$1"; then
-      echo "$pid"
-    fi
-  done
-  return 0
+    local pid
+    for pid in $({ pgrep -f "$SERVER_ENTRY" 2>/dev/null || true; }); do
+        if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$1"; then
+            echo "$pid"
+        fi
+    done
+    return 0
 }
 
 # A PID alone is not proof: PIDs get recycled, and the file survives a crash.
 # Only treat it as ours when the live process really is the built server ON OUR
 # PORT.
 is_prod_server() { # <pid>
-  local pid="${1:-}"
-  [ -n "$pid" ] || return 1
-  kill -0 "$pid" 2>/dev/null || return 1
-  tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "$SERVER_ENTRY" || return 1
-  tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$PROD_PORT"
+    local pid="${1:-}"
+    [ -n "$pid" ] || return 1
+    kill -0 "$pid" 2>/dev/null || return 1
+    tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q "$SERVER_ENTRY" || return 1
+    tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "PORT=$PROD_PORT"
 }
 
 prod_pid() {
-  local pid=""
-  if [ -f "$PID_FILE" ]; then
-    pid="$(cat "$PID_FILE" 2>/dev/null || true)"
-  fi
-  if is_prod_server "$pid"; then
-    echo "$pid"
-    return 0
-  fi
-  # Fall back to a scan: the pid file can be stale (or absent after a manual
-  # launch), but a second copy of the server holding the port would be
-  # invisible. First line taken in the shell rather than with `| head -1`:
-  # under `set -o pipefail` head's early exit SIGPIPEs the producer, the
-  # pipeline reports 141, and the caller's `$(...)` assignment inherits it —
-  # which `set -e` turns into an abort.
-  local pids
-  pids="$(servers_on_port "$PROD_PORT")" || true
-  printf '%s' "${pids%%$'\n'*}"
+    local pid=""
+    if [ -f "$PID_FILE" ]; then
+        pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+    fi
+    if is_prod_server "$pid"; then
+        echo "$pid"
+        return 0
+    fi
+    # Fall back to a scan: the pid file can be stale (or absent after a manual
+    # launch), but a second copy of the server holding the port would be
+    # invisible. First line taken in the shell rather than with `| head -1`:
+    # under `set -o pipefail` head's early exit SIGPIPEs the producer, the
+    # pipeline reports 141, and the caller's `$(...)` assignment inherits it —
+    # which `set -e` turns into an abort.
+    local pids
+    pids="$(servers_on_port "$PROD_PORT")" || true
+    printf '%s' "${pids%%$'\n'*}"
 }
 
 prod_html() { curl -fsS --max-time 5 "http://localhost:$PROD_PORT/" 2>/dev/null; }
@@ -197,102 +197,102 @@ PROD_MARKER="/_app/immutable/"
 # So a fallback to :8081 is right for one of them and silently wrong for the
 # other, and caddy cannot tell them apart. `ensure` below can.
 dev_port_pid() { # the adapter-node build on :$DEV_PORT, if that is what is there
-  local pids
-  pids="$(servers_on_port "$DEV_PORT")" || true
-  [ -n "$pids" ] || return 1
-  printf '%s' "${pids%%$'\n'*}"
+    local pids
+    pids="$(servers_on_port "$DEV_PORT")" || true
+    [ -n "$pids" ] || return 1
+    printf '%s' "${pids%%$'\n'*}"
 }
 
 # ORIGIN is baked in at launch and not exposed by the app, so read it back out
 # of the process that was launched with it.
 pid_origin() { # <pid>
-  tr '\0' '\n' <"/proc/${1:-0}/environ" 2>/dev/null |
-    sed -n 's/^ORIGIN=//p' | head -1
+    tr '\0' '\n' <"/proc/${1:-0}/environ" 2>/dev/null |
+        sed -n 's/^ORIGIN=//p' | head -1
 }
 
 # ── start ───────────────────────────────────────────────────────────────────
 cmd_start() {
-  local origin="${1:-}" build=1
-  shift || true
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --no-build) build=0 ;;
-      *)
-        echo "unknown argument: $1" >&2
+    local origin="${1:-}" build=1
+    shift || true
+    while [ $# -gt 0 ]; do
+        case "$1" in
+        --no-build) build=0 ;;
+        *)
+            echo "unknown argument: $1" >&2
+            exit 2
+            ;;
+        esac
+        shift
+    done
+    case "$origin" in
+    http://* | https://*) ;;
+    *)
+        echo "usage: prod-serve.sh start <http(s)://public-url> [--no-build]" >&2
+        echo "  the URL becomes ORIGIN — SvelteKit 403s every form POST whose" >&2
+        echo "  Origin header does not match it." >&2
         exit 2
         ;;
     esac
-    shift
-  done
-  case "$origin" in
-    http://* | https://*) ;;
-    *)
-      echo "usage: prod-serve.sh start <http(s)://public-url> [--no-build]" >&2
-      echo "  the URL becomes ORIGIN — SvelteKit 403s every form POST whose" >&2
-      echo "  Origin header does not match it." >&2
-      exit 2
-      ;;
-  esac
-  origin="${origin%/}"
+    origin="${origin%/}"
 
-  local existing
-  existing="$(prod_pid)"
-  if [ -n "$existing" ]; then
-    echo "==> A built server is already on :$PROD_PORT (pid $existing) — restarting it."
-    cmd_stop
-  fi
+    local existing
+    existing="$(prod_pid)"
+    if [ -n "$existing" ]; then
+        echo "==> A built server is already on :$PROD_PORT (pid $existing) — restarting it."
+        cmd_stop
+    fi
 
-  if [ "$build" -eq 1 ]; then
-    echo "==> Building the frontend (pnpm run build:prod)..."
-    (cd "$FRONTEND_DIR" && pnpm run build:prod)
-  fi
-  if [ ! -f "$FRONTEND_DIR/$SERVER_ENTRY" ]; then
-    echo "error: $SERVER_ENTRY missing — run without --no-build." >&2
-    exit 1
-  fi
+    if [ "$build" -eq 1 ]; then
+        echo "==> Building the frontend (pnpm run build:prod)..."
+        (cd "$FRONTEND_DIR" && pnpm run build:prod)
+    fi
+    if [ ! -f "$FRONTEND_DIR/$SERVER_ENTRY" ]; then
+        echo "error: $SERVER_ENTRY missing — run without --no-build." >&2
+        exit 1
+    fi
 
-  # NOTHING is stopped here. process-compose keeps `vite dev` on :$DEV_PORT for
-  # localhost work and for the e2e suites; this server owns :$PROD_PORT and the
-  # two never meet. The socat bridge (.devcontainer/host-bridge.sh) is likewise
-  # left alone: it binds the eth0 IP on :$DEV_PORT only, so the EADDRINUSE that
-  # HOST=:: used to hit when both wanted :8081 cannot happen on a free port.
+    # NOTHING is stopped here. process-compose keeps `vite dev` on :$DEV_PORT for
+    # localhost work and for the e2e suites; this server owns :$PROD_PORT and the
+    # two never meet. The socat bridge (.devcontainer/host-bridge.sh) is likewise
+    # left alone: it binds the eth0 IP on :$DEV_PORT only, so the EADDRINUSE that
+    # HOST=:: used to hit when both wanted :8081 cannot happen on a free port.
 
-  mkdir -p "$RUN_DIR"
-  : >"$LOG_FILE"
-  echo "$origin" >"$ORIGIN_FILE"
+    mkdir -p "$RUN_DIR"
+    : >"$LOG_FILE"
+    echo "$origin" >"$ORIGIN_FILE"
 
-  echo "==> Starting the built server (ORIGIN=$origin)..."
-  # Args go on the command line, unmodified: src/lib/server/args.ts hands
-  # process.argv to command-line-args BY IDENTITY, and the library only strips
-  # the node+script pair for that exact array — rebuilding argv in a wrapper
-  # makes it swallow --config-dir instead.
-  (
-    cd "$FRONTEND_DIR"
-    PORT="$PROD_PORT" HOST="::" ORIGIN="$origin" AUTH_URL="$origin" \
-      setsid node "$SERVER_ENTRY" --config-dir "$CONFIG_DIR" --data-dir "$DATA_DIR" \
-      >>"$LOG_FILE" 2>&1 &
-    echo $! >"$PID_FILE"
-  )
+    echo "==> Starting the built server (ORIGIN=$origin)..."
+    # Args go on the command line, unmodified: src/lib/server/args.ts hands
+    # process.argv to command-line-args BY IDENTITY, and the library only strips
+    # the node+script pair for that exact array — rebuilding argv in a wrapper
+    # makes it swallow --config-dir instead.
+    (
+        cd "$FRONTEND_DIR"
+        PORT="$PROD_PORT" HOST="::" ORIGIN="$origin" AUTH_URL="$origin" \
+            setsid node "$SERVER_ENTRY" --config-dir "$CONFIG_DIR" --data-dir "$DATA_DIR" \
+            >>"$LOG_FILE" 2>&1 &
+        echo $! >"$PID_FILE"
+    )
 
-  # --max-time bounds each attempt: wait_for only checks its deadline BETWEEN
-  # attempts, so a probe that never returns would defeat the 90s budget.
-  if ! wait_for "built frontend" 90 curl -fsS -o /dev/null --max-time 10 "http://localhost:$PROD_PORT/"; then
-    echo "error: the built server never answered on :$PROD_PORT." >&2
-    echo "── $LOG_FILE (tail) ─────────────────────────────" >&2
-    tail -40 "$LOG_FILE" >&2
-    rm -f "$PID_FILE" "$ORIGIN_FILE"
-    exit 1
-  fi
-  # setsid normally execs in place, but re-resolve anyway so `stop` never
-  # chases a PID that belonged to the launcher.
-  prod_pid >"$PID_FILE.tmp" && mv "$PID_FILE.tmp" "$PID_FILE"
+    # --max-time bounds each attempt: wait_for only checks its deadline BETWEEN
+    # attempts, so a probe that never returns would defeat the 90s budget.
+    if ! wait_for "built frontend" 90 curl -fsS -o /dev/null --max-time 10 "http://localhost:$PROD_PORT/"; then
+        echo "error: the built server never answered on :$PROD_PORT." >&2
+        echo "── $LOG_FILE (tail) ─────────────────────────────" >&2
+        tail -40 "$LOG_FILE" >&2
+        rm -f "$PID_FILE" "$ORIGIN_FILE"
+        exit 1
+    fi
+    # setsid normally execs in place, but re-resolve anyway so `stop` never
+    # chases a PID that belonged to the launcher.
+    prod_pid >"$PID_FILE.tmp" && mv "$PID_FILE.tmp" "$PID_FILE"
 
-  echo
-  echo "Serving the PRODUCTION BUILD on :$PROD_PORT (pid $(cat "$PID_FILE"))."
-  echo "  ORIGIN: $origin"
-  echo "  log:    $LOG_FILE"
-  echo "  tunnel: caddy prefers :$PROD_PORT, falls back to vite on :$DEV_PORT"
-  echo "  stop:   prod-serve.sh stop  (vite on :$DEV_PORT is untouched either way)"
+    echo
+    echo "Serving the PRODUCTION BUILD on :$PROD_PORT (pid $(cat "$PID_FILE"))."
+    echo "  ORIGIN: $origin"
+    echo "  log:    $LOG_FILE"
+    echo "  tunnel: caddy prefers :$PROD_PORT, falls back to vite on :$DEV_PORT"
+    echo "  stop:   prod-serve.sh stop  (vite on :$DEV_PORT is untouched either way)"
 }
 
 # ── ensure ──────────────────────────────────────────────────────────────────
@@ -327,82 +327,82 @@ cmd_start() {
 #   This function can, and it does the refusing HERE, before a public URL is
 #   handed over: it either fixes the upstream or exits non-zero.
 cmd_ensure() {
-  local want="${1:-}"
-  case "$want" in
+    local want="${1:-}"
+    case "$want" in
     http://* | https://*) ;;
     *)
-      echo "usage: prod-serve.sh ensure <http(s)://public-url>" >&2
-      exit 2
-      ;;
-  esac
-  want="${want%/}"
+        echo "usage: prod-serve.sh ensure <http(s)://public-url>" >&2
+        exit 2
+        ;;
+    esac
+    want="${want%/}"
 
-  local pid current
-  pid="$(prod_pid)"
-  if [ -n "$pid" ]; then
-    current="$(cat "$ORIGIN_FILE" 2>/dev/null || true)"
-    [ -n "$current" ] || current="$(pid_origin "$pid")"
-    if [ "$current" = "$want" ] && prod_html >/dev/null 2>&1; then
-      echo "==> :$PROD_PORT already serves ORIGIN=$want — the tunnel's upstream is correct."
-      return 0
+    local pid current
+    pid="$(prod_pid)"
+    if [ -n "$pid" ]; then
+        current="$(cat "$ORIGIN_FILE" 2>/dev/null || true)"
+        [ -n "$current" ] || current="$(pid_origin "$pid")"
+        if [ "$current" = "$want" ] && prod_html >/dev/null 2>&1; then
+            echo "==> :$PROD_PORT already serves ORIGIN=$want — the tunnel's upstream is correct."
+            return 0
+        fi
+        echo "==> :$PROD_PORT serves ORIGIN=${current:-unknown}, not $want — restarting it."
+        start_with_current_bundle "$want"
+        return 0
     fi
-    echo "==> :$PROD_PORT serves ORIGIN=${current:-unknown}, not $want — restarting it."
-    start_with_current_bundle "$want"
-    return 0
-  fi
 
-  # Nothing on :8082. Whether that is fine depends entirely on WHO is on :8081.
-  local dev_pid dev_origin dev_body
-  if dev_pid="$(dev_port_pid)"; then
-    dev_origin="$(pid_origin "$dev_pid")"
-    echo "==> :$DEV_PORT holds the adapter-node BUILD (pid $dev_pid, ORIGIN=${dev_origin:-unset})."
-    echo "    caddy would fall back to it, and SvelteKit answers 403 to every form"
-    echo "    POST whose Origin is not its ORIGIN — through $want that means login"
-    echo "    silently does nothing. Starting a correct-origin server on :$PROD_PORT."
-    start_with_current_bundle "$want"
-    return 0
-  fi
+    # Nothing on :8082. Whether that is fine depends entirely on WHO is on :8081.
+    local dev_pid dev_origin dev_body
+    if dev_pid="$(dev_port_pid)"; then
+        dev_origin="$(pid_origin "$dev_pid")"
+        echo "==> :$DEV_PORT holds the adapter-node BUILD (pid $dev_pid, ORIGIN=${dev_origin:-unset})."
+        echo "    caddy would fall back to it, and SvelteKit answers 403 to every form"
+        echo "    POST whose Origin is not its ORIGIN — through $want that means login"
+        echo "    silently does nothing. Starting a correct-origin server on :$PROD_PORT."
+        start_with_current_bundle "$want"
+        return 0
+    fi
 
-  dev_body="$(dev_html || true)"
-  if [ -n "$dev_body" ] && printf '%s' "$dev_body" | grep -q -- "$DEV_MARKER"; then
-    echo "==> :$DEV_PORT is \`vite dev\`, which takes its origin from the request Host"
-    echo "    and is therefore correct on $want as it stands. Nothing to start."
-    return 0
-  fi
-  if [ -n "$dev_body" ]; then
-    # Serving, but not vite and not a process we can read an ORIGIN off (another
-    # namespace, or started by hand). Assume the worst: a fixed origin we cannot
-    # verify is exactly the silent failure this function exists to prevent.
-    echo "==> :$DEV_PORT is serving something whose ORIGIN cannot be read — treating"
-    echo "    it as a fixed origin and taking the tunnel to :$PROD_PORT instead."
-    start_with_current_bundle "$want"
-    return 0
-  fi
+    dev_body="$(dev_html || true)"
+    if [ -n "$dev_body" ] && printf '%s' "$dev_body" | grep -q -- "$DEV_MARKER"; then
+        echo "==> :$DEV_PORT is \`vite dev\`, which takes its origin from the request Host"
+        echo "    and is therefore correct on $want as it stands. Nothing to start."
+        return 0
+    fi
+    if [ -n "$dev_body" ]; then
+        # Serving, but not vite and not a process we can read an ORIGIN off (another
+        # namespace, or started by hand). Assume the worst: a fixed origin we cannot
+        # verify is exactly the silent failure this function exists to prevent.
+        echo "==> :$DEV_PORT is serving something whose ORIGIN cannot be read — treating"
+        echo "    it as a fixed origin and taking the tunnel to :$PROD_PORT instead."
+        start_with_current_bundle "$want"
+        return 0
+    fi
 
-  echo "error: nothing is serving on :$PROD_PORT or :$DEV_PORT — the tunnel has no" >&2
-  echo "       upstream and would answer 502. Start the stack first (just up, or" >&2
-  echo "       hackathon-e2e/scripts/up.sh)." >&2
-  return 1
+    echo "error: nothing is serving on :$PROD_PORT or :$DEV_PORT — the tunnel has no" >&2
+    echo "       upstream and would answer 502. Start the stack first (just up, or" >&2
+    echo "       hackathon-e2e/scripts/up.sh)." >&2
+    return 1
 }
 
 # The bundle is a snapshot of src/, so it has to be rebuilt when src/ moved
 # under it — but rebuilding a current one costs ~40s of a tunnel handover for
 # nothing. Same freshness test as hackathon-e2e/scripts/prod-frontend.sh.
 bundle_is_stale() {
-  [ -f "$FRONTEND_DIR/$SERVER_ENTRY" ] || return 0
-  local newer
-  newer="$(cd "$FRONTEND_DIR" &&
-    find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
-      -newer "$SERVER_ENTRY" -print -quit 2>/dev/null || true)"
-  [ -n "$newer" ]
+    [ -f "$FRONTEND_DIR/$SERVER_ENTRY" ] || return 0
+    local newer
+    newer="$(cd "$FRONTEND_DIR" &&
+        find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
+            -newer "$SERVER_ENTRY" -print -quit 2>/dev/null || true)"
+    [ -n "$newer" ]
 }
 
 start_with_current_bundle() { # <origin>
-  if bundle_is_stale; then
-    cmd_start "$1"
-  else
-    cmd_start "$1" --no-build
-  fi
+    if bundle_is_stale; then
+        cmd_start "$1"
+    else
+        cmd_start "$1" --no-build
+    fi
 }
 
 # ── stop ────────────────────────────────────────────────────────────────────
@@ -410,108 +410,108 @@ start_with_current_bundle() { # <origin>
 # hand back — caddy notices :$PROD_PORT refusing connections and falls through
 # to vite on its own.
 cmd_stop() {
-  local pid
-  pid="$(prod_pid)"
-  if [ -n "$pid" ]; then
-    echo "==> Stopping the built server (pid $pid)..."
-    kill "$pid" 2>/dev/null || true
-    for _ in $(seq 1 20); do
-      is_prod_server "$pid" || break
-      sleep 0.5
-    done
-    is_prod_server "$pid" && kill -9 "$pid" 2>/dev/null || true
-  else
-    echo "==> No built server running."
-  fi
-  rm -f "$PID_FILE" "$ORIGIN_FILE"
+    local pid
+    pid="$(prod_pid)"
+    if [ -n "$pid" ]; then
+        echo "==> Stopping the built server (pid $pid)..."
+        kill "$pid" 2>/dev/null || true
+        for _ in $(seq 1 20); do
+            is_prod_server "$pid" || break
+            sleep 0.5
+        done
+        is_prod_server "$pid" && kill -9 "$pid" 2>/dev/null || true
+    else
+        echo "==> No built server running."
+    fi
+    rm -f "$PID_FILE" "$ORIGIN_FILE"
 }
 
 # ── status ──────────────────────────────────────────────────────────────────
 # Both ports, because with a fallback upstream "is prod up?" and "what does the
 # public link serve?" are no longer the same question.
 cmd_status() {
-  local pid prod dev
-  pid="$(prod_pid)"
-  prod="$(prod_html || true)"
-  dev="$(dev_html || true)"
+    local pid prod dev
+    pid="$(prod_pid)"
+    prod="$(prod_html || true)"
+    dev="$(dev_html || true)"
 
-  if [ -n "$pid" ] && [ -n "$prod" ]; then
-    echo ":$PROD_PORT  PRODUCTION BUILD (adapter-node, pid $pid)"
-    echo "       origin: $(cat "$ORIGIN_FILE" 2>/dev/null || echo '(unknown)')"
-    echo "       log:    $LOG_FILE"
-  elif [ -n "$pid" ]; then
-    echo ":$PROD_PORT  built server is RUNNING (pid $pid) but not answering"
-  else
-    echo ":$PROD_PORT  not running"
-  fi
-
-  if [ -n "$dev" ] && printf '%s' "$dev" | grep -q -- "$DEV_MARKER"; then
-    echo ":$DEV_PORT  DEV SERVER (vite, via process-compose) — origin from the Host header"
-  elif [ -n "$dev" ]; then
-    # Name the ORIGIN, because that is the difference that decides whether
-    # caddy's fallback is harmless or silently breaks every form POST.
-    local dev_pid dev_origin
-    if dev_pid="$(dev_port_pid)"; then
-      dev_origin="$(pid_origin "$dev_pid")"
-      echo ":$DEV_PORT  adapter-node BUILD (pid $dev_pid) — FIXED origin ${dev_origin:-unset}"
-      echo "       usable as the tunnel's fallback ONLY for that exact origin"
+    if [ -n "$pid" ] && [ -n "$prod" ]; then
+        echo ":$PROD_PORT  PRODUCTION BUILD (adapter-node, pid $pid)"
+        echo "       origin: $(cat "$ORIGIN_FILE" 2>/dev/null || echo '(unknown)')"
+        echo "       log:    $LOG_FILE"
+    elif [ -n "$pid" ]; then
+        echo ":$PROD_PORT  built server is RUNNING (pid $pid) but not answering"
     else
-      echo ":$DEV_PORT  something is serving, but no '$DEV_MARKER' in the markup"
+        echo ":$PROD_PORT  not running"
     fi
-  else
-    echo ":$DEV_PORT  not serving"
-  fi
 
-  if [ -n "$prod" ]; then
-    echo "tunnel serves the PRODUCTION BUILD (caddy prefers :$PROD_PORT)"
-    { printf '%s' "$prod" | grep -o "$PROD_MARKER[^\"]*" | head -1 |
-      sed 's/^/       asset: /'; } || true
-  elif [ -n "$dev" ]; then
-    echo "tunnel falls back to the DEV SERVER on :$DEV_PORT"
-    { printf '%s' "$dev" | grep -o "$DEV_MARKER[^\"]*" | head -1 |
-      sed 's/^/       asset: /'; } || true
-  else
-    echo "tunnel has NO upstream — it will answer 502"
-    return 1
-  fi
+    if [ -n "$dev" ] && printf '%s' "$dev" | grep -q -- "$DEV_MARKER"; then
+        echo ":$DEV_PORT  DEV SERVER (vite, via process-compose) — origin from the Host header"
+    elif [ -n "$dev" ]; then
+        # Name the ORIGIN, because that is the difference that decides whether
+        # caddy's fallback is harmless or silently breaks every form POST.
+        local dev_pid dev_origin
+        if dev_pid="$(dev_port_pid)"; then
+            dev_origin="$(pid_origin "$dev_pid")"
+            echo ":$DEV_PORT  adapter-node BUILD (pid $dev_pid) — FIXED origin ${dev_origin:-unset}"
+            echo "       usable as the tunnel's fallback ONLY for that exact origin"
+        else
+            echo ":$DEV_PORT  something is serving, but no '$DEV_MARKER' in the markup"
+        fi
+    else
+        echo ":$DEV_PORT  not serving"
+    fi
+
+    if [ -n "$prod" ]; then
+        echo "tunnel serves the PRODUCTION BUILD (caddy prefers :$PROD_PORT)"
+        { printf '%s' "$prod" | grep -o "$PROD_MARKER[^\"]*" | head -1 |
+            sed 's/^/       asset: /'; } || true
+    elif [ -n "$dev" ]; then
+        echo "tunnel falls back to the DEV SERVER on :$DEV_PORT"
+        { printf '%s' "$dev" | grep -o "$DEV_MARKER[^\"]*" | head -1 |
+            sed 's/^/       asset: /'; } || true
+    else
+        echo "tunnel has NO upstream — it will answer 502"
+        return 1
+    fi
 }
 
 # ── origin ──────────────────────────────────────────────────────────────────
 # Machine-readable "is prod mode live, and with which ORIGIN?" — one place that
 # knows, so callers do not re-implement the pid/cmdline check.
 cmd_origin() {
-  local pid origin
-  pid="$(prod_pid)"
-  [ -n "$pid" ] || return 1
-  origin="$(cat "$ORIGIN_FILE" 2>/dev/null || true)"
-  [ -n "$origin" ] || return 1
-  echo "$origin"
+    local pid origin
+    pid="$(prod_pid)"
+    [ -n "$pid" ] || return 1
+    origin="$(cat "$ORIGIN_FILE" 2>/dev/null || true)"
+    [ -n "$origin" ] || return 1
+    echo "$origin"
 }
 
 case "${1:-}" in
-  start)
+start)
     shift
     cmd_start "$@"
     ;;
-  ensure)
+ensure)
     shift
     cmd_ensure "$@"
     ;;
-  stop)
+stop)
     shift
     cmd_stop "$@"
     ;;
-  status)
+status)
     cmd_status
     ;;
-  origin)
+origin)
     cmd_origin
     ;;
-  -h | --help | "")
+-h | --help | "")
     sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 0
     ;;
-  *)
+*)
     echo "unknown command: $1 (see --help)" >&2
     exit 2
     ;;

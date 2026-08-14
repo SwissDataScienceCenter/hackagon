@@ -115,7 +115,12 @@ export async function listStoredImages(
     Number.isFinite(requested) && requested > 0 ? Math.trunc(requested) : 0
 
   try {
-    const result = await storage.listObjects({ scope, ownerId, pageSize, pageToken })
+    const result = await storage.listObjects({
+      scope,
+      ownerId,
+      pageSize,
+      pageToken,
+    })
 
     return json({
       objects: result.objects.map((o) => ({

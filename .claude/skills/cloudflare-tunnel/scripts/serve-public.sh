@@ -30,41 +30,47 @@ E2E="$SKILLS/hackathon-e2e"
 SEED=0
 [ "${1:-}" = "--seed" ] && SEED=1
 
-step() { echo; echo "── $* ─────────────────────────────────────────"; }
-ok()   { echo "  ok    $*"; }
+step() {
+    echo
+    echo "── $* ─────────────────────────────────────────"
+}
+ok() { echo "  ok    $*"; }
 warn() { echo "  warn  $*" >&2; }
 
 in_dev() { bash "$SKILLS/devcontainer-up/scripts/exec.sh" "$@"; }
-nix()    { in_dev just nix::develop default bash -c "$1"; }
+nix() { in_dev just nix::develop default bash -c "$1"; }
 
 # ── 1. the stack ─────────────────────────────────────────────────────────────
 step "Stack"
 nix 'bash .claude/skills/hackathon-e2e/scripts/up.sh' >/dev/null 2>&1 || true
 
 for svc in postgres keycloak; do
-  case "$svc" in
+    case "$svc" in
     postgres) probe='pg_isready -h 127.0.0.1 -p 5432 -U postgres' ;;
     keycloak) probe='curl -fsS -o /dev/null --max-time 10 http://localhost:8180/realms/hackagon/.well-known/openid-configuration' ;;
-  esac
-  if nix "$probe" >/dev/null 2>&1; then ok "$svc"; else
-    warn "$svc not ready — restarting"
-    nix "just deploy::proc-comp process restart $svc" >/dev/null 2>&1 || true
-  fi
+    esac
+    if nix "$probe" >/dev/null 2>&1; then ok "$svc"; else
+        warn "$svc not ready — restarting"
+        nix "just deploy::proc-comp process restart $svc" >/dev/null 2>&1 || true
+    fi
 done
 
 # The backend is the one that is routinely down: `just deploy::down` and the
 # suites both stop it, and nothing brings it back on its own.
 if nix 'grpcurl -plaintext localhost:3000 health.HealthService/Check' >/dev/null 2>&1; then
-  ok "backend"
+    ok "backend"
 else
-  warn "backend not answering — restarting (it rebuilds, ~1 min)"
-  nix 'just deploy::proc-comp process restart backend' >/dev/null 2>&1 || true
-  for _ in $(seq 1 40); do
-    nix 'grpcurl -plaintext localhost:3000 health.HealthService/Check' >/dev/null 2>&1 && break
-    sleep 3
-  done
-  nix 'grpcurl -plaintext localhost:3000 health.HealthService/Check' >/dev/null 2>&1 \
-    && ok "backend" || { echo "error: backend will not start — see 'just deploy::proc-comp process logs backend'" >&2; exit 1; }
+    warn "backend not answering — restarting (it rebuilds, ~1 min)"
+    nix 'just deploy::proc-comp process restart backend' >/dev/null 2>&1 || true
+    for _ in $(seq 1 40); do
+        nix 'grpcurl -plaintext localhost:3000 health.HealthService/Check' >/dev/null 2>&1 && break
+        sleep 3
+    done
+    nix 'grpcurl -plaintext localhost:3000 health.HealthService/Check' >/dev/null 2>&1 &&
+        ok "backend" || {
+        echo "error: backend will not start — see 'just deploy::proc-comp process logs backend'" >&2
+        exit 1
+    }
 fi
 
 # ── 2. the built frontend ────────────────────────────────────────────────────
@@ -73,19 +79,24 @@ fi
 # resolves to in this container; AUTH_URL must accompany ORIGIN).
 step "Frontend"
 nix 'bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh ensure' 2>&1 | sed 's/^/  /' || {
-  echo "error: no frontend on :8081" >&2; exit 1; }
+    echo "error: no frontend on :8081" >&2
+    exit 1
+}
 
 # ── 3+4. tunnel, wired ───────────────────────────────────────────────────────
 step "Tunnel"
 bash "$HERE/up.sh" --with-auth --prod 2>&1 | tail -5 | sed 's/^/  /'
 URL="$(bash "$HERE/url.sh" 2>/dev/null | awk '{print $NF}' | grep -E '^https://' | tail -1)"
-[ -n "$URL" ] || { echo "error: no public URL" >&2; exit 1; }
+[ -n "$URL" ] || {
+    echo "error: no public URL" >&2
+    exit 1
+}
 
 if [ "$SEED" -eq 1 ]; then
-  step "Archive"
-  nix "E2E_KEYCLOAK_URL=$URL bash .claude/skills/seed-past-hackathons/scripts/seed.sh" 2>&1 \
-    | grep -cE '\[\+\] hackathon|\[=\]' | sed 's/^/  editions present: /'
-  nix "E2E_KEYCLOAK_URL=$URL bash .claude/skills/seed-past-hackathons/scripts/prizes.sh" >/dev/null 2>&1 || true
+    step "Archive"
+    nix "E2E_KEYCLOAK_URL=$URL bash .claude/skills/seed-past-hackathons/scripts/seed.sh" 2>&1 |
+        grep -cE '\[\+\] hackathon|\[=\]' | sed 's/^/  editions present: /'
+    nix "E2E_KEYCLOAK_URL=$URL bash .claude/skills/seed-past-hackathons/scripts/prizes.sh" >/dev/null 2>&1 || true
 fi
 
 # ── 5. prove a login ─────────────────────────────────────────────────────────
@@ -94,15 +105,15 @@ fi
 # stale server each produce it.
 step "Proving a real login through $URL"
 if in_dev env TUNNEL_BASE_URL="$URL" PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true \
-     just nix::develop default bash -c \
-     'cd .claude/skills/hackathon-e2e && pnpm exec playwright test --project=tunnel --grep "logs in"' \
-     >/dev/null 2>&1; then
-  ok "alice signed in and reached her dashboard"
+    just nix::develop default bash -c \
+    'cd .claude/skills/hackathon-e2e && pnpm exec playwright test --project=tunnel --grep "logs in"' \
+    >/dev/null 2>&1; then
+    ok "alice signed in and reached her dashboard"
 else
-  echo "error: pages serve but LOGIN FAILED — the one failure that hides." >&2
-  echo "  Check: is the issuer wired? (config.local.yaml should hold an oidc block)" >&2
-  echo "  Check: is a server with ORIGIN=$URL on :8082? (prod-serve.sh status)" >&2
-  exit 1
+    echo "error: pages serve but LOGIN FAILED — the one failure that hides." >&2
+    echo "  Check: is the issuer wired? (config.local.yaml should hold an oidc block)" >&2
+    echo "  Check: is a server with ORIGIN=$URL on :8082? (prod-serve.sh status)" >&2
+    exit 1
 fi
 
 cat <<EOF

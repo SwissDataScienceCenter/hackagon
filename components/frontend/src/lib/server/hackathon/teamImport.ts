@@ -344,19 +344,18 @@ function parseJson(text: string): ParseResult {
 
   // Accept both the bare array the template writes and a `{ rows: [...] }`
   // wrapper, which is what anyone hand-rolling an export tends to produce.
-  const list =
-    Array.isArray(parsed) ? parsed
-    : (
-      parsed !== null &&
-      typeof parsed === "object" &&
-      Array.isArray((parsed as { rows?: unknown }).rows)
-    ) ?
-      ((parsed as { rows: unknown[] }).rows as unknown[])
-    : null
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed !== null &&
+        typeof parsed === "object" &&
+        Array.isArray((parsed as { rows?: unknown }).rows)
+      ? ((parsed as { rows: unknown[] }).rows as unknown[])
+      : null
   if (!list) {
     return {
       ok: false,
-      message: 'the JSON must be an array of rows, or an object with a "rows" array',
+      message:
+        'the JSON must be an array of rows, or an object with a "rows" array',
     }
   }
   if (list.length === 0) return { ok: false, message: "the file has no rows" }
@@ -493,7 +492,9 @@ export function resolveImport(
     })
 
     if (email === "") {
-      planned.push(err("user_email is empty — every row must name a participant"))
+      planned.push(
+        err("user_email is empty — every row must name a participant"),
+      )
       continue
     }
     const key = fold(email)
@@ -564,7 +565,9 @@ export function resolveImport(
     }
     if (teamName.length > MAX_TEAM_NAME) {
       planned.push(
-        err(`the team name is ${teamName.length} characters; the limit is ${MAX_TEAM_NAME}`),
+        err(
+          `the team name is ${teamName.length} characters; the limit is ${MAX_TEAM_NAME}`,
+        ),
       )
       continue
     }
@@ -617,11 +620,11 @@ export function resolveImport(
         ...base,
         status: "assign",
         detail:
-          leave.length === 0 ?
-            `joins "${team.name}" (${project.title})`
-          : alreadyThere ?
-            `stays on "${team.name}" and leaves ${quoteList(leave.map((t) => t.name))}`
-          : `moves from ${quoteList(leave.map((t) => t.name))} to "${team.name}"`,
+          leave.length === 0
+            ? `joins "${team.name}" (${project.title})`
+            : alreadyThere
+              ? `stays on "${team.name}" and leaves ${quoteList(leave.map((t) => t.name))}`
+              : `moves from ${quoteList(leave.map((t) => t.name))} to "${team.name}"`,
         userId: person.id,
         target: team.id,
         leave: leave.map((t) => t.id),
@@ -647,9 +650,9 @@ export function resolveImport(
       ...base,
       status: "create",
       detail:
-        current.length === 0 ?
-          `joins a new team "${teamName}" under "${project.title}"`
-        : `moves from ${quoteList(currentNames)} into a new team "${teamName}" under "${project.title}"`,
+        current.length === 0
+          ? `joins a new team "${teamName}" under "${project.title}"`
+          : `moves from ${quoteList(currentNames)} into a new team "${teamName}" under "${project.title}"`,
       userId: person.id,
       target: `new:${at}`,
       leave: current.map((t) => t.id),
@@ -763,7 +766,8 @@ export function templateRows(world: ImportWorld): TemplateRow[] {
   // the format exists to express. The project title is a REAL one when the event
   // has any; the emails are obviously placeholders, and the importer will say so
   // by name if they are left in.
-  const example = world.projects[0]?.title ?? "Project title, exactly as in this event"
+  const example =
+    world.projects[0]?.title ?? "Project title, exactly as in this event"
   const team = world.projects[0] ? `Team ${initialsOf(example)}` : "Team name"
 
   return [
@@ -773,13 +777,18 @@ export function templateRows(world: ImportWorld): TemplateRow[] {
 }
 
 /** The downloadable file, in the format asked for. */
-export function buildTemplate(world: ImportWorld, format: ImportFormat): string {
+export function buildTemplate(
+  world: ImportWorld,
+  format: ImportFormat,
+): string {
   const rows = templateRows(world)
   if (format === "json") return `${JSON.stringify(rows, null, 2)}\n`
 
   const lines = [
     IMPORT_COLUMNS.map(csvCell).join(","),
-    ...rows.map((r) => [r.user_email, r.project, r.team].map(csvCell).join(",")),
+    ...rows.map((r) =>
+      [r.user_email, r.project, r.team].map(csvCell).join(","),
+    ),
   ]
 
   // CRLF, which is what RFC 4180 specifies and what Excel expects.

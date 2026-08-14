@@ -191,7 +191,8 @@ export function generatePdfReport(title: string, lines: string[]): Buffer {
   })
   const xrefStart = body.length
   body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
-  for (const off of offsets) body += `${String(off).padStart(10, "0")} 00000 n \n`
+  for (const off of offsets)
+    body += `${String(off).padStart(10, "0")} 00000 n \n`
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`
   return Buffer.from(body, "latin1")
 }
@@ -203,7 +204,9 @@ export function generateCsv(seed: number, rows = 48): string {
   const out = ["timestamp,sensor_id,temperature_c,humidity_pct,co2_ppm"]
   for (let i = 0; i < rows; i++) {
     // Fixed base timestamp — wall-clock independence keeps runs byte-identical.
-    const ts = new Date(Date.UTC(2027, 5, 12, 8, 0, 0) + i * 15 * 60_000).toISOString()
+    const ts = new Date(
+      Date.UTC(2027, 5, 12, 8, 0, 0) + i * 15 * 60_000,
+    ).toISOString()
     out.push(
       `${ts},S-${(i % 4) + 1},${(17 + rand() * 9).toFixed(2)},${(35 + rand() * 30).toFixed(1)},${Math.round(400 + rand() * 350)}`,
     )

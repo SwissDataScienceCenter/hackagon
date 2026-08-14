@@ -56,7 +56,9 @@ test.describe("hackathon co-organizers", () => {
     await participantsPage(page)
 
     await expect(card(page, BOB)).toBeVisible()
-    await card(page, BOB).getByRole("button", { name: "Make organizer" }).click()
+    await card(page, BOB)
+      .getByRole("button", { name: "Make organizer" })
+      .click()
     await page.waitForLoadState("networkidle")
 
     await expect(
@@ -91,7 +93,9 @@ test.describe("hackathon co-organizers", () => {
     // Promote bob first, so a second owner exists. Without that the assertion
     // below would pass on the last-organizer guard instead of the self guard,
     // and would keep passing if the self guard were deleted.
-    await card(page, BOB).getByRole("button", { name: "Make organizer" }).click()
+    await card(page, BOB)
+      .getByRole("button", { name: "Make organizer" })
+      .click()
     await page.waitForLoadState("networkidle")
     await expect(
       card(page, BOB).getByRole("button", { name: "Step down" }),

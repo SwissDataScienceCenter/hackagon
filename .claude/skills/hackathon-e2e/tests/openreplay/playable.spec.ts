@@ -188,10 +188,14 @@ test.describe("a recorded session is playable", () => {
         "seed hackathon h1 not found — did `just db::seed` run?",
       ).toBeTruthy()
 
-      const created = await rpcAs("alice", "hackathon.HackathonService/CreateInvite", {
-        hackathonId: h1!.id,
-        note: "session replay leak check",
-      })
+      const created = await rpcAs(
+        "alice",
+        "hackathon.HackathonService/CreateInvite",
+        {
+          hackathonId: h1!.id,
+          note: "session replay leak check",
+        },
+      )
       expect(created.ok, created.raw).toBe(true)
       const token = (created.data.invite as { token: string }).token
       expect(token, "CreateInvite returned no token").toBeTruthy()
@@ -214,11 +218,14 @@ test.describe("a recorded session is playable", () => {
       // a recording of somewhere else is the exact false green this folder
       // exists to prevent.
       await expect
-        .poll(() => posts.posts.filter((p) => p.url.includes("/v1/web/i")).length, {
-          message:
-            "the tracker sent no batch on the invite page — is replay.enabled on, was consent granted, and did the frontend restart since?",
-          timeout: 30_000,
-        })
+        .poll(
+          () => posts.posts.filter((p) => p.url.includes("/v1/web/i")).length,
+          {
+            message:
+              "the tracker sent no batch on the invite page — is replay.enabled on, was consent granted, and did the frontend restart since?",
+            timeout: 30_000,
+          },
+        )
         .toBeGreaterThan(0)
 
       // Stay here. This page load IS the subject: a fresh open of an invite
@@ -291,9 +298,10 @@ test.describe("a recorded session is playable", () => {
 
       // A zero-byte object is a file that exists and is not a recording: the
       // same spinner with a better-looking `ls`.
-      expect(mob.bytes, `the mob file for ${sessionId} is empty`).toBeGreaterThan(
-        0,
-      )
+      expect(
+        mob.bytes,
+        `the mob file for ${sessionId} is empty`,
+      ).toBeGreaterThan(0)
       expect(
         mob.compressed,
         `the mob file for ${sessionId} is not a zstd frame — storage did not write it`,

@@ -80,7 +80,9 @@ test.describe("the interstitial without JavaScript", () => {
     storageState: { cookies: [], origins: [] },
   })
 
-  test("explains what happened and names where it is going", async ({ page }) => {
+  test("explains what happened and names where it is going", async ({
+    page,
+  }) => {
     await page.goto(deepLink)
     expect(
       page.url(),
@@ -95,17 +97,22 @@ test.describe("the interstitial without JavaScript", () => {
     const region = status(page)
     await expect(region).toBeVisible()
     await expect(region).toContainText("not signed in")
-    await expect(region, "the page must name the URL that was refused").toContainText(
-      deepLink,
+    await expect(
+      region,
+      "the page must name the URL that was refused",
+    ).toContainText(deepLink)
+    await expect(region, "and where it is sending them").toContainText(
+      "login page",
     )
-    await expect(region, "and where it is sending them").toContainText("login page")
 
     // Nobody is stuck watching a countdown, and with no script this button is
     // the ONLY way onward — so it is also the honest thing for the text to
     // point at, which is what the no-script branch of the copy says.
     await expect(region).toContainText("button below")
     await expect(region).not.toContainText("Taking you")
-    await expect(page.getByRole("button", { name: "Go to login now" })).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Go to login now" }),
+    ).toBeVisible()
   })
 
   test("does not pretend to forward a browser that cannot forward itself", async ({
@@ -133,9 +140,10 @@ test.describe("the interstitial without JavaScript", () => {
     await fillKeycloakForm(page, ALICE)
 
     await page.waitForURL(/localhost:8081/, { timeout: 30_000 })
-    expect(page.url(), "the deep link must survive a scriptless login").toContain(
-      deepLink,
-    )
+    expect(
+      page.url(),
+      "the deep link must survive a scriptless login",
+    ).toContain(deepLink)
     // Landed there AND signed in. Without this, a guard that bounced again
     // would be the only thing distinguishing success from failure, and the
     // bounce would put a different URL in the bar — but "the URL is right" and
@@ -143,7 +151,9 @@ test.describe("the interstitial without JavaScript", () => {
     await expectSignedIn(page, ALICE.initial)
   })
 
-  test("a crafted returnTo cannot become an off-site callback", async ({ page }) => {
+  test("a crafted returnTo cannot become an off-site callback", async ({
+    page,
+  }) => {
     // The form's redirectTo is handed straight to Auth.js as the post-login
     // destination. An unvalidated one is an open redirect off the site, so the
     // assertion is on the VALUE the page is about to submit.
@@ -253,7 +263,9 @@ test.describe("signing in with nowhere in particular to go", () => {
     // "nothing happened", and this is the half of the behaviour that an
     // implementation echoing the current path would break.
     await expect(page).toHaveURL(/\/dashboard$/)
-    await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: /Welcome back/ }),
+    ).toBeVisible()
   })
 })
 
@@ -269,10 +281,13 @@ test.describe("a signed-in visitor", () => {
     // absent for the boring reason. Signed out, this exact locator DOES find
     // the page — asserted in the no-JS block above and re-checked here in an
     // anonymous context of its own.
-    const anon = await page.context().browser()!.newContext({
-      storageState: { cookies: [], origins: [] },
-      javaScriptEnabled: false,
-    })
+    const anon = await page
+      .context()
+      .browser()!
+      .newContext({
+        storageState: { cookies: [], origins: [] },
+        javaScriptEnabled: false,
+      })
     const anonPage = await anon.newPage()
     await anonPage.goto(deepLink)
     await expect(
