@@ -1,12 +1,30 @@
 #!/usr/bin/env bash
-# Create a Cloudflare quick tunnel and print its public URL.
-#   up.sh              -> tunnel the hackagon stack (view-only: login stays local)
+# Create a Cloudflare tunnel to the hackagon stack and print its public URL.
+#   up.sh              -> tunnel the stack (view-only: login stays local)
 #   up.sh --with-auth  -> same, plus rewire OIDC so login works through the tunnel
 #   up.sh --prod       -> ALSO run the production BUILD on :8082 and let the
 #                         tunnel prefer it (54 requests/page instead of 150;
 #                         combine with --with-auth). `vite dev` keeps :8081.
 #                         Undo with down.sh or prod-serve.sh stop.
+#   up.sh --named      -> force a NAMED tunnel on your own hostname
+#   up.sh --quick      -> force an ephemeral *.trycloudflare.com quick tunnel
 #   up.sh --port <n>   -> tunnel any local port via host.docker.internal
+#
+# TWO MODES, and the default picks between them:
+#
+#   NAMED  a persistent hostname on a zone you own (HACKAGON_HOSTNAME in the
+#          gitignored .env — see SKILL.md, "Named tunnels"). Chosen
+#          automatically when those credentials are present. The hostname
+#          survives restarts, so the issuer wiring below stays correct instead
+#          of having to be redone every time.
+#   QUICK  cloudflared's free ephemeral *.trycloudflare.com URL. No account, no
+#          DNS, nothing to configure — and a new hostname on every start. Used
+#          whenever named mode is not configured, which keeps this the
+#          zero-setup path it has always been.
+#
+# The two are mutually exclusive per run: bringing one up stops the other, because
+# the OIDC issuer can only name ONE hostname and the other would keep serving
+# every page while silently failing every login.
 #
 # Every hackagon-stack run also ENSURES the tunnel's upstream can serve the
 # public hostname: caddy prefers :8082 and falls back to vite on :8081, but the
@@ -18,6 +36,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$HERE/../../../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/.devcontainer/docker-compose.yml"
+# shellcheck source=../../lib/cf-named-tunnel.sh
+source "$ROOT_DIR/.claude/skills/lib/cf-named-tunnel.sh"
+CFN_NAME="${HACKAGON_TUNNEL_NAME:-hackagon}"
 
 case "$(uname -s)" in
   MINGW* | MSYS*)
@@ -30,6 +51,7 @@ esac
 PORT=""
 WITH_AUTH=""
 PROD=""
+MODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --port)
@@ -38,8 +60,10 @@ while [ $# -gt 0 ]; do
       ;;
     --with-auth) WITH_AUTH=1 ;;
     --prod) PROD=1 ;;
+    --named) MODE=named ;;
+    --quick) MODE=quick ;;
     -h | --help)
-      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -53,6 +77,27 @@ if [ -n "$PORT" ] && [ -n "$PROD" ]; then
   echo "error: --prod only applies to the hackagon stack, not --port mode." >&2
   exit 2
 fi
+if [ -n "$PORT" ] && [ -n "$MODE" ]; then
+  echo "error: --named/--quick only apply to the hackagon stack, not --port mode." >&2
+  exit 2
+fi
+
+# Which mode, and SAY SO. Auto-selection reads the gitignored .env; --named and
+# --quick override it. An explicit --named with nothing configured is an error
+# rather than a silent downgrade to an ephemeral hostname: somebody who asked
+# for a stable URL and got a throwaway one finds out at the worst moment.
+resolve_mode() {
+  if [ "$MODE" = "named" ]; then
+    cf_configured && [ -n "${HACKAGON_HOSTNAME:-}" ] || {
+      echo "error: --named needs Cloudflare credentials and HACKAGON_HOSTNAME." >&2
+      cf_explain_unconfigured >&2
+      exit 2
+    }
+    return
+  fi
+  [ -n "$MODE" ] && return
+  if cf_configured && [ -n "${HACKAGON_HOSTNAME:-}" ]; then MODE=named; else MODE=quick; fi
+}
 
 # Make the RUNNING caddy match Caddyfile.tunnel, and prove one route did.
 #
@@ -130,12 +175,45 @@ if [ -z "$PORT" ]; then
   # path-splits the hostname between frontend and Keycloak) can reach it.
   docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
     bash -lc 'cd /workspaces/hackagon && bash .devcontainer/host-bridge.sh'
-  docker compose -f "$COMPOSE_FILE" --profile tunnel up -d tunnel
-  # After caddy exists (compose starts it via depends_on), before anyone is
-  # handed the link: a running container keeps its boot-time config forever.
-  ensure_caddy_config
-  name=$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q tunnel)
-  url=$(wait_for_url "$name")
+
+  resolve_mode
+  if [ "$MODE" = "named" ]; then
+    echo "==> Mode: NAMED — https://$HACKAGON_HOSTNAME (persistent)"
+    # caddy only. `up -d tunnel` would start the QUICK tunnel through
+    # depends_on, which is the other mode; naming the service explicitly is
+    # what keeps the two from both running.
+    docker compose -f "$COMPOSE_FILE" --profile tunnel up -d caddy
+    ensure_caddy_config
+    # Stop the quick tunnel if a previous run left one up. Two tunnels onto the
+    # same caddy is not a redundancy — the OIDC issuer names ONE hostname, so
+    # the other would serve every page and fail every login, which is the
+    # failure mode that only surfaces when somebody tries to sign in.
+    if [ -n "$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q tunnel 2>/dev/null)" ]; then
+      echo "    stopping the quick tunnel (named mode owns the issuer)"
+      docker compose -f "$COMPOSE_FILE" --profile tunnel rm -sf tunnel >/dev/null 2>&1 || true
+    fi
+    # caddy's network, read off the container rather than assumed: the compose
+    # network name is overridable (HACKAGON_DEV_NETWORK) and a wrong guess
+    # fails as a DNS lookup for `caddy` inside cloudflared, which Cloudflare
+    # renders as a plain 502 while every container reports healthy.
+    caddy_net=$(docker inspect "$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q caddy)" \
+      --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' | awk '{print $1}')
+    cfn_up "$CFN_NAME" "$HACKAGON_HOSTNAME" "$caddy_net" "http://caddy:80"
+    url="https://$HACKAGON_HOSTNAME"
+  else
+    echo "==> Mode: QUICK — an ephemeral *.trycloudflare.com hostname"
+    if cfn_running "$CFN_NAME"; then
+      echo "    stopping the named tunnel (one issuer, one hostname)"
+      cfn_stop "$CFN_NAME"
+    fi
+    docker compose -f "$COMPOSE_FILE" --profile tunnel up -d tunnel
+    # After caddy exists (compose starts it via depends_on), before anyone is
+    # handed the link: a running container keeps its boot-time config forever.
+    ensure_caddy_config
+    name=$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q tunnel)
+    url=$(wait_for_url "$name")
+  fi
+
   if [ -n "$WITH_AUTH" ]; then
     # Rewire issuers + realm allowlist so OIDC login works via the tunnel.
     docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
@@ -183,6 +261,13 @@ if [ -z "$PORT" ]; then
     echo "Public URL (login-capable): $url"
   else
     echo "Public URL (frontend, view-only): $url"
+  fi
+  if [ "$MODE" = "named" ]; then
+    echo "Mode:                       NAMED — this hostname persists across restarts,"
+    echo "                            so the OIDC wiring stays valid and does not have"
+    echo "                            to be redone on the next up.sh."
+  else
+    echo "Mode:                       QUICK — this hostname dies with the tunnel."
   fi
   if [ -n "$PROD" ]; then
     echo "Back to the dev server:     scripts/prod-serve.sh stop  (down.sh does it too)"

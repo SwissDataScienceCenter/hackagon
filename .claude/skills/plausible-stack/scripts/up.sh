@@ -22,12 +22,15 @@ DRY=0
 SKIP_DOCTOR=0
 SKIP_SIGNUP=0
 KEEP_OPEN=0
+MODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --skip-doctor) SKIP_DOCTOR=1 ;;
     --skip-signup) SKIP_SIGNUP=1 ;;
     --keep-registration-open) KEEP_OPEN=1 ;;
+    --named) MODE=named ;;
+    --quick) MODE=quick ;;
     -h | --help)
       sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
@@ -70,23 +73,50 @@ if [ "$DRY" -eq 1 ]; then
   exit 0
 fi
 
-# ── phase 1: the tunnel alone, to learn the public URL ─────────────────────
-# --no-deps: the overlay declares `tunnel → plausible`, and the point of this
-# phase is that plausible must NOT start yet. cloudflared happily serves 502s
-# until its origin exists; it re-resolves the name per connection.
-echo "==> starting the quick tunnel…"
-compose up -d --no-deps tunnel
-url=""
-for _ in $(seq 1 30); do
-  url="$(tunnel_url || true)"
-  [ -n "$url" ] && break
-  sleep 2
-done
-[ -z "$url" ] && {
-  echo "error: no tunnel URL after 60s — check: docker logs plausible-tunnel" >&2
-  exit 1
-}
-echo "    $url"
+# ── phase 1: learn the public URL ──────────────────────────────────────────
+# NAMED MODE SKIPS THIS PHASE ENTIRELY, and that is the point of it. The
+# hostname is known before anything starts, so BASE_URL can be written once and
+# never revisited; the "start a tunnel just to find out what it is called" dance
+# is a quick-tunnel tax.
+if [ "$MODE" = "named" ] && ! named_configured; then
+  echo "error: --named needs Cloudflare credentials and PLAUSIBLE_HOSTNAME." >&2
+  cf_explain_unconfigured >&2
+  exit 2
+fi
+[ -n "$MODE" ] || { named_configured && MODE=named || MODE=quick; }
+
+if [ "$MODE" = "named" ]; then
+  url="https://$PLAUSIBLE_HOSTNAME"
+  echo "==> Mode: NAMED — $url (persistent)"
+  # Two tunnels onto one Plausible is not redundancy: BASE_URL names ONE of
+  # them, and the other would serve a dashboard whose websocket fails its own
+  # origin check — a page that renders and never loads any numbers.
+  if [ -n "$(compose ps -q tunnel 2>/dev/null)" ]; then
+    echo "    stopping the quick tunnel (named mode owns BASE_URL)"
+    compose rm -sf tunnel >/dev/null 2>&1 || true
+  fi
+else
+  # --no-deps: the overlay declares `tunnel → plausible`, and the point of this
+  # phase is that plausible must NOT start yet. cloudflared happily serves 502s
+  # until its origin exists; it re-resolves the name per connection.
+  echo "==> Mode: QUICK — starting the quick tunnel to learn its hostname…"
+  if cfn_running "$NAMED_TUNNEL"; then
+    echo "    stopping the named tunnel (one BASE_URL, one hostname)"
+    cfn_stop "$NAMED_TUNNEL"
+  fi
+  compose up -d --no-deps tunnel
+  url=""
+  for _ in $(seq 1 30); do
+    url="$(tunnel_url || true)"
+    [ -n "$url" ] && break
+    sleep 2
+  done
+  [ -z "$url" ] && {
+    echo "error: no tunnel URL after 60s — check: docker logs plausible-tunnel" >&2
+    exit 1
+  }
+  echo "    $url"
+fi
 echo "$url" >"$STATE/tunnel-url"
 
 # ── phase 2: point the app at that URL, then start it ──────────────────────
@@ -105,7 +135,14 @@ env_set BASE_URL "$url"
 [ "$SKIP_SIGNUP" -eq 1 ] || env_set DISABLE_REGISTRATION false
 
 echo "==> starting Plausible (first run pulls 3 images and migrates — a few minutes)…"
-compose up -d
+if [ "$MODE" = "named" ]; then
+  # Every service EXCEPT the quick tunnel, named explicitly. A bare `up -d`
+  # would start `tunnel` as well and mint a hostname nothing uses.
+  # shellcheck disable=SC2046
+  compose up -d $(compose config --services | grep -v '^tunnel$' | tr '\n' ' ')
+else
+  compose up -d
+fi
 
 # ── phase 3: wait for the app, not for the container ───────────────────────
 # `compose up -d` returns when the containers were CREATED. Plausible then
@@ -143,6 +180,20 @@ while :; do
   sleep 5
 done
 echo "    $health"
+
+# ── phase 3b: the named tunnel, once there is an origin to point it at ─────
+# AFTER the app is healthy, unlike the quick tunnel which has to run first to
+# reveal its own hostname. cloudflared re-resolves per connection so the order
+# is not strictly required — but starting it here means the first request
+# through the public hostname finds a working dashboard rather than a 502, and
+# the readiness probe inside cfn_run is then a real end-to-end check.
+if [ "$MODE" = "named" ]; then
+  cfn_up "$NAMED_TUNNEL" "$PLAUSIBLE_HOSTNAME" "$(rig_network plausible)" \
+    "http://plausible:8000" || {
+    echo "error: the named tunnel did not come up — the dashboard is local-only." >&2
+    exit 1
+  }
+fi
 
 # ── phase 4: the admin account and the site ────────────────────────────────
 if [ "$SKIP_SIGNUP" -eq 0 ]; then
@@ -185,5 +236,12 @@ echo ""
 echo "  Wire the app at it:  bash $HERE/wire-frontend.sh"
 echo "  Prove it works:      bash $HERE/verify.sh"
 echo ""
-echo "  ⚠ This URL dies with the tunnel. Re-running up.sh mints a new one and"
-echo "    rewrites BASE_URL — fine for debugging, not for anything lasting."
+if [ "$MODE" = "named" ]; then
+  echo "  Mode: NAMED — this hostname persists. BASE_URL and any wiring done"
+  echo "  against it stay correct across restarts; re-running up.sh rewrites"
+  echo "  nothing and the frontend does not need re-pointing."
+else
+  echo "  ⚠ This URL dies with the tunnel. Re-running up.sh mints a new one and"
+  echo "    rewrites BASE_URL — fine for debugging, not for anything lasting."
+  echo "    A named hostname removes that churn: see SKILL.md, 'Named tunnels'."
+fi

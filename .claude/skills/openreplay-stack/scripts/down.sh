@@ -22,17 +22,27 @@ require_vendor
 # which reads as a docker bug rather than a leftover container.
 export COMPOSE_PROFILES=migration
 
+# The named tunnel's CONTAINER goes with the stack; its hostname and DNS record
+# stay, so the next up.sh reuses both and nothing needs re-wiring. Give them up
+# explicitly with:
+#   bash .claude/skills/lib/cf-named-tunnel.sh destroy hackagon-openreplay <host>
+stop_named() { if cfn_running "$NAMED_TUNNEL"; then cfn_stop "$NAMED_TUNNEL"; fi; }
+
 case "${1:-}" in
   --tunnel)
-    compose stop tunnel && rm -f "$STATE/tunnel-url"
+    compose stop tunnel || true
+    stop_named
+    rm -f "$STATE/tunnel-url"
     echo "tunnel stopped — the public URL is gone; the stack is still running." ;;
   --volumes)
     echo "==> stopping and DELETING ALL VOLUMES (recorded sessions included)…"
+    stop_named
     compose down --volumes --remove-orphans
     rm -f "$STATE/tunnel-url" "$STATE/env.prepared"
     echo "done. Next up.sh re-randomizes secrets, re-runs migrations, and"
     echo "re-creates the admin account from .secrets.env (kept on purpose)." ;;
   *)
+    stop_named
     compose down --remove-orphans
     rm -f "$STATE/tunnel-url"
     echo "stopped (data volumes kept)." ;;

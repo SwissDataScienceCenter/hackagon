@@ -204,7 +204,13 @@ fi
 # Fail before writing a config that points at a script that is not there — a
 # 404 on the tracker is invisible in the app (a failed <script> logs one line
 # and the page is fine) and looks identical to "nobody visited".
-code="$(curl -s -o "$CURL_DISCARD" -w '%{http_code}' -m 20 "$script_url" || true)"
+#
+# cfn_http_code, not a bare curl: with a NAMED hostname the check must fail on a
+# broken TUNNEL and not on a broken RESOLVER, and those are distinguishable —
+# it retries against the address Cloudflare's own DoH endpoint gives. The
+# machine this was built on answers AAAA-only for these names with no IPv6 route
+# out, so a bare curl reports 000 for a dashboard that is serving 200.
+code="$(cfn_http_code "$script_url")"
 [ "$code" = "200" ] || {
   echo "error: $script_url answered $code — is the tunnel healthy? (scripts/url.sh)" >&2
   exit 1

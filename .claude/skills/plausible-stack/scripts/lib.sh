@@ -175,12 +175,45 @@ env_get() { # <key> -> stdout (empty when absent)
   sed -n "s|^$1=||p" "$ENV_FILE" | tail -1
 }
 
-# Read the quick-tunnel URL out of cloudflared's log (it only ever prints it
-# there). The state file is the cache; the log is the truth, because a tunnel
-# that was restarted has a different URL and the same state file.
+# ── named vs quick tunnel ────────────────────────────────────────────────────
+# Same two modes as the app's own tunnel (see .claude/skills/lib/cf-api.sh for
+# why named exists). Named is chosen when Cloudflare credentials and
+# PLAUSIBLE_HOSTNAME are configured; otherwise the quick tunnel, unchanged.
+#
+# It matters MORE here than for the app. Plausible reads BASE_URL once at boot
+# and uses it for link generation and the LiveView origin check, so every new
+# quick-tunnel hostname is a config rewrite plus a container recreate — and any
+# browser still holding the old tracker URL posts into a host that no longer
+# exists, which looks exactly like "nobody visited".
+# shellcheck source=../../lib/cf-named-tunnel.sh
+source "$SKILL_DIR/../lib/cf-named-tunnel.sh"
+NAMED_TUNNEL="${PLAUSIBLE_TUNNEL_NAME:-hackagon-plausible}"
+
+named_configured() {
+  cf_configured && [ -n "${PLAUSIBLE_HOSTNAME:-}" ]
+}
+
+# The URL this rig is reachable on, asked of whatever is RUNNING. A named
+# tunnel answers from its container label; a quick tunnel from cloudflared's
+# log, which is the only place it ever prints it. Neither reads the state file:
+# a tunnel that was restarted has a new URL and the same state file, and a stale
+# URL fails silently — the tracker keeps posting into nothing.
 tunnel_url() {
+  cfn_url "$NAMED_TUNNEL" 2>/dev/null && return 0
   docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
     grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
+}
+
+# The docker network the rig's containers are on, read off a live container
+# rather than assumed: compose derives it from the project name, which is
+# overridable. A wrong guess fails as a DNS lookup for `plausible` inside
+# cloudflared, which Cloudflare renders as a plain 502 while every container
+# reports healthy — an afternoon lost to that once already, in the openreplay
+# overlay.
+rig_network() { # <service>
+  docker inspect "$(compose ps -q "$1")" \
+    --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null |
+    awk '{print $1}'
 }
 
 # The URL to talk to Plausible on from THIS machine. Prefer the loopback port:

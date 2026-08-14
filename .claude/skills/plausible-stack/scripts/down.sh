@@ -22,6 +22,12 @@ VOLUMES=0
 
 bash "$HERE/wire-frontend.sh" --restore || true
 
+# The named tunnel's container, if this rig is running one. Its HOSTNAME and DNS
+# record are kept: that is the whole point of a named tunnel, and the next up.sh
+# reuses both. Give them up explicitly with
+#   bash .claude/skills/lib/cf-named-tunnel.sh destroy hackagon-plausible <host>
+if cfn_running "$NAMED_TUNNEL"; then cfn_stop "$NAMED_TUNNEL"; fi
+
 if [ "$VOLUMES" -eq 1 ]; then
   echo "==> stopping and deleting volumes"
   compose down -v --remove-orphans

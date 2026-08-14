@@ -66,8 +66,41 @@ require_vendor() {
     echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2; exit 1; }
 }
 
-# Read the quick-tunnel URL out of cloudflared's log (it only ever prints it there).
+# ── named vs quick tunnel ────────────────────────────────────────────────────
+# Same two modes as the app's own tunnel (see .claude/skills/lib/cf-api.sh for
+# why named exists). Named when Cloudflare credentials and OPENREPLAY_HOSTNAME
+# are configured; otherwise the quick tunnel, unchanged.
+#
+# The gain is largest here. COMMON_DOMAIN_NAME is baked into ~25 containers at
+# boot, so a new hostname means rewriting common.env and recreating the whole
+# stack — and every browser still carrying the old ingest URL posts sessions
+# into a host that no longer exists, which looks exactly like "nobody visited".
+# A stable hostname means the app's `replay.ingestPoint` wiring stays true.
+# shellcheck source=../../lib/cf-named-tunnel.sh
+source "$SKILL_DIR/../lib/cf-named-tunnel.sh"
+NAMED_TUNNEL="${OPENREPLAY_TUNNEL_NAME:-hackagon-openreplay}"
+
+named_configured() {
+  cf_configured && [ -n "${OPENREPLAY_HOSTNAME:-}" ]
+}
+
+# The URL this rig is reachable on, asked of whatever is RUNNING — a named
+# tunnel's container label, or the quick tunnel's log, which is the only place
+# cloudflared ever prints it. Never the state file: a restarted tunnel has a new
+# URL and the same state file, and a stale URL fails silently.
 tunnel_url() {
+  cfn_url "$NAMED_TUNNEL" 2>/dev/null && return 0
   docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
     grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
+}
+
+# The docker network a service is on, read off the live container. Upstream
+# defines `openreplay-net` explicitly and compose prefixes it with the project
+# name, so guessing it wrong is easy — and it fails as a DNS lookup for `caddy`
+# INSIDE cloudflared, which Cloudflare renders as a plain 502 while every
+# container reports healthy. That cost an afternoon once already.
+rig_network() { # <service>
+  docker inspect "$(compose ps -q "$1")" \
+    --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null |
+    awk '{print $1}'
 }

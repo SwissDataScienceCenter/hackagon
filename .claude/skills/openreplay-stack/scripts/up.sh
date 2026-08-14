@@ -15,11 +15,13 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
 
-DRY=0; SKIP_DOCTOR=0
+DRY=0; SKIP_DOCTOR=0; MODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --skip-doctor) SKIP_DOCTOR=1 ;;
+    --named) MODE=named ;;
+    --quick) MODE=quick ;;
     -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -76,18 +78,44 @@ if [ "$DRY" -eq 1 ]; then
   exit 0
 fi
 
-# ── phase 1: tunnel only, to learn the public URL ──────────────────────────
-echo "==> starting the quick tunnel…"
-compose up -d --no-deps tunnel
-url=""
-for _ in $(seq 1 30); do
-  url="$(tunnel_url || true)"
-  [ -n "$url" ] && break
-  sleep 2
-done
-[ -z "$url" ] && { echo "error: no tunnel URL after 60s — check: docker logs openreplay-tunnel" >&2; exit 1; }
+# ── phase 1: learn the public URL ──────────────────────────────────────────
+# NAMED MODE SKIPS THIS PHASE. The hostname is known before anything starts, so
+# COMMON_DOMAIN_NAME is written once and never revisited — which is worth more
+# here than anywhere else, because that value is baked into ~25 containers and
+# changing it recreates the whole stack.
+if [ "$MODE" = "named" ] && ! named_configured; then
+  echo "error: --named needs Cloudflare credentials and OPENREPLAY_HOSTNAME." >&2
+  cf_explain_unconfigured >&2
+  exit 2
+fi
+[ -n "$MODE" ] || { named_configured && MODE=named || MODE=quick; }
+
+if [ "$MODE" = "named" ]; then
+  url="https://$OPENREPLAY_HOSTNAME"
+  echo "==> Mode: NAMED — $url (persistent)"
+  # One COMMON_DOMAIN_NAME, one hostname. A second tunnel onto the same caddy
+  # would serve a UI whose API calls all address the other host.
+  if [ -n "$(compose ps -q tunnel 2>/dev/null)" ]; then
+    echo "    stopping the quick tunnel (named mode owns COMMON_DOMAIN_NAME)"
+    compose rm -sf tunnel >/dev/null 2>&1 || true
+  fi
+else
+  echo "==> Mode: QUICK — starting the quick tunnel to learn its hostname…"
+  if cfn_running "$NAMED_TUNNEL"; then
+    echo "    stopping the named tunnel (one COMMON_DOMAIN_NAME, one hostname)"
+    cfn_stop "$NAMED_TUNNEL"
+  fi
+  compose up -d --no-deps tunnel
+  url=""
+  for _ in $(seq 1 30); do
+    url="$(tunnel_url || true)"
+    [ -n "$url" ] && break
+    sleep 2
+  done
+  [ -z "$url" ] && { echo "error: no tunnel URL after 60s — check: docker logs openreplay-tunnel" >&2; exit 1; }
+  echo "    $url"
+fi
 host="${url#https://}"
-echo "    $url"
 echo "$url" > "$STATE/tunnel-url"
 
 # ── prepare env, part B: the domain (changes on every tunnel restart) ──────
@@ -103,7 +131,25 @@ sync_dotenv
 
 # ── phase 3: everything (migration profile creates schemas on first run) ───
 echo "==> starting OpenReplay (first run pulls ~25 images — this takes a while)…"
-COMPOSE_PROFILES=migration compose up -d
+if [ "$MODE" = "named" ]; then
+  # Every service EXCEPT the quick tunnel, named explicitly — a bare `up -d`
+  # would start it and mint a hostname nothing uses.
+  # shellcheck disable=SC2046
+  COMPOSE_PROFILES=migration compose up -d \
+    $(COMPOSE_PROFILES=migration compose config --services | grep -v '^tunnel$' | tr '\n' ' ')
+else
+  COMPOSE_PROFILES=migration compose up -d
+fi
+
+# ── phase 3b: the named tunnel, once caddy exists to point it at ───────────
+if [ "$MODE" = "named" ]; then
+  cfn_up "$NAMED_TUNNEL" "$OPENREPLAY_HOSTNAME" "$(rig_network caddy)" \
+    "http://caddy:80" || {
+    echo "error: the named tunnel did not come up — OpenReplay is local-only," >&2
+    echo "       which means the tracker cannot reach /ingest from a browser." >&2
+    exit 1
+  }
+fi
 
 # ── phase 4: the admin account, from .secrets.env ──────────────────────────
 # The stack has no seeded account and the first signup becomes the admin; an
@@ -123,5 +169,12 @@ echo "  Tracker config for the SvelteKit app:"
 echo "    ingestPoint: \"$url/ingest\""
 echo "    projectKey:  printed above, or: bash $HERE/wire-frontend.sh --print"
 echo ""
-echo "  ⚠ This URL dies with the tunnel. Re-running up.sh mints a new one and"
-echo "    rewrites the config — fine for debugging, not for anything lasting."
+if [ "$MODE" = "named" ]; then
+  echo "  Mode: NAMED — this hostname persists. COMMON_DOMAIN_NAME and any"
+  echo "  wiring done against it stay correct across restarts, so the ~25"
+  echo "  containers do not have to be recreated for a new URL."
+else
+  echo "  ⚠ This URL dies with the tunnel. Re-running up.sh mints a new one and"
+  echo "    rewrites the config — fine for debugging, not for anything lasting."
+  echo "    A named hostname removes that churn: see SKILL.md, 'Named tunnels'."
+fi

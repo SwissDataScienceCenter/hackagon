@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test"
 import { PERSONAS } from "../../personas.js"
+import { onTunnel, onTunnelRealm } from "./host.js"
 
 /**
  * Proves a presigned UPLOAD survives the public path, not just localhost.
@@ -25,11 +26,16 @@ import { PERSONAS } from "../../personas.js"
  * spec is the independent check, from the browser, on the deployed path.
  *
  *   bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth
- *   TUNNEL_BASE_URL=https://X.trycloudflare.com pnpm exec playwright test --project=tunnel
+ *   TUNNEL_BASE_URL=https://hackagon.example.org \
+ *     pnpm exec playwright test --project=tunnel
+ *
+ * Works against a quick tunnel or a named one — the public host is derived from
+ * TUNNEL_BASE_URL (host.ts). The Host-rewrite fault this catches is caddy's and
+ * is identical either way; a named hostname does not make it go away.
  */
 const base = process.env.TUNNEL_BASE_URL
 
-test.describe("presigned upload through the quick tunnel", () => {
+test.describe("presigned upload through the tunnel", () => {
   test.skip(!base, "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first")
 
   test("an avatar uploads and reads back through the public URL", async ({ page }) => {
@@ -40,7 +46,7 @@ test.describe("presigned upload through the quick tunnel", () => {
     await page.goto("/")
     await page.waitForLoadState("networkidle")
     await page.getByRole("button", { name: "Log in" }).click()
-    await page.waitForURL(/trycloudflare\.com\/realms\/hackagon/, { timeout: 45_000 })
+    await page.waitForURL(onTunnelRealm(base), { timeout: 45_000 })
     await page.locator("#username").fill(alice.username)
     if (!(await page.locator("#password").isVisible())) {
       await page.locator("#kc-login").click()
@@ -48,7 +54,7 @@ test.describe("presigned upload through the quick tunnel", () => {
     }
     await page.locator("#password").fill(alice.password)
     await page.locator("#kc-login").click()
-    await page.waitForURL(/trycloudflare\.com/, { timeout: 30_000 })
+    await page.waitForURL(onTunnel(base), { timeout: 30_000 })
 
     // Presign + PUT exactly as the app does it, in the page, so the request
     // travels the same hops with the same headers a person's upload would.

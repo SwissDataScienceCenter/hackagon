@@ -29,6 +29,27 @@ bash .claude/skills/plausible-stack/scripts/down.sh --volumes  # stop and delete
 owner, creates the site and a Stats API key, then **closes registration behind
 itself** and checks that `/register` refuses.
 
+## Named hostname (`--named`)
+
+`up.sh --named` puts this rig on a **persistent hostname you own** instead of a
+quick tunnel, using the same Cloudflare credentials as the app's tunnel —
+`PLAUSIBLE_HOSTNAME` in the gitignored
+`.claude/skills/cloudflare-tunnel/.env`. See that skill's SKILL.md for the token
+and its real (zone-wide) scope. Named is the default when configured; `--quick`
+forces the old behaviour, which still needs no account at all.
+
+It matters more here than it looks. **`BASE_URL` is read once at boot** and used
+for link generation and the LiveView origin check, so a new hostname means
+rewriting `vendor/.env` and recreating the container — and any browser still
+holding the old `scriptUrl` posts into a host that no longer exists, which is
+indistinguishable from "nobody visited". With a stable hostname the wiring
+written by `wire-frontend.sh` stays true across restarts, and `up.sh --named`
+skips the "start a tunnel just to find out what it is called" phase entirely.
+
+Only one tunnel runs at a time: `--named` stops the quick tunnel and vice
+versa, because `BASE_URL` names exactly one of them and a dashboard reached on
+the other renders and then never loads any numbers.
+
 ## Layout
 
 ```

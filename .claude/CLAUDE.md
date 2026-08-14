@@ -913,6 +913,62 @@ running :8081, assert the browse page lists its events again, *and* assert that
 while the backend is down the page says unavailable rather than empty. Without
 that second assertion half the script passes against a page that is lying.
 
+## Named tunnels — the churn above has a root cause, and this removes it
+
+Everything in the next section exists to survive a hostname that changes on
+every restart. **A named tunnel is a hostname on a zone you own**, and all three
+rigs support one now (`.claude/skills/lib/cf-named-tunnel.sh`, driven by a
+gitignored `.claude/skills/cloudflare-tunnel/.env`):
+
+| rig | hostname var | tunnel | origin |
+| --- | --- | --- | --- |
+| the app | `HACKAGON_HOSTNAME` | `hackagon` | `http://caddy:80` |
+| Plausible | `PLAUSIBLE_HOSTNAME` | `hackagon-plausible` | `http://plausible:8000` |
+| OpenReplay | `OPENREPLAY_HOSTNAME` | `hackagon-openreplay` | `http://caddy:80` |
+
+`up.sh` picks named when those credentials exist and quick otherwise, prints
+which mode it is in, and **stops the other mode's tunnel** — the OIDC issuer
+names ONE hostname, so a second public URL would serve every page and fail every
+login, which is the failure that only surfaces when somebody signs in.
+**Quick tunnels are untouched and remain the zero-setup path**; `--quick` forces
+them and needs no account.
+
+**The re-wiring dance is gone in named mode, and it is the far end that says
+so.** A stable hostname makes the second `up.sh --with-auth` write a
+byte-identical overlay, so `config-overlay.sh` answers `unchanged` — but an
+unchanged FILE is not a correct PROCESS (that stale-process trap has cost three
+debugging sessions). `auth-wire.sh` therefore mints a token from the issuer it
+just wired and asks the running backend whether it accepts it; only then does it
+skip the restart. "Could not ask" restarts, because a skip has to be earned.
+
+**Nothing tracked carries the hostname**, exactly as before: the issuer lives in
+`config.local.yaml` through `config-overlay.sh`, and `config_test.go` still
+asserts both tracked configs say `localhost`. Caddy needed no change at all —
+`Caddyfile.tunnel` binds `:80` for any Host, so the path mux and the `/objects`
+Host rewrite apply identically.
+
+⚠ **A Cloudflare API token scopes to a ZONE, not to a hostname.** There is no
+per-subdomain grant and no combination of settings that produces one: the
+narrowest token for this job can edit **any DNS record in the whole zone**.
+Do not describe it as limited to the three subdomains. The tooling supplies the
+guard Cloudflare cannot — `cf_dns_point` refuses to replace a record that is not
+already a `*.cfargotunnel.com` CNAME (`CF_FORCE_DNS=1` overrides). Minting
+steps, permissions, rotation and leak response are in the skill's SKILL.md.
+
+**The token is a SETUP credential.** After the tunnels exist, cloudflared runs
+from a per-tunnel credentials file that cannot touch DNS, cannot enumerate the
+zone and cannot create anything. A machine that only RUNS a tunnel should hold
+`.state/named/<name>/` and no token.
+
+**One local trap worth knowing, because it looks like a broken tunnel.** The
+LAN resolver here answers **AAAA-only** for these names on a network with no
+IPv6 route out: every lookup succeeds, every connection fails in milliseconds.
+`auth-wire.sh`'s `/etc/hosts` pin used to be gated on `getent hosts`, which says
+YES about a name nothing can reach — it tests REACHABILITY now, and the
+readiness probe retries against a DoH-resolved IPv4 edge and, when that works,
+says "the tunnel is fine, this machine's resolver is not" instead of reporting a
+failure. `curl --resolve <host>:443:<a-cloudflare-v4>` is the manual check.
+
 ## The tunnel's auth wiring (why login kept breaking)
 
 `run.sh` unwires the tunnel before a suite — every persona logs in over
@@ -1122,13 +1178,23 @@ Public URL with working login (see the cloudflare-tunnel skill):
 
 ```bash
 bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth   # stack must be up first
+bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth --quick   # force an ephemeral URL
 bash .claude/skills/cloudflare-tunnel/scripts/down.sh             # also un-wires OIDC
+bash .claude/skills/lib/cf-named-tunnel.sh check                  # credentials + zone only
+bash .claude/skills/lib/cf-named-tunnel.sh status                 # which named tunnels run
 ```
 
 Quick-tunnel URLs are ephemeral, so `--with-auth` re-points the frontend and
 backend issuers at each new URL. **While wired, localhost logins fail** (their
 tokens carry the wrong issuer) — that is expected, `down.sh` restores it. Suite
-runs restore it too, so re-run `--with-auth` after any smoke/journey run.
+runs restore it too, so re-run `--with-auth` after any smoke/journey run. With a
+NAMED hostname that re-run is a no-op: same hostname, same overlay, no restart.
+
+`tests/tunnel/*.spec.ts` derive the public host from `TUNNEL_BASE_URL`
+(`tests/tunnel/host.ts`) rather than matching `trycloudflare.com`. The literal
+was correct while quick tunnels were the only public path and became a lie the
+day a named hostname worked — every wait would have timed out against a URL that
+was serving perfectly, reading as "login is broken through the tunnel".
 
 Dev credentials: all cast members use password `aliceandbob`; Keycloak admin
 is `admin`/`admin`. The extras crowd (`cast.json`) is provisioned by
