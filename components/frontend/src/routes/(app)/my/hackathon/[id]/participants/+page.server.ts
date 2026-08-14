@@ -31,6 +31,7 @@ export const load: PageServerLoad = async (event) => {
   const ownerCount = participants.filter((p) => p.isOwner).length
 
   return {
+    hackathonId: hackathon.id,
     participants,
     ownerCount,
     // 0 means unlimited — the page renders the fullness gauge and the

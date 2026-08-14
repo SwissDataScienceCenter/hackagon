@@ -1,5 +1,10 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    // Pathname, not string: resolve() is typed against the route tree, and a
+    // bare string is not assignable to it — which is how this prop used to be
+    // handed a `#participant-<id>` fragment behind an `as any`, resolving to
+    // nothing and making View a link that only changed the hash.
+    import type { Pathname } from '$app/types';
     import type { Snippet } from 'svelte';
 
     let {
@@ -9,7 +14,7 @@
         role: roleProp,
         skills = [],
         linkedinUrl,
-        profileDetailsHref = '#',
+        profileDetailsHref,
         actions,
     }: {
         name: string;
@@ -26,7 +31,12 @@
         role?: string;
         skills?: string[];
         linkedinUrl?: string;
-        profileDetailsHref?: string;
+        /**
+         * Where "View" goes. Omitted rather than defaulted: a card with no
+         * destination shows no View button, which is honest, where a `#` default
+         * renders a control that goes nowhere.
+         */
+        profileDetailsHref?: Pathname;
         /**
          * Extra controls rendered beside "View" — e.g. an owner's Approve/Remove
          * buttons. Left to the caller so this card stays ignorant of hackathon
@@ -112,8 +122,15 @@
         </div>
 
         <div class="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
-            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-            <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+            {#if profileDetailsHref}
+                <!-- The name is an sr-only TEXT NODE, not an aria-label: the
+                     replay tracker masks text and ships attribute values in
+                     clear, so a name in an attribute leaks on a page that lists
+                     everybody. Same shape as the pages list's View link. -->
+                <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref)}>
+                    View<span class="sr-only"> {name}</span>
+                </a>
+            {/if}
             {#if actions}
                 {@render actions()}
             {/if}

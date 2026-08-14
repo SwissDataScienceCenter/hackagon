@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import { resolve } from '$app/paths';
     import { SvelteSet } from 'svelte/reactivity';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
     import DataToolbar from '$lib/components/data/DataToolbar.svelte';
@@ -217,7 +218,25 @@
                     <tbody>
                         {#each filtered as participant (participant.id)}
                             <tr class="border-b border-line last:border-0">
-                                <td class="px-3 py-2 font-medium text-ink">{participant.name}</td>
+                                <td class="px-3 py-2 font-medium text-ink">
+                                    <!-- The same destination the cards' View
+                                         button has: which view is remembered
+                                         per list, so a table-mode organiser
+                                         would otherwise have no way in at
+                                         all. -->
+                                    {#if data.mayManage}
+                                        <a
+                                            href={resolve(
+                                                `/my/hackathon/${data.hackathonId}/participants/${participant.id}`
+                                            )}
+                                            class="text-ink no-underline hover:underline"
+                                        >
+                                            {participant.name}
+                                        </a>
+                                    {:else}
+                                        {participant.name}
+                                    {/if}
+                                </td>
                                 <td class="px-3 py-2 text-ink-2">{participant.roleLabel}</td>
                                 <td class="px-3 py-2">
                                     <span
@@ -245,7 +264,9 @@
                 <ParticipantCard
                     name={participant.name}
                     role={participant.roleLabel}
-                    profileDetailsHref="#participant-{participant.id}"
+                    profileDetailsHref={data.mayManage
+                        ? `/my/hackathon/${data.hackathonId}/participants/${participant.id}`
+                        : undefined}
                 >
                     {#snippet actions()}
                         {@render rowActions(participant)}
