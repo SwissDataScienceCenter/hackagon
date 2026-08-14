@@ -15,15 +15,22 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
 
-DRY=0; SKIP_DOCTOR=0
+DRY=0
+SKIP_DOCTOR=0
 while [ $# -gt 0 ]; do
-  case "$1" in
+    case "$1" in
     --dry-run) DRY=1 ;;
     --skip-doctor) SKIP_DOCTOR=1 ;;
-    -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "unknown argument: $1" >&2; exit 2 ;;
-  esac
-  shift
+    -h | --help)
+        sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
+    *)
+        echo "unknown argument: $1" >&2
+        exit 2
+        ;;
+    esac
+    shift
 done
 
 require_docker
@@ -51,29 +58,29 @@ ENV_FILE="$VENDOR/common.env"
 sync_dotenv() { cp -f "$ENV_FILE" "$VENDOR/.env"; }
 
 if [ ! -f "$STATE/env.prepared" ]; then
-  echo "==> randomizing placeholder secrets in common.env"
-  mapfile -t tokens < <(grep -oE 'change_me_[a-zA-Z0-9_]*' "$ENV_FILE" | sort -u | grep -v '^change_me_domain$' || true)
-  for tok in "${tokens[@]}"; do
-    sed -i "s|\\b$tok\\b|$(openssl rand -hex 10)|g" "$ENV_FILE"
-  done
-  echo "    ${#tokens[@]} secrets set"
-  # Caddy serves plain HTTP on :80 for any Host — Cloudflare terminates TLS at
-  # its edge, and ACME could never validate a trycloudflare hostname from here.
-  # COMMON_PROTOCOL stays `https` because that is what the PUBLIC URL is.
-  grep -q '^CADDY_DOMAIN=' "$ENV_FILE" \
-    && sed -i 's|^CADDY_DOMAIN=.*|CADDY_DOMAIN=":80"|' "$ENV_FILE" \
-    || echo 'CADDY_DOMAIN=":80"' >> "$ENV_FILE"
-  touch "$STATE/env.prepared"
+    echo "==> randomizing placeholder secrets in common.env"
+    mapfile -t tokens < <(grep -oE 'change_me_[a-zA-Z0-9_]*' "$ENV_FILE" | sort -u | grep -v '^change_me_domain$' || true)
+    for tok in "${tokens[@]}"; do
+        sed -i "s|\\b$tok\\b|$(openssl rand -hex 10)|g" "$ENV_FILE"
+    done
+    echo "    ${#tokens[@]} secrets set"
+    # Caddy serves plain HTTP on :80 for any Host — Cloudflare terminates TLS at
+    # its edge, and ACME could never validate a trycloudflare hostname from here.
+    # COMMON_PROTOCOL stays `https` because that is what the PUBLIC URL is.
+    grep -q '^CADDY_DOMAIN=' "$ENV_FILE" &&
+        sed -i 's|^CADDY_DOMAIN=.*|CADDY_DOMAIN=":80"|' "$ENV_FILE" ||
+        echo 'CADDY_DOMAIN=":80"' >>"$ENV_FILE"
+    touch "$STATE/env.prepared"
 else
-  echo "==> secrets already prepared (delete .state/env.prepared to redo)"
+    echo "==> secrets already prepared (delete .state/env.prepared to redo)"
 fi
 sync_dotenv
 
 if [ "$DRY" -eq 1 ]; then
-  echo ""
-  echo "[dry-run] would start:"
-  compose config --services | sed 's/^/    /'
-  exit 0
+    echo ""
+    echo "[dry-run] would start:"
+    compose config --services | sed 's/^/    /'
+    exit 0
 fi
 
 # ── phase 1: tunnel only, to learn the public URL ──────────────────────────
@@ -81,22 +88,25 @@ echo "==> starting the quick tunnel…"
 compose up -d --no-deps tunnel
 url=""
 for _ in $(seq 1 30); do
-  url="$(tunnel_url || true)"
-  [ -n "$url" ] && break
-  sleep 2
+    url="$(tunnel_url || true)"
+    [ -n "$url" ] && break
+    sleep 2
 done
-[ -z "$url" ] && { echo "error: no tunnel URL after 60s — check: docker logs openreplay-tunnel" >&2; exit 1; }
+[ -z "$url" ] && {
+    echo "error: no tunnel URL after 60s — check: docker logs openreplay-tunnel" >&2
+    exit 1
+}
 host="${url#https://}"
 echo "    $url"
-echo "$url" > "$STATE/tunnel-url"
+echo "$url" >"$STATE/tunnel-url"
 
 # ── prepare env, part B: the domain (changes on every tunnel restart) ──────
 # COMMON_DOMAIN_NAME is a BARE HOSTNAME — the scheme lives in COMMON_PROTOCOL.
 echo "==> pointing the stack at $host"
 if grep -q '^COMMON_DOMAIN_NAME=' "$ENV_FILE"; then
-  sed -i "s|^COMMON_DOMAIN_NAME=.*|COMMON_DOMAIN_NAME=$host|" "$ENV_FILE"
+    sed -i "s|^COMMON_DOMAIN_NAME=.*|COMMON_DOMAIN_NAME=$host|" "$ENV_FILE"
 else
-  echo "COMMON_DOMAIN_NAME=$host" >> "$ENV_FILE"
+    echo "COMMON_DOMAIN_NAME=$host" >>"$ENV_FILE"
 fi
 grep -qE '^COMMON_PROTOCOL=https' "$ENV_FILE" || sed -i 's|^COMMON_PROTOCOL=.*|COMMON_PROTOCOL=https|' "$ENV_FILE"
 sync_dotenv

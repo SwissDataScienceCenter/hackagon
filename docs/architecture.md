@@ -79,9 +79,9 @@ Configuration for each component is loaded from a config directory passed with
   It exists so that pointing this checkout at a machine-specific hostname never
   edits a tracked file. The Cloudflare quick-tunnel wiring
   (`.claude/skills/cloudflare-tunnel/scripts/auth-wire.sh`) writes the tunnel
-  issuer here; it used to rewrite `config.yaml` itself, and a hostname that
-  dies with the tunnel got committed. `internal/config/config_test.go` asserts
-  both tracked configs still name `localhost`.
+  issuer here; it used to rewrite `config.yaml` itself, and a hostname that dies
+  with the tunnel got committed. `internal/config/config_test.go` asserts both
+  tracked configs still name `localhost`.
 
 ## Request flow
 

@@ -41,11 +41,7 @@ fs.writeFileSync(
 const back = fs.readFileSync(playerPath, "utf8")
 const s2 = back.indexOf(open) + open.length
 const e2 = back.indexOf(close, s2)
-const lines = back
-  .slice(s2, e2)
-  .trim()
-  .split("\n")
-  .filter(Boolean)
+const lines = back.slice(s2, e2).trim().split("\n").filter(Boolean)
 let actions = 0
 for (const l of lines) {
   const o = JSON.parse(l) // throws on a truncated or mangled line
@@ -60,4 +56,6 @@ if (actions !== sourceActions) {
     `player embeds ${actions} actions but recipe.jsonl has ${sourceActions}`,
   )
 }
-console.log(`player embeds ${lines.length} lines, ${actions} actions — matches recipe.jsonl`)
+console.log(
+  `player embeds ${lines.length} lines, ${actions} actions — matches recipe.jsonl`,
+)

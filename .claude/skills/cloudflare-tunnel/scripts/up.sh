@@ -20,7 +20,7 @@ ROOT_DIR="$(cd "$HERE/../../../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/.devcontainer/docker-compose.yml"
 
 case "$(uname -s)" in
-  MINGW* | MSYS*)
+MINGW* | MSYS*)
     export MSYS_NO_PATHCONV=1
     export MSYS2_ARG_CONV_EXCL="*"
     COMPOSE_FILE="$(cygpath -m "$COMPOSE_FILE")"
@@ -31,27 +31,27 @@ PORT=""
 WITH_AUTH=""
 PROD=""
 while [ $# -gt 0 ]; do
-  case "$1" in
+    case "$1" in
     --port)
-      shift
-      PORT="${1:?--port needs a port number}"
-      ;;
+        shift
+        PORT="${1:?--port needs a port number}"
+        ;;
     --with-auth) WITH_AUTH=1 ;;
     --prod) PROD=1 ;;
     -h | --help)
-      sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
-      exit 0
-      ;;
+        sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
     *)
-      echo "unknown argument: $1 (see --help)" >&2
-      exit 2
-      ;;
-  esac
-  shift
+        echo "unknown argument: $1 (see --help)" >&2
+        exit 2
+        ;;
+    esac
+    shift
 done
 if [ -n "$PORT" ] && [ -n "$PROD" ]; then
-  echo "error: --prod only applies to the hackagon stack, not --port mode." >&2
-  exit 2
+    echo "error: --prod only applies to the hackagon stack, not --port mode." >&2
+    exit 2
 fi
 
 # Make the RUNNING caddy match Caddyfile.tunnel, and prove one route did.
@@ -75,126 +75,126 @@ fi
 # here — the file was already right. Verifying the reload took is the only part
 # of this that could have caught the bug.
 ensure_caddy_config() {
-  # MSYS_NO_PATHCONV: on a Git Bash host, /etc/caddy/Caddyfile is rewritten to
-  # C:/Program Files/Git/etc/caddy/Caddyfile before docker ever sees it, and the
-  # reload fails with a path nobody typed. Ignored everywhere else.
-  MSYS_NO_PATHCONV=1 docker compose -f "$COMPOSE_FILE" exec -T caddy \
-    caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || {
-    echo "warn: could not reload caddy's config; it is serving whatever it booted with" >&2
-    return 0
-  }
-  # The Host rewrite on the /objects route, read back out of the live config.
-  if docker compose -f "$COMPOSE_FILE" exec -T caddy \
-    sh -c 'wget -qO- http://localhost:2019/config/ 2>/dev/null || curl -sS http://localhost:2019/config/' 2>/dev/null |
-    tr -d ' \n' | grep -q '"strip_path_prefix":"/objects"'; then
-    if ! docker compose -f "$COMPOSE_FILE" exec -T caddy \
-      sh -c 'wget -qO- http://localhost:2019/config/ 2>/dev/null || curl -sS http://localhost:2019/config/' 2>/dev/null |
-      tr -d ' \n' | grep -q 'upstream.hostport'; then
-      echo "warn: caddy's /objects route has no Host rewrite — presigned UPLOADS" >&2
-      echo "      through the public URL will 403 while reads keep working." >&2
+    # MSYS_NO_PATHCONV: on a Git Bash host, /etc/caddy/Caddyfile is rewritten to
+    # C:/Program Files/Git/etc/caddy/Caddyfile before docker ever sees it, and the
+    # reload fails with a path nobody typed. Ignored everywhere else.
+    MSYS_NO_PATHCONV=1 docker compose -f "$COMPOSE_FILE" exec -T caddy \
+        caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || {
+        echo "warn: could not reload caddy's config; it is serving whatever it booted with" >&2
+        return 0
+    }
+    # The Host rewrite on the /objects route, read back out of the live config.
+    if docker compose -f "$COMPOSE_FILE" exec -T caddy \
+        sh -c 'wget -qO- http://localhost:2019/config/ 2>/dev/null || curl -sS http://localhost:2019/config/' 2>/dev/null |
+        tr -d ' \n' | grep -q '"strip_path_prefix":"/objects"'; then
+        if ! docker compose -f "$COMPOSE_FILE" exec -T caddy \
+            sh -c 'wget -qO- http://localhost:2019/config/ 2>/dev/null || curl -sS http://localhost:2019/config/' 2>/dev/null |
+            tr -d ' \n' | grep -q 'upstream.hostport'; then
+            echo "warn: caddy's /objects route has no Host rewrite — presigned UPLOADS" >&2
+            echo "      through the public URL will 403 while reads keep working." >&2
+        fi
     fi
-  fi
 }
 
 wait_for_url() { # container-name
-  local name="$1" url=""
-  for _ in $(seq 1 30); do
-    url=$(docker logs "$name" 2>&1 | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1 || true)
-    if [ -n "$url" ]; then
-      echo "$url"
-      return 0
-    fi
-    sleep 2
-  done
-  echo "error: no trycloudflare URL appeared in '$name' logs after 60s" >&2
-  return 1
+    local name="$1" url=""
+    for _ in $(seq 1 30); do
+        url=$(docker logs "$name" 2>&1 | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1 || true)
+        if [ -n "$url" ]; then
+            echo "$url"
+            return 0
+        fi
+        sleep 2
+    done
+    echo "error: no trycloudflare URL appeared in '$name' logs after 60s" >&2
+    return 1
 }
 
 if [ -z "$PORT" ]; then
-  # The app must already be serving: caddy proxies to it and cloudflared
-  # resolves its target once at startup. This check lives here rather than as
-  # a compose `depends_on: service_healthy` because the stack inside `dev` is
-  # started by hand (`just up`), not by compose — see the comment on caddy in
-  # docker-compose.yml.
-  echo "==> Checking the app is up inside the dev container..."
-  if ! docker compose -f "$COMPOSE_FILE" exec -T -u vscode dev bash -c \
-    'curl -fsS -o /dev/null --max-time 5 "http://[::1]:8081/" ||
+    # The app must already be serving: caddy proxies to it and cloudflared
+    # resolves its target once at startup. This check lives here rather than as
+    # a compose `depends_on: service_healthy` because the stack inside `dev` is
+    # started by hand (`just up`), not by compose — see the comment on caddy in
+    # docker-compose.yml.
+    echo "==> Checking the app is up inside the dev container..."
+    if ! docker compose -f "$COMPOSE_FILE" exec -T -u vscode dev bash -c \
+        'curl -fsS -o /dev/null --max-time 5 "http://[::1]:8081/" ||
      curl -fsS -o /dev/null --max-time 5 "http://127.0.0.1:8081/"'; then
-    echo "error: nothing is serving on :8081 inside the dev container." >&2
-    echo "Start the stack first:  just up   (or scripts/up.sh in hackathon-e2e)" >&2
-    exit 1
-  fi
+        echo "error: nothing is serving on :8081 inside the dev container." >&2
+        echo "Start the stack first:  just up   (or scripts/up.sh in hackathon-e2e)" >&2
+        exit 1
+    fi
 
-  # Vite binds loopback inside the dev container: republish it on the
-  # container interface first so caddy (the tunnel's target, which
-  # path-splits the hostname between frontend and Keycloak) can reach it.
-  docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
-    bash -lc 'cd /workspaces/hackagon && bash .devcontainer/host-bridge.sh'
-  docker compose -f "$COMPOSE_FILE" --profile tunnel up -d tunnel
-  # After caddy exists (compose starts it via depends_on), before anyone is
-  # handed the link: a running container keeps its boot-time config forever.
-  ensure_caddy_config
-  name=$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q tunnel)
-  url=$(wait_for_url "$name")
-  if [ -n "$WITH_AUTH" ]; then
-    # Rewire issuers + realm allowlist so OIDC login works via the tunnel.
+    # Vite binds loopback inside the dev container: republish it on the
+    # container interface first so caddy (the tunnel's target, which
+    # path-splits the hostname between frontend and Keycloak) can reach it.
     docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
-      bash -lc "cd /workspaces/hackagon && bash .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh '$url'"
-  fi
+        bash -lc 'cd /workspaces/hackagon && bash .devcontainer/host-bridge.sh'
+    docker compose -f "$COMPOSE_FILE" --profile tunnel up -d tunnel
+    # After caddy exists (compose starts it via depends_on), before anyone is
+    # handed the link: a running container keeps its boot-time config forever.
+    ensure_caddy_config
+    name=$(docker compose -f "$COMPOSE_FILE" --profile tunnel ps -q tunnel)
+    url=$(wait_for_url "$name")
+    if [ -n "$WITH_AUTH" ]; then
+        # Rewire issuers + realm allowlist so OIDC login works via the tunnel.
+        docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
+            bash -lc "cd /workspaces/hackagon && bash .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh '$url'"
+    fi
 
-  # LAST, and only now: the built server reads config.yaml once into a module
-  # singleton at boot, so the issuer overlay above has to be on disk before it
-  # starts. (Nothing is duplicated by ordering it this way — auth-wire.sh
-  # restarts the built server only when one is ALREADY running, which on this
-  # path it is not.)
-  #
-  # ORIGIN is the tunnel URL, not localhost: SvelteKit rejects any form POST
-  # whose Origin header does not match ORIGIN, so a localhost value would 403
-  # every action a visitor takes through the public link — login first.
-  #
-  # `ensure` runs on EVERY hackagon-stack tunnel, not just `--prod`, because
-  # caddy's fallback to :8081 is only correct when `vite dev` is what is there.
-  # Whenever the adapter-node build holds that port — which is what the e2e
-  # harness leaves behind, and what `hackathon-e2e/scripts/wait-ready.sh` sets
-  # up on every single run — its ORIGIN is http://localhost:8081 and the public
-  # URL serves every page while every form POST 403s. That is silent: the link
-  # looks perfect until somebody tries to sign in, which is exactly what
-  # `devcontainer-up/scripts/start.sh --tunnel` then failed to prove, with
-  # nothing in any log naming the cause. `ensure` starts a correct-origin server
-  # on :8082 only in that case, leaves a vite fallback alone, and exits non-zero
-  # rather than handing over a URL it knows is broken. `--prod` still forces the
-  # built server (and a build) for the request-count win.
-  if [ -n "$PROD" ]; then
-    UPSTREAM_CMD="bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh start '$url'"
-  else
-    UPSTREAM_CMD="bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh ensure '$url'"
-  fi
-  if ! docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
-    bash -lc "cd /workspaces/hackagon && $UPSTREAM_CMD &&
+    # LAST, and only now: the built server reads config.yaml once into a module
+    # singleton at boot, so the issuer overlay above has to be on disk before it
+    # starts. (Nothing is duplicated by ordering it this way — auth-wire.sh
+    # restarts the built server only when one is ALREADY running, which on this
+    # path it is not.)
+    #
+    # ORIGIN is the tunnel URL, not localhost: SvelteKit rejects any form POST
+    # whose Origin header does not match ORIGIN, so a localhost value would 403
+    # every action a visitor takes through the public link — login first.
+    #
+    # `ensure` runs on EVERY hackagon-stack tunnel, not just `--prod`, because
+    # caddy's fallback to :8081 is only correct when `vite dev` is what is there.
+    # Whenever the adapter-node build holds that port — which is what the e2e
+    # harness leaves behind, and what `hackathon-e2e/scripts/wait-ready.sh` sets
+    # up on every single run — its ORIGIN is http://localhost:8081 and the public
+    # URL serves every page while every form POST 403s. That is silent: the link
+    # looks perfect until somebody tries to sign in, which is exactly what
+    # `devcontainer-up/scripts/start.sh --tunnel` then failed to prove, with
+    # nothing in any log naming the cause. `ensure` starts a correct-origin server
+    # on :8082 only in that case, leaves a vite fallback alone, and exits non-zero
+    # rather than handing over a URL it knows is broken. `--prod` still forces the
+    # built server (and a build) for the request-count win.
+    if [ -n "$PROD" ]; then
+        UPSTREAM_CMD="bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh start '$url'"
+    else
+        UPSTREAM_CMD="bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh ensure '$url'"
+    fi
+    if ! docker compose -f "$COMPOSE_FILE" exec -T -u vscode -e USER=vscode dev \
+        bash -lc "cd /workspaces/hackagon && $UPSTREAM_CMD &&
       echo && echo '==> Tunnel upstream:' &&
       bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh status"; then
-    echo "error: the tunnel is up but its upstream cannot serve $url correctly." >&2
-    echo "       Fix that before using the link — see the lines above." >&2
-    exit 1
-  fi
+        echo "error: the tunnel is up but its upstream cannot serve $url correctly." >&2
+        echo "       Fix that before using the link — see the lines above." >&2
+        exit 1
+    fi
 
-  echo
-  if [ -n "$WITH_AUTH" ]; then
-    echo "Public URL (login-capable): $url"
-  else
-    echo "Public URL (frontend, view-only): $url"
-  fi
-  if [ -n "$PROD" ]; then
-    echo "Back to the dev server:     scripts/prod-serve.sh stop  (down.sh does it too)"
-  else
-    echo "Which server answers it:    printed above by prod-serve.sh status"
-    echo "Fewer requests per page:    re-run with --prod (bundled build, 54 vs 150)"
-  fi
+    echo
+    if [ -n "$WITH_AUTH" ]; then
+        echo "Public URL (login-capable): $url"
+    else
+        echo "Public URL (frontend, view-only): $url"
+    fi
+    if [ -n "$PROD" ]; then
+        echo "Back to the dev server:     scripts/prod-serve.sh stop  (down.sh does it too)"
+    else
+        echo "Which server answers it:    printed above by prod-serve.sh status"
+        echo "Fewer requests per page:    re-run with --prod (bundled build, 54 vs 150)"
+    fi
 else
-  name="cf-quicktunnel-$PORT"
-  docker rm -f "$name" >/dev/null 2>&1 || true
-  docker run -d --name "$name" --restart unless-stopped \
-    cloudflare/cloudflared:latest \
-    tunnel --no-autoupdate --url "http://host.docker.internal:$PORT" >/dev/null
-  echo "Public URL (port $PORT): $(wait_for_url "$name")"
+    name="cf-quicktunnel-$PORT"
+    docker rm -f "$name" >/dev/null 2>&1 || true
+    docker run -d --name "$name" --restart unless-stopped \
+        cloudflare/cloudflared:latest \
+        tunnel --no-autoupdate --url "http://host.docker.internal:$PORT" >/dev/null
+    echo "Public URL (port $PORT): $(wait_for_url "$name")"
 fi

@@ -45,21 +45,34 @@ test.describe("media upload", () => {
     // The control is a <label> wrapping a hidden input — a styled button cannot
     // open a file picker — so the input is set directly.
     await page
-      .locator('input[type=file]')
-      .setInputFiles({ name: "venue-photo.png", mimeType: "image/png", buffer: PNG })
+      .locator("input[type=file]")
+      .setInputFiles({
+        name: "venue-photo.png",
+        mimeType: "image/png",
+        buffer: PNG,
+      })
 
     // Check the editor's own error line FIRST. Without this the failure is
     // "the textarea is still empty", which is the symptom; the component
     // already knows the cause and puts it on screen.
-    const uploadError = page.locator('[role=alert]').filter({ hasText: /upload|store|permission|MiB|type/i })
+    const uploadError = page
+      .locator("[role=alert]")
+      .filter({ hasText: /upload|store|permission|MiB|type/i })
     await expect
-      .poll(async () => (await uploadError.count()) > 0 || (await content.inputValue()) !== "", {
-        timeout: 20_000,
-        message: "neither an inserted image nor an error appeared",
-      })
+      .poll(
+        async () =>
+          (await uploadError.count()) > 0 ||
+          (await content.inputValue()) !== "",
+        {
+          timeout: 20_000,
+          message: "neither an inserted image nor an error appeared",
+        },
+      )
       .toBe(true)
     if (await uploadError.count()) {
-      throw new Error(`upload reported: ${await uploadError.first().innerText()}`)
+      throw new Error(
+        `upload reported: ${await uploadError.first().innerText()}`,
+      )
     }
 
     // The markdown gains an image pointing at the object store.

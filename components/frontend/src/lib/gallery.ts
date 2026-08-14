@@ -57,7 +57,8 @@ export async function fetchStoredImages(
 ): Promise<StoredImagePage> {
   const url = new URL(endpoint, "http://localhost")
   if (options.pageToken) url.searchParams.set("page", options.pageToken)
-  if (options.pageSize) url.searchParams.set("pageSize", String(options.pageSize))
+  if (options.pageSize)
+    url.searchParams.set("pageSize", String(options.pageSize))
   // Same-origin request, so only the path+query is sent — the base above exists
   // solely to let URLSearchParams do the encoding.
   const target = url.pathname + (url.search || "")
@@ -70,7 +71,9 @@ export async function fetchStoredImages(
   }
   if (!response.ok) {
     const text = await response.text().catch(() => "")
-    throw new GalleryError(text.trim() || "Could not load what is already uploaded")
+    throw new GalleryError(
+      text.trim() || "Could not load what is already uploaded",
+    )
   }
 
   let body: unknown

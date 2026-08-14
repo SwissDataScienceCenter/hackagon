@@ -13,14 +13,14 @@ REALM="hackagon"
 
 # Dev master-realm credentials (see tools/configs/keycloak/README.md).
 ADMIN_TOKEN=$(curl -s -X POST \
-  "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli" \
-  -d "username=admin" \
-  -d "password=admin" \
-  -d "grant_type=password" | jq -r ".access_token")
+    "$KEYCLOAK_URL/realms/master/protocol/openid-connect/token" \
+    -d "client_id=admin-cli" \
+    -d "username=admin" \
+    -d "password=admin" \
+    -d "grant_type=password" | jq -r ".access_token")
 if [ -z "$ADMIN_TOKEN" ] || [ "$ADMIN_TOKEN" = "null" ]; then
-  echo "error: could not get a Keycloak master admin token (admin/admin)" >&2
-  exit 1
+    echo "error: could not get a Keycloak master admin token (admin/admin)" >&2
+    exit 1
 fi
 
 PASSWORD=$(jq -r '.password' "$CAST")
@@ -29,16 +29,16 @@ COUNT=$(jq -r '.extras | length' "$CAST")
 echo "==> Ensuring $COUNT extra participants exist in realm '$REALM'..."
 created=0
 for i in $(seq 0 $((COUNT - 1))); do
-  username=$(jq -r ".extras[$i].username" "$CAST")
+    username=$(jq -r ".extras[$i].username" "$CAST")
 
-  existing=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
-    "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$username&exact=true" | jq 'length')
-  if [ "$existing" -gt 0 ]; then
-    echo "  [=] $username (exists)"
-    continue
-  fi
+    existing=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
+        "$KEYCLOAK_URL/admin/realms/$REALM/users?username=$username&exact=true" | jq 'length')
+    if [ "$existing" -gt 0 ]; then
+        echo "  [=] $username (exists)"
+        continue
+    fi
 
-  payload=$(jq -c --arg pw "$PASSWORD" ".extras[$i] | {
+    payload=$(jq -c --arg pw "$PASSWORD" ".extras[$i] | {
       username: .username,
       firstName: .firstName,
       lastName: .lastName,
@@ -48,16 +48,16 @@ for i in $(seq 0 $((COUNT - 1))); do
       credentials: [{type: \"password\", value: \$pw, temporary: false}]
     }" "$CAST")
 
-  http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-    -H "Authorization: Bearer $ADMIN_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$payload" \
-    "$KEYCLOAK_URL/admin/realms/$REALM/users")
-  if [ "$http_code" != "201" ] && [ "$http_code" != "409" ]; then
-    echo "error: creating $username failed (HTTP $http_code)" >&2
-    exit 1
-  fi
-  echo "  [+] $username (created)"
-  created=$((created + 1))
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "$payload" \
+        "$KEYCLOAK_URL/admin/realms/$REALM/users")
+    if [ "$http_code" != "201" ] && [ "$http_code" != "409" ]; then
+        echo "error: creating $username failed (HTTP $http_code)" >&2
+        exit 1
+    fi
+    echo "  [+] $username (created)"
+    created=$((created + 1))
 done
 echo "==> Roster ready ($created created, $((COUNT - created)) already present)."

@@ -69,7 +69,11 @@ const FLOWS: Flow[] = [
         name: "2-event",
         run: async (p) => {
           await p.goto("/")
-          await p.locator('a[href^="/hackathon/"]').filter({ hasText: H_UPCOMING }).first().click()
+          await p
+            .locator('a[href^="/hackathon/"]')
+            .filter({ hasText: H_UPCOMING })
+            .first()
+            .click()
           await expect(p).toHaveURL(/\/hackathon\//)
         },
       },

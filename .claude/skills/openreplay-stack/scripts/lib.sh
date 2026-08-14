@@ -23,14 +23,14 @@ SECRETS_FILE="$SKILL_DIR/.secrets.env"
 # Plain KEY=value lines, no quoting: the value is everything after the first
 # '=', so spaces survive without shell-quoting rules getting involved.
 load_secrets() {
-  [ -f "$SECRETS_FILE" ] || return 0
-  local line k
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in ''|\#*) continue ;; esac
-    k="${line%%=*}"
-    case "$k" in *[!A-Za-z0-9_]*|'') continue ;; esac
-    [ -n "${!k:-}" ] || export "$k=${line#*=}"
-  done < "$SECRETS_FILE"
+    [ -f "$SECRETS_FILE" ] || return 0
+    local line k
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in '' | \#*) continue ;; esac
+        k="${line%%=*}"
+        case "$k" in *[!A-Za-z0-9_]* | '') continue ;; esac
+        [ -n "${!k:-}" ] || export "$k=${line#*=}"
+    done <"$SECRETS_FILE"
 }
 
 # Paths handed to docker.exe. On Git Bash/MSYS, MSYS_NO_PATHCONV stops the
@@ -42,7 +42,7 @@ COMPOSE_VENDOR="$VENDOR/docker-compose.yaml"
 COMPOSE_OVERLAY="$SKILL_DIR/compose.tunnel.yaml"
 COMPOSE_DIR="$VENDOR"
 case "$(uname -s)" in
-  MINGW* | MSYS*)
+MINGW* | MSYS*)
     export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
     COMPOSE_VENDOR="$(cygpath -m "$COMPOSE_VENDOR")"
     COMPOSE_OVERLAY="$(cygpath -m "$COMPOSE_OVERLAY")"
@@ -51,23 +51,31 @@ case "$(uname -s)" in
 esac
 
 compose() {
-  docker compose -p "$PROJECT" \
-    -f "$COMPOSE_VENDOR" -f "$COMPOSE_OVERLAY" \
-    --project-directory "$COMPOSE_DIR" "$@"
+    docker compose -p "$PROJECT" \
+        -f "$COMPOSE_VENDOR" -f "$COMPOSE_OVERLAY" \
+        --project-directory "$COMPOSE_DIR" "$@"
 }
 
 require_docker() {
-  command -v docker >/dev/null 2>&1 || { echo "error: docker not found" >&2; exit 1; }
-  docker info >/dev/null 2>&1 || { echo "error: docker daemon not reachable" >&2; exit 1; }
+    command -v docker >/dev/null 2>&1 || {
+        echo "error: docker not found" >&2
+        exit 1
+    }
+    docker info >/dev/null 2>&1 || {
+        echo "error: docker daemon not reachable" >&2
+        exit 1
+    }
 }
 
 require_vendor() {
-  [ -f "$VENDOR/docker-compose.yaml" ] || {
-    echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2; exit 1; }
+    [ -f "$VENDOR/docker-compose.yaml" ] || {
+        echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2
+        exit 1
+    }
 }
 
 # Read the quick-tunnel URL out of cloudflared's log (it only ever prints it there).
 tunnel_url() {
-  docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
-    grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
+    docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
+        grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
 }

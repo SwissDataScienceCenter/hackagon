@@ -3,11 +3,24 @@
 
 ## Table of Contents
 
-- [hackathon/messages/config_svc/override_window_request.proto](#hackathon_messages_config_svc_override_window_request-proto)
-    - [OverrideWindowRequest](#hackathon-messages-config_svc-OverrideWindowRequest)
+- [hackathon/messages/config_svc/get_email_templates_request.proto](#hackathon_messages_config_svc_get_email_templates_request-proto)
+    - [GetEmailTemplatesRequest](#hackathon-messages-config_svc-GetEmailTemplatesRequest)
+  
+- [hackathon/messages/config_svc/get_email_templates_response.proto](#hackathon_messages_config_svc_get_email_templates_response-proto)
+    - [GetEmailTemplatesResponse](#hackathon-messages-config_svc-GetEmailTemplatesResponse)
+    - [GetEmailTemplatesResponse.TemplatesEntry](#hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry)
+  
+- [hackathon/messages/config_svc/get_windows_request.proto](#hackathon_messages_config_svc_get_windows_request-proto)
+    - [GetWindowsRequest](#hackathon-messages-config_svc-GetWindowsRequest)
   
 - [hackathon/entities/hackathon_window_set.proto](#hackathon_entities_hackathon_window_set-proto)
     - [HackathonWindows](#hackathon-entities-HackathonWindows)
+  
+- [hackathon/messages/config_svc/get_windows_response.proto](#hackathon_messages_config_svc_get_windows_response-proto)
+    - [GetWindowsResponse](#hackathon-messages-config_svc-GetWindowsResponse)
+  
+- [hackathon/messages/config_svc/override_window_request.proto](#hackathon_messages_config_svc_override_window_request-proto)
+    - [OverrideWindowRequest](#hackathon-messages-config_svc-OverrideWindowRequest)
   
 - [hackathon/messages/config_svc/override_window_response.proto](#hackathon_messages_config_svc_override_window_response-proto)
     - [OverrideWindowResponse](#hackathon-messages-config_svc-OverrideWindowResponse)
@@ -55,19 +68,6 @@
 - [hackathon/messages/config_svc/set_windows_response.proto](#hackathon_messages_config_svc_set_windows_response-proto)
     - [SetWindowsResponse](#hackathon-messages-config_svc-SetWindowsResponse)
   
-- [hackathon/messages/config_svc/get_email_templates_request.proto](#hackathon_messages_config_svc_get_email_templates_request-proto)
-    - [GetEmailTemplatesRequest](#hackathon-messages-config_svc-GetEmailTemplatesRequest)
-  
-- [hackathon/messages/config_svc/get_email_templates_response.proto](#hackathon_messages_config_svc_get_email_templates_response-proto)
-    - [GetEmailTemplatesResponse](#hackathon-messages-config_svc-GetEmailTemplatesResponse)
-    - [GetEmailTemplatesResponse.TemplatesEntry](#hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry)
-  
-- [hackathon/messages/config_svc/get_windows_request.proto](#hackathon_messages_config_svc_get_windows_request-proto)
-    - [GetWindowsRequest](#hackathon-messages-config_svc-GetWindowsRequest)
-  
-- [hackathon/messages/config_svc/get_windows_response.proto](#hackathon_messages_config_svc_get_windows_response-proto)
-    - [GetWindowsResponse](#hackathon-messages-config_svc-GetWindowsResponse)
-  
 - [hackathon/config_service.proto](#hackathon_config_service-proto)
     - [ConfigService](#hackathon-ConfigService)
   
@@ -79,10 +79,6 @@
   
 - [hackathon/entities/hackathon_branding.proto](#hackathon_entities_hackathon_branding-proto)
     - [HackathonBranding](#hackathon-entities-HackathonBranding)
-  
-- [hackathon/entities/hackathon_voting_policy.proto](#hackathon_entities_hackathon_voting_policy-proto)
-    - [HackathonVotingPolicy](#hackathon-entities-HackathonVotingPolicy)
-    - [ScaleRange](#hackathon-entities-ScaleRange)
   
 - [hackathon/entities/hackathon_role.proto](#hackathon_entities_hackathon_role-proto)
     - [HackathonRole](#hackathon-entities-HackathonRole)
@@ -105,6 +101,10 @@
   
 - [hackathon/entities/hackathon_status.proto](#hackathon_entities_hackathon_status-proto)
     - [HackathonStatus](#hackathon-entities-HackathonStatus)
+  
+- [hackathon/entities/hackathon_voting_policy.proto](#hackathon_entities_hackathon_voting_policy-proto)
+    - [HackathonVotingPolicy](#hackathon-entities-HackathonVotingPolicy)
+    - [ScaleRange](#hackathon-entities-ScaleRange)
   
 - [hackathon/entities/page.proto](#hackathon_entities_page-proto)
     - [Page](#hackathon-entities-Page)
@@ -165,6 +165,12 @@
 - [hackathon/messages/hackathon_svc/approve_participant_response.proto](#hackathon_messages_hackathon_svc_approve_participant_response-proto)
     - [ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse)
   
+- [hackathon/messages/hackathon_svc/create_invite_request.proto](#hackathon_messages_hackathon_svc_create_invite_request-proto)
+    - [CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/create_invite_response.proto](#hackathon_messages_hackathon_svc_create_invite_response-proto)
+    - [CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse)
+  
 - [hackathon/messages/hackathon_svc/create_request.proto](#hackathon_messages_hackathon_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest)
   
@@ -195,35 +201,18 @@
 - [hackathon/messages/hackathon_svc/edit_settings_response.proto](#hackathon_messages_hackathon_svc_edit_settings_response-proto)
     - [EditSettingsResponse](#hackathon-messages-hackathon_svc-EditSettingsResponse)
   
+- [hackathon/messages/hackathon_svc/get_registration_response_request.proto](#hackathon_messages_hackathon_svc_get_registration_response_request-proto)
+    - [GetRegistrationResponseRequest](#hackathon-messages-hackathon_svc-GetRegistrationResponseRequest)
+  
+- [hackathon/messages/hackathon_svc/get_registration_response_response.proto](#hackathon_messages_hackathon_svc_get_registration_response_response-proto)
+    - [GetRegistrationResponseResponse](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse)
+    - [GetRegistrationResponseResponse.ConsentsEntry](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse-ConsentsEntry)
+  
 - [hackathon/messages/hackathon_svc/get_request.proto](#hackathon_messages_hackathon_svc_get_request-proto)
     - [GetRequest](#hackathon-messages-hackathon_svc-GetRequest)
   
 - [hackathon/messages/hackathon_svc/get_response.proto](#hackathon_messages_hackathon_svc_get_response-proto)
     - [GetResponse](#hackathon-messages-hackathon_svc-GetResponse)
-  
-- [hackathon/messages/hackathon_svc/create_invite_request.proto](#hackathon_messages_hackathon_svc_create_invite_request-proto)
-    - [CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest)
-  
-- [hackathon/messages/hackathon_svc/create_invite_response.proto](#hackathon_messages_hackathon_svc_create_invite_response-proto)
-    - [CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse)
-  
-- [hackathon/messages/hackathon_svc/list_invites_request.proto](#hackathon_messages_hackathon_svc_list_invites_request-proto)
-    - [ListInvitesRequest](#hackathon-messages-hackathon_svc-ListInvitesRequest)
-  
-- [hackathon/messages/hackathon_svc/list_invites_response.proto](#hackathon_messages_hackathon_svc_list_invites_response-proto)
-    - [ListInvitesResponse](#hackathon-messages-hackathon_svc-ListInvitesResponse)
-  
-- [hackathon/messages/hackathon_svc/preview_invite_request.proto](#hackathon_messages_hackathon_svc_preview_invite_request-proto)
-    - [PreviewInviteRequest](#hackathon-messages-hackathon_svc-PreviewInviteRequest)
-  
-- [hackathon/messages/hackathon_svc/preview_invite_response.proto](#hackathon_messages_hackathon_svc_preview_invite_response-proto)
-    - [PreviewInviteResponse](#hackathon-messages-hackathon_svc-PreviewInviteResponse)
-  
-- [hackathon/messages/hackathon_svc/revoke_invite_request.proto](#hackathon_messages_hackathon_svc_revoke_invite_request-proto)
-    - [RevokeInviteRequest](#hackathon-messages-hackathon_svc-RevokeInviteRequest)
-  
-- [hackathon/messages/hackathon_svc/revoke_invite_response.proto](#hackathon_messages_hackathon_svc_revoke_invite_response-proto)
-    - [RevokeInviteResponse](#hackathon-messages-hackathon_svc-RevokeInviteResponse)
   
 - [hackathon/messages/hackathon_svc/join_request.proto](#hackathon_messages_hackathon_svc_join_request-proto)
     - [JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest)
@@ -231,11 +220,31 @@
 - [hackathon/messages/hackathon_svc/join_response.proto](#hackathon_messages_hackathon_svc_join_response-proto)
     - [JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse)
   
+- [hackathon/messages/hackathon_svc/list_invites_request.proto](#hackathon_messages_hackathon_svc_list_invites_request-proto)
+    - [ListInvitesRequest](#hackathon-messages-hackathon_svc-ListInvitesRequest)
+  
+- [hackathon/messages/hackathon_svc/list_invites_response.proto](#hackathon_messages_hackathon_svc_list_invites_response-proto)
+    - [ListInvitesResponse](#hackathon-messages-hackathon_svc-ListInvitesResponse)
+  
+- [hackathon/messages/hackathon_svc/list_registration_responses_request.proto](#hackathon_messages_hackathon_svc_list_registration_responses_request-proto)
+    - [ListRegistrationResponsesRequest](#hackathon-messages-hackathon_svc-ListRegistrationResponsesRequest)
+  
+- [hackathon/messages/hackathon_svc/list_registration_responses_response.proto](#hackathon_messages_hackathon_svc_list_registration_responses_response-proto)
+    - [ListRegistrationResponsesResponse](#hackathon-messages-hackathon_svc-ListRegistrationResponsesResponse)
+    - [RegistrationResponseEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry)
+    - [RegistrationResponseEntry.ConsentsEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry-ConsentsEntry)
+  
 - [hackathon/messages/hackathon_svc/list_request.proto](#hackathon_messages_hackathon_svc_list_request-proto)
     - [ListRequest](#hackathon-messages-hackathon_svc-ListRequest)
   
 - [hackathon/messages/hackathon_svc/list_response.proto](#hackathon_messages_hackathon_svc_list_response-proto)
     - [ListResponse](#hackathon-messages-hackathon_svc-ListResponse)
+  
+- [hackathon/messages/hackathon_svc/preview_invite_request.proto](#hackathon_messages_hackathon_svc_preview_invite_request-proto)
+    - [PreviewInviteRequest](#hackathon-messages-hackathon_svc-PreviewInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/preview_invite_response.proto](#hackathon_messages_hackathon_svc_preview_invite_response-proto)
+    - [PreviewInviteResponse](#hackathon-messages-hackathon_svc-PreviewInviteResponse)
   
 - [hackathon/messages/hackathon_svc/remove_owner_request.proto](#hackathon_messages_hackathon_svc_remove_owner_request-proto)
     - [RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest)
@@ -246,30 +255,14 @@
 - [hackathon/messages/hackathon_svc/remove_participant_request.proto](#hackathon_messages_hackathon_svc_remove_participant_request-proto)
     - [RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest)
   
-- [hackathon/messages/hackathon_svc/submit_registration_form_request.proto](#hackathon_messages_hackathon_svc_submit_registration_form_request-proto)
-    - [SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest)
-    - [SubmitRegistrationFormRequest.ConsentsEntry](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry)
-  
-- [hackathon/messages/hackathon_svc/submit_registration_form_response.proto](#hackathon_messages_hackathon_svc_submit_registration_form_response-proto)
-    - [SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse)
-  
-- [hackathon/messages/hackathon_svc/get_registration_response_request.proto](#hackathon_messages_hackathon_svc_get_registration_response_request-proto)
-    - [GetRegistrationResponseRequest](#hackathon-messages-hackathon_svc-GetRegistrationResponseRequest)
-  
-- [hackathon/messages/hackathon_svc/get_registration_response_response.proto](#hackathon_messages_hackathon_svc_get_registration_response_response-proto)
-    - [GetRegistrationResponseResponse](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse)
-    - [GetRegistrationResponseResponse.ConsentsEntry](#hackathon-messages-hackathon_svc-GetRegistrationResponseResponse-ConsentsEntry)
-  
-- [hackathon/messages/hackathon_svc/list_registration_responses_request.proto](#hackathon_messages_hackathon_svc_list_registration_responses_request-proto)
-    - [ListRegistrationResponsesRequest](#hackathon-messages-hackathon_svc-ListRegistrationResponsesRequest)
-  
-- [hackathon/messages/hackathon_svc/list_registration_responses_response.proto](#hackathon_messages_hackathon_svc_list_registration_responses_response-proto)
-    - [ListRegistrationResponsesResponse](#hackathon-messages-hackathon_svc-ListRegistrationResponsesResponse)
-    - [RegistrationResponseEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry)
-    - [RegistrationResponseEntry.ConsentsEntry](#hackathon-messages-hackathon_svc-RegistrationResponseEntry-ConsentsEntry)
-  
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
+  
+- [hackathon/messages/hackathon_svc/revoke_invite_request.proto](#hackathon_messages_hackathon_svc_revoke_invite_request-proto)
+    - [RevokeInviteRequest](#hackathon-messages-hackathon_svc-RevokeInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/revoke_invite_response.proto](#hackathon_messages_hackathon_svc_revoke_invite_response-proto)
+    - [RevokeInviteResponse](#hackathon-messages-hackathon_svc-RevokeInviteResponse)
   
 - [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
     - [SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest)
@@ -282,6 +275,13 @@
   
 - [hackathon/messages/hackathon_svc/set_current_phase_response.proto](#hackathon_messages_hackathon_svc_set_current_phase_response-proto)
     - [SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse)
+  
+- [hackathon/messages/hackathon_svc/submit_registration_form_request.proto](#hackathon_messages_hackathon_svc_submit_registration_form_request-proto)
+    - [SubmitRegistrationFormRequest](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest)
+    - [SubmitRegistrationFormRequest.ConsentsEntry](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry)
+  
+- [hackathon/messages/hackathon_svc/submit_registration_form_response.proto](#hackathon_messages_hackathon_svc_submit_registration_form_response-proto)
+    - [SubmitRegistrationFormResponse](#hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse)
   
 - [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
     - [HackathonService](#hackathon-HackathonService)
@@ -824,27 +824,106 @@
 
 
 
-<a name="hackathon_messages_config_svc_override_window_request-proto"></a>
+<a name="hackathon_messages_config_svc_get_email_templates_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## hackathon/messages/config_svc/override_window_request.proto
+## hackathon/messages/config_svc/get_email_templates_request.proto
 
 
 
-<a name="hackathon-messages-config_svc-OverrideWindowRequest"></a>
+<a name="hackathon-messages-config_svc-GetEmailTemplatesRequest"></a>
 
-### OverrideWindowRequest
-One-shot manual extension: the window stays open until now &#43; extend_minutes
-regardless of its configured close (walk-ins at the door, AV issues during
-demos). The organizer has the final word over the clock.
+### GetEmailTemplatesRequest
+
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
-| window | [string](#string) |  | Which window to extend: &#34;registration&#34; or &#34;submissions&#34;. |
-| extend_minutes | [int32](#int32) |  |  |
-| reason | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_get_email_templates_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_email_templates_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetEmailTemplatesResponse"></a>
+
+### GetEmailTemplatesResponse
+The stored notification copy, keyed exactly as SetEmailTemplates takes it.
+
+A read is required rather than convenient: Set REPLACES the whole map, so a
+form that cannot prefill blanks every template the organizer did not have in
+front of them. Same reason GetWindows and PrizeService.Get exist.
+
+Empty map = nothing authored yet, which is a valid state and not an error.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| templates | [GetEmailTemplatesResponse.TemplatesEntry](#hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry) | repeated |  |
+
+
+
+
+
+
+<a name="hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry"></a>
+
+### GetEmailTemplatesResponse.TemplatesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_get_windows_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_windows_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetWindowsRequest"></a>
+
+### GetWindowsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
 
 
 
@@ -888,6 +967,74 @@ anchored at the moment the organizer granted them.
 | submissions_override_until | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 | late_policy | [string](#string) | optional | Human-readable note on how late submissions are handled. |
 | modified_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_get_windows_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/get_windows_response.proto
+
+
+
+<a name="hackathon-messages-config_svc-GetWindowsResponse"></a>
+
+### GetWindowsResponse
+`windows` is absent when the event has no row yet, which reads as &#34;no
+deadlines set&#34; — distinct from a row whose fields happen to be empty.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| windows | [hackathon.entities.HackathonWindows](#hackathon-entities-HackathonWindows) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_config_svc_override_window_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/config_svc/override_window_request.proto
+
+
+
+<a name="hackathon-messages-config_svc-OverrideWindowRequest"></a>
+
+### OverrideWindowRequest
+One-shot manual extension: the window stays open until now &#43; extend_minutes
+regardless of its configured close (walk-ins at the door, AV issues during
+demos). The organizer has the final word over the clock.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| window | [string](#string) |  | Which window to extend: &#34;registration&#34; or &#34;submissions&#34;. |
+| extend_minutes | [int32](#int32) |  |  |
+| reason | [string](#string) |  |  |
 
 
 
@@ -1417,153 +1564,6 @@ not enforced.
 
 
 
-<a name="hackathon_messages_config_svc_get_email_templates_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/config_svc/get_email_templates_request.proto
-
-
-
-<a name="hackathon-messages-config_svc-GetEmailTemplatesRequest"></a>
-
-### GetEmailTemplatesRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_config_svc_get_email_templates_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/config_svc/get_email_templates_response.proto
-
-
-
-<a name="hackathon-messages-config_svc-GetEmailTemplatesResponse"></a>
-
-### GetEmailTemplatesResponse
-The stored notification copy, keyed exactly as SetEmailTemplates takes it.
-
-A read is required rather than convenient: Set REPLACES the whole map, so a
-form that cannot prefill blanks every template the organizer did not have in
-front of them. Same reason GetWindows and PrizeService.Get exist.
-
-Empty map = nothing authored yet, which is a valid state and not an error.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| templates | [GetEmailTemplatesResponse.TemplatesEntry](#hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry) | repeated |  |
-
-
-
-
-
-
-<a name="hackathon-messages-config_svc-GetEmailTemplatesResponse-TemplatesEntry"></a>
-
-### GetEmailTemplatesResponse.TemplatesEntry
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| key | [string](#string) |  |  |
-| value | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_config_svc_get_windows_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/config_svc/get_windows_request.proto
-
-
-
-<a name="hackathon-messages-config_svc-GetWindowsRequest"></a>
-
-### GetWindowsRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_config_svc_get_windows_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/config_svc/get_windows_response.proto
-
-
-
-<a name="hackathon-messages-config_svc-GetWindowsResponse"></a>
-
-### GetWindowsResponse
-`windows` is absent when the event has no row yet, which reads as &#34;no
-deadlines set&#34; — distinct from a row whose fields happen to be empty.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| windows | [hackathon.entities.HackathonWindows](#hackathon-entities-HackathonWindows) | optional |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
 <a name="hackathon_config_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1700,67 +1700,6 @@ The event logo is not here: it is a column on the hackathon row itself
 | primary_color | [string](#string) | optional | Hex colour, #rgb or #rrggbb. SetBranding rejects anything else, but these values end up inside a CSS style attribute, so clients must validate them again before interpolating: a row written before that check existed, or by a future write path that forgets it, would otherwise be injected into CSS. |
 | accent_color | [string](#string) | optional |  |
 | banner_text | [string](#string) | optional | Free text shown as a banner on the event page (e.g. &#34;Registration closes Friday&#34;). Rendered as text, never as markup. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_entities_hackathon_voting_policy-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/entities/hackathon_voting_policy.proto
-
-
-
-<a name="hackathon-entities-HackathonVotingPolicy"></a>
-
-### HackathonVotingPolicy
-How this event&#39;s vote works, as ConfigService.SetVotingPolicy stored it.
-
-On the entity rather than behind a GetVotingPolicy RPC because these are the
-RULES OF A VOTE, and the people bound by them are exactly the people who
-should be able to read them: &#34;may I vote for my own team&#34; is a question a
-voter asks, not an organizer&#39;s private setting.
-
-Absent when no policy was ever set, which the backend reads as its defaults —
-organizers do not vote, voting for your own team is allowed. `SubmitVote`
-enforces both (they were stored and ignored until then).
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| mechanism | [string](#string) |  | Free text describing the count, e.g. &#34;single_choice&#34;. Documented rather than enforced: one vote per category is the only mechanism implemented. |
-| one_ballot_per | [string](#string) |  | What one ballot covers, e.g. &#34;category&#34;. |
-| own_team_voting | [bool](#bool) |  | Whether a voter may vote for a submission from a team they are on. |
-| organizer_voting | [bool](#bool) |  | Whether the event&#39;s own organizers may vote in it. |
-| tie_break | [string](#string) | repeated | Ordered tie-break rules, as the organizer wrote them. Advisory: the organizer records the winners, so a tie is theirs to break. |
-| scale | [ScaleRange](#hackathon-entities-ScaleRange) | optional | Present only for scored mechanisms. |
-
-
-
-
-
-
-<a name="hackathon-entities-ScaleRange"></a>
-
-### ScaleRange
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| min | [int32](#int32) |  |  |
-| max | [int32](#int32) |  |  |
 
 
 
@@ -2048,6 +1987,67 @@ nothing here can open or close anything on its own.
 | HACKATHON_STATUS_ACTIVE | 2 |  |
 | HACKATHON_STATUS_FINISHED | 3 |  |
 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_hackathon_voting_policy-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_voting_policy.proto
+
+
+
+<a name="hackathon-entities-HackathonVotingPolicy"></a>
+
+### HackathonVotingPolicy
+How this event&#39;s vote works, as ConfigService.SetVotingPolicy stored it.
+
+On the entity rather than behind a GetVotingPolicy RPC because these are the
+RULES OF A VOTE, and the people bound by them are exactly the people who
+should be able to read them: &#34;may I vote for my own team&#34; is a question a
+voter asks, not an organizer&#39;s private setting.
+
+Absent when no policy was ever set, which the backend reads as its defaults —
+organizers do not vote, voting for your own team is allowed. `SubmitVote`
+enforces both (they were stored and ignored until then).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| mechanism | [string](#string) |  | Free text describing the count, e.g. &#34;single_choice&#34;. Documented rather than enforced: one vote per category is the only mechanism implemented. |
+| one_ballot_per | [string](#string) |  | What one ballot covers, e.g. &#34;category&#34;. |
+| own_team_voting | [bool](#bool) |  | Whether a voter may vote for a submission from a team they are on. |
+| organizer_voting | [bool](#bool) |  | Whether the event&#39;s own organizers may vote in it. |
+| tie_break | [string](#string) | repeated | Ordered tie-break rules, as the organizer wrote them. Advisory: the organizer records the winners, so a tie is theirs to break. |
+| scale | [ScaleRange](#hackathon-entities-ScaleRange) | optional | Present only for scored mechanisms. |
+
+
+
+
+
+
+<a name="hackathon-entities-ScaleRange"></a>
+
+### ScaleRange
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| min | [int32](#int32) |  |  |
+| max | [int32](#int32) |  |  |
+
+
+
+
+
+ 
 
  
 
@@ -2781,6 +2781,69 @@ Clearing deliberately does NOT touch capabilities. Advancing applies the ones sc
 
 
 
+<a name="hackathon_messages_hackathon_svc_create_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateInviteRequest"></a>
+
+### CreateInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| note | [string](#string) | optional | Optional organizer-facing reminder of who the link was sent to. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_create_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateInviteResponse"></a>
+
+### CreateInviteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invite | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3107,620 +3170,6 @@ Empty string = unlink, non-empty = link to that phase, not set = no change. Same
 
 
 
-<a name="hackathon_messages_hackathon_svc_get_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/get_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-GetRequest"></a>
-
-### GetRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_get_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/get_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-GetResponse"></a>
-
-### GetResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_create_invite_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/create_invite_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-CreateInviteRequest"></a>
-
-### CreateInviteRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| note | [string](#string) | optional | Optional organizer-facing reminder of who the link was sent to. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_create_invite_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/create_invite_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-CreateInviteResponse"></a>
-
-### CreateInviteResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| invite | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_list_invites_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/list_invites_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-ListInvitesRequest"></a>
-
-### ListInvitesRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| include_revoked | [bool](#bool) | optional | Revoked links are hidden unless asked for. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_list_invites_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/list_invites_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-ListInvitesResponse"></a>
-
-### ListInvitesResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| invites | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) | repeated |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_preview_invite_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/preview_invite_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-PreviewInviteRequest"></a>
-
-### PreviewInviteRequest
-Redeeming side of an invite: exchanges the link secret for enough of the
-hackathon to render its page. Deliberately takes ONLY the token, so it never
-confirms whether a given hackathon id exists.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| token | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_preview_invite_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/preview_invite_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-PreviewInviteResponse"></a>
-
-### PreviewInviteResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) |  | Shallow entity only — the invite grants visibility, not membership. |
-| already_participant | [bool](#bool) |  | True when the caller is already on this hackathon&#39;s roster. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_revoke_invite_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/revoke_invite_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-RevokeInviteRequest"></a>
-
-### RevokeInviteRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| invite_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_revoke_invite_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/revoke_invite_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-RevokeInviteResponse"></a>
-
-### RevokeInviteResponse
-
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_join_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/join_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-JoinRequest"></a>
-
-### JoinRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| invite_token | [string](#string) | optional | Required to join a PRIVATE hackathon: the secret from the invitation link. Public hackathons ignore it. Without this a private event was joinable by anyone who knew its UUID. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_join_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/join_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-JoinResponse"></a>
-
-### JoinResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| waitlisted | [bool](#bool) |  | True when this join landed on the waiting list (pending an organizer&#39;s approval or a freed place); false when it took a confirmed place outright. Joining a full event SUCCEEDS and queues — this flag is how a client tells &#34;you&#39;re in&#34; from &#34;you&#39;re number N in the queue&#34;. |
-| queue_position | [int32](#int32) |  | 1-based place in the waiting queue (join order) when waitlisted; 0 when confirmed. An idempotent re-join reports the caller&#39;s current state. |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_list_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/list_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-ListRequest"></a>
-
-### ListRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| status_filter | [hackathon.entities.HackathonStatus](#hackathon-entities-HackathonStatus) | repeated |  |
-| owner_id | [string](#string) | optional |  |
-| participant_id | [string](#string) | optional |  |
-| visibility_filter | [hackathon.entities.Visibility](#hackathon-entities-Visibility) | optional |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_list_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/list_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-ListResponse"></a>
-
-### ListResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathons | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) | repeated |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_remove_owner_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/remove_owner_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-RemoveOwnerRequest"></a>
-
-### RemoveOwnerRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| user_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_remove_owner_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/remove_owner_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-RemoveOwnerResponse"></a>
-
-### RemoveOwnerResponse
-
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_remove_participant_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/remove_participant_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-RemoveParticipantRequest"></a>
-
-### RemoveParticipantRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| user_id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_submit_registration_form_request-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/submit_registration_form_request.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest"></a>
-
-### SubmitRegistrationFormRequest
-Responses are validated against the organizer-defined registration form:
-unknown keys, missing required fields, and unticked required consents are
-InvalidArgument. `on_behalf_of` lets an organizer digitize a paper form
-for another registrant (walk-ins at the check-in desk).
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| hackathon_id | [string](#string) |  |  |
-| responses | [google.protobuf.Struct](#google-protobuf-Struct) |  |  |
-| consents | [SubmitRegistrationFormRequest.ConsentsEntry](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry) | repeated |  |
-| on_behalf_of | [string](#string) | optional |  |
-
-
-
-
-
-
-<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry"></a>
-
-### SubmitRegistrationFormRequest.ConsentsEntry
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| key | [string](#string) |  |  |
-| value | [bool](#bool) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
-<a name="hackathon_messages_hackathon_svc_submit_registration_form_response-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## hackathon/messages/hackathon_svc/submit_registration_form_response.proto
-
-
-
-<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse"></a>
-
-### SubmitRegistrationFormResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
-
-
-
 <a name="hackathon_messages_hackathon_svc_get_registration_response_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3801,6 +3250,196 @@ optional, so a bare empty map would be ambiguous.
 | ----- | ---- | ----- | ----------- |
 | key | [string](#string) |  |  |
 | value | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_get_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/get_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-GetRequest"></a>
+
+### GetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_get_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/get_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-GetResponse"></a>
+
+### GetResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_join_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/join_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-JoinRequest"></a>
+
+### JoinRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| invite_token | [string](#string) | optional | Required to join a PRIVATE hackathon: the secret from the invitation link. Public hackathons ignore it. Without this a private event was joinable by anyone who knew its UUID. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_join_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/join_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-JoinResponse"></a>
+
+### JoinResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| waitlisted | [bool](#bool) |  | True when this join landed on the waiting list (pending an organizer&#39;s approval or a freed place); false when it took a confirmed place outright. Joining a full event SUCCEEDS and queues — this flag is how a client tells &#34;you&#39;re in&#34; from &#34;you&#39;re number N in the queue&#34;. |
+| queue_position | [int32](#int32) |  | 1-based place in the waiting queue (join order) when waitlisted; 0 when confirmed. An idempotent re-join reports the caller&#39;s current state. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_invites_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_invites_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListInvitesRequest"></a>
+
+### ListInvitesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| include_revoked | [bool](#bool) | optional | Revoked links are hidden unless asked for. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_invites_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_invites_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListInvitesResponse"></a>
+
+### ListInvitesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invites | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) | repeated |  |
 
 
 
@@ -3927,6 +3566,226 @@ different facts to an organiser chasing people.
 
 
 
+<a name="hackathon_messages_hackathon_svc_list_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListRequest"></a>
+
+### ListRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| status_filter | [hackathon.entities.HackathonStatus](#hackathon-entities-HackathonStatus) | repeated |  |
+| owner_id | [string](#string) | optional |  |
+| participant_id | [string](#string) | optional |  |
+| visibility_filter | [hackathon.entities.Visibility](#hackathon-entities-Visibility) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListResponse"></a>
+
+### ListResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathons | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_preview_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/preview_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-PreviewInviteRequest"></a>
+
+### PreviewInviteRequest
+Redeeming side of an invite: exchanges the link secret for enough of the
+hackathon to render its page. Deliberately takes ONLY the token, so it never
+confirms whether a given hackathon id exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| token | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_preview_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/preview_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-PreviewInviteResponse"></a>
+
+### PreviewInviteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) |  | Shallow entity only — the invite grants visibility, not membership. |
+| already_participant | [bool](#bool) |  | True when the caller is already on this hackathon&#39;s roster. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_remove_owner_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/remove_owner_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RemoveOwnerRequest"></a>
+
+### RemoveOwnerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_remove_owner_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/remove_owner_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RemoveOwnerResponse"></a>
+
+### RemoveOwnerResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_remove_participant_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/remove_participant_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RemoveParticipantRequest"></a>
+
+### RemoveParticipantRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_remove_participant_response-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3937,6 +3796,63 @@ different facts to an organiser chasing people.
 <a name="hackathon-messages-hackathon_svc-RemoveParticipantResponse"></a>
 
 ### RemoveParticipantResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_revoke_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/revoke_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RevokeInviteRequest"></a>
+
+### RevokeInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invite_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_revoke_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/revoke_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RevokeInviteResponse"></a>
+
+### RevokeInviteResponse
 
 
 
@@ -4086,6 +4002,90 @@ whose response carries the full `CapabilityStatus` list this one flattens.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | state | [hackathon.entities.HackathonState](#hackathon-entities-HackathonState) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_submit_registration_form_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/submit_registration_form_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest"></a>
+
+### SubmitRegistrationFormRequest
+Responses are validated against the organizer-defined registration form:
+unknown keys, missing required fields, and unticked required consents are
+InvalidArgument. `on_behalf_of` lets an organizer digitize a paper form
+for another registrant (walk-ins at the check-in desk).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| responses | [google.protobuf.Struct](#google-protobuf-Struct) |  |  |
+| consents | [SubmitRegistrationFormRequest.ConsentsEntry](#hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry) | repeated |  |
+| on_behalf_of | [string](#string) | optional |  |
+
+
+
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormRequest-ConsentsEntry"></a>
+
+### SubmitRegistrationFormRequest.ConsentsEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_submit_registration_form_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/submit_registration_form_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitRegistrationFormResponse"></a>
+
+### SubmitRegistrationFormResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
 
 
 

@@ -193,7 +193,9 @@ export function loadRecipe(): RecipeAction[] {
   // Cross-check against a scan of the RAW text, not of `parsed`: if the
   // predicate above ever drifts again, the two counts disagree and the suite
   // fails loudly instead of running fewer tests.
-  const textualIdLines = lines.filter((l) => /(^|[{,])\s*"id"\s*:/.test(l)).length
+  const textualIdLines = lines.filter((l) =>
+    /(^|[{,])\s*"id"\s*:/.test(l),
+  ).length
   if (actions.length !== textualIdLines) {
     throw new Error(
       `recipe.jsonl: loaded ${actions.length} actions but ${textualIdLines} lines ` +
@@ -206,7 +208,8 @@ export function loadRecipe(): RecipeAction[] {
   // run when two were written.
   const seen = new Set<string>()
   for (const a of actions) {
-    if (seen.has(a.id)) throw new Error(`recipe.jsonl: duplicate action id '${a.id}'`)
+    if (seen.has(a.id))
+      throw new Error(`recipe.jsonl: duplicate action id '${a.id}'`)
     seen.add(a.id)
   }
 
@@ -238,14 +241,19 @@ class MissingVar extends Error {
 
 function credsFor(username: string): Credentials {
   const principal = Object.values(PERSONAS).find((p) => p.username === username)
-  if (principal) return { username: principal.username, password: principal.password }
+  if (principal)
+    return { username: principal.username, password: principal.password }
   const extra = EXTRAS.find((e) => e.username === username)
   if (extra) return { username: extra.username, password: extra.password }
-  throw new Error(`unknown recipe actor: ${username} (not in personas.ts or cast.json)`)
+  throw new Error(
+    `unknown recipe actor: ${username} (not in personas.ts or cast.json)`,
+  )
 }
 
 function personaKeyFor(username: string): PersonaKey {
-  const entry = Object.entries(PERSONAS).find(([, p]) => p.username === username)
+  const entry = Object.entries(PERSONAS).find(
+    ([, p]) => p.username === username,
+  )
   if (!entry) {
     throw new Error(
       `actor ${username} has no browser session (only principals do) — UI actions must use admin/alice/bob/charles`,
@@ -322,14 +330,17 @@ function skipAction(test: AnyTest, a: RecipeAction, reason: string): void {
 const CHECKS: Record<string, (data: any, args: any) => void> = {
   logoRoundTrip(data, args) {
     expect(data.hackathon.logo).toBe(logoFor(args?.seed ?? 2027))
-    if (args?.nameContains) expect(data.hackathon.name).toContain(args.nameContains)
+    if (args?.nameContains)
+      expect(data.hackathon.name).toContain(args.nameContains)
     if (args?.descriptionContains) {
       expect(data.hackathon.description).toContain(args.descriptionContains)
     }
   },
   hackathonField(data, args) {
-    if (args.nameEquals !== undefined) expect(data.hackathon.name).toBe(args.nameEquals)
-    if (args.nameContains !== undefined) expect(data.hackathon.name).toContain(args.nameContains)
+    if (args.nameEquals !== undefined)
+      expect(data.hackathon.name).toBe(args.nameEquals)
+    if (args.nameContains !== undefined)
+      expect(data.hackathon.name).toContain(args.nameContains)
     if (args.descriptionContains !== undefined) {
       expect(data.hackathon.description).toContain(args.descriptionContains)
     }
@@ -349,7 +360,10 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
   usersCount(data, args) {
     const users: unknown[] = data.users ?? []
     if (args.atLeast !== undefined) {
-      expect(users.length, `expected >= ${args.atLeast} platform users`).toBeGreaterThanOrEqual(args.atLeast)
+      expect(
+        users.length,
+        `expected >= ${args.atLeast} platform users`,
+      ).toBeGreaterThanOrEqual(args.atLeast)
     }
   },
   usersLackNames(data, args) {
@@ -367,7 +381,10 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
       "no user in the list has a displayName — the field this check reads has moved",
     ).toBeGreaterThan(0)
     for (const n of args.names as string[]) {
-      expect(names, `deleted profile '${n}' must not appear in the user list`).not.toContain(n)
+      expect(
+        names,
+        `deleted profile '${n}' must not appear in the user list`,
+      ).not.toContain(n)
     }
   },
   /** ExportVotes(JSON) → exactly N ballot rows. The race's end-state read:
@@ -416,9 +433,10 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
   ownerCount(data, args) {
     const members: { role?: string }[] = data.hackathon.members ?? []
     const owners = members.filter((m) => m.role === "HACKATHON_ROLE_OWNER")
-    expect(owners, `expected exactly ${args.count} owner(s) on the roster`).toHaveLength(
-      args.count,
-    )
+    expect(
+      owners,
+      `expected exactly ${args.count} owner(s) on the roster`,
+    ).toHaveLength(args.count)
   },
   listHasName(data, args) {
     const names = (data.hackathons ?? []).map((h: { name: string }) => h.name)
@@ -426,7 +444,9 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
   },
   listLacksName(data, args) {
     const names = (data.hackathons ?? []).map((h: { name: string }) => h.name)
-    expect(names, `list must NOT contain '${args.name}'`).not.toContain(args.name)
+    expect(names, `list must NOT contain '${args.name}'`).not.toContain(
+      args.name,
+    )
   },
   roster(data, args) {
     const members: { isWaiting?: boolean }[] = data.hackathon.members ?? []
@@ -450,7 +470,9 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
   /** The capacity field as Edit/Get echo it back; 0 asserts "unlimited"
    * (proto3 omits the optional field entirely then). */
   capacityField(data, args) {
-    expect(data.hackathon.maxParticipants ?? 0, "max_participants").toBe(args.value)
+    expect(data.hackathon.maxParticipants ?? 0, "max_participants").toBe(
+      args.value,
+    )
   },
   votingWinner() {
     throw new Error(
@@ -467,7 +489,9 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
   objectsListed(data, args) {
     const objects: { key?: string }[] = data.objects ?? []
     if (args.count !== undefined) {
-      expect(objects, `expected exactly ${args.count} object(s)`).toHaveLength(args.count)
+      expect(objects, `expected exactly ${args.count} object(s)`).toHaveLength(
+        args.count,
+      )
     }
     if (args.atLeast !== undefined) {
       expect(
@@ -481,14 +505,18 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
         "no objects came back, so the prefix check below would be vacuous",
       ).toBeGreaterThan(0)
       for (const o of objects) {
-        expect(o.key ?? "", "a listing must not leak keys outside its scope").toContain(
-          args.keyPrefix,
-        )
+        expect(
+          o.key ?? "",
+          "a listing must not leak keys outside its scope",
+        ).toContain(args.keyPrefix)
       }
     }
     if (args.keyNot !== undefined) {
       for (const o of objects) {
-        expect(o.key, "the cursor did not advance past the first page").not.toBe(args.keyNot)
+        expect(
+          o.key,
+          "the cursor did not advance past the first page",
+        ).not.toBe(args.keyNot)
       }
     }
     if (args.hasNextToken !== undefined) {
@@ -523,13 +551,18 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
   /** Team membership by display name, per team. The end-state read an import
    *  owes: "Applied 1 of 1" and "she is on that team" are different claims. */
   teamComposition(data, args) {
-    const teams: { name?: string; members?: { displayName?: string; username?: string }[] }[] =
-      data.teams ?? []
+    const teams: {
+      name?: string
+      members?: { displayName?: string; username?: string }[]
+    }[] = data.teams ?? []
     for (const [name, members] of Object.entries(
       args.teams as Record<string, string[]>,
     )) {
       const t = teams.find((x) => x.name === name)
-      expect(t, `no team named '${name}' (got ${teams.map((x) => x.name).join(", ")})`).toBeTruthy()
+      expect(
+        t,
+        `no team named '${name}' (got ${teams.map((x) => x.name).join(", ")})`,
+      ).toBeTruthy()
       const got = (t?.members ?? [])
         .map((m) => m.displayName || m.username)
         .sort()
@@ -550,7 +583,9 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
       rows.length,
       "the hackathon reports no capability rows at all — every state check below would be vacuous",
     ).toBeGreaterThan(0)
-    for (const [name, state] of Object.entries(args.states as Record<string, string>)) {
+    for (const [name, state] of Object.entries(
+      args.states as Record<string, string>,
+    )) {
       const row = rows.find((r) => r.capability === name)
       expect(row, `no capability row for '${name}'`).toBeTruthy()
       expect(row?.state, `state of '${name}'`).toBe(state)
@@ -573,13 +608,18 @@ const CHECKS: Record<string, (data: any, args: any) => void> = {
     const body = p?.content ?? ""
     expect(body, "the page came back empty").not.toBe("")
     for (const s of args.contains as string[]) {
-      expect(body, `saved page content must contain ${JSON.stringify(s)}`).toContain(s)
+      expect(
+        body,
+        `saved page content must contain ${JSON.stringify(s)}`,
+      ).toContain(s)
     }
   },
 }
 
 function sortKeys(o: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)))
+  return Object.fromEntries(
+    Object.entries(o).sort(([a], [b]) => a.localeCompare(b)),
+  )
 }
 
 // ─── Named UI assertions (`ui.assert`) ───────────────────────────────────────
@@ -707,7 +747,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
   },
   async dashboardBadge(page, args) {
     await page.goto("/dashboard")
-    const row = dashboardRow(dashboardSection(page, "Your hackathons"), args.name)
+    const row = dashboardRow(
+      dashboardSection(page, "Your hackathons"),
+      args.name,
+    )
     await expect(row).toBeVisible()
     await expect(row.getByText(args.badge, { exact: true })).toBeVisible()
   },
@@ -721,7 +764,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const id = vars.get("hackathonId")
     if (!id) throw new MissingVar("hackathonId")
     await page.goto(`/my/hackathon/${id}/overview`)
-    await expect(visibleText(content(page), args.textContains).first()).toBeVisible()
+    await expect(
+      visibleText(content(page), args.textContains).first(),
+    ).toBeVisible()
   },
   async proposalsPage(page, args) {
     const id = vars.get("hackathonId")
@@ -733,14 +778,20 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     // organiser's queue and the right place for this assertion.
     await page.goto(`/my/hackathon/${id}/projects`)
     for (const title of [...(args.approved ?? []), ...(args.proposed ?? [])]) {
-      await expect(content(page).getByText(title, { exact: true })).toBeVisible()
+      await expect(
+        content(page).getByText(title, { exact: true }),
+      ).toBeVisible()
     }
     // Status badges: at least one of each expected state is shown.
     if ((args.approved ?? []).length > 0) {
-      await expect(visibleText(content(page), "Approved", true).first()).toBeVisible()
+      await expect(
+        visibleText(content(page), "Approved", true).first(),
+      ).toBeVisible()
     }
     if ((args.proposed ?? []).length > 0) {
-      await expect(visibleText(content(page), "Proposed", true).first()).toBeVisible()
+      await expect(
+        visibleText(content(page), "Proposed", true).first(),
+      ).toBeVisible()
     }
   },
   async timelinePhases(page, args) {
@@ -757,8 +808,12 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const id = vars.get("hackathonId")
     if (!id) throw new MissingVar("hackathonId")
     await page.goto(`/hackathon/${id}`)
-    await expect(content(page).getByText("Photos & Winners", { exact: true })).toBeVisible()
-    await expect(visibleText(content(page), args.winner as string).first()).toBeVisible()
+    await expect(
+      content(page).getByText("Photos & Winners", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      visibleText(content(page), args.winner as string).first(),
+    ).toBeVisible()
   },
   // Proves the markdown pipeline neutralizes hostile admin-authored content:
   // the prose renders, but neither the <script> nor the onerror handler in
@@ -766,36 +821,52 @@ const UI_ASSERTS: Record<string, UiAssert> = {
   async sitePageSanitized(page, args) {
     await page.goto(`/${args.slug as string}`)
     await page.waitForLoadState("networkidle")
-    await expect(visibleText(content(page), args.textContains as string).first()).toBeVisible()
+    await expect(
+      visibleText(content(page), args.textContains as string).first(),
+    ).toBeVisible()
     const pwned = await page.evaluate(
       () => (window as unknown as { __pwned?: boolean }).__pwned === true,
     )
-    expect(pwned, "injected script executed — markdown is not sanitized").toBe(false)
+    expect(pwned, "injected script executed — markdown is not sanitized").toBe(
+      false,
+    )
     // ...and the hostile markup must not survive into the DOM either. Scope
     // this to the rendered markdown container: the surrounding page carries
     // SvelteKit/vite runtime scripts that legitimately contain `onerror=`,
     // so asserting over page.content() gives a false positive.
     const rendered = await page.locator(".markdown-content").first().innerHTML()
-    expect(rendered, "a <script> tag survived sanitization").not.toContain("<script")
-    expect(rendered, "an event handler survived sanitization").not.toContain("onerror")
+    expect(rendered, "a <script> tag survived sanitization").not.toContain(
+      "<script",
+    )
+    expect(rendered, "an event handler survived sanitization").not.toContain(
+      "onerror",
+    )
   },
   async publicBlogEntry(page, args) {
     const id = vars.get("hackathonId")
     if (!id) throw new MissingVar("hackathonId")
     await page.goto(`/hackathon/${id}`)
     await expect(
-      page.getByRole("heading", { name: new RegExp(args.titleContains as string) }),
+      page.getByRole("heading", {
+        name: new RegExp(args.titleContains as string),
+      }),
     ).toBeVisible()
-    await expect(visibleText(content(page), args.winner as string).first()).toBeVisible()
+    await expect(
+      visibleText(content(page), args.winner as string).first(),
+    ).toBeVisible()
   },
   async submissionsPage(page, args) {
     const id = vars.get("hackathonId")
     if (!id) throw new MissingVar("hackathonId")
     await page.goto(`/my/hackathon/${id}/submissions`)
     for (const title of args.final as string[]) {
-      await expect(visibleText(content(page), title, true).first()).toBeVisible()
+      await expect(
+        visibleText(content(page), title, true).first(),
+      ).toBeVisible()
     }
-    await expect(visibleText(content(page), "Final", true).first()).toBeVisible()
+    await expect(
+      visibleText(content(page), "Final", true).first(),
+    ).toBeVisible()
   },
   /**
    * The home row RENDERS the cover it was passed — pixels, not markup. List
@@ -808,12 +879,14 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const row = homeRow(page, args.name)
     await expect(row).toBeVisible()
     const img = row.locator("img").first()
-    await expect(img, "the row was given a cover and rendered no <img>").toBeVisible()
+    await expect(
+      img,
+      "the row was given a cover and rendered no <img>",
+    ).toBeVisible()
     await expect
-      .poll(
-        () => img.evaluate((el) => (el as HTMLImageElement).naturalWidth),
-        { message: "the cover <img> decoded to zero pixels (broken src?)" },
-      )
+      .poll(() => img.evaluate((el) => (el as HTMLImageElement).naturalWidth), {
+        message: "the cover <img> decoded to zero pixels (broken src?)",
+      })
       .toBeGreaterThan(0)
   },
   /**
@@ -859,7 +932,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
       `GET ${publicUrl} answered ${get.status()} — the uploaded object does not load`,
     ).toBe(200)
     const body = await get.body()
-    expect(body.length, "the served object is not the uploaded bytes").toBe(png.length)
+    expect(body.length, "the served object is not the uploaded bytes").toBe(
+      png.length,
+    )
   },
   /** The participants page states how full a capped event is — the number an
    * organizer approves against. Takes the hackathon id via args (resolved
@@ -879,9 +954,13 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     for (const [teamName, members] of Object.entries(
       args.teams as Record<string, string[]>,
     )) {
-      await expect(content(page).getByText(teamName, { exact: true })).toBeVisible()
+      await expect(
+        content(page).getByText(teamName, { exact: true }),
+      ).toBeVisible()
       for (const member of members) {
-        await expect(visibleText(content(page), member, true).first()).toBeVisible()
+        await expect(
+          visibleText(content(page), member, true).first(),
+        ).toBeVisible()
       }
     }
   },
@@ -906,13 +985,22 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     ).toBeVisible()
 
     const tiles = manageTiles(page)
-    for (const tile of (args.tiles ?? []) as { label: string; href: string }[]) {
+    for (const tile of (args.tiles ?? []) as {
+      label: string
+      href: string
+    }[]) {
       const link = tiles.getByRole("link", { name: tile.label, exact: true })
-      await expect(link, `no tile named '${tile.label}' in the Manage grid`).toHaveCount(1)
+      await expect(
+        link,
+        `no tile named '${tile.label}' in the Manage grid`,
+      ).toHaveCount(1)
       await expect(
         link,
         `the '${tile.label}' tile does not lead to ${tile.href}`,
-      ).toHaveAttribute("href", new RegExp(`${tile.href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`))
+      ).toHaveAttribute(
+        "href",
+        new RegExp(`${tile.href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`),
+      )
     }
     if (args.tileCount !== undefined) {
       await expect(
@@ -933,7 +1021,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
         name: `Review ${args.reviewWaiting} waiting`,
         exact: true,
       })
-      await expect(named, "the approval queue prompt states its count").toBeVisible()
+      await expect(
+        named,
+        "the approval queue prompt states its count",
+      ).toBeVisible()
       await expect(named).toHaveAttribute("href", /\/participants$/)
     } else {
       // Absence, with the tiles above as the positive control that the page
@@ -947,7 +1038,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
 
     const edit = page.getByRole("link", { name: "Edit details", exact: true })
     if (args.mayEdit === false) {
-      await expect(edit, "a viewer who may not edit is offered no edit link").toHaveCount(0)
+      await expect(
+        edit,
+        "a viewer who may not edit is offered no edit link",
+      ).toHaveCount(0)
     } else {
       await expect(edit).toBeVisible()
       await expect(edit).toHaveAttribute("href", /\/manage\/edit$/)
@@ -955,9 +1049,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
 
     const now = phaseCard(page, "Now")
     if (args.now) {
-      await expect(now.getByRole("heading"), "the Now card names the live phase").toHaveText(
-        args.now as string,
-      )
+      await expect(
+        now.getByRole("heading"),
+        "the Now card names the live phase",
+      ).toHaveText(args.now as string)
     } else {
       await expect(
         now.getByText("Nothing running", { exact: true }),
@@ -981,12 +1076,17 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     if (args.next) {
       await expect(next.getByRole("heading")).toHaveText(args.next as string)
     } else if (args.next === null) {
-      await expect(next.getByText("Nothing after this", { exact: true })).toBeVisible()
+      await expect(
+        next.getByText("Nothing after this", { exact: true }),
+      ).toBeVisible()
     }
 
     if (args.phaseAction) {
       await expect(
-        page.getByRole("button", { name: args.phaseAction as string, exact: true }),
+        page.getByRole("button", {
+          name: args.phaseAction as string,
+          exact: true,
+        }),
         "the one phase action, named for what it actually does",
       ).toBeVisible()
     } else if (args.phaseAction === null) {
@@ -1024,9 +1124,7 @@ const UI_ASSERTS: Record<string, UiAssert> = {
       next?: string | null
       action?: string | null
     }[]) {
-      await page
-        .getByRole("button", { name: step.click, exact: true })
-        .click()
+      await page.getByRole("button", { name: step.click, exact: true }).click()
       // The form POST re-renders the page; every assertion below auto-retries,
       // so the state is read after the round trip rather than after a sleep.
       if (step.now !== undefined) {
@@ -1044,10 +1142,14 @@ const UI_ASSERTS: Record<string, UiAssert> = {
       if (step.next !== undefined) {
         if (step.next === null) {
           await expect(
-            phaseCard(page, "Next").getByText("Nothing after this", { exact: true }),
+            phaseCard(page, "Next").getByText("Nothing after this", {
+              exact: true,
+            }),
           ).toBeVisible()
         } else {
-          await expect(phaseCard(page, "Next").getByRole("heading")).toHaveText(step.next)
+          await expect(phaseCard(page, "Next").getByRole("heading")).toHaveText(
+            step.next,
+          )
         }
       }
       if (step.action !== undefined) {
@@ -1084,8 +1186,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     await page.goto(`/my/hackathon/${id}/overview`)
 
     const entry = () => page.getByRole("link", { name: entryName, exact: true })
-    const show = () => page.getByRole("button", { name: "Show Manage Hackathon pages" })
-    const hide = () => page.getByRole("button", { name: "Hide Manage Hackathon pages" })
+    const show = () =>
+      page.getByRole("button", { name: "Show Manage Hackathon pages" })
+    const hide = () =>
+      page.getByRole("button", { name: "Hide Manage Hackathon pages" })
 
     await expect(
       page.getByRole("link", { name: "Manage Hackathon", exact: true }),
@@ -1098,7 +1202,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     ).toHaveCount(0)
 
     await show().click()
-    await expect(entry(), "opening the section reveals its entries").toBeVisible()
+    await expect(
+      entry(),
+      "opening the section reveals its entries",
+    ).toBeVisible()
     await expect(
       hide(),
       "the disclosure must now say it closes — an aria-label stuck on 'Show' is a control that lies",
@@ -1196,7 +1303,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     }
     if (args.ungovernedWarning !== undefined) {
       await expect(
-        panel.getByText("no stored setting on this hackathon", { exact: false }),
+        panel.getByText("no stored setting on this hackathon", {
+          exact: false,
+        }),
         "the save-will-be-refused warning",
       ).toHaveCount(args.ungovernedWarning ? 1 : 0)
     }
@@ -1221,7 +1330,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     for (const label of (args.check ?? []) as string[]) {
       await capabilityRow(page, label).locator("input[type=checkbox]").check()
     }
-    await panel.getByRole("button", { name: "Save changes", exact: true }).click()
+    await panel
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click()
     // The line that STATES the save landed — not `getByRole("status")`, which
     // this panel can legitimately have three of (saved, ungoverned, unmet).
     await expect(
@@ -1269,17 +1380,25 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const id = requireHackathonId(args)
     await page.goto(`/my/hackathon/${id}/manage`)
     const panel = capabilityPanel(page)
-    const warning = panel.locator("div[role=status]").filter({ hasText: "is meant to include" })
+    const warning = panel
+      .locator("div[role=status]")
+      .filter({ hasText: "is meant to include" })
 
     await expect(warning, "the mismatch warning did not render").toBeVisible()
-    await expect(warning, "it must name the phase whose plan is unmet").toContainText(
-      args.phase as string,
-    )
+    await expect(
+      warning,
+      "it must name the phase whose plan is unmet",
+    ).toContainText(args.phase as string)
     for (const name of args.names as string[]) {
-      await expect(warning, "and what participants cannot do yet").toContainText(name)
+      await expect(
+        warning,
+        "and what participants cannot do yet",
+      ).toContainText(name)
     }
 
-    await warning.getByRole("button", { name: args.button as string, exact: true }).click()
+    await warning
+      .getByRole("button", { name: args.button as string, exact: true })
+      .click()
     for (const [label, state] of Object.entries(
       (args.after ?? {}) as Record<string, string>,
     )) {
@@ -1309,7 +1428,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
    */
   async galleryShows(page, args) {
     await page.goto("/manage/gallery")
-    await expect(page.getByRole("heading", { name: "Media library" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Media library" }),
+    ).toBeVisible()
 
     const origins = page.locator("[data-testid=image-origin]")
     expect(
@@ -1324,7 +1445,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     }
     if (args.eventName) {
       await expect(
-        page.locator("[data-testid=image-event]").filter({ hasText: args.eventName as string }).first(),
+        page
+          .locator("[data-testid=image-event]")
+          .filter({ hasText: args.eventName as string })
+          .first(),
         "a tile must name the event its picture belongs to",
       ).toBeVisible()
     }
@@ -1350,7 +1474,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const id = requireHackathonId(args)
     await page.goto(`/my/hackathon/${id}/${args.path ?? "pages/new"}`)
     const field = page.locator(`textarea#${args.field ?? "page-content"}`)
-    await page.getByRole("button", { name: "Insert image", exact: true }).click()
+    await page
+      .getByRole("button", { name: "Insert image", exact: true })
+      .click()
 
     const dialog = page.getByRole("dialog")
     await expect(dialog).toBeVisible()
@@ -1360,13 +1486,18 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const fileInput = dialog.getByLabel("Choose an image file to insert")
 
     if (args.halves !== false) {
-      await expect(dropZone, "the upload half is what opens first").toBeVisible()
+      await expect(
+        dropZone,
+        "the upload half is what opens first",
+      ).toBeVisible()
       await expect(
         fileInput,
         "and the keyboard path into it is a labelled file input",
       ).toBeAttached()
 
-      await dialog.getByRole("button", { name: "Choose from gallery", exact: true }).click()
+      await dialog
+        .getByRole("button", { name: "Choose from gallery", exact: true })
+        .click()
       await expect(
         dialog.getByRole("button", { name: /^Use this image/ }).first(),
         "the gallery half lists what this event has already uploaded",
@@ -1422,18 +1553,26 @@ const UI_ASSERTS: Record<string, UiAssert> = {
   async pagesReorder(page, args) {
     const id = requireHackathonId(args)
     await page.goto(`/my/hackathon/${id}/pages`)
-    const titles = () => content(page).locator("[data-page-row] h3").allTextContents()
+    const titles = () =>
+      content(page).locator("[data-page-row] h3").allTextContents()
 
-    expect(await titles(), "the order this reorder starts from").toEqual(args.before as string[])
+    expect(await titles(), "the order this reorder starts from").toEqual(
+      args.before as string[],
+    )
 
-    const handle = page.getByRole("button", { name: `Reorder ${args.title}`, exact: true })
+    const handle = page.getByRole("button", {
+      name: `Reorder ${args.title}`,
+      exact: true,
+    })
     const announcement = page.locator("[data-testid=reorder-announcement]")
 
     if (args.button) {
       // The arrows: one swap by definition, and the only path here that works
       // with no JavaScript at all — they are plain form posts (MoveUp/MoveDown)
       // rather than the whole-sequence SetOrder the drag and the keyboard send.
-      await page.getByRole("button", { name: args.button as string, exact: true }).click()
+      await page
+        .getByRole("button", { name: args.button as string, exact: true })
+        .click()
       await expect
         .poll(titles, { message: `'${args.button}' did not move the row` })
         .toEqual(args.after as string[])
@@ -1447,9 +1586,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     }
 
     await handle.press("Enter")
-    await expect(announcement, "picking a page up has to be announced").toContainText(
-      `Picked up ${args.title}`,
-    )
+    await expect(
+      announcement,
+      "picking a page up has to be announced",
+    ).toContainText(`Picked up ${args.title}`)
     const key = (args.direction as string) === "up" ? "ArrowUp" : "ArrowDown"
     for (let i = 0; i < ((args.by as number) ?? 1); i++) await handle.press(key)
     await handle.press("Enter")
@@ -1501,9 +1641,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
 
     const title = page.locator("input[name=title]")
     const body = page.locator("textarea#page-content")
-    await expect(title, "the form must open carrying the stored title").toHaveValue(
-      args.from as string,
-    )
+    await expect(
+      title,
+      "the form must open carrying the stored title",
+    ).toHaveValue(args.from as string)
     for (const s of (args.bodyContains ?? []) as string[]) {
       expect(
         await body.inputValue(),
@@ -1512,14 +1653,22 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     }
 
     await title.fill(args.to as string)
-    await page.getByRole("button", { name: "Save changes", exact: true }).click()
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click()
     await expect(page).toHaveURL(/\/pages$/)
     await expect(
-      content(page).getByRole("heading", { name: args.to as string, exact: true }),
+      content(page).getByRole("heading", {
+        name: args.to as string,
+        exact: true,
+      }),
       "the corrected title must appear in the list",
     ).toBeVisible()
     await expect(
-      content(page).getByRole("heading", { name: args.from as string, exact: true }),
+      content(page).getByRole("heading", {
+        name: args.from as string,
+        exact: true,
+      }),
       "and the typo must be gone",
     ).toHaveCount(0)
   },
@@ -1531,10 +1680,15 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const id = requireHackathonId(args)
     await page.goto(`/my/hackathon/${id}/pages`)
     const row = pageRow(page, args.title as string)
-    await expect(row, `no Manage Pages row titled '${args.title}'`).toHaveCount(1)
+    await expect(row, `no Manage Pages row titled '${args.title}'`).toHaveCount(
+      1,
+    )
     const excerpt = row.locator("[data-testid=page-excerpt]")
     for (const s of (args.contains ?? []) as string[]) {
-      await expect(excerpt, "the row quotes the page's opening line").toContainText(s)
+      await expect(
+        excerpt,
+        "the row quotes the page's opening line",
+      ).toContainText(s)
     }
     for (const s of (args.lacks ?? []) as string[]) {
       await expect(
@@ -1554,7 +1708,11 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const area = page.locator(`textarea#${args.field ?? "page-content"}`)
     await area.fill(args.start as string)
 
-    for (const step of args.presses as { select?: string; button: string; expect: string }[]) {
+    for (const step of args.presses as {
+      select?: string
+      button: string
+      expect: string
+    }[]) {
       if (step.select) {
         // Select the run of text the button is meant to act on, the way a person
         // would: the transformations behave differently on a selection and on a
@@ -1567,7 +1725,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
         }, step.select)
       }
       await page.getByRole("button", { name: step.button, exact: true }).click()
-      await expect(area, `after pressing '${step.button}'`).toHaveValue(step.expect)
+      await expect(area, `after pressing '${step.button}'`).toHaveValue(
+        step.expect,
+      )
     }
   },
 
@@ -1587,19 +1747,27 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const area = page.locator(`textarea#${args.field ?? "page-content"}`)
     await area.fill("")
 
-    await page.getByRole("button", { name: "Paste a table", exact: true }).first().click()
+    await page
+      .getByRole("button", { name: "Paste a table", exact: true })
+      .first()
+      .click()
     const panel = page.getByRole("group", { name: "Paste a table" })
     await expect(panel).toBeVisible()
 
-    await panel.getByLabel("Paste rows from a spreadsheet, or CSV text").fill(args.paste as string)
-    if (args.separator) await panel.getByLabel("Separator").selectOption(args.separator as string)
+    await panel
+      .getByLabel("Paste rows from a spreadsheet, or CSV text")
+      .fill(args.paste as string)
+    if (args.separator)
+      await panel.getByLabel("Separator").selectOption(args.separator as string)
     if (args.firstRowIsHeader === false) {
       await panel.getByLabel("First row is a header").uncheck()
     }
 
     // The element that STATES the shape, not the panel around it.
     const shape = panel.locator("p[aria-live=polite]")
-    await expect(shape, "the panel must say what it recognised").toHaveText(args.shape as string)
+    await expect(shape, "the panel must say what it recognised").toHaveText(
+      args.shape as string,
+    )
 
     if (args.cancel) {
       // Changed their mind. Nothing may reach the document: a converter that
@@ -1612,16 +1780,24 @@ const UI_ASSERTS: Record<string, UiAssert> = {
       return
     }
 
-    await panel.getByRole("button", { name: "Insert table", exact: true }).click()
+    await panel
+      .getByRole("button", { name: "Insert table", exact: true })
+      .click()
     // The markdown actually committed to the field — the textarea stays the
     // single source of truth, so this is the thing that gets saved.
     await expect(area).not.toHaveValue("")
     const value = await area.inputValue()
     for (const s of (args.contains ?? []) as string[]) {
-      expect(value, `the inserted markdown must contain ${JSON.stringify(s)}`).toContain(s)
+      expect(
+        value,
+        `the inserted markdown must contain ${JSON.stringify(s)}`,
+      ).toContain(s)
     }
     for (const s of (args.lacks ?? []) as string[]) {
-      expect(value, `the inserted markdown must NOT contain ${JSON.stringify(s)}`).not.toContain(s)
+      expect(
+        value,
+        `the inserted markdown must NOT contain ${JSON.stringify(s)}`,
+      ).not.toContain(s)
     }
   },
 
@@ -1645,21 +1821,27 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     ).toContain("attachment")
 
     const lines = (await csv.text()).split("\r\n").filter(Boolean)
-    expect(lines[0], "the header the importer reads").toBe('"user_email","project","team"')
+    expect(lines[0], "the header the importer reads").toBe(
+      '"user_email","project","team"',
+    )
     expect(
       lines.length,
       "this event has confirmed participants, so the template cannot be header-only",
     ).toBeGreaterThan(1)
     const body = lines.slice(1).join("\n")
     for (const s of (args.mustContain ?? []) as string[]) {
-      expect(body, `the template should carry ${JSON.stringify(s)}`).toContain(s)
+      expect(body, `the template should carry ${JSON.stringify(s)}`).toContain(
+        s,
+      )
     }
 
     const json = await page.request.get(`${base}/json`)
     expect(json.status()).toBe(200)
     expect(json.headers()["content-type"]).toContain("application/json")
     const rows = JSON.parse(await json.text()) as Record<string, string>[]
-    expect(rows.length, "both formats describe the same roster").toBe(lines.length - 1)
+    expect(rows.length, "both formats describe the same roster").toBe(
+      lines.length - 1,
+    )
     for (const r of rows) {
       expect(Object.keys(r).sort()).toEqual(["project", "team", "user_email"])
     }
@@ -1678,8 +1860,12 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     await page.goto(`/my/hackathon/${id}/teams/manage`)
     await page
       .locator("input[type=file]")
-      .setInputFiles(uploadFile({ name: "template.csv", body: await csv.text() }))
-    await content(page).getByRole("button", { name: "Preview import", exact: true }).click()
+      .setInputFiles(
+        uploadFile({ name: "template.csv", body: await csv.text() }),
+      )
+    await content(page)
+      .getByRole("button", { name: "Preview import", exact: true })
+      .click()
 
     // The preview must ARRIVE before anything is concluded from its absence,
     // and this has to retry: `locator.count()` is a snapshot, and taken the
@@ -1734,12 +1920,18 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     ).toBeVisible()
 
     const before: Record<string, string> = {}
-    for (const name of Object.keys((args.badges ?? {}) as Record<string, string>)) {
-      before[name] = ((await personTeamBadge(page, name).textContent()) ?? "").trim()
+    for (const name of Object.keys(
+      (args.badges ?? {}) as Record<string, string>,
+    )) {
+      before[name] = (
+        (await personTeamBadge(page, name).textContent()) ?? ""
+      ).trim()
     }
 
     await page.locator("input[type=file]").setInputFiles(uploadFile(args.file))
-    await content(page).getByRole("button", { name: "Preview import", exact: true }).click()
+    await content(page)
+      .getByRole("button", { name: "Preview import", exact: true })
+      .click()
 
     for (const cell of (args.outcomes ?? []) as string[]) {
       // `.first()`: one sentence can legitimately appear on SEVERAL rows — a
@@ -1772,7 +1964,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
         .toBeGreaterThanOrEqual(args.rowsAtLeast as number)
     }
     for (const s of (args.alertContains ?? []) as string[]) {
-      await expect(content(page).getByRole("alert"), "the refusal, in words").toContainText(s)
+      await expect(
+        content(page).getByRole("alert"),
+        "the refusal, in words",
+      ).toContainText(s)
     }
     for (const s of (args.statusContains ?? []) as string[]) {
       await expect(content(page).getByRole("status").first()).toContainText(s)
@@ -1797,7 +1992,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     }
 
     if (args.apply) {
-      await content(page).getByRole("button", { name: args.apply as string, exact: true }).click()
+      await content(page)
+        .getByRole("button", { name: args.apply as string, exact: true })
+        .click()
       for (const s of (args.appliedContains ?? []) as string[]) {
         await expect(content(page).getByRole("status").first()).toContainText(s)
       }
@@ -1807,7 +2004,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
       ).toHaveCount(0)
     }
 
-    for (const [name, team] of Object.entries((args.badges ?? {}) as Record<string, string>)) {
+    for (const [name, team] of Object.entries(
+      (args.badges ?? {}) as Record<string, string>,
+    )) {
       if (!args.apply) {
         expect(
           before[name],
@@ -1832,7 +2031,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
    */
   async dashboardJoinClosed(page, args) {
     await page.goto("/dashboard")
-    const section = dashboardSection(page, (args.section as string) ?? "Other hackathons")
+    const section = dashboardSection(
+      page,
+      (args.section as string) ?? "Other hackathons",
+    )
     const row = dashboardRow(section, args.name as string)
     await expect(row, `no dashboard row for '${args.name}'`).toBeVisible()
     await expect(
@@ -1851,7 +2053,10 @@ const UI_ASSERTS: Record<string, UiAssert> = {
    */
   async dashboardJoinOffered(page, args) {
     await page.goto("/dashboard")
-    const section = dashboardSection(page, (args.section as string) ?? "Other hackathons")
+    const section = dashboardSection(
+      page,
+      (args.section as string) ?? "Other hackathons",
+    )
     const row = dashboardRow(section, args.name as string)
     await expect(row, `no dashboard row for '${args.name}'`).toBeVisible()
     await expect(
@@ -1886,7 +2091,9 @@ const UI_ASSERTS: Record<string, UiAssert> = {
         expect(
           p.url(),
           "the guard must park the refused URL on the interstitial",
-        ).toContain(`/signin?returnTo=${encodeURIComponent(args.expectParked as string)}`)
+        ).toContain(
+          `/signin?returnTo=${encodeURIComponent(args.expectParked as string)}`,
+        )
       }
       await expect(
         p.getByRole("heading", { name: "Sign in to continue" }),
@@ -1942,7 +2149,11 @@ async function actorContext(
 }
 
 async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
-  const gates = a.gate ? ([] as string[]).concat(a.gate) : a.method ? [a.method] : []
+  const gates = a.gate
+    ? ([] as string[]).concat(a.gate)
+    : a.method
+      ? [a.method]
+      : []
   // A gate nobody probed is a hole in scripts/probe.sh, not a backend that has
   // not caught up — and it self-skips forever while the suite reports green.
   // Fail on it instead: the whole point of gating is that an action WAKES UP
@@ -1956,13 +2167,21 @@ async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
   }
   const missing = gates.filter((g) => !implemented(g))
   if (missing.length > 0) {
-    skipAction(test, a, a.todo ?? `backend does not implement yet: ${missing.join(", ")}`)
+    skipAction(
+      test,
+      a,
+      a.todo ?? `backend does not implement yet: ${missing.join(", ")}`,
+    )
     return
   }
   const params = await resolveDeep(a.params ?? {})
   // Extras exist only in Keycloak until their first platform action: register
   // them lazily through the same RPC the frontend uses (memoized in api.ts).
-  if (a.actor && a.actor !== "anonymous" && a.method !== "user.UserService/Register") {
+  if (
+    a.actor &&
+    a.actor !== "anonymous" &&
+    a.method !== "user.UserService/Register"
+  ) {
     await ensureRegistered(credsFor(a.actor))
   }
   const res =
@@ -1980,14 +2199,19 @@ async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
       ).toContain(res.code)
     }
   } else if (a.expect?.error) {
-    expect(res.ok, `expected ${a.expect.error} but the call succeeded`).toBe(false)
+    expect(res.ok, `expected ${a.expect.error} but the call succeeded`).toBe(
+      false,
+    )
     expect(res.code, res.raw).toBe(a.expect.error)
   } else {
     expect(res.ok, `${a.method} failed: ${res.raw}`).toBe(true)
   }
   if (a.expect?.check && (res.ok || !a.expect?.okOr)) {
     const check = CHECKS[a.expect.check]
-    if (!check) throw new Error(`unknown check '${a.expect.check}' — add it to CHECKS in helpers/recipe.ts`)
+    if (!check)
+      throw new Error(
+        `unknown check '${a.expect.check}' — add it to CHECKS in helpers/recipe.ts`,
+      )
     check(res.data, await resolveDeep(a.expect.checkArgs ?? {}))
   }
   for (const [name, dotted] of Object.entries(a.save ?? {})) {
@@ -2021,7 +2245,9 @@ async function runRpcRace(test: AnyTest, a: RecipeAction): Promise<void> {
     throw new Error(`[${a.id}] rpc.race needs at least two calls to race`)
   }
   if (!a.race) {
-    throw new Error(`[${a.id}] rpc.race needs a 'race' expectation ({ok, failCodesOneOf?})`)
+    throw new Error(
+      `[${a.id}] rpc.race needs a 'race' expectation ({ok, failCodesOneOf?})`,
+    )
   }
   const methods = [...new Set(calls.map((c) => c.method))]
   const gates = a.gate ? ([] as string[]).concat(a.gate) : methods
@@ -2034,13 +2260,19 @@ async function runRpcRace(test: AnyTest, a: RecipeAction): Promise<void> {
   }
   const missing = gates.filter((g) => !implemented(g))
   if (missing.length > 0) {
-    skipAction(test, a, a.todo ?? `backend does not implement yet: ${missing.join(", ")}`)
+    skipAction(
+      test,
+      a,
+      a.todo ?? `backend does not implement yet: ${missing.join(", ")}`,
+    )
     return
   }
 
   const actors = [
     ...new Set(
-      calls.filter((c) => c.actor && c.actor !== "anonymous").map((c) => c.actor!),
+      calls
+        .filter((c) => c.actor && c.actor !== "anonymous")
+        .map((c) => c.actor!),
     ),
   ]
   for (const actor of actors) {
@@ -2077,7 +2309,9 @@ async function runRpcRace(test: AnyTest, a: RecipeAction): Promise<void> {
 
   if (a.race.failCodesOneOf) {
     const got = JSON.stringify(failCodes)
-    const allowed = a.race.failCodesOneOf.map((set) => JSON.stringify([...set].sort()))
+    const allowed = a.race.failCodesOneOf.map((set) =>
+      JSON.stringify([...set].sort()),
+    )
     expect(
       allowed,
       `the losers' codes were ${got}; allowed multisets: ${allowed.join(" | ")}`,
@@ -2085,13 +2319,18 @@ async function runRpcRace(test: AnyTest, a: RecipeAction): Promise<void> {
   }
 }
 
-async function runUiAssert(test: AnyTest, a: RecipeAction, browser: Browser): Promise<void> {
+async function runUiAssert(
+  test: AnyTest,
+  a: RecipeAction,
+  browser: Browser,
+): Promise<void> {
   const fn = UI_ASSERTS[a.assert ?? ""]
   if (!fn) {
     skipAction(
       test,
       a,
-      a.todo ?? `UI assertion '${a.assert}' is not implemented yet (helpers/recipe.ts UI_ASSERTS)`,
+      a.todo ??
+        `UI assertion '${a.assert}' is not implemented yet (helpers/recipe.ts UI_ASSERTS)`,
     )
     return
   }
@@ -2107,7 +2346,11 @@ async function runUiAssert(test: AnyTest, a: RecipeAction, browser: Browser): Pr
   }
 }
 
-async function runFlow(test: AnyTest, a: RecipeAction, browser: Browser): Promise<void> {
+async function runFlow(
+  test: AnyTest,
+  a: RecipeAction,
+  browser: Browser,
+): Promise<void> {
   const ctx = await actorContext(browser, a.actor, a.fresh ?? false)
   try {
     const page = await ctx.newPage()
@@ -2142,7 +2385,10 @@ async function runFlow(test: AnyTest, a: RecipeAction, browser: Browser): Promis
         // also matched "Toggle light/d(a)rk mode" — and .first() clicked the
         // theme switch instead of opening the account menu. ("B" for bob
         // matched nothing else, so the same step passed for him.)
-        const exact = page.getByRole("button", { name: step.clickButton, exact: true })
+        const exact = page.getByRole("button", {
+          name: step.clickButton,
+          exact: true,
+        })
         const target =
           (await exact.count()) > 0
             ? exact
@@ -2150,9 +2396,11 @@ async function runFlow(test: AnyTest, a: RecipeAction, browser: Browser): Promis
         await target.first().click()
       }
       if (step.clickSelector) await page.locator(step.clickSelector).click()
-      if (step.fill) await page.locator(step.fill.selector).fill(step.fill.value)
+      if (step.fill)
+        await page.locator(step.fill.selector).fill(step.fill.value)
       if (step.back) await page.goBack()
-      if (step.expectUrl) await expect(page).toHaveURL(new RegExp(step.expectUrl))
+      if (step.expectUrl)
+        await expect(page).toHaveURL(new RegExp(step.expectUrl))
       if (step.expectText) {
         // Whole page, not just <main>: flows also assert about the chrome
         // ("Log in" is the NavBar button). The named UI_ASSERTS below are the
@@ -2223,7 +2471,8 @@ export async function runAction(
       case "rpc":
         await runRpc(test, a)
         // Remember the event name for downstream file metadata.
-        if (a.id === "act1.publish" && a.params?.name) vars.set("hackathonName", a.params.name)
+        if (a.id === "act1.publish" && a.params?.name)
+          vars.set("hackathonName", a.params.name)
         break
       case "rpc.race":
         await runRpcRace(test, a)

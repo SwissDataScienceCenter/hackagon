@@ -13,6 +13,10 @@ _: {
       "components/backend/internal/proto/**"
       "components/backend/ent/**"
       "components/frontend/src/lib/server/grpc/generated/**"
+      # Self-contained agent tooling (skills + their vendored deps). It carries
+      # its own conventions — 2-space shell, hand-wrapped markdown, a pnpm-owned
+      # lockfile — and reformatting it here only makes the two styles fight.
+      ".claude/**"
     ];
   };
 

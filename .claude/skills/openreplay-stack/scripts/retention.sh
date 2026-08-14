@@ -54,17 +54,35 @@ APPLY=0
 INSTALL_TTL=0
 
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --days) DAYS="${2:?--days needs a number}"; shift 2 ;;
-    --apply) APPLY=1; shift ;;
-    --install-ttl) INSTALL_TTL=1; shift ;;
-    -h | --help) sed -n '2,50p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    *) echo "error: unknown option $1" >&2; exit 2 ;;
-  esac
+    case "$1" in
+    --days)
+        DAYS="${2:?--days needs a number}"
+        shift 2
+        ;;
+    --apply)
+        APPLY=1
+        shift
+        ;;
+    --install-ttl)
+        INSTALL_TTL=1
+        shift
+        ;;
+    -h | --help)
+        sed -n '2,50p' "${BASH_SOURCE[0]}"
+        exit 0
+        ;;
+    *)
+        echo "error: unknown option $1" >&2
+        exit 2
+        ;;
+    esac
 done
 
 case "$DAYS" in
-  '' | *[!0-9]*) echo "error: --days must be a whole number of days" >&2; exit 2 ;;
+'' | *[!0-9]*)
+    echo "error: --days must be a whole number of days" >&2
+    exit 2
+    ;;
 esac
 
 require_docker
@@ -76,10 +94,10 @@ pg() { docker exec -i postgres sh -lc 'PGPASSWORD="$POSTGRESQL_PASSWORD" psql -U
 ch() { docker exec -i clickhouse sh -lc 'clickhouse-client --multiquery -q "$(cat)"'; }
 
 for c in postgres clickhouse chalice minio; do
-  docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null | grep -q true || {
-    echo "error: container '$c' is not running — is the stack up? (scripts/up.sh)" >&2
-    exit 1
-  }
+    docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null | grep -q true || {
+        echo "error: container '$c' is not running — is the stack up? (scripts/up.sh)" >&2
+        exit 1
+    }
 done
 
 # The object purge, run inside `chalice` (it is the container that already has
@@ -118,7 +136,7 @@ for line in sys.stdin:
 print("    removed %d objects" % removed)
 '
 
-CUTOFF_MS=$(( ($(date -u +%s) - DAYS * 86400) * 1000 ))
+CUTOFF_MS=$((($(date -u +%s) - DAYS * 86400) * 1000))
 echo "==> Retention: ${DAYS} days (sessions started before $(date -u -d "@$((CUTOFF_MS / 1000))" +%Y-%m-%dT%H:%M:%SZ))"
 [ "$APPLY" -eq 1 ] || echo "    DRY RUN — nothing will be deleted. Add --apply."
 
@@ -129,24 +147,24 @@ TOTAL="$(printf 'SELECT count(*) FROM public.sessions;' | pg)"
 echo "==> ${COUNT} of ${TOTAL} recorded sessions are past the cutoff."
 
 if [ "$COUNT" -eq 0 ]; then
-  echo "    Nothing to purge."
+    echo "    Nothing to purge."
 else
-  if [ "$APPLY" -eq 0 ]; then
-    printf '%s\n' "$IDS" | head -20 | sed 's/^/    would delete session /'
-    [ "$COUNT" -gt 20 ] && echo "    ... and $((COUNT - 20)) more"
-  else
-    # --------------------------------------------------- 1. the recordings --
-    # boto3 lives in chalice and already holds the S3 credentials; the ids
-    # arrive on stdin so no list is ever interpolated into a command line.
-    echo "==> Deleting objects under mobs/<session_id>/ ..."
-    # `python -c "$PURGE"` and NOT `python - <<PY`: a heredoc IS stdin, so it
-    # would take the file descriptor the session ids arrive on and the loop
-    # below would read nothing — deleting no objects while reporting success.
-    printf '%s\n' "$IDS" | docker exec -i chalice python -c "$PURGE_OBJECTS"
+    if [ "$APPLY" -eq 0 ]; then
+        printf '%s\n' "$IDS" | head -20 | sed 's/^/    would delete session /'
+        [ "$COUNT" -gt 20 ] && echo "    ... and $((COUNT - 20)) more"
+    else
+        # --------------------------------------------------- 1. the recordings --
+        # boto3 lives in chalice and already holds the S3 credentials; the ids
+        # arrive on stdin so no list is ever interpolated into a command line.
+        echo "==> Deleting objects under mobs/<session_id>/ ..."
+        # `python -c "$PURGE"` and NOT `python - <<PY`: a heredoc IS stdin, so it
+        # would take the file descriptor the session ids arrive on and the loop
+        # below would read nothing — deleting no objects while reporting success.
+        printf '%s\n' "$IDS" | docker exec -i chalice python -c "$PURGE_OBJECTS"
 
-    # ----------------------------------------------------- 2. the analytics --
-    echo "==> Deleting ClickHouse rows ..."
-    ch <<CH
+        # ----------------------------------------------------- 2. the analytics --
+        echo "==> Deleting ClickHouse rows ..."
+        ch <<CH
 ALTER TABLE experimental.sessions DELETE WHERE datetime < toDateTime(${CUTOFF_MS} / 1000);
 ALTER TABLE experimental.ios_events DELETE WHERE datetime < toDateTime(${CUTOFF_MS} / 1000);
 ALTER TABLE product_analytics.events DELETE WHERE created_at < toDateTime(${CUTOFF_MS} / 1000);
@@ -158,27 +176,27 @@ ALTER TABLE experimental.user_favorite_sessions DELETE WHERE session_id NOT IN (
 );
 CH
 
-    # ------------------------------------------------------ 3. the metadata --
-    # Last, on purpose: this is the list the other two steps are derived from.
-    echo "==> Deleting Postgres rows (events cascade) ..."
-    printf 'DELETE FROM public.sessions WHERE start_ts < %s;' "$CUTOFF_MS" | pg >/dev/null
-    echo "    ${COUNT} sessions purged."
-  fi
+        # ------------------------------------------------------ 3. the metadata --
+        # Last, on purpose: this is the list the other two steps are derived from.
+        echo "==> Deleting Postgres rows (events cascade) ..."
+        printf 'DELETE FROM public.sessions WHERE start_ts < %s;' "$CUTOFF_MS" | pg >/dev/null
+        echo "    ${COUNT} sessions purged."
+    fi
 fi
 
 # ------------------------------------------------------------ declarative --
 if [ "$INSTALL_TTL" -eq 1 ]; then
-  if [ "$APPLY" -eq 0 ]; then
-    echo "==> Would set a ${DAYS}-day TTL on experimental.sessions / ios_events / product_analytics.events"
-  else
-    echo "==> Installing ${DAYS}-day ClickHouse TTLs ..."
-    ch <<CH
+    if [ "$APPLY" -eq 0 ]; then
+        echo "==> Would set a ${DAYS}-day TTL on experimental.sessions / ios_events / product_analytics.events"
+    else
+        echo "==> Installing ${DAYS}-day ClickHouse TTLs ..."
+        ch <<CH
 ALTER TABLE experimental.sessions MODIFY TTL datetime + INTERVAL ${DAYS} DAY;
 ALTER TABLE experimental.ios_events MODIFY TTL datetime + INTERVAL ${DAYS} DAY;
 ALTER TABLE product_analytics.events MODIFY TTL created_at + INTERVAL ${DAYS} DAY;
 CH
-    echo "    ClickHouse will now expire those tables on its own."
-    echo "    NOTE: this does NOT cover the recordings themselves or Postgres."
-    echo "    Keep running this script for those."
-  fi
+        echo "    ClickHouse will now expire those tables on its own."
+        echo "    NOTE: this does NOT cover the recordings themselves or Postgres."
+        echo "    Keep running this script for those."
+    fi
 fi

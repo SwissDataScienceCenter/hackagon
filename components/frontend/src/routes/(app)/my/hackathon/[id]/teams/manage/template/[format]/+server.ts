@@ -38,9 +38,9 @@ export const GET: RequestHandler = async (event) => {
   return new Response(buildTemplate(world, format), {
     headers: {
       "content-type":
-        format === "json" ?
-          "application/json; charset=utf-8"
-        : "text/csv; charset=utf-8",
+        format === "json"
+          ? "application/json; charset=utf-8"
+          : "text/csv; charset=utf-8",
       "content-disposition": `attachment; filename="teams-${event.params.id}.${format}"`,
     },
   })

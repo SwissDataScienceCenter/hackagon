@@ -13,12 +13,15 @@ source "$HERE/lib.sh"
 
 [ "${1:-}" = "--force" ] && rm -rf "$VENDOR"
 if [ -f "$VENDOR/docker-compose.yaml" ]; then
-  echo "already fetched: $(cat "$VENDOR/UPSTREAM.txt" 2>/dev/null | head -1)"
-  echo "(use --force to refetch)"
-  exit 0
+    echo "already fetched: $(cat "$VENDOR/UPSTREAM.txt" 2>/dev/null | head -1)"
+    echo "(use --force to refetch)"
+    exit 0
 fi
 
-command -v git >/dev/null || { echo "error: git not found" >&2; exit 1; }
+command -v git >/dev/null || {
+    echo "error: git not found" >&2
+    exit 1
+}
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
@@ -38,25 +41,27 @@ echo "==> cloning $UPSTREAM_REPO @ $UPSTREAM_REF (sparse)…"
 # correct S3 secret produces "The request signature we calculated does not
 # match the signature you provided".
 (
-  cd "$tmp"
-  git -c core.autocrlf=false -c core.eol=lf \
-    clone --depth 1 --filter=blob:none --sparse --branch "$UPSTREAM_REF" \
-    "$UPSTREAM_REPO" or 2>&1 | tail -1
-  cd or
-  git -c core.autocrlf=false -c core.eol=lf sparse-checkout set scripts/docker-compose
-  git rev-parse HEAD > ../SHA
+    cd "$tmp"
+    git -c core.autocrlf=false -c core.eol=lf \
+        clone --depth 1 --filter=blob:none --sparse --branch "$UPSTREAM_REF" \
+        "$UPSTREAM_REPO" or 2>&1 | tail -1
+    cd or
+    git -c core.autocrlf=false -c core.eol=lf sparse-checkout set scripts/docker-compose
+    git rev-parse HEAD >../SHA
 )
 sha="$(cat "$tmp/SHA")"
 [ -d "$tmp/or/scripts/docker-compose" ] || {
-  echo "error: sparse checkout produced no scripts/docker-compose tree" >&2; exit 1; }
+    echo "error: sparse checkout produced no scripts/docker-compose tree" >&2
+    exit 1
+}
 
 mkdir -p "$VENDOR"
 cp -r "$tmp/or/scripts/docker-compose/." "$VENDOR/"
 {
-  echo "$UPSTREAM_REPO @ $UPSTREAM_REF"
-  echo "commit $sha"
-  echo "fetched $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-} > "$VENDOR/UPSTREAM.txt"
+    echo "$UPSTREAM_REPO @ $UPSTREAM_REF"
+    echo "commit $sha"
+    echo "fetched $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} >"$VENDOR/UPSTREAM.txt"
 
 echo "==> vendored $(find "$VENDOR" -type f | wc -l) files at ${sha:0:12}"
 echo "    $VENDOR"

@@ -17,26 +17,26 @@ source "$HERE/lib.sh"
 require_docker
 
 if command -v devcontainer >/dev/null 2>&1; then
-  echo "==> Starting via the devcontainer CLI (Nix feature + post-create handled)..."
-  devcontainer up --workspace-folder "$ROOT_DIR"
-  # The CLI starts what devcontainer.json names; the object store is a sibling
-  # service it has no opinion about.
-  compose up -d "$STORAGE_SERVICE"
+    echo "==> Starting via the devcontainer CLI (Nix feature + post-create handled)..."
+    devcontainer up --workspace-folder "$ROOT_DIR"
+    # The CLI starts what devcontainer.json names; the object store is a sibling
+    # service it has no opinion about.
+    compose up -d "$STORAGE_SERVICE"
 else
-  echo "==> devcontainer CLI not found — using plain docker compose..."
-  # Both, explicitly: naming a service makes compose start only what is named,
-  # so `up -d dev` silently left the object store down even though it has no
-  # profile and a bare `up` would have started it.
-  compose up -d --build "$SERVICE" "$STORAGE_SERVICE"
+    echo "==> devcontainer CLI not found — using plain docker compose..."
+    # Both, explicitly: naming a service makes compose start only what is named,
+    # so `up -d dev` silently left the object store down even though it has no
+    # profile and a bare `up` would have started it.
+    compose up -d --build "$SERVICE" "$STORAGE_SERVICE"
 
-  if ! in_container 'command -v nix' >/dev/null 2>&1; then
-    echo "==> Installing Nix (single-user) inside the container..."
-    in_container 'curl -fsSL https://nixos.org/nix/install -o /tmp/install-nix && sh /tmp/install-nix --no-daemon'
-    in_container 'mkdir -p ~/.config/nix && printf "experimental-features = nix-command flakes\nsandbox = false\n" > ~/.config/nix/nix.conf'
-  fi
+    if ! in_container 'command -v nix' >/dev/null 2>&1; then
+        echo "==> Installing Nix (single-user) inside the container..."
+        in_container 'curl -fsSL https://nixos.org/nix/install -o /tmp/install-nix && sh /tmp/install-nix --no-daemon'
+        in_container 'mkdir -p ~/.config/nix && printf "experimental-features = nix-command flakes\nsandbox = false\n" > ~/.config/nix/nix.conf'
+    fi
 
-  echo "==> Running post-create bootstrap (idempotent)..."
-  in_container 'bash .devcontainer/post-create.sh'
+    echo "==> Running post-create bootstrap (idempotent)..."
+    in_container 'bash .devcontainer/post-create.sh'
 fi
 
 echo "==> Preparing the object store (bucket, access policy, seeded event images)..."
