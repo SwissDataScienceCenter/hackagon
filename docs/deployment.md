@@ -246,6 +246,71 @@ it with `proxy-real-ip-cidr` scoped to the proxies you actually have.
 
 Keep `frontend.config.cookies.useSecure` in step with the real scheme.
 
+### A config-only upgrade used to change nothing at all
+
+Fixed 2026-08-14. It is written up rather than deleted because **the symptom was
+that there was no symptom**: `helm upgrade` reported success, `kubectl get
+configmap` showed the new value, and every running pod went on serving the old
+one. Rotating the OIDC client secret that way changed nothing that was running.
+
+Two things combined, and either alone would have been survivable:
+
+1. **`subPath` mounts never receive updates.** Three of them — the backend's
+   `config.yaml`, the frontend's `config.yaml` and its `secrets.yaml`. The
+   kubelet refreshes a plain ConfigMap volume; a `subPath` mount is resolved
+   once, at container start. That is Kubernetes behaviour, not a chart bug.
+2. **No template carried a `checksum/config` annotation.** So after a
+   config-only upgrade the Deployment's pod template was byte-identical, and
+   Kubernetes correctly did nothing.
+
+Measured on the k3d rig before the fix, changing one frontend config value:
+`helm upgrade` returned in **0.9 s** with status `deployed`, the ConfigMap held
+the new value, and the frontend pod — **same pod name, same
+`metadata.generation`** — still served the old one. It was never restarted,
+because nothing asked it to be.
+
+The fix is the standard idiom: a pod-template annotation whose value is a hash
+of the rendered config, so changing the config changes the pod template and the
+Deployment rolls itself.
+
+```yaml
+checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+```
+
+Three of them: `checksum/config` on the backend, and `checksum/config` +
+`checksum/secret` on the frontend. After the fix, the same experiment leaves the
+running pod holding the new value with nobody restarting anything.
+
+⚠ **Hashing rendered output is only safe while the render is deterministic.**
+One non-deterministic byte in a hashed template and every upgrade rolls every
+pod forever — a worse bug wearing this one's clothes. This chart has a real
+source of such bytes: the Bitnami and Keycloak subcharts mint passwords during
+rendering, and `helm template` run twice produces two different Keycloak
+`admin-password`s (and two different `postgres-password`s whenever
+`postgresql.auth.postgresPassword` is left empty). **None of it reaches the
+hashed templates** — verified by rendering twice, in that exact state, and
+finding all three checksums byte-identical while the subchart Secrets differed.
+The structural reason is that the DB password these ConfigMaps write comes from
+`backend.config.database.postgresPassword`, which is `required`, so it can only
+come from values. `verify.sh` now asserts it on every run.
+
+**What it does not cover, and what the annotation costs:**
+
+- **Editing a ConfigMap or Secret directly** — `kubectl edit`, or any
+  controller writing to it — still does not reach a running pod. The `subPath`
+  mount is unchanged; only a pod-template change rolls it, and Helm is what
+  produces one. Outside Helm, `kubectl rollout restart` remains the answer.
+- **Keycloak and Postgres are the subcharts' business.** The Keycloak subchart
+  already carries its own `checksum/secrets`; nothing here changed for either.
+- **`checksum/secret` puts a hash of secret material into the pod spec**, which
+  anyone with `get deployment` can read while the Secret itself needs `get
+  secret`. A sha256 is not the secret, but it *is* an oracle: someone who
+  guesses `frontendSecrets.clientSecret` can confirm the guess without asking
+  Keycloak. Kept anyway, because every alternative is worse — any value that
+  changes when the secret changes is the same oracle, and a value that does not
+  change is the original bug. What bounds it is entropy: keep `clientSecret` and
+  `authSecret` long and random, which they must be regardless.
+
 ### `keycloakHost` and the certificate that does not cover it
 
 `hackagon.keycloakHost` derives `auth.{baseDomain}`, and
@@ -358,18 +423,6 @@ recognise the next one**, and none of them showed up in a rendered manifest.
   path, so neither distinguishes wedged from degraded. Liveness wants a route
   that does not fan out.
 
-- **A ConfigMap change does not restart anything, and cannot.** Both configs are
-  mounted with `subPath`, and a `subPath` mount never receives ConfigMap updates
-  — the file is frozen at pod creation. There is no `checksum/config` pod
-  annotation in any template either. So a `helm upgrade` that changes only
-  `backend.config` or `frontend.config` — or rotates `frontendSecrets` — updates
-  the ConfigMap, reports success, and changes nothing that is running. Roll the
-  pods yourself:
-  ```bash
-  kubectl -n hackagon rollout restart deploy/hackagon-backend deploy/hackagon-frontend
-  ```
-  (The rig's `install.sh --restart` exists for this reason.)
-
 - **`postgresPassword` renders into a ConfigMap in plaintext.** Two of them:
   `<release>-backend-config` (the app DB password, inside `config.yaml`) and
   `hackagon-keycloak-init` (both DB passwords, inside the initdb SQL). A
@@ -413,7 +466,7 @@ what follows is why it is shaped the way it is.
 
 ```bash
 bash .claude/skills/k3d-chart-rig/scripts/up.sh       # ~4 min cold, ~90 s warm
-bash .claude/skills/k3d-chart-rig/scripts/verify.sh   # 37 checks, ~2 min
+bash .claude/skills/k3d-chart-rig/scripts/verify.sh   # 55 checks, ~4 min
 bash .claude/skills/k3d-chart-rig/scripts/install.sh --restart   # iterate on the chart
 bash .claude/skills/k3d-chart-rig/scripts/down.sh     # delete the cluster
 ```
@@ -458,7 +511,7 @@ prefix working and with it being ignored.
 
 ```bash
 bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh up
-bash .claude/skills/k3d-chart-rig/scripts/verify.sh        # the same 37, over https
+bash .claude/skills/k3d-chart-rig/scripts/verify.sh        # the same 55, over https
 bash .claude/skills/k3d-chart-rig/scripts/browser-check.sh # 13 checks a browser must answer
 bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh down
 bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh destroy
@@ -535,15 +588,24 @@ backend's restart reason read off the live pod; and the unset-`postgresPassword`
 claim, by rendering the same input twice and reading two different passwords out
 of the two Secrets.
 
-**Read from source, not run:** the `subPath` config-reload gap, the liveness
-probe's fan-out, the five places the Keycloak hostname is written, the unused
-helpers, and the plaintext passwords in the two ConfigMaps.
+**Read from source, not run:** the liveness probe's fan-out, the five places the
+Keycloak hostname is written, the unused helpers, and the plaintext passwords in
+the two ConfigMaps.
+
+**Run on 2026-08-14, against the same live cluster, for the config-reload
+section:** the bug reproduced with the fix reverted (0.9 s upgrade, ConfigMap
+updated, running pod unchanged, generation frozen), the fix observed from inside
+the container afterwards, three consecutive identical upgrades leaving every
+generation untouched, and the two-render determinism check with the subchart
+Secrets as its control. The `verify.sh` checks that pin all of it were then
+themselves reverted-and-run, to see them fail.
 
 **Attributed, not re-measured:** the 4k `proxy_buffer_size` 502, the
 ExternalName flag experiment, the `use-forwarded-headers` / `protocolHeader`
 table, the `__Secure-` browser results, Cloudflare's TLS alert 40 below one
-label, and the 37/13 check counts — all from `b98fbdda`, `e0d2f6d2` and the
-rig's `SKILL.md`.
+label, and the 13 browser checks — all from `b98fbdda`, `e0d2f6d2` and the
+rig's `SKILL.md`. (`verify.sh` was 37 checks in those commits and is 55 now;
+the 18 added on 2026-08-14 are the config-reload step above, and they were run.)
 
 ## See also
 

@@ -10,7 +10,7 @@ difference observable.
 
 ```bash
 bash .claude/skills/k3d-chart-rig/scripts/up.sh       # ~4 min cold, ~90 s warm
-bash .claude/skills/k3d-chart-rig/scripts/verify.sh   # 37 checks, ~2 min
+bash .claude/skills/k3d-chart-rig/scripts/verify.sh   # 55 checks, ~4 min
 bash .claude/skills/k3d-chart-rig/scripts/down.sh     # deletes the cluster
 ```
 
@@ -19,7 +19,7 @@ certificate** (needs the Cloudflare credentials the other tunnels use):
 
 ```bash
 bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh up       # ~2 min
-bash .claude/skills/k3d-chart-rig/scripts/verify.sh          # the same 37, over https
+bash .claude/skills/k3d-chart-rig/scripts/verify.sh          # the same 55, over https
 bash .claude/skills/k3d-chart-rig/scripts/browser-check.sh   # 13 checks a browser must answer
 bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh down     # back to *.localhost
 bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh destroy  # …and give the names up
@@ -46,7 +46,7 @@ scripts/lib.sh      names, ports, hostnames, tool wrappers, path translation
 scripts/tools.sh    downloads pinned k3d / helm / kubectl into bin/ (gitignored)
 scripts/up.sh       cluster → ingress-nginx → CoreDNS → store → secrets → helm
 scripts/install.sh  just the `helm upgrade`, for iterating on the chart
-scripts/verify.sh   the 37 checks — in EITHER mode
+scripts/verify.sh   the 55 checks — in EITHER mode
 scripts/presign.sh  SigV4 presigner mirroring internal/storage/sigv4.go
 scripts/tunnel.sh   the public-https mode: up / down / destroy / status
 scripts/browser-check.sh + browser-login.mjs   a real browser, the 13 checks
@@ -285,8 +285,9 @@ to, so the failure is identical.
 
 ## What it found
 
-Six things, all in `helm-chart/`, all fixed here, none of which the rendered
-manifest showed.
+Seven things, all in `helm-chart/`, all fixed here, none of which the rendered
+manifest showed. The first six were found here; the seventh (below) was found by
+reading and could only be *settled* here.
 
 1. **`templates/keycloak-ingress.yaml` hard-coded `ingressClassName:
    webapprouting.kubernetes.azure.com`**, the cert-manager issuer and a TLS
@@ -331,6 +332,19 @@ manifest showed.
    `keycloak.ingress.host` now overrides it, defaulting to the old derivation, so
    no existing deployment changes. **This is the only chart change real HTTPS
    needed** — everything else about the https mode is configuration.
+
+7. **A config-only `helm upgrade` was a silent no-op** (2026-08-14). Not found
+   by this rig — it was read out of the chart and written down in
+   `docs/deployment.md` as known-broken — but **the rig is what turned it from
+   a claim into a measurement, and then proved the fix**. With the annotations
+   reverted: `helm upgrade` returned in 0.9 s with status `deployed`, the
+   ConfigMap held the new value, and the running pod (same name, same
+   `metadata.generation`) still served the old one. Both configs and the
+   frontend Secret are `subPath` mounts, which the kubelet resolves once at
+   container start, and no template carried a `checksum/*` annotation, so the
+   pod template never changed and nothing rolled. Three annotations now do.
+   Step 6 pins it, and was itself run against the reverted chart to watch it
+   fail — 10 reds, including the original bug reproduced by the check.
 
 Three more are recorded but deliberately **not** fixed — one is an arguable
 design call and two are cosmetic:
@@ -408,6 +422,26 @@ the origin it is actually reached on; sign-in redirects to Keycloak; the realm's
 username-first flow is driven in two POSTs; Keycloak redirects back with a code;
 **the callback returns 302 and not 502**; and `/auth/session` carries alice's
 email and a Keycloak access token.
+
+**A config-only upgrade reaches the running pod** (step 6, added 2026-08-14).
+Both halves are asserted, because each is a bug: a config change MUST roll the
+pods, and an unchanged one MUST NOT. The second is the one likely to catch a
+mistake — a hash over anything non-deterministic would trade a silent no-op for
+a rollout on every upgrade, and this chart really does contain such bytes (the
+Keycloak and Postgres subcharts mint passwords during rendering). So the render
+is done twice and compared, the live Deployment's annotations are compared
+against what the chart renders to, and three probe renders prove the hashes
+still TRACK their inputs — determinism alone is also what a constant would give
+you. Then the behavioural half: an unchanged upgrade must leave
+`metadata.generation` untouched (Kubernetes' own answer to "did the pod template
+move"), and a changed one must land in the file the RUNNING container has open,
+with nobody restarting anything.
+
+⚠ **Its values come from `helm get values`, never a hard-coded list of `-f`
+files.** This script runs in tunnel mode too, and re-installing the localhost
+values there would quietly repoint the release mid-run. That the round-trip is
+faithful is not assumed — the no-op check is exactly that claim, so a lossy
+round-trip fails loudly instead of silently reinstalling something else.
 
 **Optional blocks absent.** Read out of the LIVE container — not `helm
 template`, not the ConfigMap. The frontend image is distroless (no shell, no

@@ -14,10 +14,40 @@ spec:
       app.kubernetes.io/component: frontend
   template:
     metadata:
-      {{- with .Values.frontend.annotations }}
       annotations:
+        {{- /*
+        THE CONFIG RELOAD. Both files this pod reads are `subPath` mounts
+        (below), and a subPath mount is resolved ONCE at container start — the
+        kubelet refreshes a plain ConfigMap volume and never refreshes this
+        one. With no annotation here the pod template is byte-identical after a
+        config-only upgrade, so nothing rolls and the running pod keeps serving
+        the old file while `kubectl get configmap` shows the new one. The whole
+        story is in backend-deployment.yaml's copy of this comment.
+
+        Two hashes because there are two mounts, and either can change without
+        the other.
+        */}}
+        checksum/config: {{ include (print $.Template.BasePath "/frontend-configmap.yaml") . | sha256sum }}
+        {{- /*
+        ⚠ THIS PUTS A HASH OF SECRET MATERIAL IN THE POD SPEC, which anyone
+        with `get deployment` on the namespace can read while the Secret itself
+        needs `get secret`. A sha256 is not the secret, but it IS an oracle: a
+        reader who guesses `frontendSecrets.clientSecret` can confirm the guess
+        here without asking Keycloak.
+
+        Kept anyway, because every alternative is worse. Any value that changes
+        when the secret changes is the same oracle, and a value that does not
+        change is the bug — an OIDC client secret rotated by `helm upgrade` and
+        never picked up by a running pod, which is exactly the failure this
+        chart shipped with. What bounds it is entropy: `clientSecret` and
+        `authSecret` are meant to be long random strings (the k3d rig mints 24
+        and 32 bytes of hex). Do not put a guessable one in `frontendSecrets` —
+        that was never safe, and this makes the guess cheap to check.
+        */}}
+        checksum/secret: {{ include (print $.Template.BasePath "/frontend-secrets.yaml") . | sha256sum }}
+        {{- with .Values.frontend.annotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       labels:
         {{- include "hackagon.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: frontend

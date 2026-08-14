@@ -2,8 +2,11 @@
 # Turn the chart's three arguable claims into observations, and prove login.
 #
 #   bash scripts/verify.sh          # everything
-#   bash scripts/verify.sh --quick  # skip the two checks that reconfigure the
-#                                   # ingress controller (~30 s each)
+#   bash scripts/verify.sh --quick  # skip the checks that reconfigure the
+#                                   # cluster: the two ingress-controller
+#                                   # rollouts (~30 s each) and the config-
+#                                   # reload upgrade in step 6 (two rollouts).
+#                                   # The render-level half of step 6 still runs.
 #
 # "The pods are Running" is not in here anywhere. Pods can be Running and the
 # product unusable — this rig was written after exactly that: every page
@@ -45,6 +48,37 @@ check_lacks() { # description needle haystack
 
 CONTROL_HOST="control.$BASE_DOMAIN"
 STAMP="$(date +%s)"
+
+# Read the config file a RUNNING container has open — not `helm template`, not
+# the ConfigMap. Both images are distroless (no shell, no tar), so `kubectl
+# exec` and `kubectl cp` are both out; an ephemeral debug container sharing the
+# process namespace reads the real mount through /proc/1/root.
+#
+# `--profile=sysadmin` is needed, not decoration: with the default profile the
+# read comes back "cat: can't open '/proc/1/root/…': Permission denied" even
+# though both containers run as uid 0. That failure is why EVERY caller asserts
+# a positive control on the result — the absence assertions in step 5 all
+# passed against that error message once, and would have gone on passing.
+#
+# The Running field-selector matters after a rollout: a Terminating pod still
+# matches the label and can sort first, and reading the OLD pod is exactly the
+# mistake step 6 exists to detect.
+read_live_config() { # component tag -> the file's text on stdout
+    local comp="$1" tag="$2" pod dbg out=""
+    pod="$(kubectl -n "$NAMESPACE" get pod -l "app.kubernetes.io/component=$comp" \
+        --field-selector=status.phase=Running \
+        -o jsonpath='{.items[0].metadata.name}')"
+    dbg="rigread$tag"
+    kubectl -n "$NAMESPACE" debug "$pod" --image=busybox:1.36 --target="$comp" \
+        --profile=sysadmin -c "$dbg" -q \
+        -- sh -c 'cat /proc/1/root/etc/hackagon/config.yaml' >/dev/null 2>&1 || true
+    for _ in $(seq 40); do
+        out="$(kubectl -n "$NAMESPACE" logs "$pod" -c "$dbg" 2>/dev/null || true)"
+        [ -n "$out" ] && break
+        sleep 2
+    done
+    printf '%s' "$out"
+}
 
 # =====================================================================
 step "0 · the release is installed and serving"
@@ -253,28 +287,10 @@ check_contains "and it carries a Keycloak access token" '"accessToken":"ey' "$se
 step "5 · the optional blocks are absent from the RUNNING pod"
 # =====================================================================
 # Read out of the live container, not out of `helm template` and not out of the
-# ConfigMap: the question is what the process is actually configured with. The
-# frontend image is distroless — no shell, no tar — so `kubectl exec` and
-# `kubectl cp` are both out. An ephemeral debug container sharing the process
-# namespace can read the real mount through /proc/1/root.
-#
-# `--profile=sysadmin` is needed, not decoration: with the default profile the
-# read comes back "cat: can't open '/proc/1/root/…': Permission denied" even
-# though both containers run as uid 0. That failure is WHY the positive control
-# below is first — the two absence assertions passed against that error message,
-# and would have gone on passing forever.
-POD="$(kubectl -n "$NAMESPACE" get pod -l app.kubernetes.io/component=frontend \
-    -o jsonpath='{.items[0].metadata.name}')"
-DBG="rigread$STAMP"
-kubectl -n "$NAMESPACE" debug "$POD" --image=busybox:1.36 --target=frontend \
-    --profile=sysadmin -c "$DBG" -q \
-    -- sh -c 'cat /proc/1/root/etc/hackagon/config.yaml' >/dev/null 2>&1 || true
-LIVE=""
-for _ in $(seq 40); do
-    LIVE="$(kubectl -n "$NAMESPACE" logs "$POD" -c "$DBG" 2>/dev/null || true)"
-    [ -n "$LIVE" ] && break
-    sleep 2
-done
+# ConfigMap: the question is what the process is actually configured with. See
+# read_live_config at the top of this file for how, and why the positive
+# control below has to come first.
+LIVE="$(read_live_config frontend "$STAMP")"
 
 # POSITIVE CONTROL FIRST. An empty read agrees with every absence assertion
 # below, and on the first attempt at this the read WAS empty.
@@ -286,6 +302,136 @@ check_contains "…while the blocks that ARE configured are present" "useSecure:
 ENVJSON="$(kubectl -n "$NAMESPACE" get deployment "$RELEASE-frontend" \
     -o go-template='{{range .spec.template.spec.containers}}{{range .env}}{{.name}} {{end}}{{end}}')"
 check_lacks "and nothing smuggles them in as environment" "REPLAY" "$ENVJSON"
+
+# =====================================================================
+step "6 · a config-only upgrade reaches the RUNNING pod"
+# =====================================================================
+# THE BUG THIS EXISTS FOR was silent in the worst way: `helm upgrade` reported
+# success in 0.9 s, `kubectl get configmap` showed the new value, and every
+# running pod went on serving the old one. Two things combined — config.yaml is
+# a `subPath` mount, which the kubelet resolves ONCE at container start and
+# never refreshes, and no template carried a pod-template annotation, so after
+# a config-only upgrade the Deployment was byte-identical and Kubernetes
+# correctly did nothing. Rotating the OIDC client secret that way changed
+# nothing that was running, with no signal anywhere.
+#
+# The fix is the checksum annotations in {backend,frontend}-deployment.yaml.
+# Both halves are checked here, because each is a bug on its own: a config
+# change MUST roll the pods, and an unchanged one MUST NOT — a hash over
+# something non-deterministic would trade a silent no-op for a rollout on every
+# upgrade, which is worse.
+#
+# Values come from `helm get values`, never a hard-coded list of -f files: this
+# script runs in TUNNEL mode too, and re-installing the localhost values there
+# would quietly repoint the release mid-run. That the round-trip is faithful is
+# asserted rather than assumed — the no-op check below is exactly that claim.
+#
+# ⚠ THAT FILE HOLDS EVERY CREDENTIAL THE RELEASE WAS INSTALLED WITH — both DB
+# passwords, the OIDC client secret and the Auth.js key. `.state/` is
+# gitignored (checked), and the umask matches the one up.sh mints
+# `secrets.env` under.
+# `rm` first: a umask only applies when the file is CREATED, so rewriting an
+# existing world-readable one would keep its mode.
+VALS="$STATE_DIR/current-values.yaml"
+rm -f "$VALS"
+(umask 077; helm -n "$NAMESPACE" get values "$RELEASE" -o yaml >"$VALS")
+
+csums() { # component [extra helm args…] -> "checksum/<kind>: <sha256>" lines, sorted
+    local comp="$1"; shift
+    helm template "$RELEASE" "$(winpath "$CHART_DIR")" --namespace "$NAMESPACE" \
+        -f "$(winpath "$VALS")" --show-only "templates/$comp-deployment.yaml" "$@" 2>/dev/null |
+        grep -oE 'checksum/[a-z]+: [0-9a-f]{64}' | LC_ALL=C sort
+}
+live_csums() { # component -> the same shape, off the running Deployment
+    kubectl -n "$NAMESPACE" get deploy "$RELEASE-$1" \
+        -o jsonpath='{.spec.template.metadata.annotations}' |
+        tr ',' '\n' | grep -oE 'checksum/[a-z]+":"[0-9a-f]{64}' |
+        sed 's/":"/: /' | LC_ALL=C sort
+}
+
+# --- the annotations are there, and are not empty strings -------------
+# The count assertions are the positive control for every equality below: two
+# empty strings compare equal, so "live matches rendered" would hold just as
+# well if the annotation had been deleted from both sides.
+check "the backend renders exactly one checksum annotation" "1" "$(csums backend | grep -c .)"
+check "the frontend renders two (config and secret)" "2" "$(csums frontend | grep -c .)"
+check "the running backend carries the checksum it renders to" "$(csums backend)" "$(live_csums backend)"
+check "the running frontend carries the checksums it renders to" "$(csums frontend)" "$(live_csums frontend)"
+
+# --- the hash is deterministic ---------------------------------------
+# If anything non-deterministic reached the hashed templates — a timestamp, a
+# generated password — every `helm upgrade` would roll every pod forever. The
+# Bitnami and Keycloak subcharts DO mint passwords on each render (measured:
+# `helm template` twice produces two different keycloak admin-passwords, and a
+# different postgres one whenever postgresql.auth.postgresPassword is empty),
+# so this is not a hypothetical property of this chart.
+# `|| true` on every assignment from csums/grep: they are pipelines under
+# `set -o pipefail`, and a missing annotation makes grep exit 1 — which would
+# kill this script through errexit at exactly the moment it has something to
+# report. A check that cannot survive its own subject being absent is no check.
+FE="$(csums frontend || true)"
+check "two renders of identical inputs agree (no rollout on every upgrade)" "$FE" "$(csums frontend)"
+check "…and so does the backend's" "$(csums backend)" "$(csums backend)"
+
+# --- …and it still tracks what it is supposed to track ----------------
+# Determinism alone is also what a CONSTANT would give you. These three prove
+# the hashes are functions of the right inputs, and that the frontend's two are
+# independent of each other — without rotating a real secret on the cluster.
+FE_CFG="$(printf '%s' "$FE" | grep 'checksum/config' || true)"
+FE_SEC="$(printf '%s' "$FE" | grep 'checksum/secret' || true)"
+ALT_CFG="$(csums frontend --set frontend.config.oidc.clientId=rig-checksum-probe || true)"
+check_lacks "a changed config value changes checksum/config" "$FE_CFG" "$ALT_CFG"
+check_contains "…and leaves checksum/secret alone" "$FE_SEC" "$ALT_CFG"
+ALT_SEC="$(csums frontend --set frontendSecrets.authSecret=rig-checksum-probe || true)"
+check_lacks "a rotated secret changes checksum/secret" "$FE_SEC" "$ALT_SEC"
+check_contains "…and leaves checksum/config alone" "$FE_CFG" "$ALT_SEC"
+check_lacks "a changed backend config value changes the backend's checksum" \
+    "$(csums backend)" "$(csums backend --set backend.config.logging.level=rigprobe)"
+
+if [ "$QUICK" = 0 ]; then
+    # --- the behaviour, on the running cluster ------------------------
+    # Everything above is a render. The claim is about a pod.
+    reupgrade() { # extra helm args…
+        if ! helm upgrade "$RELEASE" "$(winpath "$CHART_DIR")" --namespace "$NAMESPACE" \
+            -f "$(winpath "$VALS")" "$@" --timeout 15m >/dev/null 2>"$STATE_DIR/upgrade.err"; then
+            bad "helm upgrade failed"; sed 's/^/        /' "$STATE_DIR/upgrade.err" >&2
+            FAIL=$((FAIL + 1)); return 1
+        fi
+    }
+    gens() { kubectl -n "$NAMESPACE" get deploy "$RELEASE-backend" "$RELEASE-frontend" \
+        -o jsonpath='{.items[*].metadata.generation}'; }
+
+    # THE ASSERTION MOST LIKELY TO CATCH A MISTAKE. `metadata.generation` only
+    # advances when the SPEC changes, so this is Kubernetes' own answer to "did
+    # the pod template move", not an inference from pod names.
+    GEN0="$(gens)"
+    reupgrade || true
+    check "an upgrade with unchanged values does not touch the pod template" "$GEN0" "$(gens)"
+
+    # Flip a value that is pure logging, computed from what the pod is actually
+    # running rather than assumed — the tunnel overlay may set it either way.
+    BEFORE="$(read_live_config frontend "${STAMP}b")"
+    check_contains "the live config was actually read (positive control)" "forceDevLog:" "$BEFORE"
+    case "$BEFORE" in *"forceDevLog: true"*) WAS=true; WANT=false ;; *) WAS=false; WANT=true ;; esac
+
+    if reupgrade --set "frontend.config.log.forceDevLog=$WANT"; then
+        kubectl -n "$NAMESPACE" rollout status "deploy/$RELEASE-frontend" --timeout=300s >/dev/null 2>&1 || true
+        AFTER="$(read_live_config frontend "${STAMP}c")"
+        check_contains "the live config was read after the upgrade too (positive control)" \
+            "forceDevLog:" "$AFTER"
+        # NOBODY RESTARTED ANYTHING. No `kubectl rollout restart`, no pod
+        # deletion — the annotation changed, so the Deployment rolled itself.
+        check_contains "a config-only upgrade reaches the running pod" \
+            "forceDevLog: $WANT" "$AFTER"
+        check_lacks "…and the old value is gone from it" "forceDevLog: $WAS" "$AFTER"
+    fi
+
+    # Put it back, and leave the release where this script found it.
+    reupgrade || true
+    kubectl -n "$NAMESPACE" rollout status "deploy/$RELEASE-frontend" --timeout=300s >/dev/null 2>&1 || true
+    check "the restored release renders the checksums it started with" "$FE" "$(csums frontend)"
+    check "…and the running pod carries them again" "$FE" "$(live_csums frontend)"
+fi
 
 # =====================================================================
 step "result"

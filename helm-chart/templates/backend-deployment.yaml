@@ -14,10 +14,44 @@ spec:
       app.kubernetes.io/component: backend
   template:
     metadata:
-      {{- with .Values.backend.annotations }}
       annotations:
+        {{- /*
+        THE CONFIG RELOAD. Without this line a `helm upgrade` that changes only
+        `backend.config` updates the ConfigMap, reports success, and changes
+        nothing that is running — because TWO things are true at once:
+
+          * config.yaml is a `subPath` mount (below), and a subPath mount is
+            resolved ONCE at container start. The kubelet refreshes a plain
+            ConfigMap volume; it never refreshes this one.
+          * with no annotation here the pod template is byte-identical after
+            the upgrade, so Kubernetes correctly does nothing.
+
+        Observed on the k3d rig before this landed: `helm upgrade` in 0.9 s,
+        status `deployed`, `kubectl get configmap` showing the new value, and
+        the running pod — same name, same `metadata.generation` — still serving
+        the old one. Rotating a credential that way changes nothing, with no
+        signal anywhere that it did not.
+
+        The hash is over the RENDERED ConfigMap, so it covers every input that
+        can reach the file — values, the `{baseDomain}` substitutions, the
+        storage helpers — without this line having to enumerate them.
+
+        ⚠ That only works while the render is DETERMINISTIC: one
+        non-deterministic byte in there and every upgrade rolls the pods
+        forever, which is a worse bug wearing this one's clothes. Checked, and
+        worth re-checking if backend-configmap.yaml grows an input: nothing in
+        it calls `randAlphaNum`, `uuidv4`, `now` or `lookup`, and the one
+        non-deterministic thing in this chart — the Bitnami subchart minting a
+        postgres password when `postgresql.auth.postgresPassword` is empty —
+        cannot reach it, because the DB password written here is `required` and
+        so can only come from values. Measured: two renders of identical inputs
+        produce an identical checksum while the subchart's own Secret differs
+        between them.
+        */}}
+        checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+        {{- with .Values.backend.annotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       labels:
         {{- include "hackagon.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: backend
