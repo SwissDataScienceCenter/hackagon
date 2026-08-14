@@ -621,9 +621,11 @@ deleted.
 
 ### What the first manifest found (2026-08-13, 38 mutations)
 
-**26 caught, 12 with NO REDS.** Every one of the twelve is a backend property,
-and eleven of them cluster into three surfaces that the 6-second Go suite does
-not touch at all:
+**26 caught, 12 with NO REDS** (eleven of the twelve are closed as of
+2026-08-14 — see the section after this one; what they were is kept because the
+CLUSTERING is the finding). Every one of the twelve is a backend property, and
+eleven of them cluster into three surfaces that the 6-second Go suite did not
+touch at all:
 
 - **`requireWindowOpen` — all of it.** Deadlines never closing, the
   now-anchored override ignored, registration opening early: three mutations,
@@ -653,6 +655,47 @@ The frontend half came out the other way round: all 8 vitest mutations produced
 reds, including a cross-file one — flattening `capabilityAllows` turns
 `joinOffer`'s ungoverned case red as well, which is the two gates agreeing, in
 the test suite, that UNGOVERNED permits.
+
+### Eleven of the twelve closed (2026-08-14): 37 exact, 1 gap
+
+28 Go specs later the manifest reads **37 EXACT, 1 GAP, 0 NO REDS**, and the
+whole fast tier still runs in the same ~9.3 s — `internal/service` 312 → 337
+specs (+0.06 s), `internal/middleware` 43 → 46. New files:
+`config_service_test.go` (windows through Join), `hackathon_owner_test.go`,
+`hackathon_join_test.go`, `require_user_test.go`,
+`storage_upload_internal_test.go`, plus a `RequireUser` block in
+`middleware/auth_test.go`.
+
+Four things the work turned up that are worth more than the coverage:
+
+- **Ownership has no column, so every owner assertion goes through the
+  enforcer** `CreateTestServer` hands back — the same instance the server holds,
+  not a copy. `RemoveOwner` answers with an EMPTY message, so "it returned OK"
+  says nothing about who ends up holding what; `HackathonOwners` and
+  `GetHackathonRole` are the facts. And `owner.demote-restores-member` is only
+  visible on someone who did NOT already hold Member, so the spec writes its
+  participant row directly rather than joining — a bob who joined normally would
+  read as Member whether or not the demotion restored it.
+- **The order of RemoveOwner's two refusals is load-bearing in the tests too.**
+  The last-organizer guard runs before the self-demotion one, so a sole owner
+  demoting themselves is refused by the FIRST — which is why the self-demotion
+  spec promotes a co-organizer first (its recipe twin, `act5.owner.self`, says
+  the same in its `todo`), and why the last-organizer spec has a SECOND global
+  admin do the asking instead.
+- **No clock control anywhere, and no sleep.** `requireWindowOpen` takes `now`
+  as an argument but the handlers pass `time.Now()`, so the windows are written
+  relative to now (−1 h closed, +1 h not yet open) and the assertions hold
+  however slowly the suite runs.
+- **`OverrideWindow` cannot express an expired override** — protovalidate holds
+  `extend_minutes` to 1..1440, which the first draft of that spec discovered by
+  failing. The expired state is written to the row directly; the alternative is
+  waiting for one to run out, and a test that sleeps to cross a boundary flakes.
+
+The one that stays open is **`owner.mutex-dropped`**, and deliberately: the
+three RemoveOwner specs above are all SERIAL, so dropping `ownerMu` changes
+nothing any of them can see. A test that went red under it without two calls
+genuinely in flight would be pinning a coincidence. Its witness remains
+`act5.race.owner.remove` in the journey.
 
 ### The baseline is not green, and that is handled rather than hidden
 
@@ -686,6 +729,16 @@ failure is the evidence, and the first freeze had stripped it as noise. The rule
 when a listed test really does witness a mutation, it belongs in that mutation's
 `expectReds`, where the excuse cannot reach it (the filter only ever looks at
 reds that are NOT expected). Excusing an extra prints that reminder every time.
+
+⚠ **And it flakes in BOTH directions, which no filter can excuse.** Observed
+2026-08-14: `capacity.oversell-by-one` came back MISMATCH with that same spec
+under "expected but stayed GREEN" — its witness had passed under the mutation.
+Same root cause (a join that errors out under SQLite contention seats one fewer,
+so the oversell never materialises), opposite symptom, and the `KNOWN_FLAKY`
+list cannot help: an expected red that does not arrive is exactly what a
+MISMATCH is for. Three re-runs of that one id came back EXACT. So a MISMATCH
+naming ONLY a `KNOWN_FLAKY` test in the "stayed GREEN" column wants a re-run
+before it is believed — the same courtesy the extras column already gets.
 
 ## Container traps (Windows/macOS hosts) — read before touching compose
 
