@@ -1,0 +1,356 @@
+# -- Base domain for all external services
+baseDomain: "example.com"
+
+# -- Keycloak realm JSON (pass via --set-file: --set-file realmJson=@./tools/configs/keycloak/realm-hackagon.json)
+# realmJson: ""
+
+# ============================================================
+# Frontend
+# ============================================================
+frontend:
+  image:
+    repository: ghcr.io/swissdatasciencecenter/hackagon/temporary/frontend-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+  annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # -- Frontend config.yaml content (non-sensitive settings)
+  config:
+    log:
+      forceDevLog: false
+    backend:
+      # -- Empty means the backend Service this chart creates. Set a hostname
+      # only to point the frontend somewhere else.
+      hostname: ""
+      port: 3000
+    cookies:
+      useSecure: true
+    oidc:
+      clientId: hackagon-frontend
+      issuer: "https://auth.{baseDomain}/realms/hackagon"
+      audience: hackagon-backend
+
+    # -- Session replay (OpenReplay). OFF, and absent from the rendered
+    # config.yaml, unless enabled — the frontend's schema
+    # (src/lib/schemas/config-schema.ts) parses an absent block as
+    # `{enabled: false}`, so a deployment that has never heard of this feature
+    # cannot start recording because somebody forgot a flag.
+    #
+    # Enabling it streams the DOM, its mutations, clicks, scrolls and
+    # navigations of EVERY visitor to `ingestPoint`. Read the schema comment
+    # and docs/frontend/session-replay.md before turning it on.
+    #
+    # There is deliberately no default endpoint here. A dev tunnel hostname
+    # once sat committed in a tracked config and outlived the tunnel;
+    # internal/config/config_test.go asserts the tracked configs still say
+    # localhost, and this file must not reintroduce the problem from the
+    # deployment side.
+    replay:
+      enabled: false
+      # ingestPoint: "https://replay.example.org/ingest"
+      # projectKey: ""
+      # -- The tracker refuses a page served over plain http. Only ever set
+      # this on a deployment that is genuinely http (it should not be one).
+      allowInsecureOrigin: false
+
+    # -- Audience measurement (Plausible). Same discipline as `replay`: no
+    # block rendered unless enabled, no default host. Sets no cookie and
+    # stores no identifier in the browser; see docs/frontend/analytics.md for
+    # what it does send.
+    plausible:
+      enabled: false
+      # scriptUrl: "https://plausible.example.org/js/script.local.manual.js"
+      # domain: "app.example.org"
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  ingress:
+    enabled: true
+    ingressClass: "webapprouting.kubernetes.azure.com"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
+    hosts:
+      - host: "app.{baseDomain}"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "{releaseName}-frontend-tls"
+        hosts:
+          - "app.{baseDomain}"
+
+# ============================================================
+# Backend
+# ============================================================
+backend:
+  image:
+    repository: ghcr.io/swissdatasciencecenter/hackagon/temporary/backend-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+  annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  # -- Backend config.yaml content
+  config:
+    server:
+      port: "3000"
+      adminemail: "admin@{baseDomain}"
+      adminkeycloakid: ""
+    database:
+      driver: postgres
+      host: "" # Auto-generated from release name in template
+      port: 5432
+      dbname: hackagon
+      user: hackagon
+      postgresPassword: ""
+    oidc:
+      jwksurl: "https://auth.{baseDomain}/realms/hackagon/protocol/openid-connect/certs"
+      issuerurl: "https://auth.{baseDomain}/realms/hackagon"
+      algorithm: RS256
+    logging:
+      level: info
+
+    # -- RPC journal (components/backend/internal/audit). One JSON line per
+    # gRPC call, appended to a file INSIDE the pod: no volume is mounted for
+    # it, so it dies with the pod and is a debugging aid, not an audit trail
+    # you can rely on. Off by default; read config.AuditConfig for exactly
+    # what enabling it records (caller username, method, allowlisted request
+    # fields, status, response ids).
+    #
+    # No block is written to config.yaml unless enabled, so the backend's own
+    # default (off) applies.
+    audit:
+      enabled: false
+      path: ".output/audit/rpc-journal.jsonl"
+      buffer: 4096
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+# ============================================================
+# Object storage (StorageService)
+# ============================================================
+# Avatars, event logos, page media, prize art and the gallery are uploaded
+# from the BROWSER straight to an S3-compatible store over a presigned URL —
+# the bytes never pass through the app. Without this block configured every
+# upload in the product fails, and every image already stored 404s.
+#
+# THE CHART DEPLOYS NO STORE. Deliberately: a bucket is the one piece of state
+# here that must outlive the release, and a StatefulSet in an application chart
+# invites `helm uninstall` to take the uploads with it. Development uses the
+# RustFS container in .devcontainer/; a cluster points at S3, MinIO, Ceph RGW
+# or whatever else the platform already runs and backs up. If you want a store
+# in-cluster, install one as its own release and give its endpoint here.
+#
+# THE CHART DOES NOT CREATE THE BUCKET POLICY EITHER, and a store without it
+# serves 403 to every image. The prefixes `hackathons/*`, `users/*` and
+# `site/*` must be public-read (they render on pages that need no login, which
+# is what lets their stable path live in a database column); everything else —
+# `teams/*` above all — must stay private and is read through short-lived
+# presigned GETs. .devcontainer/rustfs-init.sh has the exact policy document
+# and a --selftest that proves both halves. docs/storage.md explains why.
+storage:
+  # -- Master switch. When false the chart writes an EMPTY endpoint into the
+  # backend config on purpose: the storage RPCs then answer Unavailable, which
+  # is an honest "off". Writing nothing at all would leave the backend on its
+  # development defaults — http://rustfs:9000 with the committed dev keys.
+  enabled: true
+
+  # -- S3 base URL, scheme included. Required when enabled.
+  endpoint: ""
+  # -- Bucket the platform uploads into. Required when enabled.
+  bucket: ""
+  region: "us-east-1"
+
+  # -- Keep the bucket in the PATH (endpoint/bucket/key) rather than in the
+  # hostname (bucket.endpoint/key). Path-style works everywhere; virtual-hosted
+  # style needs wildcard DNS and a certificate that covers it. Both are
+  # supported here — the signed Host follows this flag, see
+  # `hackagon.storageSignHost`.
+  usePathStyle: true
+
+  # -- The path the app serves uploads under, on its OWN origin. The database
+  # stores `<publicPrefix>/<bucket>/<key>`, root-relative, so one stored value
+  # resolves from every hostname the app is reached at. Changing this after
+  # anything has been uploaded breaks the stored paths.
+  publicPrefix: "/objects"
+
+  # -- Credentials. A Secret, always — never values.yaml, which ends up in
+  # `helm get values`, in CI logs and in whatever repository this file lives
+  # in. Create it out of band, e.g.
+  #
+  #   kubectl create secret generic hackagon-storage \
+  #     --from-literal=accessKey=… --from-literal=secretKey=…
+  #
+  # The two keys are read into HACKAGON_STORAGE_ACCESSKEY /
+  # HACKAGON_STORAGE_SECRETKEY on the backend pod. Required when enabled.
+  #
+  # ⚠ The backend's env loader splits any value containing a SPACE into a
+  # list. An access key with a space in it will not arrive intact.
+  existingSecret: ""
+  secretKeys:
+    accessKey: accessKey
+    secretKey: secretKey
+
+  # -- How `<publicPrefix>` is served to browsers.
+  objects:
+    ingress:
+      # -- Route it at the edge, straight to the store. Turn this OFF to have
+      # the frontend proxy it instead: the app owns `/objects/*` as a fallback
+      # route and will forward to STORAGE_ENDPOINT itself. That works, but it
+      # puts every uploaded byte through the app server, which is exactly what
+      # presigned URLs exist to avoid.
+      enabled: true
+
+      # -- ⚠ THE HOST REWRITE. This chart writes it for you; it is described
+      # here because it is the failure nobody diagnoses.
+      #
+      # SigV4 signs the Host header, and the backend signs the STORE's
+      # hostname — the only name it knows. A reverse proxy passes the INCOMING
+      # host through by default (app.example.org here), the store recomputes a
+      # different signature, and every presigned PUT answers
+      # 403 SignatureDoesNotMatch. Public reads are unsigned and keep working,
+      # so the deployment looks healthy and only uploads are dead.
+      #
+      # Expressed for INGRESS-NGINX (`nginx.ingress.kubernetes.io/
+      # upstream-vhost`), because the chart's default ingressClass —
+      # webapprouting.kubernetes.azure.com, the AKS app-routing addon — is
+      # ingress-nginx. On Traefik the same thing is `passHostHeader: false` on
+      # the ServicesLoadBalancer plus a `Headers` middleware setting
+      # `customRequestHeaders.Host`; neither is expressible in a core Ingress
+      # object, so it would need a Traefik-specific CRD. If you run Traefik,
+      # set `enabled: false` here and let the frontend proxy serve /objects.
+      #
+      # The equivalents in this repo, for reference: `changeOrigin` in
+      # components/frontend/vite.config.ts and `header_up Host
+      # {upstream_hostport}` in .devcontainer/Caddyfile.tunnel.
+      #
+      # Rendered on its own Ingress object, not the frontend's: these
+      # annotations are per-Ingress, and rewrite-target on the frontend's rules
+      # would mangle every application URL.
+      annotations: {}
+
+      # -- Largest upload the store accepts through this route. The biggest
+      # rule the backend signs is a 50 MiB submission attachment
+      # (internal/service/storage_service.go); nginx defaults to 1m and would
+      # refuse almost every image with a 413.
+      maxBodySize: "64m"
+
+      # -- The Service the /objects path routes to. Left empty, the chart
+      # creates an ExternalName Service for `endpoint`'s hostname — which is
+      # what makes an out-of-cluster store routable from an Ingress at all.
+      # Name an existing Service instead when the store runs in this cluster.
+      #
+      # ⚠ ingress-nginx can be configured to refuse ExternalName backends
+      # (`disable-service-external-name`, off by default). On a cluster that
+      # sets it, this route 503s: either name an in-cluster Service here, or
+      # set `enabled: false` and let the frontend proxy /objects.
+      service:
+        name: ""
+        port: null
+
+# ============================================================
+# Keycloak (helmforge)
+# ============================================================
+keycloak:
+  enabled: true
+  replicaCount: 1
+
+  # -- Production mode requires hostname and database
+  mode: production
+
+  # -- Hostname for Keycloak (public admin UI)
+  hostname:
+    hostname: "" # e.g. "https://auth.{baseDomain}"
+
+  # -- Admin credentials (password from realm JSON, but username needed)
+  admin:
+    username: hackagon-admin
+
+  # -- External database (reuse the same postgres instance)
+  database:
+    external:
+      vendor: postgres
+      host: "" # Required: set to <release>-postgresql (e.g. "hackagon-postgresql")
+      port: 5432
+      database: keycloak
+      user: keycloak
+      password: ""
+
+  # -- Realm import from ConfigMap
+  realmImport:
+    enabled: true
+    existingConfigMap: hackagon-realm
+
+  # -- Persistence (for Keycloak data, not DB)
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  # -- Resources
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # -- Proxy configuration (behind reverse proxy)
+  proxy:
+    headers: xforwarded
+
+  # -- Ingress for Keycloak (managed by parent chart)
+  ingress:
+    enabled: false
+
+# ============================================================
+# PostgreSQL (bitnami) — two databases, two users
+# ============================================================
+postgresql:
+  enabled: true
+  auth:
+    username: postgres
+    database: postgres
+    postgresPassword: ""
+
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    initdb:
+      scriptsConfigMap: hackagon-keycloak-init
+
+# ============================================================
+# Frontend OIDC secrets
+# ============================================================
+frontendSecrets:
+  clientSecret: ""
+  authSecret: ""

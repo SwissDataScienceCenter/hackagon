@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hackagon.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hackagon.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      {{- with .Values.backend.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "hackagon.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          args:
+            - "--config-dir=/etc/hackagon/"
+          {{- if .Values.storage.enabled }}
+          {{- /*
+          Object-store credentials, from a Secret and never from the
+          ConfigMap. HACKAGON_* env is the backend's LAST config layer, so
+          these win over anything in config.yaml — and the key names have no
+          separator on purpose: the loader lowercases and turns `_` into `.`,
+          so HACKAGON_STORAGE_ACCESS_KEY would become `storage.access.key` and
+          be quietly ignored.
+          */}}
+          env:
+            - name: HACKAGON_STORAGE_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "storage.existingSecret is required when storage.enabled — credentials must come from a Secret, not from values.yaml" .Values.storage.existingSecret }}
+                  key: {{ .Values.storage.secretKeys.accessKey }}
+            - name: HACKAGON_STORAGE_SECRETKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.existingSecret }}
+                  key: {{ .Values.storage.secretKeys.secretKey }}
+          {{- end }}
+          ports:
+            - name: grpc
+              containerPort: 3000
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/hackagon/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          livenessProbe:
+            grpc:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            grpc:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hackagon.fullname" . }}-backend-config

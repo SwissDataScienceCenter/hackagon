@@ -43,7 +43,13 @@ result
 # All .env files
 .env
 .env.yaml
+# Helm dev values with passwords
+helm-chart/values.dev.yaml
 ## ============================================================================
+
+# Helm subchart archives, fetched by `helm dependency build` from Chart.lock.
+# Not a secret, just generated — the lock file is what belongs in a commit.
+helm-chart/charts/
 
 # Generated files
 components/backend/internal/proto

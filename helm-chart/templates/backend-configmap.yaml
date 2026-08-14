@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hackagon.fullname" . }}-backend-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: {{ .Values.backend.config.server.port | quote }}
+      adminemail: {{ .Values.backend.config.server.adminemail | replace "{baseDomain}" .Values.baseDomain | quote }}
+      adminkeycloakid: {{ .Values.backend.config.server.adminkeycloakid | quote }}
+    database:
+      driver: {{ .Values.backend.config.database.driver | quote }}
+      host: {{ include "hackagon.postgresqlServiceName" . | quote }}
+      port: {{ .Values.backend.config.database.port }}
+      dbname: {{ .Values.backend.config.database.dbname | quote }}
+      user: {{ .Values.backend.config.database.user | quote }}
+      password: {{ .Values.backend.config.database.postgresPassword | required "postgresql.auth.postgresPassword is required" | quote }}
+    oidc:
+      jwksurl: {{ .Values.backend.config.oidc.jwksurl | replace "{baseDomain}" .Values.baseDomain | quote }}
+      issuerurl: {{ .Values.backend.config.oidc.issuerurl | replace "{baseDomain}" .Values.baseDomain | quote }}
+      algorithm: {{ .Values.backend.config.oidc.algorithm | quote }}
+    logging:
+      level: {{ .Values.backend.config.logging.level | quote }}
+    {{- /*
+    Object store. Keys are lowercase and unseparated to match the yaml tags on
+    config.StorageConfig and the spelling in
+    components/backend/data/test/config/config.yaml — the same file this one
+    replaces in a deployment.
+
+    accesskey/secretkey are DELIBERATELY absent: a ConfigMap is readable by
+    anything with `get` on the namespace. They arrive as HACKAGON_STORAGE_*
+    env vars from a Secret, and env is the backend's last config layer, so it
+    wins over this file.
+    */}}
+    storage:
+    {{- if .Values.storage.enabled }}
+      endpoint: {{ include "hackagon.storageEndpointURL" . | quote }}
+      region: {{ .Values.storage.region | quote }}
+      bucket: {{ required "storage.bucket is required when storage.enabled" .Values.storage.bucket | quote }}
+      usepathstyle: {{ .Values.storage.usePathStyle }}
+      publicprefix: {{ include "hackagon.storagePublicPrefix" . | quote }}
+    {{- else }}
+      {{- /*
+      Explicitly empty, not omitted. The backend treats an empty endpoint as
+      "no store" and answers Unavailable; omitting the key would leave it on
+      its development default (http://rustfs:9000 with committed dev keys),
+      which fails later and less clearly.
+      */}}
+      endpoint: ""
+    {{- end }}
+    {{- if .Values.backend.config.audit.enabled }}
+    audit:
+      enabled: true
+      path: {{ .Values.backend.config.audit.path | quote }}
+      buffer: {{ .Values.backend.config.audit.buffer }}
+    {{- end }}

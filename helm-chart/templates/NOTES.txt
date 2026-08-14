@@ -1,0 +1,50 @@
+Hackagon has been deployed!
+
+Frontend:  https://{{ .Values.baseDomain }}
+Keycloak:  https://auth.{{ .Values.baseDomain }}
+
+To get the generated frontend OIDC secrets, run:
+
+  kubectl get secret {{ include "hackagon.fullname" . }}-frontend-secrets \
+    -n {{ .Release.Namespace }} -o jsonpath='{.data.secrets\.yaml}' | base64 -d
+
+Passwords are set in your values files. Retrieve them with:
+
+  # Platform (hackagon) user password
+  kubectl get secret {{ include "hackagon.fullname" . }}-postgresql \
+    -n {{ .Release.Namespace }} -o jsonpath='{.data.postgres-password}' | base64 -d
+
+{{ if .Values.storage.enabled }}
+Object storage is configured against {{ include "hackagon.storageEndpointURL" . }}
+(bucket {{ .Values.storage.bucket }}), with credentials from the Secret
+"{{ .Values.storage.existingSecret }}".
+
+This chart does NOT create the bucket or its policy. Uploads will succeed and
+every image will then 403 until these prefixes are public-read:
+
+  hackathons/*   users/*   site/*
+
+and everything else — teams/* above all — is left private. See
+.devcontainer/rustfs-init.sh for the exact policy document and a self-test.
+{{- if .Values.storage.objects.ingress.enabled }}
+
+{{ include "hackagon.storagePublicPrefix" . }}/* is served by its own Ingress,
+which rewrites Host to {{ include "hackagon.storageSignHost" . }}. That rewrite
+is what makes presigned uploads work; without it they answer 403
+SignatureDoesNotMatch while public reads keep working.
+{{- else }}
+
+{{ include "hackagon.storagePublicPrefix" . }}/* is served by the frontend's own
+fallback proxy — every uploaded byte passes through the app server. Enable
+storage.objects.ingress to route it at the edge instead.
+{{- end }}
+{{- else }}
+
+Object storage is DISABLED: uploads (avatars, event logos, page media, prize
+art, the gallery) will answer Unavailable. Set storage.enabled with an
+endpoint, a bucket and a credentials Secret to turn them on.
+{{- end }}
+
+Check the status of your release:
+
+  helm status {{ .Release.Name }} -n {{ .Release.Namespace }}

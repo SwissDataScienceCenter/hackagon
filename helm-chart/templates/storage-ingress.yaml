@@ -1,0 +1,101 @@
+{{- if and .Values.storage.enabled .Values.storage.objects.ingress.enabled -}}
+{{- if not .Values.frontend.ingress.enabled -}}
+{{- fail "storage.objects.ingress.enabled needs frontend.ingress.enabled: /objects is served on the frontend's own hosts, so there is nothing to attach it to" -}}
+{{- end -}}
+{{- $prefix := include "hackagon.storagePublicPrefix" . -}}
+{{- $signHost := include "hackagon.storageSignHost" . -}}
+{{- /*
+Uploaded files, on the APP's own origin.
+
+The database stores a root-relative path (<publicPrefix>/<bucket>/<key>), so one
+stored value resolves from every hostname the app is reached at. Something has
+to serve that path; this is it, and it routes straight to the store so the bytes
+never touch the app server.
+
+A SEPARATE Ingress from the frontend's, and it has to be: `rewrite-target` and
+`upstream-vhost` are per-Ingress annotations, and applying them to the
+frontend's own rules would rewrite every application URL and lie to SvelteKit
+about its host.
+
+Same host as the frontend — same-origin is the entire point of this path — so
+the hosts and the TLS block are taken from `frontend.ingress` rather than
+duplicated in values.
+
+⚠ TWO annotations here are load-bearing, and the failure they prevent is silent:
+
+  upstream-vhost   SigV4 signs the Host header, and the backend signs the
+                   STORE's hostname because that is the only name it knows.
+                   ingress-nginx forwards the INCOMING host by default, the
+                   store recomputes a different signature, and every presigned
+                   PUT answers 403 SignatureDoesNotMatch — while unsigned
+                   public reads keep working, so nothing looks broken except
+                   uploads. `header_up Host` in .devcontainer/Caddyfile.tunnel
+                   and `changeOrigin` in vite.config.ts are the same fix at the
+                   other two edges. It carries the PORT when the endpoint names
+                   one, and the bucket prefix under virtual-hosted style,
+                   because that is what `signHost` in internal/storage/client.go
+                   does.
+
+  rewrite-target   The store knows nothing about `/objects`. The signature is
+                   computed over the un-prefixed path, so the prefix must be
+                   stripped before the request leaves — the `(/|$)(.*)` capture
+                   plus `/$2` is the ingress-nginx spelling of caddy's
+                   `handle_path` and vite's `rewrite`.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "hackagon.fullname" . }}-objects
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+  annotations:
+    nginx.ingress.kubernetes.io/upstream-vhost: {{ $signHost | quote }}
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.storage.objects.ingress.maxBodySize | quote }}
+    nginx.ingress.kubernetes.io/backend-protocol: {{ include "hackagon.storageBackendProtocol" . | quote }}
+    {{- if eq (include "hackagon.storageBackendProtocol" .) "HTTPS" }}
+    # SNI as well as Host: a store behind a shared TLS endpoint answers with the
+    # wrong certificate otherwise.
+    nginx.ingress.kubernetes.io/proxy-ssl-server-name: "on"
+    nginx.ingress.kubernetes.io/proxy-ssl-name: {{ include "hackagon.storageHostname" . | quote }}
+    {{- end }}
+    {{- with .Values.storage.objects.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.frontend.ingress.ingressClass }}
+  rules:
+    {{- range .Values.frontend.ingress.hosts }}
+    - host: {{ .host | replace "{baseDomain}" $.Values.baseDomain | replace "{releaseName}" $.Release.Name }}
+      http:
+        paths:
+          # ImplementationSpecific, not Prefix: a Prefix path is matched
+          # literally and the capture groups the rewrite needs would be part of
+          # the path instead of a regex.
+          - path: {{ printf "%s(/|$)(.*)" $prefix }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ include "hackagon.storageObjectsServiceName" $ }}
+                port:
+                  number: {{ include "hackagon.storageObjectsServicePort" $ }}
+    {{- end }}
+  {{- /*
+  The same host and the same TLS secret as the frontend Ingress, referenced
+  rather than re-issued: the cert-manager annotation lives on that Ingress
+  only, so exactly one Certificate is ever requested for this hostname.
+  */}}
+  {{- with .Values.frontend.ingress.tls }}
+  tls:
+    {{- range . }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | replace "{baseDomain}" $.Values.baseDomain | replace "{releaseName}" $.Release.Name }}
+        {{- end }}
+      secretName: {{ .secretName | replace "{releaseName}" $.Release.Name }}
+    {{- end }}
+  {{- end }}
+{{- end }}

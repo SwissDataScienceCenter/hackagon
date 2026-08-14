@@ -1,0 +1,27 @@
+{{- $host := .Values.keycloak.database.external.host | required "keycloak.database.external.host is required (e.g. \"hackagon-postgresql\")" -}}
+{{- $keycloakPassword := .Values.keycloak.database.external.password | required "keycloak.database.external.password is required" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hackagon.fullname" . }}-realm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  hackagon.json: |
+    {{- /*
+    The dev export (tools/configs/keycloak/realm-hackagon.json) hard-codes
+    http://localhost:8081 in the frontend client's redirectUris, webOrigins and
+    post.logout.redirect.uris. Every one of those has to become the deployed
+    origin, WITH ITS SCHEME: Keycloak accepts an absolute URI or a root-relative
+    path, and a bare `app.example.org/*` is neither — it is taken as a relative
+    path and the login redirect is then rejected as an invalid redirect_uri.
+    https, because the frontend Ingress terminates TLS and the OIDC issuer in
+    values.yaml is https for the same reason.
+    */}}
+    {{- $frontendUrl := printf "https://%s" (include "hackagon.frontendHost" .) }}
+    {{- $raw := .Values.realmJson | default "" }}
+    {{- $processed := $raw | replace "http://localhost:8081/*##http://localhost:8081/auth/callback/keycloak" (printf "%s/*##%s/auth/callback/keycloak" $frontendUrl $frontendUrl) }}
+    {{- $processed = $processed | replace "http://localhost:8081/*" (printf "%s/*" $frontendUrl) }}
+    {{- $processed = $processed | replace "http://localhost:8081" $frontendUrl }}
+    {{- $processed | nindent 4 }}

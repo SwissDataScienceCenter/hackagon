@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hackagon.fullname" . }}-frontend-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    log:
+      forceDevLog: {{ .Values.frontend.config.log.forceDevLog }}
+    backend:
+      hostname: {{ .Values.frontend.config.backend.hostname | default (include "hackagon.backendServiceName" .) | quote }}
+      port: {{ .Values.frontend.config.backend.port }}
+    cookies:
+      useSecure: {{ .Values.frontend.config.cookies.useSecure }}
+    oidc:
+      clientId: {{ .Values.frontend.config.oidc.clientId | quote }}
+      issuer: {{ .Values.frontend.config.oidc.issuer | replace "{baseDomain}" .Values.baseDomain | quote }}
+      audience: {{ .Values.frontend.config.oidc.audience | quote }}
+    {{- /*
+    replay and plausible are OPTIONAL blocks. Nothing is rendered when they are
+    off — not `enabled: false`, not an empty map — because the frontend's zod
+    schema parses an absent block as disabled, and a half-written block
+    (enabled with no endpoint) fails validation at boot rather than starting.
+    */}}
+    {{- with .Values.frontend.config.replay }}
+    {{- if .enabled }}
+    replay:
+      enabled: true
+      ingestPoint: {{ required "frontend.config.replay.ingestPoint is required when replay is enabled" .ingestPoint | quote }}
+      projectKey: {{ required "frontend.config.replay.projectKey is required when replay is enabled" .projectKey | quote }}
+      allowInsecureOrigin: {{ .allowInsecureOrigin | default false }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.frontend.config.plausible }}
+    {{- if .enabled }}
+    plausible:
+      enabled: true
+      scriptUrl: {{ required "frontend.config.plausible.scriptUrl is required when plausible is enabled" .scriptUrl | quote }}
+      domain: {{ required "frontend.config.plausible.domain is required when plausible is enabled" .domain | quote }}
+    {{- end }}
+    {{- end }}
