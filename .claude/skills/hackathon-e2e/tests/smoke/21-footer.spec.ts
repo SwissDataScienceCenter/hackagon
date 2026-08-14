@@ -2,7 +2,11 @@ import { test, expect, type Page } from "@playwright/test"
 import { PERSONAS, SEED_HACKATHONS } from "../../personas.js"
 import { storageStatePath } from "../../helpers/state.js"
 import { rpcAnonymous } from "../../helpers/api.js"
-import { expectFooterOperable } from "../../helpers/reflow.js"
+import {
+  expectFooterLinkNamesUnique,
+  expectFooterOperable,
+  footerLinkNames,
+} from "../../helpers/reflow.js"
 
 // The site footer on the SIGNED-IN half of the app, and what it is FOR.
 //
@@ -32,17 +36,30 @@ import { expectFooterOperable } from "../../helpers/reflow.js"
  * slug -> the <h1> the SitePage renders (cmd/seed/main.go, seedSitePages), and
  * the footer nav landmark that links to it.
  *
- * ⚠ `nav` is load-bearing, not decoration. develop's rebuilt footer (`02658384`)
- * puts the SDSC org site's links beside ours and one of THEM is also named
- * exactly "About" (datascience.ch/about). Footer-wide, `name: "About"` matches
- * two links pointing at two different places; the landmark is what says which
- * one this test means. The label also moved: "Terms" is "Terms of use" now, so
- * the link text and the page's <h1> finally agree.
+ * ⚠ `label` and `title` are the SAME STRING on all three rows now, and that is
+ * the fix rather than a coincidence. develop's rebuilt footer (`02658384`) put
+ * the SDSC org site's links beside ours with one of THEM named exactly "About"
+ * (datascience.ch/about), so footer-wide `name: "About"` matched two links
+ * pointing at two different places — undisambiguatable in a screen reader's
+ * link list, which is a flat list of names with the column headings thrown
+ * away. Our link carries the SitePage's own title now, so the two names differ
+ * at the source: a page and its inbound link cannot drift while the rule is
+ * "name the destination the way it names itself". "Terms" → "Terms of use" was
+ * the same move, made by develop for the same reason.
+ *
+ * `nav` stays because it costs nothing and says WHICH link a bare name means.
+ * The property that keeps the collision gone is asserted directly, on the
+ * footer as a whole, by `expectFooterLinkNamesUnique` further down.
  */
 const SITE_PAGES = [
   { label: "Privacy", nav: "Legal", href: "/privacy", title: "Privacy" },
   { label: "Terms of use", nav: "Legal", href: "/terms", title: "Terms of use" },
-  { label: "About", nav: "Platform", href: "/about", title: "About Hackagon" },
+  {
+    label: "About Hackagon",
+    nav: "Platform",
+    href: "/about",
+    title: "About Hackagon",
+  },
 ]
 
 let h1Id = ""
@@ -234,35 +251,17 @@ test.describe("the footer's links resolve from inside the app", () => {
     //
     // Not followed — an external navigation in a suite with no network contract
     // with linkedin.com is a flake waiting to happen. The href is the claim.
+    //
+    // The name computation moved to helpers/reflow.ts (`footerLinkNames`) when
+    // the uniqueness check below needed the same thing. It is shared rather
+    // than copied for one reason: it is the piece that has already been WRONG
+    // once — reading textContent alone called the two parent-institution logos
+    // nameless, because they are `<a><img alt="ETH Zurich"></a>` and the alt
+    // text is what names them. One copy can be corrected; two drift.
     await page.goto("/dashboard")
-    const offsite = await page
-      .locator("footer")
-      .getByRole("link")
-      .evaluateAll((els) =>
-        els
-          .map((e) => ({
-            href: e.getAttribute("href") ?? "",
-            // aria-label wins, then the link's CONTENT — and content includes
-            // the alt text of any image inside it. Reading textContent alone
-            // called the two parent-institution logos nameless on the first
-            // run; they are `<a><img alt="ETH Zurich"></a>`, which names the
-            // link perfectly well. A check that reports a correct page as
-            // broken gets deleted, so it computes the name the way a screen
-            // reader does.
-            name: (
-              e.getAttribute("aria-label") ??
-              [
-                (e.textContent ?? "").trim(),
-                ...Array.from(e.querySelectorAll("img")).map(
-                  (i) => i.getAttribute("alt") ?? "",
-                ),
-              ]
-                .filter(Boolean)
-                .join(" ")
-            ).trim(),
-          }))
-          .filter((l) => /^https?:/.test(l.href)),
-      )
+    const offsite = (await footerLinkNames(page)).filter((l) =>
+      /^https?:/.test(l.href),
+    )
 
     // Positive control: a footer whose off-site row went missing would satisfy
     // both assertions below with an empty array, which is the vacuous shape
@@ -282,6 +281,23 @@ test.describe("the footer's links resolve from inside the app", () => {
       "an off-site footer link has no accessible name — icon-only anchors need " +
         "aria-label, and nothing on screen shows when one is lost",
     ).toEqual([])
+  })
+
+  test("no two footer links answer to the same name", async ({ page }) => {
+    // The one thing a screen reader's link list is: a flat list of NAMES. Our
+    // /about and datascience.ch/about were both "About" in it (develop's
+    // `02658384`), one column apart on screen and side by side in that list.
+    //
+    // Asserted on BOTH shells, because the property is about a region and the
+    // region is mounted by AppShell — a page that added a link of its own into
+    // the footer would break this on one side only, and the equality test
+    // further down compares the two footers to each OTHER, so it would agree
+    // with two identical broken ones.
+    for (const path of ["/hackathon", "/dashboard"]) {
+      await page.goto(path)
+      await page.waitForLoadState("networkidle").catch(() => {})
+      await expectFooterLinkNamesUnique(page, `smoke ${path}`)
+    }
   })
 
   // ─── Controls: each assertion above, shown failing ─────────────────────────
@@ -359,6 +375,42 @@ test.describe("the footer's links resolve from inside the app", () => {
       "a viewport-anchored sidebar is drawn over the footer, and this check is " +
         "what would say so",
     ).rejects.toThrow(/drawn over the footer/)
+  })
+
+  test("CONTROL: two links with one name fails the name check", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard")
+    await page.waitForLoadState("networkidle").catch(() => {})
+
+    // Positive control first, on the footer as it ships. Without it a helper
+    // that threw unconditionally would look like a good check.
+    await expectFooterLinkNamesUnique(page, "control (names distinct)")
+
+    // Now put the footer back in exactly the state develop's rebuild shipped
+    // in: our own About page's link named "About", one column away from
+    // datascience.ch's. Reproduced in the live DOM rather than by reverting the
+    // component, so the proof runs on every suite rather than once for whoever
+    // happened to be watching.
+    const collided = await page.evaluate(() => {
+      const own = document.querySelector('footer a[href="/about"]')
+      if (!own) return false
+      own.textContent = "About"
+      return true
+    })
+    expect(
+      collided,
+      "the footer has no link to /about — this control cannot reproduce the " +
+        "collision, so it is not proving the check can fail",
+    ).toBe(true)
+
+    await expect(
+      expectFooterLinkNamesUnique(page, "control (duplicate name)"),
+      'both links are present, visible and correctly labelled on screen — "About" ' +
+        "under a Platform heading and under an SDSC one. Only the flat list of " +
+        "names shows the clash, which is why this check reads names rather than " +
+        "columns",
+    ).rejects.toThrow(/"About" does not name exactly one link/)
   })
 
   test("the footer is the same footer on both sides of the login", async ({

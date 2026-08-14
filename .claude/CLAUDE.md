@@ -444,13 +444,43 @@ rule is exactly the one that action exists for — `SubmitRegistrationForm` is a
 upsert precisely so a first typo is not permanent, which needs a way IN from the
 UI — so the locator moved and the claim did not.
 
-**Two stale things develop's own tree carries, found by the audit and not fixed
-here:** `(app)/account/+page.svelte` still tells people to look for "Your
-registration answers → View or edit", copy for a control that no longer exists;
-and the rebuilt footer links `datascience.ch/about` beside our own `/about`, so
-two links in one region share the accessible name "About" — which is precisely
-what a screen-reader link list cannot disambiguate, and what made the footer
-checks scope to a nav landmark instead of searching footer-wide.
+**Two stale things develop's own tree carried, found by the audit and fixed
+2026-08-14.** Both were copy, and neither could be seen on screen.
+
+`(app)/account/+page.svelte` told people to look for "Your registration answers
+→ View or edit" — the block `c596683c` deleted. It names the roster now
+(Participants, then View on your own row), and `smoke/07-account-menu` FOLLOWS
+that sentence rather than reading it: it lifts the `<strong>` labels out of the
+paragraph, clicks the destination they name, and asserts a 200. Copy that names
+a control is a promise about the UI; the only way to keep one is to click it.
+There is no link in that paragraph, and that is a limit — `/account` loads your
+profile and no event, so an href would have to guess WHICH event you meant.
+
+The rebuilt footer linked `datascience.ch/about` beside our own `/about`, so two
+links in one region shared the accessible name "About". Nothing on screen was
+wrong: the column headings tell them apart. **A screen reader's link list is a
+flat list of NAMES, and headings are the first thing it discards** — which is
+also why the tooling's earlier answer (scope the footer checks to a nav
+landmark) made the checks correct and left the product broken. Ours reads
+"About Hackagon" now, in its VISIBLE text: an `aria-label` would have fixed the
+list and broken voice control ("click About"), which is the trade WCAG 2.5.3 is
+about. The rule that keeps it fixed is **name the destination the way it names
+itself** — "About Hackagon" is that SitePage's own `<h1>` in the seed and in
+act 0 — so the two names cannot re-converge through a copy edit on one side.
+`expectFooterLinkNamesUnique` asserts the PROPERTY (no name identifies two links
+in the footer landmark), never a list of expected names: the previous generation
+of that check was really an assertion about the footer's SIZE and broke when
+develop grew it to 14 links.
+
+⚠ **Still open, and reported rather than fixed unasked:** the five
+`datascience.ch` links are marked as leaving the site only by `target="_blank"`,
+which nothing announces. Sighted users get no icon and screen-reader users get
+no word — the nav landmark's name is context a link list discards, exactly like
+the column heading above. Smallest fix: a visually-hidden suffix inside each
+anchor (`<span class="sr-only"> (opens datascience.ch in a new tab)</span>`),
+which APPENDS to the accessible name and so keeps the visible text contained in
+it. The logo and social links already say who they lead to by name (ETH Zurich,
+EPFL, SDSC on LinkedIn); these five do not.
 
 **Guessing which labels moved does not scale — the check is mechanical.** Every
 static `clickLink`/`clickButton`/`expectHeading`/`expectText` literal in

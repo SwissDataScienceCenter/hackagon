@@ -17,7 +17,8 @@
 
     // The SDSC org site, off-site from here — read out of datascience.ch's own
     // markup rather than guessed. Distinct from the Platform column's own About,
-    // which is about Hackagon, not about SDSC.
+    // which is about Hackagon, not about SDSC: see the note on that link for why
+    // the two must not share a NAME, only a column heading.
     const SDSC_LINKS = [
         { label: 'About', href: 'https://datascience.ch/about' },
         { label: 'Events', href: 'https://datascience.ch/events' },
@@ -74,8 +75,25 @@
                 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches NavBar's own convention -->
                 <a href="/hackathon" class={LINK}>Hackathons</a>
                 <a href={resolve('/(app)/dashboard')} class={LINK}>Dashboard</a>
+                <!-- "About Hackagon", not "About". The SDSC column beside this
+                     one links datascience.ch/about, and two links whose
+                     accessible name is exactly "About" cannot be told apart in a
+                     screen reader's link list — which is a flat list of NAMES,
+                     with the column heading that distinguishes them on screen
+                     thrown away. Fixed in the visible text rather than with an
+                     aria-label on one of them: an aria-label REPLACES the label
+                     a sighted person reads, so "click About" would stop working
+                     for voice control and the visible text would no longer be
+                     contained in the accessible name (WCAG 2.5.3).
+                     The rule that keeps it fixed: each link names its
+                     destination the way that destination names ITSELF. "About
+                     Hackagon" is this SitePage's own <h1> (cmd/seed/main.go, and
+                     the journey's act0 authors it under the same title);
+                     "About" is datascience.ch's own label for theirs. Two pages,
+                     two titles, so the collision cannot come back through a copy
+                     edit on one side. -->
                 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- SitePage slug, not a typed route -->
-                <a href="/about" class={LINK}>About</a>
+                <a href="/about" class={LINK}>About Hackagon</a>
             </nav>
 
             <nav class="flex flex-col gap-3" aria-label="Swiss Data Science Center">

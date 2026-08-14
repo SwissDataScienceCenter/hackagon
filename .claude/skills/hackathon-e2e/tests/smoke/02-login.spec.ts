@@ -71,15 +71,22 @@ for (const persona of ALL_PERSONAS) {
       // the header" is satisfied just as well by an About that was deleted, and
       // an absence with no positive control agrees with everything
       // (.claude/CLAUDE.md, "Ways a test reported green while proving nothing").
+      //
+      // The absence half is matched by PREFIX, the presence half by the exact
+      // name. The link is called "About Hackagon" now — it names its own
+      // destination, so it cannot be confused with the SDSC column's
+      // datascience.ch/about — and an exact `"About"` here would have gone on
+      // reporting zero header entries whatever the header did with the new
+      // spelling. Exactly the shape of a check that agrees with everything.
       await expect(
-        nav.getByRole("link", { name: "About", exact: true }),
+        nav.getByRole("link", { name: /^About/ }),
         "About is deliberately not a header entry any more",
       ).toHaveCount(0)
       await expect(
         page
           .locator("footer")
           .getByRole("navigation", { name: "Platform" })
-          .getByRole("link", { name: "About", exact: true }),
+          .getByRole("link", { name: "About Hackagon", exact: true }),
         "…but it must still be reachable, and the footer is now the only way in",
       ).toHaveAttribute("href", "/about")
 
