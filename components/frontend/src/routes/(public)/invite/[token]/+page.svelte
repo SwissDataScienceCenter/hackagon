@@ -1,6 +1,7 @@
 <script lang="ts">
     import Seo from '$lib/components/layout/Seo.svelte';
     import { enhance } from '$app/forms';
+    import { resolve } from '$app/paths';
     import MarkdownSection from '$lib/components/hackathon/MarkdownSection.svelte';
     import { statusLabel } from '$lib/utils/hackathonStatus';
 
@@ -56,7 +57,7 @@
                 The organizers review requests and will confirm your place. You'll find
                 this event on your dashboard.
             </p>
-            <a href="/dashboard" class="btn btn-accent mt-4">Go to my dashboard</a>
+            <a href={resolve('/(app)/dashboard')} class="btn btn-accent mt-4">Go to my dashboard</a>
         {:else if data.signedIn}
             <p class="text-sm text-ink-3">
                 Requesting a place puts you on the organizers' list — they confirm who

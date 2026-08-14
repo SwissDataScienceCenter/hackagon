@@ -36,6 +36,7 @@ func NewConfigService(dbClient *ent.Client, enf *m.Enforcer) *ConfigService {
 }
 
 func windowsEntryFromEnt(w *ent.HackathonWindows, hackathonID uuid.UUID) *ents.HackathonWindows {
+	//exhaustruct:ignore
 	entry := &ents.HackathonWindows{
 		HackathonId: hackathonID.String(),
 		ModifiedAt:  timestamppb.New(w.ModifiedAt),
@@ -79,6 +80,8 @@ func windowsRowFor(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			//nolint:nilnil // documented contract: nil,nil is "no row yet", every
+			// caller already checks it as a distinct state from an error
 			return nil, nil
 		}
 
@@ -132,6 +135,7 @@ func (s *ConfigService) GetWindows(
 		if ent.IsNotFound(err) {
 			// No row yet: nothing has been scheduled, which is a valid state and
 			// not an error the UI should have to translate.
+			//exhaustruct:ignore
 			return &cfgMsgs.GetWindowsResponse{}, nil
 		}
 		slog.Error("query hackathon windows", "err", err)
@@ -160,6 +164,27 @@ func (s *ConfigService) SetWindows(
 		return nil, err
 	}
 
+	row, err := s.upsertWindows(ctx, hackathonID, modifier, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfgMsgs.SetWindowsResponse{
+		Windows: windowsEntryFromEnt(row, hackathonID),
+	}, nil
+}
+
+// upsertWindows creates the hackathon's windows row if none exists yet, or
+// updates the existing one otherwise. Split out of SetWindows because the
+// create/update branches repeat the same five nillable-timestamp setters and
+// LatePolicy handling; keeping them inline pushed SetWindows past the nesting
+// budget for no benefit.
+func (s *ConfigService) upsertWindows(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	modifier *ent.User,
+	req *cfgMsgs.SetWindowsRequest,
+) (*ent.HackathonWindows, error) {
 	existing, err := windowsRowFor(ctx, s.dbClient, hackathonID)
 	if err != nil {
 		slog.Error("query hackathon windows", "err", err)
@@ -180,15 +205,17 @@ func (s *ConfigService) SetWindows(
 		create := s.dbClient.HackathonWindows.Create().
 			SetHackathonID(hackathonID).
 			SetModifierID(modifier.ID).
-			SetNillableRegistrationOpens(asTime(req.RegistrationOpens)).
-			SetNillableRegistrationCloses(asTime(req.RegistrationCloses)).
-			SetNillableProposalsClose(asTime(req.ProposalsClose)).
-			SetNillablePreferencesClose(asTime(req.PreferencesClose)).
-			SetNillableSubmissionsClose(asTime(req.SubmissionsClose))
+			SetNillableRegistrationOpens(asTime(req.GetRegistrationOpens())).
+			SetNillableRegistrationCloses(asTime(req.GetRegistrationCloses())).
+			SetNillableProposalsClose(asTime(req.GetProposalsClose())).
+			SetNillablePreferencesClose(asTime(req.GetPreferencesClose())).
+			SetNillableSubmissionsClose(asTime(req.GetSubmissionsClose()))
 		if req.LatePolicy != nil {
 			create.SetLatePolicy(req.GetLatePolicy())
 		}
-		if existing, err = create.Save(ctx); err != nil {
+
+		row, err := create.Save(ctx)
+		if err != nil {
 			if ent.IsConstraintError(err) {
 				return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
 			}
@@ -196,27 +223,29 @@ func (s *ConfigService) SetWindows(
 
 			return nil, status.Error(codes.Internal, "couldn't create hackathon windows")
 		}
-	} else {
-		update := existing.Update().
-			SetModifierID(modifier.ID).
-			SetNillableRegistrationOpens(asTime(req.RegistrationOpens)).
-			SetNillableRegistrationCloses(asTime(req.RegistrationCloses)).
-			SetNillableProposalsClose(asTime(req.ProposalsClose)).
-			SetNillablePreferencesClose(asTime(req.PreferencesClose)).
-			SetNillableSubmissionsClose(asTime(req.SubmissionsClose))
-		if req.LatePolicy != nil {
-			update.SetLatePolicy(req.GetLatePolicy())
-		}
-		if existing, err = update.Save(ctx); err != nil {
-			slog.Error("update hackathon windows", "err", err)
 
-			return nil, status.Error(codes.Internal, "couldn't update hackathon windows")
-		}
+		return row, nil
 	}
 
-	return &cfgMsgs.SetWindowsResponse{
-		Windows: windowsEntryFromEnt(existing, hackathonID),
-	}, nil
+	update := existing.Update().
+		SetModifierID(modifier.ID).
+		SetNillableRegistrationOpens(asTime(req.GetRegistrationOpens())).
+		SetNillableRegistrationCloses(asTime(req.GetRegistrationCloses())).
+		SetNillableProposalsClose(asTime(req.GetProposalsClose())).
+		SetNillablePreferencesClose(asTime(req.GetPreferencesClose())).
+		SetNillableSubmissionsClose(asTime(req.GetSubmissionsClose()))
+	if req.LatePolicy != nil {
+		update.SetLatePolicy(req.GetLatePolicy())
+	}
+
+	row, err := update.Save(ctx)
+	if err != nil {
+		slog.Error("update hackathon windows", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update hackathon windows")
+	}
+
+	return row, nil
 }
 
 func (s *ConfigService) OverrideWindow(
@@ -292,6 +321,8 @@ func formsRowFor(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			//nolint:nilnil // documented contract: nil,nil is "no row yet", every
+			// caller already checks it as a distinct state from an error
 			return nil, nil
 		}
 
@@ -347,8 +378,10 @@ func formSchemaFromJSON(fields, consents []map[string]any) *ents.FormSchema {
 
 		return false
 	}
+	//exhaustruct:ignore
 	schema := &ents.FormSchema{}
 	for _, f := range fields {
+		//exhaustruct:ignore
 		schema.Fields = append(schema.Fields, &ents.FormField{
 			Key:      str(f, "key"),
 			Label:    str(f, "label"),
@@ -483,6 +516,8 @@ func (s *ConfigService) SetSubmissionForm(
 // "<moment>" is the body and "<moment>Subject" the subject line. Nothing
 // sends these yet — organizers compose from them by hand — and a mail without
 // a subject is the one most likely to be ignored.
+//
+//nolint:gochecknoglobals // closed-set lookup table, not mutable shared state
 var emailTemplateKeys = map[string]bool{
 	"registrationConfirmed":        true,
 	"registrationConfirmedSubject": true,
@@ -518,6 +553,7 @@ func (s *ConfigService) GetEmailTemplates(
 		if ent.IsNotFound(err) {
 			// Nothing authored yet — a valid state, not an error for the UI to
 			// translate. Same shape as GetWindows on an unscheduled event.
+			//exhaustruct:ignore
 			return &cfgMsgs.GetEmailTemplatesResponse{}, nil
 		}
 		slog.Error("query hackathon forms", "err", err)
@@ -599,6 +635,7 @@ func (s *ConfigService) SetBranding(
 		}
 	}
 
+	//nolint:protogetter // *string fields: nil vs "" is the "field not sent" signal below
 	for key, val := range map[string]*string{
 		"primaryColor": req.PrimaryColor,
 		"accentColor":  req.AccentColor,

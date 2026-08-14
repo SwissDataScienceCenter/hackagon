@@ -29,7 +29,7 @@
                      The endpoint had no link at all — it existed and nothing
                      reached it. -->
                 <a
-                    href="/my/hackathon/{data.hackathonId}/projects/proposals/export"
+                    href={resolve(`/my/hackathon/${data.hackathonId}/projects/proposals/export`)}
                     class="btn w-full shrink-0 no-underline sm:w-auto"
                     data-sveltekit-reload
                 >

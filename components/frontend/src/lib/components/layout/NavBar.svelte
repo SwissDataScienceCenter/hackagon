@@ -152,6 +152,7 @@
                  whoever is asking. The label names a list, so it has to reach
                  the list; when it pointed at the dashboard while signed in, the
                  same word meant "yours" or "all" depending on your session. -->
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
             <a href="/hackathon" aria-current={onHackathons ? 'page' : undefined} class="{TAB} {onHackathons ? TAB_ON : TAB_OFF}">
                 Hackathons
             </a>
@@ -165,6 +166,7 @@
                  "Challenges" entry that used to sit beside it pointed at "/" —
                  no backing entity yet, and a link to nowhere is worse than a
                  missing one. It comes back the day the feature does. -->
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- SitePage slug, not a typed route -->
             <a href="/about" class="{TAB} {TAB_OFF}">About</a>
         </nav>
 
@@ -201,6 +203,10 @@
                      SidebarUserFooter version of this link lives, is not mounted
                      by any route, so without this entry /account exists and
                      nothing reaches it. -->
+                <!-- Block-scoped rather than -next-line: the anchor spans several
+                     lines, so the rule reports on the href line, not the tag line
+                     a -next-line comment would cover. -->
+                <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
                 <a
                     href="/account"
                     title="Your account"
@@ -209,6 +215,7 @@
                 >
                     <UserCog class="h-4 w-4" />
                 </a>
+                <!-- eslint-enable svelte/no-navigation-without-resolve -->
                 <!-- Desktop only. Below md it moves into the panel, and the width
                      that frees is what keeps the bar from overflowing at 320px. -->
                 <button
@@ -267,6 +274,10 @@
                     Dashboard
                 </a>
             {/if}
+            <!-- Block-scoped rather than -next-line: the anchor spans several
+                 lines, so the rule reports on the href line, not the tag line
+                 a -next-line comment would cover. -->
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
             <a
                 href="/hackathon"
                 aria-current={onHackathons ? 'page' : undefined}
@@ -274,11 +285,14 @@
             >
                 Hackathons
             </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- SitePage slug, not a typed route -->
             <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
             {#if session?.user}
                 <!-- Below md the account link moves in here with sign-out, for
                      the same reason sign-out does: the bar has no room for it
                      at 320px. -->
+                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
                 <a href="/account" class="{ROW} {ROW_IDLE}">Your account</a>
                 <button
                     onclick={() => signOut({ callbackUrl: '/' })}

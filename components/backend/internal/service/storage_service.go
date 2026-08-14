@@ -91,6 +91,13 @@ const (
 	// listObjectsTimeout bounds the whole scan. Up to listScanCap/1000 round
 	// trips to the store, and a person is waiting for the grid to appear.
 	listObjectsTimeout = 15 * time.Second
+
+	// Per-kind byte ceilings for uploadRules below, in MiB.
+	logoMaxMB       = 5
+	mediaMaxMB      = 15
+	avatarMaxMB     = 5
+	attachmentMaxMB = 50
+	siteMediaMaxMB  = 15
 )
 
 // listableExts is every extension the image allowlist accepts, as a set.
@@ -98,6 +105,8 @@ const (
 // Derived from imageTypes rather than restated, so a new image type cannot be
 // accepted by the uploader and then be invisible in the picker that is supposed
 // to offer it back.
+//
+//nolint:gochecknoglobals // derived lookup table, not mutable shared state
 var listableExts = func() map[string]bool {
 	exts := make(map[string]bool)
 	for _, list := range imageTypes {
@@ -118,6 +127,8 @@ var listableExts = func() map[string]bool {
 // origin at /objects (that is what makes stored paths portable), so an SVG is
 // a script that runs as the application — an XSS with a stable URL. Adding it
 // would need a separate, non-same-origin host to serve from.
+//
+//nolint:gochecknoglobals // fixed allowlist, not mutable shared state
 var imageTypes = map[string][]string{
 	"image/webp": {"webp"},
 	"image/png":  {"png"},
@@ -127,6 +138,8 @@ var imageTypes = map[string][]string{
 
 // attachmentTypes is what a team may turn in: the imagery above plus the
 // document formats a poster or a slide deck actually arrives as.
+//
+//nolint:gochecknoglobals // derived allowlist, not mutable shared state
 var attachmentTypes = func() map[string][]string {
 	types := map[string][]string{
 		"application/pdf": {"pdf"},
@@ -153,24 +166,29 @@ type uploadRule struct {
 	contentTypes map[string][]string
 }
 
+// UNSPECIFIED is deliberately absent: it is not a valid upload kind, and the
+// comma-ok lookup at its call site already answers InvalidArgument for it
+// exactly like any other unmapped kind.
+//
+//nolint:exhaustive,gochecknoglobals // see comment above; fixed per-kind ceiling table, not mutable shared state
 var uploadRules = map[ents.UploadKind]uploadRule{
 	ents.UploadKind_UPLOAD_KIND_HACKATHON_LOGO: {
-		public: true, maxBytes: 5 * mib, contentTypes: imageTypes,
+		public: true, maxBytes: logoMaxMB * mib, contentTypes: imageTypes,
 	},
 	ents.UploadKind_UPLOAD_KIND_HACKATHON_MEDIA: {
-		public: true, maxBytes: 15 * mib, contentTypes: imageTypes,
+		public: true, maxBytes: mediaMaxMB * mib, contentTypes: imageTypes,
 	},
 	ents.UploadKind_UPLOAD_KIND_USER_AVATAR: {
-		public: true, maxBytes: 5 * mib, contentTypes: imageTypes,
+		public: true, maxBytes: avatarMaxMB * mib, contentTypes: imageTypes,
 	},
 	ents.UploadKind_UPLOAD_KIND_SUBMISSION_ATTACHMENT: {
-		public: false, maxBytes: 50 * mib, contentTypes: attachmentTypes,
+		public: false, maxBytes: attachmentMaxMB * mib, contentTypes: attachmentTypes,
 	},
 	// The same job as HACKATHON_MEDIA — a picture dropped into prose from a
 	// markdown editor — so deliberately the same ceiling and the same allowlist.
 	// A platform page is world-readable, so its imagery has to be too.
 	ents.UploadKind_UPLOAD_KIND_SITE_MEDIA: {
-		public: true, maxBytes: 15 * mib, contentTypes: imageTypes,
+		public: true, maxBytes: siteMediaMaxMB * mib, contentTypes: imageTypes,
 	},
 }
 

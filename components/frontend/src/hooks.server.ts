@@ -1,4 +1,3 @@
-import { resolve as resolvePath } from "$app/paths"
 import { sequence } from "@sveltejs/kit/hooks"
 import {
   error,
