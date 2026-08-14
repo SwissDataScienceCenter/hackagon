@@ -186,7 +186,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
 <header class="topbar">
   <div class="brand">Hackagon <span>· e2e quality report</span></div>
-  <div class="topmeta">sketch/06-08-26 @ e77e6f99 · 2026-08-14</div>
+  <div class="topmeta">sketch/06-08-26 @ d3737691 · 2026-08-14</div>
   <nav>
     <a class="btn" href="recipe-player.html">▶ Recipe player</a>
     <button class="btn" id="btnTheme" type="button" aria-pressed="false">
@@ -357,7 +357,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
       <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act5.rpc" data-value="19">19</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act5.ui.flow" data-value="5">5</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act5.ui.assert" data-value="3">3</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act5.rpc.race" data-value="1">1</span></td>
     </tr>
 <tr>
-      <th scope="row"><span class="actno">Act 5 (cont.)</span><span class="actabout">the organizer&#39;s own screens: the manage hub, the folded nav, the capability switches, bulk team composition</span></th>
+      <th scope="row"><span class="actno">Act 5 (cont.)</span><span class="actabout">the organizer&#39;s own screens: the manage hub, the flat Manage nav, the capability switches, bulk team composition</span></th>
       <td class="numcell"><span class="num" data-claim="recipe.section.act5cont" data-value="92">92</span><a class="src" href="#src-A" title="Source A">A</a></td>
       <td class="barcell"><span class="bar" role="img" aria-label="rpc 55, ui.flow 6, ui.assert 29, rpc.race 2"><span class="seg s1" style="width:59.783%" title="rpc: 55"></span><span class="seg s2" style="width:6.522%" title="ui.flow: 6"></span><span class="seg s3" style="width:31.522%" title="ui.assert: 29"></span><span class="seg s4" style="width:2.174%" title="rpc.race: 2"></span></span></td>
       <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act5cont.rpc" data-value="55">55</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act5cont.ui.flow" data-value="6">6</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act5cont.ui.assert" data-value="29">29</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act5cont.rpc.race" data-value="2">2</span></td>
@@ -408,11 +408,11 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
   <div class="tiles" style="margin-bottom:1.2rem">
     <article class="tile"><h3>Properties with a declared witness</h3>
-      <p class="val"><span class="num" data-claim="mut.caught" data-value="26">26</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">of <span class="num" data-claim="mut.totalTile" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a></span></p>
+      <p class="val"><span class="num" data-claim="mut.caught" data-value="37">37</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">of <span class="num" data-claim="mut.totalTile" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a></span></p>
       <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>provably catchable</span></p>
     </article>
     <article class="tile"><h3>Gaps — nothing goes red</h3>
-      <p class="val"><span class="num" data-claim="mut.gaps" data-value="12">12</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">of <span class="num" data-claim="mut.totalTile2" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a></span></p>
+      <p class="val"><span class="num" data-claim="mut.gaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">of <span class="num" data-claim="mut.totalTile2" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a></span></p>
       <p class="chips"><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>unguarded in the fast tier</span></p>
       <p class="note">Every one is a backend property.</p>
     </article>
@@ -471,8 +471,8 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
     OWN <code>expectReds</code>, where the excuse cannot reach it — a flaky test can still be a genuine
     witness, and this one hammers concurrent joins against a cap, which is precisely what the mutation
     breaks. The recorded run counted it as an unexpected extra, so the file and the manifest disagree,
-    and the timestamps do not explain it: the manifest is not newer
-    than the run (<span class="num" data-claim="mut.manifestTime" data-value="2026-08-13 21:47:46Z">2026-08-13 21:47:46Z</span><a class="src" href="#src-C" title="Source C">C</a> vs
+    and the timestamps do not explain it: the manifest is newer
+    than the run (<span class="num" data-claim="mut.manifestTime" data-value="2026-08-14 16:34:51Z">2026-08-14 16:34:51Z</span><a class="src" href="#src-C" title="Source C">C</a> vs
     <span class="num" data-claim="mut.verifyTime" data-value="2026-08-13 21:53:17Z">2026-08-13 21:53:17Z</span><a class="src" href="#src-D" title="Source D">D</a>).
     <strong>The table above is the last recorded judgement, not a live one</strong> — re-run the
     manifest to refresh it.</p>
@@ -480,48 +480,16 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
   <div class="wrap"><table>
     <caption>Gaps cluster. Grouping is by the id prefix, so this is derived from the manifest rather
-    than editorial: <span class="num" data-claim="mut.majorClusters" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a> surfaces account for <span class="num" data-claim="mut.clusterGapShare" data-value="10">10</span><a class="src" href="#src-C" title="Source C">C</a> of the <span class="num" data-claim="mut.gaps2" data-value="12">12</span><a class="src" href="#src-C" title="Source C">C</a> gaps.</caption>
+    than editorial: <span class="num" data-claim="mut.majorClusters" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> surfaces account for <span class="num" data-claim="mut.clusterGapShare" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> of the <span class="num" data-claim="mut.gaps2" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gaps.</caption>
     <thead><tr><th scope="col">Cluster</th><th scope="col" class="numcell">Entries</th><th scope="col" class="numcell">Caught</th><th scope="col" class="numcell">Gaps</th><th scope="col">State</th><th scope="col">Files</th></tr></thead>
     <tbody>
 <tr>
       <td class="mono">owner.*</td>
       <td class="numcell"><span class="num" data-claim="mut.cluster.owner.total" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.caught" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.gaps" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>entire surface uncovered</span></td>
-      <td class="mono small">hackathon_service.go</td>
-    </tr>
-<tr>
-      <td class="mono">join.*</td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.join.total" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.join.caught" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.join.gaps" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.gaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
       <td><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>partly uncovered</span></td>
       <td class="mono small">hackathon_service.go</td>
-    </tr>
-<tr>
-      <td class="mono">window.*</td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.window.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.window.caught" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.window.gaps" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>entire surface uncovered</span></td>
-      <td class="mono small">config_service.go</td>
-    </tr>
-<tr>
-      <td class="mono">auth.*</td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.total" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.caught" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.gaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>uncovered</span></td>
-      <td class="mono small">auth.go</td>
-    </tr>
-<tr>
-      <td class="mono">upload.*</td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.total" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.caught" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.gaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
-      <td><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>uncovered</span></td>
-      <td class="mono small">storage_service.go</td>
     </tr>
 <tr>
       <td class="mono">cap.*</td>
@@ -530,6 +498,14 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
       <td class="numcell"><span class="num" data-claim="mut.cluster.cap.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
       <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
       <td class="mono small">capability.go, capability.go</td>
+    </tr>
+<tr>
+      <td class="mono">join.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join.total" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join.caught" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">hackathon_service.go</td>
     </tr>
 <tr>
       <td class="mono">rbac.*</td>
@@ -546,6 +522,14 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
       <td class="numcell"><span class="num" data-claim="mut.cluster.capacity.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
       <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
       <td class="mono small">capacity.go</td>
+    </tr>
+<tr>
+      <td class="mono">window.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.window.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.window.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.window.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">config_service.go</td>
     </tr>
 <tr>
       <td class="mono">presign.*</td>
@@ -579,14 +563,30 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
       <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
       <td class="mono small">capability.ts</td>
     </tr>
+<tr>
+      <td class="mono">auth.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.total" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.caught" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">auth.go</td>
+    </tr>
+<tr>
+      <td class="mono">upload.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.total" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.caught" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">storage_service.go</td>
+    </tr>
     </tbody>
   </table></div>
 
   <div class="callout crit">
-    <h3><span class="num" data-claim="mut.majorClustersHeading" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a> surfaces carry
-    <span class="num" data-claim="mut.clusterGapShareHeading" data-value="10">10</span><a class="src" href="#src-C" title="Source C">C</a> of the
-    <span class="num" data-claim="mut.gaps4" data-value="12">12</span><a class="src" href="#src-C" title="Source C">C</a> gaps</h3>
-    <ul><li><code>owner.*</code> — <strong>all <span class="num" data-claim="mut.major.owner.all" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></strong> of its mutations produced zero reds, in <code>hackathon_service.go</code></li><li><code>join.*</code> — <span class="num" data-claim="mut.major.join.gaps" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a> of <span class="num" data-claim="mut.major.join.total" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a>, in <code>hackathon_service.go</code></li><li><code>window.*</code> — <strong>all <span class="num" data-claim="mut.major.window.all" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></strong> of its mutations produced zero reds, in <code>config_service.go</code></li></ul>
+    <h3><span class="num" data-claim="mut.majorClustersHeading" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> surfaces carry
+    <span class="num" data-claim="mut.clusterGapShareHeading" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> of the
+    <span class="num" data-claim="mut.gaps4" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gaps</h3>
+    <ul></ul>
     <p>No Go spec exercises a deadline window in any package. <code>RemoveOwner</code> has no Go specs
     whatsoever, so the last-organizer guard — one of the two invariants a real concurrency bug broke —
     is held up entirely by journey actions; ownership is a casbin fact on this branch with no column to
@@ -599,111 +599,23 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
   <div class="callout crit">
     <h3>The honesty caveat</h3>
     <p>These are gaps in the FAST tier, not proof the product is unguarded:
-    <span class="num" data-claim="mut.gaps.crossRef" data-value="8">8</span><a class="src" href="#src-C" title="Source C">C</a> of the <span class="num" data-claim="mut.gaps3" data-value="12">12</span><a class="src" href="#src-C" title="Source C">C</a> name journey actions in their <code>crossRef</code>, and <span class="num" data-claim="mut.gaps.proseOnly" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a> more describe a journey witness in prose without naming one. <strong>But those reds are DEDUCED</strong>
+    <span class="num" data-claim="mut.gaps.crossRef" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> of the <span class="num" data-claim="mut.gaps3" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> name journey actions in their <code>crossRef</code>, and <span class="num" data-claim="mut.gaps.proseOnly" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> more describe a journey witness in prose without naming one. <strong>But those reds are DEDUCED</strong>
     — from each action's declared <code>expect.error</code>, not observed, because no journey mutation
-    has been run. And <span class="num" data-claim="mut.gaps.noWitness" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> entry has no witness anywhere at all: <code>upload.content-type-allowlist</code>, the rule that keeps <code>image/svg+xml</code> out of an origin we serve. That one is a
+    has been run. And <span class="num" data-claim="mut.gaps.noWitness" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> entry has no witness anywhere at all: <code>—</code>, the rule that keeps <code>image/svg+xml</code> out of an origin we serve. That one is a
     request for a test, not a pointer to one.</p>
     <p>What it adds up to: the only thing standing behind window enforcement and the last-organizer
     invariant is a suite that costs minutes, needs the whole stack, and cannot be run on a branch.</p>
   </div>
 
-  <h3 style="margin:1.6rem 0 .7rem;font-size:14px">All <span class="num" data-claim="mut.gapsHeading" data-value="12">12</span><a class="src" href="#src-C" title="Source C">C</a> gaps</h3>
+  <h3 style="margin:1.6rem 0 .7rem;font-size:14px">All <span class="num" data-claim="mut.gapsHeading" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gaps</h3>
   <div class="gaps">
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>auth.require-user.admits-anon</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">RequireUser rejects the anonymous subject: endpoints that act on a PERSON must not accept &#39;anonymous&#39; as an identity.</p>
-      <p class="small mono">components/backend/internal/middleware/auth.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. Not one Go spec calls a RequireUser endpoint anonymously, so admitting the &#39;anonymous&#39; subject as an identity breaks nothing in 6 seconds of backend tests — even though eight TeamService handlers were moved onto RequireUser specifically to stop an anonymous caller getting NotFound and probing which team ids exist. The witnesses are all journey actions (crossRef), i.e. minutes and a running stack. Their reds are DEDUCED from each action&#39;s declared expect.error, not observed.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.auth.require-user.admits-anon.refs" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a> journey actions: <code>act2.anonymous.register</code> <code>act4.team.anon</code> <code>act6.submit.anon</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>window.never-closes</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">A hackathon with a windows row and a passed deadline refuses the action with FailedPrecondition.</p>
-      <p class="small mono">components/backend/internal/service/config_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. requireWindowOpen has no Go coverage at all — neither a passed deadline nor an override is exercised by any spec in any package. Deadline enforcement is pinned only by journey actions (crossRef), whose reds are deduced from their declared expect.error rather than observed. This is the largest single hole the first manifest found.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.window.never-closes.refs" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a> journey actions: <code>act5.window.regclosed</code> <code>act6.window.sublate</code> <code>act4.window.preflate</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>window.override-ignored</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">A now-anchored override reopens a closed window until it expires — the override is what makes a late submission a support decision.</p>
-      <p class="small mono">components/backend/internal/service/config_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. Same hole as window.never-closes: the now-anchored override — the mechanism that makes a late submission a support decision rather than a lockout — is exercised by no Go spec.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.window.override-ignored.refs" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> journey action: <code>act6.window.override</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>window.opens-early</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">Registration before its opening moment is refused — a window has a start as well as an end.</p>
-      <p class="small mono">components/backend/internal/service/config_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. Same hole as window.never-closes, for the opening half of a window. Only act1.window.early pins it.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.window.opens-early.refs" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> journey action: <code>act1.window.early</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>owner.last-guard</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">The last owner cannot be demoted — an event whose every organizer is gone cannot be edited by anyone short of a global admin.</p>
-      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. RemoveOwner has no Go specs whatsoever, so the last-organizer guard — one of the two invariants a real concurrency bug broke — is held up entirely by act5.owner.last and the act5.race.owner.* trio. Ownership is a casbin fact on this branch with no column to assert against, which is probably why no unit test was written; a spec driving the enforcer directly would close it.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.owner.last-guard.refs" data-value="2">2</span><a class="src" href="#src-C" title="Source C">C</a> journey actions: <code>act5.owner.last</code> <code>act5.race.owner.remove</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>owner.self-demote</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">You cannot remove your own organizer role: the permission you are giving up is the one that would let you undo it.</p>
-      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. Same hole as owner.last-guard: nothing in Go calls RemoveOwner, so &#39;you cannot give up the permission that would let you undo it&#39; is pinned only by act5.owner.self.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.owner.self-demote.refs" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> journey action: <code>act5.owner.self</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>owner.demote-restores-member</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">A demoted owner is given Member back; without it their role resolves to UNSPECIFIED, which renders as a corrupted record rather than a demotion.</p>
-      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. Same hole as owner.last-guard. Worth noting the mutation used here (re-grant Owner instead of Member) makes the demotion a complete no-op and is STILL invisible to every Go package.</p>
-      <p class="small">No <code>crossRef</code> recorded; the witness is described in prose only.</p>
-    </article>
 <article class="gap">
       <h4><span class="glyph" aria-hidden="true">⚠</span> <code>owner.mutex-dropped</code>
         <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
       <p class="prop">RemoveOwner&#39;s read-owners/check/remove sequence is one decision under ownerMu — two owners demoting each other concurrently must not leave the event with none.</p>
       <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">Concurrency, and no fast-tier witness for the surface either. The Go suite has no concurrent RemoveOwner spec, and act5.race.owner.remove reaches only the real backend — so nothing in the fast tier can see this. Promote to arena &#39;journey&#39; once a backend-restart path is safe to automate.</p>
+      <p class="reason">CONCURRENCY, AND STILL OPEN. RemoveOwner now has Go specs (the three owner.* entries above are caught by them), but every one of them is SERIAL: a dropped mutex changes nothing about a sequence of calls that never overlap, so none of them can go red here and adding one that did would be pinning a coincidence. Witnessing this needs two RemoveOwner calls in flight at once against one service instance — which is what act5.race.owner.remove does, and it reaches only the real backend. Promote to arena &#39;journey&#39; once a backend-restart path is safe to automate.</p>
       <p class="small">Pinned by <span class="num" data-claim="mut.gap.owner.mutex-dropped.refs" data-value="2">2</span><a class="src" href="#src-C" title="Source C">C</a> journey actions: <code>act5.race.owner.remove</code> <code>act5.race.owner.invariant</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>join.private-needs-invite</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">A private hackathon is joinable only with a live invitation — privacy was discovery-only until this check, so anyone who learned the UUID could join.</p>
-      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. Nothing in Go joins a PRIVATE hackathon, so removing the invitation requirement entirely — the fix that turned privacy from discovery-only into a real gate, i.e. anyone who learned the UUID could join — breaks no backend spec. The invite path is exercised only through the journey.</p>
-      <p class="small">No <code>crossRef</code> recorded; the witness is described in prose only.</p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>join.finished</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">Joining an event whose end date has passed is refused with FailedPrecondition.</p>
-      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. No Go spec joins an event whose end date has passed; the only red this mutation produced was the known capacity flake. Pinned by act8.latejoin and act8.pilot.join.finished.rpc, whose reds are deduced from their declared expect.error rather than observed.</p>
-      <p class="small">Pinned by <span class="num" data-claim="mut.gap.join.finished.refs" data-value="2">2</span><a class="src" href="#src-C" title="Source C">C</a> journey actions: <code>act8.latejoin</code> <code>act8.pilot.join.finished.rpc</code></p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>join.grants-member</code>
-        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
-      <p class="prop">Everyone on the roster holds Member at Join — including the waitlisted, which is what lets them propose and see the private event they signed up for.</p>
-      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS, and the mutation is a big one: Join grants OWNER instead of Member, so every person who joins any event becomes its organizer, and not one Go spec notices. &#39;Member role at Join&#39; is a pinned policy decision (.claude/CLAUDE.md) with no unit test behind it — the casbin role a Join writes is asserted nowhere in the fast tier.</p>
-      <p class="small">No <code>crossRef</code> recorded; the witness is described in prose only.</p>
-    </article>
-<article class="gap">
-      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>upload.content-type-allowlist</code>
-        <span class="tagrow"><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>no witness anywhere</span></span></h4>
-      <p class="prop">The upload content-type allowlist actually refuses — image/svg+xml is excluded on purpose because /objects is our own origin.</p>
-      <p class="small mono">components/backend/internal/service/storage_service.go</p>
-      <p class="reason">NO FAST-TIER WITNESS. checkContentType&#39;s allowlist — the rule that keeps image/svg+xml out, because /objects is our own origin and a stored SVG is script running as the application — is asserted by no Go spec. StorageService&#39;s specs cover authorization and listing scopes; nothing presents a refused content type. This one has no journey witness either: the recipe uploads only well-formed PNGs, so a manifest entry here is a request for a test, not a pointer to one.</p>
-      <p class="small">No journey action reaches it either — this entry is a request for a test, not a pointer to one.</p>
     </article>
   </div>
 </section>
@@ -731,7 +643,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
     before running anything.</p>
     <p><strong>The tree says otherwise.</strong> Both packages now carry a Ginkgo bootstrap whose only
     job is to register those flags:
-    <code>components/backend/internal/audit/audit_suite_test.go</code> (present) and <code>components/backend/internal/storage/storage_suite_test.go</code> (present) — both added in <code><span class="num" data-claim="open.bootstrapCommit" data-value="13331242">13331242</span><a class="src" href="#src-I" title="Source I">I</a></code>,
+    <code>components/backend/internal/audit/audit_suite_test.go</code> (present) and <code>components/backend/internal/storage/storage_suite_test.go</code> (present) — both added in <code><span class="num" data-claim="open.bootstrapCommit" data-value="13331242e">13331242e</span><a class="src" href="#src-I" title="Source I">I</a></code>,
     an ancestor of this commit.
     Confirmed once by hand on 2026-08-14 by running
     <code class="cmd">go test -tags "test unittest" ./internal/audit/ ./internal/storage/ -count=1 --ginkgo.v</code>
@@ -841,8 +753,8 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-A">
     <th scope="row" class="srckey">A</th>
     <td class="mono">.claude/skills/hackathon-e2e/recipe.jsonl</td>
-    <td class="numcell small mono">252.4 KiB</td>
-    <td class="small mono">2026-08-13</td>
+    <td class="numcell small mono">252.7 KiB</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small"><span class="num" data-claim="src.actionLines" data-value="465">465</span> action lines + <span class="num" data-claim="src.bannerLines" data-value="12">12</span> comment banners (<span class="num" data-claim="src.actSections" data-value="11">11</span> of them act headings): kinds,
       priorities, actors, gates, todos, expected status codes, and every RPC the recipe calls.</td>
   </tr>
@@ -856,8 +768,8 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-C">
     <th scope="row" class="srckey">C</th>
     <td class="mono">.claude/skills/hackathon-e2e/mutations/manifest.jsonl</td>
-    <td class="numcell small mono">30.5 KiB</td>
-    <td class="small mono">2026-08-13</td>
+    <td class="numcell small mono">29.0 KiB</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">The mutation manifest: one deliberate breakage per line, its arena, its expected reds, and — for a gap — why nothing catches it.</td>
   </tr>
 <tr id="src-D">
@@ -870,36 +782,36 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-E">
     <th scope="row" class="srckey">E</th>
     <td class="mono">docs/testing.md</td>
-    <td class="numcell small mono">5.9 KiB</td>
-    <td class="small mono">2026-08-11</td>
+    <td class="numcell small mono">6.3 KiB</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">The API-to-UI coverage table: which declared RPCs have no frontend caller, and why each is deliberate.</td>
   </tr>
 <tr id="src-F">
     <th scope="row" class="srckey">F</th>
     <td class="mono">.claude/CLAUDE.md</td>
-    <td class="numcell small mono">69.9 KiB</td>
-    <td class="small mono">2026-08-13</td>
+    <td class="numcell small mono">81.6 KiB</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">The suite-results table (the only source for smoke, mobile, openreplay, backend and frontend-unit numbers) and the known-broken prose.</td>
   </tr>
 <tr id="src-G">
     <th scope="row" class="srckey">G</th>
     <td class="mono">api/proto/</td>
     <td class="numcell small mono">—</td>
-    <td class="small mono">2026-08-07</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">Every rpc declaration in api/proto/**/*_service.proto — the denominator for both coverage counts.</td>
   </tr>
 <tr id="src-H">
     <th scope="row" class="srckey">H</th>
     <td class="mono">components/frontend/src/</td>
     <td class="numcell small mono">—</td>
-    <td class="small mono">2026-08-12</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">The frontend call sites: the API-to-UI audit is re-run here at build time rather than copied from the doc.</td>
   </tr>
 <tr id="src-I">
     <th scope="row" class="srckey">I</th>
     <td class="mono">.claude/skills/hackathon-e2e/tests/smoke/22-hackathon-pages.spec.ts</td>
     <td class="numcell small mono">14.7 KiB</td>
-    <td class="small mono">2026-08-12</td>
+    <td class="small mono">2026-08-14</td>
     <td class="small">The failing smoke spec and the helper that causes it; line numbers below are read out of the file.</td>
   </tr>
     </tbody>
@@ -908,7 +820,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
 <footer>
   <p>Generated by <code>.claude/skills/hackathon-e2e/scripts/build-quality-report.mjs</code> from
-  sketch/06-08-26 @ e77e6f99 (2026-08-14). No wall-clock is embedded, so two builds over one
+  sketch/06-08-26 @ d3737691 (2026-08-14). No wall-clock is embedded, so two builds over one
   tree are byte-identical. This is the status report; the animated replay of the recipe is
   <a href="recipe-player.html">recipe-player.html</a>.</p>
 </footer>

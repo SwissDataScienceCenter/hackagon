@@ -38,7 +38,8 @@ deferred"; **no action sets it any more** — nothing in the recipe is deferred.
 **The organiser's own screens (2026-08-12, +119 actions).** The manage hub
 (tiles derived from `manageNav`, the Now/Next box and its ONE action in all
 three cases — start the first phase, declare the live one, advance past it —
-plus Review N waiting and Edit details), the folded Manage nav, the capability
+plus Review N waiting and Edit details), the Manage nav (folded then, flat now —
+see the develop merge below), the capability
 panel, `StorageService.ListObjects` across every scope and refusal, the markdown
 toolbar and its paste-a-table converter, bulk team import, Manage Pages
 reordering, and the Join gate with the sign-in interstitial. One state in that
@@ -380,6 +381,45 @@ paths cannot both run, so ours is kept. Everywhere else additive holds.
 `AddOwner`/`RemoveOwner` went in as a casbin role write with no schema change,
 because ownership is a casbin fact here while main stores it twice and syncs by
 hand.
+
+**4. Bringing `origin/develop` in (2026-08-14).** Nothing like the main merge:
+the base is a day old, so develop already holds this branch's work up to it.
+40 commits in, 17 out, and **every one of the 16 conflicts was in `.claude/`** —
+`components/`, `helm-chart/`, `docs/` and `api/proto/` merged clean.
+
+All 16 were the formatter against hand-written tooling. develop's `5a7b253b` ran
+treefmt across the whole repo, rewriting 103 files under `.claude/` (shfmt to
+4-space, prettier's trailing commas and `*em*` → `_em_`), and its `3ba79bea` then
+**exempted `.claude/**` from treefmt** because it "carries its own conventions
+(2-space shell, hand-wrapped markdown)" — without reverting the reformat, so
+develop's tree contradicts develop's own rule for that directory. Checked rather
+than assumed before choosing a side: normalising both sides of all 103 files
+(whitespace, commas, semicolons stripped) leaves 76 byte-identical, and the other
+27 differ only in quote style, a dropped line-continuation, parentheses around an
+awaited import, a union's leading `|`, and CSS reflow. **No semantic change
+anywhere.** So `.claude/` was taken from this branch WHOLE — all 103 files, not
+only the 16 that conflicted: a directory in two shell styles is the cost that
+would have outlived the merge.
+
+**The one conflict that was not textual is the one worth remembering.**
+develop's `942b60a7` makes the hackathon manage sidebar **flat** — no fold, and
+its unit test now asserts "draws no fold control at all" — while `act5.nav.fold`
+and `sidebarManageFold` pinned the opposite: starts folded, toggles, remembers,
+self-opens inside the section. Git merged both without a murmur, because they
+touch different files; only running the thing finds it. Both sides watched the
+SAME behaviour (the fold force-opened on entering `/manage/*`) and disagreed on
+whether it was a bug — ours called a route-derived chevron "a control that
+lies", develop called a disclosure that is always open where it matters dead
+weight on a fixed-height rail. develop owns the product decision, so the action
+was **re-specified, not deleted**, keeping its id.
+
+Re-specifying it needed a different claim, not an inverted one. "The entries are
+there" passes against a fold as well, once open — and this fold opened itself on
+exactly the pages such a check would look at, so it could never have told the two
+designs apart. What it asserts now is that **the rail is identical outside Manage
+and inside it**, which is what flat means and what a fold cannot satisfy by
+construction, with the hub-and-entry visibility as the positive control that
+keeps the "no disclosure" zero from agreeing with an empty nav.
 
 ## Ways a test reported green while proving nothing
 
