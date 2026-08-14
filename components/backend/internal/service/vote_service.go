@@ -53,6 +53,7 @@ type VoteService struct {
 }
 
 func NewVoteService(dbClient *ent.Client, enf *m.Enforcer) *VoteService {
+	//exhaustruct:ignore // ballotMu: zero-value sync.Mutex is the usable initial state
 	return &VoteService{
 		UnimplementedVoteServiceServer: vote.UnimplementedVoteServiceServer{},
 		dbClient:                       dbClient,
@@ -62,6 +63,9 @@ func NewVoteService(dbClient *ent.Client, enf *m.Enforcer) *VoteService {
 
 // ─── Enum mappers ────────────────────────────────────────────────────
 
+// UNSPECIFIED (and any future value) is deliberately unmappable.
+//
+//nolint:exhaustive // already falls into default, the correct "unmappable" answer via the bool ok return
 func votingMethodToEnt(v voteEnts.VotingMethod) (votecategoryMethod, bool) {
 	switch v {
 	case voteEnts.VotingMethod_VOTING_METHOD_SINGLE_CHOICE:
@@ -102,6 +106,9 @@ func voteTypeForMethod(v votecategoryMethod) entvote.VoteType {
 	}
 }
 
+// UNSPECIFIED (and any future value) is deliberately unmappable.
+//
+//nolint:exhaustive // already falls into default, the correct "unmappable" answer via the bool ok return
 func voterTypeToEnt(v voteEnts.VoterType) (votecategoryVoter, bool) {
 	switch v {
 	case voteEnts.VoterType_VOTER_TYPE_ALL_PARTICIPANTS:
@@ -135,6 +142,7 @@ type (
 // voteCategoryEntryFromEnt maps an ent VoteCategory (with Hackathon and
 // JuryMembers eager-loaded) to its proto entity.
 func voteCategoryEntryFromEnt(c *ent.VoteCategory) *voteEnts.VoteCategory {
+	//exhaustruct:ignore
 	entry := &voteEnts.VoteCategory{
 		Id:           c.ID.String(),
 		Name:         c.Name,
@@ -147,6 +155,8 @@ func voteCategoryEntryFromEnt(c *ent.VoteCategory) *voteEnts.VoteCategory {
 	// Optional, not Nillable, so zero is how "no budget" reaches us — and a
 	// budget of zero would be a category nobody can vote in anyway.
 	if c.MaxPoints > 0 {
+		//nolint:gosec // G115: resolveMaxPoints only ever stores a value that came
+		// in as int32 from the proto request, so this round trip cannot overflow.
 		maxPoints := int32(c.MaxPoints)
 		entry.MaxPoints = &maxPoints
 	}
@@ -425,6 +435,7 @@ func (s *VoteService) DeleteVoteCategory(
 // eager-loaded) to its proto entity. One row is one judgment on one submission,
 // so a ranked or points ballot maps to several of these.
 func voteEntryFromEnt(v *ent.Vote) *voteEnts.Vote {
+	//exhaustruct:ignore
 	entry := &voteEnts.Vote{
 		Id:         v.ID.String(),
 		CreatedAt:  v.CreatedAt.Unix(),
@@ -440,6 +451,8 @@ func voteEntryFromEnt(v *ent.Vote) *voteEnts.Vote {
 		return entry
 	}
 	submissionID := v.Edges.Submission.ID.String()
+	//nolint:gosec // G115: writeBallot only ever stores a rank/points value that
+	// came in as int32 from the proto ballot, so this round trip cannot overflow.
 	value := int32(v.Value)
 	switch v.VoteType {
 	case entvote.VoteTypeSingleChoice:
@@ -924,18 +937,18 @@ func (s *VoteService) writeBallot(
 
 		return nil, status.Error(codes.Internal, "couldn't start transaction")
 	}
-	fail := func(err error, msg string) ([]*ent.Vote, error) {
+	fail := func(err error, msg string) error {
 		_ = txn.Rollback()
 		if ent.IsConstraintError(err) {
-			return nil, status.Error(codes.AlreadyExists, "already voted in this category")
+			return status.Error(codes.AlreadyExists, "already voted in this category")
 		}
 		slog.Error(msg, "err", err)
 
-		return nil, status.Error(codes.Internal, "couldn't record ballot")
+		return status.Error(codes.Internal, "couldn't record ballot")
 	}
 
 	if _, err := txn.Vote.Delete().Where(mine...).Exec(ctx); err != nil {
-		return fail(err, "clear previous ballot")
+		return nil, fail(err, "clear previous ballot")
 	}
 
 	written := make([]*ent.Vote, 0, len(lines))
@@ -952,7 +965,7 @@ func (s *VoteService) writeBallot(
 		}
 		row, err := create.Save(ctx)
 		if err != nil {
-			return fail(err, "create vote")
+			return nil, fail(err, "create vote")
 		}
 		written = append(written, row)
 	}
@@ -1100,6 +1113,11 @@ func (s *VoteService) ExportVotes(
 		return nil, err
 	}
 
+	// Tags are snake_case on purpose: this struct is the ExportVotes download
+	// format an organizer opens externally (and the e2e recipe's
+	// exportBallotCount reads `voter_id` off it directly), not a transient
+	// in-memory shape — renaming the tags would silently break both.
+	//nolint:tagliatelle // persisted export format, see comment above
 	type row struct {
 		ID           string `json:"id"`
 		CategoryID   string `json:"category_id"`
@@ -1113,6 +1131,7 @@ func (s *VoteService) ExportVotes(
 	}
 	rows := make([]row, 0, len(votes))
 	for _, v := range votes {
+		//exhaustruct:ignore
 		r := row{ID: v.ID.String(), VoteType: string(v.VoteType), Value: v.Value}
 		if v.Edges.Category != nil {
 			r.CategoryID = v.Edges.Category.ID.String()
@@ -1126,6 +1145,8 @@ func (s *VoteService) ExportVotes(
 		rows = append(rows, r)
 	}
 
+	//nolint:exhaustive // UNSPECIFIED (and any future format) already falls into
+	// default, which is the correct "format must be CSV or JSON" answer below.
 	switch req.GetFormat() {
 	case voteMsgs.ExportFormat_EXPORT_FORMAT_JSON:
 		data, err := json.MarshalIndent(rows, "", "  ")
@@ -1160,8 +1181,11 @@ func (s *VoteService) ExportVotes(
 // voteResultEntryFromEnt maps an ent VoteResult (with VoteCategory and
 // Submission eager-loaded) to its proto entity.
 func voteResultEntryFromEnt(r *ent.VoteResult) *voteEnts.VoteResult {
+	//exhaustruct:ignore // CreatedAt/ModifiedAt: ent.VoteResult has no such columns
 	entry := &voteEnts.VoteResult{
-		Id:       r.ID.String(),
+		Id: r.ID.String(),
+		//nolint:gosec // G115: a submission's rank position (a loop index) or a
+		// value that came in as int32 from the proto request; cannot overflow.
 		Position: int32(r.Position),
 	}
 	if r.Title != "" {
@@ -1583,6 +1607,10 @@ func (s *VoteService) ExportResults(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
+	// Tags are snake_case on purpose, matching ExportVotes' download format —
+	// this struct is the ExportResults download an organizer opens externally,
+	// not a transient in-memory shape.
+	//nolint:tagliatelle // persisted export format, see comment above
 	type row struct {
 		ID           string `json:"id"`
 		CategoryID   string `json:"category_id"`
@@ -1592,6 +1620,7 @@ func (s *VoteService) ExportResults(
 	}
 	rows := make([]row, 0, len(results))
 	for _, r := range results {
+		//exhaustruct:ignore
 		out := row{ID: r.ID.String(), Position: r.Position, Title: r.Title}
 		if r.Edges.VoteCategory != nil {
 			out.CategoryID = r.Edges.VoteCategory.ID.String()
@@ -1602,6 +1631,8 @@ func (s *VoteService) ExportResults(
 		rows = append(rows, out)
 	}
 
+	//nolint:exhaustive // UNSPECIFIED (and any future format) already falls into
+	// default, which is the correct "format must be CSV or JSON" answer below.
 	switch req.GetFormat() {
 	case voteMsgs.ExportFormat_EXPORT_FORMAT_JSON:
 		data, err := json.MarshalIndent(rows, "", "  ")
