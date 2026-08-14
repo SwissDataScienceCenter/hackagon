@@ -105,6 +105,7 @@ func New(cfg config.StorageConfig) (*Client, error) {
 		prefix = defaultPublicPrefix
 	}
 
+	//exhaustruct:ignore // http.Client{}: only Timeout is ours to set, the rest are stdlib defaults
 	return &Client{
 		signHost:     signHost,
 		directBase:   endpoint.Scheme + "://" + signHost,
@@ -114,7 +115,7 @@ func New(cfg config.StorageConfig) (*Client, error) {
 		accessKey:    cfg.AccessKey,
 		secretKey:    cfg.SecretKey,
 		pathStyle:    cfg.UsePathStyle,
-		http:         &http.Client{Timeout: httpTimeout}, //exhaustruct:ignore
+		http:         &http.Client{Timeout: httpTimeout},
 	}, nil
 }
 
@@ -218,7 +219,7 @@ func (c *Client) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 
 	deleted := 0
 	token := ""
-	for page := 0; page < listPageLimit; page++ {
+	for range listPageLimit {
 		objects, next, err := c.ListPrefix(ctx, prefix, token, listPageSize)
 		if err != nil {
 			return deleted, err
@@ -329,6 +330,8 @@ type listBucketResult struct {
 // is what the specification says and what both S3 and rustfs emit; the rest are
 // there so an unusual store degrades to "no timestamp" for one object instead
 // of an error for the request.
+//
+//nolint:gochecknoglobals // fixed lookup table, not mutable shared state
 var listTimeFormats = []string{
 	time.RFC3339Nano,
 	time.RFC3339,

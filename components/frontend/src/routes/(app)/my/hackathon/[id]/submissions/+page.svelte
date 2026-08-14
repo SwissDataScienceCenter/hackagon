@@ -293,6 +293,7 @@
                                         <input
                                             name="field:{field.key}"
                                             class="field"
+                                            type={INPUT_TYPE[field.type] ?? 'text'}
                                             required={field.required}
                                         />
                                     {/if}

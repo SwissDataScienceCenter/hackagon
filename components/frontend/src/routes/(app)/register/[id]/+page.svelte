@@ -1,5 +1,6 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
+    import { resolve } from '$app/paths';
 
     const { data, form } = $props();
 
@@ -59,7 +60,7 @@
                 The organizers review registrations and will confirm your place. You can come
                 back to this page and change your answers at any time.
             </p>
-            <a href="/dashboard" class="btn btn-accent mt-4">Back to my dashboard</a>
+            <a href={resolve('/(app)/dashboard')} class="btn btn-accent mt-4">Back to my dashboard</a>
         </div>
     {:else}
         {#if data.alreadySubmitted}
@@ -120,7 +121,7 @@
                 <button type="submit" class="btn btn-accent">
                     {data.alreadySubmitted ? 'Save changes' : 'Submit registration'}
                 </button>
-                <a href="/dashboard" class="btn">Cancel</a>
+                <a href={resolve('/(app)/dashboard')} class="btn">Cancel</a>
             </div>
         </form>
     {/if}

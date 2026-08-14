@@ -35,6 +35,7 @@
              thing: about you, not about a hackathon. It is also the only route
              to EditProfile and account deletion — without this entry the page
              exists and nothing reaches it. -->
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
         <a href="/account" aria-label="Your account" title="Your account" class="btn btn-icon btn-sm btn-quiet">
             <UserCog class="h-4 w-4" />
         </a>

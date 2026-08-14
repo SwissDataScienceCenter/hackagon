@@ -59,6 +59,7 @@ func NewHackathonService(
 	enf *m.Enforcer,
 	store *objstore.Client,
 ) *HackathonService {
+	//exhaustruct:ignore // ownerMu, capacityMu: zero-value sync.Mutex is the usable initial state
 	return &HackathonService{
 		UnimplementedHackathonServiceServer: hackathon.UnimplementedHackathonServiceServer{},
 		dbClient:                            dbClient,
@@ -509,6 +510,7 @@ func (s *HackathonService) joinRoster(
 
 	// Counted under the lock, so `waiting` is exactly the queue ahead of this
 	// row — no re-read needed.
+	//nolint:gosec // G115: a per-hackathon participant count, nowhere near int32 range
 	return true, int32(waiting) + 1, nil
 }
 
@@ -532,6 +534,7 @@ func (s *HackathonService) queuePositionOf(
 		return 0, status.Error(codes.Internal, "couldn't count participants")
 	}
 
+	//nolint:gosec // G115: a per-hackathon waiting-list count, nowhere near int32 range
 	return int32(ahead) + 1, nil
 }
 
@@ -1568,6 +1571,49 @@ func (s *HackathonService) EditSettings(
 	}, nil
 }
 
+// resolveListViewerParticipant resolves the CALLER's own participant id for
+// `viewer_membership`, when List's participant_id filter did not already
+// resolve one for us. Returns q eager-loading that participant's row, and nil
+// with no error for an anonymous caller or one never registered here — both
+// are real states, not failures. Split out of List because the
+// authenticate-then-query-then-eager-load sequence, with its two intentional
+// non-error outcomes, was most of that function's complexity budget on its
+// own.
+func (s *HackathonService) resolveListViewerParticipant(
+	ctx context.Context,
+	q *ent.HackathonQuery,
+) (*ent.HackathonQuery, *uuid.UUID, error) {
+	uid, _, err := m.RequireSubject(ctx)
+	//nolint:nilerr // RequireSubject's only failure is "no claims" (anonymous caller),
+	// same as an explicit AnonSubject — List serves anonymous callers, so this is
+	// "no viewer to resolve", not an error to propagate.
+	if err != nil || uid == m.AnonSubject {
+		return q, nil, nil
+	}
+
+	viewer, err := s.dbClient.User.Query().
+		Where(entuser.KeycloakIDEQ(uid)).
+		Only(ctx)
+
+	switch {
+	case err == nil:
+		q = q.WithParticipants(func(pq *ent.ParticipantQuery) {
+			pq.Where(entparticipant.UserIDEQ(viewer.ID)).WithUser()
+		})
+
+		return q, &viewer.ID, nil
+	case ent.IsNotFound(err):
+		// Authenticated in Keycloak but never registered here — a real state
+		// during the first request of a new account, and simply means no
+		// membership anywhere.
+		return q, nil, nil
+	default:
+		slog.Error("query viewer for viewer_membership", "err", err)
+
+		return nil, nil, status.Error(codes.Internal, "couldn't query database")
+	}
+}
+
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
@@ -1615,25 +1661,10 @@ func (s *HackathonService) List(
 	// One extra lookup for the caller and one eager load, both skipped for
 	// anonymous callers and when participant_id already did the work.
 	if participantUID == nil {
-		if uid, _, err := m.RequireSubject(ctx); err == nil && uid != m.AnonSubject {
-			viewer, err := s.dbClient.User.Query().
-				Where(entuser.KeycloakIDEQ(uid)).
-				Only(ctx)
-			switch {
-			case err == nil:
-				participantUID = &viewer.ID
-				q = q.WithParticipants(func(pq *ent.ParticipantQuery) {
-					pq.Where(entparticipant.UserIDEQ(viewer.ID)).WithUser()
-				})
-			case ent.IsNotFound(err):
-				// Authenticated in Keycloak but never registered here — a real
-				// state during the first request of a new account, and simply
-				// means no membership anywhere.
-			default:
-				slog.Error("query viewer for viewer_membership", "err", err)
-
-				return nil, status.Error(codes.Internal, "couldn't query database")
-			}
+		var err error
+		q, participantUID, err = s.resolveListViewerParticipant(ctx, q)
+		if err != nil {
+			return nil, err
 		}
 	}
 	// Capabilities and phases, so a list can gate its own buttons instead of
@@ -1720,6 +1751,89 @@ func (s *HackathonService) List(
 	return &msgs.ListResponse{Hackathons: entries}, nil
 }
 
+// resolveRegistrationTarget returns who the form answers belong to: the
+// caller themselves, or — when onBehalfOf is set — another registrant an
+// organizer is submitting a paper form for at check-in. Split out of
+// SubmitRegistrationForm to keep the permission check, id parsing and lookup
+// for that one optional case from nesting inside the main flow.
+func (s *HackathonService) resolveRegistrationTarget(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	caller *ent.User,
+	onBehalfOf *string,
+) (*ent.User, error) {
+	if onBehalfOf == nil {
+		return caller, nil
+	}
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {
+		return nil, err
+	}
+	targetID, err := uuid.Parse(*onBehalfOf)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid on_behalf_of: %v", err)
+	}
+	target, err := s.dbClient.User.Query().Where(entuser.IDEQ(targetID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user %s not found", targetID)
+		}
+		slog.Error("query on_behalf_of user", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	return target, nil
+}
+
+// validateRegistrationForm checks responses and consents against the
+// organizer-defined schema: unknown keys, missing required fields, unknown
+// consents and unticked required consents are all InvalidArgument. Split out
+// of SubmitRegistrationForm because the four validation loops are a coherent
+// step of their own and were most of that function's complexity budget.
+func validateRegistrationForm(
+	forms *ent.HackathonForms,
+	responses map[string]any,
+	consents map[string]bool,
+) error {
+	fieldByKey := make(map[string]map[string]any, len(forms.RegistrationFields))
+	for _, f := range forms.RegistrationFields {
+		if k, ok := f["key"].(string); ok {
+			fieldByKey[k] = f
+		}
+	}
+	consentByKey := make(map[string]map[string]any, len(forms.RegistrationConsents))
+	for _, c := range forms.RegistrationConsents {
+		if k, ok := c["key"].(string); ok {
+			consentByKey[k] = c
+		}
+	}
+
+	for k := range responses {
+		if _, ok := fieldByKey[k]; !ok {
+			return status.Errorf(codes.InvalidArgument, "unknown field %q", k)
+		}
+	}
+	for k, f := range fieldByKey {
+		if required, _ := f["required"].(bool); required {
+			if _, ok := responses[k]; !ok {
+				return status.Errorf(codes.InvalidArgument, "missing required field %q", k)
+			}
+		}
+	}
+	for k := range consents {
+		if _, ok := consentByKey[k]; !ok {
+			return status.Errorf(codes.InvalidArgument, "unknown consent %q", k)
+		}
+	}
+	for k, c := range consentByKey {
+		if required, _ := c["required"].(bool); required && !consents[k] {
+			return status.Errorf(codes.InvalidArgument, "required consent %q not given", k)
+		}
+	}
+
+	return nil
+}
+
 // SubmitRegistrationForm records a registrant's answers to the organizer-
 // defined registration form. Unknown keys, missing required fields, unknown
 // consents and unticked required consents are InvalidArgument. Organizers
@@ -1747,24 +1861,10 @@ func (s *HackathonService) SubmitRegistrationForm(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	target := caller
-	if req.OnBehalfOf != nil {
-		if err := s.enforcer.RequirePermission(ctx, id.String(), m.Hackathon, m.Write); err != nil {
-			return nil, err
-		}
-		targetID, err := uuid.Parse(req.GetOnBehalfOf())
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid on_behalf_of: %v", err)
-		}
-		target, err = s.dbClient.User.Query().Where(entuser.IDEQ(targetID)).Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return nil, status.Errorf(codes.NotFound, "user %s not found", targetID)
-			}
-			slog.Error("query on_behalf_of user", "err", err)
-
-			return nil, status.Error(codes.Internal, "couldn't query database")
-		}
+	//nolint:protogetter // *string field: nil vs "" is the "on behalf of nobody" signal
+	target, err := s.resolveRegistrationTarget(ctx, id, caller, req.OnBehalfOf)
+	if err != nil {
+		return nil, err
 	}
 
 	forms, err := formsRowFor(ctx, s.dbClient, id)
@@ -1777,42 +1877,10 @@ func (s *HackathonService) SubmitRegistrationForm(
 		return nil, status.Error(codes.FailedPrecondition, "no registration form defined")
 	}
 
-	fieldByKey := make(map[string]map[string]any, len(forms.RegistrationFields))
-	for _, f := range forms.RegistrationFields {
-		if k, ok := f["key"].(string); ok {
-			fieldByKey[k] = f
-		}
-	}
-	consentByKey := make(map[string]map[string]any, len(forms.RegistrationConsents))
-	for _, c := range forms.RegistrationConsents {
-		if k, ok := c["key"].(string); ok {
-			consentByKey[k] = c
-		}
-	}
-
 	responses := req.GetResponses().AsMap()
-	for k := range responses {
-		if _, ok := fieldByKey[k]; !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "unknown field %q", k)
-		}
-	}
-	for k, f := range fieldByKey {
-		if required, _ := f["required"].(bool); required {
-			if _, ok := responses[k]; !ok {
-				return nil, status.Errorf(codes.InvalidArgument, "missing required field %q", k)
-			}
-		}
-	}
 	consents := req.GetConsents()
-	for k := range consents {
-		if _, ok := consentByKey[k]; !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "unknown consent %q", k)
-		}
-	}
-	for k, c := range consentByKey {
-		if required, _ := c["required"].(bool); required && !consents[k] {
-			return nil, status.Errorf(codes.InvalidArgument, "required consent %q not given", k)
-		}
+	if err := validateRegistrationForm(forms, responses, consents); err != nil {
+		return nil, err
 	}
 
 	// Upsert, not insert. People correct their answers — a changed diet, a new
@@ -1926,6 +1994,7 @@ func (s *HackathonService) GetRegistrationResponse(
 		if ent.IsNotFound(err) {
 			// Not an error: "you have not filled this in yet" is a normal
 			// state the form page renders as an empty form.
+			//exhaustruct:ignore
 			return &msgs.GetRegistrationResponseResponse{Submitted: false}, nil
 		}
 		slog.Error("query form response", "err", err)
@@ -1940,6 +2009,7 @@ func (s *HackathonService) GetRegistrationResponse(
 		return nil, status.Error(codes.Internal, "couldn't encode form response")
 	}
 
+	//exhaustruct:ignore
 	out := &msgs.GetRegistrationResponseResponse{
 		Submitted: true,
 		Responses: responses,
