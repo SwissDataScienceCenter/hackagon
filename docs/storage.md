@@ -137,9 +137,9 @@ Two shapes on the server side are worth keeping:
 
 Anything that stores a picture must accept the root-relative path back.
 `UserService.EditProfile` validated `avatar_url` as http/https only, so the
-upload worked and *saving the result* answered `InvalidArgument`; `checkImageRef`
-now takes an absolute link or a `/objects/…` path, and still refuses
-`javascript:`, `data:`, `//host` and `/\host`.
+upload worked and _saving the result_ answered `InvalidArgument`;
+`checkImageRef` now takes an absolute link or a `/objects/…` path, and still
+refuses `javascript:`, `data:`, `//host` and `/\host`.
 
 **Where upload is offered:** the event logo and every markdown editor inside an
 event (pages, phases, tracks, the event description), the platform pages CMS,
@@ -171,11 +171,11 @@ Admin role.** Three consequences, stated rather than left to be discovered:
   by another name — exactly what "keys, not URLs" avoids.
 - **Public from the moment it is uploaded, including for a draft page.** The
   object store's policy is per-prefix, not per-row, so an image pasted into an
-  unpublished About page is readable at its `/objects/…` path before the page is.
-  This is already true of a hackathon whose page is hidden; the protection is
-  that the path contains a v4 UUID nobody can enumerate, so the exposure is "the
-  link leaks if it is shared", not "the draft is browsable". Anything that must
-  stay unreadable until publication needs a private kind and
+  unpublished About page is readable at its `/objects/…` path before the page
+  is. This is already true of a hackathon whose page is hidden; the protection
+  is that the path contains a v4 UUID nobody can enumerate, so the exposure is
+  "the link leaks if it is shared", not "the draft is browsable". Anything that
+  must stay unreadable until publication needs a private kind and
   `CreateDownloadUrl`, not this one.
 
 The ceiling is 15 MiB and the allowlist is `imageTypes` — deliberately identical
@@ -198,11 +198,11 @@ authorization rule from it, and a client-supplied prefix is never trusted.
 prefix.** Not a parallel rule that has to be kept in agreement with the upload
 table — the identical check `authorizeUpload` makes.
 
-| scope             | prefixes                    | who                    |
-| ----------------- | --------------------------- | ---------------------- |
-| `HACKATHON_MEDIA` | `hackathons/<owner_id>/`    | hackathon `write`      |
-| `SITE_MEDIA`      | `site/media/`               | global `Admin`         |
-| `ALL_MEDIA`       | `hackathons/`, `site/media/`| global `Admin`         |
+| scope             | prefixes                     | who               |
+| ----------------- | ---------------------------- | ----------------- |
+| `HACKATHON_MEDIA` | `hackathons/<owner_id>/`     | hackathon `write` |
+| `SITE_MEDIA`      | `site/media/`                | global `Admin`    |
+| `ALL_MEDIA`       | `hackathons/`, `site/media/` | global `Admin`    |
 
 `HACKATHON_MEDIA` covers the event's `logo/` and `media/` folders together,
 because someone picking a picture wants everything the event has and both take
@@ -217,11 +217,12 @@ rather than a prefix string.**
   easy to do with someone's photograph. A global admin fixing one profile still
   reaches it from that profile. So the account page's picker has no browse half
   at all, and the absence is asserted (with a positive control on a surface that
-  DOES have one, or "no gallery tab" would pass on a dialog that never rendered).
-- **`teams/<id>/submissions/`** — private by bucket policy. Those objects have no
-  stable readable path, so a picker row for one would be a broken image; and the
-  KEYS alone would say which teams turned work in and how much, to anyone allowed
-  to list any scope.
+  DOES have one, or "no gallery tab" would pass on a dialog that never
+  rendered).
+- **`teams/<id>/submissions/`** — private by bucket policy. Those objects have
+  no stable readable path, so a picker row for one would be a broken image; and
+  the KEYS alone would say which teams turned work in and how much, to anyone
+  allowed to list any scope.
 
 **The answer is bounded, and says when it is.** Keys end in a v4 uuid, so the
 store's lexicographic order is noise — the listing is re-sorted newest-first,
@@ -232,11 +233,11 @@ how someone concludes their upload failed. The cursor is therefore an offset
 into the sorted order, not the store's continuation token — that token would
 resume a different sequence than the caller was reading.
 
-Only objects whose extension is on `imageTypes` come back (derived from that map,
-not restated). Every listable prefix is an imagery prefix, so this only filters
-strays — `rustfs-init.sh` leaves a `_selftest/probe.txt` under each public prefix
-while it proves the bucket policy — but a gallery is a grid of `<img>` and a row
-that can only render broken is worse than no row.
+Only objects whose extension is on `imageTypes` come back (derived from that
+map, not restated). Every listable prefix is an imagery prefix, so this only
+filters strays — `rustfs-init.sh` leaves a `_selftest/probe.txt` under each
+public prefix while it proves the bucket policy — but a gallery is a grid of
+`<img>` and a row that can only render broken is worse than no row.
 
 **Authorization is answered BEFORE "is storage configured".** Otherwise an
 anonymous caller learns something about the deployment in place of the
@@ -245,13 +246,13 @@ server with no store (which is what the unit-test config is).
 
 ### One picker, two ways in
 
-`components/forms/ImagePickerDialog.svelte` replaced the bare `<input
-type="file">` behind every uploader. A native `<dialog>` opened with
+`components/forms/ImagePickerDialog.svelte` replaced the bare
+`<input type="file">` behind every uploader. A native `<dialog>` opened with
 `showModal()`, so the platform owns the focus trap, the Esc key and the
 inertness of the page behind it. Two halves: **upload**, with a visible drop
 target that is a region and not the whole page, and **choose from what is
-already uploaded**, rendered only when the caller passes a `browseEndpoint`
-(a tab that can only ever be empty is worse than one tab).
+already uploaded**, rendered only when the caller passes a `browseEndpoint` (a
+tab that can only ever be empty is worse than one tab).
 
 One trap it introduced, worth not re-learning: **the dialog's heading is its
 accessible name, and a closed `<dialog>` is `display:none` but still in the
@@ -273,11 +274,11 @@ reachable only by typing its URL and that is not happening twice. It says on
 screen that avatars and submission files are deliberately absent, because a
 gallery that quietly omitted them would read as a complete inventory.
 
-**There is deliberately no single-object delete, and that follows from "keys, not
-URLs".** An image can be referenced from any page's markdown, any event's `logo`
-column and any prize row, and NOTHING records which. Deleting one would break
-those references silently — the row keeps its path and the page renders a hole.
-A safe delete needs a reference scan across every markdown field in the
+**There is deliberately no single-object delete, and that follows from "keys,
+not URLs".** An image can be referenced from any page's markdown, any event's
+`logo` column and any prize row, and NOTHING records which. Deleting one would
+break those references silently — the row keeps its path and the page renders a
+hole. A safe delete needs a reference scan across every markdown field in the
 database, which is a manifest by another name: exactly what this design avoids.
 The deletion that exists is still the one whose scope is an entity nobody points
 at any more — `HackathonService.Delete` and `UserService.DeleteAccount` purging
@@ -289,10 +290,9 @@ by prefix.
   by the PROPOSER, who is a plain Member — and `HACKATHON_MEDIA` authorizes on
   hackathon `Write`, which Members do not have. Offering upload there means a
   project-scoped kind, not a new form.
-- **Submission attachments.** `UPLOAD_KIND_SUBMISSION_ATTACHMENT` is
-  authorized and keyed, but `owner_id` is the SUBMISSION, so a file can only be
-  attached to a submission that already exists — today's form fixes the
-  structured answers at create. It also needs somewhere to keep the key
-  (`Submission.form` is `map[string]string`, so a `file` field could hold one)
-  and a link that mints a `CreateDownloadUrl`, which is still the one RPC with
-  no caller.
+- **Submission attachments.** `UPLOAD_KIND_SUBMISSION_ATTACHMENT` is authorized
+  and keyed, but `owner_id` is the SUBMISSION, so a file can only be attached to
+  a submission that already exists — today's form fixes the structured answers
+  at create. It also needs somewhere to keep the key (`Submission.form` is
+  `map[string]string`, so a `file` field could hold one) and a link that mints a
+  `CreateDownloadUrl`, which is still the one RPC with no caller.

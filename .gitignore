@@ -38,6 +38,7 @@ result
 .claude/**/vendor/docker-envs/
 .claude/**/.secrets.env
 .claude/scheduled_tasks.lock
+.claude/settings.local.json
 
 ## Sensitive Information ======================================================
 # All .env files

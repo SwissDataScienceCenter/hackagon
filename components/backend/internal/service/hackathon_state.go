@@ -158,6 +158,9 @@ func (s *HackathonService) SetCurrentPhase(
 	// here is unreachable; falling back to the raw string keeps the response
 	// well-formed rather than empty if that ever stops being true.
 	id, parseErr := uuid.Parse(req.GetHackathonId())
+	//nolint:nilerr // unreachable per the comment above: AdvancePhase already
+	// parsed the same id successfully, so this is a graceful fallback for an
+	// invariant, not a swallowed real failure.
 	if parseErr != nil {
 		return &msgs.SetCurrentPhaseResponse{
 			State: hackathonStateFrom(

@@ -35,12 +35,15 @@
     } = $props();
 </script>
 
-<!-- min-h-screen + flex-1 on <main>: the footer sits at the bottom of the
-     VIEWPORT on a short page and at the bottom of the DOCUMENT on a long one,
-     rather than floating halfway up an empty screen. -->
-<div class="flex min-h-screen flex-col">
+<!-- No min-h-screen here. That used to stretch this container to at least
+     100vh, which — via flex-1 on <main> — pinned the footer to the exact
+     bottom edge of the viewport even on a short page: it was visible on
+     first paint, with nothing to scroll. The footer should only come into
+     view once the page's own content actually reaches it, so height here is
+     the natural sum of header + content + footer, nothing forced. -->
+<div class="flex flex-col">
     <NavBar {session} />
-    <main class="flex-1">
+    <main>
         {@render children()}
     </main>
     <AppFooter />

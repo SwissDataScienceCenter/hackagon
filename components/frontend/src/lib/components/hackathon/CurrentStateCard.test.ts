@@ -30,7 +30,11 @@ function mount(
   capabilities: { capability: number; state: number; opensAt?: Date }[],
 ) {
   render(CurrentStateCard, {
-    props: { hackathonId: "h1", capabilities, currentPhaseName: "Hacking" },
+    props: {
+      hackathonId: "h1",
+      capabilities,
+      currentPhase: { name: "Hacking", description: "" },
+    },
   })
 }
 

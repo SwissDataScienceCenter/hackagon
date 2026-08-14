@@ -48,19 +48,27 @@
                 {/each}
             </div>
         {/if}
-        <span class="text-xs text-accent-ink">{venue}</span>
-        <div class="mt-1 flex flex-wrap items-center gap-3 sm:gap-4">
-            {#each organizers as org (org.name)}
-                <div class="flex h-4 min-w-0 max-w-24 items-center sm:w-16">
-                    {#if org.logoDarkUrl}
-                        <img src={org.logoUrl} alt={org.name} class="block max-h-full max-w-full object-contain dark:hidden" />
-                        <img src={org.logoDarkUrl} alt={org.name} class="hidden max-h-full max-w-full object-contain dark:block" />
-                    {:else}
-                        <img src={org.logoUrl} alt={org.name} class="max-h-full max-w-full object-contain invert dark:invert-0" />
-                    {/if}
-                </div>
-            {/each}
-        </div>
+        <!-- Both guarded rather than always rendered: `venue` is the empty string
+             and `organizers` is empty on every hackathon there is (Hackathon
+             carries neither field), and an empty span plus an empty flex row still
+             spend vertical rhythm on nothing. -->
+        {#if venue}
+            <span class="text-xs text-accent-ink">{venue}</span>
+        {/if}
+        {#if organizers.length > 0}
+            <div class="mt-1 flex flex-wrap items-center gap-3 sm:gap-4">
+                {#each organizers as org (org.name)}
+                    <div class="flex h-4 min-w-0 max-w-24 items-center sm:w-16">
+                        {#if org.logoDarkUrl}
+                            <img src={org.logoUrl} alt={org.name} class="block max-h-full max-w-full object-contain dark:hidden" />
+                            <img src={org.logoDarkUrl} alt={org.name} class="hidden max-h-full max-w-full object-contain dark:block" />
+                        {:else}
+                            <img src={org.logoUrl} alt={org.name} class="max-h-full max-w-full object-contain invert dark:invert-0" />
+                        {/if}
+                    </div>
+                {/each}
+            </div>
+        {/if}
     </div>
 
     <div

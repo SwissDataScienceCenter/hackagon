@@ -9,7 +9,7 @@
         role: roleProp,
         skills = [],
         linkedinUrl,
-        profileDetailsHref = '#',
+        profileDetailsHref,
         actions,
     }: {
         name: string;
@@ -26,6 +26,8 @@
         role?: string;
         skills?: string[];
         linkedinUrl?: string;
+        /** When unset, no "View" link is rendered — the caller has decided this
+         *  viewer has nowhere to go (e.g. a member who can't read others). */
         profileDetailsHref?: string;
         /**
          * Extra controls rendered beside "View" — e.g. an owner's Approve/Remove
@@ -112,8 +114,10 @@
         </div>
 
         <div class="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
-            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-            <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+            {#if profileDetailsHref}
+                <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
+                <a class="btn btn-sm btn-ghost" href={resolve(profileDetailsHref as any)} aria-label="View {name} profile">View</a>
+            {/if}
             {#if actions}
                 {@render actions()}
             {/if}

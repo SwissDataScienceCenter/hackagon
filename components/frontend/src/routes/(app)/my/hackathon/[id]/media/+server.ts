@@ -31,4 +31,8 @@ export const POST: RequestHandler = (event) =>
  * `users/<id>/avatar/` — no scope can; see ObjectScope in the proto.
  */
 export const GET: RequestHandler = (event) =>
-  listStoredImages(event, ObjectScope.OBJECT_SCOPE_HACKATHON_MEDIA, event.params.id)
+  listStoredImages(
+    event,
+    ObjectScope.OBJECT_SCOPE_HACKATHON_MEDIA,
+    event.params.id,
+  )

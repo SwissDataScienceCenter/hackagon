@@ -203,7 +203,9 @@ describe("SidebarNavSection", () => {
     it("keeps the parent on the rail while its items are folded away", () => {
       render(SidebarNavSection, parented({ open: false }))
 
-      expect(screen.getByRole("link", { name: "hackathon" })).toBeInTheDocument()
+      expect(
+        screen.getByRole("link", { name: "hackathon" }),
+      ).toBeInTheDocument()
       expect(screen.queryByRole("link", { name: "teams" })).toBeNull()
     })
 
@@ -248,7 +250,9 @@ describe("SidebarNavSection", () => {
         collapsed: false,
       })
 
-      expect(screen.getByRole("link", { name: "hackathon" })).toBeInTheDocument()
+      expect(
+        screen.getByRole("link", { name: "hackathon" }),
+      ).toBeInTheDocument()
       expect(screen.queryByRole("button")).toBeNull()
     })
 

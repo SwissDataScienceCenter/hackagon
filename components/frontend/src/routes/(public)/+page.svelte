@@ -120,12 +120,13 @@
 
         <div class="flex items-center gap-3">
             {#if featured}
-                <a href="/hackathon/{featured.id}" class="btn btn-solid no-underline">
+                <a href={resolve(`/hackathon/${featured.id}`)} class="btn btn-solid no-underline">
                     Get Started
                 </a>
             {/if}
             <!-- The browse page, not an anchor to the section below: "browse"
                  means every event, and the section here is a three-row teaser. -->
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
             <a href="/hackathon" class="btn btn-outline no-underline">
                 Browse Hackathons
                 <ArrowRight class="h-3.5 w-3.5 opacity-60" />
@@ -189,6 +190,7 @@
 <section class="px-4 py-12 sm:px-10 md:px-20">
     <div class="flex items-center justify-between">
         <h2 class="text-title">Award-winning projects</h2>
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
         <a href="/hackathon" class="text-sm text-accent-ink no-underline">See all →</a>
     </div>
 
@@ -205,7 +207,7 @@
     {:else}
         <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {#each data.awards as award (award.hackathonId + award.rank + award.title)}
-                <a href="/hackathon/{award.hackathonId}" class="card overflow-hidden no-underline">
+                <a href={resolve(`/hackathon/${award.hackathonId}`)} class="card overflow-hidden no-underline">
                     {#if award.hackathonLogo}
                         <!-- The event's own cover, not a stock photo of a
                              trophy: the card names a real award, so its picture

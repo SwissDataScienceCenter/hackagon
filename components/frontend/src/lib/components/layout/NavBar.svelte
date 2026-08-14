@@ -8,6 +8,8 @@
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
     import UserCog from 'lucide-svelte/icons/user-cog';
+    import LayoutDashboard from 'lucide-svelte/icons/layout-dashboard';
+    import Compass from 'lucide-svelte/icons/compass';
     import { loginDestination } from '$lib/utils/returnTo';
 
     // The header carries identity, theme and sign-out — no administration entry.
@@ -16,6 +18,20 @@
     // inside a hackathon an admin now returns to the dashboard first, via the
     // wordmark, rather than jumping straight there from the header — on a phone
     // as much as on a desktop, since the mobile panel drops the entry too.
+    //
+    // The primary nav is TWO entries: Dashboard (yours) and All Hackathons
+    // (everyone's). About is gone from it — the page stays, the entry does not.
+    // It is a SitePage that most people read once, if ever, and the footer's
+    // Platform column already links it from every page in the app (AppFooter,
+    // beside Privacy and Terms, which are the same kind of page and were never
+    // in the bar). Spending a third of the primary nav on it made the two
+    // entries that DO get used every day one item in a list of three rather
+    // than a pair to tell apart.
+    //
+    // "Every entry present on every page" still holds — that rule was about an
+    // entry appearing and disappearing under you as you moved through the app,
+    // which is why About was hoisted out of the app shell in the first place. It
+    // is now absent consistently, which the rule permits and the footer covers.
     let {
         session,
     }: {
@@ -39,6 +55,46 @@
     const onHackathons = $derived(
         $page.url.pathname === '/hackathon' || $page.url.pathname.startsWith('/hackathon/')
     );
+
+    // What each entry is FOR, in one line, stated once and rendered on both
+    // surfaces.
+    //
+    // Two distinct labels were not enough on their own: "Dashboard" and
+    // "Hackathons" are both nouns for a list of hackathons, and nothing in
+    // either word says whose. So the pair is separated three ways instead of
+    // one — the label names the SCOPE ("All Hackathons", against a Dashboard
+    // that is yours), an icon carries it pre-reading (a personal panel against
+    // a compass for browsing), and the sentence below spells it out where there
+    // is room for a sentence.
+    //
+    // "All Hackathons" rather than "Hackathons" for a second reason as well:
+    // the wordmark to its left already reads "Hackathons", so the bare noun was
+    // the same word twice in one bar, once as the platform's name and once as a
+    // destination inside it.
+    // Phrased as a contrast, not as two independent blurbs: "the events you're
+    // part of" against "every event", so reading either one answers the question
+    // the other raises.
+    const DASHBOARD_HINT = "The events you're part of";
+    const BROWSE_HINT = 'Every event on the platform, searchable';
+
+    // The desktop tab. `inline-flex` so the icon sits on the label's baseline
+    // row and the active underline spans both rather than the text alone.
+    const TAB =
+        'inline-flex items-center gap-1.5 pb-0.5 text-sm font-medium no-underline hover:text-accent-ink';
+    const TAB_ON = 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]';
+    const TAB_OFF = 'text-ink-2';
+
+    // The row vocabulary is SidebarNavSection's, so the two navigations read as
+    // one system rather than drifting into separate dialects of the same idea.
+    //
+    // `min-h-10` rather than `h-10`: the two primary entries carry their hint
+    // underneath, and a fixed height would clip the second line at the widths
+    // where it wraps. The single-line rows below keep the same 2.5rem they had.
+    const ROW =
+        'flex min-h-10 items-center gap-2 rounded-control px-2 py-1.5 text-sm no-underline transition-colors';
+    const ROW_ACTIVE = 'bg-raised font-medium text-accent-ink';
+    const ROW_IDLE = 'text-ink-3 hover:text-ink-2';
+    const ROW_HINT = 'text-xs font-normal text-ink-3';
 
     // Where signing in returns you.
     //
@@ -64,17 +120,6 @@
                     : $page.url.pathname + $page.url.search)
         )
     );
-
-    const TAB = 'pb-0.5 text-sm font-medium no-underline hover:text-accent-ink';
-    const TAB_ON = 'text-ink shadow-[inset_0_-2px_0_var(--color-accent)]';
-    const TAB_OFF = 'text-ink-2';
-
-    // The row vocabulary is SidebarNavSection's, so the two navigations read as
-    // one system rather than drifting into separate dialects of the same idea.
-    const ROW =
-        'flex h-10 items-center rounded-control px-2 text-sm no-underline transition-colors';
-    const ROW_ACTIVE = 'bg-raised font-medium text-accent-ink';
-    const ROW_IDLE = 'text-ink-3 hover:text-ink-2';
 
     // Any navigation closes the panel. It sits in the header's own flow rather
     // than over the page, so leaving it open would push the destination down
@@ -136,36 +181,47 @@
             <span class="truncate text-section max-[389px]:hidden">Hackathons</span>
         </a>
 
+        <!-- Two entries, and only two: your events, and all of them. About is
+             deliberately absent (the footer links it) — see the script above. -->
         <nav class="hidden items-center gap-6 md:flex">
-            <!-- Your events, only once you have some. First, because it is where
-                 a signed-in person is going nine times out of ten. -->
+            <!-- Yours. First, because it is where a signed-in person is going
+                 nine times out of ten, and because "yours" before "everyone's"
+                 is the order the two entries contrast in. -->
             {#if session?.user}
                 <a
                     href={resolve('/(app)/dashboard')}
                     aria-current={onDashboard ? 'page' : undefined}
+                    title={DASHBOARD_HINT}
                     class="{TAB} {onDashboard ? TAB_ON : TAB_OFF}"
                 >
+                    <LayoutDashboard class="h-4 w-4 shrink-0" aria-hidden="true" />
                     Dashboard
                 </a>
             {/if}
-            <!-- "Hackathons" is the browse page — every event, searchable —
+            <!-- Everyone's: the browse page — every event, searchable —
                  whoever is asking. The label names a list, so it has to reach
                  the list; when it pointed at the dashboard while signed in, the
-                 same word meant "yours" or "all" depending on your session. -->
-            <a href="/hackathon" aria-current={onHackathons ? 'page' : undefined} class="{TAB} {onHackathons ? TAB_ON : TAB_OFF}">
-                Hackathons
-            </a>
-            <!-- Always here, signed in or out. It used to be hidden inside the
-                 app shell as a "marketing link", which made the nav change
-                 shape the moment you reached the dashboard: three entries on
-                 the way in, two once you arrived. A navigation you cannot point
-                 at is worse than one carrying an entry you rarely need.
+                 same word meant "yours" or "all" depending on your session.
+                 It says "All" now for the same reason it stopped moving: the
+                 scope belongs in the label, not in the reader's session.
 
-                 About is a real SitePage, served by [slug=sitepage]. The
-                 "Challenges" entry that used to sit beside it pointed at "/" —
-                 no backing entity yet, and a link to nowhere is worse than a
-                 missing one. It comes back the day the feature does. -->
-            <a href="/about" class="{TAB} {TAB_OFF}">About</a>
+                 One label whoever is asking, signed in or out. A word that
+                 renames itself once you have an account is the same bug as one
+                 that re-points itself. -->
+            <!-- Block-scoped rather than -next-line: the anchor spans several
+                 lines, so the rule reports on the href line, not the tag line
+                 a -next-line comment would cover. -->
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
+            <a
+                href="/hackathon"
+                aria-current={onHackathons ? 'page' : undefined}
+                title={BROWSE_HINT}
+                class="{TAB} {onHackathons ? TAB_ON : TAB_OFF}"
+            >
+                <Compass class="h-4 w-4 shrink-0" aria-hidden="true" />
+                All Hackathons
+            </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
         </nav>
 
         <div class="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-3">
@@ -201,6 +257,10 @@
                      SidebarUserFooter version of this link lives, is not mounted
                      by any route, so without this entry /account exists and
                      nothing reaches it. -->
+                <!-- Block-scoped rather than -next-line: the anchor spans several
+                     lines, so the rule reports on the href line, not the tag line
+                     a -next-line comment would cover. -->
+                <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
                 <a
                     href="/account"
                     title="Your account"
@@ -209,6 +269,7 @@
                 >
                     <UserCog class="h-4 w-4" />
                 </a>
+                <!-- eslint-enable svelte/no-navigation-without-resolve -->
                 <!-- Desktop only. Below md it moves into the panel, and the width
                      that frees is what keeps the bar from overflowing at 320px. -->
                 <button
@@ -257,28 +318,45 @@
             class="flex flex-col gap-0.5 border-t border-line px-4 py-2 md:hidden"
         >
             <!-- Same entries as the bar above, in the same order: the panel is
-                 the bar at 320px, not a second navigation with its own ideas. -->
+                 the bar at 320px, not a second navigation with its own ideas.
+
+                 What it has that the bar cannot: room for the hint the bar can
+                 only offer as a tooltip — and a phone has no hover, so a
+                 title-only explanation would reach nobody here. -->
             {#if session?.user}
                 <a
                     href={resolve('/(app)/dashboard')}
                     aria-current={onDashboard ? 'page' : undefined}
                     class="{ROW} {onDashboard ? ROW_ACTIVE : ROW_IDLE}"
                 >
-                    Dashboard
+                    <LayoutDashboard class="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span class="flex min-w-0 flex-col">
+                        <span>Dashboard</span>
+                        <span class={ROW_HINT}>{DASHBOARD_HINT}</span>
+                    </span>
                 </a>
             {/if}
+            <!-- Block-scoped rather than -next-line: the anchor spans several
+                 lines, so the rule reports on the href line, not the tag line
+                 a -next-line comment would cover. -->
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
             <a
                 href="/hackathon"
                 aria-current={onHackathons ? 'page' : undefined}
                 class="{ROW} {onHackathons ? ROW_ACTIVE : ROW_IDLE}"
             >
-                Hackathons
+                <Compass class="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span class="flex min-w-0 flex-col">
+                    <span>All Hackathons</span>
+                    <span class={ROW_HINT}>{BROWSE_HINT}</span>
+                </span>
             </a>
-            <a href="/about" class="{ROW} {ROW_IDLE}">About</a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
             {#if session?.user}
                 <!-- Below md the account link moves in here with sign-out, for
                      the same reason sign-out does: the bar has no room for it
                      at 320px. -->
+                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
                 <a href="/account" class="{ROW} {ROW_IDLE}">Your account</a>
                 <button
                     onclick={() => signOut({ callbackUrl: '/' })}

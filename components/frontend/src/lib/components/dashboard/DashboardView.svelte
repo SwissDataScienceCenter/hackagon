@@ -197,7 +197,10 @@
                 <div class="card overflow-hidden">
                     {#each myHackathons as h, i (h.id)}
                         {@const mem = h.viewerMembership}
-                        <div class="flex items-center">
+                        <!-- Hover tint on the row wrapper, not just the link inside
+                             HackathonRow: the membership badge is that link's
+                             sibling, so a tint painted there stopped short of it. -->
+                        <div class="flex items-center transition-colors hover:bg-raised">
                             <div class="flex-1">
                                 <!-- Member of this one: straight to the member view. -->
                                 <HackathonRow
@@ -251,7 +254,12 @@
             {:else}
                 <div class="card overflow-hidden">
                     {#each otherHackathons as h, i (h.id)}
-                        <div class="flex items-center border-b border-line last:border-0">
+                        <!-- Same reasoning as the "Your hackathons" row above: the
+                             tint has to reach the trailing Join control too. -->
+                        <div
+                            class="flex items-center border-b border-line
+                                   transition-colors last:border-0 hover:bg-raised"
+                        >
                             <div class="flex-1">
                                 <!-- Not a member: the public page is the only view open to us. -->
                                 <HackathonRow

@@ -148,10 +148,7 @@ function lineBounds(text: string, start: number, end: number) {
  * prefix — a partial selection gets levelled up rather than half-toggled,
  * which is the behaviour that makes a drag over mixed lines predictable.
  */
-export function toggleLinePrefix(
-  state: EditState,
-  op: LinePrefix,
-): EditState {
+export function toggleLinePrefix(state: EditState, op: LinePrefix): EditState {
   const { text, start, end } = state
   const { from, to } = lineBounds(text, start, end)
   const lines = text.slice(from, to).split("\n")
@@ -291,7 +288,8 @@ export function toggleCodeBlock(state: EditState): EditState {
       `${FENCE}\n\n${FENCE}`,
     )
     // Caret on the blank line between the fences.
-    const inside = result.text.indexOf(`${FENCE}\n\n${FENCE}`) + FENCE.length + 1
+    const inside =
+      result.text.indexOf(`${FENCE}\n\n${FENCE}`) + FENCE.length + 1
     return { ...result, start: inside, end: inside }
   }
 
