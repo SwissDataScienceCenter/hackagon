@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import { stateAlerts, type CapabilityRow } from '$lib/utils/hackathonState';
 
     /**
@@ -42,7 +43,7 @@
         <!-- Straight to the switches. An alert that describes a problem and
              leaves you to find the control is only half an alert. -->
         <a
-            href="/my/hackathon/{hackathonId}/timeline"
+            href={resolve(`/my/hackathon/${hackathonId}/timeline`)}
             class="btn btn-sm shrink-0 no-underline"
         >
             Review the switches
