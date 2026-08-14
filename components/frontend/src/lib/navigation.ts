@@ -11,10 +11,9 @@ import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UsersRound from "lucide-svelte/icons/users-round"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
-import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
-import CalendarCog from "lucide-svelte/icons/calendar-cog"
+import CalendarPlus from "lucide-svelte/icons/calendar-plus"
 import FileText from "lucide-svelte/icons/file-text"
 import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
@@ -448,21 +447,9 @@ export function manageNav(
       icon: Tag,
       href: resolve(`/my/hackathon/${hackathonId}/tracks`),
     },
-    // Approve and waitlist actions live on the same page every participant
-    // reads, gated internally on `mayManage` rather than split into a second
-    // route the way main's `/participants/manage` is — so this entry, unlike
-    // its siblings, points at the SAME url the participant nav's own
-    // "Participants" entry does. Without it the Manage section named every
-    // organiser destination except this one.
-    {
-      id: "manage:participants",
-      label: "Manage Participants",
-      icon: UserRoundCheck,
-      href: resolve(`/my/hackathon/${hackathonId}/participants`),
-    },
     // Nested under the participant Teams route, so `activeNavId`'s longest match
     // lights this entry and not that one while the page is open — the same
-    // mechanism Manage Timeline relies on below.
+    // mechanism New Phase relies on below.
     //
     // Labelled for the page it opens rather than trimmed to "Teams": the
     // heading already says Manage, but an entry whose label repeats a
@@ -474,17 +461,15 @@ export function manageNav(
       icon: UserRoundCog,
       href: resolve(`/my/hackathon/${hackathonId}/teams/manage`),
     },
-    // The phase LIST, not the creation form: `/timeline` already offers Add,
-    // Edit and Make-current to anyone `mayManage` is true for (unlike main's
-    // `/timeline/manage`, which also sets the current phase and toggles
-    // capabilities — those live on Manage Hackathon here instead). Landing an
-    // organiser straight on a blank "new phase" form read oddly once a
-    // hackathon already had phases to edit.
+    // A create route rather than a landing page, following `homeNav`'s Create
+    // Hackathon: the timeline itself is already in the participant nav, so a
+    // second entry pointing at the same URL would be the one thing this split is
+    // meant to avoid.
     {
-      id: "manage:timeline",
-      label: "Manage Timeline",
-      icon: CalendarCog,
-      href: resolve(`/my/hackathon/${hackathonId}/timeline`),
+      id: "manage:phase-create",
+      label: "New Phase",
+      icon: CalendarPlus,
+      href: resolve(`/my/hackathon/${hackathonId}/timeline/new`),
     },
     // Last, because the page list it acts on is last in `memberNav` for the same
     // reason: an organiser can add and remove pages at will, so anything below it
