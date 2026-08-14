@@ -1,4 +1,9 @@
-import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test"
+import {
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test"
 import {
   KEYCLOAK,
   type Persona,
@@ -74,7 +79,10 @@ export async function fillKeycloakForm(
  * ("identity, not an action to be drawn toward"), so a role-based locator finds
  * nothing even though the user is signed in.
  */
-export async function expectSignedIn(page: Page, initial: string): Promise<void> {
+export async function expectSignedIn(
+  page: Page,
+  initial: string,
+): Promise<void> {
   await expect(
     page.locator("header").getByText(initial, { exact: true }),
   ).toBeVisible()
@@ -91,7 +99,9 @@ export async function registerViaKeycloak(
   page: Page,
   reg: SelfRegistrant,
 ): Promise<void> {
-  const kc = new RegExp(KEYCLOAK.baseUrl.replace(/^https?:\/\//, "").replace(/[.:]/g, "\\$&"))
+  const kc = new RegExp(
+    KEYCLOAK.baseUrl.replace(/^https?:\/\//, "").replace(/[.:]/g, "\\$&"),
+  )
 
   await page.goto("/")
   await page.waitForLoadState("networkidle")
@@ -106,18 +116,28 @@ export async function registerViaKeycloak(
   await page.locator("#username").fill(reg.username)
   await page.locator("#password").fill(reg.password)
   await page.locator("#password-confirm").fill(reg.password)
-  await page.locator('input[type="submit"], button[type="submit"]').first().click()
+  await page
+    .locator('input[type="submit"], button[type="submit"]')
+    .first()
+    .click()
 
   try {
     await page.waitForURL(/localhost:8081/, { timeout: 15_000 })
   } catch {
     // Still on Keycloak: the only expected reason is an already-registered
     // account from a --no-reset rerun — log in with the same credentials.
-    if (await page.getByText(/already exists/i).first().isVisible()) {
+    if (
+      await page
+        .getByText(/already exists/i)
+        .first()
+        .isVisible()
+    ) {
       await loginViaKeycloak(page, reg)
       return
     }
-    throw new Error("registration did not return to the app and no 'already exists' error is shown")
+    throw new Error(
+      "registration did not return to the app and no 'already exists' error is shown",
+    )
   }
   await expect(
     page.locator("header").getByText(reg.initial, { exact: true }),
@@ -148,6 +168,8 @@ export async function contextFor(
  * "not specified" and the inherited value survives the merge. An explicit empty
  * state is the only spelling that overrides it.
  */
-export async function anonymousContext(browser: Browser): Promise<BrowserContext> {
+export async function anonymousContext(
+  browser: Browser,
+): Promise<BrowserContext> {
   return browser.newContext({ storageState: { cookies: [], origins: [] } })
 }

@@ -43,9 +43,13 @@ export default defineConfig({
     // Default unchanged, because on a passing run the artifacts cost nothing
     // and on a failing one they are how anyone diagnoses it. Screenshots stay
     // on either way — they are written once, only on failure.
-    trace: (process.env.E2E_TRACE as "on" | "off" | "retain-on-failure") ?? "retain-on-failure",
+    trace:
+      (process.env.E2E_TRACE as "on" | "off" | "retain-on-failure") ??
+      "retain-on-failure",
     screenshot: "only-on-failure",
-    video: (process.env.E2E_VIDEO as "on" | "off" | "retain-on-failure") ?? "retain-on-failure",
+    video:
+      (process.env.E2E_VIDEO as "on" | "off" | "retain-on-failure") ??
+      "retain-on-failure",
   },
   projects: [
     // Logs in every persona through the real Keycloak flow and saves a
@@ -55,12 +59,20 @@ export default defineConfig({
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     // Snapshot-mode suite: requires `just db::seed` (scripts/run.sh smoke does
     // this). Verifies what each persona can see/do against the seed fixture.
-    { name: "smoke", testMatch: /smoke\/.*\.spec\.ts/, dependencies: ["setup"] },
+    {
+      name: "smoke",
+      testMatch: /smoke\/.*\.spec\.ts/,
+      dependencies: ["setup"],
+    },
     // Journey-mode suite: requires an EMPTY database (scripts/run.sh journey
     // resets state and does NOT seed). Plays the full hackathon lifecycle
     // recipe act by act; acts whose backend RPCs are missing self-skip based
     // on .state/capabilities.json written by scripts/probe.sh.
-    { name: "journey", testMatch: /journey\/.*\.spec\.ts/, dependencies: ["setup"] },
+    {
+      name: "journey",
+      testMatch: /journey\/.*\.spec\.ts/,
+      dependencies: ["setup"],
+    },
     // Smartphone battery: every surface at a phone viewport — responsive
     // sanity checks (no horizontal overflow, visible header) plus a full-page
     // screenshot per page into .artifacts/mobile/. Viewport-only emulation:

@@ -14,9 +14,14 @@ import { PERSONAS } from "../../personas.js"
 const base = process.env.TUNNEL_BASE_URL
 
 test.describe("login through the quick tunnel", () => {
-  test.skip(!base, "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first")
+  test.skip(
+    !base,
+    "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first",
+  )
 
-  test("alice logs in on the public URL and reaches her dashboard", async ({ page }) => {
+  test("alice logs in on the public URL and reaches her dashboard", async ({
+    page,
+  }) => {
     const alice = PERSONAS.alice
     await page.goto("/")
     await page.waitForLoadState("networkidle")
@@ -25,7 +30,9 @@ test.describe("login through the quick tunnel", () => {
     // Keycloak served from the SAME public host (caddy path-multiplexes
     // /realms/* to it) — this is the step that used to dead-end on
     // localhost:8180.
-    await page.waitForURL(/trycloudflare\.com\/realms\/hackagon/, { timeout: 45_000 })
+    await page.waitForURL(/trycloudflare\.com\/realms\/hackagon/, {
+      timeout: 45_000,
+    })
 
     await page.locator("#username").fill(alice.username)
     if (!(await page.locator("#password").isVisible())) {

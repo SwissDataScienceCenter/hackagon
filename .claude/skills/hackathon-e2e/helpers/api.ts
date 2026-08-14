@@ -37,7 +37,9 @@ export async function getTokenFor(creds: Credentials): Promise<string> {
   }
   const body = (await res.json()) as { access_token?: string }
   if (!body.access_token) {
-    throw new Error(`No access_token in Keycloak response for ${creds.username}`)
+    throw new Error(
+      `No access_token in Keycloak response for ${creds.username}`,
+    )
   }
   tokenCache.set(creds.username, body.access_token)
   return body.access_token
@@ -70,7 +72,9 @@ function runGrpcurl(method: string, data: unknown, token?: string): RpcResult {
     return { ok: true, data: out.trim() ? JSON.parse(out) : {}, raw: out }
   } catch (e) {
     const err = e as { stdout?: string; stderr?: string; message?: string }
-    const raw = `${err.stdout ?? ""}${err.stderr ?? ""}` || (err.message ?? "grpcurl failed")
+    const raw =
+      `${err.stdout ?? ""}${err.stderr ?? ""}` ||
+      (err.message ?? "grpcurl failed")
     const m = raw.match(/Code:\s*(\w+)/)
     return { ok: false, code: m?.[1], raw }
   }
@@ -171,7 +175,8 @@ export async function ensureRegistered(creds: Credentials): Promise<string> {
   let res = await rpcAsUser(creds, "user.UserService/WhoAmI", {})
   if (!res.ok && res.code === "NotFound") {
     const reg = await rpcAsUser(creds, "user.UserService/Register", {})
-    if (!reg.ok) throw new Error(`Register failed for ${creds.username}: ${reg.raw}`)
+    if (!reg.ok)
+      throw new Error(`Register failed for ${creds.username}: ${reg.raw}`)
     res = await rpcAsUser(creds, "user.UserService/WhoAmI", {})
   }
   const id: string | undefined = res.data?.user?.id

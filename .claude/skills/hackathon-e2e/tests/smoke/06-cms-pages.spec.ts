@@ -34,13 +34,19 @@ test.describe("platform CMS: /manage/pages", () => {
     // --- create, as a draft -------------------------------------------------
     await page.goto("/manage/pages")
     await page.waitForLoadState("networkidle")
-    await expect(page.getByRole("heading", { name: "Platform pages" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Platform pages" }),
+    ).toBeVisible()
 
     // A previous failed run may have left the page behind; slugs are unique,
     // so Create would fail with AlreadyExists. Clear it first.
     const stale = page.locator(".card", { hasText: TITLE })
     if ((await stale.count()) > 0) {
-      await stale.first().locator('form[action="?/delete"]').getByRole("button").click()
+      await stale
+        .first()
+        .locator('form[action="?/delete"]')
+        .getByRole("button")
+        .click()
       await expect(page.locator(".card", { hasText: TITLE })).toHaveCount(0)
     }
 
@@ -80,7 +86,9 @@ test.describe("platform CMS: /manage/pages", () => {
     await expect(badge).toHaveText("Published")
 
     resp = await anonPage.goto(`/${SLUG}`)
-    expect(resp?.status(), "a published page must be publicly readable").toBe(200)
+    expect(resp?.status(), "a published page must be publicly readable").toBe(
+      200,
+    )
     await expect(anonPage.getByRole("heading", { name: TITLE })).toBeVisible()
     // Markdown was parsed, not dumped as source.
     await expect(
@@ -130,7 +138,10 @@ test.describe("platform CMS: /manage/pages", () => {
     const ctx = await contextFor(browser, PERSONAS.alice.key)
     const alicePage = await ctx.newPage()
     const resp = await alicePage.goto("/manage/pages")
-    expect(resp?.status(), "organizers must not administer platform pages").toBe(403)
+    expect(
+      resp?.status(),
+      "organizers must not administer platform pages",
+    ).toBe(403)
     await ctx.close()
   })
 })

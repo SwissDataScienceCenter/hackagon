@@ -3,7 +3,9 @@ import { storageStatePath } from "../../helpers/state.js"
 
 test.use({ storageState: storageStatePath("alice") })
 
-test("the platform profile saves and survives the next request", async ({ page }) => {
+test("the platform profile saves and survives the next request", async ({
+  page,
+}) => {
   await page.goto("/account")
   await page.getByLabel("Affiliation").fill("ETH Zurich")
   await page.getByLabel("Skills").fill("Python, ML")
@@ -17,7 +19,9 @@ test("the platform profile saves and survives the next request", async ({ page }
   await page.goto("/dashboard")
   await page.goto("/account")
   await expect(page.getByLabel("Affiliation")).toHaveValue("ETH Zurich")
-  await expect(page.getByLabel("Dietary requirements")).toHaveValue("vegetarian")
+  await expect(page.getByLabel("Dietary requirements")).toHaveValue(
+    "vegetarian",
+  )
 
   // Clearing must stick too — a min_len would have made this impossible.
   await page.getByLabel("Dietary requirements").fill("")

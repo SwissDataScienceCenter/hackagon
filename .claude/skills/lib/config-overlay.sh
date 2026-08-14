@@ -61,14 +61,14 @@ HEADER='# GENERATED — machine-local config overlay. Do not edit, do not commit
 #   replay:  .claude/skills/openreplay-stack/scripts/wire-frontend.sh [--restore]'
 
 usage() {
-  sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
-  exit 2
+    sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
+    exit 2
 }
 
 # Everything except the header and the named key's block.
 strip_key() { # <file> <key>
-  [ -f "$1" ] || return 0
-  awk -v key="$2" '
+    [ -f "$1" ] || return 0
+    awk -v key="$2" '
     # Header: comments and blanks before the first top-level key.
     !started && /^[[:space:]]*(#.*)?$/ { next }
     /^[A-Za-z_][A-Za-z0-9_-]*:/ { started = 1; inblock = (index($0, key ":") == 1) }
@@ -79,7 +79,7 @@ strip_key() { # <file> <key>
 }
 
 trim_blank_lines() { # stdin -> stdout, leading/trailing blank lines removed
-  awk '
+    awk '
     { line[n++] = $0 }
     END {
       s = 0; while (s < n && line[s] ~ /^[[:space:]]*$/) s++
@@ -91,16 +91,16 @@ trim_blank_lines() { # stdin -> stdout, leading/trailing blank lines removed
 
 # Just the named key's block, as it currently stands.
 extract_key() { # <file> <key>
-  [ -f "$1" ] || return 0
-  awk -v key="$2" '
+    [ -f "$1" ] || return 0
+    awk -v key="$2" '
     /^[A-Za-z_][A-Za-z0-9_-]*:/ { inblock = (index($0, key ":") == 1) }
     inblock { print }
   ' "$1"
 }
 
 has_key() { # <file> <key>
-  [ -f "$1" ] || return 1
-  awk -v key="$2" '
+    [ -f "$1" ] || return 1
+    awk -v key="$2" '
     /^[A-Za-z_][A-Za-z0-9_-]*:/ && index($0, key ":") == 1 { found = 1 }
     END { exit found ? 0 : 1 }
   ' "$1"
@@ -116,13 +116,13 @@ has_key() { # <file> <key>
 # PATH. The overlay is generated text that always ends in exactly one newline,
 # so the trailing-newline stripping that `$(cat …)` does applies to both sides.
 commit() { # <tmp> <file>
-  if [ -f "$2" ] && [ "$(cat "$1")" = "$(cat "$2")" ]; then
-    rm -f "$1"
-    echo "unchanged"
-  else
-    mv "$1" "$2"
-    echo "changed"
-  fi
+    if [ -f "$2" ] && [ "$(cat "$1")" = "$(cat "$2")" ]; then
+        rm -f "$1"
+        echo "unchanged"
+    else
+        mv "$1" "$2"
+        echo "changed"
+    fi
 }
 
 cmd="${1:-}"
@@ -131,14 +131,14 @@ file="$2"
 key="${3:-}"
 
 case "$cmd" in
-  set)
+set)
     [ -n "$key" ] || usage
     block="$(cat | trim_blank_lines)"
     # A block that does not start with the key it claims to be would land in
     # the file under someone else's name and be removable by nobody.
     case "$block" in
-      "$key:"* | "$key: "*) ;;
-      *)
+    "$key:"* | "$key: "*) ;;
+    *)
         echo "config-overlay: block for '$key' must start with '$key:'" >&2
         exit 2
         ;;
@@ -149,58 +149,58 @@ case "$cmd" in
     # scripts bounce :8081, and a needless bounce mid-suite fails one unrelated
     # test with nothing pointing back here.
     if [ "$(extract_key "$file" "$key" | trim_blank_lines)" = "$block" ]; then
-      echo "unchanged"
-      exit 0
+        echo "unchanged"
+        exit 0
     fi
     rest="$(strip_key "$file" "$key" | trim_blank_lines)"
     tmp="$file.tmp.$$"
     {
-      printf '%s\n' "$HEADER"
-      if [ -n "$rest" ]; then printf '\n%s\n' "$rest"; fi
-      printf '\n%s\n' "$block"
+        printf '%s\n' "$HEADER"
+        if [ -n "$rest" ]; then printf '\n%s\n' "$rest"; fi
+        printf '\n%s\n' "$block"
     } >"$tmp"
     commit "$tmp" "$file"
     ;;
 
-  remove)
+remove)
     [ -n "$key" ] || usage
     if [ ! -f "$file" ]; then
-      echo "unchanged"
-      exit 0
+        echo "unchanged"
+        exit 0
     fi
     rest="$(strip_key "$file" "$key" | trim_blank_lines)"
     if [ -z "$rest" ]; then
-      # Nothing but the header would be left. An empty overlay and no overlay
-      # are the same configuration, and only one of them looks like a fresh
-      # clone to whoever opens the directory next.
-      if has_key "$file" "$key"; then
-        rm -f "$file"
-        echo "changed"
-      else
-        rm -f "$file"
-        echo "unchanged"
-      fi
-      exit 0
+        # Nothing but the header would be left. An empty overlay and no overlay
+        # are the same configuration, and only one of them looks like a fresh
+        # clone to whoever opens the directory next.
+        if has_key "$file" "$key"; then
+            rm -f "$file"
+            echo "changed"
+        else
+            rm -f "$file"
+            echo "unchanged"
+        fi
+        exit 0
     fi
     tmp="$file.tmp.$$"
     {
-      printf '%s\n' "$HEADER"
-      printf '\n%s\n' "$rest"
+        printf '%s\n' "$HEADER"
+        printf '\n%s\n' "$rest"
     } >"$tmp"
     commit "$tmp" "$file"
     ;;
 
-  get)
+get)
     [ -n "$key" ] || usage
     extract_key "$file" "$key" | trim_blank_lines
     ;;
 
-  has) has_key "$file" "$key" ;;
+has) has_key "$file" "$key" ;;
 
-  keys)
+keys)
     [ -f "$file" ] || exit 0
     awk '/^[A-Za-z_][A-Za-z0-9_-]*:/ { sub(/:.*/, ""); print }' "$file"
     ;;
 
-  *) usage ;;
+*) usage ;;
 esac

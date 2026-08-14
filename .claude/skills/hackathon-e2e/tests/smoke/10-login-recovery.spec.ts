@@ -11,7 +11,9 @@ import { test, expect } from "@playwright/test"
 test.describe("password step: changing the username", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("offers a labelled way back that actually restarts the login", async ({ page }) => {
+  test("offers a labelled way back that actually restarts the login", async ({
+    page,
+  }) => {
     await page.goto("/")
     await page.waitForLoadState("networkidle")
     await page.getByRole("button", { name: "Log in" }).click()
@@ -29,7 +31,9 @@ test.describe("password step: changing the username", () => {
     // A word, not just an icon: this is the whole point of the fix. The text
     // comes from CSS (the theme extends keycloak.v2 without copying its
     // templates), so it is asserted through the rendered pseudo-element.
-    const label = await back.evaluate((e) => getComputedStyle(e, "::before").content)
+    const label = await back.evaluate(
+      (e) => getComputedStyle(e, "::before").content,
+    )
     expect(label).toContain("Change")
     // It must sit inside the button, not float over the icon — PatternFly owns
     // ::after on buttons for its border overlay, and a label put there escaped.

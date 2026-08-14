@@ -48,7 +48,10 @@ test.describe("admin panel screenshots", () => {
     for (const s of shots) {
       await page.goto(s.path)
       await page.waitForLoadState("networkidle")
-      await page.screenshot({ path: `.artifacts/admin/${s.name}.png`, fullPage: true })
+      await page.screenshot({
+        path: `.artifacts/admin/${s.name}.png`,
+        fullPage: true,
+      })
     }
 
     // The account menu only exists once opened, so it needs its own shot.

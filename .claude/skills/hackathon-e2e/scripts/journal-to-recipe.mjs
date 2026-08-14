@@ -31,9 +31,11 @@
 
 import fs from "node:fs"
 
-const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+const UUID =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
 // Same shape, unanchored, for "does this blob contain a uuid anywhere".
-const UUID_ANYWHERE = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
+const UUID_ANYWHERE =
+  /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
 
 // Journal lines that are traffic rather than intent. Dropping these is the one
 // editorial judgement this script makes, and both are reversible by flag.
@@ -43,7 +45,13 @@ const READ_METHOD = /\/(Get|List|WhoAmI|Preview|Export|Suggest)[A-Za-z]*$/
 // ─── argv ────────────────────────────────────────────────────────────────────
 
 const argv = process.argv.slice(2)
-const opts = { dedupe: false, keepHealth: false, keepReads: false, out: null, fromSeq: 0 }
+const opts = {
+  dedupe: false,
+  keepHealth: false,
+  keepReads: false,
+  out: null,
+  fromSeq: 0,
+}
 let journalPath = null
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i]
@@ -53,7 +61,13 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--out") opts.out = argv[++i]
   else if (a === "--from-seq") opts.fromSeq = Number(argv[++i])
   else if (a === "-h" || a === "--help") {
-    console.log(fs.readFileSync(new URL(import.meta.url), "utf8").split("\n").slice(1, 31).join("\n"))
+    console.log(
+      fs
+        .readFileSync(new URL(import.meta.url), "utf8")
+        .split("\n")
+        .slice(1, 31)
+        .join("\n"),
+    )
     process.exit(0)
   } else if (a.startsWith("-")) {
     console.error(`unknown option: ${a}`)
@@ -61,7 +75,9 @@ for (let i = 0; i < argv.length; i++) {
   } else journalPath = a
 }
 if (!journalPath) {
-  console.error("usage: journal-to-recipe.mjs <journal.jsonl> [--out f] [--dedupe] [--keep-health] [--keep-reads]")
+  console.error(
+    "usage: journal-to-recipe.mjs <journal.jsonl> [--out f] [--dedupe] [--keep-health] [--keep-reads]",
+  )
   process.exit(2)
 }
 
@@ -88,9 +104,11 @@ const captured = entries.length
 let dropped = { health: 0, reads: 0, dupes: 0, early: 0 }
 
 let kept = entries.filter((e) => {
-  if (opts.fromSeq && (e.seq ?? 0) < opts.fromSeq) return (dropped.early++, false)
+  if (opts.fromSeq && (e.seq ?? 0) < opts.fromSeq)
+    return (dropped.early++, false)
   if (!opts.keepHealth && e.method === HEALTH) return (dropped.health++, false)
-  if (!opts.keepReads && READ_METHOD.test("/" + (e.method ?? ""))) return (dropped.reads++, false)
+  if (!opts.keepReads && READ_METHOD.test("/" + (e.method ?? "")))
+    return (dropped.reads++, false)
   return true
 })
 
@@ -129,7 +147,11 @@ function varNameFor(entry, path) {
   const method = entry.method ?? ""
   const short = method.split("/").pop() ?? ""
   const leaf = path.split(".").pop() ?? "id"
-  if (SELF_ID.test("/" + method) && entry.actor && entry.actor !== "anonymous") {
+  if (
+    SELF_ID.test("/" + method) &&
+    entry.actor &&
+    entry.actor !== "anonymous"
+  ) {
     return { token: `{{userId:${entry.actor}}}`, save: null }
   }
   // {{hackathonId}} is the recipe's one bare token and it names THE event the
@@ -137,11 +159,24 @@ function varNameFor(entry, path) {
   // binding both to the same token silently rewrote every later reference to
   // the draft into a reference to the main event — a draft that looks right
   // and is wrong. Only the first Create claims it; the rest fall through.
-  if (leaf === "hackathonId" && short === "Create" && !usedVars.has("hackathonId")) {
+  if (
+    leaf === "hackathonId" &&
+    short === "Create" &&
+    !usedVars.has("hackathonId")
+  ) {
     usedVars.add("hackathonId")
     return { token: "{{hackathonId}}", save: "hackathonId" }
   }
-  const base = leaf === "id" ? lowerFirst(entry.method.split(".").pop().split("/")[0].replace(/Service$/, "")) : leaf
+  const base =
+    leaf === "id"
+      ? lowerFirst(
+          entry.method
+            .split(".")
+            .pop()
+            .split("/")[0]
+            .replace(/Service$/, ""),
+        )
+      : leaf
   let name = `${base}${short === "Create" || short === "Propose" ? "" : capitalize(short)}`
   let n = 1
   let candidate = name
@@ -190,7 +225,8 @@ function templateValue(v) {
 const referenced = new Set()
 for (const e of kept) {
   JSON.stringify(e.params ?? {}, (k, v) => {
-    if (typeof v === "string" && UUID.test(v) && binding.has(v)) referenced.add(v)
+    if (typeof v === "string" && UUID.test(v) && binding.has(v))
+      referenced.add(v)
     return v
   })
 }
@@ -263,7 +299,9 @@ log(
     `${manualCalls} carry a literal id`,
 )
 if (untemplated.size === 0) {
-  log("UNTEMPLATED: none — every id in every draft came from a call in this journal.")
+  log(
+    "UNTEMPLATED: none — every id in every draft came from a call in this journal.",
+  )
 } else {
   const sample = [...untemplated.entries()]
     .sort((a, b) => b[1] - a[1])
