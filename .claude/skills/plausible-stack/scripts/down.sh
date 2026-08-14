@@ -29,14 +29,14 @@ bash "$HERE/wire-frontend.sh" --restore || true
 if cfn_running "$NAMED_TUNNEL"; then cfn_stop "$NAMED_TUNNEL"; fi
 
 if [ "$VOLUMES" -eq 1 ]; then
-  echo "==> stopping and deleting volumes"
-  compose down -v --remove-orphans
-  # The tunnel URL and the "which URL was this wired at" marker describe a
-  # world that no longer exists.
-  rm -f "$STATE/tunnel-url"
+    echo "==> stopping and deleting volumes"
+    compose down -v --remove-orphans
+    # The tunnel URL and the "which URL was this wired at" marker describe a
+    # world that no longer exists.
+    rm -f "$STATE/tunnel-url"
 else
-  echo "==> stopping (statistics kept)"
-  compose down --remove-orphans
+    echo "==> stopping (statistics kept)"
+    compose down --remove-orphans
 fi
 
 echo "    done. Bring it back with: bash $HERE/up.sh"

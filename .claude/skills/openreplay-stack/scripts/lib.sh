@@ -23,14 +23,14 @@ SECRETS_FILE="$SKILL_DIR/.secrets.env"
 # Plain KEY=value lines, no quoting: the value is everything after the first
 # '=', so spaces survive without shell-quoting rules getting involved.
 load_secrets() {
-  [ -f "$SECRETS_FILE" ] || return 0
-  local line k
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in ''|\#*) continue ;; esac
-    k="${line%%=*}"
-    case "$k" in *[!A-Za-z0-9_]*|'') continue ;; esac
-    [ -n "${!k:-}" ] || export "$k=${line#*=}"
-  done < "$SECRETS_FILE"
+    [ -f "$SECRETS_FILE" ] || return 0
+    local line k
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in '' | \#*) continue ;; esac
+        k="${line%%=*}"
+        case "$k" in *[!A-Za-z0-9_]* | '') continue ;; esac
+        [ -n "${!k:-}" ] || export "$k=${line#*=}"
+    done <"$SECRETS_FILE"
 }
 
 # Paths handed to docker.exe. On Git Bash/MSYS, MSYS_NO_PATHCONV stops the
@@ -42,7 +42,7 @@ COMPOSE_VENDOR="$VENDOR/docker-compose.yaml"
 COMPOSE_OVERLAY="$SKILL_DIR/compose.tunnel.yaml"
 COMPOSE_DIR="$VENDOR"
 case "$(uname -s)" in
-  MINGW* | MSYS*)
+MINGW* | MSYS*)
     export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
     COMPOSE_VENDOR="$(cygpath -m "$COMPOSE_VENDOR")"
     COMPOSE_OVERLAY="$(cygpath -m "$COMPOSE_OVERLAY")"
@@ -51,19 +51,27 @@ case "$(uname -s)" in
 esac
 
 compose() {
-  docker compose -p "$PROJECT" \
-    -f "$COMPOSE_VENDOR" -f "$COMPOSE_OVERLAY" \
-    --project-directory "$COMPOSE_DIR" "$@"
+    docker compose -p "$PROJECT" \
+        -f "$COMPOSE_VENDOR" -f "$COMPOSE_OVERLAY" \
+        --project-directory "$COMPOSE_DIR" "$@"
 }
 
 require_docker() {
-  command -v docker >/dev/null 2>&1 || { echo "error: docker not found" >&2; exit 1; }
-  docker info >/dev/null 2>&1 || { echo "error: docker daemon not reachable" >&2; exit 1; }
+    command -v docker >/dev/null 2>&1 || {
+        echo "error: docker not found" >&2
+        exit 1
+    }
+    docker info >/dev/null 2>&1 || {
+        echo "error: docker daemon not reachable" >&2
+        exit 1
+    }
 }
 
 require_vendor() {
-  [ -f "$VENDOR/docker-compose.yaml" ] || {
-    echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2; exit 1; }
+    [ -f "$VENDOR/docker-compose.yaml" ] || {
+        echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2
+        exit 1
+    }
 }
 
 # ── named vs quick tunnel ────────────────────────────────────────────────────
@@ -81,7 +89,7 @@ source "$SKILL_DIR/../lib/cf-named-tunnel.sh"
 NAMED_TUNNEL="${OPENREPLAY_TUNNEL_NAME:-hackagon-openreplay}"
 
 named_configured() {
-  cf_configured && [ -n "${OPENREPLAY_HOSTNAME:-}" ]
+    cf_configured && [ -n "${OPENREPLAY_HOSTNAME:-}" ]
 }
 
 # The URL this rig is reachable on, asked of whatever is RUNNING — a named
@@ -89,9 +97,9 @@ named_configured() {
 # cloudflared ever prints it. Never the state file: a restarted tunnel has a new
 # URL and the same state file, and a stale URL fails silently.
 tunnel_url() {
-  cfn_url "$NAMED_TUNNEL" 2>/dev/null && return 0
-  docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
-    grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
+    cfn_url "$NAMED_TUNNEL" 2>/dev/null && return 0
+    docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
+        grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
 }
 
 # The docker network a service is on, read off the live container. Upstream
@@ -100,7 +108,7 @@ tunnel_url() {
 # INSIDE cloudflared, which Cloudflare renders as a plain 502 while every
 # container reports healthy. That cost an afternoon once already.
 rig_network() { # <service>
-  docker inspect "$(compose ps -q "$1")" \
-    --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null |
-    awk '{print $1}'
+    docker inspect "$(compose ps -q "$1")" \
+        --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null |
+        awk '{print $1}'
 }

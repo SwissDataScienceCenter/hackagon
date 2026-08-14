@@ -21,10 +21,13 @@ RECREATE=0
 WITH_REALM=1
 for arg in "$@"; do
     case "$arg" in
-        --recreate) RECREATE=1 ;;
-        --no-realm) WITH_REALM=0 ;;
-        -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
-        *) die "unknown flag $arg" ;;
+    --recreate) RECREATE=1 ;;
+    --no-realm) WITH_REALM=0 ;;
+    -h | --help)
+        sed -n '2,30p' "$0"
+        exit 0
+        ;;
+    *) die "unknown flag $arg" ;;
     esac
 done
 
@@ -70,7 +73,7 @@ fi
 # The rig's own kubeconfig, never ~/.kube/config: this machine has other
 # clusters and other contexts, and a rig that repoints `kubectl` for everything
 # else is a rig that breaks someone's day.
-k3d kubeconfig get "$CLUSTER" > "$KUBECONFIG_FILE"
+k3d kubeconfig get "$CLUSTER" >"$KUBECONFIG_FILE"
 ok "kubeconfig -> $KUBECONFIG_FILE"
 
 # =====================================================================
@@ -184,8 +187,8 @@ if [ ! -f "$TLS_CERT" ] || ! openssl x509 -in "$TLS_CERT" -checkend 604800 >/dev
     openssl req -x509 -newkey rsa:2048 -sha256 -days 90 -nodes \
         -keyout "$TLS_KEY" -out "$TLS_CERT" \
         -subj "//CN=$AUTH_HOST" \
-        -addext "subjectAltName=DNS:$AUTH_HOST" >/dev/null 2>&1 \
-        || die "openssl could not mint the Keycloak certificate"
+        -addext "subjectAltName=DNS:$AUTH_HOST" >/dev/null 2>&1 ||
+        die "openssl could not mint the Keycloak certificate"
     ok "minted a 90-day self-signed certificate for $AUTH_HOST"
 else
     ok "reusing the certificate for $AUTH_HOST"

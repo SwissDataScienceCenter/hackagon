@@ -1,6 +1,13 @@
 ---
 name: plausible-stack
-description: Spin up a self-hosted Plausible Analytics (Community Edition) instance with docker compose, behind a Cloudflare quick tunnel so both the dashboard and the tracking script have a public origin. Vendors the upstream compose, prepares secrets and the owner account non-interactively, wires the SvelteKit app at it and back, and proves a page view lands end to end. Use when asked to run/try/evaluate Plausible, add privacy-friendly analytics, or count page views for the hackathon platform.
+description:
+  Spin up a self-hosted Plausible Analytics (Community Edition) instance with
+  docker compose, behind a Cloudflare quick tunnel so both the dashboard and the
+  tracking script have a public origin. Vendors the upstream compose, prepares
+  secrets and the owner account non-interactively, wires the SvelteKit app at it
+  and back, and proves a page view lands end to end. Use when asked to
+  run/try/evaluate Plausible, add privacy-friendly analytics, or count page
+  views for the hackathon platform.
 ---
 
 # Plausible CE behind a quick tunnel
@@ -33,10 +40,10 @@ itself** and checks that `/register` refuses.
 
 `up.sh --named` puts this rig on a **persistent hostname you own** instead of a
 quick tunnel, using the same Cloudflare credentials as the app's tunnel —
-`PLAUSIBLE_HOSTNAME` in the gitignored
-`.claude/skills/cloudflare-tunnel/.env`. See that skill's SKILL.md for the token
-and its real (zone-wide) scope. Named is the default when configured; `--quick`
-forces the old behaviour, which still needs no account at all.
+`PLAUSIBLE_HOSTNAME` in the gitignored `.claude/skills/cloudflare-tunnel/.env`.
+See that skill's SKILL.md for the token and its real (zone-wide) scope. Named is
+the default when configured; `--quick` forces the old behaviour, which still
+needs no account at all.
 
 It matters more here than it looks. **`BASE_URL` is read once at boot** and used
 for link generation and the LiveView origin check, so a new hostname means
@@ -46,9 +53,9 @@ indistinguishable from "nobody visited". With a stable hostname the wiring
 written by `wire-frontend.sh` stays true across restarts, and `up.sh --named`
 skips the "start a tunnel just to find out what it is called" phase entirely.
 
-Only one tunnel runs at a time: `--named` stops the quick tunnel and vice
-versa, because `BASE_URL` names exactly one of them and a dashboard reached on
-the other renders and then never loads any numbers.
+Only one tunnel runs at a time: `--named` stops the quick tunnel and vice versa,
+because `BASE_URL` names exactly one of them and a dashboard reached on the
+other renders and then never loads any numbers.
 
 ## Layout
 
@@ -67,26 +74,26 @@ vendor/.env            what compose interpolates (generated)
 ```
 
 `vendor/` is fetched at a pinned tag (`PLAUSIBLE_REF`, default `v3.2.1`) rather
-than committed: **the compose file IS the version** — the image tag lives
-inside it — so the ref pinned here and the release running are one decision.
+than committed: **the compose file IS the version** — the image tag lives inside
+it — so the ref pinned here and the release running are one decision.
 
 ## Why the tunnel starts first
 
 Plausible reads `BASE_URL` **at boot** and uses it for link generation and for
 the LiveView origin check, so a dashboard booted against the wrong hostname
-serves HTML and then fails to connect its own websocket: a page that renders
-and never loads any numbers. `up.sh` therefore starts `tunnel` alone
-(`--no-deps`), reads the URL out of cloudflared's log, writes it, and only then
-starts the app. Same ordering trap as openreplay-stack's `COMMON_DOMAIN_NAME`,
-and the same consequence: **every `up.sh` mints a new URL**, so this is a
-debugging tool. A lasting instance wants a named tunnel and a fixed `BASE_URL`.
+serves HTML and then fails to connect its own websocket: a page that renders and
+never loads any numbers. `up.sh` therefore starts `tunnel` alone (`--no-deps`),
+reads the URL out of cloudflared's log, writes it, and only then starts the app.
+Same ordering trap as openreplay-stack's `COMMON_DOMAIN_NAME`, and the same
+consequence: **every `up.sh` mints a new URL**, so this is a debugging tool. A
+lasting instance wants a named tunnel and a fixed `BASE_URL`.
 
 Two differences from that rig, both easy to get backwards:
 
-| | openreplay-stack | here |
-| --- | --- | --- |
-| tunnel's `networks:` | must name `openreplay-net` — upstream defines one | must name NOTHING — upstream defines none, so everything is on `default` |
-| public hostname | bare host in `COMMON_DOMAIN_NAME` + `COMMON_PROTOCOL` | full URL in `BASE_URL`, scheme included |
+|                      | openreplay-stack                                      | here                                                                     |
+| -------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------ |
+| tunnel's `networks:` | must name `openreplay-net` — upstream defines one     | must name NOTHING — upstream defines none, so everything is on `default` |
+| public hostname      | bare host in `COMMON_DOMAIN_NAME` + `COMMON_PROTOCOL` | full URL in `BASE_URL`, scheme included                                  |
 
 Getting either wrong produces the same symptom: a 502 on the public URL with
 every container healthy.
@@ -98,9 +105,9 @@ with no mailer configured there is **no recovery path**. So the credentials are
 generated into `.secrets.env` and the account is created from them —
 `openreplay-stack` learned this by having to wipe its volumes once.
 
-The HTTP route *looks* scriptable and is not. `GET /register` serves a form
-with `user[name]`, `user[email]`, `user[password]`, `user[password_confirmation]`
-and a CSRF token; **`POST /register` is 404.** The form is a LiveView
+The HTTP route _looks_ scriptable and is not. `GET /register` serves a form with
+`user[name]`, `user[email]`, `user[password]`, `user[password_confirmation]` and
+a CSRF token; **`POST /register` is 404.** The form is a LiveView
 (`phx-submit="register"`) — the account is created by a handler on the
 websocket, and the form's own `action="/login"` only signs the new user in
 afterwards. `signup.sh` therefore runs Elixir inside the release with
@@ -165,9 +172,9 @@ nothing. `verify.sh` reads both.
   Manual mode means every page view is one the app decided to send, with a URL
   it built.
 
-`verify.sh` asserts both properties of the fetched script, because a wiring
-that names the wrong variant is invisible until somebody asks why the dashboard
-is empty.
+`verify.sh` asserts both properties of the fetched script, because a wiring that
+names the wrong variant is invisible until somebody asks why the dashboard is
+empty.
 
 ### Unwire before running an e2e suite
 
@@ -194,9 +201,9 @@ Full statement in **`docs/frontend/analytics.md`**. The short version:
   verified against `system.columns`, which shows no IP or user-agent column in
   `events_v2`/`sessions_v2`, rather than against a marketing page. No
   geolocation database is shipped, so country/city stay empty.
-- **It sits OUTSIDE the session-replay consent gate**, deliberately: that
-  banner asks about session RECORDING, and consent is scoped to what was asked.
-  A second banner would ask about something with no artefact to permit or
+- **It sits OUTSIDE the session-replay consent gate**, deliberately: that banner
+  asks about session RECORDING, and consent is scoped to what was asked. A
+  second banner would ask about something with no artefact to permit or
   withdraw. `DNT`/GPC still suppress it, before the script is fetched.
 - **Nothing is correlated.** No user id, session id or replay id is ever sent;
   these counts cannot be joined to the RPC journal or to a replay.
@@ -205,19 +212,19 @@ Full statement in **`docs/frontend/analytics.md`**. The short version:
 
 Idle, on this machine, with the app stack and the openreplay rig also running:
 
-| container | RSS | image |
-| --- | --- | --- |
-| `plausible` | 431 MB | 265 MB |
-| `plausible_events_db` (ClickHouse) | 188 MB | 718 MB |
-| `plausible_db` (Postgres 16) | 110 MB | 396 MB |
-| `tunnel` | 18 MB | — |
-| **total** | **≈ 750 MB** | ≈ 1.4 GB |
+| container                          | RSS          | image    |
+| ---------------------------------- | ------------ | -------- |
+| `plausible`                        | 431 MB       | 265 MB   |
+| `plausible_events_db` (ClickHouse) | 188 MB       | 718 MB   |
+| `plausible_db` (Postgres 16)       | 110 MB       | 396 MB   |
+| `tunnel`                           | 18 MB        | —        |
+| **total**                          | **≈ 750 MB** | ≈ 1.4 GB |
 
 Volumes after the first few page views: ~80 MB, nearly all of it Postgres's
 initial database.
 
-**It coexists with the openreplay rig comfortably** — that one wants 8 GB *of
-its own*, this one runs in under one, and the two were up together throughout
+**It coexists with the openreplay rig comfortably** — that one wants 8 GB _of
+its own_, this one runs in under one, and the two were up together throughout
 the verification below. Upstream recommends 2 GB RAM; the measured idle
 footprint is well under that, and ClickHouse is configured small by upstream's
 own `clickhouse/low-resources.xml`.
@@ -240,9 +247,9 @@ Docker Desktop. `verify.sh` — all nine checks:
    `config.yaml` still says `localhost`
 5. the tracker script is fetchable and is the `local` + `manual` variant
 6. **a real Firefox** visits `/`, clicks through to `/hackathon/<uuid>` and
-   opens `/invite/<token>`; the captured POST bodies carry
-   `/`, `/hackathon/[id]`, `/invite/[token]` and **no UUID, no token, no
-   internal referrer**
+   opens `/invite/<token>`; the captured POST bodies carry `/`,
+   `/hackathon/[id]`, `/invite/[token]` and **no UUID, no token, no internal
+   referrer**
 7. **Plausible's own Stats API** returns those three pages for today
 8. `events_v2`/`sessions_v2` have no IP or user-agent column
 9. `--restore` removes `plausible` and leaves `oidc` and `replay` intact
@@ -254,18 +261,18 @@ has been lied to before. Unwired, the same script records **zero** requests —
 which is the other half of "absent config ⇒ absent script".
 
 The **wipe-and-recover** claim is verified too, not just written down:
-`down.sh --volumes` (databases gone, frontend unwired, `oidc`/`replay` intact)
-→ `up.sh` → a new tunnel URL, the SAME owner account re-created from
+`down.sh --volumes` (databases gone, frontend unwired, `oidc`/`replay` intact) →
+`up.sh` → a new tunnel URL, the SAME owner account re-created from
 `.secrets.env`, the site re-created, registration closed again → re-wire →
 `verify.sh` green. All nine checks above were re-run after that cycle.
 
 **That round-trip found a bug that only a real wipe could show.** The Stats API
-key survives in `.secrets.env` by design, but its ROW was in the wiped
-database — so `signup.sh`'s "is the key set" test was true and useless, and the
-first thing to notice would have been a 401 in `verify.sh` step 7, pointing
-nowhere near the cause. It probes the key against the Stats API now and mints a
-new one when the answer is not 200. A file that outlives the thing it describes
-is not a cache; it is a claim that needs checking.
+key survives in `.secrets.env` by design, but its ROW was in the wiped database
+— so `signup.sh`'s "is the key set" test was true and useless, and the first
+thing to notice would have been a 401 in `verify.sh` step 7, pointing nowhere
+near the cause. It probes the key against the Stats API now and mints a new one
+when the answer is not 200. A file that outlives the thing it describes is not a
+cache; it is a claim that needs checking.
 
 Playwright and Firefox are borrowed from the sibling `hackathon-e2e` skill (the
 only place they are installed), through a `createRequire` anchored at that
@@ -276,32 +283,31 @@ not help.
 
 **A carriage return inside a secret.** Git Bash's `openssl` prints CRLF, so
 `openssl rand -base64 32 | tr -d '\n'` leaves a `\r` at the END OF THE VALUE —
-no longer a line ending, just a byte in a secret. Plausible then refuses to
-boot with `TOTP_VAULT_KEY must be Base64 encoded 32 bytes` about a key that
-decodes to exactly 32 bytes in every tool you check it with. It survives every
-obvious check: `cat -A` on a file `sed` has since rewritten shows nothing (MSYS
-strips CRs on the way through), `docker compose config` shows it clean because
-that reads `.env` rather than the process environment, and
+no longer a line ending, just a byte in a secret. Plausible then refuses to boot
+with `TOTP_VAULT_KEY must be Base64 encoded 32 bytes` about a key that decodes
+to exactly 32 bytes in every tool you check it with. It survives every obvious
+check: `cat -A` on a file `sed` has since rewritten shows nothing (MSYS strips
+CRs on the way through), `docker compose config` shows it clean because that
+reads `.env` rather than the process environment, and
 `docker inspect --format '{{range .Config.Env}}'` renders the CR as the line
 break it looks like. Only `{{json .Config.Env}}` shows it. Stripped in three
 places now — at generation, on read, and on write into `.env` — because a
 `.secrets.env` already on disk is not fixed by fixing the generator.
 
-**`curl -o /dev/null` on a Windows host.** `lib.sh` exports
-`MSYS_NO_PATHCONV=1` (docker needs its own `/container/paths` left alone), so
-`/dev/null` reaches `curl.exe` verbatim, which tries to create a file at that
-literal path and prints `curl: (23) client returned ERROR on write` — in the
-middle of a check that then PASSES, because `-w '%{http_code}'` already
-produced the number. Use `$CURL_DISCARD`. The same shape bites
-`curl … | grep … | head`: head closes the pipe at the first match while curl is
-still writing. Capture, then match.
+**`curl -o /dev/null` on a Windows host.** `lib.sh` exports `MSYS_NO_PATHCONV=1`
+(docker needs its own `/container/paths` left alone), so `/dev/null` reaches
+`curl.exe` verbatim, which tries to create a file at that literal path and
+prints `curl: (23) client returned ERROR on write` — in the middle of a check
+that then PASSES, because `-w '%{http_code}'` already produced the number. Use
+`$CURL_DISCARD`. The same shape bites `curl … | grep … | head`: head closes the
+pipe at the first match while curl is still writing. Capture, then match.
 
 **A restart that stops a server and does not start it.** The first
-`wire-frontend.sh` ran its restarts as `cmd && cmd` with output on
-`/dev/null`, and left the app tunnel's only upstream (`:8082`) stopped while
-printing "analytics is ON". The public URL kept answering — caddy falls back to
-`:8081` — right up until that was down too. Every restart step now captures its
-output, prints `ok`/`FAILED`, and names the port that is down. **Three** servers
-can be serving this app (process-compose's vite, `prod-frontend.sh` on :8081,
+`wire-frontend.sh` ran its restarts as `cmd && cmd` with output on `/dev/null`,
+and left the app tunnel's only upstream (`:8082`) stopped while printing
+"analytics is ON". The public URL kept answering — caddy falls back to `:8081` —
+right up until that was down too. Every restart step now captures its output,
+prints `ok`/`FAILED`, and names the port that is down. **Three** servers can be
+serving this app (process-compose's vite, `prod-frontend.sh` on :8081,
 `prod-serve.sh` on :8082 for the tunnel), and the built ones read their config
 once at boot, so all three are bounced.

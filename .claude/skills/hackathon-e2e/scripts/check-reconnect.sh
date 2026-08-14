@@ -47,7 +47,7 @@ pc() { process-compose --unix-socket "$SOCK" "$@" >/dev/null 2>&1; }
 # One <a href="/hackathon/{uuid}"> per listed event.
 page_html() { curl -fsS --max-time 15 "$BROWSE" 2>/dev/null || true; }
 page_count() {
-  page_html | grep -oE 'href="/hackathon/[0-9a-f-]{36}"' | sort -u | wc -l | tr -d ' '
+    page_html | grep -oE 'href="/hackathon/[0-9a-f-]{36}"' | sort -u | wc -l | tr -d ' '
 }
 # jq, not a grep for `"id"`. Every hackathon in this response also carries
 # nested ids (capability modifiers, creator, …), so a naive count reported 16 for
@@ -55,19 +55,19 @@ page_count() {
 # guard would have read as "nothing to test" and exited cleanly having tested
 # nothing. Ask the structure.
 rpc_count() {
-  grpcurl -plaintext -d '{"visibility_filter":1}' "$GRPC_ADDR" \
-    hackathon.HackathonService/List 2>/dev/null |
-    jq -r '.hackathons | length' 2>/dev/null || echo 0
+    grpcurl -plaintext -d '{"visibility_filter":1}' "$GRPC_ADDR" \
+        hackathon.HackathonService/List 2>/dev/null |
+        jq -r '.hackathons | length' 2>/dev/null || echo 0
 }
 
 fail() {
-  echo "  ✗ $1" >&2
-  FAILED=1
+    echo "  ✗ $1" >&2
+    FAILED=1
 }
 
 if [ -z "$SOCK" ] || [ ! -S "$SOCK" ]; then
-  echo "error: no process-compose socket — start the stack first (scripts/up.sh)." >&2
-  exit 1
+    echo "error: no process-compose socket — start the stack first (scripts/up.sh)." >&2
+    exit 1
 fi
 
 echo "==> Baseline"
@@ -75,44 +75,44 @@ BEFORE_RPC="$(rpc_count)"
 BEFORE_PAGE="$(page_count)"
 echo "     gRPC lists $BEFORE_RPC public events; the browse page renders $BEFORE_PAGE"
 if [ "$BEFORE_RPC" -eq 0 ]; then
-  echo "error: no public hackathons to check against — seed the instance first." >&2
-  echo "       (An assertion whose subject is absent verifies nothing.)" >&2
-  exit 1
+    echo "error: no public hackathons to check against — seed the instance first." >&2
+    echo "       (An assertion whose subject is absent verifies nothing.)" >&2
+    exit 1
 fi
 [ "$BEFORE_PAGE" -eq "$BEFORE_RPC" ] ||
-  fail "before any restart the page already disagrees with gRPC ($BEFORE_PAGE vs $BEFORE_RPC)"
+    fail "before any restart the page already disagrees with gRPC ($BEFORE_PAGE vs $BEFORE_RPC)"
 
 echo "==> Stopping the backend"
 pc process stop backend
 for _ in $(seq 1 15); do
-  [ "$(rpc_count)" -eq 0 ] && break
-  sleep 1
+    [ "$(rpc_count)" -eq 0 ] && break
+    sleep 1
 done
 
 echo "==> While the backend is down the page must say UNAVAILABLE, not EMPTY"
 DOWN_HTML="$(page_html)"
 if echo "$DOWN_HTML" | grep -q 'data-testid="listUnavailable"'; then
-  echo "     ✓ the page reports the outage"
+    echo "     ✓ the page reports the outage"
 else
-  if echo "$DOWN_HTML" | grep -q "No hackathons have been published yet"; then
-    fail "the page claims an EMPTY PLATFORM while the backend is down — this is the bug"
-  elif [ -z "$DOWN_HTML" ]; then
-    fail "the page did not render at all while the backend was down (it used to degrade)"
-  else
-    fail "the page neither reported the outage nor rendered the empty state"
-  fi
+    if echo "$DOWN_HTML" | grep -q "No hackathons have been published yet"; then
+        fail "the page claims an EMPTY PLATFORM while the backend is down — this is the bug"
+    elif [ -z "$DOWN_HTML" ]; then
+        fail "the page did not render at all while the backend was down (it used to degrade)"
+    else
+        fail "the page neither reported the outage nor rendered the empty state"
+    fi
 fi
 
 echo "==> Starting the backend"
 pc process start backend
 S=$(date +%s)
 while :; do
-  [ "$(rpc_count)" -gt 0 ] && break
-  if [ $(($(date +%s) - S)) -gt 600 ]; then
-    echo "error: the backend did not come back within 600s — not a channel problem." >&2
-    exit 1
-  fi
-  sleep 5
+    [ "$(rpc_count)" -gt 0 ] && break
+    if [ $(($(date +%s) - S)) -gt 600 ]; then
+        echo "error: the backend did not come back within 600s — not a channel problem." >&2
+        exit 1
+    fi
+    sleep 5
 done
 HEALTHY_AT=$(date +%s)
 echo "     gRPC answers again after $((HEALTHY_AT - S))s"
@@ -124,22 +124,22 @@ echo "     gRPC answers again after $((HEALTHY_AT - S))s"
 echo "==> The page must agree with gRPC again"
 LAG=-1
 for _ in $(seq 1 20); do
-  if [ "$(page_count)" -eq "$(rpc_count)" ] && [ "$(page_count)" -gt 0 ]; then
-    LAG=$(($(date +%s) - HEALTHY_AT))
-    break
-  fi
-  sleep 3
+    if [ "$(page_count)" -eq "$(rpc_count)" ] && [ "$(page_count)" -gt 0 ]; then
+        LAG=$(($(date +%s) - HEALTHY_AT))
+        break
+    fi
+    sleep 3
 done
 if [ "$LAG" -lt 0 ]; then
-  fail "the page still disagrees with gRPC 60s after the backend was healthy (page=$(page_count) grpc=$(rpc_count)) — the channel did not reconnect"
+    fail "the page still disagrees with gRPC 60s after the backend was healthy (page=$(page_count) grpc=$(rpc_count)) — the channel did not reconnect"
 else
-  echo "     ✓ the page recovered ${LAG}s after the backend was healthy"
+    echo "     ✓ the page recovered ${LAG}s after the backend was healthy"
 fi
 
 if [ "$FAILED" -ne 0 ]; then
-  echo ""
-  echo "FAILED — a backend restart is visible to users of :8081." >&2
-  exit 1
+    echo ""
+    echo "FAILED — a backend restart is visible to users of :8081." >&2
+    exit 1
 fi
 echo ""
 echo "PASSED — a backend restart heals itself, and an outage never reads as an empty platform."

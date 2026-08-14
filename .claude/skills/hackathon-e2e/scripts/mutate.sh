@@ -34,37 +34,37 @@ JOURNAL="$SKILL_DIR/mutations/.state/journal.json"
 
 DEVENV_BIN="$ROOT_DIR/.devenv/profile/bin"
 if [ -d "$DEVENV_BIN" ]; then
-  export PATH="$DEVENV_BIN:$PATH"
+    export PATH="$DEVENV_BIN:$PATH"
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "error: node is not on PATH and $DEVENV_BIN does not exist." >&2
-  echo "       Run this inside the dev container (devcontainer-up/scripts/mutate.sh)," >&2
-  echo "       or enter the Nix dev shell first." >&2
-  exit 1
+    echo "error: node is not on PATH and $DEVENV_BIN does not exist." >&2
+    echo "       Run this inside the dev container (devcontainer-up/scripts/mutate.sh)," >&2
+    echo "       or enter the Nix dev shell first." >&2
+    exit 1
 fi
 
 # The belt to the runner's braces. `[ -s ]` rather than `[ -f ]`: the runner
 # writes an empty array when it has nothing outstanding, and restoring from an
 # empty journal would print a scary message about a run that ended cleanly.
 on_exit() {
-  if [ -s "$JOURNAL" ] && ! grep -q '^\[\]$' "$JOURNAL" 2>/dev/null; then
-    echo
-    echo "!! mutations were still applied when this script exited — restoring" >&2
-    node "$RUNNER" restore || true
-  fi
-  # Verified, not assumed. Scoped to components/, which is the only tree the
-  # runner may touch; the repo-wide check can never pass in this container
-  # (three git-lfs pointer files read as permanently modified — trap 4).
-  local left
-  left="$(git -C "$ROOT_DIR" status --porcelain -- components/ || true)"
-  if [ -n "$left" ]; then
-    echo >&2
-    echo "!! components/ IS NOT CLEAN after the run:" >&2
-    echo "$left" >&2
-    echo "!! Do not commit. Inspect, then: git -C '$ROOT_DIR' checkout -- components/" >&2
-    exit 1
-  fi
+    if [ -s "$JOURNAL" ] && ! grep -q '^\[\]$' "$JOURNAL" 2>/dev/null; then
+        echo
+        echo "!! mutations were still applied when this script exited — restoring" >&2
+        node "$RUNNER" restore || true
+    fi
+    # Verified, not assumed. Scoped to components/, which is the only tree the
+    # runner may touch; the repo-wide check can never pass in this container
+    # (three git-lfs pointer files read as permanently modified — trap 4).
+    local left
+    left="$(git -C "$ROOT_DIR" status --porcelain -- components/ || true)"
+    if [ -n "$left" ]; then
+        echo >&2
+        echo "!! components/ IS NOT CLEAN after the run:" >&2
+        echo "$left" >&2
+        echo "!! Do not commit. Inspect, then: git -C '$ROOT_DIR' checkout -- components/" >&2
+        exit 1
+    fi
 }
 trap on_exit EXIT
 

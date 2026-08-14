@@ -18,9 +18,14 @@ import { onTunnel, onTunnelRealm } from "./host.js"
 const base = process.env.TUNNEL_BASE_URL
 
 test.describe("login through the tunnel", () => {
-  test.skip(!base, "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first")
+  test.skip(
+    !base,
+    "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first",
+  )
 
-  test("alice logs in on the public URL and reaches her dashboard", async ({ page }) => {
+  test("alice logs in on the public URL and reaches her dashboard", async ({
+    page,
+  }) => {
     const alice = PERSONAS.alice
     await page.goto("/")
     await page.waitForLoadState("networkidle")

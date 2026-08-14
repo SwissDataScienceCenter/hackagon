@@ -35,12 +35,13 @@ set -euo pipefail
 # shellcheck source=../../lib/cf-named-tunnel.sh
 . "$REPO_ROOT/.claude/skills/lib/cf-named-tunnel.sh"
 
-PURGE=0; STOP=0
+PURGE=0
+STOP=0
 for arg in "$@"; do
     case "$arg" in
-        --purge) PURGE=1 ;;
-        --stop) STOP=1 ;;
-        *) die "unknown flag $arg" ;;
+    --purge) PURGE=1 ;;
+    --stop) STOP=1 ;;
+    *) die "unknown flag $arg" ;;
     esac
 done
 
@@ -81,7 +82,7 @@ fi
 
 if [ "$PURGE" = 1 ]; then
     rm -f "$KUBECONFIG_FILE" "$GEN_VALUES" "$REALM_FILE" "$SECRETS_ENV" \
-          "$TLS_CERT" "$TLS_KEY" "$STATE_DIR/values.tunnel.yaml"
+        "$TLS_CERT" "$TLS_KEY" "$STATE_DIR/values.tunnel.yaml"
     rm -f "$STATE_DIR"/*.html "$STATE_DIR"/*.txt "$STATE_DIR"/*.body 2>/dev/null || true
     ok "purged $STATE_DIR"
     if [ "${#TUNNEL_HOSTS[@]}" -gt 0 ]; then

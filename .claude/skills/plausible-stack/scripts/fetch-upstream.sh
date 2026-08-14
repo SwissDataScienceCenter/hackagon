@@ -18,14 +18,14 @@ source "$HERE/lib.sh"
 
 [ "${1:-}" = "--force" ] && rm -rf "$VENDOR"
 if [ -f "$VENDOR/compose.yml" ]; then
-  echo "already fetched: $(head -1 "$VENDOR/UPSTREAM.txt" 2>/dev/null)"
-  echo "(use --force to refetch)"
-  exit 0
+    echo "already fetched: $(head -1 "$VENDOR/UPSTREAM.txt" 2>/dev/null)"
+    echo "(use --force to refetch)"
+    exit 0
 fi
 
 command -v git >/dev/null || {
-  echo "error: git not found" >&2
-  exit 1
+    echo "error: git not found" >&2
+    exit 1
 }
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -43,21 +43,21 @@ echo "==> cloning $UPSTREAM_REPO @ $UPSTREAM_REF…"
 # generating links to a hostname nothing resolves. Same class of failure that
 # cost openreplay-stack an afternoon of S3 signature mismatches.
 (
-  cd "$tmp"
-  git -c core.autocrlf=false -c core.eol=lf \
-    clone --depth 1 --branch "$UPSTREAM_REF" --single-branch \
-    "$UPSTREAM_REPO" ce 2>&1 | tail -1
-  cd ce
-  git rev-parse HEAD >../SHA
+    cd "$tmp"
+    git -c core.autocrlf=false -c core.eol=lf \
+        clone --depth 1 --branch "$UPSTREAM_REF" --single-branch \
+        "$UPSTREAM_REPO" ce 2>&1 | tail -1
+    cd ce
+    git rev-parse HEAD >../SHA
 )
 sha="$(cat "$tmp/SHA")"
 [ -f "$tmp/ce/compose.yml" ] || {
-  echo "error: no compose.yml at $UPSTREAM_REF" >&2
-  exit 1
+    echo "error: no compose.yml at $UPSTREAM_REF" >&2
+    exit 1
 }
 [ -d "$tmp/ce/clickhouse" ] || {
-  echo "error: no clickhouse/ config dir at $UPSTREAM_REF — compose bind-mounts it" >&2
-  exit 1
+    echo "error: no clickhouse/ config dir at $UPSTREAM_REF — compose bind-mounts it" >&2
+    exit 1
 }
 
 mkdir -p "$VENDOR"
@@ -65,10 +65,10 @@ cp "$tmp/ce/compose.yml" "$VENDOR/compose.yml"
 cp -r "$tmp/ce/clickhouse" "$VENDOR/clickhouse"
 cp "$tmp/ce/README.md" "$VENDOR/README.md" 2>/dev/null || true
 {
-  echo "$UPSTREAM_REPO @ $UPSTREAM_REF"
-  echo "commit $sha"
-  echo "fetched $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  echo "image   $(grep -oE 'ghcr.io/plausible/community-edition:[^ ]*' "$VENDOR/compose.yml" | head -1)"
+    echo "$UPSTREAM_REPO @ $UPSTREAM_REF"
+    echo "commit $sha"
+    echo "fetched $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "image   $(grep -oE 'ghcr.io/plausible/community-edition:[^ ]*' "$VENDOR/compose.yml" | head -1)"
 } >"$VENDOR/UPSTREAM.txt"
 
 echo "==> vendored $(find "$VENDOR" -type f | wc -l) files at ${sha:0:12}"

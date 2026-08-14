@@ -1,6 +1,14 @@
 ---
 name: seed-past-hackathons
-description: Populate a running Hackagon instance with SDSC's real past hackathons — one source-cited JSON per edition under data/, with all images downloaded into static/ and then uploaded into the platform's own object store (covers, gallery pages, prize art). Covers the editions from the live sdsc-hackathons.ch platform (Firestore) plus the Energy Data Hackdays. Use when asked to seed past/previous/archived hackathons, migrate the old platform's content, fill the platform with real history, add a new past edition, or demo the archive with authentic content.
+description:
+  Populate a running Hackagon instance with SDSC's real past hackathons — one
+  source-cited JSON per edition under data/, with all images downloaded into
+  static/ and then uploaded into the platform's own object store (covers,
+  gallery pages, prize art). Covers the editions from the live
+  sdsc-hackathons.ch platform (Firestore) plus the Energy Data Hackdays. Use
+  when asked to seed past/previous/archived hackathons, migrate the old
+  platform's content, fill the platform with real history, add a new past
+  edition, or demo the archive with authentic content.
 ---
 
 # Seed past SDSC hackathons
@@ -13,20 +21,20 @@ and a realistic fixture for the public pages.
 
 ## Editions on file
 
-| File | Event | When | Where | Source |
-| --- | --- | --- | --- | --- |
-| `2023-11-generative-ai.json` | SDSC Hackathon: Generative AI | 30 Nov – 1 Dec 2023 | ETH Andreasturm, Zurich Oerlikon | live platform (archived) + event page |
-| `2024-10-ord-for-the-sciences.json` | SDSC Hackathon: ORD for the Sciences | 24–25 Oct 2024 | BC Building, EPFL, Lausanne | live platform (archived) + event page |
-| `2025-09-energy-data-hackdays.json` | Energy Data Hackdays 2025 | 11–12 Sep 2025 | FHNW Brugg-Windisch | SDSC event page |
-| `2026-05-energy-data-hackdays-lausanne.json` | Energy Data Hackdays — Spring, Lausanne | 7–8 May 2026 | Biopôle, Lausanne | SDSC article |
-| `2026-06-durham-group-1.json` | Hackathon with Uni Durham — Group 1 | 2–3 Jun 2026 | SDSC, Arginine bld, Biopôle | **live platform** |
-| `2026-06-durham-group-2.json` | Hackathon with Uni Durham — Group 2 | 9–10 Jun 2026 | SDSC, Arginine bld, Biopôle | **live platform** |
+| File                                         | Event                                   | When                | Where                            | Source                                |
+| -------------------------------------------- | --------------------------------------- | ------------------- | -------------------------------- | ------------------------------------- |
+| `2023-11-generative-ai.json`                 | SDSC Hackathon: Generative AI           | 30 Nov – 1 Dec 2023 | ETH Andreasturm, Zurich Oerlikon | live platform (archived) + event page |
+| `2024-10-ord-for-the-sciences.json`          | SDSC Hackathon: ORD for the Sciences    | 24–25 Oct 2024      | BC Building, EPFL, Lausanne      | live platform (archived) + event page |
+| `2025-09-energy-data-hackdays.json`          | Energy Data Hackdays 2025               | 11–12 Sep 2025      | FHNW Brugg-Windisch              | SDSC event page                       |
+| `2026-05-energy-data-hackdays-lausanne.json` | Energy Data Hackdays — Spring, Lausanne | 7–8 May 2026        | Biopôle, Lausanne                | SDSC article                          |
+| `2026-06-durham-group-1.json`                | Hackathon with Uni Durham — Group 1     | 2–3 Jun 2026        | SDSC, Arginine bld, Biopôle      | **live platform**                     |
+| `2026-06-durham-group-2.json`                | Hackathon with Uni Durham — Group 2     | 9–10 Jun 2026       | SDSC, Arginine bld, Biopôle      | **live platform**                     |
 
 The Durham pair and the two SDSC editions come straight from the **current
-platform's own database** — sdsc-hackathons.ch is a FlutterFlow app on
-Firestore (project `sdschacks`, collection `hackathons`); each record carries
-its `platformRef` with the document id, so the mapping old→new is traceable.
-Read one directly with:
+platform's own database** — sdsc-hackathons.ch is a FlutterFlow app on Firestore
+(project `sdschacks`, collection `hackathons`); each record carries its
+`platformRef` with the document id, so the mapping old→new is traceable. Read
+one directly with:
 
 ```bash
 curl "https://firestore.googleapis.com/v1/projects/sdschacks/databases/(default)/documents/hackathons/<docId>"
@@ -54,7 +62,7 @@ bash .claude/skills/devcontainer-up/scripts/exec.sh just develop \
 ```
 
 Seeding is **idempotent by NAME** — an edition that already exists is skipped.
-That is right for "run it twice" and exactly wrong after the *seeder* changes:
+That is right for "run it twice" and exactly wrong after the _seeder_ changes:
 the editions were created before it uploaded anything, so a plain re-run left
 every cover empty forever. `--refresh` re-uploads the media, re-sets the cover
 and recreates the pages on an edition that is already there (tracks and phases
@@ -76,8 +84,8 @@ later run verifies and warns if a remote file changed. Two source schemes:
 
 Stored artefacts are **WebP** (`media[].file` ends in `.webp`); `source` keeps
 the real provenance URL, so a source that is still JPEG/PNG upstream is
-re-encoded at q80 on arrival. That needs `cwebp`, which is not in the dev
-shell — run `nix shell nixpkgs#libwebp -c bash scripts/fetch-media.sh`.
+re-encoded at q80 on arrival. That needs `cwebp`, which is not in the dev shell
+— run `nix shell nixpkgs#libwebp -c bash scripts/fetch-media.sh`.
 
 `seed.sh` then pushes them **into the instance** through
 `StorageService.CreateUploadUrl` (presigned PUT, uploaded straight to the store,
@@ -88,20 +96,20 @@ the returned public path stored in the DB). Four consequences worth knowing:
   uploaded as `UPLOAD_KIND_HACKATHON_LOGO` and `Edit`ed onto the hackathon as
   its logo. Everything else goes up as `UPLOAD_KIND_HACKATHON_MEDIA`.
 - **Page markdown is repointed at what was just uploaded.** The paths in the
-  JSON are the *old* platform's (`/images/hackathon-ord-2024/…`) and resolve to
+  JSON are the _old_ platform's (`/images/hackathon-ord-2024/…`) and resolve to
   nothing here; matching is by basename, because the old tree had a category
-  folder per image that this platform has no equivalent for. Without the
-  rewrite ORD 2024's photo pages render as broken images.
+  folder per image that this platform has no equivalent for. Without the rewrite
+  ORD 2024's photo pages render as broken images.
 - **Unreferenced photos get a generated "Photos" page.** Uploading an image no
   page links to would be the same "exists but nothing reaches it" bug the
   reachability audits keep finding.
-- **The upload has to reach the store, not the browser prefix.** `CreateUploadUrl`
-  returns a ROOT-RELATIVE `/objects/…` URL — correct for a browser, which PUTs
-  same-origin — so a CLI must supply a host, and SigV4 signs `Host`. The seeder
-  tries the store directly (`HACKAGON_STORE_ENDPOINT`, default
-  `http://rustfs:9000`) and falls back to proxies that rewrite `Host`; a base
-  that serves `/objects` without rewriting answers 403 and would be the wrong
-  pick even though it is reachable. SVG uploads are refused on purpose, so
+- **The upload has to reach the store, not the browser prefix.**
+  `CreateUploadUrl` returns a ROOT-RELATIVE `/objects/…` URL — correct for a
+  browser, which PUTs same-origin — so a CLI must supply a host, and SigV4 signs
+  `Host`. The seeder tries the store directly (`HACKAGON_STORE_ENDPOINT`,
+  default `http://rustfs:9000`) and falls back to proxies that rewrite `Host`; a
+  base that serves `/objects` without rewriting answers 403 and would be the
+  wrong pick even though it is reachable. SVG uploads are refused on purpose, so
   `edhd-logo.svg` is not uploaded.
 
 ## Prizes
@@ -164,5 +172,5 @@ field is empty and `source.note` says so. Two recorded caveats worth keeping:
 
 - `PhaseService.Create` silently drops dates (bug B4 in `docs/TODO.md`), so the
   seeder creates each phase then `Edit`s the dates in. Drop that once fixed.
-- Everything is created as `hackagon-admin` (override with
-  `HACKAGON_ADMIN_USER` / `HACKAGON_ADMIN_PASS`).
+- Everything is created as `hackagon-admin` (override with `HACKAGON_ADMIN_USER`
+  / `HACKAGON_ADMIN_PASS`).

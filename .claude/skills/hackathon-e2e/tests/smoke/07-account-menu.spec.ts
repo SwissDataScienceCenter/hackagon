@@ -109,28 +109,41 @@ test.describe("account, from the top bar", () => {
 
   test("the header identifies who is signed in", async ({ page }) => {
     await page.goto("/dashboard")
-    await expect(header(page).getByText(PERSONAS.alice.initial, { exact: true })).toBeVisible()
+    await expect(
+      header(page).getByText(PERSONAS.alice.initial, { exact: true }),
+    ).toBeVisible()
   })
 
   test("the account link reaches the account page", async ({ page }) => {
     await page.goto("/dashboard")
     // By its accessible name, not its position: it is an icon control on
     // desktop and a labelled row on phones, and both must work.
-    await header(page).getByRole("link", { name: "Your account" }).first().click()
+    await header(page)
+      .getByRole("link", { name: "Your account" })
+      .first()
+      .click()
 
     await expect(page).toHaveURL(/\/account$/)
-    await expect(page.getByRole("heading", { name: "Your account" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Your account" }),
+    ).toBeVisible()
   })
 
-  test("the account page offers the profile edit and the deletion path", async ({ page }) => {
+  test("the account page offers the profile edit and the deletion path", async ({
+    page,
+  }) => {
     await page.goto("/account")
 
     // The two things only this page can do.
     await expect(page.getByRole("button", { name: "Save" })).toBeVisible()
-    await expect(page.getByRole("button", { name: /Delete my profile/ })).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: /Delete my profile/ }),
+    ).toBeVisible()
   })
 
-  test("username and email link out to the identity provider", async ({ page }) => {
+  test("username and email link out to the identity provider", async ({
+    page,
+  }) => {
     await page.goto("/account")
 
     // Keycloak owns them and re-reads them from the token on every request, so
@@ -193,7 +206,12 @@ test.describe("account, from the top bar", () => {
     // block develop removed. An assertion that cannot reject the state that was
     // actually shipped is not guarding anything.
     await expect(
-      expectTrailExists(page, h1Id, "Your registration answers", "View or edit"),
+      expectTrailExists(
+        page,
+        h1Id,
+        "Your registration answers",
+        "View or edit",
+      ),
       "the stale instruction named a destination no event has; following it has " +
         "to fail, or this spec would have agreed with the copy it was written " +
         "to replace",
@@ -231,10 +249,14 @@ test.describe("every persona can reach their account", () => {
   // renders. Cheap to check per persona, and it is the whole point of the page.
   for (const persona of ALL_PERSONAS) {
     test(`${persona.key}`, async ({ page, browser }) => {
-      const ctx = await browser.newContext({ storageState: storageStatePath(persona.key) })
+      const ctx = await browser.newContext({
+        storageState: storageStatePath(persona.key),
+      })
       const p = await ctx.newPage()
       await p.goto("/account")
-      await expect(p.getByRole("heading", { name: "Your account" })).toBeVisible()
+      await expect(
+        p.getByRole("heading", { name: "Your account" }),
+      ).toBeVisible()
       await ctx.close()
       void page
     })

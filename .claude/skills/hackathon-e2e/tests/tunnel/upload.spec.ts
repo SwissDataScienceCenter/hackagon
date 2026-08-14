@@ -36,9 +36,14 @@ import { onTunnel, onTunnelRealm } from "./host.js"
 const base = process.env.TUNNEL_BASE_URL
 
 test.describe("presigned upload through the tunnel", () => {
-  test.skip(!base, "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first")
+  test.skip(
+    !base,
+    "TUNNEL_BASE_URL not set — start the tunnel with --with-auth first",
+  )
 
-  test("an avatar uploads and reads back through the public URL", async ({ page }) => {
+  test("an avatar uploads and reads back through the public URL", async ({
+    page,
+  }) => {
     const alice = PERSONAS.alice
 
     // Log in on the tunnel host. Not a saved storage state: those are minted
@@ -70,15 +75,21 @@ test.describe("presigned upload through the tunnel", () => {
         ctx.fillStyle = `hsl(${i % 360} 70% ${40 + (i % 30)}%)`
         ctx.fillRect(i, 0, 12, 600)
       }
-      const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"))
+      const blob = await new Promise<Blob | null>((r) =>
+        canvas.toBlob(r, "image/png"),
+      )
       if (!blob) return { step: "canvas", ok: false as const }
       const file = new File([blob], "probe.png", { type: "image/png" })
 
       // The app's own module: a copy of the sequence here could pass while the
       // shipped one is broken.
-      const { uploadImage } = await import("/src/lib/upload.ts").catch(() => ({
+      const { uploadImage } = (await import("/src/lib/upload.ts").catch(() => ({
         uploadImage: null,
-      })) as { uploadImage: ((e: string, f: File) => Promise<{ publicUrl: string }>) | null }
+      }))) as {
+        uploadImage:
+          | ((e: string, f: File) => Promise<{ publicUrl: string }>)
+          | null
+      }
 
       // The built server serves bundled JS, so the source import above only
       // resolves under vite. Fall back to the same three steps inline —
@@ -125,7 +136,9 @@ test.describe("presigned upload through the tunnel", () => {
     expect(publicUrl, "no public path came back from the presign").toBeTruthy()
 
     const read = await page.request.get(`${base}${publicUrl}`)
-    expect(read.status(), `reading ${publicUrl} back through the tunnel`).toBe(200)
+    expect(read.status(), `reading ${publicUrl} back through the tunnel`).toBe(
+      200,
+    )
     expect(read.headers()["content-type"]).toContain("image/")
     expect((await read.body()).byteLength).toBeGreaterThan(1000)
   })

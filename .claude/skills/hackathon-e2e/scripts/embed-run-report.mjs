@@ -26,7 +26,8 @@ import { fileURLToPath } from "node:url"
 const skillDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const playerPath = path.join(skillDir, "recipe-player.html")
 const recipePath = path.join(skillDir, "recipe.jsonl")
-const reportPath = process.argv[2] || path.join(skillDir, ".artifacts", "results.json")
+const reportPath =
+  process.argv[2] || path.join(skillDir, ".artifacts", "results.json")
 
 const raw = fs.readFileSync(reportPath, "utf8")
 if (/^\s*[^[{]/.test(raw)) {
@@ -50,9 +51,14 @@ const ids = new Set(
 
 // recipe.spec.ts titles every test `[<id>] <title>`, which is the join key
 const BUCKET = {
-  passed: "passed", expected: "passed",
-  failed: "failed", unexpected: "failed", timedOut: "failed", interrupted: "failed",
-  skipped: "skipped", flaky: "flaky",
+  passed: "passed",
+  expected: "passed",
+  failed: "failed",
+  unexpected: "failed",
+  timedOut: "failed",
+  interrupted: "failed",
+  skipped: "skipped",
+  flaky: "flaky",
 }
 const status = {}
 const totals = { passed: 0, failed: 0, skipped: 0, flaky: 0, other: 0 }
@@ -64,13 +70,19 @@ let maxEnd = 0
   for (const sp of node.specs || []) {
     specs++
     const m = /^\[([^\]]+)\]/.exec(String(sp.title || ""))
-    if (!m) { unmatched++; continue }
+    if (!m) {
+      unmatched++
+      continue
+    }
     const test = (sp.tests || [])[0] || {}
     const results = test.results || []
     const last = results[results.length - 1] || {}
     const s = String(last.status || test.status || "unknown")
     const dur = Math.round(+last.duration || 0)
-    if (!ids.has(m[1])) { unmatched++; continue }
+    if (!ids.has(m[1])) {
+      unmatched++
+      continue
+    }
     status[m[1]] = [s, dur]
     const b = BUCKET[s] || "other"
     totals[b]++
@@ -81,7 +93,10 @@ let maxEnd = 0
 })(report)
 
 const matched = Object.keys(status).length
-if (!matched) throw new Error(`no spec title in ${reportPath} starts with a recipe action id`)
+if (!matched)
+  throw new Error(
+    `no spec title in ${reportPath} starts with a recipe action id`,
+  )
 
 const startedAt = Date.parse(report.stats?.startTime || "") || 0
 const payload = {
@@ -92,7 +107,9 @@ const payload = {
   generatedAt: new Date(startedAt || Date.now()).toISOString(),
   recipeActions: ids.size,
   specs,
-  durationMs: Math.round(report.stats?.duration || (maxEnd && startedAt ? maxEnd - startedAt : 0)),
+  durationMs: Math.round(
+    report.stats?.duration || (maxEnd && startedAt ? maxEnd - startedAt : 0),
+  ),
   totals,
   status,
 }
@@ -103,12 +120,16 @@ const escaped = json.split("</").join("<\\/")
 const html = fs.readFileSync(playerPath, "utf8")
 const open = '<script id="run-report" type="application/json">'
 const start = html.indexOf(open)
-if (start < 0) throw new Error("run-report open marker not found in recipe-player.html")
+if (start < 0)
+  throw new Error("run-report open marker not found in recipe-player.html")
 const bodyStart = start + open.length
 const close = "</" + "script>"
 const end = html.indexOf(close, bodyStart)
 if (end < 0) throw new Error("run-report close marker not found")
-fs.writeFileSync(playerPath, html.slice(0, bodyStart) + "\n" + escaped + "\n" + html.slice(end))
+fs.writeFileSync(
+  playerPath,
+  html.slice(0, bodyStart) + "\n" + escaped + "\n" + html.slice(end),
+)
 
 // read it back and prove it parses in place, and that the file still has the
 // three close tags it is supposed to have — a splice nobody verified is how the
@@ -119,8 +140,11 @@ const e2 = back.indexOf(close, s2)
 const round = JSON.parse(back.slice(s2, e2).trim().split("<\\/").join("</"))
 const tags = back.split(close).length - 1
 if (Object.keys(round.status).length !== matched)
-  throw new Error(`embedded ${Object.keys(round.status).length} entries, expected ${matched}`)
-if (tags !== 3) throw new Error(`expected 3 literal close tags in the player, found ${tags}`)
+  throw new Error(
+    `embedded ${Object.keys(round.status).length} entries, expected ${matched}`,
+  )
+if (tags !== 3)
+  throw new Error(`expected 3 literal close tags in the player, found ${tags}`)
 
 const pct = (100 * escaped.length) / raw.length
 console.log(

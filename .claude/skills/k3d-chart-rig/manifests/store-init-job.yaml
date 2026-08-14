@@ -25,9 +25,11 @@ spec:
           image: MC_IMAGE_PLACEHOLDER
           env:
             - name: AK
-              valueFrom: { secretKeyRef: { name: store-credentials, key: accessKey } }
+              valueFrom:
+                { secretKeyRef: { name: store-credentials, key: accessKey } }
             - name: SK
-              valueFrom: { secretKeyRef: { name: store-credentials, key: secretKey } }
+              valueFrom:
+                { secretKeyRef: { name: store-credentials, key: secretKey } }
           command: ["/bin/sh", "-c"]
           args:
             - |

@@ -43,7 +43,11 @@ type RGB = [number, number, number]
  * and every comparison would come out equal — a vacuous pass of the worst kind.
  * The sentinel makes that a thrown error.
  */
-async function paintedColour(page: Page, value: string, over: string): Promise<RGB> {
+async function paintedColour(
+  page: Page,
+  value: string,
+  over: string,
+): Promise<RGB> {
   const out = await page.evaluate(
     ([v, backdrop]) => {
       const canvas = document.createElement("canvas")
@@ -68,7 +72,9 @@ async function paintedColour(page: Page, value: string, over: string): Promise<R
     [value, over] as const,
   )
   if (!out) {
-    throw new Error(`the browser could not paint '${value}' — nothing was measured`)
+    throw new Error(
+      `the browser could not paint '${value}' — nothing was measured`,
+    )
   }
 
   return out as RGB
@@ -93,10 +99,7 @@ async function settledStyle(
   prop: "background-color" | "color",
 ): Promise<string> {
   const read = () =>
-    el.evaluate(
-      (node, p) => getComputedStyle(node).getPropertyValue(p),
-      prop,
-    )
+    el.evaluate((node, p) => getComputedStyle(node).getPropertyValue(p), prop)
 
   let previous = await read()
   for (let i = 0; i < 25; i++) {
@@ -152,7 +155,10 @@ async function expectChipStatesDistinct(page: Page) {
 
   // Positive control for the whole file: without both kinds of chip on screen
   // every comparison below is between two reads of the same element.
-  await expect(selected, "the landing page must render one selected chip").toHaveCount(1)
+  await expect(
+    selected,
+    "the landing page must render one selected chip",
+  ).toHaveCount(1)
   await expect(unselected, "…and at least one unselected chip").toBeVisible()
 
   // The backdrop these washes are composited over: the chips sit directly on the
@@ -175,7 +181,8 @@ async function expectChipStatesDistinct(page: Page) {
 
   await unhover(page)
 
-  const d = (a: ChipPaint, b: ChipPaint) => colourDistance(a.background, b.background)
+  const d = (a: ChipPaint, b: ChipPaint) =>
+    colourDistance(a.background, b.background)
   const show = (c: ChipPaint) => `rgb(${c.background.join(",")})`
   // 8 rather than 0: two colours a reader cannot tell apart are not two states,
   // and an exact-inequality check would accept a one-unit rounding difference
@@ -246,7 +253,9 @@ test.describe("chip states stay distinguishable", () => {
   // it. Done in the page rather than by editing the theme and re-running by
   // hand: a source edit proves it once, for whoever was watching, and then
   // stops existing.
-  test("CONTROL: without .chip-active:hover the check fails", async ({ page }) => {
+  test("CONTROL: without .chip-active:hover the check fails", async ({
+    page,
+  }) => {
     await page.goto("/")
 
     // Passes as it stands, first — a check that threw unconditionally would
@@ -259,14 +268,18 @@ test.describe("chip states stay distinguishable", () => {
       // never at the top level of the sheet and the walk has to recurse — and
       // deletion is by index ON THE OWNER, which is why the owner is what gets
       // passed down rather than a bare CSSRuleList.
-      type RuleOwner = { cssRules: CSSRuleList; deleteRule(index: number): void }
+      type RuleOwner = {
+        cssRules: CSSRuleList
+        deleteRule(index: number): void
+      }
 
       const strip = (owner: RuleOwner): number => {
         let n = 0
         const rules = owner.cssRules
         // Backwards: deleting shifts every later index down by one.
         for (let i = rules.length - 1; i >= 0; i--) {
-          const rule = rules[i] as CSSRule & Partial<RuleOwner> & { selectorText?: string }
+          const rule = rules[i] as CSSRule &
+            Partial<RuleOwner> & { selectorText?: string }
           if (rule.cssRules && typeof rule.deleteRule === "function") {
             n += strip(rule as unknown as RuleOwner)
           }

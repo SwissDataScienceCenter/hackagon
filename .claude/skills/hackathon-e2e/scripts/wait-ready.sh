@@ -33,41 +33,41 @@ TIMEOUT="${E2E_READY_TIMEOUT:-300}"
 # never normal is a number that keeps climbing, so print the count AND the exit
 # code, which together name the cause.
 report_restarts() {
-  local sock pc line name restarts exitcode noisy=0
-  sock="$(cat "$ROOT_DIR/tools/deploy/process-compose/.socket-path-test-services" 2>/dev/null || true)"
-  [ -n "$sock" ] && [ -S "$sock" ] || return 0
-  command -v process-compose >/dev/null 2>&1 || return 0
-  pc="$(process-compose --unix-socket "$sock" process list -o wide 2>/dev/null || true)"
-  [ -n "$pc" ] || return 0
-  while read -r line; do
-    name="$(echo "$line" | awk '{print $2}')"
-    # RESTARTS and EXITCODE are the LAST TWO columns, counted from the end on
-    # purpose: HEALTH is "Not Ready" — TWO whitespace-separated words — for every
-    # service that is starting up, so fixed field numbers ($6/$7) read the health
-    # text as the restart count on exactly the rows worth reading. Counting from
-    # NF is stable across both widths, and "Disabled" rows (`- -`) too.
-    restarts="$(echo "$line" | awk '{print $(NF - 1)}')"
-    exitcode="$(echo "$line" | awk '{print $NF}')"
-    case "$restarts" in '' | *[!0-9]*) continue ;; esac
-    if [ "$restarts" -ge 3 ]; then
-      echo "  ⚠ $name has restarted $restarts times (last exit code $exitcode)." >&2
-      noisy=1
-    fi
-  done <<EOF
+    local sock pc line name restarts exitcode noisy=0
+    sock="$(cat "$ROOT_DIR/tools/deploy/process-compose/.socket-path-test-services" 2>/dev/null || true)"
+    [ -n "$sock" ] && [ -S "$sock" ] || return 0
+    command -v process-compose >/dev/null 2>&1 || return 0
+    pc="$(process-compose --unix-socket "$sock" process list -o wide 2>/dev/null || true)"
+    [ -n "$pc" ] || return 0
+    while read -r line; do
+        name="$(echo "$line" | awk '{print $2}')"
+        # RESTARTS and EXITCODE are the LAST TWO columns, counted from the end on
+        # purpose: HEALTH is "Not Ready" — TWO whitespace-separated words — for every
+        # service that is starting up, so fixed field numbers ($6/$7) read the health
+        # text as the restart count on exactly the rows worth reading. Counting from
+        # NF is stable across both widths, and "Disabled" rows (`- -`) too.
+        restarts="$(echo "$line" | awk '{print $(NF - 1)}')"
+        exitcode="$(echo "$line" | awk '{print $NF}')"
+        case "$restarts" in '' | *[!0-9]*) continue ;; esac
+        if [ "$restarts" -ge 3 ]; then
+            echo "  ⚠ $name has restarted $restarts times (last exit code $exitcode)." >&2
+            noisy=1
+        fi
+    done <<EOF
 $(echo "$pc" | awk 'NR>1 && NF>=7')
 EOF
-  if [ "$noisy" -eq 1 ]; then
-    echo "  ⚠ A service that keeps restarting is a service whose every attempt" >&2
-    echo "    re-enters the Nix dev shell and takes the repo-wide fetch lock," >&2
-    echo "    which starves the startup of everything else. Check its log under" >&2
-    echo "    .output/run/process-compose/ before trusting this run's results." >&2
-  fi
+    if [ "$noisy" -eq 1 ]; then
+        echo "  ⚠ A service that keeps restarting is a service whose every attempt" >&2
+        echo "    re-enters the Nix dev shell and takes the repo-wide fetch lock," >&2
+        echo "    which starves the startup of everything else. Check its log under" >&2
+        echo "    .output/run/process-compose/ before trusting this run's results." >&2
+    fi
 }
 
 echo "==> Waiting for the stack to be ready (timeout ${TIMEOUT}s per service)..."
 wait_for "postgres" "$TIMEOUT" pg_isready -h 127.0.0.1 -p 5432 -U postgres
 wait_for "keycloak" "$TIMEOUT" curl -fsS \
-  "$KEYCLOAK_URL/realms/hackagon/.well-known/openid-configuration"
+    "$KEYCLOAK_URL/realms/hackagon/.well-known/openid-configuration"
 wait_for "backend" "$TIMEOUT" grpcurl -plaintext "$GRPC_ADDR" list
 # vite is unusable here — see prod-frontend.sh for why, and for the traps in
 # starting the built server by hand. This is UNCONDITIONAL: the guard used to be
@@ -86,11 +86,11 @@ bash "$HERE/prod-frontend.sh" ensure "$FRONTEND_URL"
 # single attempt, printing not one dot, and the run looked hung rather than
 # failed. Bound every attempt so the deadline can actually be reached.
 if ! wait_for "frontend" "$TIMEOUT" curl -fsS --max-time 10 "$FRONTEND_URL"; then
-  echo ""
-  echo "  The frontend did not come up on $FRONTEND_URL." >&2
-  echo "  If it is not part of the process-compose stack, start it manually:" >&2
-  echo "    cd components/frontend && just serve" >&2
-  exit 1
+    echo ""
+    echo "  The frontend did not come up on $FRONTEND_URL." >&2
+    echo "  If it is not part of the process-compose stack, start it manually:" >&2
+    echo "    cd components/frontend && just serve" >&2
+    exit 1
 fi
 # After everything answers, not before: a restart count taken mid-boot is mostly
 # noise, and the question this answers is "is what I am about to test stable".

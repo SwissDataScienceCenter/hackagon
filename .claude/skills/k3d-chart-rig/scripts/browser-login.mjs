@@ -32,14 +32,17 @@
 // `PW_FROM` moves the anchor for a machine that keeps it elsewhere.
 import { createRequire } from "node:module"
 const require = createRequire(
-  process.env.PW_FROM || new URL("../../hackathon-e2e/package.json", import.meta.url),
+  process.env.PW_FROM ||
+    new URL("../../hackathon-e2e/package.json", import.meta.url),
 )
 const { firefox } = require("@playwright/test")
 
 const [appUrl, authHost, username = "alice", password = "aliceandbob"] =
   process.argv.slice(2)
 if (!appUrl || !authHost) {
-  console.error("usage: node browser-login.mjs <app-url> <auth-host> [user] [pass]")
+  console.error(
+    "usage: node browser-login.mjs <app-url> <auth-host> [user] [pass]",
+  )
   process.exit(2)
 }
 const appHost = new URL(appUrl).hostname
@@ -78,9 +81,20 @@ const page = await ctx.newPage()
 
 try {
   // ── 1 · the app, over a certificate the browser accepts ────────────────
-  const resp = await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: 60_000 })
-  check("the landing page loads over https", resp?.status() === 200, `status ${resp?.status()}`)
-  check("…on the public hostname", new URL(page.url()).protocol === "https:", page.url())
+  const resp = await page.goto(appUrl, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  })
+  check(
+    "the landing page loads over https",
+    resp?.status() === 200,
+    `status ${resp?.status()}`,
+  )
+  check(
+    "…on the public hostname",
+    new URL(page.url()).protocol === "https:",
+    page.url(),
+  )
 
   const sec = await page.evaluate(() => window.isSecureContext)
   // Not decoration: `*.localhost` over plain http is ALSO a secure context (RFC
@@ -116,10 +130,15 @@ try {
       await page.waitForURL((u) => u.hostname === authHost, { timeout: 30_000 })
       reached = true
     } catch {
-      if (attempt < 3) await page.goto(appUrl, { waitUntil: "domcontentloaded" })
+      if (attempt < 3)
+        await page.goto(appUrl, { waitUntil: "domcontentloaded" })
     }
   }
-  check("sign-in reaches Keycloak on its own public hostname", reached, page.url())
+  check(
+    "sign-in reaches Keycloak on its own public hostname",
+    reached,
+    page.url(),
+  )
   if (!reached) throw new Error(`never left ${page.url()}`)
 
   await page.locator("#username").waitFor({ timeout: 30_000 })
@@ -141,16 +160,30 @@ try {
   const names = cookies.map((c) => c.name)
   // POSITIVE CONTROL FIRST. An empty jar agrees with every claim below, and
   // "no cookie called X" reads identically to "no cookies at all".
-  check("the browser kept cookies for the app host", cookies.some((c) => c.domain.endsWith(appHost)), names.join(", ") || "(none)")
+  check(
+    "the browser kept cookies for the app host",
+    cookies.some((c) => c.domain.endsWith(appHost)),
+    names.join(", ") || "(none)",
+  )
 
   const session = cookies.filter((c) => /authjs\.session-token/.test(c.name))
-  check("a session cookie exists at all", session.length > 0, names.join(", ") || "(none)")
+  check(
+    "a session cookie exists at all",
+    session.length > 0,
+    names.join(", ") || "(none)",
+  )
   check(
     "it is named __Secure-authjs.session-token",
     session.every((c) => c.name.startsWith("__Secure-")),
     session.map((c) => c.name).join(", "),
   )
-  check("…and carries the Secure and HttpOnly flags", session.every((c) => c.secure && c.httpOnly), JSON.stringify(session.map((c) => ({ n: c.name, s: c.secure, h: c.httpOnly }))))
+  check(
+    "…and carries the Secure and HttpOnly flags",
+    session.every((c) => c.secure && c.httpOnly),
+    JSON.stringify(
+      session.map((c) => ({ n: c.name, s: c.secure, h: c.httpOnly })),
+    ),
+  )
   check(
     "no unprefixed authjs.session-token was set alongside it",
     !names.includes("authjs.session-token"),
@@ -164,8 +197,16 @@ try {
     const r = await fetch(`${u}/auth/session`, { credentials: "include" })
     return { status: r.status, body: await r.text() }
   }, appUrl)
-  check("/auth/session identifies the signed-in user", /alice/.test(sess.body), `${sess.status} ${sess.body.slice(0, 200)}`)
-  check("…and carries a Keycloak access token", /"accessToken":"ey/.test(sess.body), sess.body.slice(0, 120))
+  check(
+    "/auth/session identifies the signed-in user",
+    /alice/.test(sess.body),
+    `${sess.status} ${sess.body.slice(0, 200)}`,
+  )
+  check(
+    "…and carries a Keycloak access token",
+    /"accessToken":"ey/.test(sess.body),
+    sess.body.slice(0, 120),
+  )
 
   // ── 5 · it survives a fresh navigation ─────────────────────────────────
   // The cookie being in the jar is not the same as it being sent on the next
@@ -176,9 +217,16 @@ try {
     const r = await fetch(`${u}/auth/session`, { credentials: "include" })
     return await r.text()
   }, appUrl)
-  check("the session survives a full page load", /alice/.test(after), after.slice(0, 160))
+  check(
+    "the session survives a full page load",
+    /alice/.test(after),
+    after.slice(0, 160),
+  )
 
-  await page.screenshot({ path: process.env.SHOT || "/tmp/k3d-tunnel-login.png", fullPage: false })
+  await page.screenshot({
+    path: process.env.SHOT || "/tmp/k3d-tunnel-login.png",
+    fullPage: false,
+  })
 } catch (err) {
   bad("the run threw", String(err).split("\n")[0])
 } finally {

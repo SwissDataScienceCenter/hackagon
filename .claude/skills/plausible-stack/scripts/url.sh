@@ -8,13 +8,13 @@ source "$HERE/lib.sh"
 
 url="$(tunnel_url || true)"
 if [ -z "$url" ]; then
-  echo "no tunnel running — bash $HERE/up.sh" >&2
-  exit 1
+    echo "no tunnel running — bash $HERE/up.sh" >&2
+    exit 1
 fi
 
 echo "$url"
 if [ "${1:-}" = "--all" ]; then
-  echo "local     $(local_url)"
-  echo "cached    $(cat "$STATE/tunnel-url" 2>/dev/null || echo '-')"
-  echo "BASE_URL  $(env_get BASE_URL)"
+    echo "local     $(local_url)"
+    echo "cached    $(cat "$STATE/tunnel-url" 2>/dev/null || echo '-')"
+    echo "BASE_URL  $(env_get BASE_URL)"
 fi

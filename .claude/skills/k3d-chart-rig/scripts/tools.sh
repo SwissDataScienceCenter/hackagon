@@ -31,14 +31,23 @@ FORCE=0
 mkdir -p "$BIN_DIR"
 
 case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*) OS=windows; EXT=.exe ;;
-    Darwin)               OS=darwin;  EXT=  ;;
-    *)                    OS=linux;   EXT=  ;;
+MINGW* | MSYS* | CYGWIN*)
+    OS=windows
+    EXT=.exe
+    ;;
+Darwin)
+    OS=darwin
+    EXT=
+    ;;
+*)
+    OS=linux
+    EXT=
+    ;;
 esac
 case "$(uname -m)" in
-    x86_64|amd64) ARCH=amd64 ;;
-    arm64|aarch64) ARCH=arm64 ;;
-    *) die "unsupported architecture $(uname -m)" ;;
+x86_64 | amd64) ARCH=amd64 ;;
+arm64 | aarch64) ARCH=arm64 ;;
+*) die "unsupported architecture $(uname -m)" ;;
 esac
 
 fetch() { # name url
@@ -59,7 +68,8 @@ fetch k3d "https://github.com/k3d-io/k3d/releases/download/$K3D_VERSION/k3d-$OS-
 if [ ! -x "$BIN_DIR/helm$EXT" ] || [ "$FORCE" -eq 1 ]; then
     step "fetching helm $HELM_VERSION"
     tmp="$STATE_DIR/helm-dl"
-    rm -rf "$tmp"; mkdir -p "$tmp"
+    rm -rf "$tmp"
+    mkdir -p "$tmp"
     if [ "$OS" = windows ]; then
         curl -fsSL --retry 3 -o "$tmp/helm.zip" \
             "https://get.helm.sh/helm-$HELM_VERSION-windows-$ARCH.zip" || die "helm download failed"
@@ -83,5 +93,5 @@ fetch kubectl "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/$OS/$ARCH/kubectl$
 step "versions"
 "$BIN_DIR/k3d$EXT" version | sed 's/^/  /' >&2
 "$BIN_DIR/helm$EXT" version --short | sed 's/^/  helm /' >&2
-"$BIN_DIR/kubectl$EXT" version --client=true -o yaml 2>/dev/null \
-    | awk '/gitVersion/{print "  kubectl " $2; exit}' >&2 || true
+"$BIN_DIR/kubectl$EXT" version --client=true -o yaml 2>/dev/null |
+    awk '/gitVersion/{print "  kubectl " $2; exit}' >&2 || true

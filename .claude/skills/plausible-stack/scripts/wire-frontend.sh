@@ -36,10 +36,10 @@ OVERLAY="$ROOT_DIR/.claude/skills/lib/config-overlay.sh"
 
 MODE="wire"
 case "${1:-}" in
-  --restore) MODE="restore" ;;
-  --print) MODE="print" ;;
-  "") ;;
-  *)
+--restore) MODE="restore" ;;
+--print) MODE="print" ;;
+"") ;;
+*)
     echo "unknown argument: $1" >&2
     exit 2
     ;;
@@ -58,14 +58,14 @@ esac
 # Restarting only the first succeeds, prints "Process frontend restarted", and
 # changes nothing at all.
 in_shell() { # run a command in the dev shell, wherever this script started
-  local pc="$ROOT_DIR/.claude/skills/devcontainer-up/scripts/exec.sh"
-  if command -v process-compose >/dev/null 2>&1; then
-    (cd "$ROOT_DIR" && bash -c "$1")
-  elif [ -f "$pc" ]; then
-    (cd "$ROOT_DIR" && MSYS_NO_PATHCONV=1 bash "$pc" just nix::develop default bash -c "$1")
-  else
-    return 1
-  fi
+    local pc="$ROOT_DIR/.claude/skills/devcontainer-up/scripts/exec.sh"
+    if command -v process-compose >/dev/null 2>&1; then
+        (cd "$ROOT_DIR" && bash -c "$1")
+    elif [ -f "$pc" ]; then
+        (cd "$ROOT_DIR" && MSYS_NO_PATHCONV=1 bash "$pc" just nix::develop default bash -c "$1")
+    else
+        return 1
+    fi
 }
 
 # ⚠ EVERY STEP HERE REPORTS. The first version of this function ran the
@@ -81,57 +81,57 @@ in_shell() { # run a command in the dev shell, wherever this script started
 # step (trap 4 in .claude/CLAUDE.md) — which is why they are three steps and
 # not one.
 step() { # <label> <command…>
-  local label="$1"
-  shift
-  local out
-  if out="$(in_shell "$*" 2>&1)"; then
-    echo "    $label: ok"
-    return 0
-  fi
-  echo "    $label: FAILED" >&2
-  printf '%s\n' "$out" | tail -6 | sed 's/^/        /' >&2
-  return 1
+    local label="$1"
+    shift
+    local out
+    if out="$(in_shell "$*" 2>&1)"; then
+        echo "    $label: ok"
+        return 0
+    fi
+    echo "    $label: FAILED" >&2
+    printf '%s\n' "$out" | tail -6 | sed 's/^/        /' >&2
+    return 1
 }
 
 restart_frontend() {
-  local ok=1
+    local ok=1
 
-  # vite, when process-compose is the thing serving :8081.
-  in_shell 'just deploy::proc-comp process restart frontend' >/dev/null 2>&1 && ok=0
+    # vite, when process-compose is the thing serving :8081.
+    in_shell 'just deploy::proc-comp process restart frontend' >/dev/null 2>&1 && ok=0
 
-  # The built server on :8081, when the e2e harness put one there. `ensure`
-  # rebuilds if the source is newer than the build — which it is the first time
-  # this feature is wired, because it also adds a component. That build takes
-  # minutes, and its failure used to be invisible.
-  if in_shell 'test -s .output/run/e2e-prod-frontend.pid' >/dev/null 2>&1; then
-    if step ":8081 built server" \
-      'bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop &&
+    # The built server on :8081, when the e2e harness put one there. `ensure`
+    # rebuilds if the source is newer than the build — which it is the first time
+    # this feature is wired, because it also adds a component. That build takes
+    # minutes, and its failure used to be invisible.
+    if in_shell 'test -s .output/run/e2e-prod-frontend.pid' >/dev/null 2>&1; then
+        if step ":8081 built server" \
+            'bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop &&
        bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh ensure'; then
-      ok=0
-    else
-      echo "    ⚠ :8081 IS DOWN — restart it: prod-frontend.sh ensure" >&2
+            ok=0
+        else
+            echo "    ⚠ :8081 IS DOWN — restart it: prod-frontend.sh ensure" >&2
+        fi
     fi
-  fi
 
-  # The built server on :8082 — the app tunnel's upstream. Restarted with ITS
-  # OWN origin, read back from the running process: an adapter-node server is
-  # launched with a FIXED ORIGIN, and handing it the wrong one 403s every form
-  # POST through the public URL while every page still renders.
-  local origin
-  origin="$(in_shell 'bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh origin' 2>/dev/null |
-    tr -d '\r' | grep -oE 'https?://[^ ]+' | tail -1 || true)"
-  if [ -n "$origin" ]; then
-    step ":8082 tunnel upstream ($origin)" \
-      "bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh stop &&
+    # The built server on :8082 — the app tunnel's upstream. Restarted with ITS
+    # OWN origin, read back from the running process: an adapter-node server is
+    # launched with a FIXED ORIGIN, and handing it the wrong one 403s every form
+    # POST through the public URL while every page still renders.
+    local origin
+    origin="$(in_shell 'bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh origin' 2>/dev/null |
+        tr -d '\r' | grep -oE 'https?://[^ ]+' | tail -1 || true)"
+    if [ -n "$origin" ]; then
+        step ":8082 tunnel upstream ($origin)" \
+            "bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh stop &&
        bash .claude/skills/cloudflare-tunnel/scripts/prod-serve.sh ensure '$origin'" ||
-      echo "    ⚠ THE APP TUNNEL HAS NO UPSTREAM — restart it: prod-serve.sh ensure $origin" >&2
-  fi
+            echo "    ⚠ THE APP TUNNEL HAS NO UPSTREAM — restart it: prod-serve.sh ensure $origin" >&2
+    fi
 
-  [ "$ok" -eq 0 ] && return 0
-  echo "note: restart the frontend for this to take effect:" >&2
-  echo "      just deploy::proc-comp process restart frontend" >&2
-  echo "      (or, if the e2e built server is serving :8081)" >&2
-  echo "      bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop && … ensure" >&2
+    [ "$ok" -eq 0 ] && return 0
+    echo "note: restart the frontend for this to take effect:" >&2
+    echo "      just deploy::proc-comp process restart frontend" >&2
+    echo "      (or, if the e2e built server is serving :8081)" >&2
+    echo "      bash .claude/skills/hackathon-e2e/scripts/prod-frontend.sh stop && … ensure" >&2
 }
 
 # Restart only when the overlay actually CHANGED — config-overlay.sh answers
@@ -140,32 +140,32 @@ restart_frontend() {
 #
 # ⚠ Do not run this while an e2e suite is in flight, even so.
 apply() { # <changed|unchanged> <message>
-  if [ "$1" = "changed" ]; then
-    echo "$2"
-    restart_frontend
-  else
-    echo "$2 (already; nothing changed, frontend left alone)"
-  fi
+    if [ "$1" = "changed" ]; then
+        echo "$2"
+        restart_frontend
+    else
+        echo "$2 (already; nothing changed, frontend left alone)"
+    fi
 }
 
 if [ "$MODE" = "restore" ]; then
-  # `remove`, never `rm`: `oidc` and `replay` may share this file.
-  apply "$(bash "$OVERLAY" remove "$FRONTEND_LOCAL" plausible)" \
-    "==> analytics is OFF"
-  exit 0
+    # `remove`, never `rm`: `oidc` and `replay` may share this file.
+    apply "$(bash "$OVERLAY" remove "$FRONTEND_LOCAL" plausible)" \
+        "==> analytics is OFF"
+    exit 0
 fi
 
 require_docker
 url="$(tunnel_url || true)"
 [ -n "$url" ] || {
-  echo "error: no Plausible tunnel running — scripts/up.sh first" >&2
-  exit 1
+    echo "error: no Plausible tunnel running — scripts/up.sh first" >&2
+    exit 1
 }
 load_secrets
 domain="${PLAUSIBLE_SITE:-}"
 [ -n "$domain" ] || {
-  echo "error: no PLAUSIBLE_SITE in $SECRETS_FILE — run scripts/secrets.sh" >&2
-  exit 1
+    echo "error: no PLAUSIBLE_SITE in $SECRETS_FILE — run scripts/secrets.sh" >&2
+    exit 1
 }
 
 # THE SCRIPT VARIANT IS TWO DECISIONS, and both are load-bearing.
@@ -188,7 +188,7 @@ domain="${PLAUSIBLE_SITE:-}"
 script_url="$url/js/script.local.manual.js"
 
 block=$(
-  cat <<YAML
+    cat <<YAML
 plausible:
   enabled: true
   scriptUrl: $script_url
@@ -197,8 +197,8 @@ YAML
 )
 
 if [ "$MODE" = "print" ]; then
-  echo "$block"
-  exit 0
+    echo "$block"
+    exit 0
 fi
 
 # Fail before writing a config that points at a script that is not there — a
@@ -212,12 +212,12 @@ fi
 # out, so a bare curl reports 000 for a dashboard that is serving 200.
 code="$(cfn_http_code "$script_url")"
 [ "$code" = "200" ] || {
-  echo "error: $script_url answered $code — is the tunnel healthy? (scripts/url.sh)" >&2
-  exit 1
+    echo "error: $script_url answered $code — is the tunnel healthy? (scripts/url.sh)" >&2
+    exit 1
 }
 
 apply "$(printf '%s\n' "$block" | bash "$OVERLAY" set "$FRONTEND_LOCAL" plausible)" \
-  "==> analytics is ON"
+    "==> analytics is ON"
 echo "    script   $script_url"
 echo "    domain   $domain"
 echo "    dashboard $url/$domain"

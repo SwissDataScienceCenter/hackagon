@@ -104,7 +104,9 @@ test.describe("login theme screenshots", () => {
 
           console.log(
             `[theme] ${p.name} ${scheme} ${vp.tag}px overflow=${diag.overflow}` +
-              (diag.offenders.length ? `\n  ${diag.offenders.join("\n  ")}` : ""),
+              (diag.offenders.length
+                ? `\n  ${diag.offenders.join("\n  ")}`
+                : ""),
           )
           expect(
             diag.overflow,
@@ -169,7 +171,9 @@ test.describe("login theme error states", () => {
           const overflow = await page.evaluate(
             () => document.documentElement.scrollWidth - window.innerWidth,
           )
-          console.log(`[theme] ${p.name} ${scheme} ${vp.tag}px overflow=${overflow}`)
+          console.log(
+            `[theme] ${p.name} ${scheme} ${vp.tag}px overflow=${overflow}`,
+          )
           await page.screenshot({
             path: `.artifacts/theme/${p.name}-${scheme}-${vp.tag}.png`,
             fullPage: true,
@@ -188,9 +192,24 @@ test.describe("login theme error states", () => {
  * entirely under the keyboard, with no way to scroll to them.
  */
 const keyboardCases = [
-  { name: "login", open: (p: Page) => p.goto(LOGIN_URL).then(() => {}), field: "#username", submit: "#kc-login" },
-  { name: "login-password", open: gotoPasswordStep, field: "#password", submit: "#kc-login" },
-  { name: "register", open: (p: Page) => p.goto(REGISTER_URL).then(() => {}), field: "#password", submit: "#kc-register-form input[type=submit]" },
+  {
+    name: "login",
+    open: (p: Page) => p.goto(LOGIN_URL).then(() => {}),
+    field: "#username",
+    submit: "#kc-login",
+  },
+  {
+    name: "login-password",
+    open: gotoPasswordStep,
+    field: "#password",
+    submit: "#kc-login",
+  },
+  {
+    name: "register",
+    open: (p: Page) => p.goto(REGISTER_URL).then(() => {}),
+    field: "#password",
+    submit: "#kc-register-form input[type=submit]",
+  },
 ] as const
 
 test.describe("login theme keyboard", () => {
@@ -198,7 +217,10 @@ test.describe("login theme keyboard", () => {
 
   for (const c of keyboardCases) {
     test(`theme keyboard ${c.name}`, async ({ browser }) => {
-      const ctx = await browser.newContext({ viewport: PHONE, colorScheme: "light" })
+      const ctx = await browser.newContext({
+        viewport: PHONE,
+        colorScheme: "light",
+      })
       const page = await ctx.newPage()
       await c.open(page)
       await page.waitForLoadState("networkidle")
@@ -212,7 +234,10 @@ test.describe("login theme keyboard", () => {
           const box = (sel: string) => {
             const el = document.querySelector(sel)!
             const r = el.getBoundingClientRect()
-            return { top: r.top + window.scrollY, bottom: r.bottom + window.scrollY }
+            return {
+              top: r.top + window.scrollY,
+              bottom: r.bottom + window.scrollY,
+            }
           }
           const f = box(field)
           const s = box(submit)
@@ -252,7 +277,10 @@ test.describe("login theme keyboard", () => {
 
       // Screenshot of the "keyboard open" case: shrink to the band height and
       // scroll the focused field into view, i.e. what the user actually sees.
-      await page.setViewportSize({ width: PHONE.width, height: VISIBLE_WITH_KEYBOARD })
+      await page.setViewportSize({
+        width: PHONE.width,
+        height: VISIBLE_WITH_KEYBOARD,
+      })
       await page.locator(c.field).scrollIntoViewIfNeeded()
       await page.locator(c.field).focus()
       await page.waitForTimeout(150)
@@ -261,7 +289,10 @@ test.describe("login theme keyboard", () => {
 
       // iOS zooms the page when a focused input is under 16px, which makes the
       // occlusion worse.
-      expect(m.fontSize, "input font-size must be >= 16px (iOS auto-zoom)").toBeGreaterThanOrEqual(16)
+      expect(
+        m.fontSize,
+        "input font-size must be >= 16px (iOS auto-zoom)",
+      ).toBeGreaterThanOrEqual(16)
       expect(
         m.fieldReachable,
         `focused field cannot clear the keyboard: needs ${m.needField}px of scroll, range is ${m.range}px`,

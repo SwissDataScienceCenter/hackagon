@@ -36,17 +36,17 @@ NAME="${PLAUSIBLE_NAME:-Hackagon Analytics Admin}"
 base="$(local_url)"
 
 if [ "${1:-}" = "--print" ]; then
-  echo "email      $PLAUSIBLE_EMAIL"
-  echo "password   $PLAUSIBLE_PASSWORD"
-  echo "site       $PLAUSIBLE_SITE"
-  echo "apiKey     ${PLAUSIBLE_API_KEY:-<none yet>}"
-  exit 0
+    echo "email      $PLAUSIBLE_EMAIL"
+    echo "password   $PLAUSIBLE_PASSWORD"
+    echo "site       $PLAUSIBLE_SITE"
+    echo "apiKey     ${PLAUSIBLE_API_KEY:-<none yet>}"
+    exit 0
 fi
 
 cid="$(compose ps -q plausible 2>/dev/null || true)"
 [ -n "$cid" ] || {
-  echo "error: the plausible container is not running — scripts/up.sh first" >&2
-  exit 1
+    echo "error: the plausible container is not running — scripts/up.sh first" >&2
+    exit 1
 }
 
 rpc() { docker exec -i "$cid" bin/plausible rpc "$1"; }
@@ -91,8 +91,8 @@ end
 ')"
 printf '%s\n' "$out" | sed 's/^/    /'
 case "$out" in
-  *user=*) ;;
-  *)
+*user=*) ;;
+*)
     echo "error: rpc did not report a user — Plausible internals may have moved" >&2
     exit 1
     ;;
@@ -111,19 +111,19 @@ esac
 # would be true and useless; the wipe would look recovered and verify.sh would
 # then fail on a 401 several steps later, pointing nowhere near here.
 if [ -n "${PLAUSIBLE_API_KEY:-}" ]; then
-  probe="$(curl -s -o "$CURL_DISCARD" -w '%{http_code}' -m 20 \
-    -H "Authorization: Bearer $PLAUSIBLE_API_KEY" \
-    "$base/api/v1/stats/aggregate?site_id=$PLAUSIBLE_SITE&period=day&metrics=visitors" || true)"
-  if [ "$probe" != "200" ]; then
-    echo "==> the stored Stats API key no longer works (HTTP $probe) — minting a new one"
-    PLAUSIBLE_API_KEY=""
-  fi
+    probe="$(curl -s -o "$CURL_DISCARD" -w '%{http_code}' -m 20 \
+        -H "Authorization: Bearer $PLAUSIBLE_API_KEY" \
+        "$base/api/v1/stats/aggregate?site_id=$PLAUSIBLE_SITE&period=day&metrics=visitors" || true)"
+    if [ "$probe" != "200" ]; then
+        echo "==> the stored Stats API key no longer works (HTTP $probe) — minting a new one"
+        PLAUSIBLE_API_KEY=""
+    fi
 fi
 
 if [ -z "${PLAUSIBLE_API_KEY:-}" ]; then
-  echo "==> creating a Stats API key"
-  key="$(openssl rand -hex 24 | tr -d '\r\n')"
-  keyout="$(rpc '
+    echo "==> creating a Stats API key"
+    key="$(openssl rand -hex 24 | tr -d '\r\n')"
+    keyout="$(rpc '
 user = Plausible.Auth.find_user_by(email: "'"$PLAUSIBLE_EMAIL"'")
 {:ok, team} = Plausible.Teams.get_by_owner(user)
 
@@ -132,17 +132,17 @@ case Plausible.Auth.create_stats_api_key(user, team, "hackagon-verify", "'"$key"
   {:error, e} -> IO.puts("apikey=error " <> inspect(e))
 end
 ')"
-  case "$keyout" in
+    case "$keyout" in
     *apikey=created*)
-      # secrets_set REPLACES the line and re-checks `git check-ignore` first —
-      # the generator ran once, long ago, and a .gitignore can be edited since.
-      secrets_set PLAUSIBLE_API_KEY "$key" || exit 1
-      echo "    stored in $SECRETS_FILE"
-      ;;
+        # secrets_set REPLACES the line and re-checks `git check-ignore` first —
+        # the generator ran once, long ago, and a .gitignore can be edited since.
+        secrets_set PLAUSIBLE_API_KEY "$key" || exit 1
+        echo "    stored in $SECRETS_FILE"
+        ;;
     *)
-      echo "    ⚠ could not create a Stats API key: $keyout" >&2
-      ;;
-  esac
+        echo "    ⚠ could not create a Stats API key: $keyout" >&2
+        ;;
+    esac
 fi
 
 # ── prove the account actually logs IN ─────────────────────────────────────
@@ -159,18 +159,18 @@ trap 'rm -f "$jar"' EXIT
 # closes the pipe at the first match while curl is still writing.
 login_html="$(curl -fsS -c "$jar" "$base/login")"
 csrf="$(printf '%s' "$login_html" |
-  grep -oE 'name="_csrf_token"[^>]*value="[^"]+"' | sed 's/.*value="//;s/"//' | head -1)"
+    grep -oE 'name="_csrf_token"[^>]*value="[^"]+"' | sed 's/.*value="//;s/"//' | head -1)"
 [ -n "$csrf" ] || {
-  echo "error: no CSRF token on $base/login" >&2
-  exit 1
+    echo "error: no CSRF token on $base/login" >&2
+    exit 1
 }
 code="$(curl -fsS -b "$jar" -c "$jar" -o "$CURL_DISCARD" -w '%{http_code}' -X POST "$base/login" \
-  --data-urlencode "_csrf_token=$csrf" \
-  --data-urlencode "email=$PLAUSIBLE_EMAIL" \
-  --data-urlencode "password=$PLAUSIBLE_PASSWORD" || true)"
+    --data-urlencode "_csrf_token=$csrf" \
+    --data-urlencode "email=$PLAUSIBLE_EMAIL" \
+    --data-urlencode "password=$PLAUSIBLE_PASSWORD" || true)"
 [ "$code" = "302" ] || {
-  echo "error: login answered $code (expected a 302 to /sites)" >&2
-  exit 1
+    echo "error: login answered $code (expected a 302 to /sites)" >&2
+    exit 1
 }
 # Captured, not piped into `grep -q`: grep exits at the first match, and curl
 # on a Windows host then dies writing into a closed pipe
@@ -178,8 +178,8 @@ code="$(curl -fsS -b "$jar" -c "$jar" -o "$CURL_DISCARD" -w '%{http_code}' -X PO
 # a successful verification.
 sites_html="$(curl -fsS -b "$jar" "$base/sites")"
 case "$sites_html" in
-  *"$PLAUSIBLE_SITE"*) ;;
-  *)
+*"$PLAUSIBLE_SITE"*) ;;
+*)
     echo "error: logged in, but $PLAUSIBLE_SITE is not listed on /sites" >&2
     exit 1
     ;;

@@ -48,7 +48,9 @@ const MANIFEST = path.join(HERE, "manifest.jsonl")
 const DEVENV_BIN = path.join(ROOT, ".devenv/profile/bin")
 const ENV = {
   ...process.env,
-  PATH: fs.existsSync(DEVENV_BIN) ? `${DEVENV_BIN}${path.delimiter}${process.env.PATH}` : process.env.PATH,
+  PATH: fs.existsSync(DEVENV_BIN)
+    ? `${DEVENV_BIN}${path.delimiter}${process.env.PATH}`
+    : process.env.PATH,
 }
 
 const C = {
@@ -62,7 +64,11 @@ const C = {
 // ─── The tree must be clean, and must be clean again afterwards ─────────────
 
 function gitStatus() {
-  return execFileSync("git", ["status", "--porcelain"], { cwd: ROOT, encoding: "utf8", env: ENV })
+  return execFileSync("git", ["status", "--porcelain"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: ENV,
+  })
 }
 
 /**
@@ -126,7 +132,9 @@ function refuseIfDirty() {
   const dirty = dirtyPaths()
   if (dirty.length > 0) {
     console.error(
-      C.red("refusing to start: files this tool mutates already have uncommitted changes.\n") +
+      C.red(
+        "refusing to start: files this tool mutates already have uncommitted changes.\n",
+      ) +
         dirty.map((p) => `  ${p}`).join("\n") +
         "\n\nMutation testing edits these files and restores them from a journal. It " +
         "cannot tell your work from its own, and a mutation that survives into a " +
@@ -162,7 +170,8 @@ function writeJournal(entries) {
 function apply(mut) {
   mut.edits.forEach((edit, i) => {
     const abs = path.join(ROOT, edit.file)
-    if (!fs.existsSync(abs)) throw new Error(`${mut.id}: no such file: ${edit.file}`)
+    if (!fs.existsSync(abs))
+      throw new Error(`${mut.id}: no such file: ${edit.file}`)
     const original = fs.readFileSync(abs, "utf8")
 
     const occurrences = original.split(edit.find).length - 1
@@ -178,7 +187,10 @@ function apply(mut) {
     }
 
     fs.mkdirSync(BACKUPS, { recursive: true })
-    const backup = path.join(BACKUPS, `${mut.id.replace(/[^\w.-]/g, "_")}.${i}.bak`)
+    const backup = path.join(
+      BACKUPS,
+      `${mut.id.replace(/[^\w.-]/g, "_")}.${i}.bak`,
+    )
     const fd = fs.openSync(backup, "w")
     fs.writeSync(fd, original)
     fs.fsyncSync(fd)
@@ -205,7 +217,11 @@ function restore({ quiet = false } = {}) {
   const entries = readJournal()
   for (const e of [...entries].reverse()) {
     if (!fs.existsSync(e.backup)) {
-      console.error(C.red(`restore: backup for ${e.id} is missing (${e.backup}) — restoring from git`))
+      console.error(
+        C.red(
+          `restore: backup for ${e.id} is missing (${e.backup}) — restoring from git`,
+        ),
+      )
       spawnSync("git", ["checkout", "--", e.file], { cwd: ROOT, env: ENV })
       continue
     }
@@ -277,7 +293,9 @@ let ginkgoWrapperCache = null
 function ginkgoWrappers() {
   if (ginkgoWrapperCache) return ginkgoWrapperCache
   const out = new Set()
-  const dirs = fs.readdirSync(path.join(BACKEND, "internal"), { withFileTypes: true })
+  const dirs = fs.readdirSync(path.join(BACKEND, "internal"), {
+    withFileTypes: true,
+  })
   for (const d of dirs) {
     if (!d.isDirectory()) continue
     const dir = path.join(BACKEND, "internal", d.name)
@@ -285,7 +303,10 @@ function ginkgoWrappers() {
       if (!f.endsWith("_test.go")) continue
       const src = fs.readFileSync(path.join(dir, f), "utf8")
       if (!src.includes("RunSpecs")) continue
-      for (const m of src.matchAll(/func\s+(Test\w+)\s*\(\s*\w+\s+\*testing\.T\s*\)/g)) out.add(m[1])
+      for (const m of src.matchAll(
+        /func\s+(Test\w+)\s*\(\s*\w+\s+\*testing\.T\s*\)/g,
+      ))
+        out.add(m[1])
     }
   }
   ginkgoWrapperCache = out
@@ -321,10 +342,20 @@ function runGo(cfg) {
     const r = spawnSync(
       "go",
       [
-        "test", "-count=1", "-tags", "test unittest", "-json", pkg,
+        "test",
+        "-count=1",
+        "-tags",
+        "test unittest",
+        "-json",
+        pkg,
         `--ginkgo.json-report=${report}`,
       ],
-      { cwd: BACKEND, env: ENV, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 },
+      {
+        cwd: BACKEND,
+        env: ENV,
+        encoding: "utf8",
+        maxBuffer: 256 * 1024 * 1024,
+      },
     )
     const short = pkg.replace(/^\.\/internal\//, "").replace(/\/$/, "")
 
@@ -332,7 +363,10 @@ function runGo(cfg) {
     // "every test went red" would let a mutation that cannot possibly be
     // evaluated masquerade as a well-caught one.
     const combined = `${r.stdout ?? ""}${r.stderr ?? ""}`
-    if (/\[build failed\]|cannot find package|# \S+\n.*\.go:\d+/.test(combined) && !fs.existsSync(report)) {
+    if (
+      /\[build failed\]|cannot find package|# \S+\n.*\.go:\d+/.test(combined) &&
+      !fs.existsSync(report)
+    ) {
       buildFailure = `${short}: ${(r.stderr || r.stdout || "").slice(0, 800)}`
       continue
     }
@@ -342,21 +376,33 @@ function runGo(cfg) {
       try {
         for (const suite of JSON.parse(fs.readFileSync(report, "utf8"))) {
           for (const s of suite.SpecReports ?? []) {
-            const name = [...(s.ContainerHierarchyTexts ?? []), s.LeafNodeText].filter(Boolean).join(" > ")
+            const name = [...(s.ContainerHierarchyTexts ?? []), s.LeafNodeText]
+              .filter(Boolean)
+              .join(" > ")
             if (!name) continue
             specCount++
-            if (s.State === "failed" || s.State === "panicked" || s.State === "interrupted") {
+            if (
+              s.State === "failed" ||
+              s.State === "panicked" ||
+              s.State === "interrupted"
+            ) {
               reds.add(`${short}::${name}`)
             }
           }
         }
-      } catch { /* an unparseable report is handled by the build-failure path */ }
+      } catch {
+        /* an unparseable report is handled by the build-failure path */
+      }
     }
 
     for (const line of (r.stdout ?? "").split("\n")) {
       if (!line.startsWith("{")) continue
       let ev
-      try { ev = JSON.parse(line) } catch { continue }
+      try {
+        ev = JSON.parse(line)
+      } catch {
+        continue
+      }
       if (!ev.Test || ev.Action !== "fail") continue
       // A ginkgo wrapper's failure is the sum of its specs, which are already
       // counted above with names that say what actually broke.
@@ -365,7 +411,11 @@ function runGo(cfg) {
     }
 
     // A compile error in a package with no report and no JSON events at all.
-    if (r.status !== 0 && specCount === 0 && ![...reds].some((x) => x.startsWith(`${short}::`))) {
+    if (
+      r.status !== 0 &&
+      specCount === 0 &&
+      ![...reds].some((x) => x.startsWith(`${short}::`))
+    ) {
       buildFailure ??= `${short}: ${(r.stderr || r.stdout || "").slice(0, 800)}`
     }
   }
@@ -383,7 +433,13 @@ function runGo(cfg) {
  */
 function runVitest(cfg) {
   const out = tmpfile("vitest.json")
-  const args = ["exec", "vitest", "run", "--reporter=json", `--outputFile=${out}`]
+  const args = [
+    "exec",
+    "vitest",
+    "run",
+    "--reporter=json",
+    `--outputFile=${out}`,
+  ]
   if (cfg.files?.length) args.push(...cfg.files)
   const r = spawnSync("pnpm", args, {
     cwd: FRONTEND,
@@ -398,7 +454,10 @@ function runVitest(cfg) {
 
   const reds = new Set()
   if (!fs.existsSync(out)) {
-    return { reds, buildFailure: `vitest wrote no report: ${(r.stderr || r.stdout || "").slice(0, 800)}` }
+    return {
+      reds,
+      buildFailure: `vitest wrote no report: ${(r.stderr || r.stdout || "").slice(0, 800)}`,
+    }
   }
   const report = JSON.parse(fs.readFileSync(out, "utf8"))
   let assertions = 0
@@ -409,12 +468,18 @@ function runVitest(cfg) {
       if (a.status === "failed") reds.add(`${rel}::${a.fullName}`)
     }
     // A file that fails to even load reports zero assertions and a message.
-    if ((file.assertionResults ?? []).length === 0 && file.status === "failed") {
+    if (
+      (file.assertionResults ?? []).length === 0 &&
+      file.status === "failed"
+    ) {
       reds.add(`${rel}::<file failed to load>`)
     }
   }
   if (assertions === 0) {
-    return { reds, buildFailure: "vitest collected zero tests — the report would be vacuous" }
+    return {
+      reds,
+      buildFailure: "vitest collected zero tests — the report would be vacuous",
+    }
   }
   return { reds, buildFailure: null }
 }
@@ -445,11 +510,21 @@ function runPlaywright(cfg) {
   // do behind anyone's back: it is minutes, it takes the whole stack with it if
   // it goes wrong, and another agent may be mid-recreate.
   if (cfg.rebuild === "frontend") {
-    const b = spawnSync("bash", [path.join(ROOT, ".claude/skills/lib/frontend-build.sh"), "build"], {
-      cwd: ROOT, env: ENV, encoding: "utf8", stdio: ["ignore", "inherit", "inherit"],
-    })
+    const b = spawnSync(
+      "bash",
+      [path.join(ROOT, ".claude/skills/lib/frontend-build.sh"), "build"],
+      {
+        cwd: ROOT,
+        env: ENV,
+        encoding: "utf8",
+        stdio: ["ignore", "inherit", "inherit"],
+      },
+    )
     if (b.status !== 0) {
-      return { reds: new Set(), buildFailure: `frontend-build.sh failed (exit ${b.status})` }
+      return {
+        reds: new Set(),
+        buildFailure: `frontend-build.sh failed (exit ${b.status})`,
+      }
     }
   } else if (cfg.rebuild === "backend") {
     return {
@@ -485,7 +560,10 @@ function runPlaywright(cfg) {
   })
 
   if (!fs.existsSync(results)) {
-    return { reds: new Set(), buildFailure: `no .artifacts/results.json after the run (exit ${r.status})` }
+    return {
+      reds: new Set(),
+      buildFailure: `no .artifacts/results.json after the run (exit ${r.status})`,
+    }
   }
   if (fs.statSync(results).mtimeMs <= before) {
     return {
@@ -503,7 +581,9 @@ function runPlaywright(cfg) {
       for (const spec of s.specs ?? []) {
         seen++
         const failed = (spec.tests ?? []).some((t) =>
-          (t.results ?? []).some((res) => res.status === "failed" || res.status === "timedOut"),
+          (t.results ?? []).some(
+            (res) => res.status === "failed" || res.status === "timedOut",
+          ),
         )
         if (!failed) continue
         // The journey names every test `[<action id>] <title>` — the action id
@@ -516,7 +596,8 @@ function runPlaywright(cfg) {
     }
   }
   walk(report.suites)
-  if (seen === 0) return { reds, buildFailure: "the Playwright report contains no specs" }
+  if (seen === 0)
+    return { reds, buildFailure: "the Playwright report contains no specs" }
   return { reds, buildFailure: null }
 }
 
@@ -524,7 +605,10 @@ const ARENAS = {
   go: { run: runGo, tier: "fast" },
   vitest: { run: runVitest, tier: "fast" },
   journey: { run: runPlaywright, tier: "e2e" },
-  smoke: { run: (cfg) => runPlaywright({ ...cfg, suite: "smoke" }), tier: "e2e" },
+  smoke: {
+    run: (cfg) => runPlaywright({ ...cfg, suite: "smoke" }),
+    tier: "e2e",
+  },
 }
 
 // ─── Baselines ──────────────────────────────────────────────────────────────
@@ -583,10 +667,17 @@ function baselineFor(arena, cfg, { refresh = false } = {}) {
   process.stdout.write(C.dim(`  baseline (${arena}) … `))
   const t = Date.now()
   const { reds, buildFailure } = ARENAS[arena].run(cfg ?? {})
-  if (buildFailure) throw new Error(`baseline for ${arena} could not run: ${buildFailure}`)
-  console.log(C.dim(`${reds.size} red, ${((Date.now() - t) / 1000).toFixed(1)}s`))
+  if (buildFailure)
+    throw new Error(`baseline for ${arena} could not run: ${buildFailure}`)
+  console.log(
+    C.dim(`${reds.size} red, ${((Date.now() - t) / 1000).toFixed(1)}s`),
+  )
   if (reds.size > 0) {
-    console.log(C.yellow(`  note: ${reds.size} test(s) are ALREADY red on the clean tree:`))
+    console.log(
+      C.yellow(
+        `  note: ${reds.size} test(s) are ALREADY red on the clean tree:`,
+      ),
+    )
     for (const r of reds) console.log(C.yellow(`    ${r}`))
   }
   // On a REFRESH, union rather than replace. The cached baseline accumulates
@@ -603,7 +694,11 @@ function baselineFor(arena, cfg, { refresh = false } = {}) {
 // ─── Manifest ───────────────────────────────────────────────────────────────
 
 function loadManifest() {
-  const lines = fs.readFileSync(MANIFEST, "utf8").split("\n").map((l) => l.trim()).filter(Boolean)
+  const lines = fs
+    .readFileSync(MANIFEST, "utf8")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
   const muts = []
   const seen = new Set()
   lines.forEach((line, i) => {
@@ -616,22 +711,32 @@ function loadManifest() {
     }
     if (m.comment && !m.id) return
     for (const field of ["id", "property", "arena"]) {
-      if (m[field] === undefined) throw new Error(`manifest.jsonl line ${i + 1}: missing '${field}'`)
+      if (m[field] === undefined)
+        throw new Error(`manifest.jsonl line ${i + 1}: missing '${field}'`)
     }
     // `file`/`find`/`replace` is the one-edit shorthand for `edits: [{...}]`.
     // Most mutations are a single string swap; a few (weakening a sanitizer
     // that names the same tag in an allowlist AND a denylist) genuinely need
     // two, and a mutation that only half-applies would read as a well-tested
     // property when in fact the defence in depth held.
-    m.edits = m.edits ?? [{ file: m.file, find: m.find, replace: m.replace, occurrences: m.occurrences }]
+    m.edits = m.edits ?? [
+      {
+        file: m.file,
+        find: m.find,
+        replace: m.replace,
+        occurrences: m.occurrences,
+      },
+    ]
     for (const [j, e] of m.edits.entries()) {
       for (const field of ["file", "find", "replace"]) {
-        if (e[field] === undefined) throw new Error(`${m.id}: edit #${j + 1} is missing '${field}'`)
+        if (e[field] === undefined)
+          throw new Error(`${m.id}: edit #${j + 1} is missing '${field}'`)
       }
     }
     if (!ARENAS[m.arena]) throw new Error(`${m.id}: unknown arena '${m.arena}'`)
     m.expectReds = m.expectReds ?? []
-    if (seen.has(m.id)) throw new Error(`manifest.jsonl: duplicate mutation id '${m.id}'`)
+    if (seen.has(m.id))
+      throw new Error(`manifest.jsonl: duplicate mutation id '${m.id}'`)
     seen.add(m.id)
     // An entry with no expected reds is a CLAIM THAT NOTHING TESTS THIS, and
     // has to say so out loud. Without this, "expectReds: []" would be the one
@@ -644,9 +749,12 @@ function loadManifest() {
       )
     }
     if (m.gap && (m.expectReds ?? []).length > 0) {
-      throw new Error(`${m.id}: marked as a gap but also lists expectReds — pick one.`)
+      throw new Error(
+        `${m.id}: marked as a gap but also lists expectReds — pick one.`,
+      )
     }
-    if (m.gap && !m.gapReason) throw new Error(`${m.id}: a gap must carry a 'gapReason'.`)
+    if (m.gap && !m.gapReason)
+      throw new Error(`${m.id}: a gap must carry a 'gapReason'.`)
     muts.push(m)
   })
   return muts
@@ -682,14 +790,21 @@ function evaluate(m, { record, wide }) {
     process.stdout.write(C.dim(`  mutated  (${m.arena}) … `))
     const t = Date.now()
     result = arena.run(cfg)
-    console.log(C.dim(`${result.reds.size} red, ${((Date.now() - t) / 1000).toFixed(1)}s`))
+    console.log(
+      C.dim(
+        `${result.reds.size} red, ${((Date.now() - t) / 1000).toFixed(1)}s`,
+      ),
+    )
   } finally {
     restore({ quiet: true })
   }
   assertCleanTree(`after ${m.id}`)
 
   if (result.buildFailure) {
-    return { verdict: "INVALID", detail: `the mutated source does not build:\n${result.buildFailure}` }
+    return {
+      verdict: "INVALID",
+      detail: `the mutated source does not build:\n${result.buildFailure}`,
+    }
   }
 
   let newReds = [...result.reds].filter((r) => !base.has(r)).sort()
@@ -776,17 +891,29 @@ function main() {
     for (const m of muts) {
       for (const [i, e] of m.edits.entries()) {
         const abs = path.join(ROOT, e.file)
-        if (!fs.existsSync(abs)) { console.error(C.red(`${m.id}: no such file ${e.file}`)); bad++; continue }
+        if (!fs.existsSync(abs)) {
+          console.error(C.red(`${m.id}: no such file ${e.file}`))
+          bad++
+          continue
+        }
         const n = fs.readFileSync(abs, "utf8").split(e.find).length - 1
         const want = e.occurrences ?? 1
         if (n !== want) {
-          console.error(C.red(`${m.id}: anchor #${i + 1} matches ${n}x in ${e.file} (want ${want})`))
+          console.error(
+            C.red(
+              `${m.id}: anchor #${i + 1} matches ${n}x in ${e.file} (want ${want})`,
+            ),
+          )
           console.error(C.dim(`    ${JSON.stringify(e.find)}`))
           bad++
         }
       }
     }
-    console.log(bad === 0 ? C.green(`all ${muts.length} mutations still anchor`) : C.red(`${bad} broken anchor(s)`))
+    console.log(
+      bad === 0
+        ? C.green(`all ${muts.length} mutations still anchor`)
+        : C.red(`${bad} broken anchor(s)`),
+    )
     return bad === 0 ? 0 : 1
   }
 
@@ -804,7 +931,13 @@ function main() {
     return 2
   }
 
-  const flags = { tier: "fast", arena: null, record: false, json: null, wide: false }
+  const flags = {
+    tier: "fast",
+    arena: null,
+    record: false,
+    json: null,
+    wide: false,
+  }
   const ids = []
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i]
@@ -813,27 +946,42 @@ function main() {
     else if (a === "--record") flags.record = true
     else if (a === "--wide") flags.wide = true
     else if (a === "--json") flags.json = argv[++i]
-    else if (a.startsWith("--")) { console.error(`unknown flag ${a}`); return 2 }
-    else ids.push(a)
+    else if (a.startsWith("--")) {
+      console.error(`unknown flag ${a}`)
+      return 2
+    } else ids.push(a)
   }
 
   let selected = muts
   if (ids.length > 0) {
-    selected = muts.filter((m) => ids.some((id) => m.id === id || m.id.startsWith(`${id}.`)))
-    const unknown = ids.filter((id) => !muts.some((m) => m.id === id || m.id.startsWith(`${id}.`)))
-    if (unknown.length) { console.error(`unknown mutation id(s): ${unknown.join(", ")}`); return 2 }
+    selected = muts.filter((m) =>
+      ids.some((id) => m.id === id || m.id.startsWith(`${id}.`)),
+    )
+    const unknown = ids.filter(
+      (id) => !muts.some((m) => m.id === id || m.id.startsWith(`${id}.`)),
+    )
+    if (unknown.length) {
+      console.error(`unknown mutation id(s): ${unknown.join(", ")}`)
+      return 2
+    }
   } else {
-    if (flags.tier !== "all") selected = selected.filter((m) => tierOf(m) === flags.tier)
+    if (flags.tier !== "all")
+      selected = selected.filter((m) => tierOf(m) === flags.tier)
     if (flags.arena) selected = selected.filter((m) => m.arena === flags.arena)
   }
-  if (selected.length === 0) { console.error("no mutations selected"); return 2 }
+  if (selected.length === 0) {
+    console.error("no mutations selected")
+    return 2
+  }
 
   refuseIfDirty()
   captureDirtyBaseline()
   installCleanup()
   // A journal left over from a run that was killed outright.
   if (readJournal().length > 0) {
-    console.log(C.yellow("a previous run left mutations applied — restoring them first"))
+    console.log(
+      C.yellow("a previous run left mutations applied — restoring them first"),
+    )
     restore()
   }
 
@@ -848,22 +996,45 @@ function main() {
     } catch (e) {
       r = { verdict: "ERROR", detail: String(e?.message ?? e) }
     }
-    rows.push({ id: m.id, arena: m.arena, tier: tierOf(m), property: m.property, ...r })
+    rows.push({
+      id: m.id,
+      arena: m.arena,
+      tier: tierOf(m),
+      property: m.property,
+      ...r,
+    })
 
     const paint =
-      r.verdict === "EXACT" ? C.green
-      : r.verdict === "GAP" ? C.yellow
-      : r.verdict === "RECORD" ? C.dim
-      : C.red
+      r.verdict === "EXACT"
+        ? C.green
+        : r.verdict === "GAP"
+          ? C.yellow
+          : r.verdict === "RECORD"
+            ? C.dim
+            : C.red
     console.log(`  ${paint(r.verdict)}`)
     if (r.verdict === "RECORD") {
       console.log(`  ${C.dim("observed:")} ${JSON.stringify(r.observed)}`)
     }
-    if (r.missing?.length) console.log(C.red(`  expected but stayed GREEN:\n${r.missing.map((x) => `    ${x}`).join("\n")}`))
-    if (r.extra?.length) console.log(C.red(`  went red unexpectedly:\n${r.extra.map((x) => `    ${x}`).join("\n")}`))
+    if (r.missing?.length)
+      console.log(
+        C.red(
+          `  expected but stayed GREEN:\n${r.missing.map((x) => `    ${x}`).join("\n")}`,
+        ),
+      )
+    if (r.extra?.length)
+      console.log(
+        C.red(
+          `  went red unexpectedly:\n${r.extra.map((x) => `    ${x}`).join("\n")}`,
+        ),
+      )
     if (r.unstable?.length) {
       // Never silent. An ignored red is a claim, and it has to state its reason.
-      console.log(C.yellow("  ignored as flaky (not counted as caused by this mutation):"))
+      console.log(
+        C.yellow(
+          "  ignored as flaky (not counted as caused by this mutation):",
+        ),
+      )
       for (const x of r.unstable) {
         console.log(C.yellow(`    ${x}`))
         if (flakyReason(x)) {
@@ -885,14 +1056,21 @@ function main() {
 
   assertCleanTree("at the end of the run")
 
-  console.log(C.bold("── Results ──────────────────────────────────────────────"))
+  console.log(
+    C.bold("── Results ──────────────────────────────────────────────"),
+  )
   for (const r of rows) {
     const paint =
-      r.verdict === "EXACT" ? C.green
-      : r.verdict === "GAP" ? C.yellow
-      : r.verdict === "RECORD" ? C.dim
-      : C.red
-    console.log(`  ${paint(r.verdict.padEnd(11))} ${r.id.padEnd(30)} ${r.arena}`)
+      r.verdict === "EXACT"
+        ? C.green
+        : r.verdict === "GAP"
+          ? C.yellow
+          : r.verdict === "RECORD"
+            ? C.dim
+            : C.red
+    console.log(
+      `  ${paint(r.verdict.padEnd(11))} ${r.id.padEnd(30)} ${r.arena}`,
+    )
   }
   const bad = rows.filter((r) => !VERDICT_OK.has(r.verdict))
   const noReds = rows.filter((r) => r.verdict === "NO REDS")
@@ -916,7 +1094,10 @@ function main() {
 
   if (flags.json) {
     fs.mkdirSync(path.dirname(path.resolve(flags.json)), { recursive: true })
-    fs.writeFileSync(path.resolve(flags.json), JSON.stringify({ at: new Date().toISOString(), rows }, null, 2))
+    fs.writeFileSync(
+      path.resolve(flags.json),
+      JSON.stringify({ at: new Date().toISOString(), rows }, null, 2),
+    )
     console.log(C.dim(`\n  wrote ${flags.json}`))
   }
 

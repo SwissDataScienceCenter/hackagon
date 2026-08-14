@@ -56,7 +56,13 @@ fs.mkdirSync(SHOTS, { recursive: true })
 // ─── Route enumeration (the source of truth for coverage) ────────────────────
 
 const ROOT_DIR = path.resolve(SKILL_DIR, "..", "..", "..")
-const ROUTES_DIR = path.join(ROOT_DIR, "components", "frontend", "src", "routes")
+const ROUTES_DIR = path.join(
+  ROOT_DIR,
+  "components",
+  "frontend",
+  "src",
+  "routes",
+)
 
 /** Every route pattern that owns a +page.svelte, layout groups stripped:
  * `(app)/my/hackathon/[id]/teams/+page.svelte` → `/my/hackathon/[id]/teams`. */
@@ -69,9 +75,7 @@ function enumerateRoutes(dir: string, segs: string[] = []): string[] {
   for (const e of entries) {
     if (!e.isDirectory()) continue
     const next =
-      e.name.startsWith("(") && e.name.endsWith(")")
-        ? segs
-        : [...segs, e.name]
+      e.name.startsWith("(") && e.name.endsWith(")") ? segs : [...segs, e.name]
     out.push(...enumerateRoutes(path.join(dir, e.name), next))
   }
   return out
@@ -123,9 +127,9 @@ test.beforeAll(async () => {
   })
   if (!listed.ok) throw new Error(`HackathonService.List failed: ${listed.raw}`)
   const h1 = must(
-    (listed.data.hackathons as { id: string; name: string }[] | undefined)?.find(
-      (h) => h.name === SEED_HACKATHONS.h1.name,
-    ),
+    (
+      listed.data.hackathons as { id: string; name: string }[] | undefined
+    )?.find((h) => h.name === SEED_HACKATHONS.h1.name),
     `seed hackathon "${SEED_HACKATHONS.h1.name}" not found`,
   )
 
@@ -188,19 +192,53 @@ test.beforeAll(async () => {
   // A registration form, so /register/[id] renders fields instead of 404.
   // Labels chosen long on purpose: label wrapping at 360 is part of what the
   // sweep is here to check.
-  const form = await rpcAs("alice", "hackathon.ConfigService/SetRegistrationForm", {
-    hackathonId: h1.id,
-    fields: [
-      { key: "affiliation", label: "Affiliation / organisation", type: "text", required: true },
-      { key: "experience", label: "Tell us about your experience with machine learning and data engineering", type: "text", required: false },
-      { key: "tags", label: "Topics you want to work on (comma-separated)", type: "tags", required: false },
-      { key: "portfolio", label: "Portfolio or repository URL", type: "url", required: false },
-    ],
-    consents: [
-      { key: "conduct", label: "I accept the Code of Conduct and the event's photography policy", required: true },
-      { key: "newsletter", label: "Keep me posted about future SDSC hackathons", required: false },
-    ],
-  })
+  const form = await rpcAs(
+    "alice",
+    "hackathon.ConfigService/SetRegistrationForm",
+    {
+      hackathonId: h1.id,
+      fields: [
+        {
+          key: "affiliation",
+          label: "Affiliation / organisation",
+          type: "text",
+          required: true,
+        },
+        {
+          key: "experience",
+          label:
+            "Tell us about your experience with machine learning and data engineering",
+          type: "text",
+          required: false,
+        },
+        {
+          key: "tags",
+          label: "Topics you want to work on (comma-separated)",
+          type: "tags",
+          required: false,
+        },
+        {
+          key: "portfolio",
+          label: "Portfolio or repository URL",
+          type: "url",
+          required: false,
+        },
+      ],
+      consents: [
+        {
+          key: "conduct",
+          label:
+            "I accept the Code of Conduct and the event's photography policy",
+          required: true,
+        },
+        {
+          key: "newsletter",
+          label: "Keep me posted about future SDSC hackathons",
+          required: false,
+        },
+      ],
+    },
+  )
   if (!form.ok) throw new Error(`SetRegistrationForm failed: ${form.raw}`)
 
   // Vote categories in all three methods, so the voting page renders every
@@ -209,7 +247,9 @@ test.beforeAll(async () => {
     hackathonId: h1.id,
   })
   const existing = new Set(
-    ((cats.data?.voteCategories ?? []) as { name: string }[]).map((c) => c.name),
+    ((cats.data?.voteCategories ?? []) as { name: string }[]).map(
+      (c) => c.name,
+    ),
   )
   const wanted: { name: string; votingMethod: number; maxPoints?: number }[] = [
     { name: "Best Overall Project", votingMethod: 1 },
@@ -226,14 +266,19 @@ test.beforeAll(async () => {
       voterType: 1,
       ...(w.maxPoints ? { maxPoints: w.maxPoints } : {}),
     })
-    if (!res.ok) throw new Error(`CreateVoteCategory ${w.name} failed: ${res.raw}`)
+    if (!res.ok)
+      throw new Error(`CreateVoteCategory ${w.name} failed: ${res.raw}`)
   }
 
   // Voting open, so bob's visit renders live ballot forms, not a closed notice.
-  const settings = await rpcAs("alice", "hackathon.HackathonService/EditSettings", {
-    hackathonId: h1.id,
-    votingEnabled: true,
-  })
+  const settings = await rpcAs(
+    "alice",
+    "hackathon.HackathonService/EditSettings",
+    {
+      hackathonId: h1.id,
+      votingEnabled: true,
+    },
+  )
   if (!settings.ok) throw new Error(`EditSettings failed: ${settings.raw}`)
 
   // A prize table, so /prizes prefills rows (the many-field form case).
@@ -284,58 +329,230 @@ const VISITS: Visit[] = [
   // Public, anonymous.
   { pattern: "/", persona: "anon", path: () => "/" },
   { pattern: "/hackathon", persona: "anon", path: () => "/hackathon" },
-  { pattern: "/hackathon/[id]", persona: "anon", path: () => `/hackathon/${id("h1")}` },
+  {
+    pattern: "/hackathon/[id]",
+    persona: "anon",
+    path: () => `/hackathon/${id("h1")}`,
+  },
   { pattern: "/[slug=sitepage]", persona: "anon", path: () => "/about" },
-  { pattern: "/invite/[token]", persona: "anon", path: () => `/invite/${id("inviteToken")}`, note: "token minted in beforeAll" },
+  {
+    pattern: "/invite/[token]",
+    persona: "anon",
+    path: () => `/invite/${id("inviteToken")}`,
+    note: "token minted in beforeAll",
+  },
 
   // Signed-in platform pages.
   { pattern: "/dashboard", persona: "bob", path: () => "/dashboard" },
   { pattern: "/account", persona: "bob", path: () => "/account" },
-  { pattern: "/hackathons/create", persona: "admin", path: () => "/hackathons/create", note: "needs global Admin or HackathonOrganizer" },
-  { pattern: "/manage/pages", persona: "admin", path: () => "/manage/pages", note: "global Admin only" },
-  { pattern: "/manage/users", persona: "admin", path: () => "/manage/users", note: "global Admin only" },
-  { pattern: "/manage/gallery", persona: "admin", path: () => "/manage/gallery", note: "global Admin only — ALL_MEDIA scope" },
-  { pattern: "/register/[id]", persona: "bob", path: () => `/register/${id("h1")}`, note: "form set in beforeAll" },
+  {
+    pattern: "/hackathons/create",
+    persona: "admin",
+    path: () => "/hackathons/create",
+    note: "needs global Admin or HackathonOrganizer",
+  },
+  {
+    pattern: "/manage/pages",
+    persona: "admin",
+    path: () => "/manage/pages",
+    note: "global Admin only",
+  },
+  {
+    pattern: "/manage/users",
+    persona: "admin",
+    path: () => "/manage/users",
+    note: "global Admin only",
+  },
+  {
+    pattern: "/manage/gallery",
+    persona: "admin",
+    path: () => "/manage/gallery",
+    note: "global Admin only — ALL_MEDIA scope",
+  },
+  {
+    pattern: "/register/[id]",
+    persona: "bob",
+    path: () => `/register/${id("h1")}`,
+    note: "form set in beforeAll",
+  },
 
   // Member surfaces on h1 where the member view is the richer/only one.
-  { pattern: "/my/hackathon/[id]/projects/proposals", persona: "bob", path: () => `/my/hackathon/${id("h1")}/projects/proposals`, note: "own pending proposals — bob has two, alice none" },
-  { pattern: "/my/hackathon/[id]/projects/proposals/propose", persona: "bob", path: () => `/my/hackathon/${id("h1")}/projects/proposals/propose` },
-  { pattern: "/my/hackathon/[id]/projects/proposals/[projectId]/edit", persona: "bob", path: () => `/my/hackathon/${id("h1")}/projects/proposals/${id("bobProposal")}/edit`, note: "author edits own proposal" },
+  {
+    pattern: "/my/hackathon/[id]/projects/proposals",
+    persona: "bob",
+    path: () => `/my/hackathon/${id("h1")}/projects/proposals`,
+    note: "own pending proposals — bob has two, alice none",
+  },
+  {
+    pattern: "/my/hackathon/[id]/projects/proposals/propose",
+    persona: "bob",
+    path: () => `/my/hackathon/${id("h1")}/projects/proposals/propose`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/projects/proposals/[projectId]/edit",
+    persona: "bob",
+    path: () =>
+      `/my/hackathon/${id("h1")}/projects/proposals/${id("bobProposal")}/edit`,
+    note: "author edits own proposal",
+  },
 
   // Organizer/owner surfaces on h1 — alice sees every control.
-  { pattern: "/my/hackathon/[id]/overview", persona: "alice", path: () => `/my/hackathon/${id("h1")}/overview` },
-  { pattern: "/my/hackathon/[id]/teams", persona: "alice", path: () => `/my/hackathon/${id("h1")}/teams` },
-  { pattern: "/my/hackathon/[id]/teams/manage", persona: "alice", path: () => `/my/hackathon/${id("h1")}/teams/manage`, note: "assignment board + people panel" },
-  { pattern: "/my/hackathon/[id]/projects", persona: "alice", path: () => `/my/hackathon/${id("h1")}/projects` },
-  { pattern: "/my/hackathon/[id]/projects/[projectId]", persona: "alice", path: () => `/my/hackathon/${id("h1")}/projects/${id("approvedProject")}` },
-  { pattern: "/my/hackathon/[id]/projects/[projectId]/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/projects/${id("approvedProject")}/edit` },
-  { pattern: "/my/hackathon/[id]/timeline", persona: "alice", path: () => `/my/hackathon/${id("h1")}/timeline` },
-  { pattern: "/my/hackathon/[id]/timeline/new", persona: "alice", path: () => `/my/hackathon/${id("h1")}/timeline/new` },
-  { pattern: "/my/hackathon/[id]/timeline/[phaseId]/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/timeline/${id("phase")}/edit` },
-  { pattern: "/my/hackathon/[id]/tracks", persona: "alice", path: () => `/my/hackathon/${id("h1")}/tracks` },
-  { pattern: "/my/hackathon/[id]/tracks/new", persona: "alice", path: () => `/my/hackathon/${id("h1")}/tracks/new` },
-  { pattern: "/my/hackathon/[id]/tracks/[trackId]/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/tracks/${id("track")}/edit` },
-  { pattern: "/my/hackathon/[id]/pages", persona: "alice", path: () => `/my/hackathon/${id("h1")}/pages` },
-  { pattern: "/my/hackathon/[id]/pages/new", persona: "alice", path: () => `/my/hackathon/${id("h1")}/pages/new` },
-  { pattern: "/my/hackathon/[id]/pages/[pageId]", persona: "alice", path: () => `/my/hackathon/${id("h1")}/pages/${id("page")}` },
-  { pattern: "/my/hackathon/[id]/pages/[pageId]/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/pages/${id("page")}/edit` },
-  { pattern: "/my/hackathon/[id]/participants", persona: "alice", path: () => `/my/hackathon/${id("h1")}/participants`, note: "owner sees approve/remove/role controls" },
-  { pattern: "/my/hackathon/[id]/submissions", persona: "alice", path: () => `/my/hackathon/${id("h1")}/submissions` },
-  { pattern: "/my/hackathon/[id]/voting", persona: "alice", path: () => `/my/hackathon/${id("h1")}/voting`, note: "organizer view: category editor + tallies" },
-  { pattern: "/my/hackathon/[id]/prizes", persona: "alice", path: () => `/my/hackathon/${id("h1")}/prizes`, note: "prize table set in beforeAll" },
-  { pattern: "/my/hackathon/[id]/windows", persona: "alice", path: () => `/my/hackathon/${id("h1")}/windows` },
-  { pattern: "/my/hackathon/[id]/forms", persona: "alice", path: () => `/my/hackathon/${id("h1")}/forms` },
-  { pattern: "/my/hackathon/[id]/email", persona: "alice", path: () => `/my/hackathon/${id("h1")}/email` },
-  { pattern: "/my/hackathon/[id]/invites", persona: "alice", path: () => `/my/hackathon/${id("h1")}/invites` },
-  { pattern: "/my/hackathon/[id]/photos", persona: "alice", path: () => `/my/hackathon/${id("h1")}/photos` },
-  { pattern: "/my/hackathon/[id]/webinars", persona: "alice", path: () => `/my/hackathon/${id("h1")}/webinars` },
-  { pattern: "/my/hackathon/[id]/manage", persona: "alice", path: () => `/my/hackathon/${id("h1")}/manage` },
-  { pattern: "/my/hackathon/[id]/manage/edit", persona: "alice", path: () => `/my/hackathon/${id("h1")}/manage/edit`, note: "nested under manage — its only entry point is the hub's Edit details" },
+  {
+    pattern: "/my/hackathon/[id]/overview",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/overview`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/teams",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/teams`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/teams/manage",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/teams/manage`,
+    note: "assignment board + people panel",
+  },
+  {
+    pattern: "/my/hackathon/[id]/projects",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/projects`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/projects/[projectId]",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/projects/${id("approvedProject")}`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/projects/[projectId]/edit",
+    persona: "alice",
+    path: () =>
+      `/my/hackathon/${id("h1")}/projects/${id("approvedProject")}/edit`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/timeline",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/timeline`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/timeline/new",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/timeline/new`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/timeline/[phaseId]/edit",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/timeline/${id("phase")}/edit`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/tracks",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/tracks`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/tracks/new",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/tracks/new`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/tracks/[trackId]/edit",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/tracks/${id("track")}/edit`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/pages",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/pages`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/pages/new",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/pages/new`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/pages/[pageId]",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/pages/${id("page")}`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/pages/[pageId]/edit",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/pages/${id("page")}/edit`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/participants",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/participants`,
+    note: "owner sees approve/remove/role controls",
+  },
+  {
+    pattern: "/my/hackathon/[id]/submissions",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/submissions`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/voting",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/voting`,
+    note: "organizer view: category editor + tallies",
+  },
+  {
+    pattern: "/my/hackathon/[id]/prizes",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/prizes`,
+    note: "prize table set in beforeAll",
+  },
+  {
+    pattern: "/my/hackathon/[id]/windows",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/windows`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/forms",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/forms`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/email",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/email`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/invites",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/invites`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/photos",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/photos`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/webinars",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/webinars`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/manage",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/manage`,
+  },
+  {
+    pattern: "/my/hackathon/[id]/manage/edit",
+    persona: "alice",
+    path: () => `/my/hackathon/${id("h1")}/manage/edit`,
+    note: "nested under manage — its only entry point is the hub's Edit details",
+  },
 
   // Second visit where the member variant is a genuinely different surface:
   // bob gets the BALLOTS (three methods, forms live because voting is open),
   // where alice — organizers may not vote — gets the editor asserted above.
-  { pattern: "/my/hackathon/[id]/voting", persona: "bob", path: () => `/my/hackathon/${id("h1")}/voting`, note: "member view: live ballots in all three methods" },
+  {
+    pattern: "/my/hackathon/[id]/voting",
+    persona: "bob",
+    path: () => `/my/hackathon/${id("h1")}/voting`,
+    note: "member view: live ballots in all three methods",
+  },
 ]
 
 /**
@@ -365,12 +582,18 @@ async function sweep(page: Page, name: string, screenshot?: string) {
   // Evidence first, so it exists even when a check below fails.
   if (screenshot) {
     await page
-      .screenshot({ path: path.join(SHOTS, `${screenshot}.png`), fullPage: true })
+      .screenshot({
+        path: path.join(SHOTS, `${screenshot}.png`),
+        fullPage: true,
+      })
       .catch(() => {})
   }
 
   // Without a visible <main>, every content check below passes vacuously.
-  await expect(page.locator("main"), `${name}: no <main> rendered`).toBeVisible()
+  await expect(
+    page.locator("main"),
+    `${name}: no <main> rendered`,
+  ).toBeVisible()
 
   // Same argument for the footer, and it is not hypothetical: expectNoOverlap
   // and expectNoClippedText below RETURN EARLY when their scope is missing, so
@@ -479,9 +702,7 @@ test("every route is swept or explicitly declared uncovered", () => {
   const visited = new Set(VISITS.map((v) => v.pattern))
   const declared = new Map(UNCOVERED.map((u) => [u.pattern, u.reason]))
 
-  const unaccounted = routes.filter(
-    (r) => !visited.has(r) && !declared.has(r),
-  )
+  const unaccounted = routes.filter((r) => !visited.has(r) && !declared.has(r))
   expect(
     unaccounted,
     "routes the sweep neither visits nor declares uncovered — add a Visit " +

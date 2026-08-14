@@ -67,8 +67,12 @@ test.describe("profile picture", () => {
     // `users/<id>/avatar/`, because that prefix is other people's faces. So the
     // gallery half must NOT be offered — asserted alongside the positive below,
     // since "no gallery tab" also passes on a dialog that failed to render.
-    await expect(dialog.getByRole("button", { name: "Choose from gallery" })).toHaveCount(0)
-    await expect(dialog.getByRole("region", { name: /drop an image here/i })).toBeVisible()
+    await expect(
+      dialog.getByRole("button", { name: "Choose from gallery" }),
+    ).toHaveCount(0)
+    await expect(
+      dialog.getByRole("region", { name: /drop an image here/i }),
+    ).toBeVisible()
 
     // The control inside the dialog is a <label> wrapping a hidden input — a
     // styled button cannot open a file picker — so the input is set directly.
@@ -77,7 +81,11 @@ test.describe("profile picture", () => {
     // field above would stop being addressable.
     await page
       .getByLabel("Choose an image file for your account")
-      .setInputFiles({ name: "bob-face.png", mimeType: "image/png", buffer: PNG })
+      .setInputFiles({
+        name: "bob-face.png",
+        mimeType: "image/png",
+        buffer: PNG,
+      })
 
     // Check the uploader's own error line FIRST. Without this the failure is
     // "the field did not change", which is the symptom; the component already
@@ -97,7 +105,9 @@ test.describe("profile picture", () => {
       )
       .toBe(true)
     if (await uploadError.count()) {
-      throw new Error(`upload reported: ${await uploadError.first().innerText()}`)
+      throw new Error(
+        `upload reported: ${await uploadError.first().innerText()}`,
+      )
     }
 
     const stored = await field.inputValue()
@@ -160,9 +170,13 @@ test.describe("event logo", () => {
     // ways in are on offer. Its own test is below; here it is the control that
     // proves the avatar dialog's missing tab above is a decision and not a
     // dialog that simply never renders one.
-    await expect(dialog.getByRole("button", { name: "Choose from gallery" })).toBeVisible()
+    await expect(
+      dialog.getByRole("button", { name: "Choose from gallery" }),
+    ).toBeVisible()
 
-    const filePicker = page.getByLabel("Choose an image file for the event logo")
+    const filePicker = page.getByLabel(
+      "Choose an image file for the event logo",
+    )
 
     // First, the refusal — and that it happens BEFORE any transfer. Size and
     // content type are conditions on the presign, so a PDF is turned away by

@@ -28,21 +28,44 @@ QUICK=0
 require_cluster
 load_secrets
 
-PASS=0; FAIL=0
+PASS=0
+FAIL=0
 check() { # description expected actual
-    if [ "$2" = "$3" ]; then ok "$1"; PASS=$((PASS + 1));
-    else bad "$1"; say "        expected: $2"; say "        actual:   $3"; FAIL=$((FAIL + 1)); fi
+    if [ "$2" = "$3" ]; then
+        ok "$1"
+        PASS=$((PASS + 1))
+    else
+        bad "$1"
+        say "        expected: $2"
+        say "        actual:   $3"
+        FAIL=$((FAIL + 1))
+    fi
 }
 check_contains() { # description needle haystack
     case "$3" in
-        *"$2"*) ok "$1"; PASS=$((PASS + 1)) ;;
-        *) bad "$1"; say "        expected to contain: $2"; say "        got: $(printf '%.200s' "$3")"; FAIL=$((FAIL + 1)) ;;
+    *"$2"*)
+        ok "$1"
+        PASS=$((PASS + 1))
+        ;;
+    *)
+        bad "$1"
+        say "        expected to contain: $2"
+        say "        got: $(printf '%.200s' "$3")"
+        FAIL=$((FAIL + 1))
+        ;;
     esac
 }
 check_lacks() { # description needle haystack
     case "$3" in
-        *"$2"*) bad "$1"; say "        found: $2"; FAIL=$((FAIL + 1)) ;;
-        *) ok "$1"; PASS=$((PASS + 1)) ;;
+    *"$2"*)
+        bad "$1"
+        say "        found: $2"
+        FAIL=$((FAIL + 1))
+        ;;
+    *)
+        ok "$1"
+        PASS=$((PASS + 1))
+        ;;
     esac
 }
 
@@ -113,7 +136,7 @@ check "the chart wrote the Host rewrite" "$STORE_HOST:$STORE_PORT" \
 
 URL="$(bash "$HERE/presign.sh" put "$KEY" "text/plain" "$SIZE")"
 code="$(rigcurl -s -X PUT --data-binary "@$BODY" -H "Content-Type: text/plain" \
-        -o "$STATE_DIR/put.body" -w '%{http_code}' "$APP_URL$URL")"
+    -o "$STATE_DIR/put.body" -w '%{http_code}' "$APP_URL$URL")"
 check "presigned PUT through /objects" "200" "$code"
 [ "$code" = "200" ] || say "        $(head -c 300 "$STATE_DIR/put.body")"
 
@@ -134,8 +157,8 @@ sed -e "s|NAMESPACE_PLACEHOLDER|$NAMESPACE|" \
 
 annots() { # ingress-name -> "key=value" lines, minus the bookkeeping ones
     kubectl -n "$NAMESPACE" get ingress "$1" \
-        -o go-template='{{range $k,$v := .metadata.annotations}}{{$k}}={{$v}}{{"\n"}}{{end}}' \
-        | tr -d '\r' | grep -vE '^\s*$|^(kubectl\.kubernetes\.io/|meta\.helm\.sh/)' | LC_ALL=C sort
+        -o go-template='{{range $k,$v := .metadata.annotations}}{{$k}}={{$v}}{{"\n"}}{{end}}' |
+        tr -d '\r' | grep -vE '^\s*$|^(kubectl\.kubernetes\.io/|meta\.helm\.sh/)' | LC_ALL=C sort
 }
 diffed="$(diff <(annots "$RELEASE-objects") <(annots rig-objects-control) | grep '^[<>]' | tr -d ' ' || true)"
 check "control differs from the chart's Ingress by exactly upstream-vhost" \
@@ -153,8 +176,8 @@ done
 CKEY="hackathons/rig/$STAMP-control.txt"
 CURL_PATH="$(bash "$HERE/presign.sh" put "$CKEY" "text/plain" "$SIZE")"
 body="$(rigcurl -s -X PUT --data-binary "@$BODY" -H "Content-Type: text/plain" \
-        --resolve "$CONTROL_HOST:$HTTP_PORT:127.0.0.1" \
-        "http://$CONTROL_HOST:$HTTP_PORT$CURL_PATH")"
+    --resolve "$CONTROL_HOST:$HTTP_PORT:127.0.0.1" \
+    "http://$CONTROL_HOST:$HTTP_PORT$CURL_PATH")"
 check_contains "without the rewrite the same signature is refused" "SignatureDoesNotMatch" "$body"
 
 # And the same signature IS accepted through the chart's route, so the refusal
@@ -220,9 +243,15 @@ if [ "$QUICK" = 0 ]; then
     kubectl -n ingress-nginx patch deployment ingress-nginx-controller --type=json \
         -p "[{\"op\":\"add\",\"path\":\"$ARGS_PATH/-\",\"value\":\"--disable-svc-external-name=true\"}]" >/dev/null
     kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s >/dev/null
-    wait_code() { local c; for _ in $(seq 40); do
+    wait_code() {
+        local c
+        for _ in $(seq 40); do
             c="$(rigcurl -s -o /dev/null -w '%{http_code}' "$APP_URL/objects/$STORE_BUCKET/$KEY")"
-            [ "$c" = "$1" ] && break; sleep 1; done; printf '%s' "$c"; }
+            [ "$c" = "$1" ] && break
+            sleep 1
+        done
+        printf '%s' "$c"
+    }
     check "with --disable-svc-external-name the route 503s (so 200 was not vacuous)" \
         "503" "$(wait_code 503)"
     idx="$(ext_flag_index)"
@@ -249,10 +278,11 @@ prov="$(rigcurl -s "$APP_URL/auth/providers")"
 check_contains "the frontend advertises the origin it is actually reached on" \
     "\"callbackUrl\":\"$APP_URL/auth/callback/keycloak\"" "$prov"
 
-J="$STATE_DIR/login-jar.txt"; rm -f "$J"
+J="$STATE_DIR/login-jar.txt"
+rm -f "$J"
 lc() { rigcurl -s -b "$J" -c "$J" "$@"; }
-form_action() { tr '\n' ' ' <"$1" | grep -oE '<form[^>]*action="[^"]*"' | head -1 \
-    | grep -oE 'action="[^"]*"' | sed 's/action="//;s/"$//;s/&amp;/\&/g'; }
+form_action() { tr '\n' ' ' <"$1" | grep -oE '<form[^>]*action="[^"]*"' | head -1 |
+    grep -oE 'action="[^"]*"' | sed 's/action="//;s/"$//;s/&amp;/\&/g'; }
 
 lc -o /dev/null "$APP_URL/auth/signin"
 AUTHZ="$(lc -o /dev/null -w '%{redirect_url}' -X POST \
@@ -334,10 +364,14 @@ step "6 · a config-only upgrade reaches the RUNNING pod"
 # existing world-readable one would keep its mode.
 VALS="$STATE_DIR/current-values.yaml"
 rm -f "$VALS"
-(umask 077; helm -n "$NAMESPACE" get values "$RELEASE" -o yaml >"$VALS")
+(
+    umask 077
+    helm -n "$NAMESPACE" get values "$RELEASE" -o yaml >"$VALS"
+)
 
 csums() { # component [extra helm args…] -> "checksum/<kind>: <sha256>" lines, sorted
-    local comp="$1"; shift
+    local comp="$1"
+    shift
     helm template "$RELEASE" "$(winpath "$CHART_DIR")" --namespace "$NAMESPACE" \
         -f "$(winpath "$VALS")" --show-only "templates/$comp-deployment.yaml" "$@" 2>/dev/null |
         grep -oE 'checksum/[a-z]+: [0-9a-f]{64}' | LC_ALL=C sort
@@ -394,8 +428,10 @@ if [ "$QUICK" = 0 ]; then
     reupgrade() { # extra helm args…
         if ! helm upgrade "$RELEASE" "$(winpath "$CHART_DIR")" --namespace "$NAMESPACE" \
             -f "$(winpath "$VALS")" "$@" --timeout 15m >/dev/null 2>"$STATE_DIR/upgrade.err"; then
-            bad "helm upgrade failed"; sed 's/^/        /' "$STATE_DIR/upgrade.err" >&2
-            FAIL=$((FAIL + 1)); return 1
+            bad "helm upgrade failed"
+            sed 's/^/        /' "$STATE_DIR/upgrade.err" >&2
+            FAIL=$((FAIL + 1))
+            return 1
         fi
     }
     gens() { kubectl -n "$NAMESPACE" get deploy "$RELEASE-backend" "$RELEASE-frontend" \
@@ -412,7 +448,15 @@ if [ "$QUICK" = 0 ]; then
     # running rather than assumed — the tunnel overlay may set it either way.
     BEFORE="$(read_live_config frontend "${STAMP}b")"
     check_contains "the live config was actually read (positive control)" "forceDevLog:" "$BEFORE"
-    case "$BEFORE" in *"forceDevLog: true"*) WAS=true; WANT=false ;; *) WAS=false; WANT=true ;; esac
+    case "$BEFORE" in *"forceDevLog: true"*)
+        WAS=true
+        WANT=false
+        ;;
+    *)
+        WAS=false
+        WANT=true
+        ;;
+    esac
 
     if reupgrade --set "frontend.config.log.forceDevLog=$WANT"; then
         kubectl -n "$NAMESPACE" rollout status "deploy/$RELEASE-frontend" --timeout=300s >/dev/null 2>&1 || true

@@ -22,39 +22,42 @@ DELETE_ONLY=0
 [ "${1:-}" = "--delete-only" ] && DELETE_ONLY=1
 
 TOKEN=$(curl -s -X POST "$KC/realms/hackagon/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d client_id="hackagon-backend" -d username="$ADMIN_USER" -d password="$ADMIN_PASS" \
-  -d grant_type=password -d scope="openid profile" | jq -r .access_token)
-[ -z "$TOKEN" ] || [ "$TOKEN" = "null" ] && { echo "error: no admin token from $KC" >&2; exit 1; }
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d client_id="hackagon-backend" -d username="$ADMIN_USER" -d password="$ADMIN_PASS" \
+    -d grant_type=password -d scope="openid profile" | jq -r .access_token)
+[ -z "$TOKEN" ] || [ "$TOKEN" = "null" ] && {
+    echo "error: no admin token from $KC" >&2
+    exit 1
+}
 
 rpc() { grpcurl -plaintext -H "authorization: Bearer $TOKEN" -d "$2" "$GRPC" "$1"; }
 
 list=$(rpc hackathon.HackathonService/List '{}')
 deleted=0
 for f in "$SKILL_DIR"/data/*.json; do
-  name=$(jq -r .name "$f")
-  # --arg, not string interpolation: these names carry em-dashes and colons,
-  # and an earlier version of this loop built the jq filter by concatenation
-  # and silently matched nothing at all — it reported success having deleted
-  # zero rows.
-  id=$(jq -r --arg n "$name" '.hackathons[]? | select(.name == $n) | .id' <<<"$list")
-  [ -z "$id" ] && continue
+    name=$(jq -r .name "$f")
+    # --arg, not string interpolation: these names carry em-dashes and colons,
+    # and an earlier version of this loop built the jq filter by concatenation
+    # and silently matched nothing at all — it reported success having deleted
+    # zero rows.
+    id=$(jq -r --arg n "$name" '.hackathons[]? | select(.name == $n) | .id' <<<"$list")
+    [ -z "$id" ] && continue
 
-  # Delete refuses while an event still has pages — "archive it instead", which
-  # is the right default for a real event and merely in the way here. Clear them
-  # first; the seeder recreates every page from the JSON anyway.
-  pages=$(rpc hackathon.PageService/List "$(jq -nc --arg h "$id" '{hackathonId:$h}')" 2>/dev/null |
-            jq -r '.pages[]?.id' || true)
-  for p in $pages; do
-    rpc hackathon.PageService/Delete "$(jq -nc --arg p "$p" '{pageId:$p}')" >/dev/null 2>&1 || true
-  done
+    # Delete refuses while an event still has pages — "archive it instead", which
+    # is the right default for a real event and merely in the way here. Clear them
+    # first; the seeder recreates every page from the JSON anyway.
+    pages=$(rpc hackathon.PageService/List "$(jq -nc --arg h "$id" '{hackathonId:$h}')" 2>/dev/null |
+        jq -r '.pages[]?.id' || true)
+    for p in $pages; do
+        rpc hackathon.PageService/Delete "$(jq -nc --arg p "$p" '{pageId:$p}')" >/dev/null 2>&1 || true
+    done
 
-  if rpc hackathon.HackathonService/Delete "$(jq -nc --arg h "$id" '{hackathonId:$h}')" >/dev/null 2>&1; then
-    echo "  [-] $name"
-    deleted=$((deleted + 1))
-  else
-    echo "  ✕ could not delete $name" >&2
-  fi
+    if rpc hackathon.HackathonService/Delete "$(jq -nc --arg h "$id" '{hackathonId:$h}')" >/dev/null 2>&1; then
+        echo "  [-] $name"
+        deleted=$((deleted + 1))
+    else
+        echo "  ✕ could not delete $name" >&2
+    fi
 done
 echo "deleted $deleted edition(s)"
 

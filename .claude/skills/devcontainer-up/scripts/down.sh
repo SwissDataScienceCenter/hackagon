@@ -9,10 +9,10 @@ source "$HERE/lib.sh"
 
 require_docker
 if [ "${1:-}" = "--volumes" ]; then
-  echo "==> Stopping and REMOVING VOLUMES (nix store, devenv/postgres state)..."
-  compose down --volumes
+    echo "==> Stopping and REMOVING VOLUMES (nix store, devenv/postgres state)..."
+    compose down --volumes
 else
-  echo "==> Stopping the devcontainer stack (volumes preserved)..."
-  compose down
+    echo "==> Stopping the devcontainer stack (volumes preserved)..."
+    compose down
 fi
 echo "==> Done."

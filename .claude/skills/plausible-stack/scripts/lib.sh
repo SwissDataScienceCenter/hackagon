@@ -55,17 +55,17 @@ SECRETS_FILE="$SKILL_DIR/.secrets.env"
 # Stripped here as well as at the point of generation, because a .secrets.env
 # already on disk is not fixed by fixing the generator.
 load_secrets() {
-  [ -f "$SECRETS_FILE" ] || return 0
-  local line k v
-  while IFS= read -r line || [ -n "$line" ]; do
-    line="${line%$'\r'}"
-    case "$line" in '' | \#*) continue ;; esac
-    k="${line%%=*}"
-    case "$k" in *[!A-Za-z0-9_]* | '') continue ;; esac
-    v="${line#*=}"
-    v="${v%$'\r'}"
-    [ -n "${!k:-}" ] || export "$k=$v"
-  done <"$SECRETS_FILE"
+    [ -f "$SECRETS_FILE" ] || return 0
+    local line k v
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        case "$line" in '' | \#*) continue ;; esac
+        k="${line%%=*}"
+        case "$k" in *[!A-Za-z0-9_]* | '') continue ;; esac
+        v="${line#*=}"
+        v="${v%$'\r'}"
+        [ -n "${!k:-}" ] || export "$k=$v"
+    done <"$SECRETS_FILE"
 }
 
 # Paths handed to docker.exe. On Git Bash/MSYS, MSYS_NO_PATHCONV stops the
@@ -77,7 +77,7 @@ COMPOSE_VENDOR="$VENDOR/compose.yml"
 COMPOSE_OVERLAY="$SKILL_DIR/compose.tunnel.yaml"
 COMPOSE_DIR="$VENDOR"
 case "$(uname -s)" in
-  MINGW* | MSYS*)
+MINGW* | MSYS*)
     export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
     COMPOSE_VENDOR="$(cygpath -m "$COMPOSE_VENDOR")"
     COMPOSE_OVERLAY="$(cygpath -m "$COMPOSE_OVERLAY")"
@@ -99,31 +99,31 @@ esac
 # successful step is worse than either a failure or silence.
 CURL_DISCARD="/dev/null"
 case "$(uname -s)" in
-  MINGW* | MSYS*) CURL_DISCARD="NUL" ;;
+MINGW* | MSYS*) CURL_DISCARD="NUL" ;;
 esac
 
 compose() {
-  docker compose -p "$PROJECT" \
-    -f "$COMPOSE_VENDOR" -f "$COMPOSE_OVERLAY" \
-    --project-directory "$COMPOSE_DIR" "$@"
+    docker compose -p "$PROJECT" \
+        -f "$COMPOSE_VENDOR" -f "$COMPOSE_OVERLAY" \
+        --project-directory "$COMPOSE_DIR" "$@"
 }
 
 require_docker() {
-  command -v docker >/dev/null 2>&1 || {
-    echo "error: docker not found" >&2
-    exit 1
-  }
-  docker info >/dev/null 2>&1 || {
-    echo "error: docker daemon not reachable" >&2
-    exit 1
-  }
+    command -v docker >/dev/null 2>&1 || {
+        echo "error: docker not found" >&2
+        exit 1
+    }
+    docker info >/dev/null 2>&1 || {
+        echo "error: docker daemon not reachable" >&2
+        exit 1
+    }
 }
 
 require_vendor() {
-  [ -f "$VENDOR/compose.yml" ] || {
-    echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2
-    exit 1
-  }
+    [ -f "$VENDOR/compose.yml" ] || {
+        echo "error: upstream not fetched — run scripts/fetch-upstream.sh" >&2
+        exit 1
+    }
 }
 
 ENV_FILE="$VENDOR/.env"
@@ -132,18 +132,18 @@ ENV_FILE="$VENDOR/.env"
 # interpolation AND for the bare `- TOTP_VAULT_KEY` style pass-throughs in
 # upstream's compose, so it is the one place configuration lives.
 env_set() { # <key> <value>
-  mkdir -p "$VENDOR"
-  touch "$ENV_FILE"
-  # Same CR strip as load_secrets, for the same reason and one layer further
-  # out: whatever the value came from, a CR must not reach a container.
-  set -- "$1" "${2%$'\r'}"
-  if grep -q "^$1=" "$ENV_FILE"; then
-    # `|` as the sed delimiter: values here are URLs, and base64 secrets can
-    # contain `/`.
-    sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE"
-  else
-    printf '%s=%s\n' "$1" "$2" >>"$ENV_FILE"
-  fi
+    mkdir -p "$VENDOR"
+    touch "$ENV_FILE"
+    # Same CR strip as load_secrets, for the same reason and one layer further
+    # out: whatever the value came from, a CR must not reach a container.
+    set -- "$1" "${2%$'\r'}"
+    if grep -q "^$1=" "$ENV_FILE"; then
+        # `|` as the sed delimiter: values here are URLs, and base64 secrets can
+        # contain `/`.
+        sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE"
+    else
+        printf '%s=%s\n' "$1" "$2" >>"$ENV_FILE"
+    fi
 }
 
 # Write one KEY=value into .secrets.env, replacing any existing line.
@@ -153,26 +153,26 @@ env_set() { # <key> <value>
 # so a stored key names a row that no longer exists. Appending a second line
 # would leave load_secrets reading whichever came first — so this replaces.
 secrets_set() { # <key> <value>
-  local k="$1" v="${2%$'\r'}"
-  if command -v git >/dev/null 2>&1 &&
-    git -C "$SKILL_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 &&
-    ! git -C "$SKILL_DIR" check-ignore -q "$SECRETS_FILE"; then
-    echo "error: $SECRETS_FILE is not gitignored — refusing to write a secret there." >&2
-    return 1
-  fi
-  umask 077
-  touch "$SECRETS_FILE"
-  if grep -q "^$k=" "$SECRETS_FILE"; then
-    sed -i "s|^$k=.*|$k=$v|" "$SECRETS_FILE"
-  else
-    printf '%s=%s\n' "$k" "$v" >>"$SECRETS_FILE"
-  fi
-  export "$k=$v"
+    local k="$1" v="${2%$'\r'}"
+    if command -v git >/dev/null 2>&1 &&
+        git -C "$SKILL_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 &&
+        ! git -C "$SKILL_DIR" check-ignore -q "$SECRETS_FILE"; then
+        echo "error: $SECRETS_FILE is not gitignored — refusing to write a secret there." >&2
+        return 1
+    fi
+    umask 077
+    touch "$SECRETS_FILE"
+    if grep -q "^$k=" "$SECRETS_FILE"; then
+        sed -i "s|^$k=.*|$k=$v|" "$SECRETS_FILE"
+    else
+        printf '%s=%s\n' "$k" "$v" >>"$SECRETS_FILE"
+    fi
+    export "$k=$v"
 }
 
 env_get() { # <key> -> stdout (empty when absent)
-  [ -f "$ENV_FILE" ] || return 0
-  sed -n "s|^$1=||p" "$ENV_FILE" | tail -1
+    [ -f "$ENV_FILE" ] || return 0
+    sed -n "s|^$1=||p" "$ENV_FILE" | tail -1
 }
 
 # ── named vs quick tunnel ────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ source "$SKILL_DIR/../lib/cf-named-tunnel.sh"
 NAMED_TUNNEL="${PLAUSIBLE_TUNNEL_NAME:-hackagon-plausible}"
 
 named_configured() {
-  cf_configured && [ -n "${PLAUSIBLE_HOSTNAME:-}" ]
+    cf_configured && [ -n "${PLAUSIBLE_HOSTNAME:-}" ]
 }
 
 # The URL this rig is reachable on, asked of whatever is RUNNING. A named
@@ -199,9 +199,9 @@ named_configured() {
 # a tunnel that was restarted has a new URL and the same state file, and a stale
 # URL fails silently — the tracker keeps posting into nothing.
 tunnel_url() {
-  cfn_url "$NAMED_TUNNEL" 2>/dev/null && return 0
-  docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
-    grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
+    cfn_url "$NAMED_TUNNEL" 2>/dev/null && return 0
+    docker logs "$(compose ps -q tunnel 2>/dev/null)" 2>&1 |
+        grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1
 }
 
 # The docker network the rig's containers are on, read off a live container
@@ -211,9 +211,9 @@ tunnel_url() {
 # reports healthy — an afternoon lost to that once already, in the openreplay
 # overlay.
 rig_network() { # <service>
-  docker inspect "$(compose ps -q "$1")" \
-    --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null |
-    awk '{print $1}'
+    docker inspect "$(compose ps -q "$1")" \
+        --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null |
+        awk '{print $1}'
 }
 
 # The URL to talk to Plausible on from THIS machine. Prefer the loopback port:

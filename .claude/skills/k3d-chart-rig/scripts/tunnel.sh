@@ -143,7 +143,7 @@ ensure_forwarded_headers() {
         --namespace ingress-nginx --create-namespace \
         -f "$(winpath "$MANIFEST_DIR/ingress-nginx-values.yaml")" \
         --wait --timeout 10m >/dev/null
-    ok "use-forwarded-headers=true (absent header still falls back to \$scheme)"
+    ok 'use-forwarded-headers=true (absent header still falls back to $scheme)'
 }
 
 # ── the values overlay ─────────────────────────────────────────────────
@@ -224,7 +224,7 @@ install() { # <values-overlay…>
     local -a extra=()
     [ -f "$REALM_FILE" ] && extra=(--set-file "realmJson=$(winpath "$REALM_FILE")")
     local -a files=(-f "$(winpath "$CHART_DIR/values.yaml")"
-        -f "$(winpath "$CHART_DIR/values.k3d.yaml")")
+    -f "$(winpath "$CHART_DIR/values.k3d.yaml")")
     local f
     for f in "$@"; do files+=(-f "$(winpath "$f")"); done
     files+=(-f "$(winpath "$GEN_VALUES")")
@@ -308,7 +308,7 @@ cmd_down() {
     say "    $TUNNEL_APP_HOST"
     say "    $TUNNEL_AUTH_HOST"
     say "  Nothing serves them now, so they answer Cloudflare's 1033 (\"tunnel not"
-    say "  found\") — which is honest, and is why the container is stopped rather"
+    say '  found") — which is honest, and is why the container is stopped rather'
     say "  than left pointing at a cluster that may be gone."
     say ""
     say "  Give the names up:  bash $HERE/tunnel.sh destroy"
@@ -342,10 +342,10 @@ cmd_status() {
 }
 
 case "${1:-}" in
-    up) cmd_up ;;
-    down) cmd_down ;;
-    destroy) cmd_destroy ;;
-    status) cmd_status ;;
-    -h | --help | "") sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//' ;;
-    *) die "unknown command '$1' (up | down | destroy | status)" ;;
+up) cmd_up ;;
+down) cmd_down ;;
+destroy) cmd_destroy ;;
+status) cmd_status ;;
+-h | --help | "") sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//' ;;
+*) die "unknown command '$1' (up | down | destroy | status)" ;;
 esac

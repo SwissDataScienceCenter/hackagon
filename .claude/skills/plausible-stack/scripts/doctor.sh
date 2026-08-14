@@ -11,12 +11,12 @@ fail=0
 warn=0
 ok() { printf '  [x] %s\n' "$1"; }
 bad() {
-  printf '  ✕   %s\n' "$1"
-  fail=1
+    printf '  ✕   %s\n' "$1"
+    fail=1
 }
 soft() {
-  printf '  !   %s\n' "$1"
-  warn=1
+    printf '  !   %s\n' "$1"
+    warn=1
 }
 
 echo "── docker"
@@ -26,17 +26,17 @@ docker compose version >/dev/null 2>&1 && ok "compose v2" || bad "docker compose
 echo "── architecture"
 arch=$(uname -m)
 case "$arch" in
-  x86_64 | amd64 | aarch64 | arm64) ok "$arch (ClickHouse needs SSE4.2 or NEON)" ;;
-  *) bad "$arch — ClickHouse requires SSE 4.2 (x86) or NEON (arm)" ;;
+x86_64 | amd64 | aarch64 | arm64) ok "$arch (ClickHouse needs SSE4.2 or NEON)" ;;
+*) bad "$arch — ClickHouse requires SSE 4.2 (x86) or NEON (arm)" ;;
 esac
 
 echo "── resources (as seen by the docker host)"
 mem=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo 0)
 memgb=$((mem / 1024 / 1024 / 1024))
 if [ "$memgb" -ge 4 ]; then
-  ok "${memgb} GB RAM"
+    ok "${memgb} GB RAM"
 elif [ "$memgb" -gt 0 ]; then
-  soft "${memgb} GB RAM — 2 GB is upstream's floor, and that is for Plausible ALONE"
+    soft "${memgb} GB RAM — 2 GB is upstream's floor, and that is for Plausible ALONE"
 else soft "could not read MemTotal"; fi
 
 cpus=$(docker info --format '{{.NCPU}}' 2>/dev/null || echo 0)
@@ -54,32 +54,32 @@ echo "── ports"
 # found nothing look identical from the outside, and only one of them is
 # information.
 listeners() {
-  if command -v ss >/dev/null 2>&1; then
-    ss -ltn 2>/dev/null
-  elif command -v netstat >/dev/null 2>&1; then
-    netstat -ano 2>/dev/null | grep -i listen
-  else
-    return 1
-  fi
+    if command -v ss >/dev/null 2>&1; then
+        ss -ltn 2>/dev/null
+    elif command -v netstat >/dev/null 2>&1; then
+        netstat -ano 2>/dev/null | grep -i listen
+    else
+        return 1
+    fi
 }
 if ports="$(listeners)"; then
-  if printf '%s\n' "$ports" | grep -qE "[:.]$LOCAL_PORT[[:space:]]"; then
-    # Ours holding it is fine; anything else is not.
-    if docker ps --format '{{.Names}} {{.Ports}}' | grep -q ":$LOCAL_PORT->"; then
-      ok "port $LOCAL_PORT held by a container (this stack, presumably)"
+    if printf '%s\n' "$ports" | grep -qE "[:.]$LOCAL_PORT[[:space:]]"; then
+        # Ours holding it is fine; anything else is not.
+        if docker ps --format '{{.Names}} {{.Ports}}' | grep -q ":$LOCAL_PORT->"; then
+            ok "port $LOCAL_PORT held by a container (this stack, presumably)"
+        else
+            bad "port $LOCAL_PORT in use by something else — set PLAUSIBLE_PORT"
+        fi
     else
-      bad "port $LOCAL_PORT in use by something else — set PLAUSIBLE_PORT"
+        ok "port $LOCAL_PORT free"
     fi
-  else
-    ok "port $LOCAL_PORT free"
-  fi
 else
-  soft "no ss/netstat here — could not check whether port $LOCAL_PORT is free"
+    soft "no ss/netstat here — could not check whether port $LOCAL_PORT is free"
 fi
 
 echo "── neighbours"
 if docker ps --format '{{.Names}}' | grep -qx 'clickhouse'; then
-  soft "the openreplay rig is running — it has its OWN ClickHouse; this one is separate (~1 GB more)"
+    soft "the openreplay rig is running — it has its OWN ClickHouse; this one is separate (~1 GB more)"
 fi
 
 # ── a stack that is up: is ALL of it up? ───────────────────────────────────
@@ -88,25 +88,25 @@ fi
 # never meant to run — that is how openreplay's `sink` went missing while every
 # client-side check stayed green.
 if [ -f "$VENDOR/compose.yml" ] && [ -n "$(compose ps -q 2>/dev/null)" ]; then
-  echo "── running stack"
-  missing=""
-  running="$(compose ps --format '{{.Service}}' 2>/dev/null | sort -u)"
-  while IFS= read -r svc; do
-    [ -n "$svc" ] || continue
-    printf '%s\n' "$running" | grep -qx "$svc" || missing="$missing $svc"
-  done <<EOF
+    echo "── running stack"
+    missing=""
+    running="$(compose ps --format '{{.Service}}' 2>/dev/null | sort -u)"
+    while IFS= read -r svc; do
+        [ -n "$svc" ] || continue
+        printf '%s\n' "$running" | grep -qx "$svc" || missing="$missing $svc"
+    done <<EOF
 $(compose config --services 2>/dev/null | sort -u)
 EOF
-  if [ -n "$missing" ]; then
-    bad "not running:$missing — start them with: bash $HERE/up.sh"
-  else
-    ok "every compose service has a running container"
-  fi
+    if [ -n "$missing" ]; then
+        bad "not running:$missing — start them with: bash $HERE/up.sh"
+    else
+        ok "every compose service has a running container"
+    fi
 fi
 
 echo ""
 [ "$fail" -eq 0 ] && echo "Preflight passed$([ "$warn" -eq 1 ] && echo " (with warnings)")." ||
-  {
-    echo "Preflight FAILED — fix the ✕ items first."
-    exit 1
-  }
+    {
+        echo "Preflight FAILED — fix the ✕ items first."
+        exit 1
+    }

@@ -1,6 +1,13 @@
 ---
 name: k3d-chart-rig
-description: Install and exercise this repo's Helm chart on a throwaway local Kubernetes cluster (k3d + ingress-nginx + a test-only object store), then prove the things a rendered manifest can only assert — that a presigned upload survives the /objects Host rewrite, that the regex path beats the frontend's /, that ingress-nginx accepts the ExternalName upstream, and that a real OIDC login round-trip completes. Use when asked to test, install, debug or change helm-chart/, or to reproduce a Kubernetes-only failure.
+description:
+  Install and exercise this repo's Helm chart on a throwaway local Kubernetes
+  cluster (k3d + ingress-nginx + a test-only object store), then prove the
+  things a rendered manifest can only assert — that a presigned upload survives
+  the /objects Host rewrite, that the regex path beats the frontend's /, that
+  ingress-nginx accepts the ExternalName upstream, and that a real OIDC login
+  round-trip completes. Use when asked to test, install, debug or change
+  helm-chart/, or to reproduce a Kubernetes-only failure.
 ---
 
 # A local Kubernetes rig for `helm-chart/`
@@ -36,8 +43,8 @@ proxy) and a short-lived `-tools`. Not docker-in-docker: no privileged
 container, no nested storage driver.
 
 > The task that commissioned this assumed the devcontainer could drive it,
-> because "the devcontainer already speaks to the host socket". **It does not** —
-> `.devcontainer/docker-compose.yml` mounts no Docker socket and the image has
+> because "the devcontainer already speaks to the host socket". **It does not**
+> — `.devcontainer/docker-compose.yml` mounts no Docker socket and the image has
 > no `docker` CLI. Everything here therefore runs from the **host** shell (Git
 > Bash on Windows), which is also where `docker` and the pinned toolchain live.
 
@@ -60,11 +67,11 @@ helm-chart/values.k3d.yaml   the test values (TRACKED, and carries no secret)
 
 ## Ports it claims on the host
 
-| Port | What | Why not a dev-stack port |
-| --- | --- | --- |
-| **8090** | ingress-nginx http — the app | dev uses 3000 · 8081 · 8082 · 8180 · 15432 · 9000 · 9001 · 8010 |
-| **8443** | ingress-nginx https — Keycloak only | " |
-| **6551** | k3s apiserver, bound to `127.0.0.1` | " |
+| Port     | What                                | Why not a dev-stack port                                        |
+| -------- | ----------------------------------- | --------------------------------------------------------------- |
+| **8090** | ingress-nginx http — the app        | dev uses 3000 · 8081 · 8082 · 8180 · 15432 · 9000 · 9001 · 8010 |
+| **8443** | ingress-nginx https — Keycloak only | "                                                               |
+| **6551** | k3s apiserver, bound to `127.0.0.1` | "                                                               |
 
 The public-https mode claims **no further host port**: cloudflared joins the
 `k3d-hackagon` docker network and dials the load balancer container directly, so
@@ -72,15 +79,16 @@ the tunnel adds a container and nothing that any other rig could collide with.
 
 Nothing else is published, nothing binds `0.0.0.0` except the two ingress ports
 (Docker's default), and the compose project, the dev stack's three tunnels and
-`~/.kube/config` are untouched — k3d is called with `--kubeconfig-update-default=false` and every
-wrapper points at the rig's own `.state/kubeconfig.yaml`.
+`~/.kube/config` are untouched — k3d is called with
+`--kubeconfig-update-default=false` and every wrapper points at the rig's own
+`.state/kubeconfig.yaml`.
 
 ## What it costs
 
-| | |
-| --- | --- |
-| RAM | **~2.7 GB** resident with everything up (`k3d-…-server-0` 2.64 GiB) |
-| Disk | **~4.6 GB**: 4.1 GB of images inside the node's containerd, ~420 MB of k3d/k3s images in the host cache, ~46 MB of pinned binaries in `bin/` |
+|      |                                                                                                                                                                                                                                                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| RAM  | **~2.7 GB** resident with everything up (`k3d-…-server-0` 2.64 GiB)                                                                                                                                                                                    |
+| Disk | **~4.6 GB**: 4.1 GB of images inside the node's containerd, ~420 MB of k3d/k3s images in the host cache, ~46 MB of pinned binaries in `bin/`                                                                                                           |
 | Time | measured: **68 s** to create the cluster + **123 s** for ingress-nginx, CoreDNS, the store, the secrets and `helm install` — ~3.2 min from nothing, with every in-cluster image pulled fresh. `verify.sh` is ~2 min (two ingress-controller rollouts). |
 
 The frontend image alone is 1.17 GB (Nix-based). `down.sh` takes the 4.1 GB with
@@ -158,32 +166,33 @@ browser ──https──▶ Cloudflare edge ──tunnel──▶ cloudflared �
 
 **TLS terminates at the edge and the origin stays plain http.** That is not a
 shortcut, it is the shape a deployment behind any TLS-terminating proxy has, and
-it is the only shape in which `frontend.protocolHeader` has an input: cloudflared
-is what puts `X-Forwarded-Proto: https` on the request the cluster receives.
+it is the only shape in which `frontend.protocolHeader` has an input:
+cloudflared is what puts `X-Forwarded-Proto: https` on the request the cluster
+receives.
 
 **Two hostnames, one tunnel.** The chart routes the app and Keycloak by HOST on
 two separate Ingresses, so there is no single name that reaches both.
 
-| | |
-| --- | --- |
-| app | `k3d-hackagon.example.org` |
-| Keycloak | `k3d-auth-hackagon.example.org` |
-| origin | `http://k3d-hackagon-serverlb:8090` on the `k3d-hackagon` docker network |
+|          |                                                                          |
+| -------- | ------------------------------------------------------------------------ |
+| app      | `k3d-hackagon.example.org`                                               |
+| Keycloak | `k3d-auth-hackagon.example.org`                                          |
+| origin   | `http://k3d-hackagon-serverlb:8090` on the `k3d-hackagon` docker network |
 
 ⚠ **Both names are ONE label deep and that is a constraint, not a style.**
 Cloudflare's free Universal SSL covers the apex and one label and nothing below
 it. Measured against the edge before any record was created: SNI
-`auth.k3d-hackagon.example.org` gets **TLS alert 40, handshake
-failure**, while a one-label sibling gets the zone's certificate. A browser
-reads that as a broken site, not as a missing certificate.
+`auth.k3d-hackagon.example.org` gets **TLS alert 40, handshake failure**, while
+a one-label sibling gets the zone's certificate. A browser reads that as a
+broken site, not as a missing certificate.
 
 **The port property is REPLACED, not dropped.** In the localhost mode the
 controller listens on 8090 in-cluster as well as on the host so that one issuer
 string is true from both sides. A public https URL names no port at all, so the
 replacement is stronger: the frontend POD resolves the same public hostname
 through public DNS and reaches Keycloak the way the browser does — out to
-Cloudflare and back down the tunnel, over the same real certificate. There is one
-URL and one path to it, so there is nothing left to disagree. Measured from
+Cloudflare and back down the tunnel, over the same real certificate. There is
+one URL and one path to it, so there is nothing left to disagree. Measured from
 inside the cluster before this was built: a pod resolves and reaches
 Cloudflare-proxied names over IPv4 in ~290 ms.
 
@@ -195,8 +204,8 @@ self-signed Keycloak certificate; on a real one it does not, so the overlay sets
 ### What a browser answers and curl cannot
 
 `browser-check.sh` (13 checks, Firefox, driven inside the devcontainer where the
-e2e suite's Playwright already lives). It exists for one reason: **`__Secure-` is
-a rule about the USER AGENT.** A browser must refuse to store a `__Secure-`
+e2e suite's Playwright already lives). It exists for one reason: **`__Secure-`
+is a rule about the USER AGENT.** A browser must refuse to store a `__Secure-`
 cookie that did not arrive over a secure connection. curl implements no such
 rule — it would keep and replay that cookie over plain http — so a green curl
 login is equally consistent with the prefix working and with it being ignored.
@@ -204,8 +213,8 @@ login is equally consistent with the prefix working and with it being ignored.
 Observed, signing alice in through the public URL: the callback sets
 `__Secure-authjs.session-token` (`Secure; HttpOnly; SameSite=Lax`), Firefox
 stores it, no unprefixed twin is set beside it, `/auth/session` fetched from the
-page returns alice and a Keycloak access token, and it survives a full page load.
-On the `*.localhost` mode `cookies.useSecure` is false and none of that is
+page returns alice and a Keycloak access token, and it survives a full page
+load. On the `*.localhost` mode `cookies.useSecure` is false and none of that is
 reachable.
 
 ### The chain, broken and put back
@@ -213,15 +222,16 @@ reachable.
 Three experiments, because a fix you can break and restore is a fix you have
 proven. All three are single commands and all three were run.
 
-| change | advertised origin through the tunnel | sign-in POST |
-| --- | --- | --- |
-| baseline | `https://k3d-sdsc-hackathons…` | 302 |
-| ingress-nginx `use-forwarded-headers: false` | `http://k3d-sdsc-hackathons…` | **403** |
-| chart `frontend.protocolHeader: ""` | `https://k3d-sdsc-hackathons…` | 302 |
+| change                                       | advertised origin through the tunnel | sign-in POST |
+| -------------------------------------------- | ------------------------------------ | ------------ |
+| baseline                                     | `https://k3d-sdsc-hackathons…`       | 302          |
+| ingress-nginx `use-forwarded-headers: false` | `http://k3d-sdsc-hackathons…`        | **403**      |
+| chart `frontend.protocolHeader: ""`          | `https://k3d-sdsc-hackathons…`       | 302          |
 
-The 403's body is SvelteKit's own `Cross-site POST form submissions are
-forbidden`: the app computed an http origin, the browser sent an https `Origin`,
-and the CSRF check refused them. Every page still answered 200.
+The 403's body is SvelteKit's own
+`Cross-site POST form submissions are forbidden`: the app computed an http
+origin, the browser sent an https `Origin`, and the CSRF check refused them.
+Every page still answered 200.
 
 **And the third row is the honest result: under real https, removing
 `protocolHeader` breaks nothing.** adapter-node's unconfigured guess is the
@@ -271,31 +281,31 @@ negative TTL** — 1800 s on `example.org`. `tunnel.sh status` asks, so the very
 first status call on a name you are about to create costs you half an hour of
 `NXDOMAIN` on that machine while the record serves perfectly everywhere else.
 `lib.sh` answers it by asking Cloudflare over DoH and pinning `--resolve` for
-curl; SNI and the certificate check are untouched, so the pin chooses an edge and
-nothing more.
+curl; SNI and the certificate check are untouched, so the pin chooses an edge
+and nothing more.
 
-**The devcontainer's network answers AAAA-only with no IPv6 route out** (the same
-fault `.claude/CLAUDE.md` records for the dev tunnels): `getent hosts` returns
-two v6 addresses, none reachable, and Firefox fails in 3 ms with
+**The devcontainer's network answers AAAA-only with no IPv6 route out** (the
+same fault `.claude/CLAUDE.md` records for the dev tunnels): `getent hosts`
+returns two v6 addresses, none reachable, and Firefox fails in 3 ms with
 `NS_ERROR_UNKNOWN_HOST`. `browser-check.sh` pins `/etc/hosts` inside the
-container from a DoH-resolved A record and removes it again on exit.
-Measured on the way: `network.dns.disableIPv6` **is not enough on its own** —
-it stops the browser preferring v6, and here there is no A record to fall back
-to, so the failure is identical.
+container from a DoH-resolved A record and removes it again on exit. Measured on
+the way: `network.dns.disableIPv6` **is not enough on its own** — it stops the
+browser preferring v6, and here there is no A record to fall back to, so the
+failure is identical.
 
 ## What it found
 
 Seven things, all in `helm-chart/`, all fixed here, none of which the rendered
 manifest showed. The first six were found here; the seventh (below) was found by
-reading and could only be *settled* here.
+reading and could only be _settled_ here.
 
-1. **`templates/keycloak-ingress.yaml` hard-coded `ingressClassName:
-   webapprouting.kubernetes.azure.com`**, the cert-manager issuer and a TLS
-   block. `frontend.ingress.ingressClass` has always existed; this object
-   ignored it, so on any cluster that is not the AKS app-routing addon the
-   Ingress was claimed by no controller — a deployment that serves the product
-   and not its login. `keycloak.ingress.enabled` was decoration too: the object
-   rendered whatever it said, and values.yaml said `false`.
+1. **`templates/keycloak-ingress.yaml` hard-coded
+   `ingressClassName: webapprouting.kubernetes.azure.com`**, the cert-manager
+   issuer and a TLS block. `frontend.ingress.ingressClass` has always existed;
+   this object ignored it, so on any cluster that is not the AKS app-routing
+   addon the Ingress was claimed by no controller — a deployment that serves the
+   product and not its login. `keycloak.ingress.enabled` was decoration too: the
+   object rendered whatever it said, and values.yaml said `false`.
 2. **`backend.config.server.adminkeycloakid` shipped empty and is required at
    boot.** `internal/config/config.go` refuses the whole configuration with
    "server.adminkeycloakid is required", so `helm install` of the chart's own
@@ -321,38 +331,39 @@ reading and could only be *settled* here.
    cluster believed to have blocked ExternalName that way has not.
 
 6. **Keycloak's hostname was hard-coded one label deeper than the app's.**
-   `frontend.ingress.hosts[].host` has always been free-form; `hackagon.keycloakHost`
-   was `auth.{baseDomain}` with no override, so putting the app at
-   `k3d-sdsc-hackathons.example.org` forced Keycloak to
+   `frontend.ingress.hosts[].host` has always been free-form;
+   `hackagon.keycloakHost` was `auth.{baseDomain}` with no override, so putting
+   the app at `k3d-sdsc-hackathons.example.org` forced Keycloak to
    `auth.k3d-sdsc-hackathons.example.org`. **A one-label wildcard certificate
-   covers the first and not the second** — and Cloudflare's free Universal SSL is
-   exactly such a certificate, answering the deeper name with TLS alert 40. So a
-   deployment fronted that way publishes the product on a certificate that does
-   not cover its login: the same shape as finding 1, from a different cause.
-   `keycloak.ingress.host` now overrides it, defaulting to the old derivation, so
-   no existing deployment changes. **This is the only chart change real HTTPS
-   needed** — everything else about the https mode is configuration.
+   covers the first and not the second** — and Cloudflare's free Universal SSL
+   is exactly such a certificate, answering the deeper name with TLS alert 40.
+   So a deployment fronted that way publishes the product on a certificate that
+   does not cover its login: the same shape as finding 1, from a different
+   cause. `keycloak.ingress.host` now overrides it, defaulting to the old
+   derivation, so no existing deployment changes. **This is the only chart
+   change real HTTPS needed** — everything else about the https mode is
+   configuration.
 
 7. **A config-only `helm upgrade` was a silent no-op** (2026-08-14). Not found
    by this rig — it was read out of the chart and written down in
-   `docs/deployment.md` as known-broken — but **the rig is what turned it from
-   a claim into a measurement, and then proved the fix**. With the annotations
+   `docs/deployment.md` as known-broken — but **the rig is what turned it from a
+   claim into a measurement, and then proved the fix**. With the annotations
    reverted: `helm upgrade` returned in 0.9 s with status `deployed`, the
    ConfigMap held the new value, and the running pod (same name, same
    `metadata.generation`) still served the old one. Both configs and the
    frontend Secret are `subPath` mounts, which the kubelet resolves once at
    container start, and no template carried a `checksum/*` annotation, so the
-   pod template never changed and nothing rolled. Three annotations now do.
-   Step 6 pins it, and was itself run against the reverted chart to watch it
-   fail — 10 reds, including the original bug reproduced by the check.
+   pod template never changed and nothing rolled. Three annotations now do. Step
+   6 pins it, and was itself run against the reverted chart to watch it fail —
+   10 reds, including the original bug reproduced by the check.
 
 Three more are recorded but deliberately **not** fixed — one is an arguable
 design call and two are cosmetic:
 
 - **The backend hard-exits at boot if Keycloak's JWKS endpoint is not yet
   answering.** On a fresh install Keycloak takes ~90 s (image pull plus schema
-  migration) and the backend crash-loops until then — 3 restarts on the run
-  that produced these numbers. It self-heals, so nothing is broken; the cost is
+  migration) and the backend crash-loops until then — 3 restarts on the run that
+  produced these numbers. It self-heals, so nothing is broken; the cost is
   diagnostic. An operator watching `helm install` sees a backend in
   CrashLoopBackOff and cannot tell this apart from finding 2, which looks
   identical and never recovers. Either retry the JWKS fetch at startup, or give
@@ -443,9 +454,9 @@ values there would quietly repoint the release mid-run. That the round-trip is
 faithful is not assumed — the no-op check is exactly that claim, so a lossy
 round-trip fails loudly instead of silently reinstalling something else.
 
-**Optional blocks absent.** Read out of the LIVE container — not `helm
-template`, not the ConfigMap. The frontend image is distroless (no shell, no
-tar), so `kubectl exec` and `kubectl cp` are both out; an ephemeral debug
+**Optional blocks absent.** Read out of the LIVE container — not
+`helm template`, not the ConfigMap. The frontend image is distroless (no shell,
+no tar), so `kubectl exec` and `kubectl cp` are both out; an ephemeral debug
 container with `--profile=sysadmin` reads the real mount through `/proc/1/root`.
 The positive control runs FIRST, and it earned its place: with the default debug
 profile the read returns "Permission denied" even though both containers run as
@@ -470,10 +481,10 @@ authentication in front of the tunnel; a Cloudflare quick-tunnel-style obscure
 name is not one either, and these names are guessable by design.
 
 Treat a tunnelled cluster as a demo you are watching, not as something to leave
-running. `tunnel.sh down` is one command and `down.sh` stops the tunnel before it
-deletes anything. If it must live longer than a session, put Cloudflare Access in
-front of the hostnames or import a realm that is not the development export
-(`up.sh --no-realm`, then create the accounts you actually want).
+running. `tunnel.sh down` is one command and `down.sh` stops the tunnel before
+it deletes anything. If it must live longer than a session, put Cloudflare
+Access in front of the hostnames or import a realm that is not the development
+export (`up.sh --no-realm`, then create the accounts you actually want).
 
 That is why this rig is opt-in and why it binds loopback only. Nothing it
 generates may be copied anywhere: `helm-chart/values.k3d.yaml` is tracked and
@@ -492,14 +503,14 @@ how test-only surface gets into a production chart.
 ## Toolchain
 
 `helm` and `k3d` are not on this Windows host and `scripts/tools.sh` fetches
-pinned binaries into the gitignored `bin/` (k3d 25 MB, helm 18 MB, kubectl 3 MB).
-Containerised alternatives were considered and rejected: `k3d` in a container
-needs the Docker socket bind-mounted AND a shared path for the kubeconfig, and
-on Docker Desktop for Windows the socket has to be spelled `//var/run/docker.sock`
-to survive MSYS mangling; `alpine/helm` has to reach an apiserver published on
-the HOST's loopback, which is not the container's, so it needs
-`--network k3d-<cluster>` and a rewritten server URL. If a machine may not fetch
-binaries, both are still possible — that is the shape they need.
+pinned binaries into the gitignored `bin/` (k3d 25 MB, helm 18 MB, kubectl 3
+MB). Containerised alternatives were considered and rejected: `k3d` in a
+container needs the Docker socket bind-mounted AND a shared path for the
+kubeconfig, and on Docker Desktop for Windows the socket has to be spelled
+`//var/run/docker.sock` to survive MSYS mangling; `alpine/helm` has to reach an
+apiserver published on the HOST's loopback, which is not the container's, so it
+needs `--network k3d-<cluster>` and a rewritten server URL. If a machine may not
+fetch binaries, both are still possible — that is the shape they need.
 
 **Two Windows traps, both handled in `lib.sh`.** Paths are converted with
 `cygpath -m` (`C:/Users/…`), never `cygpath -w`: helm's `--set-file` value goes

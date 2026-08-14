@@ -6,7 +6,10 @@
   "startsAt": "2026-05-07T08:00:00+02:00",
   "endsAt": "2026-05-08T18:00:00+02:00",
   "venue": "SDSC headquarters, Biopôle, Lausanne (Canton of Vaud)",
-  "organizers": ["Energy Data Innovation Hub (EDIH)", "Swiss Data Science Center (SDSC)"],
+  "organizers": [
+    "Energy Data Innovation Hub (EDIH)",
+    "Swiss Data Science Center (SDSC)"
+  ],
   "partners": [
     "Swiss Federal Office of Energy (SFOE)",
     "Romande Energie",
@@ -22,15 +25,40 @@
   ],
   "tracks": [],
   "challenges": [
-    { "title": "Estimating Hourly Energy Production for Switzerland", "owner": "Swiss Federal Office of Energy (SFOE)" },
-    { "title": "Swiss GlassScan — window-to-wall ratio assessment", "owner": "Swiss Data Science Center (SDSC)" },
-    { "title": "GridPulseMT — day-ahead load forecasting for the Vaud grid", "owner": "Romande Energie" },
-    { "title": "Designing pocket- and grid-friendly electricity communities", "owner": "HSLU" },
-    { "title": "Anticipating grid imbalances in Switzerland's energy transition", "owner": "HEIG-VD" }
+    {
+      "title": "Estimating Hourly Energy Production for Switzerland",
+      "owner": "Swiss Federal Office of Energy (SFOE)"
+    },
+    {
+      "title": "Swiss GlassScan — window-to-wall ratio assessment",
+      "owner": "Swiss Data Science Center (SDSC)"
+    },
+    {
+      "title": "GridPulseMT — day-ahead load forecasting for the Vaud grid",
+      "owner": "Romande Energie"
+    },
+    {
+      "title": "Designing pocket- and grid-friendly electricity communities",
+      "owner": "HSLU"
+    },
+    {
+      "title": "Anticipating grid imbalances in Switzerland's energy transition",
+      "owner": "HEIG-VD"
+    }
   ],
   "phases": [
-    { "name": "Day 1 — challenges & hacking", "description": "Challenge presentations, team formation, first hacking block.", "startsAt": "2026-05-07T08:00:00+02:00", "endsAt": "2026-05-07T18:00:00+02:00" },
-    { "name": "Day 2 — hacking & presentations", "description": "Second hacking block, presentations and closing.", "startsAt": "2026-05-08T08:00:00+02:00", "endsAt": "2026-05-08T18:00:00+02:00" }
+    {
+      "name": "Day 1 — challenges & hacking",
+      "description": "Challenge presentations, team formation, first hacking block.",
+      "startsAt": "2026-05-07T08:00:00+02:00",
+      "endsAt": "2026-05-07T18:00:00+02:00"
+    },
+    {
+      "name": "Day 2 — hacking & presentations",
+      "description": "Second hacking block, presentations and closing.",
+      "startsAt": "2026-05-08T08:00:00+02:00",
+      "endsAt": "2026-05-08T18:00:00+02:00"
+    }
   ],
   "pages": [
     {

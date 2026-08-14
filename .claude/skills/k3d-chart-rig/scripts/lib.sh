@@ -61,9 +61,9 @@ RIG_MODE="${RIG_MODE:-local}"
 # Deliberately clear of everything the dev stack publishes:
 #   3000 backend · 8081 frontend (vite) · 8082 frontend (built) · 8180 keycloak
 #   15432 postgres · 9000/9001 rustfs · 8010 plausible
-HTTP_PORT="${RIG_HTTP_PORT:-8090}"    # ingress-nginx, http  — the app
-HTTPS_PORT="${RIG_HTTPS_PORT:-8443}"  # ingress-nginx, https — Keycloak only
-API_PORT="${RIG_API_PORT:-6551}"      # k3s apiserver
+HTTP_PORT="${RIG_HTTP_PORT:-8090}"   # ingress-nginx, http  — the app
+HTTPS_PORT="${RIG_HTTPS_PORT:-8443}" # ingress-nginx, https — Keycloak only
+API_PORT="${RIG_API_PORT:-6551}"     # k3s apiserver
 
 # THE APP IS ON PLAIN HTTP AND KEYCLOAK IS ON TLS, and the split is deliberate.
 #
@@ -188,15 +188,24 @@ mkdir -p "$STATE_DIR"
 
 # --- output ------------------------------------------------------------
 if [ -t 1 ]; then
-    C_OK=$'\033[32m'; C_BAD=$'\033[31m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
+    C_OK=$'\033[32m'
+    C_BAD=$'\033[31m'
+    C_DIM=$'\033[2m'
+    C_OFF=$'\033[0m'
 else
-    C_OK=''; C_BAD=''; C_DIM=''; C_OFF=''
+    C_OK=''
+    C_BAD=''
+    C_DIM=''
+    C_OFF=''
 fi
-say()  { printf '%s\n' "$*" >&2; }
+say() { printf '%s\n' "$*" >&2; }
 step() { printf '\n%s==> %s%s\n' "$C_DIM" "$*" "$C_OFF" >&2; }
-ok()   { printf '%s  ok%s   %s\n' "$C_OK" "$C_OFF" "$*" >&2; }
-bad()  { printf '%s  FAIL%s %s\n' "$C_BAD" "$C_OFF" "$*" >&2; }
-die()  { bad "$*"; exit 1; }
+ok() { printf '%s  ok%s   %s\n' "$C_OK" "$C_OFF" "$*" >&2; }
+bad() { printf '%s  FAIL%s %s\n' "$C_BAD" "$C_OFF" "$*" >&2; }
+die() {
+    bad "$*"
+    exit 1
+}
 
 # --- path translation --------------------------------------------------
 # k3d.exe, helm.exe and kubectl.exe are WINDOWS binaries invoked from Git Bash.
@@ -227,9 +236,9 @@ fi
 # through winpath() deliberately, and MSYS's automatic conversion would corrupt
 # the ones that only LOOK like paths — a JSON patch's "/spec/template/…", a
 # jsonpath, `sh -c 'cat /proc/1/root/…'`. Off is the predictable setting.
-k3d()     { MSYS_NO_PATHCONV=1 "$BIN_DIR/k3d" "$@"; }
+k3d() { MSYS_NO_PATHCONV=1 "$BIN_DIR/k3d" "$@"; }
 kubectl() { MSYS_NO_PATHCONV=1 KUBECONFIG="$(winpath "$KUBECONFIG_FILE")" "$BIN_DIR/kubectl" "$@"; }
-helm()    { MSYS_NO_PATHCONV=1 KUBECONFIG="$(winpath "$KUBECONFIG_FILE")" "$BIN_DIR/helm"    "$@"; }
+helm() { MSYS_NO_PATHCONV=1 KUBECONFIG="$(winpath "$KUBECONFIG_FILE")" "$BIN_DIR/helm" "$@"; }
 
 # curl against the rig's ingress.
 #   --resolve  belt and braces: modern curl maps *.localhost itself, older ones
@@ -247,13 +256,13 @@ helm()    { MSYS_NO_PATHCONV=1 KUBECONFIG="$(winpath "$KUBECONFIG_FILE")" "$BIN_
 rigcurl() {
     if [ "$RIG_MODE" = "tunnel" ]; then
         curl ${RIG_RESOLVE_ARGS:+$RIG_RESOLVE_ARGS} \
-             --max-time "${RIG_CURL_TIMEOUT:-30}" "$@"
+            --max-time "${RIG_CURL_TIMEOUT:-30}" "$@"
         return
     fi
     curl --resolve "$APP_HOST:$HTTP_PORT:127.0.0.1" \
-         --resolve "$AUTH_HOST:$HTTPS_PORT:127.0.0.1" \
-         --resolve "$APP_HOST:$HTTPS_PORT:127.0.0.1" \
-         -k --max-time "${RIG_CURL_TIMEOUT:-30}" "$@"
+        --resolve "$AUTH_HOST:$HTTPS_PORT:127.0.0.1" \
+        --resolve "$APP_HOST:$HTTPS_PORT:127.0.0.1" \
+        -k --max-time "${RIG_CURL_TIMEOUT:-30}" "$@"
 }
 
 # Reach the ingress controller DIRECTLY on loopback, presenting whatever Host
@@ -265,7 +274,7 @@ localcurl() { # <host> <path> [curl args…]
     local host="$1" path="$2"
     shift 2
     curl --resolve "$host:$HTTP_PORT:127.0.0.1" \
-         --max-time "${RIG_CURL_TIMEOUT:-30}" "$@" "http://$host:$HTTP_PORT$path"
+        --max-time "${RIG_CURL_TIMEOUT:-30}" "$@" "http://$host:$HTTP_PORT$path"
 }
 
 cluster_exists() { k3d cluster list -o json 2>/dev/null | grep -q "\"name\":\"$CLUSTER\""; }

@@ -65,29 +65,29 @@ CLIENT="hackagon-frontend"
 # Toolchain (just, process-compose, grpcurl, jq) — re-exec in the Nix dev
 # shell when invoked from a plain shell (same trick as the e2e skill).
 if ! command -v process-compose >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-  if [ -n "${HACKAGON_TUNNEL_NIX_WRAPPED:-}" ]; then
-    echo "error: toolchain not found even inside the Nix dev shell" >&2
-    exit 1
-  fi
-  export HACKAGON_TUNNEL_NIX_WRAPPED=1
-  cd "$ROOT_DIR"
-  exec just nix::develop default bash "$HERE/$(basename "${BASH_SOURCE[0]}")" "$@"
+    if [ -n "${HACKAGON_TUNNEL_NIX_WRAPPED:-}" ]; then
+        echo "error: toolchain not found even inside the Nix dev shell" >&2
+        exit 1
+    fi
+    export HACKAGON_TUNNEL_NIX_WRAPPED=1
+    cd "$ROOT_DIR"
+    exec just nix::develop default bash "$HERE/$(basename "${BASH_SOURCE[0]}")" "$@"
 fi
 
 wait_for() { # <name> <timeout_s> <cmd...>
-  local name="$1" timeout="$2" start
-  shift 2
-  start=$(date +%s)
-  printf "  waiting for %-16s " "$name"
-  until "$@" >/dev/null 2>&1; do
-    if [ $(($(date +%s) - start)) -ge "$timeout" ]; then
-      echo "FAILED (timeout after ${timeout}s)"
-      return 1
-    fi
-    printf "."
-    sleep 2
-  done
-  echo "ok"
+    local name="$1" timeout="$2" start
+    shift 2
+    start=$(date +%s)
+    printf "  waiting for %-16s " "$name"
+    until "$@" >/dev/null 2>&1; do
+        if [ $(($(date +%s) - start)) -ge "$timeout" ]; then
+            echo "FAILED (timeout after ${timeout}s)"
+            return 1
+        fi
+        printf "."
+        sleep 2
+    done
+    echo "ok"
 }
 
 # Every curl in this script carries --max-time: an unbounded request that
@@ -95,43 +95,43 @@ wait_for() { # <name> <timeout_s> <cmd...>
 # blocked a wait loop for 15+ minutes with no output). 10s is generous for the
 # local Keycloak admin API and still fails fast when it is wedged.
 admin_token() {
-  curl -s --max-time 10 -X POST "$KC/realms/master/protocol/openid-connect/token" \
-    -d client_id=admin-cli -d username=admin -d password=admin \
-    -d grant_type=password | jq -r ".access_token"
+    curl -s --max-time 10 -X POST "$KC/realms/master/protocol/openid-connect/token" \
+        -d client_id=admin-cli -d username=admin -d password=admin \
+        -d grant_type=password | jq -r ".access_token"
 }
 
 client_id() { # <token>
-  curl -s --max-time 10 -H "Authorization: Bearer $1" \
-    "$KC/admin/realms/$REALM/clients?clientId=$CLIENT" | jq -r ".[0].id"
+    curl -s --max-time 10 -H "Authorization: Bearer $1" \
+        "$KC/admin/realms/$REALM/clients?clientId=$CLIENT" | jq -r ".[0].id"
 }
 
 # Replace the client's redirectUris/webOrigins wholesale (GET the full
 # representation first — Keycloak's PUT nulls absent fields).
 patch_client() { # <redirectUris-json> <webOrigins-json>
-  local token cid rep
-  token=$(admin_token)
-  cid=$(client_id "$token")
-  [ -n "$cid" ] && [ "$cid" != "null" ] || {
-    echo "error: realm client '$CLIENT' not found" >&2
-    return 1
-  }
-  rep=$(curl -s --max-time 10 -H "Authorization: Bearer $token" "$KC/admin/realms/$REALM/clients/$cid")
-  echo "$rep" | jq ".redirectUris = $1 | .webOrigins = $2" |
-    curl -s -f --max-time 10 -X PUT -H "Authorization: Bearer $token" \
-      -H "Content-Type: application/json" -d @- \
-      "$KC/admin/realms/$REALM/clients/$cid"
+    local token cid rep
+    token=$(admin_token)
+    cid=$(client_id "$token")
+    [ -n "$cid" ] && [ "$cid" != "null" ] || {
+        echo "error: realm client '$CLIENT' not found" >&2
+        return 1
+    }
+    rep=$(curl -s --max-time 10 -H "Authorization: Bearer $token" "$KC/admin/realms/$REALM/clients/$cid")
+    echo "$rep" | jq ".redirectUris = $1 | .webOrigins = $2" |
+        curl -s -f --max-time 10 -X PUT -H "Authorization: Bearer $token" \
+            -H "Content-Type: application/json" -d @- \
+            "$KC/admin/realms/$REALM/clients/$cid"
 }
 
 restart_and_wait() {
-  echo "==> Restarting frontend + backend to load the new issuer..."
-  (cd "$ROOT_DIR" && just deploy::proc-comp process restart frontend >/dev/null)
-  (cd "$ROOT_DIR" && just deploy::proc-comp process restart backend >/dev/null)
-  # Per-attempt bounds are load-bearing: wait_for checks its deadline BETWEEN
-  # attempts, so one blocking probe (a cold vite holding :8081 has sat on a
-  # single untimed curl for 15+ minutes) defeats the timeout entirely.
-  wait_for "backend" 120 grpcurl -plaintext -max-time 10 localhost:3000 health.HealthService/Check
-  # vite binds [::1] only; `localhost` hits 127.0.0.1 first in this container.
-  wait_for "frontend" 120 curl -fsS --max-time 10 "http://[::1]:8081/"
+    echo "==> Restarting frontend + backend to load the new issuer..."
+    (cd "$ROOT_DIR" && just deploy::proc-comp process restart frontend >/dev/null)
+    (cd "$ROOT_DIR" && just deploy::proc-comp process restart backend >/dev/null)
+    # Per-attempt bounds are load-bearing: wait_for checks its deadline BETWEEN
+    # attempts, so one blocking probe (a cold vite holding :8081 has sat on a
+    # single untimed curl for 15+ minutes) defeats the timeout entirely.
+    wait_for "backend" 120 grpcurl -plaintext -max-time 10 localhost:3000 health.HealthService/Check
+    # vite binds [::1] only; `localhost` hits 127.0.0.1 first in this container.
+    wait_for "frontend" 120 curl -fsS --max-time 10 "http://[::1]:8081/"
 }
 
 # The two restarts above are process-compose's. The adapter-node build that the
@@ -147,16 +147,16 @@ restart_and_wait() {
 # whole run and only NEW logins fail — pages must never 502, and Keycloak has
 # dropped the tunnel redirect URIs by then anyway.
 restart_prod_server() { # <origin>
-  local origin="$1"
-  [ -f "$PROD_SERVE" ] || return 0
-  # `origin` doubles as "is prod mode live?" — it exits 1 when it is not.
-  bash "$PROD_SERVE" origin >/dev/null 2>&1 || return 0
+    local origin="$1"
+    [ -f "$PROD_SERVE" ] || return 0
+    # `origin` doubles as "is prod mode live?" — it exits 1 when it is not.
+    bash "$PROD_SERVE" origin >/dev/null 2>&1 || return 0
 
-  echo "==> Restarting the built server on :8082 (ORIGIN=$origin)..."
-  # --no-build: only config on disk changed, the bundle is byte-identical.
-  bash "$PROD_SERVE" start "$origin" --no-build >/dev/null ||
-    echo "warn: could not restart the built server; the public URL is still on" \
-      "the old issuer — run prod-serve.sh start $origin --no-build" >&2
+    echo "==> Restarting the built server on :8082 (ORIGIN=$origin)..."
+    # --no-build: only config on disk changed, the bundle is byte-identical.
+    bash "$PROD_SERVE" start "$origin" --no-build >/dev/null ||
+        echo "warn: could not restart the built server; the public URL is still on" \
+            "the old issuer — run prod-serve.sh start $origin --no-build" >&2
 }
 
 # Does the RUNNING backend accept a token minted by <issuer-base>?
@@ -171,16 +171,16 @@ restart_prod_server() { # <origin>
 # while the wire path must not SKIP a restart on the strength of a question it
 # could not put.
 backend_accepts_issuer() { # <issuer-base-url>
-  local base="${1%/}" token
-  token="$(curl -s --max-time 15 \
-    -X POST "$base/realms/hackagon/protocol/openid-connect/token" \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -d client_id=hackagon-backend -d username=alice -d password=aliceandbob \
-    -d grant_type=password -d scope="openid profile" 2>/dev/null |
-    jq -r '.access_token // empty' 2>/dev/null)"
-  [ -n "$token" ] || return 2
-  grpcurl -plaintext -H "authorization: Bearer $token" -max-time 10 \
-    localhost:3000 user.UserService/WhoAmI >/dev/null 2>&1
+    local base="${1%/}" token
+    token="$(curl -s --max-time 15 \
+        -X POST "$base/realms/hackagon/protocol/openid-connect/token" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d client_id=hackagon-backend -d username=alice -d password=aliceandbob \
+        -d grant_type=password -d scope="openid profile" 2>/dev/null |
+        jq -r '.access_token // empty' 2>/dev/null)"
+    [ -n "$token" ] || return 2
+    grpcurl -plaintext -H "authorization: Bearer $token" -max-time 10 \
+        localhost:3000 user.UserService/WhoAmI >/dev/null 2>&1
 }
 
 # Does the RUNNING backend accept a token minted by the LOCALHOST issuer?
@@ -201,17 +201,17 @@ backend_accepts_issuer() { # <issuer-base-url>
 # learned: "the server accepted it" and "the server can use it" are different
 # claims, and only one of them can be read off a config file.
 backend_accepts_localhost() {
-  local rc=0
-  backend_accepts_issuer "http://localhost:8180" || rc=$?
-  # No token means Keycloak is down or unreachable, which is a different
-  # problem: answer "fine" so this never restarts the backend for a reason that
-  # has nothing to do with the issuer.
-  if [ "$rc" = 2 ]; then
-    echo "note: could not mint a localhost token (is Keycloak up?) — skipping" \
-      "the backend issuer check" >&2
-    return 0
-  fi
-  return "$rc"
+    local rc=0
+    backend_accepts_issuer "http://localhost:8180" || rc=$?
+    # No token means Keycloak is down or unreachable, which is a different
+    # problem: answer "fine" so this never restarts the backend for a reason that
+    # has nothing to do with the issuer.
+    if [ "$rc" = 2 ]; then
+        echo "note: could not mint a localhost token (is Keycloak up?) — skipping" \
+            "the backend issuer check" >&2
+        return 0
+    fi
+    return "$rc"
 }
 
 # Restart the e2e harness's :8081 built server, which reads its OIDC issuer
@@ -228,74 +228,74 @@ backend_accepts_localhost() {
 # handing the tests a server on the tunnel issuer. Symptom either way is four
 # auth setups timing out on `page.waitForURL`.
 bounce_e2e_frontend() {
-  [ -x "$E2E_PROD_FRONTEND" ] || return 0
-  bash "$E2E_PROD_FRONTEND" stop >/dev/null 2>&1 || true
-  bash "$E2E_PROD_FRONTEND" ensure >/dev/null 2>&1 ||
-    echo "warn: could not restart the :8081 built server; logins there may still" \
-      "fail — run prod-frontend.sh stop && prod-frontend.sh ensure" >&2
+    [ -x "$E2E_PROD_FRONTEND" ] || return 0
+    bash "$E2E_PROD_FRONTEND" stop >/dev/null 2>&1 || true
+    bash "$E2E_PROD_FRONTEND" ensure >/dev/null 2>&1 ||
+        echo "warn: could not restart the :8081 built server; logins there may still" \
+            "fail — run prod-frontend.sh stop && prod-frontend.sh ensure" >&2
 }
 
 if [ "${1:-}" = "--restore" ]; then
-  # Drop any tunnel-hostname pin left in /etc/hosts (see wire mode below).
-  sudo sed -i "/# hackagon-tunnel/d" /etc/hosts 2>/dev/null || true
-  # Restore DROPS THE `oidc` KEY — not the file. With it gone both loaders fall
-  # back to the tracked config.yaml on their next boot; nothing to diff, nothing
-  # to reconcile, and no way for a stale backup to overwrite an edit somebody
-  # made to config.yaml meanwhile. The helper deletes the file itself once
-  # `oidc` was the last key in it, so an unwired machine still looks exactly
-  # like a fresh clone — but a machine with session replay wired keeps its
-  # `replay` block, which is the whole reason this is not an `rm`.
-  restored=0
-  for f in "$FRONTEND_LOCAL" "$BACKEND_LOCAL"; do
-    if [ "$(bash "$OVERLAY" remove "$f" oidc)" = "changed" ]; then
-      restored=1
-    fi
-  done
-  if [ "$restored" = 1 ]; then
-    patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
-      echo "warn: could not reset realm client (is Keycloak up?)" >&2
-    restart_and_wait
-    # No restart_prod_server here — see the comment on it. The e2e harness's
-    # :8081 server IS bounced: unlike :8082 it is what the suites log in
-    # through, and it booted with the issuer we just removed.
-    bounce_e2e_frontend
-    echo "OIDC rewired back to localhost."
-    echo "NOTE: a built server on :8082 keeps the tunnel issuer it booted with;"
-    echo "stop it (prod-serve.sh stop) if you need it on localhost too."
-  else
-    # Note the wording: config.local.yaml may well still EXIST holding somebody
-    # else's key (session replay writes `replay` into it). What matters here is
-    # only that no `oidc` block was there to remove.
-    #
-    # And that says nothing about the PROCESSES. Ask one before claiming it.
-    if backend_accepts_localhost; then
-      echo "Nothing to restore (no oidc overlay, and the backend takes localhost tokens)."
+    # Drop any tunnel-hostname pin left in /etc/hosts (see wire mode below).
+    sudo sed -i "/# hackagon-tunnel/d" /etc/hosts 2>/dev/null || true
+    # Restore DROPS THE `oidc` KEY — not the file. With it gone both loaders fall
+    # back to the tracked config.yaml on their next boot; nothing to diff, nothing
+    # to reconcile, and no way for a stale backup to overwrite an edit somebody
+    # made to config.yaml meanwhile. The helper deletes the file itself once
+    # `oidc` was the last key in it, so an unwired machine still looks exactly
+    # like a fresh clone — but a machine with session replay wired keeps its
+    # `replay` block, which is the whole reason this is not an `rm`.
+    restored=0
+    for f in "$FRONTEND_LOCAL" "$BACKEND_LOCAL"; do
+        if [ "$(bash "$OVERLAY" remove "$f" oidc)" = "changed" ]; then
+            restored=1
+        fi
+    done
+    if [ "$restored" = 1 ]; then
+        patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
+            echo "warn: could not reset realm client (is Keycloak up?)" >&2
+        restart_and_wait
+        # No restart_prod_server here — see the comment on it. The e2e harness's
+        # :8081 server IS bounced: unlike :8082 it is what the suites log in
+        # through, and it booted with the issuer we just removed.
+        bounce_e2e_frontend
+        echo "OIDC rewired back to localhost."
+        echo "NOTE: a built server on :8082 keeps the tunnel issuer it booted with;"
+        echo "stop it (prod-serve.sh stop) if you need it on localhost too."
     else
-      echo "No oidc overlay, but the backend REJECTS a localhost token — it is"
-      echo "still running with an issuer it booted with. Repairing:"
-      # The realm client's redirect URIs are patched by wire mode and are just
-      # as capable of outliving the overlay, so reset them on this path too.
-      patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
-        echo "warn: could not reset realm client (is Keycloak up?)" >&2
-      restart_and_wait
-      bounce_e2e_frontend
-      if backend_accepts_localhost; then
-        echo "OIDC repaired: the backend now takes localhost tokens."
-      else
-        echo "warn: the backend STILL rejects a localhost token after a restart." >&2
-        echo "      Check components/backend/data/test/config/ for a stray issuer." >&2
-      fi
+        # Note the wording: config.local.yaml may well still EXIST holding somebody
+        # else's key (session replay writes `replay` into it). What matters here is
+        # only that no `oidc` block was there to remove.
+        #
+        # And that says nothing about the PROCESSES. Ask one before claiming it.
+        if backend_accepts_localhost; then
+            echo "Nothing to restore (no oidc overlay, and the backend takes localhost tokens)."
+        else
+            echo "No oidc overlay, but the backend REJECTS a localhost token — it is"
+            echo "still running with an issuer it booted with. Repairing:"
+            # The realm client's redirect URIs are patched by wire mode and are just
+            # as capable of outliving the overlay, so reset them on this path too.
+            patch_client '["http://localhost:8081/*"]' '["http://localhost:8081"]' ||
+                echo "warn: could not reset realm client (is Keycloak up?)" >&2
+            restart_and_wait
+            bounce_e2e_frontend
+            if backend_accepts_localhost; then
+                echo "OIDC repaired: the backend now takes localhost tokens."
+            else
+                echo "warn: the backend STILL rejects a localhost token after a restart." >&2
+                echo "      Check components/backend/data/test/config/ for a stray issuer." >&2
+            fi
+        fi
     fi
-  fi
-  exit 0
+    exit 0
 fi
 
 URL="${1:?usage: auth-wire.sh <public-url> | --restore}"
 URL="${URL%/}"
 case "$URL" in https://*) ;; *)
-  echo "error: expected an https:// tunnel URL, got '$URL'" >&2
-  exit 1
-  ;;
+    echo "error: expected an https:// tunnel URL, got '$URL'" >&2
+    exit 1
+    ;;
 esac
 URL_HTTP="http://${URL#https://}"
 HOST="${URL#https://}"
@@ -316,45 +316,47 @@ HOST="${URL#https://}"
 # exactly this never fired because the question it asked had the wrong answer.
 # A DoH A-record pin fixes both cases, because it forces IPv4.
 host_reachable() {
-  # No -f: any HTTP status means the name resolved AND the edge answered. Only
-  # a resolve (6) or connect (7) failure is what this is looking for.
-  curl -sS -o /dev/null --max-time 8 "https://$HOST/" >/dev/null 2>&1
+    # No -f: any HTTP status means the name resolved AND the edge answered. Only
+    # a resolve (6) or connect (7) failure is what this is looking for.
+    curl -sS -o /dev/null --max-time 8 "https://$HOST/" >/dev/null 2>&1
 }
 if ! host_reachable; then
-  echo "==> '$HOST' is not reachable from here yet — pinning an IPv4 edge via /etc/hosts..."
-  ip=$(curl -s --max-time 10 "https://1.1.1.1/dns-query?name=$HOST&type=A" \
-    -H "accept: application/dns-json" |
-    jq -r '[.Answer[]? | select(.type == 1) | .data][0] // empty')
-  if [ -n "$ip" ]; then
-    sudo sed -i "/# hackagon-tunnel/d" /etc/hosts 2>/dev/null || true
-    echo "$ip $HOST # hackagon-tunnel" | sudo tee -a /etc/hosts >/dev/null
-  else
-    echo "warn: DoH could not resolve $HOST yet; relying on DNS to propagate" >&2
-  fi
+    echo "==> '$HOST' is not reachable from here yet — pinning an IPv4 edge via /etc/hosts..."
+    ip=$(curl -s --max-time 10 "https://1.1.1.1/dns-query?name=$HOST&type=A" \
+        -H "accept: application/dns-json" |
+        jq -r '[.Answer[]? | select(.type == 1) | .data][0] // empty')
+    if [ -n "$ip" ]; then
+        sudo sed -i "/# hackagon-tunnel/d" /etc/hosts 2>/dev/null || true
+        echo "$ip $HOST # hackagon-tunnel" | sudo tee -a /etc/hosts >/dev/null
+    else
+        echo "warn: DoH could not resolve $HOST yet; relying on DNS to propagate" >&2
+    fi
 fi
 
 echo "==> Checking Keycloak answers on the tunnel host (issuer must be https)..."
 issuer=""
-for _ in $(seq 1 45); do # trycloudflare DNS can take ~30s to propagate
-  issuer=$(curl -fsS --max-time 5 "$URL/realms/$REALM/.well-known/openid-configuration" 2>/dev/null | jq -r ".issuer" || true)
-  [ "$issuer" = "$URL/realms/$REALM" ] && break
-  sleep 2
+for _ in $( # trycloudflare DNS can take ~30s to propagate
+    seq 1 45
+); do
+    issuer=$(curl -fsS --max-time 5 "$URL/realms/$REALM/.well-known/openid-configuration" 2>/dev/null | jq -r ".issuer" || true)
+    [ "$issuer" = "$URL/realms/$REALM" ] && break
+    sleep 2
 done
 if [ "$issuer" != "$URL/realms/$REALM" ]; then
-  echo "error: tunnel well-known reports issuer '$issuer'," >&2
-  echo "       expected '$URL/realms/$REALM'." >&2
-  echo "If the issuer is http:// or localhost-based, Keycloak is running without" >&2
-  echo "proxy-headers=xforwarded (added in toolchain.nix) — restart the stack once:" >&2
-  echo "  just down && just up" >&2
-  exit 1
+    echo "error: tunnel well-known reports issuer '$issuer'," >&2
+    echo "       expected '$URL/realms/$REALM'." >&2
+    echo "If the issuer is http:// or localhost-based, Keycloak is running without" >&2
+    echo "proxy-headers=xforwarded (added in toolchain.nix) — restart the stack once:" >&2
+    echo "  just down && just up" >&2
+    exit 1
 fi
 
 echo "==> Allowlisting the tunnel origin on the '$CLIENT' realm client..."
 # Keep localhost so direct logins still pass Keycloak's redirect check; the
 # http:// variant covers SvelteKit deriving an http origin behind the proxy.
 patch_client \
-  "[\"http://localhost:8081/*\", \"$URL/*\", \"$URL_HTTP/*\"]" \
-  '["+"]'
+    "[\"http://localhost:8081/*\", \"$URL/*\", \"$URL_HTTP/*\"]" \
+    '["+"]'
 
 echo "==> Pointing frontend/backend issuers at the tunnel (config.local.yaml)..."
 # Each overlay carries ONE key. Both loaders merge it into config.yaml key by
@@ -370,8 +372,9 @@ echo "==> Pointing frontend/backend issuers at the tunnel (config.local.yaml)...
 # the same overlay, is somebody else's and must survive a re-wire.
 CHANGED=0
 write_overlay() { # <path> <yaml-body>
-  local answer
-  answer="$(bash "$OVERLAY" set "$1" oidc <<EOF
+    local answer
+    answer="$(
+        bash "$OVERLAY" set "$1" oidc <<EOF
 $2
   # Tunnel: $URL — removed by \`auth-wire.sh --restore\`, which down.sh calls
   # for you. A quick-tunnel hostname is this machine's for the next few hours
@@ -379,9 +382,9 @@ $2
   # stable, and still belongs here rather than in a tracked config, because it
   # is this machine's deployment choice and not the repo's.
 EOF
-  )"
-  [ "$answer" = "changed" ] && CHANGED=1
-  return 0
+    )"
+    [ "$answer" = "changed" ] && CHANGED=1
+    return 0
 }
 write_overlay "$FRONTEND_LOCAL" "oidc:
   issuer: $URL/realms/$REALM"
@@ -405,23 +408,23 @@ write_overlay "$BACKEND_LOCAL" "oidc:
 # it. "Could not ask" restarts, because a skip has to be earned.
 NEEDS_RESTART=1
 if [ "$CHANGED" = 0 ]; then
-  rc=0
-  backend_accepts_issuer "$URL" || rc=$?
-  if [ "$rc" = 0 ]; then
-    NEEDS_RESTART=0
-    echo "==> Issuer already wired to $URL and the running backend accepts its"
-    echo "    tokens — nothing to write, nothing to restart."
-  else
-    echo "==> Issuer overlay was already correct, but the running backend does" \
-      "not accept a token from it (it outlived its config). Restarting:"
-  fi
+    rc=0
+    backend_accepts_issuer "$URL" || rc=$?
+    if [ "$rc" = 0 ]; then
+        NEEDS_RESTART=0
+        echo "==> Issuer already wired to $URL and the running backend accepts its"
+        echo "    tokens — nothing to write, nothing to restart."
+    else
+        echo "==> Issuer overlay was already correct, but the running backend does" \
+            "not accept a token from it (it outlived its config). Restarting:"
+    fi
 fi
 if [ "$NEEDS_RESTART" = 1 ]; then
-  restart_and_wait
-  # Only alongside a real restart: this one rebuilds nothing but does take the
-  # public URL's upstream down and back up, and doing that to load a config it
-  # already holds is a hole in the link for no gain.
-  restart_prod_server "$URL"
+    restart_and_wait
+    # Only alongside a real restart: this one rebuilds nothing but does take the
+    # public URL's upstream down and back up, and doing that to load a config it
+    # already holds is a hole in the link for no gain.
+    restart_prod_server "$URL"
 fi
 
 echo

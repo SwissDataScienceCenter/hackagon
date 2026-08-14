@@ -106,7 +106,9 @@ if (events.length === 0)
 // that mistake more than once.
 const expectPage = hackathonId ? "/hackathon/[id]" : "/"
 if (!sent.some((u) => u && u.endsWith(expectPage)))
-  problems.push(`no pageview carried the route template ${expectPage} (got ${JSON.stringify(sent)})`)
+  problems.push(
+    `no pageview carried the route template ${expectPage} (got ${JSON.stringify(sent)})`,
+  )
 
 if (hackathonId && raw.includes(hackathonId))
   problems.push(`the hackathon id ${hackathonId} appeared on the wire`)

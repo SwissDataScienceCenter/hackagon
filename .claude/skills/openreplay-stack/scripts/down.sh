@@ -29,21 +29,24 @@ export COMPOSE_PROFILES=migration
 stop_named() { if cfn_running "$NAMED_TUNNEL"; then cfn_stop "$NAMED_TUNNEL"; fi; }
 
 case "${1:-}" in
-  --tunnel)
+--tunnel)
     compose stop tunnel || true
     stop_named
     rm -f "$STATE/tunnel-url"
-    echo "tunnel stopped — the public URL is gone; the stack is still running." ;;
-  --volumes)
+    echo "tunnel stopped — the public URL is gone; the stack is still running."
+    ;;
+--volumes)
     echo "==> stopping and DELETING ALL VOLUMES (recorded sessions included)…"
     stop_named
     compose down --volumes --remove-orphans
     rm -f "$STATE/tunnel-url" "$STATE/env.prepared"
     echo "done. Next up.sh re-randomizes secrets, re-runs migrations, and"
-    echo "re-creates the admin account from .secrets.env (kept on purpose)." ;;
-  *)
+    echo "re-creates the admin account from .secrets.env (kept on purpose)."
+    ;;
+*)
     stop_named
     compose down --remove-orphans
     rm -f "$STATE/tunnel-url"
-    echo "stopped (data volumes kept)." ;;
+    echo "stopped (data volumes kept)."
+    ;;
 esac

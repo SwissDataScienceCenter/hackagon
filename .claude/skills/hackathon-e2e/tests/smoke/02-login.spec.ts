@@ -26,7 +26,9 @@ for (const persona of ALL_PERSONAS) {
       ).toBeVisible()
 
       await page.goto("/dashboard")
-      await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible()
+      await expect(
+        page.getByRole("heading", { name: /Welcome back/ }),
+      ).toBeVisible()
     })
 
     // ⚠ Re-specified 2026-08-14 for develop's `143a9612`. The header nav is TWO
@@ -91,7 +93,9 @@ for (const persona of ALL_PERSONAS) {
       ).toHaveAttribute("href", "/about")
 
       // The logo goes home for everyone, signed in or not.
-      await expect(page.locator("header").locator('a[href="/"]').first()).toBeVisible()
+      await expect(
+        page.locator("header").locator('a[href="/"]').first(),
+      ).toBeVisible()
     })
 
     test(`the nav keeps its shape inside the app`, async ({ page }) => {
@@ -104,10 +108,9 @@ for (const persona of ALL_PERSONAS) {
       // entries on both sides now, and this is what says they stay the same
       // two.
       for (const [label, href] of NAV_ENTRIES) {
-        await expect(nav.getByRole("link", { name: label, exact: true })).toHaveAttribute(
-          "href",
-          href,
-        )
+        await expect(
+          nav.getByRole("link", { name: label, exact: true }),
+        ).toHaveAttribute("href", href)
       }
     })
   })

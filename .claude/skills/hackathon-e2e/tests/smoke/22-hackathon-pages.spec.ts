@@ -56,7 +56,9 @@ async function shownOrder(page: Page): Promise<string[]> {
 
 /** The titles in the order the BACKEND holds them — `List` sorts by `order`. */
 async function storedOrder(hackathonId: string): Promise<string[]> {
-  const res = await rpcAs("alice", "hackathon.PageService/List", { hackathonId })
+  const res = await rpcAs("alice", "hackathon.PageService/List", {
+    hackathonId,
+  })
   if (!res.ok) throw new Error(`PageService.List failed: ${res.raw}`)
   return ((res.data?.pages ?? []) as { title: string }[]).map((p) => p.title)
 }
@@ -130,7 +132,9 @@ test.describe("hackathon pages: preview and reorder", () => {
     // the `-` bullets are gone, and a SPACE was put between two blocks rather
     // than their words being glued into `Ideation09:00`.
     const schedule = row(page, "Schedule").locator(EXCERPT)
-    await expect(schedule).toContainText("Day 1 – Ideation 09:00 Opening ceremony")
+    await expect(schedule).toContainText(
+      "Day 1 – Ideation 09:00 Opening ceremony",
+    )
     await expect(schedule).toContainText("10:00 Team formation")
     expect(await schedule.textContent()).not.toContain("##")
     expect(await schedule.textContent()).not.toContain("- 09:00")
@@ -147,9 +151,9 @@ test.describe("hackathon pages: preview and reorder", () => {
       .getByRole("link", { name: "View Schedule" })
       .click()
     await expect(page.getByRole("heading", { name: "Schedule" })).toBeVisible()
-    await expect(
-      page.locator(".markdown-content h2").first(),
-    ).toHaveText("Day 1 – Ideation")
+    await expect(page.locator(".markdown-content h2").first()).toHaveText(
+      "Day 1 – Ideation",
+    )
   })
 
   test("a script pasted into a page's content cannot run from the list", async ({
@@ -197,13 +201,18 @@ test.describe("hackathon pages: preview and reorder", () => {
         "no script element may be built out of page content",
       ).toBe(0)
       expect(
-        await page.evaluate((k) => (window as unknown as Record<string, unknown>)[k], XSS_MARKER),
+        await page.evaluate(
+          (k) => (window as unknown as Record<string, unknown>)[k],
+          XSS_MARKER,
+        ),
         "the payload must not have executed on the management list",
       ).toBeUndefined()
 
       // And the same page where the markdown is genuinely RENDERED, since that
       // is the surface the flattener inherits its policy from.
-      await row(page, XSS_TITLE).getByRole("link", { name: `View ${XSS_TITLE}` }).click()
+      await row(page, XSS_TITLE)
+        .getByRole("link", { name: `View ${XSS_TITLE}` })
+        .click()
       await expect(page.locator(".markdown-content")).toContainText(
         "Doors open at 08:30.",
       )
@@ -211,7 +220,10 @@ test.describe("hackathon pages: preview and reorder", () => {
         XSS_MARKER,
       )
       expect(
-        await page.evaluate((k) => (window as unknown as Record<string, unknown>)[k], XSS_MARKER),
+        await page.evaluate(
+          (k) => (window as unknown as Record<string, unknown>)[k],
+          XSS_MARKER,
+        ),
         "the payload must not have executed on the page itself",
       ).toBeUndefined()
     } finally {
@@ -221,7 +233,9 @@ test.describe("hackathon pages: preview and reorder", () => {
       const stale = row(page, XSS_TITLE)
       if ((await stale.count()) > 0) {
         await stale.getByRole("link", { name: `Edit ${XSS_TITLE}` }).click()
-        await page.getByRole("button", { name: "Delete page", exact: true }).click()
+        await page
+          .getByRole("button", { name: "Delete page", exact: true })
+          .click()
         await page
           .getByRole("button", { name: "Delete permanently", exact: true })
           .click()
@@ -231,9 +245,14 @@ test.describe("hackathon pages: preview and reorder", () => {
     }
   })
 
-  test("dragging a row saves the whole new order in one write", async ({ page }) => {
+  test("dragging a row saves the whole new order in one write", async ({
+    page,
+  }) => {
     const before = await shownOrder(page)
-    expect(before.length, "need at least three pages to prove a move").toBeGreaterThan(2)
+    expect(
+      before.length,
+      "need at least three pages to prove a move",
+    ).toBeGreaterThan(2)
     expect(
       await storedOrder(hackathonId),
       "the screen and the database must agree before we touch anything",
@@ -245,7 +264,10 @@ test.describe("hackathon pages: preview and reorder", () => {
     // --- last row to the top ------------------------------------------------
     let saved = awaitSetOrder(page)
     await dragRowTo(row(page, last), row(page, first))
-    expect((await saved).status(), "the drop should be one accepted write").toBe(200)
+    expect(
+      (await saved).status(),
+      "the drop should be one accepted write",
+    ).toBe(200)
 
     const expected = [last, ...before.slice(0, -1)]
     await page.reload()
@@ -286,19 +308,28 @@ test.describe("hackathon pages: preview and reorder", () => {
     await expect(announcement).toHaveText("")
 
     const handle = () =>
-      row(page, moving).getByRole("button", { name: `Reorder ${moving}`, exact: true })
+      row(page, moving).getByRole("button", {
+        name: `Reorder ${moving}`,
+        exact: true,
+      })
 
     await handle().press("Enter")
-    await expect(announcement).toContainText(`Picked up ${moving}, position 1 of ${last}`)
+    await expect(announcement).toContainText(
+      `Picked up ${moving}, position 1 of ${last}`,
+    )
     await expect(handle()).toHaveAttribute("aria-pressed", "true")
 
     const saved = awaitSetOrder(page)
     for (let i = 2; i <= last; i++) {
       await handle().press("ArrowDown")
-      await expect(announcement).toContainText(`${moving}, position ${i} of ${last}`)
+      await expect(announcement).toContainText(
+        `${moving}, position ${i} of ${last}`,
+      )
     }
     await handle().press("Enter")
-    await expect(announcement).toContainText(`Dropped ${moving} at position ${last}`)
+    await expect(announcement).toContainText(
+      `Dropped ${moving} at position ${last}`,
+    )
     expect((await saved).status()).toBe(200)
 
     const expected = [...before.slice(1), moving]
@@ -323,11 +354,16 @@ test.describe("hackathon pages: preview and reorder", () => {
     expect(await storedOrder(hackathonId)).toEqual(before)
   })
 
-  test("Escape puts a picked-up page back and writes nothing", async ({ page }) => {
+  test("Escape puts a picked-up page back and writes nothing", async ({
+    page,
+  }) => {
     const before = await shownOrder(page)
     const moving = before[0]!
     const handle = () =>
-      row(page, moving).getByRole("button", { name: `Reorder ${moving}`, exact: true })
+      row(page, moving).getByRole("button", {
+        name: `Reorder ${moving}`,
+        exact: true,
+      })
 
     let writes = 0
     page.on("request", (r) => {
@@ -338,10 +374,16 @@ test.describe("hackathon pages: preview and reorder", () => {
     await handle().press("ArrowDown")
     // The row really did move on screen — otherwise "Escape put it back" is a
     // statement about a move that never happened.
-    expect(await shownOrder(page)).toEqual([before[1]!, moving, ...before.slice(2)])
+    expect(await shownOrder(page)).toEqual([
+      before[1]!,
+      moving,
+      ...before.slice(2),
+    ])
 
     await handle().press("Escape")
-    await expect(page.locator(ANNOUNCEMENT)).toContainText("Reordering cancelled")
+    await expect(page.locator(ANNOUNCEMENT)).toContainText(
+      "Reordering cancelled",
+    )
     expect(await shownOrder(page)).toEqual(before)
 
     await page.waitForTimeout(500)

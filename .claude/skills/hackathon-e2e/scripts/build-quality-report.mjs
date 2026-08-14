@@ -65,7 +65,9 @@ const P = {
   claudeMd: R(".claude/CLAUDE.md"),
   protoDir: R("api/proto"),
   frontendSrc: R("components/frontend/src"),
-  dragSpec: R(".claude/skills/hackathon-e2e/tests/smoke/22-hackathon-pages.spec.ts"),
+  dragSpec: R(
+    ".claude/skills/hackathon-e2e/tests/smoke/22-hackathon-pages.spec.ts",
+  ),
   auditBoot: R("components/backend/internal/audit/audit_suite_test.go"),
   storageBoot: R("components/backend/internal/storage/storage_suite_test.go"),
 }
@@ -85,7 +87,8 @@ function n(id, value, src) {
     String(value),
   )}</span>${src ? sup(src) : ""}`
 }
-const sup = (k) => `<a class="src" href="#src-${k}" title="Source ${k}">${k}</a>`
+const sup = (k) =>
+  `<a class="src" href="#src-${k}" title="Source ${k}">${k}</a>`
 
 const esc = (s) =>
   String(s)
@@ -129,10 +132,14 @@ const sections = []
           .trim()
           .split(/\s{2,}/)[0]
           .trim()
-        const m = text.match(/^ACT\s+(\d+)([a-z]?|\s*\(cont\.\))\s*[—-]\s*(.*)$/)
+        const m = text.match(
+          /^ACT\s+(\d+)([a-z]?|\s*\(cont\.\))\s*[—-]\s*(.*)$/,
+        )
         cur = {
           act: m ? Number(m[1]) : null,
-          label: m ? `Act ${m[1]}${/cont/.test(m[2]) ? " (cont.)" : m[2].trim()}` : text,
+          label: m
+            ? `Act ${m[1]}${/cont/.test(m[2]) ? " (cont.)" : m[2].trim()}`
+            : text,
           about: m ? m[3] : text,
           ids: [],
         }
@@ -156,11 +163,36 @@ const tally = (arr, f) => {
   return m
 }
 const KINDS = [
-  { key: "rpc", label: "rpc", slot: 1, about: "one grpcurl call, judged on its status code and payload" },
-  { key: "ui.flow", label: "ui.flow", slot: 2, about: "a browser drives the product: click, type, submit" },
-  { key: "ui.assert", label: "ui.assert", slot: 3, about: "a browser reads a page back and asserts what it says" },
-  { key: "rpc.race", label: "rpc.race", slot: 4, about: "several calls fired simultaneously, judged in aggregate" },
-  { key: "files.generate", label: "files.generate", slot: 5, about: "produces a fixture file for a later action" },
+  {
+    key: "rpc",
+    label: "rpc",
+    slot: 1,
+    about: "one grpcurl call, judged on its status code and payload",
+  },
+  {
+    key: "ui.flow",
+    label: "ui.flow",
+    slot: 2,
+    about: "a browser drives the product: click, type, submit",
+  },
+  {
+    key: "ui.assert",
+    label: "ui.assert",
+    slot: 3,
+    about: "a browser reads a page back and asserts what it says",
+  },
+  {
+    key: "rpc.race",
+    label: "rpc.race",
+    slot: 4,
+    about: "several calls fired simultaneously, judged in aggregate",
+  },
+  {
+    key: "files.generate",
+    label: "files.generate",
+    slot: 5,
+    about: "produces a fixture file for a later action",
+  },
 ]
 const kindCount = tally(actions, (a) => a.action)
 const prioCount = tally(actions, (a) => a.priority)
@@ -169,8 +201,12 @@ const actorCount = tally(actions, (a) => a.actor)
 const errCount = tally(actions, (a) => a.expect && a.expect.error)
 const gateCount = actions.filter((a) => a.gate).length
 const todoCount = actions.filter((a) => a.todo).length
-const grpcActions = actions.filter((a) => a.action === "rpc" || a.action === "rpc.race").length
-const uiActions = actions.filter((a) => String(a.action).startsWith("ui.")).length
+const grpcActions = actions.filter(
+  (a) => a.action === "rpc" || a.action === "rpc.race",
+).length
+const uiActions = actions.filter((a) =>
+  String(a.action).startsWith("ui."),
+).length
 const fileActions = actions.filter((a) => a.action === "files.generate").length
 const denialTotal = [...errCount.values()].reduce((x, y) => x + y, 0)
 
@@ -191,9 +227,14 @@ const specs = []
 })({ suites: results.suites })
 const projSpecs = new Map()
 for (const s of specs)
-  for (const t of s.tests) projSpecs.set(t.projectName, (projSpecs.get(t.projectName) || 0) + 1)
-const journeySpecs = specs.filter((s) => s.tests.some((t) => t.projectName === "journey"))
-const runIds = journeySpecs.map((s) => (s.title.match(/^\[([^\]]+)\]/) || [])[1]).filter(Boolean)
+  for (const t of s.tests)
+    projSpecs.set(t.projectName, (projSpecs.get(t.projectName) || 0) + 1)
+const journeySpecs = specs.filter((s) =>
+  s.tests.some((t) => t.projectName === "journey"),
+)
+const runIds = journeySpecs
+  .map((s) => (s.title.match(/^\[([^\]]+)\]/) || [])[1])
+  .filter(Boolean)
 const runDay = results.stats.startTime.slice(0, 10)
 const runMinutes = (results.stats.duration / 60000).toFixed(1)
 
@@ -213,7 +254,9 @@ const mutByArena = tally(manifest, (m) => m.arena)
 const gaps = manifest.filter((m) => m.gap)
 const caught = manifest.filter((m) => !m.gap)
 const gapsWithCrossRef = gaps.filter((m) => (m.crossRef || []).length > 0)
-const gapsNoWitnessAnywhere = gaps.filter((m) => /no journey witness/i.test(m.gapReason || ""))
+const gapsNoWitnessAnywhere = gaps.filter((m) =>
+  /no journey witness/i.test(m.gapReason || ""),
+)
 
 const verify = JSON.parse(read(P.verify))
 const verdictCount = tally(verify.rows, (r) => r.verdict)
@@ -225,16 +268,29 @@ const mismatchRows = verify.rows.filter((r) => r.verdict === "MISMATCH")
 const mismatchExtras = [...new Set(mismatchRows.flatMap((r) => r.extra || []))]
 const supersededMismatch = mismatchRows.filter((r) => {
   const entry = manifest.find((m) => m.id === r.id)
-  return entry && (r.extra || []).length > 0 && (r.extra || []).every((x) => (entry.expectReds || []).includes(x))
+  return (
+    entry &&
+    (r.extra || []).length > 0 &&
+    (r.extra || []).every((x) => (entry.expectReds || []).includes(x))
+  )
 })
-const manifestStamp = fs.statSync(P.manifest).mtime.toISOString().slice(0, 19).replace("T", " ") + "Z"
-const manifestNewerThanVerify = fs.statSync(P.manifest).mtimeMs > new Date(verify.at).getTime()
+const manifestStamp =
+  fs.statSync(P.manifest).mtime.toISOString().slice(0, 19).replace("T", " ") +
+  "Z"
+const manifestNewerThanVerify =
+  fs.statSync(P.manifest).mtimeMs > new Date(verify.at).getTime()
 
 /** Clusters = the id prefix before the first dot. Derived, never typed. */
 const clusters = new Map()
 for (const m of manifest) {
   const key = m.id.split(".")[0]
-  const c = clusters.get(key) || { key, total: 0, gaps: 0, files: new Set(), arena: new Set() }
+  const c = clusters.get(key) || {
+    key,
+    total: 0,
+    gaps: 0,
+    files: new Set(),
+    arena: new Set(),
+  }
   c.total++
   if (m.gap) c.gaps++
   if (m.file) c.files.add(m.file)
@@ -242,7 +298,9 @@ for (const m of manifest) {
   c.arena.add(m.arena)
   clusters.set(key, c)
 }
-const clusterList = [...clusters.values()].sort((a, b) => b.gaps - a.gaps || b.total - a.total)
+const clusterList = [...clusters.values()].sort(
+  (a, b) => b.gaps - a.gaps || b.total - a.total,
+)
 /** The surfaces worth naming: more than one mutation on them went unnoticed.
  *  Derived by a threshold, not picked — a fourth appearing tomorrow names
  *  itself, and a cluster that gets a test drops out on its own. */
@@ -259,19 +317,33 @@ const uncalledDoc = []
     const m = line.match(/^\|\s*`([A-Za-z]+\.[A-Za-z]+)`\s*\|\s*(.+?)\s*\|\s*$/)
     if (m) uncalledDoc.push({ rpc: m[1], why: m[2] })
   }
-  if (!uncalledDoc.length) throw new Error("could not parse the API-to-UI table out of docs/testing.md")
+  if (!uncalledDoc.length)
+    throw new Error(
+      "could not parse the API-to-UI table out of docs/testing.md",
+    )
 }
 
 /* ══ F. the suite table in .claude/CLAUDE.md ══════════════════════════════ */
 const claudeMd = read(P.claudeMd)
 const suiteRows = []
 {
-  const start = claudeMd.indexOf("| Suite | Result | When |")
-  if (start < 0) throw new Error("suite table not found in .claude/CLAUDE.md")
+  // Whitespace-TOLERANT, deliberately. `.claude/` is treefmt-formatted now
+  // (the blanket exemption was lifted), and prettier pads markdown table cells
+  // out to the column width — so this header reads
+  // "| Suite                | Result | When       |" on disk and an exact
+  // indexOf("| Suite | Result | When |") found nothing. Every other anchor into
+  // this file already collapses whitespace first (`claudeFlat`) or matches with
+  // `\s*`; this was the last literal one.
+  const header = claudeMd.match(/^\|\s*Suite\s*\|\s*Result\s*\|\s*When\s*\|/m)
+  if (!header) throw new Error("suite table not found in .claude/CLAUDE.md")
+  const start = header.index
   const lines = claudeMd.slice(start).split(/\r?\n/)
   for (const l of lines.slice(2)) {
     if (!l.startsWith("|")) break
-    const cells = l.split("|").slice(1, -1).map((c) => c.trim())
+    const cells = l
+      .split("|")
+      .slice(1, -1)
+      .map((c) => c.trim())
     if (cells.length < 3) break
     suiteRows.push({
       suite: cells[0].replace(/`/g, ""),
@@ -305,7 +377,10 @@ const need = (re, what) => {
 }
 /** CLAUDE.md's own claim about the API-to-UI ratio — kept to be contrasted. */
 const claudeMdUncalled = (() => {
-  const m = need(/API-to-UI coverage: \**(\d+) of (\d+) RPC declarations/, "the API-to-UI ratio")
+  const m = need(
+    /API-to-UI coverage: \**(\d+) of (\d+) RPC declarations/,
+    "the API-to-UI ratio",
+  )
   return { called: Number(m[1]), total: Number(m[2]) }
 })()
 /** The waitlisted-owner paragraph, quoted rather than paraphrased. */
@@ -343,7 +418,9 @@ const methodNames = new Set(declarations.map((d) => d.split("/")[1]))
 const recipeCovered = [...recipeMethods].filter((m) => declSet.has(m))
 const unknownMethods = [...recipeMethods].filter((m) => !declSet.has(m))
 if (unknownMethods.length)
-  throw new Error(`recipe calls methods with no proto declaration: ${unknownMethods.join(", ")}`)
+  throw new Error(
+    `recipe calls methods with no proto declaration: ${unknownMethods.join(", ")}`,
+  )
 
 /* ══ H. the API-to-UI audit, re-run against the tree ══════════════════════ */
 const frontendFiles = walkFiles(
@@ -360,9 +437,12 @@ const uncalledNow = [...methodNames]
 const dragSpec = read(P.dragSpec)
 const dragSpecLines = dragSpec.split(/\r?\n/)
 const dragTestLine =
-  dragSpecLines.findIndex((l) => l.includes('test("dragging a row saves the whole new order')) + 1
+  dragSpecLines.findIndex((l) =>
+    l.includes('test("dragging a row saves the whole new order'),
+  ) + 1
 const dragEndYLine = dragSpecLines.findIndex((l) => /const endY = /.test(l)) + 1
-if (!dragTestLine || !dragEndYLine) throw new Error("could not locate the drag test / endY line")
+if (!dragTestLine || !dragEndYLine)
+  throw new Error("could not locate the drag test / endY line")
 const ginkgoBootstraps = [P.auditBoot, P.storageBoot].map((p) => ({
   path: rel(p),
   present: fs.existsSync(p) && /RunSpecs\(/.test(read(p)),
@@ -394,7 +474,11 @@ if (new Set(bootstrapCommits).size !== 1)
 const bootstrapCommit = bootstrapCommits[0]
 const bootstrapIsAncestor = (() => {
   try {
-    execFileSync("git", ["merge-base", "--is-ancestor", bootstrapCommit, "HEAD"], { cwd: repoRoot })
+    execFileSync(
+      "git",
+      ["merge-base", "--is-ancestor", bootstrapCommit, "HEAD"],
+      { cwd: repoRoot },
+    )
     return true
   } catch {
     return false
@@ -412,8 +496,16 @@ const SOURCES = [
     )} comment banners (${n("src.actSections", sections.length)} of them act headings): kinds,
       priorities, actors, gates, todos, expected status codes, and every RPC the recipe calls.`,
   },
-  { k: "B", p: P.results, what: "Playwright's json reporter from the last journey run: stats block, per-project spec counts, and the [id] prefix on every spec title." },
-  { k: "C", p: P.manifest, what: "The mutation manifest: one deliberate breakage per line, its arena, its expected reds, and — for a gap — why nothing catches it." },
+  {
+    k: "B",
+    p: P.results,
+    what: "Playwright's json reporter from the last journey run: stats block, per-project spec counts, and the [id] prefix on every spec title.",
+  },
+  {
+    k: "C",
+    p: P.manifest,
+    what: "The mutation manifest: one deliberate breakage per line, its arena, its expected reds, and — for a gap — why nothing catches it.",
+  },
   {
     k: "D",
     p: P.verify,
@@ -422,11 +514,31 @@ const SOURCES = [
       verify.rows.length,
     )} entries, with the reds each one actually produced.`,
   },
-  { k: "E", p: P.testingDoc, what: "The API-to-UI coverage table: which declared RPCs have no frontend caller, and why each is deliberate." },
-  { k: "F", p: P.claudeMd, what: "The suite-results table (the only source for smoke, mobile, openreplay, backend and frontend-unit numbers) and the known-broken prose." },
-  { k: "G", p: P.protoDir, what: "Every rpc declaration in api/proto/**/*_service.proto — the denominator for both coverage counts." },
-  { k: "H", p: P.frontendSrc, what: "The frontend call sites: the API-to-UI audit is re-run here at build time rather than copied from the doc." },
-  { k: "I", p: P.dragSpec, what: "The failing smoke spec and the helper that causes it; line numbers below are read out of the file." },
+  {
+    k: "E",
+    p: P.testingDoc,
+    what: "The API-to-UI coverage table: which declared RPCs have no frontend caller, and why each is deliberate.",
+  },
+  {
+    k: "F",
+    p: P.claudeMd,
+    what: "The suite-results table (the only source for smoke, mobile, openreplay, backend and frontend-unit numbers) and the known-broken prose.",
+  },
+  {
+    k: "G",
+    p: P.protoDir,
+    what: "Every rpc declaration in api/proto/**/*_service.proto — the denominator for both coverage counts.",
+  },
+  {
+    k: "H",
+    p: P.frontendSrc,
+    what: "The frontend call sites: the API-to-UI audit is re-run here at build time rather than copied from the doc.",
+  },
+  {
+    k: "I",
+    p: P.dragSpec,
+    what: "The failing smoke spec and the helper that causes it; line numbers below are read out of the file.",
+  },
 ]
 
 /* ══════════════════════════ HTML ════════════════════════════════════════ */
@@ -511,7 +623,12 @@ const tiles = [
     value: n("journey.expected", results.stats.expected, "B"),
     unit: "specs passed",
     chip:
-      chipNum("good", "journey.unexpected", results.stats.unexpected, "failed") +
+      chipNum(
+        "good",
+        "journey.unexpected",
+        results.stats.unexpected,
+        "failed",
+      ) +
       chipNum("good", "journey.skipped", results.stats.skipped, "skipped") +
       chipNum("good", "journey.flaky", results.stats.flaky, "flaky"),
     when: runDay,
@@ -528,8 +645,18 @@ const tiles = [
     value: n("smoke.passed", firstInt(smoke.result), "F"),
     unit: "passed",
     chip:
-      chipNum("crit", "smoke.failed", grab(smoke.result, /(\d+) failed/), "failed") +
-      chipNum("warn", "smoke.notrun", grab(smoke.result, /(\d+) did not run/), "did not run"),
+      chipNum(
+        "crit",
+        "smoke.failed",
+        grab(smoke.result, /(\d+) failed/),
+        "failed",
+      ) +
+      chipNum(
+        "warn",
+        "smoke.notrun",
+        grab(smoke.result, /(\d+) did not run/),
+        "did not run",
+      ),
     when: smoke.when,
     src: "F",
     note: `One deterministic failure and the two specs behind it in the same serial describe — <a href="#open-drag">below</a>.`,
@@ -537,12 +664,28 @@ const tiles = [
   tile({
     id: "backend",
     name: "backend — go test ./internal/…",
-    value: n("backend.serviceSpecs", grab(backend.result, /service (\d+)\//), "F"),
+    value: n(
+      "backend.serviceSpecs",
+      grab(backend.result, /service (\d+)\//),
+      "F",
+    ),
     unit: `of ${n("backend.serviceTotal", grab(backend.result, /service \d+\/(\d+)/), "F")} service specs`,
     chip:
       statusChip("good", "all packages ok") +
-      chipNum("info", "backend.capability", grab(backend.result, /capability (\d+)/), "", "capability") +
-      chipNum("info", "backend.middleware", grab(backend.result, /middleware (\d+)/), "", "middleware"),
+      chipNum(
+        "info",
+        "backend.capability",
+        grab(backend.result, /capability (\d+)/),
+        "",
+        "capability",
+      ) +
+      chipNum(
+        "info",
+        "backend.middleware",
+        grab(backend.result, /middleware (\d+)/),
+        "",
+        "middleware",
+      ),
     when: backend.when,
     src: "F",
     note: "One spec is pending. Six packages; the fast tier the mutation runner drives.",
@@ -554,7 +697,12 @@ const tiles = [
     unit: "passed",
     chip:
       statusChip("good", "no failures reported") +
-      chipNum("info", "feunits.files", grab(feUnits.suite, /\((\d+) files\)/), "files"),
+      chipNum(
+        "info",
+        "feunits.files",
+        grab(feUnits.suite, /\((\d+) files\)/),
+        "files",
+      ),
     when: feUnits.when,
     src: "F",
   }),
@@ -563,7 +711,9 @@ const tiles = [
     name: "mobile — phone viewport",
     value: n("mobile.passed", firstInt(mobile.result), "F"),
     unit: "passed",
-    chip: statusChip("good", "no failures reported") + statusChip("warn", "older observation"),
+    chip:
+      statusChip("good", "no failures reported") +
+      statusChip("warn", "older observation"),
     when: mobile.when,
     src: "F",
   }),
@@ -573,8 +723,12 @@ const tiles = [
     value: n("openreplay.passed", firstInt(openreplay.result), "F"),
     unit: "passed",
     chip:
-      chipNum("good", "openreplay.skipped", grab(openreplay.result, /(\d+) skipped/), "skipped") +
-      statusChip("warn", "needs the replay rig"),
+      chipNum(
+        "good",
+        "openreplay.skipped",
+        grab(openreplay.result, /(\d+) skipped/),
+        "skipped",
+      ) + statusChip("warn", "needs the replay rig"),
     when: openreplay.when,
     src: "F",
   }),
@@ -641,10 +795,26 @@ const gapCards = gaps
   .join("\n")
 
 const verdictRows = [
-  ["EXACT", "good", "exactly the declared tests went red — the property is provably catchable"],
-  ["MISMATCH", "warn", "the declared set failed plus something else; every extra here is the one declared-flaky spec"],
-  ["GAP", "crit", "nothing went red — no test in the fast tier holds this property"],
-  ["GAP CLOSED", "warn", "declared a gap, but a red appeared — promote it to a real entry"],
+  [
+    "EXACT",
+    "good",
+    "exactly the declared tests went red — the property is provably catchable",
+  ],
+  [
+    "MISMATCH",
+    "warn",
+    "the declared set failed plus something else; every extra here is the one declared-flaky spec",
+  ],
+  [
+    "GAP",
+    "crit",
+    "nothing went red — no test in the fast tier holds this property",
+  ],
+  [
+    "GAP CLOSED",
+    "warn",
+    "declared a gap, but a red appeared — promote it to a real entry",
+  ],
 ]
   .map(
     ([v, state, meaning]) => `<tr>
@@ -681,28 +851,63 @@ const sourceRows = SOURCES.map((s) => {
 }).join("\n")
 
 const smokeTotal =
-  firstInt(smoke.result) + grab(smoke.result, /(\d+) failed/) + grab(smoke.result, /(\d+) did not run/)
+  firstInt(smoke.result) +
+  grab(smoke.result, /(\d+) failed/) +
+  grab(smoke.result, /(\d+) did not run/)
 /** `{html}` opts a cell out of escaping; a bare string is escaped. */
-const cellHtml = (v) => (v && typeof v === "object" && "html" in v ? v.html : esc(v))
+const cellHtml = (v) =>
+  v && typeof v === "object" && "html" in v ? v.html : esc(v)
 const reproRows = [
   [
-    { html: `journey — the ${n("repro.actions", actions.length, "A")} recipe actions` },
+    {
+      html: `journey — the ${n("repro.actions", actions.length, "A")} recipe actions`,
+    },
     "bash .claude/skills/devcontainer-up/scripts/e2e.sh journey",
     "writes .artifacts/results.json (source B); do not redirect stdout — the json reporter is the durable copy",
   ],
   [
     "smoke — the seeded fixture",
     "bash .claude/skills/devcontainer-up/scripts/e2e.sh smoke",
-    { html: `${n("repro.smokeTotal", smokeTotal, "F")} specs; one is the open drag failure` },
+    {
+      html: `${n("repro.smokeTotal", smokeTotal, "F")} specs; one is the open drag failure`,
+    },
   ],
-  ["mobile / openreplay", "bash .claude/skills/hackathon-e2e/scripts/run.sh mobile", "openreplay needs the rig up and the app wired at it, or every spec self-skips"],
-  ["backend units", 'go test -tags "test unittest" ./internal/... -count=1', "from components/backend, with .devenv/profile/bin on PATH"],
+  [
+    "mobile / openreplay",
+    "bash .claude/skills/hackathon-e2e/scripts/run.sh mobile",
+    "openreplay needs the rig up and the app wired at it, or every spec self-skips",
+  ],
+  [
+    "backend units",
+    'go test -tags "test unittest" ./internal/... -count=1',
+    "from components/backend, with .devenv/profile/bin on PATH",
+  ],
   ["frontend units", "just check::test -c frontend", "vitest, jsdom"],
-  ["mutations — the whole manifest", "bash .claude/skills/devcontainer-up/scripts/mutate.sh run", "rewrites mutations/.state/verify.json (source D); NO REDS fails the run"],
-  ["mutations — anchors only", "bash .claude/skills/hackathon-e2e/scripts/mutate.sh check", "cheap enough for every commit: asserts every find: still matches its file exactly once"],
-  ["API-to-UI audit", "grep -rn '\\.<method>(' components/frontend/src --include='*.ts' --include='*.svelte'", "ignore hits under src/lib/server/grpc/generated/"],
-  ["this report", "node .claude/skills/hackathon-e2e/scripts/build-quality-report.mjs", "re-derives every figure and refuses to write one that disagrees with its source"],
-  ["the recipe player", "node .claude/skills/hackathon-e2e/scripts/splice-player.mjs", "required after any recipe edit — the player shows what is embedded, not the file"],
+  [
+    "mutations — the whole manifest",
+    "bash .claude/skills/devcontainer-up/scripts/mutate.sh run",
+    "rewrites mutations/.state/verify.json (source D); NO REDS fails the run",
+  ],
+  [
+    "mutations — anchors only",
+    "bash .claude/skills/hackathon-e2e/scripts/mutate.sh check",
+    "cheap enough for every commit: asserts every find: still matches its file exactly once",
+  ],
+  [
+    "API-to-UI audit",
+    "grep -rn '\\.<method>(' components/frontend/src --include='*.ts' --include='*.svelte'",
+    "ignore hits under src/lib/server/grpc/generated/",
+  ],
+  [
+    "this report",
+    "node .claude/skills/hackathon-e2e/scripts/build-quality-report.mjs",
+    "re-derives every figure and refuses to write one that disagrees with its source",
+  ],
+  [
+    "the recipe player",
+    "node .claude/skills/hackathon-e2e/scripts/splice-player.mjs",
+    "required after any recipe edit — the player shows what is embedded, not the file",
+  ],
 ]
   // Cells are escaped unless they were built with a stamped figure in them, and
   // that is declared per cell rather than inferred — the alternative (stop
@@ -1194,12 +1399,18 @@ ${gapCards}
     Moving down, everything below the lifted row shifts up by one row height and the pointer arrives at
     what has become the middle row — which is exactly why one direction passes and the other does not.
     The two specs after it are the rest of a <code>mode: "serial"</code> describe, so they never run:
-    ${n("open.smokeSum", `${firstInt(smoke.result)} + ${grab(smoke.result, /(\d+) failed/)} + ${grab(
-      smoke.result,
-      /(\d+) did not run/,
-    )}`, "F")} = ${n(
+    ${n(
+      "open.smokeSum",
+      `${firstInt(smoke.result)} + ${grab(smoke.result, /(\d+) failed/)} + ${grab(
+        smoke.result,
+        /(\d+) did not run/,
+      )}`,
+      "F",
+    )} = ${n(
       "open.smokeTotal",
-      firstInt(smoke.result) + grab(smoke.result, /(\d+) failed/) + grab(smoke.result, /(\d+) did not run/),
+      firstInt(smoke.result) +
+        grab(smoke.result, /(\d+) failed/) +
+        grab(smoke.result, /(\d+) did not run/),
       "F",
     )}.</p>
   </div>
@@ -1218,8 +1429,13 @@ ${gapCards}
     <p><strong>The tree says otherwise.</strong> Both packages now carry a Ginkgo bootstrap whose only
     job is to register those flags:
     ${ginkgoBootstraps
-      .map((b) => `<code>${esc(b.path)}</code> ${b.present ? "(present)" : "(MISSING)"}`)
-      .join(" and ")} — both added in <code>${n("open.bootstrapCommit", bootstrapCommit, "I")}</code>,
+      .map(
+        (b) =>
+          `<code>${esc(b.path)}</code> ${b.present ? "(present)" : "(MISSING)"}`,
+      )
+      .join(
+        " and ",
+      )} — both added in <code>${n("open.bootstrapCommit", bootstrapCommit, "I")}</code>,
     ${bootstrapIsAncestor ? "an ancestor of this commit" : "<strong>NOT an ancestor of this commit</strong>"}.
     Confirmed once by hand on 2026-08-14 by running
     <code class="cmd">go test -tags "test unittest" ./internal/audit/ ./internal/storage/ -count=1 --ginkgo.v</code>
@@ -1360,12 +1576,17 @@ function rederive() {
 
   out["recipe.actions"] = count(/"id"\s*:/)
   out["recipe.actionsLede"] = out["recipe.actions"]
-  for (const k of KINDS) out[`recipe.kind.${k.key}`] = count(new RegExp(`"action"\\s*:\\s*"${k.key.replace(".", "\\.")}"`))
-  for (const p of ["P1", "P2", "P3"]) out[`recipe.${p}`] = count(new RegExp(`"priority"\\s*:\\s*"${p}"`))
+  for (const k of KINDS)
+    out[`recipe.kind.${k.key}`] = count(
+      new RegExp(`"action"\\s*:\\s*"${k.key.replace(".", "\\.")}"`),
+    )
+  for (const p of ["P1", "P2", "P3"])
+    out[`recipe.${p}`] = count(new RegExp(`"priority"\\s*:\\s*"${p}"`))
   out["recipe.gates"] = count(/"gate"\s*:/)
   out["recipe.todos"] = count(/"todo"\s*:/)
   out["recipe.grpc"] = out["recipe.kind.rpc"] + out["recipe.kind.rpc.race"]
-  out["recipe.browser"] = out["recipe.kind.ui.flow"] + out["recipe.kind.ui.assert"]
+  out["recipe.browser"] =
+    out["recipe.kind.ui.flow"] + out["recipe.kind.ui.assert"]
   out["recipe.browserAgain"] = out["recipe.browser"]
   out["recipe.files"] = out["recipe.kind.files.generate"]
   let denials = 0
@@ -1377,12 +1598,16 @@ function rederive() {
   out["recipe.denials"] = denials
   out["recipe.denialsTable"] = denials
   out["recipe.actors"] = new Set(
-    lines.map((l) => (l.match(/"actor"\s*:\s*"([^"]+)"/) || [])[1]).filter(Boolean),
+    lines
+      .map((l) => (l.match(/"actor"\s*:\s*"([^"]+)"/) || [])[1])
+      .filter(Boolean),
   ).size
   const methods = new Set()
   for (const m of raw.matchAll(/"method"\s*:\s*"([^"]+)"/g)) methods.add(m[1])
   out["recipe.methods"] = methods.size
-  out["recipe.services"] = new Set([...methods].map((m) => m.split("/")[0])).size
+  out["recipe.services"] = new Set(
+    [...methods].map((m) => m.split("/")[0]),
+  ).size
 
   // per-section counts: split the raw text on ACT banners and count id lines.
   // Both JSONL files here are written with a space after the colon, so every
@@ -1401,19 +1626,24 @@ function rederive() {
     for (const k of KINDS)
       m[k.key] = ch
         .split(/\r?\n/)
-        .filter((l) => new RegExp(`"action"\\s*:\\s*"${k.key.replace(".", "\\.")}"`).test(l)).length
+        .filter((l) =>
+          new RegExp(`"action"\\s*:\\s*"${k.key.replace(".", "\\.")}"`).test(l),
+        ).length
     secKinds.push(m)
   }
   sections.forEach((s, i) => {
     const key = s.label.toLowerCase().replace(/[^a-z0-9]+/g, "")
     out[`recipe.section.${key}`] = secCounts[i]
     for (const k of KINDS)
-      if (secKinds[i][k.key]) out[`recipe.section.${key}.${k.key}`] = secKinds[i][k.key]
+      if (secKinds[i][k.key])
+        out[`recipe.section.${key}.${k.key}`] = secKinds[i][k.key]
   })
 
   // B — results.json, read by regex off the raw text rather than the object tree
   const rr = read(P.results)
-  const stats = JSON.parse(rr.slice(rr.lastIndexOf('"stats":') + 8).replace(/}\s*$/, ""))
+  const stats = JSON.parse(
+    rr.slice(rr.lastIndexOf('"stats":') + 8).replace(/}\s*$/, ""),
+  )
   out["journey.expected"] = stats.expected
   out["journey.unexpected"] = stats.unexpected
   out["journey.unexpectedHero"] = stats.unexpected
@@ -1423,16 +1653,28 @@ function rederive() {
   out["journey.minutes"] = (stats.duration / 60000).toFixed(1)
   out["journey.when"] = stats.startTime.slice(0, 10)
   out["journey.day"] = out["journey.when"]
-  out["journey.setupSpecs"] = (rr.match(/"projectName":\s*"setup"/g) || []).length
-  out["journey.recipeSpecs"] = (rr.match(/"projectName":\s*"journey"/g) || []).length
+  out["journey.setupSpecs"] = (
+    rr.match(/"projectName":\s*"setup"/g) || []
+  ).length
+  out["journey.recipeSpecs"] = (
+    rr.match(/"projectName":\s*"journey"/g) || []
+  ).length
   out["journey.recipeSpecsHero"] = out["journey.recipeSpecs"]
   out["xcheck.runIds"] = (rr.match(/"title":\s*"\[[^\]"]+\]/g) || []).length
   out["xcheck.recipeIds"] = out["recipe.actions"]
   out["xcheck.same"] = out["recipe.actions"]
-  out["open.bootstrapCommit"] = git("log", "-1", "--format=%h", "--", rel(P.storageBoot))
+  out["open.bootstrapCommit"] = git(
+    "log",
+    "-1",
+    "--format=%h",
+    "--",
+    rel(P.storageBoot),
+  )
 
   // C — manifest, counted line by line
-  const ml = read(P.manifest).split(/\r?\n/).filter((l) => /"id"\s*:/.test(l))
+  const ml = read(P.manifest)
+    .split(/\r?\n/)
+    .filter((l) => /"id"\s*:/.test(l))
   out["mut.total"] = ml.length
   out["mut.totalTile"] = ml.length
   out["mut.totalTile2"] = ml.length
@@ -1444,33 +1686,48 @@ function rederive() {
   out["mut.go"] = ml.filter((l) => /"arena"\s*:\s*"go"/.test(l)).length
   out["mut.vitest"] = ml.filter((l) => /"arena"\s*:\s*"vitest"/.test(l)).length
   out["mut.vitest2"] = out["mut.vitest"]
-  out["mut.gaps.crossRef"] = ml.filter((l) => /"gap"\s*:\s*true/.test(l) && /"crossRef"\s*:\s*\[/.test(l)).length
+  out["mut.gaps.crossRef"] = ml.filter(
+    (l) => /"gap"\s*:\s*true/.test(l) && /"crossRef"\s*:\s*\[/.test(l),
+  ).length
   out["mut.gaps.noWitness"] = ml.filter(
     (l) => /"gap"\s*:\s*true/.test(l) && /no journey witness/i.test(l),
   ).length
-  out["mut.gaps.proseOnly"] = out["mut.gaps"] - out["mut.gaps.crossRef"] - out["mut.gaps.noWitness"]
+  out["mut.gaps.proseOnly"] =
+    out["mut.gaps"] - out["mut.gaps.crossRef"] - out["mut.gaps.noWitness"]
   out["mut.manifestDay"] = mtimeDay(P.manifest)
   for (const l of ml) {
     const id = (l.match(/"id"\s*:\s*"([^"]+)"/) || [])[1]
     const cr = l.match(/"crossRef"\s*:\s*\[([^\]]*)\]/)
-    if (id && cr) out[`mut.gap.${id}.refs`] = (cr[1].match(/"/g) || []).length / 2
+    if (id && cr)
+      out[`mut.gap.${id}.refs`] = (cr[1].match(/"/g) || []).length / 2
   }
   for (const c of clusterList) {
-    const rows = ml.filter((l) => new RegExp(`"id"\\s*:\\s*"${c.key}\\.`).test(l))
+    const rows = ml.filter((l) =>
+      new RegExp(`"id"\\s*:\\s*"${c.key}\\.`).test(l),
+    )
     const g = rows.filter((l) => /"gap"\s*:\s*true/.test(l)).length
     out[`mut.cluster.${c.key}.total`] = rows.length
     out[`mut.cluster.${c.key}.gaps`] = g
     out[`mut.cluster.${c.key}.caught`] = rows.length - g
   }
-  const major = clusterList.filter((c) => out[`mut.cluster.${c.key}.gaps`] >= MAJOR_GAP)
+  const major = clusterList.filter(
+    (c) => out[`mut.cluster.${c.key}.gaps`] >= MAJOR_GAP,
+  )
   for (const c of major) {
-    const t = out[`mut.cluster.${c.key}.total`], g = out[`mut.cluster.${c.key}.gaps`]
+    const t = out[`mut.cluster.${c.key}.total`],
+      g = out[`mut.cluster.${c.key}.gaps`]
     if (t === g) out[`mut.major.${c.key}.all`] = t
-    else { out[`mut.major.${c.key}.gaps`] = g; out[`mut.major.${c.key}.total`] = t }
+    else {
+      out[`mut.major.${c.key}.gaps`] = g
+      out[`mut.major.${c.key}.total`] = t
+    }
   }
   out["mut.majorClusters"] = major.length
   out["mut.majorClustersHeading"] = major.length
-  out["mut.clusterGapShare"] = major.reduce((a, c) => a + out[`mut.cluster.${c.key}.gaps`], 0)
+  out["mut.clusterGapShare"] = major.reduce(
+    (a, c) => a + out[`mut.cluster.${c.key}.gaps`],
+    0,
+  )
   out["mut.clusterGapShareHeading"] = out["mut.clusterGapShare"]
   out["mut.gaps4"] = out["mut.gaps"]
 
@@ -1486,37 +1743,47 @@ function rederive() {
   out["src.verifyRows"] = out["mut.verifyRows"]
   out["src.actionLines"] = out["recipe.actions"]
   out["src.bannerLines"] =
-    read(P.recipe).split(/\r?\n/).filter((l) => l.trim()).length - out["recipe.actions"]
-  out["src.actSections"] = (read(P.recipe).match(/^\{"comment":\s*"─+ ACT /gm) || []).length
+    read(P.recipe)
+      .split(/\r?\n/)
+      .filter((l) => l.trim()).length - out["recipe.actions"]
+  out["src.actSections"] = (
+    read(P.recipe).match(/^\{"comment":\s*"─+ ACT /gm) || []
+  ).length
   const at = (vr.match(/"at"\s*:\s*"([^"]+)"/) || [])[1]
   out["mut.verifyDay"] = at.slice(0, 10)
   out["mut.verifyDay2"] = out["mut.verifyDay"]
   out["mut.verifyDate"] = out["mut.verifyDay"]
   out["mut.mismatch.superseded"] = supersededMismatch.length
-  out["mut.mismatch.rows"] = (vr.match(/"verdict"\s*:\s*"MISMATCH"/g) || []).length
+  out["mut.mismatch.rows"] = (
+    vr.match(/"verdict"\s*:\s*"MISMATCH"/g) || []
+  ).length
   out["mut.mismatch.rows2"] = out["mut.mismatch.rows"]
   out["mut.manifestTime"] =
-    fs.statSync(P.manifest).mtime.toISOString().slice(0, 19).replace("T", " ") + "Z"
+    fs.statSync(P.manifest).mtime.toISOString().slice(0, 19).replace("T", " ") +
+    "Z"
   out["mut.verifyTime"] = at.slice(0, 19).replace("T", " ") + "Z"
 
   // E/G/H — proto + frontend, recounted with different expressions
   let decls = 0
-  for (const f of protoFiles) decls += (read(f).match(/^[ \t]*rpc[ \t]+[A-Za-z0-9_]+/gm) || []).length
+  for (const f of protoFiles)
+    decls += (read(f).match(/^[ \t]*rpc[ \t]+[A-Za-z0-9_]+/gm) || []).length
   out["proto.declarations"] = decls
   out["proto.declarationsAudit"] = decls
   out["proto.declarationsAudit2"] = decls
   out["proto.names"] = new Set(
     protoFiles.flatMap((f) =>
-      [...read(f).matchAll(/^[ \t]*rpc[ \t]+([A-Za-z0-9_]+)/gm)].map((m) => m[1]),
+      [...read(f).matchAll(/^[ \t]*rpc[ \t]+([A-Za-z0-9_]+)/gm)].map(
+        (m) => m[1],
+      ),
     ),
   ).size
   out["api.uncalledNow"] = [...methodNames].filter(
     (m) => !new RegExp(`\\.${lcFirst(m)}\\s*\\(`).test(frontendCorpus),
   ).length
   const doc = read(P.testingDoc)
-  out["api.uncalledDoc"] = (
-    doc.split(/^## API-to-UI coverage$/m)[1] || ""
-  ).split(/\r?\n/).filter((l) => /^\|\s*`[A-Za-z]+\.[A-Za-z]+`/.test(l)).length
+  out["api.uncalledDoc"] = (doc.split(/^## API-to-UI coverage$/m)[1] || "")
+    .split(/\r?\n/)
+    .filter((l) => /^\|\s*`[A-Za-z]+\.[A-Za-z]+`/.test(l)).length
   const cm = doc.match(/\*\*(\w+) RPC declarations have no frontend caller\*\*/)
   if (cm) {
     const words = { Seven: 7, Eight: 8, Nine: 9, Six: 6, Five: 5 }
@@ -1527,28 +1794,43 @@ function rederive() {
   }
 
   // F — the suite table, re-parsed with a stricter row regex
-  const rows = [...claudeMd.matchAll(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|$/gm)]
-  const find = (k) => rows.find((r) => r[1].toLowerCase().replace(/`/g, "").startsWith(k))
+  const rows = [
+    ...claudeMd.matchAll(
+      /^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|$/gm,
+    ),
+  ]
+  const find = (k) =>
+    rows.find((r) => r[1].toLowerCase().replace(/`/g, "").startsWith(k))
   const num = (s, re) => Number((String(s).match(re) || [])[1])
-  const sm = find("smoke"), mo = find("mobile"), or = find("openreplay"),
-    fe = find("frontend"), be = find("backend"), jo = find("journey")
+  const sm = find("smoke"),
+    mo = find("mobile"),
+    or = find("openreplay"),
+    fe = find("frontend"),
+    be = find("backend"),
+    jo = find("journey")
   out["smoke.passed"] = num(sm[2], /(\d+) passed/)
   out["smoke.failed"] = num(sm[2], /(\d+) failed/)
   out["smoke.notrun"] = num(sm[2], /(\d+) did not run/)
   out["smoke.when"] = sm[3]
-  out["open.smokeSum"] = `${out["smoke.passed"]} + ${out["smoke.failed"]} + ${out["smoke.notrun"]}`
-  out["open.smokeTotal"] = out["smoke.passed"] + out["smoke.failed"] + out["smoke.notrun"]
+  out["open.smokeSum"] =
+    `${out["smoke.passed"]} + ${out["smoke.failed"]} + ${out["smoke.notrun"]}`
+  out["open.smokeTotal"] =
+    out["smoke.passed"] + out["smoke.failed"] + out["smoke.notrun"]
   out["repro.smokeTotal"] = out["open.smokeTotal"]
   out["repro.actions"] = out["recipe.actions"]
-  out["mobile.passed"] = num(mo[2], /(\d+) passed/); out["mobile.when"] = mo[3]
+  out["mobile.passed"] = num(mo[2], /(\d+) passed/)
+  out["mobile.when"] = mo[3]
   out["openreplay.passed"] = num(or[2], /(\d+) passed/)
-  out["openreplay.skipped"] = num(or[2], /(\d+) skipped/); out["openreplay.when"] = or[3]
+  out["openreplay.skipped"] = num(or[2], /(\d+) skipped/)
+  out["openreplay.when"] = or[3]
   out["feunits.passed"] = num(fe[2], /(\d+) passed/)
-  out["feunits.files"] = num(fe[1], /\((\d+) files\)/); out["feunits.when"] = fe[3]
+  out["feunits.files"] = num(fe[1], /\((\d+) files\)/)
+  out["feunits.when"] = fe[3]
   out["backend.serviceSpecs"] = num(be[2], /service (\d+)\//)
   out["backend.serviceTotal"] = num(be[2], /service \d+\/(\d+)/)
   out["backend.capability"] = num(be[2], /capability (\d+)/)
-  out["backend.middleware"] = num(be[2], /middleware (\d+)/); out["backend.when"] = be[3]
+  out["backend.middleware"] = num(be[2], /middleware (\d+)/)
+  out["backend.when"] = be[3]
   if (num(jo[2], /(\d+) passed/) !== out["journey.expected"])
     throw new Error(
       `.claude/CLAUDE.md claims journey ${num(jo[2], /(\d+) passed/)} but results.json recorded ${
@@ -1557,14 +1839,17 @@ function rederive() {
     )
   const cu = claudeMd
     .replace(/\s+/g, " ")
-    .match(/coverage: \**(\d+) of (\d+) RPC declarations have a frontend caller/)
+    .match(
+      /coverage: \**(\d+) of (\d+) RPC declarations have a frontend caller/,
+    )
   if (!cu) throw new Error("the API-to-UI sentence moved in .claude/CLAUDE.md")
   out["claudemd.uncalled"] = Number(cu[2]) - Number(cu[1])
   out["claudemd.total"] = Number(cu[2])
 
   // I — the two code sites, located by a different anchor
   const ds = read(P.dragSpec).split(/\r?\n/)
-  out["open.dragLine"] = ds.findIndex((l) => /dragging a row saves the whole new order/.test(l)) + 1
+  out["open.dragLine"] =
+    ds.findIndex((l) => /dragging a row saves the whole new order/.test(l)) + 1
   out["open.endYLine"] = ds.findIndex((l) => /\bendY\b\s*=/.test(l)) + 1
   return out
 }
@@ -1575,7 +1860,9 @@ const back = read(OUT)
 const opens = (back.match(/<script\b/g) || []).length
 const closes = (back.match(/<\/script>/g) || []).length
 if (opens !== 1 || closes !== 1)
-  throw new Error(`expected exactly one script block, found ${opens} open / ${closes} close`)
+  throw new Error(
+    `expected exactly one script block, found ${opens} open / ${closes} close`,
+  )
 
 // No figure may have been escaped INTO the page as text. This is the shape a
 // stamped number takes after esc() has run over it, and it is invisible to the
@@ -1590,13 +1877,21 @@ if (leaked)
 
 const stamped = new Map()
 for (const m of back.matchAll(/data-claim="([^"]+)"\s+data-value="([^"]*)"/g))
-  stamped.set(m[1], m[2].replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"'))
+  stamped.set(
+    m[1],
+    m[2]
+      .replace(/&amp;/g, "&")
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"'),
+  )
 
 const truth = rederive()
 const problems = []
 for (const [id, shown] of stamped) {
   if (!(id in truth)) {
-    problems.push(`${id}: rendered ${shown} but the re-derivation has no value for it`)
+    problems.push(
+      `${id}: rendered ${shown} but the re-derivation has no value for it`,
+    )
     continue
   }
   if (String(truth[id]) !== String(shown))
@@ -1607,7 +1902,9 @@ for (const [id, shown] of stamped) {
    say about it" is the shape every silent-green bug in this repo has had. */
 for (const [id, v] of CLAIMS) {
   if (!(id in truth)) {
-    problems.push(`${id}: built ${v} but rederive() covers it nowhere — add it or drop the claim`)
+    problems.push(
+      `${id}: built ${v} but rederive() covers it nowhere — add it or drop the claim`,
+    )
     continue
   }
   if (!stamped.has(id) && String(truth[id]) !== String(v))
@@ -1622,20 +1919,56 @@ if (!idsIdentical)
 
 /* ── print what was embedded, the way splice-player.mjs does ─────────────── */
 const line = (k, v) => console.log("  " + String(k).padEnd(34) + String(v))
-console.log(`quality-report.html — ${(back.length / 1024).toFixed(1)} KiB, ${branch} @ ${headSha}`)
-line("recipe actions", `${actions.length} in ${actCount.size} acts, ${sections.length} banner sections`)
-line("  by kind", KINDS.map((k) => `${k.label} ${kindCount.get(k.key) || 0}`).join(", "))
+console.log(
+  `quality-report.html — ${(back.length / 1024).toFixed(1)} KiB, ${branch} @ ${headSha}`,
+)
+line(
+  "recipe actions",
+  `${actions.length} in ${actCount.size} acts, ${sections.length} banner sections`,
+)
+line(
+  "  by kind",
+  KINDS.map((k) => `${k.label} ${kindCount.get(k.key) || 0}`).join(", "),
+)
 line("  by priority", [...prioCount].map(([k, v]) => `${k} ${v}`).join(", "))
-line("  driver", `${grpcActions} gRPC, ${uiActions} browser, ${fileActions} fixture`)
+line(
+  "  driver",
+  `${grpcActions} gRPC, ${uiActions} browser, ${fileActions} fixture`,
+)
 line("  gates / todos", `${gateCount} / ${todoCount}`)
-line("  expected refusals", `${denialTotal} across ${errCount.size} status codes`)
-line("  reaches", `${recipeCovered.length} of ${declarations.length} declared RPCs, ${recipeServices.size} services`)
-line("journey run", `${results.stats.expected} passed, ${results.stats.unexpected} failed, ${results.stats.skipped} skipped (${runDay})`)
-line("  spec ids == recipe ids", idsIdentical ? `yes, all ${runIds.length}, same order` : "NO")
-line("mutations", `${manifest.length} entries — ${caught.length} with a witness, ${gaps.length} gaps`)
-line("  verdicts", [...verdictCount].map(([k, v]) => `${k} ${v}`).join(", ") + ` (${verifyDay})`)
-line("  gap clusters", majorGapClusters.map((c) => `${c.key} ${c.gaps}/${c.total}`).join(", ") || "none")
-line("API-to-UI", `${uncalledNow.length} of ${methodNames.size} method names uncalled; ${declarations.length} declarations`)
+line(
+  "  expected refusals",
+  `${denialTotal} across ${errCount.size} status codes`,
+)
+line(
+  "  reaches",
+  `${recipeCovered.length} of ${declarations.length} declared RPCs, ${recipeServices.size} services`,
+)
+line(
+  "journey run",
+  `${results.stats.expected} passed, ${results.stats.unexpected} failed, ${results.stats.skipped} skipped (${runDay})`,
+)
+line(
+  "  spec ids == recipe ids",
+  idsIdentical ? `yes, all ${runIds.length}, same order` : "NO",
+)
+line(
+  "mutations",
+  `${manifest.length} entries — ${caught.length} with a witness, ${gaps.length} gaps`,
+)
+line(
+  "  verdicts",
+  [...verdictCount].map(([k, v]) => `${k} ${v}`).join(", ") + ` (${verifyDay})`,
+)
+line(
+  "  gap clusters",
+  majorGapClusters.map((c) => `${c.key} ${c.gaps}/${c.total}`).join(", ") ||
+    "none",
+)
+line(
+  "API-to-UI",
+  `${uncalledNow.length} of ${methodNames.size} method names uncalled; ${declarations.length} declarations`,
+)
 line("suite table rows", suiteRows.map((r) => r.suite.split(" ")[0]).join(", "))
 line("figures stamped", `${stamped.size} (${CLAIMS.size} claims registered)`)
 

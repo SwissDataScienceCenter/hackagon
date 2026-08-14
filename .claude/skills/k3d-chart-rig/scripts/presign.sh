@@ -63,17 +63,17 @@ uriencode() { # value encode_slash(0|1)
     for ((i = 0; i < ${#s}; i++)); do
         c="${s:i:1}"
         case "$c" in
-            [a-zA-Z0-9._~-]) out+="$c" ;;
-            /) if [ "$slash" = 1 ]; then out+="%2F"; else out+="/"; fi ;;
-            *) out+="$(printf '%%%02X' "'$c")" ;;
+        [a-zA-Z0-9._~-]) out+="$c" ;;
+        /) if [ "$slash" = 1 ]; then out+="%2F"; else out+="/"; fi ;;
+        *) out+="$(printf '%%%02X' "'$c")" ;;
         esac
     done
     printf '%s' "$out"
 }
 
 sha256hex() { printf '%s' "$1" | openssl dgst -sha256 -r | awk '{print $1}'; }
-tohex()     { printf '%s' "$1" | od -An -tx1 | tr -d ' \n'; }
-hmachex()   { printf '%s' "$2" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$1" -r | awk '{print $1}'; }
+tohex() { printf '%s' "$1" | od -An -tx1 | tr -d ' \n'; }
+hmachex() { printf '%s' "$2" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$1" -r | awk '{print $1}'; }
 
 signing_key() { # datestamp -> hex
     local k
@@ -86,10 +86,12 @@ signing_key() { # datestamp -> hex
 canonical_uri() { # key
     local key="$1"
     if [ "$USE_PATH_STYLE" = 1 ]; then
-        if [ -z "$key" ]; then printf '/%s' "$(uriencode "$BUCKET" 0)"
+        if [ -z "$key" ]; then
+            printf '/%s' "$(uriencode "$BUCKET" 0)"
         else printf '/%s/%s' "$(uriencode "$BUCKET" 0)" "$(uriencode "$key" 0)"; fi
     else
-        if [ -z "$key" ]; then printf '/'
+        if [ -z "$key" ]; then
+            printf '/'
         else printf '/%s' "$(uriencode "$key" 0)"; fi
     fi
 }
@@ -99,7 +101,8 @@ canonical_uri() { # key
 # is added here because SigV4 requires it and because it is the one header a
 # proxy in front of the store rewrites.
 presign() {
-    local method="$1" key="$2" ttl="$3"; shift 3
+    local method="$1" key="$2" ttl="$3"
+    shift 3
     local amz_date datestamp scope uri raw_query
     amz_date="$(date -u +%Y%m%dT%H%M%SZ)"
     datestamp="$(date -u +%Y%m%d)"
@@ -137,23 +140,27 @@ presign() {
 # --- CLI ---------------------------------------------------------------
 main() {
     local direct=0
-    local verb="${1:-}"; shift || true
-    if [ "${1:-}" = "--direct" ]; then direct=1; shift; fi
+    local verb="${1:-}"
+    shift || true
+    if [ "${1:-}" = "--direct" ]; then
+        direct=1
+        shift
+    fi
 
     case "$verb" in
-        put)
-            local key="$1" ctype="$2" size="$3" ttl="${4:-300}"
-            presign PUT "$key" "$ttl" "content-type:$ctype" "content-length:$size"
-            ;;
-        get)
-            local key="$1" ttl="${2:-300}"
-            presign GET "$key" "$ttl"
-            ;;
-        *)
-            say "usage: presign.sh put [--direct] <key> <content-type> <size> [ttl]"
-            say "       presign.sh get [--direct] <key> [ttl]"
-            exit 2
-            ;;
+    put)
+        local key="$1" ctype="$2" size="$3" ttl="${4:-300}"
+        presign PUT "$key" "$ttl" "content-type:$ctype" "content-length:$size"
+        ;;
+    get)
+        local key="$1" ttl="${2:-300}"
+        presign GET "$key" "$ttl"
+        ;;
+    *)
+        say "usage: presign.sh put [--direct] <key> <content-type> <size> [ttl]"
+        say "       presign.sh get [--direct] <key> [ttl]"
+        exit 2
+        ;;
     esac
 
     if [ "$direct" = 1 ]; then

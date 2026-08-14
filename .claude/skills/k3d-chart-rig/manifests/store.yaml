@@ -37,12 +37,22 @@ spec:
       containers:
         - name: minio
           image: MINIO_IMAGE_PLACEHOLDER
-          args: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
+          args:
+            [
+              "server",
+              "/data",
+              "--address",
+              ":9000",
+              "--console-address",
+              ":9001",
+            ]
           env:
             - name: MINIO_ROOT_USER
-              valueFrom: { secretKeyRef: { name: store-credentials, key: accessKey } }
+              valueFrom:
+                { secretKeyRef: { name: store-credentials, key: accessKey } }
             - name: MINIO_ROOT_PASSWORD
-              valueFrom: { secretKeyRef: { name: store-credentials, key: secretKey } }
+              valueFrom:
+                { secretKeyRef: { name: store-credentials, key: secretKey } }
             # No browser console needed and one less surface to reason about.
             - name: MINIO_BROWSER
               value: "off"

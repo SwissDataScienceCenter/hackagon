@@ -133,7 +133,10 @@ export const EXTRAS: ExtraParticipant[] = castFile.extras.map((e) => ({
   password: castFile.password,
 }))
 
-export function credentials(p: { username: string; password: string }): Credentials {
+export function credentials(p: {
+  username: string
+  password: string
+}): Credentials {
   return { username: p.username, password: p.password }
 }
 
@@ -222,7 +225,10 @@ export const SEED_HACKATHONS: Record<
  */
 export interface DashboardExpectation {
   /** Rows that must appear under "Your hackathons", with the badge text. */
-  mine: { hackathon: SeedHackathonKey; badge: "Owner" | "Member" | "Waitlisted" }[]
+  mine: {
+    hackathon: SeedHackathonKey
+    badge: "Owner" | "Member" | "Waitlisted"
+  }[]
   /**
    * Fixture hackathons that must appear under "Other hackathons" — public, and
    * this persona is not in them. Fixture hackathons NOT listed here must be
@@ -244,7 +250,10 @@ export type Access = "ok" | "forbidden"
 
 export const SEED_EXPECTATIONS: Record<
   PersonaKey,
-  { dashboard: DashboardExpectation; memberView: Record<SeedHackathonKey, Access> }
+  {
+    dashboard: DashboardExpectation
+    memberView: Record<SeedHackathonKey, Access>
+  }
 > = {
   admin: {
     dashboard: {
