@@ -372,6 +372,14 @@ keycloak:
     # cluster while the app itself came up — a deployment serving the product
     # and not its login.
     ingressClass: ""
+    # -- Keycloak's public hostname. Empty derives `auth.{baseDomain}`, which is
+    # what every existing deployment gets. Set it when the app is NOT at
+    # `app.{baseDomain}` — otherwise Keycloak lands one label deeper than the
+    # product, and a one-label wildcard (Cloudflare's free Universal SSL is
+    # exactly that: apex plus one label, handshake failure below it) covers the
+    # app and not its login. `{baseDomain}` and `{releaseName}` substitute here
+    # the same way they do in `frontend.ingress.hosts`.
+    host: ""
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-production
     # -- TLS secret for the Keycloak host. Empty renders no `tls:` block at

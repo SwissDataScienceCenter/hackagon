@@ -2,13 +2,13 @@
 # Run a Cloudflare NAMED tunnel — a tunnel with a PERSISTENT hostname on a zone
 # you own, instead of a quick tunnel's throwaway *.trycloudflare.com.
 #
-#   cf-named-tunnel.sh up      <name> <fqdn> <network> <service-url>
-#   cf-named-tunnel.sh ensure  <name> <fqdn>            # Cloudflare side only
+#   cf-named-tunnel.sh up      <name> <fqdn> <network> <service-url> [fqdn…]
+#   cf-named-tunnel.sh ensure  <name> <fqdn> [fqdn…]    # Cloudflare side only
 #   cf-named-tunnel.sh stop    <name>
 #   cf-named-tunnel.sh status  [name]
 #   cf-named-tunnel.sh url     <name>                   # from the RUNNING container
 #   cf-named-tunnel.sh running <name>                   # exit 0 when it is
-#   cf-named-tunnel.sh destroy <name> <fqdn>            # tunnel + DNS + container
+#   cf-named-tunnel.sh destroy <name> <fqdn> [fqdn…]    # tunnel + DNS + container
 #   cf-named-tunnel.sh check                            # credentials + zone only
 #
 # e.g.  cf-named-tunnel.sh up hackagon hackagon.example.org \
@@ -21,6 +21,27 @@
 # rig came up or down. Per-rig tunnels are independent, they mirror the
 # quick-tunnel-per-rig design that is already here, and a rig that is down
 # simply has no tunnel rather than breaking the others'.
+#
+# ── SEVERAL HOSTNAMES, ONE RIG ───────────────────────────────────────────────
+#
+# The rule above is per RIG, not per hostname, and one rig can legitimately need
+# more than one public name: the k3d chart rig serves the app and Keycloak from
+# two host-based Ingresses on the same ingress controller, because the chart
+# routes them by Host. Those extra names take TRAILING ARGUMENTS and share the
+# ONE service URL — which is the whole point, since the thing behind the tunnel
+# is a single proxy that dispatches on Host itself. A second tunnel would be a
+# second container, a second thing to start and stop in step, and a second way
+# to leave half a rig public.
+#
+# Every hostname must be inside the same zone (the token can write nowhere
+# else), they all get their own proxied CNAME to the same tunnel, and `destroy`
+# takes the same list so no record outlives the tunnel it points at.
+#
+# ⚠ Cloudflare's free Universal SSL covers the apex and ONE label
+# (`example.org`, `a.example.org`) and nothing deeper. `a.b.example.org` gets no
+# certificate at the edge and fails the TLS handshake outright — measured, alert
+# 40, before anything was created. Pick sibling names, not nested ones, unless
+# the zone has Advanced Certificate Manager.
 #
 # ── WHAT RUNS, AND WITH WHICH CREDENTIAL ─────────────────────────────────────
 #
@@ -75,8 +96,10 @@ cfn_dir_docker() { # host path in the form docker.exe accepts
 # ── Cloudflare side ──────────────────────────────────────────────────────────
 # Create-or-reuse the tunnel, make sure we hold its credentials, point DNS at
 # it. Idempotent: run it as often as you like.
-cfn_ensure() { # <name> <fqdn>
-  local name="$1" fqdn="$2" dir tid secret token
+cfn_ensure() { # <name> <fqdn> [fqdn…]
+  local name="$1" fqdn="$2" dir tid secret token host
+  shift 2
+  local extras=("$@")
   dir="$(cfn_dir "$name")"
 
   cf_load || {
@@ -87,16 +110,18 @@ cfn_ensure() { # <name> <fqdn>
   cf_verify_token || return 1
   cf_resolve_zone || return 1
 
-  # The fqdn must be inside the zone the token can edit. Checked here because
+  # Every fqdn must be inside the zone the token can edit. Checked here because
   # the API's own error for this is a bare "record name is invalid".
-  case "$fqdn" in
-    *".$CLOUDFLARE_ZONE" | "$CLOUDFLARE_ZONE") ;;
-    *)
-      echo "error: '$fqdn' is not inside the zone '$CLOUDFLARE_ZONE'." >&2
-      echo "       The token is scoped to that zone and can write nowhere else." >&2
-      return 1
-      ;;
-  esac
+  for host in "$fqdn" "${extras[@]}"; do
+    case "$host" in
+      *".$CLOUDFLARE_ZONE" | "$CLOUDFLARE_ZONE") ;;
+      *)
+        echo "error: '$host' is not inside the zone '$CLOUDFLARE_ZONE'." >&2
+        echo "       The token is scoped to that zone and can write nowhere else." >&2
+        return 1
+        ;;
+    esac
+  done
 
   mkdir -p "$dir"
   cf_guard_gitignored "$dir/credentials.json" || return 1
@@ -138,37 +163,55 @@ cfn_ensure() { # <name> <fqdn>
     fi
   fi
 
-  cf_dns_point "$fqdn" "$tid" || return 1
+  for host in "$fqdn" "${extras[@]}"; do
+    cf_dns_point "$host" "$tid" || return 1
+  done
   echo "$tid" >"$dir/tunnel-id"
-  echo "$fqdn" >"$dir/hostname"
+  printf '%s\n' "$fqdn" "${extras[@]}" >"$dir/hostname"
 }
 
 # ── the ingress file ─────────────────────────────────────────────────────────
-# One hostname, one service, then an explicit 404. The catch-all matters: without
-# a final rule cloudflared refuses to start, and with a permissive one the tunnel
-# would answer for hostnames it was never given.
-cfn_write_config() { # <name> <fqdn> <service-url>
-  local name="$1" fqdn="$2" service="$3" dir tid
+# One rule per hostname, all pointing at the one service, then an explicit 404.
+# The catch-all matters: without a final rule cloudflared refuses to start, and
+# with a permissive one the tunnel would answer for hostnames it was never given.
+#
+# All hostnames share the service because the origin is a proxy that dispatches
+# on Host itself (caddy here, ingress-nginx for the k3d rig). cloudflared passes
+# the requested Host through unchanged, so the far end sees the name the browser
+# asked for and routes on it.
+cfn_write_config() { # <name> <fqdn> <service-url> [fqdn…]
+  local name="$1" fqdn="$2" service="$3" dir tid host
+  shift 3
   dir="$(cfn_dir "$name")"
   tid="$(cat "$dir/tunnel-id")"
-  cat >"$dir/config.yml" <<YAML
+  {
+    cat <<YAML
 # GENERATED by .claude/skills/lib/cf-named-tunnel.sh — do not edit by hand.
 # Mounted read-only at /etc/cloudflared inside the cloudflared container.
 tunnel: $tid
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
-  - hostname: $fqdn
+YAML
+    for host in "$fqdn" ${1+"$@"}; do
+      cat <<YAML
+  - hostname: $host
     service: $service
     originRequest:
-      # The origin is a plain-HTTP proxy on the compose network; TLS terminates
-      # at Cloudflare's edge. Nothing here speaks https, so no verification
-      # setting applies — this timeout is the only knob that has bitten us: a
-      # cold vite SSR can take ~19s and the default 30s is uncomfortably close.
+      # The origin is a plain-HTTP proxy on its rig's docker network; TLS
+      # terminates at Cloudflare's edge, and cloudflared is what puts
+      # \`X-Forwarded-Proto: https\` on the request the origin receives. Nothing
+      # here speaks https, so no verification setting applies — this timeout is
+      # the only knob that has bitten us: a cold vite SSR can take ~19s and the
+      # default 30s is uncomfortably close.
       connectTimeout: 30s
+YAML
+    done
+    cat <<YAML
   # Anything else reaching this tunnel is not ours. Say so rather than serving it.
   - service: http_status:404
 YAML
+  } >"$dir/config.yml"
 }
 
 # ── the container ────────────────────────────────────────────────────────────
@@ -199,12 +242,18 @@ cfn_stop() { # <name>
   fi
 }
 
-cfn_run() { # <name> <fqdn> <network> <service-url>
-  local name="$1" fqdn="$2" network="$3" service="$4" c dir_d
+cfn_run() { # <name> <fqdn> <network> <service-url> [fqdn…]
+  local name="$1" fqdn="$2" network="$3" service="$4" c dir_d all
+  shift 4
   c="$(cfn_container "$name")"
   dir_d="$(cfn_dir_docker "$name")"
+  # Every hostname this container serves, on ONE label. `cfn_url` still reads
+  # `hostname` (the primary) so nothing that asks "what is this rig's URL"
+  # changes; this one exists so `status` and a teardown can name them all.
+  all="$(printf '%s,' "$fqdn" ${1+"$@"})"
+  all="${all%,}"
 
-  cfn_write_config "$name" "$fqdn" "$service"
+  cfn_write_config "$name" "$fqdn" "$service" ${1+"$@"}
 
   docker network inspect "$network" >/dev/null 2>&1 || {
     echo "error: docker network '$network' does not exist — is that rig up?" >&2
@@ -217,6 +266,7 @@ cfn_run() { # <name> <fqdn> <network> <service-url>
     --network "$network" \
     --label "hackagon.tunnel.name=$name" \
     --label "hackagon.tunnel.hostname=$fqdn" \
+    --label "hackagon.tunnel.hostnames=$all" \
     --label "hackagon.tunnel.service=$service" \
     -v "$dir_d:/etc/cloudflared:ro" \
     "$CFN_IMAGE" \
@@ -357,33 +407,55 @@ cfn_probe() { # -> a 3-digit code, 000 when nothing answered
   printf '%s' "${out: -3}"
 }
 
-cfn_up() { # <name> <fqdn> <network> <service-url>
-  cfn_ensure "$1" "$2" || return 1
-  cfn_run "$1" "$2" "$3" "$4"
+cfn_up() { # <name> <fqdn> <network> <service-url> [fqdn…]
+  local name="$1" fqdn="$2" network="$3" service="$4"
+  shift 4
+  cfn_ensure "$name" "$fqdn" ${1+"$@"} || return 1
+  cfn_run "$name" "$fqdn" "$network" "$service" ${1+"$@"}
 }
 
-cfn_destroy() { # <name> <fqdn>
-  cfn_stop "$1"
+cfn_destroy() { # <name> <fqdn> [fqdn…]
+  local name="$1" host
+  shift
+  cfn_stop "$name"
   cf_load || return 1
   cf_resolve_zone || return 1
-  cf_dns_delete "$2" || true
-  local tid
-  tid="$(cf_tunnel_id "$1")" || return 1
-  if [ -n "$tid" ]; then
-    cf_tunnel_delete "$tid" && echo "    tunnel   deleted  $1 ($tid)"
-  else
-    echo "    tunnel   absent   $1"
+  # Every hostname handed in, plus anything the state dir remembers — a record
+  # this tooling created and then forgot about is exactly the stranded record
+  # `destroy` exists to prevent.
+  local -a hosts=("$@")
+  if [ -s "$(cfn_dir "$name")/hostname" ]; then
+    while IFS= read -r host; do
+      [ -n "$host" ] || continue
+      case " ${hosts[*]-} " in *" $host "*) continue ;; esac
+      hosts+=("$host")
+    done <"$(cfn_dir "$name")/hostname"
   fi
-  rm -rf "$(cfn_dir "$1")"
+  for host in ${hosts[0]+"${hosts[@]}"}; do
+    cf_dns_delete "$host" || true
+  done
+  local tid
+  tid="$(cf_tunnel_id "$name")" || return 1
+  if [ -n "$tid" ]; then
+    cf_tunnel_delete "$tid" && echo "    tunnel   deleted  $name ($tid)"
+  else
+    echo "    tunnel   absent   $name"
+  fi
+  rm -rf "$(cfn_dir "$name")"
 }
 
 cfn_status() {
-  local c host svc
+  local c host hosts svc
   local found=0
   for c in $(docker ps --format '{{.Names}}' | grep -E '^cf-named-' || true); do
     host="$(docker inspect "$c" --format '{{index .Config.Labels "hackagon.tunnel.hostname"}}' 2>/dev/null || true)"
+    hosts="$(docker inspect "$c" --format '{{index .Config.Labels "hackagon.tunnel.hostnames"}}' 2>/dev/null || true)"
     svc="$(docker inspect "$c" --format '{{index .Config.Labels "hackagon.tunnel.service"}}' 2>/dev/null || true)"
     printf '%-28s https://%-45s → %s\n' "$c" "$host" "$svc"
+    case "$hosts" in
+      "" | "$host") ;;
+      *) printf '%-28s   also %s\n' "" "${hosts#"$host",}" ;;
+    esac
     found=1
   done
   [ "$found" -eq 1 ] || echo "no named tunnels running"
@@ -431,6 +503,8 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       echo "  app         ${HACKAGON_HOSTNAME:-(unset)}"
       echo "  plausible   ${PLAUSIBLE_HOSTNAME:-(unset)}"
       echo "  openreplay  ${OPENREPLAY_HOSTNAME:-(unset)}"
+      echo "  k3d app     ${K3D_HOSTNAME:-(unset)}"
+      echo "  k3d auth    ${K3D_AUTH_HOSTNAME:-(unset)}"
       ;;
     -h | --help | "")
       sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'

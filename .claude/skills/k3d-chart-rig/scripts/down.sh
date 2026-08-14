@@ -2,7 +2,8 @@
 # Delete the cluster. One command, and it takes everything with it.
 #
 #   bash scripts/down.sh            # delete the cluster, keep .state/
-#   bash scripts/down.sh --purge    # …and the generated credentials/kubeconfig
+#   bash scripts/down.sh --purge    # …and the credentials, AND give the
+#                                   # public hostnames back to Cloudflare
 #   bash scripts/down.sh --stop     # stop the containers, keep the cluster
 #
 # There is nothing to preserve: the store is an emptyDir, postgres runs without
@@ -10,10 +11,29 @@
 # only so a fresh run is provably fresh.
 #
 # It touches nothing outside its own cluster: the dev stack's compose project,
-# its ports (3000/8081/8082/8180/15432/9000/9001/8010) and any tunnel are
-# untouched, because none of them is a k3d resource.
+# its ports (3000/8081/8082/8180/15432/9000/9001/8010) and the three tunnels
+# that serve it are untouched, because none of them is a k3d resource.
+#
+# ── THE ONE THING IT OWNS OUTSIDE THE CLUSTER ────────────────────────────────
+#
+# This rig's OWN tunnel (scripts/tunnel.sh) is different: its whole job is to
+# point two public hostnames at a cluster that is about to stop existing.
+#
+#   * the cloudflared container is STOPPED, always. Left running it would keep
+#     answering for hostnames whose origin has been deleted — Cloudflare would
+#     return 502 from a healthy-looking tunnel, which is the least informative
+#     failure available.
+#   * the DNS records and the tunnel are LEFT unless --purge. They are cheap,
+#     they make the next `tunnel.sh up` a no-op instead of a re-registration,
+#     and deleting records in a shared zone is not something a routine teardown
+#     should do quietly. With the tunnel stopped they answer Cloudflare's 1033
+#     ("tunnel not found"), which says what is actually true.
+#   * either way the exact give-up command is PRINTED, every time, naming both
+#     hostnames. A hostname you have forgotten you own is the failure mode here.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+# shellcheck source=../../lib/cf-named-tunnel.sh
+. "$REPO_ROOT/.claude/skills/lib/cf-named-tunnel.sh"
 
 PURGE=0; STOP=0
 for arg in "$@"; do
@@ -23,6 +43,27 @@ for arg in "$@"; do
         *) die "unknown flag $arg" ;;
     esac
 done
+
+# --- the tunnel, before the cluster it points at ------------------------
+# Before, not after: between deleting the cluster and stopping cloudflared the
+# public URL is a 502, and that window is exactly what someone watching the link
+# would misread as a broken tunnel.
+TUNNEL_NAME="${RIG_TUNNEL_NAME:-hackagon-k3d}"
+TUNNEL_HOSTS=()
+if cf_configured; then
+    cf_load >/dev/null 2>&1 || true
+    # Same fallbacks as tunnel.sh, and derived from the zone for the same
+    # reason: no tracked file in this repository names a hostname.
+    TUNNEL_HOSTS=("${K3D_HOSTNAME:-k3d.${CLOUDFLARE_ZONE:-}}"
+        "${K3D_AUTH_HOSTNAME:-k3d-auth.${CLOUDFLARE_ZONE:-}}")
+fi
+if cfn_running "$TUNNEL_NAME"; then
+    step "stopping this rig's tunnel"
+    cfn_stop "$TUNNEL_NAME"
+elif [ -n "$(docker ps -aq -f "name=^$(cfn_container "$TUNNEL_NAME")\$" 2>/dev/null)" ]; then
+    cfn_stop "$TUNNEL_NAME"
+fi
+rm -f "$MODE_ENV"
 
 if ! cluster_exists; then
     ok "cluster '$CLUSTER' is already gone"
@@ -40,9 +81,27 @@ fi
 
 if [ "$PURGE" = 1 ]; then
     rm -f "$KUBECONFIG_FILE" "$GEN_VALUES" "$REALM_FILE" "$SECRETS_ENV" \
-          "$TLS_CERT" "$TLS_KEY"
+          "$TLS_CERT" "$TLS_KEY" "$STATE_DIR/values.tunnel.yaml"
     rm -f "$STATE_DIR"/*.html "$STATE_DIR"/*.txt "$STATE_DIR"/*.body 2>/dev/null || true
     ok "purged $STATE_DIR"
+    if [ "${#TUNNEL_HOSTS[@]}" -gt 0 ]; then
+        step "giving the public hostnames back"
+        cfn_destroy "$TUNNEL_NAME" "${TUNNEL_HOSTS[@]}" || true
+    fi
+fi
+
+# --- say what is left, by name -----------------------------------------
+# Printed whether or not a tunnel was ever created here: "there is nothing to
+# clean up" and "you were never told" look the same from the outside, and the
+# second is how a record survives a laptop.
+if [ "$PURGE" != 1 ] && [ "${#TUNNEL_HOSTS[@]}" -gt 0 ]; then
+    say ""
+    say "  Still registered on Cloudflare (nothing serves them now — 1033):"
+    say "    ${TUNNEL_HOSTS[0]}"
+    say "    ${TUNNEL_HOSTS[1]}"
+    say "  Give them up:"
+    say "    bash $HERE/tunnel.sh destroy"
+    say "    bash $HERE/down.sh --purge        # same thing, with the credentials"
 fi
 
 say ""

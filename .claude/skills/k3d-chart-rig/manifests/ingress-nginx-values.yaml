@@ -44,6 +44,31 @@ controller:
   # enabled would let a rig-only annotation stand in for a chart-only one.
   allowSnippetAnnotations: false
 
+  config:
+    # THE SCHEME HAS TO SURVIVE A HOP THIS CONTROLLER DID NOT TERMINATE.
+    #
+    # ingress-nginx always sends `X-Forwarded-Proto: $pass_access_scheme`
+    # upstream, and by default `$pass_access_scheme` is `$scheme` — the scheme of
+    # the connection IT accepted. Behind a tunnel that terminates TLS at
+    # Cloudflare's edge and speaks plain http to this controller, that is `http`,
+    # so the frontend would be told `http` on a request the browser made over
+    # https: it would advertise an http callback URL, drop the `__Secure-` cookie
+    # prefix, and 403 the sign-in POST whose `Origin` is https. Every page would
+    # still answer 200.
+    #
+    # With this on, the map becomes `default $http_x_forwarded_proto; '' $scheme`
+    # — so cloudflared's header is believed when present and the connection's own
+    # scheme is used when it is not. That second half is why this is safe to
+    # leave on in the plain `*.localhost` mode: nothing sends the header there,
+    # the fallback is exactly the previous behaviour, and `verify.sh` still
+    # passes unchanged.
+    #
+    # ⚠ It does mean any client that can reach this controller directly can claim
+    # to be on https. That is the standard trade for running behind a proxy and
+    # it is why this rig binds loopback only; a deployment pairs it with
+    # `proxy-real-ip-cidr` scoped to the proxies it actually has.
+    use-forwarded-headers: "true"
+
   resources:
     requests:
       cpu: 50m

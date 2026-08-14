@@ -76,10 +76,31 @@ Frontend host with substitution
 {{- end }}
 
 {{/*
-Keycloak host with substitution
+Keycloak host with substitution.
+
+`auth.{baseDomain}` unless `keycloak.ingress.host` names one, and the override
+exists because the derived name is a level DEEPER than the app's whenever the
+app is not itself at `app.{baseDomain}` — `frontend.ingress.hosts[].host` has
+always been free-form, this was not.
+
+That extra label is not cosmetic. A one-label wildcard certificate covers
+`app.example.org` and not `auth.app.example.org`; Cloudflare's free Universal
+SSL is exactly such a certificate (apex + one label, nothing deeper) and answers
+a handshake for anything below it with TLS alert 40 — measured against the edge,
+not deduced. A deployment fronted that way could therefore
+publish the product on a certificate that does not cover its login, which is the
+same shape as the hard-coded ingressClass bug this file's Keycloak Ingress
+already carries a note about: the app works, the sign-in does not.
+
+Same `{baseDomain}` / `{releaseName}` substitution as every other host value, so
+one string can stay portable across environments.
 */}}
 {{- define "hackagon.keycloakHost" -}}
+{{- if .Values.keycloak.ingress.host -}}
+{{- .Values.keycloak.ingress.host | replace "{baseDomain}" .Values.baseDomain | replace "{releaseName}" .Release.Name }}
+{{- else -}}
 {{- printf "auth.%s" (include "hackagon.baseDomain" .) | replace "{baseDomain}" .Values.baseDomain }}
+{{- end }}
 {{- end }}
 
 {{/*

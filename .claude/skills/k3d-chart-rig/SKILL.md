@@ -14,6 +14,17 @@ bash .claude/skills/k3d-chart-rig/scripts/verify.sh   # 37 checks, ~2 min
 bash .claude/skills/k3d-chart-rig/scripts/down.sh     # deletes the cluster
 ```
 
+…and, optionally, the same cluster on a **real public hostname with a real
+certificate** (needs the Cloudflare credentials the other tunnels use):
+
+```bash
+bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh up       # ~2 min
+bash .claude/skills/k3d-chart-rig/scripts/verify.sh          # the same 37, over https
+bash .claude/skills/k3d-chart-rig/scripts/browser-check.sh   # 13 checks a browser must answer
+bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh down     # back to *.localhost
+bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh destroy  # …and give the names up
+```
+
 **Opt-in, loopback-only, and it imports development accounts** — see the warning
 at the bottom before running it on a machine anyone else can reach.
 
@@ -35,11 +46,16 @@ scripts/lib.sh      names, ports, hostnames, tool wrappers, path translation
 scripts/tools.sh    downloads pinned k3d / helm / kubectl into bin/ (gitignored)
 scripts/up.sh       cluster → ingress-nginx → CoreDNS → store → secrets → helm
 scripts/install.sh  just the `helm upgrade`, for iterating on the chart
-scripts/verify.sh   the 37 checks
+scripts/verify.sh   the 37 checks — in EITHER mode
 scripts/presign.sh  SigV4 presigner mirroring internal/storage/sigv4.go
+scripts/tunnel.sh   the public-https mode: up / down / destroy / status
+scripts/browser-check.sh + browser-login.mjs   a real browser, the 13 checks
+                    that need one (see "Real HTTPS", below)
 scripts/down.sh     delete (or --stop, or --purge)
 manifests/          ingress-nginx values · the test store · the negative control
 helm-chart/values.k3d.yaml   the test values (TRACKED, and carries no secret)
+.state/values.tunnel.yaml    the public-https overlay (GENERATED, gitignored —
+                    it names a hostname, and nothing tracked ever does)
 ```
 
 ## Ports it claims on the host
@@ -50,9 +66,13 @@ helm-chart/values.k3d.yaml   the test values (TRACKED, and carries no secret)
 | **8443** | ingress-nginx https — Keycloak only | " |
 | **6551** | k3s apiserver, bound to `127.0.0.1` | " |
 
+The public-https mode claims **no further host port**: cloudflared joins the
+`k3d-hackagon` docker network and dials the load balancer container directly, so
+the tunnel adds a container and nothing that any other rig could collide with.
+
 Nothing else is published, nothing binds `0.0.0.0` except the two ingress ports
-(Docker's default), and the compose project, the tunnels and `~/.kube/config`
-are untouched — k3d is called with `--kubeconfig-update-default=false` and every
+(Docker's default), and the compose project, the dev stack's three tunnels and
+`~/.kube/config` are untouched — k3d is called with `--kubeconfig-update-default=false` and every
 wrapper points at the rig's own `.state/kubeconfig.yaml`.
 
 ## What it costs
@@ -119,9 +139,153 @@ callback URLs, issues `__Secure-` cookies the browser will not send back, and
 login dies — with every page still answering 200. That is exactly what happened
 here, and it is what `frontend.protocolHeader` now prevents.
 
+**That argument has since been checked from the other side, and it held.**
+`scripts/tunnel.sh` runs the same cluster behind real edge-terminated TLS: over
+https, removing `protocolHeader` breaks nothing at all, because the guess is
+right by accident. Which is exactly the state this mode exists not to be in.
+**Keep both.**
+
+## …and a second mode with REAL https, which is the other half
+
+`scripts/tunnel.sh up` publishes the SAME cluster through a **named Cloudflare
+tunnel** on a zone we own. Nothing is simulated: DNS is public, the certificate
+is the zone's real one, and a browser verifies it.
+
+```
+browser ──https──▶ Cloudflare edge ──tunnel──▶ cloudflared ──http──▶
+                   ingress-nginx :8090 ──▶ frontend · Keycloak · the store
+```
+
+**TLS terminates at the edge and the origin stays plain http.** That is not a
+shortcut, it is the shape a deployment behind any TLS-terminating proxy has, and
+it is the only shape in which `frontend.protocolHeader` has an input: cloudflared
+is what puts `X-Forwarded-Proto: https` on the request the cluster receives.
+
+**Two hostnames, one tunnel.** The chart routes the app and Keycloak by HOST on
+two separate Ingresses, so there is no single name that reaches both.
+
+| | |
+| --- | --- |
+| app | `k3d-hackagon.example.org` |
+| Keycloak | `k3d-auth-hackagon.example.org` |
+| origin | `http://k3d-hackagon-serverlb:8090` on the `k3d-hackagon` docker network |
+
+⚠ **Both names are ONE label deep and that is a constraint, not a style.**
+Cloudflare's free Universal SSL covers the apex and one label and nothing below
+it. Measured against the edge before any record was created: SNI
+`auth.k3d-hackagon.example.org` gets **TLS alert 40, handshake
+failure**, while a one-label sibling gets the zone's certificate. A browser
+reads that as a broken site, not as a missing certificate.
+
+**The port property is REPLACED, not dropped.** In the localhost mode the
+controller listens on 8090 in-cluster as well as on the host so that one issuer
+string is true from both sides. A public https URL names no port at all, so the
+replacement is stronger: the frontend POD resolves the same public hostname
+through public DNS and reaches Keycloak the way the browser does — out to
+Cloudflare and back down the tunnel, over the same real certificate. There is one
+URL and one path to it, so there is nothing left to disagree. Measured from
+inside the cluster before this was built: a pod resolves and reaches
+Cloudflare-proxied names over IPv4 in ~290 ms.
+
+That also **removes `NODE_TLS_REJECT_UNAUTHORIZED=0`**, the line values.k3d.yaml
+calls the worst in the file. It is there because the frontend has to accept the
+self-signed Keycloak certificate; on a real one it does not, so the overlay sets
+`frontend.extraEnv: []` and the pod runs with node's trust store intact.
+
+### What a browser answers and curl cannot
+
+`browser-check.sh` (13 checks, Firefox, driven inside the devcontainer where the
+e2e suite's Playwright already lives). It exists for one reason: **`__Secure-` is
+a rule about the USER AGENT.** A browser must refuse to store a `__Secure-`
+cookie that did not arrive over a secure connection. curl implements no such
+rule — it would keep and replay that cookie over plain http — so a green curl
+login is equally consistent with the prefix working and with it being ignored.
+
+Observed, signing alice in through the public URL: the callback sets
+`__Secure-authjs.session-token` (`Secure; HttpOnly; SameSite=Lax`), Firefox
+stores it, no unprefixed twin is set beside it, `/auth/session` fetched from the
+page returns alice and a Keycloak access token, and it survives a full page load.
+On the `*.localhost` mode `cookies.useSecure` is false and none of that is
+reachable.
+
+### The chain, broken and put back
+
+Three experiments, because a fix you can break and restore is a fix you have
+proven. All three are single commands and all three were run.
+
+| change | advertised origin through the tunnel | sign-in POST |
+| --- | --- | --- |
+| baseline | `https://k3d-sdsc-hackathons…` | 302 |
+| ingress-nginx `use-forwarded-headers: false` | `http://k3d-sdsc-hackathons…` | **403** |
+| chart `frontend.protocolHeader: ""` | `https://k3d-sdsc-hackathons…` | 302 |
+
+The 403's body is SvelteKit's own `Cross-site POST form submissions are
+forbidden`: the app computed an http origin, the browser sent an https `Origin`,
+and the CSRF check refused them. Every page still answered 200.
+
+**And the third row is the honest result: under real https, removing
+`protocolHeader` breaks nothing.** adapter-node's unconfigured guess is the
+literal string `https`, which is correct here by accident — which is precisely
+why the app is on plain http in the default mode, and why that asymmetry is
+worth keeping. What is load-bearing over https is the header being TRUE, and
+`protocolHeader` is what makes the scheme observed rather than guessed.
+
+The cheapest proof that it is READ at all needs no restart and no downtime —
+**same pod, same Host header, one hop apart**:
+
+```
+through the tunnel (cloudflared sends X-Forwarded-Proto: https)
+  "callbackUrl":"https://k3d-hackagon.example.org/auth/callback/keycloak"
+loopback to the same ingress, no X-Forwarded-Proto
+  "callbackUrl":"http://k3d-hackagon.example.org:8090/auth/callback/keycloak"
+```
+
+With `protocolHeader` removed the second line becomes `https://…:8090` — the
+guess, on an origin nothing serves. That is the original bug, reproduced.
+
+### Teardown, and what it refuses to leave behind
+
+- `tunnel.sh down` — stops cloudflared, reinstalls the `*.localhost` values,
+  puts the Keycloak client's redirect URIs back, deletes `.state/mode.env`, and
+  **prints both hostnames and the give-up command**.
+- `tunnel.sh destroy` — the above plus the tunnel, its credentials file and both
+  CNAMEs.
+- `down.sh` **stops the tunnel BEFORE deleting the cluster**, always. The order
+  matters: in between, the public URL is a 502 from a healthy-looking tunnel,
+  which is the least informative failure available. It leaves the DNS records
+  (they are cheap, they make the next `up` a no-op, and deleting records in a
+  shared zone is not a thing a routine teardown should do quietly) — with the
+  tunnel stopped they answer Cloudflare's 1033, "tunnel not found", which is
+  true. `down.sh --purge` destroys them.
+- Nothing tracked ever carries the hostname: the overlay is generated into
+  gitignored `.state/`, and the names live in the same gitignored
+  `.claude/skills/cloudflare-tunnel/.env` the other three rigs read.
+
+`tunnel.sh up` is idempotent — the second run reuses the tunnel and reports
+`DNS ok` for both records rather than rewriting them.
+
+### Two traps this mode has, both about DNS and neither about the tunnel
+
+**A probe run BEFORE the record exists poisons the local resolver for the zone's
+negative TTL** — 1800 s on `example.org`. `tunnel.sh status` asks, so the very
+first status call on a name you are about to create costs you half an hour of
+`NXDOMAIN` on that machine while the record serves perfectly everywhere else.
+`lib.sh` answers it by asking Cloudflare over DoH and pinning `--resolve` for
+curl; SNI and the certificate check are untouched, so the pin chooses an edge and
+nothing more.
+
+**The devcontainer's network answers AAAA-only with no IPv6 route out** (the same
+fault `.claude/CLAUDE.md` records for the dev tunnels): `getent hosts` returns
+two v6 addresses, none reachable, and Firefox fails in 3 ms with
+`NS_ERROR_UNKNOWN_HOST`. `browser-check.sh` pins `/etc/hosts` inside the
+container from a DoH-resolved A record and removes it again on exit.
+Measured on the way: `network.dns.disableIPv6` **is not enough on its own** —
+it stops the browser preferring v6, and here there is no A record to fall back
+to, so the failure is identical.
+
 ## What it found
 
-Five things, all in `helm-chart/`, all fixed here, none of which the rendered
+Six things, all in `helm-chart/`, all fixed here, none of which the rendered
 manifest showed.
 
 1. **`templates/keycloak-ingress.yaml` hard-coded `ingressClassName:
@@ -155,6 +319,19 @@ manifest showed.
    and with it the route does answer 503 exactly as the comment predicted. A
    cluster believed to have blocked ExternalName that way has not.
 
+6. **Keycloak's hostname was hard-coded one label deeper than the app's.**
+   `frontend.ingress.hosts[].host` has always been free-form; `hackagon.keycloakHost`
+   was `auth.{baseDomain}` with no override, so putting the app at
+   `k3d-sdsc-hackathons.example.org` forced Keycloak to
+   `auth.k3d-sdsc-hackathons.example.org`. **A one-label wildcard certificate
+   covers the first and not the second** — and Cloudflare's free Universal SSL is
+   exactly such a certificate, answering the deeper name with TLS alert 40. So a
+   deployment fronted that way publishes the product on a certificate that does
+   not cover its login: the same shape as finding 1, from a different cause.
+   `keycloak.ingress.host` now overrides it, defaulting to the old derivation, so
+   no existing deployment changes. **This is the only chart change real HTTPS
+   needed** — everything else about the https mode is configuration.
+
 Three more are recorded but deliberately **not** fixed — one is an arguable
 design call and two are cosmetic:
 
@@ -177,6 +354,18 @@ design call and two are cosmetic:
   subchart as `name` / `username`. The two ignored keys happen to carry the same
   strings as the subchart's defaults, so it works by coincidence.
   `keycloak.persistence` is ignored outright — the subchart has no such value.
+
+- **`hackagon.frontendHost` — the host the realm ConfigMap rewrites the client's
+  redirect URIs to — is `app.{baseDomain}` and ignores
+  `frontend.ingress.hosts[].host` entirely.** Set the app's host to anything
+  else and the realm is imported allowing redirects to a hostname that does not
+  exist; Keycloak then answers the login with `Invalid parameter: redirect_uri`,
+  which names the parameter and not the mistake. Found while wiring the https
+  mode, and NOT fixed here because this rig cannot observe the failure — `up.sh`
+  rewrites the realm itself before handing it to the chart, so the chart's own
+  replaces are already no-ops, and `tunnel.sh` sets the URIs on the running
+  Keycloak (a realm imports ONCE, so an upgrade could not change them anyway).
+  Same family as finding 6: one host value free-form, its partner derived.
 
 ## What the checks actually check
 
@@ -235,6 +424,22 @@ export: **alice, bob, charles and hackagon-admin, all with the password
 `aliceandbob`**, all with `emailVerified` and no password policy. It is imported
 because the login round-trip has to sign somebody in, and inventing a second
 realm would test a realm nobody deploys. `--no-realm` skips it.
+
+### ⚠⚠ …and `tunnel.sh up` PUBLISHES that realm to the internet
+
+Everything above is written on the assumption that the rig binds loopback only.
+**`scripts/tunnel.sh up` is the one thing here that breaks it**, and the
+consequence deserves saying plainly: while the tunnel is up, anyone who learns
+the hostname can sign in as **alice, bob, charles or hackagon-admin with the
+password `aliceandbob`** — the last of those being a global Admin. There is no
+authentication in front of the tunnel; a Cloudflare quick-tunnel-style obscure
+name is not one either, and these names are guessable by design.
+
+Treat a tunnelled cluster as a demo you are watching, not as something to leave
+running. `tunnel.sh down` is one command and `down.sh` stops the tunnel before it
+deletes anything. If it must live longer than a session, put Cloudflare Access in
+front of the hostnames or import a realm that is not the development export
+(`up.sh --no-realm`, then create the accounts you actually want).
 
 That is why this rig is opt-in and why it binds loopback only. Nothing it
 generates may be copied anywhere: `helm-chart/values.k3d.yaml` is tracked and

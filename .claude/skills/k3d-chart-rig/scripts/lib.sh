@@ -37,6 +37,26 @@ BASE_DOMAIN="${RIG_BASE_DOMAIN:-hackagon.localhost}"
 APP_HOST="app.$BASE_DOMAIN"
 AUTH_HOST="auth.$BASE_DOMAIN"
 
+# --- which mode the cluster is currently installed in -------------------
+# `local` (the default) is everything above: *.localhost, loopback, plain http
+# for the app. `tunnel` is the same cluster published through a NAMED Cloudflare
+# tunnel on a zone we own — real hostnames, real certificates, TLS terminated at
+# the edge, plain http to the origin. See scripts/tunnel.sh.
+#
+# The mode is read from a file the installer WRITES, not inferred from whether a
+# tunnel happens to be running: which URLs the release is configured for is a
+# property of the last `helm upgrade`, and a container can be stopped without
+# that changing. A stopped tunnel in tunnel mode is a rig whose public URL is
+# down — which is what it should report, rather than quietly measuring a
+# different URL that would pass.
+MODE_ENV="$STATE_DIR/mode.env"
+RIG_MODE="${RIG_MODE:-}"
+if [ -z "$RIG_MODE" ] && [ -f "$MODE_ENV" ]; then
+    # shellcheck disable=SC1090
+    . "$MODE_ENV"
+fi
+RIG_MODE="${RIG_MODE:-local}"
+
 # --- host ports this rig claims ---------------------------------------
 # Deliberately clear of everything the dev stack publishes:
 #   3000 backend · 8081 frontend (vite) · 8082 frontend (built) · 8180 keycloak
@@ -71,6 +91,69 @@ API_PORT="${RIG_API_PORT:-6551}"      # k3s apiserver
 # was added for, and this is where it is observed.
 APP_URL="http://$APP_HOST:$HTTP_PORT"
 AUTH_URL="https://$AUTH_HOST:$HTTPS_PORT"
+
+# --- tunnel mode overrides ---------------------------------------------
+# The one thing the localhost mode cannot do: a REAL certificate. Cloudflare
+# terminates TLS at its edge and cloudflared speaks plain http to the ingress
+# controller, so the origin is unencrypted and `X-Forwarded-Proto: https` is the
+# only thing that tells the app what the browser actually used. That is
+# production's shape, and it is what `frontend.protocolHeader` is for.
+#
+# THE PORT PROPERTY IS REPLACED, NOT DROPPED. In localhost mode the controller
+# listens on 8090 in-cluster as well as on the host so that ONE issuer string is
+# true from both sides. A public https URL names no port at all, so the
+# replacement is stronger: the frontend POD resolves the same public hostname
+# through public DNS and reaches it the same way the browser does — out to
+# Cloudflare and back down the tunnel — over the same real certificate. There is
+# one URL and one path to it, so there is nothing left to disagree.
+
+# The loopback URL is kept under its own name in BOTH modes. Two callers need
+# it while tunnel mode is on: the Keycloak client's redirect URIs, which stay
+# valid for both origins so switching modes cannot lock anyone out, and the
+# `localcurl` control below.
+LOCAL_APP_HOST="app.$BASE_DOMAIN"
+LOCAL_APP_URL="http://$LOCAL_APP_HOST:$HTTP_PORT"
+
+if [ "$RIG_MODE" = "tunnel" ]; then
+    APP_HOST="${RIG_APP_HOST:?tunnel mode needs RIG_APP_HOST (scripts/tunnel.sh writes it)}"
+    AUTH_HOST="${RIG_AUTH_HOST:?tunnel mode needs RIG_AUTH_HOST (scripts/tunnel.sh writes it)}"
+    APP_URL="https://$APP_HOST"
+    AUTH_URL="https://$AUTH_HOST"
+fi
+
+# --- when THIS machine cannot look the public name up ------------------
+# Two states produce it and neither is a broken tunnel: the LAN resolver here
+# answers AAAA-only for these names on a network with no IPv6 route out (written
+# up in .claude/CLAUDE.md), and a resolver that was asked for the name BEFORE the
+# record existed caches the NXDOMAIN for minutes afterwards — which is every
+# first run, because `tunnel.sh status` asks.
+#
+# So: ask Cloudflare over DoH and pin the connection to the address it gives.
+# This changes WHICH EDGE is dialled and nothing else — SNI is still the real
+# hostname and the certificate is still verified, so the thing this mode exists
+# to prove is untouched. `-k` would be the shortcut that throws it away.
+RIG_RESOLVE_ARGS="${RIG_RESOLVE_ARGS:-}"
+rig_pin_edge() {
+    [ "$RIG_MODE" = "tunnel" ] || return 0
+    [ -z "$RIG_RESOLVE_ARGS" ] || return 0
+    local h ip
+    for h in "$APP_HOST" "$AUTH_HOST"; do
+        ip="$(curl -sS --max-time 10 "https://1.1.1.1/dns-query?name=$h&type=A" \
+            -H "accept: application/dns-json" 2>/dev/null |
+            tr ',' '\n' | grep -oE '"data":"[0-9.]+"' | head -1 |
+            sed 's/.*:"//;s/"//')" || true
+        [ -n "$ip" ] && RIG_RESOLVE_ARGS="$RIG_RESOLVE_ARGS --resolve $h:443:$ip"
+    done
+    [ -n "$RIG_RESOLVE_ARGS" ] || return 1
+}
+# Only when the machine actually needs it: a resolver that works must be left to
+# work, or the pin would hide a genuinely dead record.
+if [ "$RIG_MODE" = "tunnel" ] && [ -z "$RIG_RESOLVE_ARGS" ]; then
+    if [ "${RIG_RESOLVE_V4:-0}" = 1 ] ||
+        ! curl -sS -o /dev/null --max-time 8 "https://$APP_HOST/" 2>/dev/null; then
+        rig_pin_edge || true
+    fi
+fi
 
 # --- pinned toolchain --------------------------------------------------
 K3D_VERSION="${RIG_K3D_VERSION:-v5.8.3}"
@@ -154,11 +237,35 @@ helm()    { MSYS_NO_PATHCONV=1 KUBECONFIG="$(winpath "$KUBECONFIG_FILE")" "$BIN_
 #   -k         the Keycloak certificate is minted by up.sh and signed by
 #              nothing. Scoped to this function so it can never leak into a
 #              call that ought to be verifying a real chain.
+#
+# In TUNNEL mode neither flag is used, and their absence is the assertion: the
+# hostname is looked up in public DNS and the certificate is verified against the
+# system trust store. `-k` there would throw away the only thing this mode adds.
+# (`RIG_RESOLVE_V4=1` pins both names to a DoH-resolved Cloudflare IPv4 for the
+# network described in .claude/CLAUDE.md, which answers AAAA-only with no v6
+# route out. It still verifies the chain — it only chooses the edge.)
 rigcurl() {
+    if [ "$RIG_MODE" = "tunnel" ]; then
+        curl ${RIG_RESOLVE_ARGS:+$RIG_RESOLVE_ARGS} \
+             --max-time "${RIG_CURL_TIMEOUT:-30}" "$@"
+        return
+    fi
     curl --resolve "$APP_HOST:$HTTP_PORT:127.0.0.1" \
          --resolve "$AUTH_HOST:$HTTPS_PORT:127.0.0.1" \
          --resolve "$APP_HOST:$HTTPS_PORT:127.0.0.1" \
          -k --max-time "${RIG_CURL_TIMEOUT:-30}" "$@"
+}
+
+# Reach the ingress controller DIRECTLY on loopback, presenting whatever Host
+# the public name is. Same pod, same release, same nginx — the ONLY difference
+# from a tunnelled request is that no `X-Forwarded-Proto` arrives. That makes it
+# the positive control for the header chain: if the app answers differently to
+# these two, the scheme is being READ rather than assumed.
+localcurl() { # <host> <path> [curl args…]
+    local host="$1" path="$2"
+    shift 2
+    curl --resolve "$host:$HTTP_PORT:127.0.0.1" \
+         --max-time "${RIG_CURL_TIMEOUT:-30}" "$@" "http://$host:$HTTP_PORT$path"
 }
 
 cluster_exists() { k3d cluster list -o json 2>/dev/null | grep -q "\"name\":\"$CLUSTER\""; }
