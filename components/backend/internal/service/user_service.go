@@ -279,6 +279,10 @@ func (s *UserService) userWithRoles(u *ent.User) (*ents.User, error) {
 // protoRoleToCasbin maps the wire enum onto a casbin role. Owner and Member are
 // per-hackathon and deliberately unmappable here — AddGlobalRole refuses them
 // too, so a mistake is caught twice.
+//
+// UNSPECIFIED (and any future value) is deliberately unmappable.
+//
+//nolint:exhaustive // already falls into default, the correct answer this function documents
 func protoRoleToCasbin(r ents.GlobalRole) (m.Role, bool) {
 	switch r {
 	case ents.GlobalRole_GLOBAL_ROLE_ADMIN:

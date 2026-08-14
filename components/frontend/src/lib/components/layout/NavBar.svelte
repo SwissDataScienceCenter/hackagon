@@ -208,6 +208,10 @@
                  One label whoever is asking, signed in or out. A word that
                  renames itself once you have an account is the same bug as one
                  that re-points itself. -->
+            <!-- Block-scoped rather than -next-line: the anchor spans several
+                 lines, so the rule reports on the href line, not the tag line
+                 a -next-line comment would cover. -->
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
             <a
                 href="/hackathon"
                 aria-current={onHackathons ? 'page' : undefined}
@@ -217,6 +221,7 @@
                 <Compass class="h-4 w-4 shrink-0" aria-hidden="true" />
                 All Hackathons
             </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
         </nav>
 
         <div class="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-3">
@@ -252,6 +257,10 @@
                      SidebarUserFooter version of this link lives, is not mounted
                      by any route, so without this entry /account exists and
                      nothing reaches it. -->
+                <!-- Block-scoped rather than -next-line: the anchor spans several
+                     lines, so the rule reports on the href line, not the tag line
+                     a -next-line comment would cover. -->
+                <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
                 <a
                     href="/account"
                     title="Your account"
@@ -260,6 +269,7 @@
                 >
                     <UserCog class="h-4 w-4" />
                 </a>
+                <!-- eslint-enable svelte/no-navigation-without-resolve -->
                 <!-- Desktop only. Below md it moves into the panel, and the width
                      that frees is what keeps the bar from overflowing at 320px. -->
                 <button
@@ -326,6 +336,10 @@
                     </span>
                 </a>
             {/if}
+            <!-- Block-scoped rather than -next-line: the anchor spans several
+                 lines, so the rule reports on the href line, not the tag line
+                 a -next-line comment would cover. -->
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
             <a
                 href="/hackathon"
                 aria-current={onHackathons ? 'page' : undefined}
@@ -337,10 +351,12 @@
                     <span class={ROW_HINT}>{BROWSE_HINT}</span>
                 </span>
             </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
             {#if session?.user}
                 <!-- Below md the account link moves in here with sign-out, for
                      the same reason sign-out does: the bar has no room for it
                      at 320px. -->
+                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches AppFooter's own convention -->
                 <a href="/account" class="{ROW} {ROW_IDLE}">Your account</a>
                 <button
                     onclick={() => signOut({ callbackUrl: '/' })}

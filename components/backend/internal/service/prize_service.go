@@ -35,6 +35,7 @@ func NewPrizeService(dbClient *ent.Client, enf *m.Enforcer) *PrizeService {
 func prizesFromJSON(rows []map[string]any) []*ents.Prize {
 	out := make([]*ents.Prize, 0, len(rows))
 	for _, r := range rows {
+		//exhaustruct:ignore
 		p := &ents.Prize{}
 		if v, ok := r["rank"].(float64); ok {
 			p.Rank = int32(v)
@@ -64,6 +65,8 @@ func (s *PrizeService) prizeRowFor(
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			//nolint:nilnil // documented contract: nil,nil is "no row yet", every
+			// caller already checks it as a distinct state from an error
 			return nil, nil
 		}
 		slog.Error("query hackathon prizes", "err", err)
@@ -142,6 +145,7 @@ func (s *PrizeService) Get(
 	if row == nil {
 		// No table yet is a normal state — an event that has not decided its
 		// prizes, not an error for the UI to translate.
+		//exhaustruct:ignore
 		return &prizeMsgs.GetResponse{}, nil
 	}
 
@@ -177,12 +181,30 @@ func (s *PrizeService) Set(
 		prizes = append(prizes, row)
 	}
 
+	row, err := s.upsertPrizes(ctx, hackathonID, modifier, prizes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &prizeMsgs.SetResponse{Prizes: prizesFromJSON(row.Prizes)}, nil
+}
+
+// upsertPrizes creates the hackathon's prize table if none exists yet, or
+// replaces the prizes on the existing one otherwise. Split out of Set because
+// inlining both branches pushed Set past the nesting budget for no benefit.
+func (s *PrizeService) upsertPrizes(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	modifier *ent.User,
+	prizes []map[string]any,
+) (*ent.HackathonPrizes, error) {
 	existing, err := s.prizeRowFor(ctx, hackathonID)
 	if err != nil {
 		return nil, err
 	}
+
 	if existing == nil {
-		existing, err = s.dbClient.HackathonPrizes.Create().
+		row, err := s.dbClient.HackathonPrizes.Create().
 			SetHackathonID(hackathonID).
 			SetModifierID(modifier.ID).
 			SetPrizes(prizes).
@@ -195,19 +217,21 @@ func (s *PrizeService) Set(
 
 			return nil, status.Error(codes.Internal, "couldn't create prize table")
 		}
-	} else {
-		existing, err = existing.Update().
-			SetModifierID(modifier.ID).
-			SetPrizes(prizes).
-			Save(ctx)
-		if err != nil {
-			slog.Error("update hackathon prizes", "err", err)
 
-			return nil, status.Error(codes.Internal, "couldn't update prize table")
-		}
+		return row, nil
 	}
 
-	return &prizeMsgs.SetResponse{Prizes: prizesFromJSON(existing.Prizes)}, nil
+	row, err := existing.Update().
+		SetModifierID(modifier.ID).
+		SetPrizes(prizes).
+		Save(ctx)
+	if err != nil {
+		slog.Error("update hackathon prizes", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't update prize table")
+	}
+
+	return row, nil
 }
 
 func (s *PrizeService) Finalize(
@@ -286,6 +310,7 @@ func (s *PrizeService) Edit(
 		}
 		prizes[i] = p
 		title, _ := p["title"].(string)
+		//exhaustruct:ignore
 		edited = &ents.Prize{Rank: req.GetRank(), Title: title}
 
 		break

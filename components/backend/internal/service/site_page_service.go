@@ -266,11 +266,12 @@ func (s *SitePageService) actingUser(ctx context.Context) (*ent.User, error) {
 func sitePageFromEnt(p *ent.SitePage) *ents.SitePage {
 	//exhaustruct:ignore
 	entry := &ents.SitePage{
-		Id:         p.ID.String(),
-		Slug:       p.Slug,
-		Title:      p.Title,
-		Content:    p.Content,
-		Visible:    p.Visible,
+		Id:      p.ID.String(),
+		Slug:    p.Slug,
+		Title:   p.Title,
+		Content: p.Content,
+		Visible: p.Visible,
+		//nolint:gosec // G115: a site page's display order, a handful of platform pages
 		Order:      int32(p.Order),
 		CreatedAt:  timestamppb.New(p.CreatedAt),
 		ModifiedAt: timestamppb.New(p.ModifiedAt),

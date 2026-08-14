@@ -174,6 +174,7 @@
 
             <p class="m-0 text-meta text-ink-3">
                 Your username, email and password live with your sign-in provider.
+                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute off-site URL (Keycloak account console), not an app route -->
                 <a href={data.identityConsoleUrl} rel="external noopener" target="_blank">
                     Change them there
                 </a>

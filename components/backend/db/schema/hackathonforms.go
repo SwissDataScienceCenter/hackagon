@@ -41,7 +41,11 @@ func (HackathonForms) Fields() []ent.Field {
 			Comment("Pinned voting mechanism decisions (mechanism, scale, tie-breaks)."),
 		field.JSON("email_templates", map[string]string{}).
 			Optional().
-			Comment("Organizer-authored notification copy, keyed by moment (registrationConfirmed, teamAssigned, deadlineReminder, results). Stored only — no notification service sends them yet."),
+			Comment(
+				"Organizer-authored notification copy, keyed by moment " +
+					"(registrationConfirmed, teamAssigned, deadlineReminder, results). " +
+					"Stored only — no notification service sends them yet.",
+			),
 		field.JSON("branding", map[string]string{}).
 			Optional().
 			Comment("Event branding (primaryColor, accentColor, bannerText). The logo lives on the hackathon row itself."),
