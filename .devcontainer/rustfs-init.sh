@@ -400,6 +400,9 @@ check_public_policy() {
 
     if [ "$failed" -ne 0 ]; then
         echo "FAIL — the public/private split is not what docs/storage.md says" >&2
+        # The backticks quote a config key for a human reader; they are literal
+        # prose, so single quotes are the correct quoting here.
+        # shellcheck disable=SC2016
         echo '       (a prefix marked `public: true` in uploadRules must also be' >&2
         echo "        listed in put_public_policy above)" >&2
         return 1
