@@ -189,34 +189,31 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 
 | Suite | Result | When |
 | --- | --- | --- |
-| journey (465-action recipe) | **469 passed / 0 failed / 0 skipped** | 2026-08-13 |
-| smoke | **139 passed / 1 failed / 2 did not run** — see below | 2026-08-13 |
+| journey (465-action recipe) | **469 passed / 0 failed / 0 skipped** | 2026-08-14 |
+| smoke | **142 passed / 0 failed / 0 did not run** | 2026-08-14 |
 | mobile | **121 passed** | 2026-08-10 |
-| backend `go test ./internal/...` | all ok (service 311/312, capability 37, middleware 43) | 2026-08-13 |
+| backend `go test -tags "test unittest" ./internal/...` | all 6 packages ok in ~13 s — service 336/337 specs (one pending), capability 37, middleware 46 | 2026-08-14 |
 | openreplay (9 tests) | **13 passed / 0 skipped** | 2026-08-11 |
-| frontend units (26 files) | **462 passed** | 2026-08-13 |
+| frontend units (29 files) | **488 passed** | 2026-08-14 |
 
 Playwright totals include the 4 auth-setup tests every suite depends on, so
 journey's 469 is 4 setup + 465 recipe actions.
 
-⚠ **smoke is one short of its baseline, deterministically** (2026-08-13, open):
-`22-hackathon-pages.spec.ts:234` "dragging a row saves the whole new order in one
-write". Its first drag (bottom row to the top) passes; the RESTORE drag — the
-same row, now at the top, dragged back to the bottom — lands one position short,
-`[Welcome, Rules & Guidelines, Schedule]` where `[Welcome, Schedule, Rules &
-Guidelines]` was asked for. The two tests after it are the rest of a
-`mode: "serial"` describe, so they never run: 139 + 1 + 2 = 142.
+Both e2e numbers are POST-MERGE with `origin/develop` and the recipe adapted to
+its chrome (see "Bringing `origin/develop` in" below). Smoke was 22 red on the
+first run after the merge, in exactly two files, and every one of them was a
+label develop deliberately changed — no regression among them.
 
-It is test-side, and the cause is in `dragRowTo` (same file, ~line 74): `endY` is
-computed from the DESTINATION row's bounding box **before the drag starts**,
-while the list reorders live on `dragover`. Moving DOWN, everything below the
-lifted row shifts up by one row height, so the pointer arrives at what has become
-the middle row — moving UP shifts the other way and the pre-computed centre still
-lands inside the intended row, which is exactly why one direction passes and the
-other does not. Recompute the destination box mid-drag, or aim past its far edge.
-**Not caused by the 2026-08-13 infrastructure work**: reverting those five
-frontend files to HEAD, rebuilding and re-running the one test reproduces it
-unchanged.
+⚠ **The known `22-hackathon-pages` drag failure did not reproduce** on either
+post-merge run (2026-08-14), having been deterministic on 2026-08-13. Recorded
+as OPEN rather than fixed: nothing in this merge touches `dragRowTo`, and a
+timing-shaped defect that stops reproducing has not been explained. The
+diagnosis stands for whoever picks it up — `endY` is computed from the
+DESTINATION row's bounding box **before** the drag starts, while the list
+reorders live on `dragover`, so moving DOWN the pointer arrives at what has
+become the middle row while moving UP still lands inside the intended one. That
+asymmetry is why exactly one direction failed. Recompute the destination box
+mid-drag, or aim past its far edge.
 
 ⚠ **`mode: "serial"` in `tests/journey/recipe.spec.ts` is load-bearing for STATE,
 not just for stopping at the first failure.** Without it Playwright tears the
@@ -420,6 +417,47 @@ designs apart. What it asserts now is that **the rail is identical outside Manag
 and inside it**, which is what flat means and what a fold cannot satisfy by
 construction, with the hub-and-entry visibility as the positive control that
 keeps the "no disclosure" zero from agreeing with an empty nav.
+
+⚠ **The problem the fold was built for is still there, and is now a UX
+follow-up rather than a merge decision.** `memberNav` returns 10 entries and
+`manageNav` another 10, so an organiser's rail is 20 rows in a
+`sticky h-[calc(100vh-3.5rem)]` column — which is what "a second nav half again
+as long as the first, on every page" meant. develop's fix is right that a
+disclosure which force-opens wherever it matters is not the answer; it does not
+make the column shorter. Do not reintroduce the fold to close this.
+
+**Five more actions moved with it, and only one was about the sidebar.** The
+first post-merge journey run stopped at `act2.flow.bob` — develop's
+`+error.svelte` replaced one always-Home button with a context-aware way out, so
+a 403 inside an event now offers "Back to this hackathon" and lands on the
+PUBLIC event page, which for a waitlisted person is the page that offers Join.
+That is the better answer to the question the action asks (a refusal must not be
+a dead end), so both it and `act8.flow.charles` were re-specified to it — and
+strengthened while being rewritten, because "a link was clicked and the URL
+changed" would pass against a link back to anywhere; they now name the event
+they land on. `act5.flow.reach.manage` lost its unfold click. `act8.form.ui.edit`
+follows a control that MOVED rather than one that vanished: develop's `c596683c`
+removed the overview's "Your registration answers → View or edit" block and its
+`76037844` put the entry point on the participants roster, where View opens your
+own editable form (and `?userId=` someone else's, for organisers). The product
+rule is exactly the one that action exists for — `SubmitRegistrationForm` is an
+upsert precisely so a first typo is not permanent, which needs a way IN from the
+UI — so the locator moved and the claim did not.
+
+**Two stale things develop's own tree carries, found by the audit and not fixed
+here:** `(app)/account/+page.svelte` still tells people to look for "Your
+registration answers → View or edit", copy for a control that no longer exists;
+and the rebuilt footer links `datascience.ch/about` beside our own `/about`, so
+two links in one region share the accessible name "About" — which is precisely
+what a screen-reader link list cannot disambiguate, and what made the footer
+checks scope to a nav landmark instead of searching footer-wide.
+
+**Guessing which labels moved does not scale — the check is mechanical.** Every
+static `clickLink`/`clickButton`/`expectHeading`/`expectText` literal in
+`recipe.jsonl` is greppable against `components/frontend/src`, and after the
+fixes the only ones with no hit are the ones that are DATA (a hackathon name, a
+persona, an `aria-label` template, organiser-authored form fields). Run that
+before a journey rather than paying a full run per red.
 
 ## Ways a test reported green while proving nothing
 
