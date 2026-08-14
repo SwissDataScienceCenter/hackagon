@@ -14,6 +14,7 @@ required beyond the repo itself (Nix dev shell via `just`).
 | `dbml-diagrams` | Builds and validates the dbdiagram.io DBML (`docs/backend/schema.dbml`) from the ent schema; `scripts/validate.sh` runs the official parser. |
 | `docs-bundle` | Builds `docs/` into ONE self-contained HTML (`out/hackagon-docs.html`): images re-encoded to webp and inlined, mermaid pre-rendered to SVG, cross-doc links anchored. No network needed to read it; prints to PDF. |
 | `openreplay-stack` | Self-hosted OpenReplay (session replay) via docker compose behind a Cloudflare quick tunnel. Vendors the upstream compose into the skill, prepares secrets non-interactively, points the stack at the tunnel URL, wires the app at it and back (`wire-frontend.sh`), and purges expired sessions (`retention.sh` — upstream has no retention setting). Debug rig — needs 8 GB RAM of its own. |
+| `plausible-stack` | Self-hosted Plausible Analytics (CE v3.2.1) via docker compose behind its own Cloudflare quick tunnel — Plausible plus its OWN Postgres and ClickHouse, never the app's database. Prepares secrets and the owner account non-interactively (the signup form is a LiveView, so it goes through `bin/plausible rpc`), wires the app at it and back (`wire-frontend.sh`, the THIRD writer of `config.local.yaml`), and proves a page view lands end to end with a real browser and Plausible's own Stats API. ~750 MB RSS — coexists with the openreplay rig. |
 | `seed-past-hackathons` | Populates a running instance with SDSC's real past hackathons — one source-cited JSON per edition under `data/` (details, phases, tracks, markdown pages, images). Uploads the pictures into the instance's object store, sets each event's cover, rewrites page markdown to the uploaded paths, and gives every edition a prize table with drawn (not photographed) badge art. |
 
 ## The recipe = the product spec
@@ -933,10 +934,11 @@ guard against a repeat is a spec in `internal/config/config_test.go` asserting
 BOTH tracked configs still say `localhost`; `run.sh` reads the wired URL out of
 the overlay, so the overlay's absence is now the "no tunnel" signal.
 
-**That overlay has TWO writers now, and neither may `rm` it.** `auth-wire.sh`
-owns `oidc`; `openreplay-stack/scripts/wire-frontend.sh` owns `replay` (moved
-there for the same reason — a wired dev machine used to carry a
-`*.trycloudflare.com` ingest hostname in the tracked `config.yaml`). Both go
+**That overlay has THREE writers now, and none of them may `rm` it.**
+`auth-wire.sh` owns `oidc`; `openreplay-stack/scripts/wire-frontend.sh` owns
+`replay` (moved there for the same reason — a wired dev machine used to carry a
+`*.trycloudflare.com` ingest hostname in the tracked `config.yaml`);
+`plausible-stack/scripts/wire-frontend.sh` owns `plausible`. All go
 through `.claude/skills/lib/config-overlay.sh`, which adds and removes ONE
 top-level key and deletes the file only when the last key leaves it. A whole-file
 `rm` is invisible in both directions: dropping `replay` stops recording, and an
@@ -1104,6 +1106,16 @@ bash .claude/skills/openreplay-stack/scripts/up.sh   # creates the admin account
 bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh
 bash .claude/skills/hackathon-e2e/scripts/run.sh openreplay
 bash .claude/skills/openreplay-stack/scripts/wire-frontend.sh --restore
+```
+
+Audience measurement (page views per SCREEN, cookieless, no URL ever sent — the
+privacy decisions are in `docs/frontend/analytics.md`):
+
+```bash
+bash .claude/skills/plausible-stack/scripts/up.sh              # instance + its own tunnel, no prompts
+bash .claude/skills/plausible-stack/scripts/wire-frontend.sh
+bash .claude/skills/plausible-stack/scripts/verify.sh          # real browser → Plausible's own Stats API
+bash .claude/skills/plausible-stack/scripts/wire-frontend.sh --restore
 ```
 
 Public URL with working login (see the cloudflare-tunnel skill):

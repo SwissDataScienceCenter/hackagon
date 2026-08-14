@@ -1,0 +1,38 @@
+# Overlay merged on top of the vendored upstream compose:
+#   docker compose -f vendor/compose.yml -f compose.tunnel.yaml …
+#
+# Upstream ships no ingress at all (its README tells you to publish ports or
+# put a reverse proxy in front), so this adds the two things a debugging rig
+# needs: a Cloudflare quick tunnel, and a loopback port.
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: plausible-tunnel
+    restart: unless-stopped
+    # --no-autoupdate: the container is disposable; an in-place update would
+    # restart the process and silently mint a NEW public URL, which every
+    # wired browser would keep posting past.
+    command: tunnel --no-autoupdate --url http://plausible:8000
+    depends_on:
+      - plausible
+    # ⚠ NO `networks:` KEY HERE, AND THAT IS DELIBERATE — the opposite of the
+    # openreplay overlay, for the opposite reason. Upstream's compose defines
+    # no networks, so every service lands on compose's implicit `default` and a
+    # service that named one would be the odd one out and fail to RESOLVE
+    # `plausible`. (OpenReplay's upstream DOES define `openreplay-net`, so its
+    # tunnel had to join it explicitly — that omission cost an afternoon of
+    # 502s with every container healthy.) The rule is the same either way:
+    # match whatever upstream does, and check with `compose config` that the
+    # tunnel and its target share a network.
+
+  plausible:
+    ports:
+      # LOOPBACK ONLY. The tunnel is the entrypoint — the browser must reach
+      # the ingest endpoint from outside — but a local port is what lets a
+      # diagnostic tell "Plausible is broken" apart from "Cloudflare is
+      # broken", which are indistinguishable from the public URL. 127.0.0.1 so
+      # publishing it does not put a dashboard on the LAN.
+      #
+      # Container-side 8000 is upstream's HTTP_PORT default; up.sh pins
+      # HTTP_PORT=8000 in .env rather than relying on it.
+      - "127.0.0.1:${PLAUSIBLE_PORT:-8010}:8000"

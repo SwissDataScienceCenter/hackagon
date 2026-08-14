@@ -14,6 +14,11 @@
     // The ask. Same reasoning about where it is mounted: the tracker would run
     // on public pages, so the question has to be answerable there.
     import ReplayConsentBanner from '$lib/components/observability/ReplayConsentBanner.svelte';
+    // Audience measurement. Same root-layout mounting and the same "absent
+    // config ⇒ absent script" rule as session replay; unlike replay it is not
+    // behind the consent banner, and +layout.server.ts is where that decision
+    // is argued.
+    import PlausibleAnalytics from '$lib/components/observability/PlausibleAnalytics.svelte';
     import type { LayoutData } from './$types';
 
     const { children, data }: { children: import('svelte').Snippet; data: LayoutData } =
@@ -21,6 +26,7 @@
 </script>
 
 <SessionReplay config={data.replay.config} />
+<PlausibleAnalytics config={data.plausible} />
 
 {@render children()}
 

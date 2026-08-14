@@ -25,8 +25,9 @@
 #
 # It now has MORE THAN ONE WRITER, and they are unaware of each other:
 #
-#   oidc:    .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh
-#   replay:  .claude/skills/openreplay-stack/scripts/wire-frontend.sh
+#   oidc:       .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh
+#   replay:     .claude/skills/openreplay-stack/scripts/wire-frontend.sh
+#   plausible:  .claude/skills/plausible-stack/scripts/wire-frontend.sh
 #
 # Each owns exactly one top-level key. If either treated "unwire me" as
 # "delete the overlay", it would silently take the other's wiring with it —
@@ -57,8 +58,9 @@ HEADER='# GENERATED — machine-local config overlay. Do not edit, do not commit
 # independently. Do not delete this file to "turn something off": that takes
 # the other tools'"'"' wiring with it.
 #
-#   oidc:    .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh [--restore]
-#   replay:  .claude/skills/openreplay-stack/scripts/wire-frontend.sh [--restore]'
+#   oidc:       .claude/skills/cloudflare-tunnel/scripts/auth-wire.sh [--restore]
+#   replay:     .claude/skills/openreplay-stack/scripts/wire-frontend.sh [--restore]
+#   plausible:  .claude/skills/plausible-stack/scripts/wire-frontend.sh [--restore]'
 
 usage() {
   sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2

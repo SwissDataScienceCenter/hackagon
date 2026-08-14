@@ -39,6 +39,50 @@ const replaySchema = z
   })
   .default({})
 
+// Audience measurement (Plausible). OFF unless a `plausible:` block says
+// otherwise, exactly like `replay` above and for the same reason: a deployment
+// that has never heard of this feature must not start counting because
+// somebody forgot a flag. Absent block ⇒ no script tag, no request, nothing in
+// the console.
+//
+// WHAT ENABLING IT COLLECTS, per page view: the ROUTE TEMPLATE (never the URL —
+// see $lib/utils/analyticsRoute), the referrer's origin, screen width, and
+// whatever Plausible derives server-side from the request (browser, OS,
+// country if a geolocation database is configured — this dev rig ships none).
+// No cookie, no localStorage, no identifier of any kind is stored in the
+// browser.
+//
+// WHAT PLAUSIBLE ITSELF DOES WITH THE REQUEST: to count a visitor twice in one
+// day without an identifier, it computes a hash of (daily-rotated salt, IP
+// address, user agent, site domain) and stores ONLY that hash — verified
+// against the schema, not the marketing page: `plausible_events_db.events_v2`
+// has a `user_id UInt64` and no column of any kind holding an IP or a user
+// agent. The salt rotates every day, so the same person is a different number
+// tomorrow. That is still processing of an IP address in transit, and
+// docs/frontend/analytics.md says so out loud rather than calling it
+// "anonymous".
+//
+// It is deliberately NOT correlated with the RPC journal or with session
+// replay: nothing joins these numbers to a user id, and no replay session id
+// is ever sent here.
+const plausibleSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    // The tracker script, served by the Plausible instance itself. The script
+    // derives its own ingest endpoint from this URL's origin, so one setting
+    // points at both. Wiring writes the `…local.manual.js` variant on purpose
+    // (see PlausibleAnalytics.svelte).
+    scriptUrl: z.string().url("plausible.scriptUrl must be a URL").optional(),
+    // The site to attribute events to — must equal the domain registered in
+    // Plausible EXACTLY, and it is a label rather than a hostname: nothing
+    // resolves it.
+    domain: z.string().min(1).optional(),
+  })
+  .refine((p) => !p.enabled || (!!p.scriptUrl && !!p.domain), {
+    message: "plausible.enabled requires plausible.scriptUrl and plausible.domain",
+  })
+  .default({})
+
 // Secrets File Schema for Validation
 export const secretsFileSchema = z.object({
   oidc: z.object({
@@ -82,6 +126,7 @@ export const settingsFileSchema = z.object({
   }),
   cookies: z.object({ useSecure: z.boolean() }),
   replay: replaySchema,
+  plausible: plausibleSchema,
 })
 
 // App Config Schema
@@ -121,4 +166,5 @@ export const AppConfigSchema = z.object({
   }),
   cookies: z.object({ useSecure: z.boolean() }),
   replay: replaySchema,
+  plausible: plausibleSchema,
 })
