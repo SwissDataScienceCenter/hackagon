@@ -504,6 +504,43 @@ fixes the only ones with no hit are the ones that are DATA (a hackathon name, a
 persona, an `aria-label` template, organiser-authored form fields). Run that
 before a journey rather than paying a full run per red.
 
+## Ways a HANDOVER was confidently wrong
+
+Distinct from the section below, and it cost more. Those are tests that agreed
+with a broken product; these are briefs that told an agent something false with
+enough confidence that it could have been taken on trust. Five in one week, all
+mine, all caught only because the brief said "verify this before acting on it"
+and the agent did:
+
+- **A 44-second Nix floor that did not exist.** Handed over as fact and already
+  propagated into five files as the justification for design decisions.
+  Measured: 4.6-5.0 s steady state, and clean-vs-dirty is not the variable. The
+  44 s had been measured during a frontend crash loop that was fixed hours
+  earlier. A wrong number stated once became load-bearing in four other files
+  within a day.
+- **git-lfs framed as the fix for that floor.** It makes `git status` truthful,
+  which is worth having; it does not change the timing at all. The agent A/B'd
+  it before touching the Dockerfile and said so.
+- **A vacuity guard removed on a wrong theory.** "A no-op preview lists nothing"
+  — except the table renders every planned row including unchanged ones.
+  Deleting the wait made the two assertions after it pass instantly against a
+  page that never rendered. I introduced two silent-green assertions while
+  explaining why I was right.
+- **"The devcontainer can drive k3d."** It mounts no Docker socket and has no
+  docker CLI. The agent found out in its first minute and rewrote that half of
+  the brief.
+- **A stale consequence stated as current.** "A backend outage restarts every
+  frontend pod" was true before the landing page learned to catch its own gRPC
+  failures. The cost is real (the probe issues up to five calls per pod every 15
+  s) but the consequence had changed.
+
+What made the difference every time was a brief that said **verify this rather
+than transcribe it**, and named what would count as disproof. The failure mode
+is not a lie — it is a true-once observation restated after its context moved,
+which is exactly the shape nobody re-checks. Two habits follow: attribute a
+number to the run that produced it, and when handing over a diagnosis, hand over
+the measurement that would falsify it.
+
 ## Ways a test reported green while proving nothing
 
 The most expensive category of bug here, because nothing turns red. All of these
