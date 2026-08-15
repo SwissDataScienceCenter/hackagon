@@ -20,7 +20,12 @@
 # Each step is checked, repaired if it can be, and reported. The script ends by
 # driving a REAL login round-trip: serving HTML proves nothing about OIDC.
 #
-# Usage: serve-public.sh [--seed]     (--seed also loads the SDSC archive)
+# Usage: serve-public.sh [--seed] [--with-plausible]
+#   --seed            also load the SDSC archive (six real past editions)
+#   --with-plausible  bring the Plausible rig up on its OWN tunnel and wire the
+#                     app at it. Off by default: it costs ~750 MB idle, and an
+#                     analytics dashboard full of Playwright traffic is worse
+#                     than an empty one — unwire before any suite run.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS="$(cd "$HERE/../.." && pwd)"
@@ -28,7 +33,19 @@ ROOT_DIR="$(cd "$SKILLS/.." && pwd)"
 E2E="$SKILLS/hackathon-e2e"
 
 SEED=0
-[ "${1:-}" = "--seed" ] && SEED=1
+PLAUSIBLE=0
+# Set only when the rig comes up; the Ready block tests it with ${VAR:+…}.
+PLAUSIBLE_URL=""
+for arg in "$@"; do
+    case "$arg" in
+    --seed) SEED=1 ;;
+    --with-plausible) PLAUSIBLE=1 ;;
+    *)
+        echo "unknown argument: $arg (see the usage comment)" >&2
+        exit 2
+        ;;
+    esac
+done
 
 step() {
     echo
@@ -99,6 +116,22 @@ if [ "$SEED" -eq 1 ]; then
     nix "E2E_KEYCLOAK_URL=$URL bash .claude/skills/seed-past-hackathons/scripts/prizes.sh" >/dev/null 2>&1 || true
 fi
 
+# ── 4b. analytics, opt-in ────────────────────────────────────────────────────
+# Its own tunnel, not this one: the tracking script and the dashboard need a
+# public origin of their own, and sharing this hostname would put the app and a
+# third-party dashboard behind one link.
+if [ "$PLAUSIBLE" -eq 1 ]; then
+    step "Plausible"
+    if bash "$SKILLS/plausible-stack/scripts/up.sh" >/dev/null 2>&1; then
+        nix 'bash .claude/skills/plausible-stack/scripts/wire-frontend.sh' >/dev/null 2>&1 &&
+            ok "wired — the frontend loads the tracker" ||
+            warn "rig is up but wiring failed; run plausible-stack/scripts/wire-frontend.sh"
+        PLAUSIBLE_URL="$(bash "$SKILLS/plausible-stack/scripts/url.sh" 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1 || true)"
+    else
+        warn "could not start Plausible — continuing without it"
+    fi
+fi
+
 # ── 5. prove a login ─────────────────────────────────────────────────────────
 # The whole point. Every step above can be green while signing in is broken,
 # and that combination has happened repeatedly: the issuer, the ORIGIN and a
@@ -124,7 +157,12 @@ cat <<EOF
   Password   aliceandbob   (dev only — never a real deployment)
 
   Keycloak admin console  $URL/admin/  (admin / admin)
-
+${PLAUSIBLE_URL:+
+  Analytics  $PLAUSIBLE_URL   (admin@hackagon.test — password in
+             .claude/skills/plausible-stack/.secrets.env)
+             Unwire before a suite run, or the numbers become Playwright:
+               .claude/skills/plausible-stack/scripts/wire-frontend.sh --restore
+}
   Stop the public link:  .claude/skills/cloudflare-tunnel/scripts/down.sh
   The quick-tunnel URL dies with the tunnel; re-run this to mint a new one.
 EOF

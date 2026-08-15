@@ -1215,6 +1215,26 @@ func (s *HackathonService) SetCapabilities(
 		wanted[entCapability] = t.GetEnabled()
 	}
 
+	// The hackathon itself, not its capabilities: the batch below CREATES a row
+	// for anything ungoverned, and a create against an id that names nothing is
+	// a foreign-key error rather than an answer. Asked once, here, so a caller
+	// naming a hackathon that does not exist still gets NotFound about the
+	// HACKATHON — which is the true statement — instead of NotFound about a
+	// capability, which used to be the same reply and said the wrong thing.
+	//
+	// After RequirePermission on purpose: a stranger must not learn which
+	// hackathon ids exist from the difference between PermissionDenied and
+	// NotFound.
+	exists, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Exist(ctx)
+	if err != nil {
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "hackathon %s not found", id)
+	}
+
 	rows, err := s.dbClient.Capability.Query().
 		Where(entcapability.HasHackathonWith(enthackathon.IDEQ(id))).
 		All(ctx)
@@ -1227,11 +1247,6 @@ func (s *HackathonService) SetCapabilities(
 	present := make(map[entcapability.Capability]*ent.Capability, len(rows))
 	for _, row := range rows {
 		present[row.Capability] = row
-	}
-	for c := range wanted {
-		if _, ok := present[c]; !ok {
-			return nil, status.Errorf(codes.NotFound, "hackathon %s has no %s capability", id, c)
-		}
 	}
 
 	txn, err := s.dbClient.Tx(ctx)
@@ -1247,7 +1262,59 @@ func (s *HackathonService) SetCapabilities(
 	}
 
 	for c, enabled := range wanted {
-		row := present[c]
+		row, governed := present[c]
+
+		// An ungoverned capability is CREATED rather than refused.
+		//
+		// This used to answer NotFound for the whole batch, and the organiser's
+		// panel posts all six switches every save — so one absent row made the
+		// entire capability screen unusable, with a 404 as the only explanation
+		// and no RPC anywhere that could create the missing row. The panel had
+		// grown a paragraph of copy warning about it, which is a product
+		// explaining its own data gap to the person least able to close it.
+		//
+		// Of the three possible answers, creating is the only one that is both
+		// safe and true to what the request says. SKIPPING is the dangerous one:
+		// an ungoverned capability is ALLOWED (`capability.State` reports
+		// UNGOVERNED and `Allowed` returns true for it), so quietly dropping a
+		// row the caller asked to set to `false` would report a save that
+		// changed nothing while participants kept the permission — a silent
+		// no-op on a gate. REFUSING with the capability named is honest but
+		// still leaves the panel dead, because there is no way to act on the
+		// name. And the schema already calls a full set the invariant — "one row
+		// per capability per hackathon, pre-created on hackathon creation" — so
+		// a missing row is a gap (an older event, a partial restore, a
+		// capability added to the enum after the event was made), never a
+		// decision anyone took. `SetCapabilities` takes a whole list rather than
+		// a delta, which means "these are the values afterwards"; creating what
+		// is missing is what makes that sentence true.
+		if !governed {
+			if _, err := txn.Capability.Create().
+				SetCapability(c).
+				SetEnabled(enabled).
+				SetHackathonID(id).
+				SetModifier(user).
+				Save(ctx); err != nil {
+				rollback(err)
+				// The unique index is `(capability, hackathon)`, so this is a
+				// concurrent writer that governed it first — a real outcome, and
+				// a different one from a broken request. Retrying takes the
+				// UpdateOne branch.
+				if ent.IsConstraintError(err) {
+					return nil, status.Errorf(
+						codes.Aborted,
+						"another change to %s landed first; retry",
+						c,
+					)
+				}
+				slog.Error("create capability", "err", err)
+
+				return nil, status.Error(codes.Internal, "couldn't update capabilities")
+			}
+
+			continue
+		}
+
 		// Already correct: skipping the write keeps modified_at and the modifier
 		// meaningful, so "who last changed this" stays a real answer.
 		if row.Enabled == enabled {
@@ -1319,14 +1386,17 @@ func (s *HackathonService) capabilityStatuses(
 		return nil
 	}
 
-	clock := newCapabilityClock(order, hack.CurrentPhaseID)
-	now := time.Now()
-	out := make([]*ents.CapabilityStatus, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, capabilityStatusFromEnt(row, clock, now))
-	}
-
-	return out
+	// `capabilityStatusesFromEnt`, the same mapper Get uses, rather than one
+	// status per stored row: it fills the vocabulary, reporting UNGOVERNED for a
+	// capability with no row. Built from the rows alone this reply was SHORT
+	// wherever Get's was six long — one handler giving two answers to "what are
+	// this hackathon's capabilities", and the shorter one is the reply a client
+	// gets immediately after saving.
+	return capabilityStatusesFromEnt(
+		rows,
+		newCapabilityClock(order, hack.CurrentPhaseID),
+		time.Now(),
+	)
 }
 
 // AdvancePhase declares which phase a hackathon is now in, and switches its

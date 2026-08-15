@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hackagon.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hackagon.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      annotations:
+        {{- /*
+        THE CONFIG RELOAD. Without this line a `helm upgrade` that changes only
+        `backend.config` updates the ConfigMap, reports success, and changes
+        nothing that is running — because TWO things are true at once:
+
+          * config.yaml is a `subPath` mount (below), and a subPath mount is
+            resolved ONCE at container start. The kubelet refreshes a plain
+            ConfigMap volume; it never refreshes this one.
+          * with no annotation here the pod template is byte-identical after
+            the upgrade, so Kubernetes correctly does nothing.
+
+        Observed on the k3d rig before this landed: `helm upgrade` in 0.9 s,
+        status `deployed`, `kubectl get configmap` showing the new value, and
+        the running pod — same name, same `metadata.generation` — still serving
+        the old one. Rotating a credential that way changes nothing, with no
+        signal anywhere that it did not.
+
+        The hash is over the RENDERED ConfigMap, so it covers every input that
+        can reach the file — values, the `{baseDomain}` substitutions, the
+        storage helpers — without this line having to enumerate them.
+
+        ⚠ That only works while the render is DETERMINISTIC: one
+        non-deterministic byte in there and every upgrade rolls the pods
+        forever, which is a worse bug wearing this one's clothes. Checked, and
+        worth re-checking if backend-configmap.yaml grows an input: nothing in
+        it calls `randAlphaNum`, `uuidv4`, `now` or `lookup`, and the one
+        non-deterministic thing in this chart — the Bitnami subchart minting a
+        postgres password when `postgresql.auth.postgresPassword` is empty —
+        cannot reach it, because the DB password written here is `required` and
+        so can only come from values. Measured: two renders of identical inputs
+        produce an identical checksum while the subchart's own Secret differs
+        between them.
+        */}}
+        checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+        {{- with .Values.backend.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "hackagon.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          args:
+            - "--config-dir=/etc/hackagon/"
+          {{- if .Values.storage.enabled }}
+          {{- /*
+          Object-store credentials, from a Secret and never from the
+          ConfigMap. HACKAGON_* env is the backend's LAST config layer, so
+          these win over anything in config.yaml — and the key names have no
+          separator on purpose: the loader lowercases and turns `_` into `.`,
+          so HACKAGON_STORAGE_ACCESS_KEY would become `storage.access.key` and
+          be quietly ignored.
+          */}}
+          env:
+            - name: HACKAGON_STORAGE_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "storage.existingSecret is required when storage.enabled — credentials must come from a Secret, not from values.yaml" .Values.storage.existingSecret }}
+                  key: {{ .Values.storage.secretKeys.accessKey }}
+            - name: HACKAGON_STORAGE_SECRETKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.existingSecret }}
+                  key: {{ .Values.storage.secretKeys.secretKey }}
+          {{- end }}
+          ports:
+            - name: grpc
+              containerPort: 3000
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/hackagon/config.yaml
+              subPath: config.yaml
+              readOnly: true
+          livenessProbe:
+            grpc:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            grpc:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hackagon.fullname" . }}-backend-config

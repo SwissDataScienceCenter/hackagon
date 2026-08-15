@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Rewire OIDC so login works through the quick tunnel's public hostname.
-# Runs INSIDE the dev container (up.sh execs it there).
+# Rewire OIDC so login works through the tunnel's public hostname — quick
+# (*.trycloudflare.com) or NAMED (your own zone). Runs INSIDE the dev container
+# (up.sh execs it there). The hostname is just an argument; nothing here knows
+# or cares which kind it is.
 #
-#   auth-wire.sh <https://X.trycloudflare.com>   wire issuers to the tunnel
-#   auth-wire.sh --restore                       undo (back to localhost)
+#   auth-wire.sh <https://public-host>   wire issuers to that hostname
+#   auth-wire.sh --restore               undo (back to localhost)
+#
+# With a NAMED hostname the second and every later wire is a no-op: the overlay
+# it would write is byte-identical, so nothing is rewritten and — once the
+# running backend confirms it accepts tokens from that issuer — nothing is
+# restarted either. That is the whole reason to prefer a named tunnel: the
+# per-restart re-wiring churn a quick tunnel forces simply does not arise.
 #
 # What wiring does:
 #   1. sanity-check Keycloak answers on the tunnel host with an https issuer
@@ -151,6 +159,30 @@ restart_prod_server() { # <origin>
             "the old issuer — run prod-serve.sh start $origin --no-build" >&2
 }
 
+# Does the RUNNING backend accept a token minted by <issuer-base>?
+#
+# Answers three things, not two, and the third is why this is not a boolean:
+#   0  yes — the running backend validates tokens from that issuer
+#   1  no  — it is running with a different issuer than the one asked about
+#   2  could not ask — Keycloak did not mint a token at all
+#
+# Callers want opposite defaults for that third case, so it is theirs to decide:
+# --restore must not bounce the backend because Keycloak happens to be down,
+# while the wire path must not SKIP a restart on the strength of a question it
+# could not put.
+backend_accepts_issuer() { # <issuer-base-url>
+    local base="${1%/}" token
+    token="$(curl -s --max-time 15 \
+        -X POST "$base/realms/hackagon/protocol/openid-connect/token" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d client_id=hackagon-backend -d username=alice -d password=aliceandbob \
+        -d grant_type=password -d scope="openid profile" 2>/dev/null |
+        jq -r '.access_token // empty' 2>/dev/null)"
+    [ -n "$token" ] || return 2
+    grpcurl -plaintext -H "authorization: Bearer $token" -max-time 10 \
+        localhost:3000 user.UserService/WhoAmI >/dev/null 2>&1
+}
+
 # Does the RUNNING backend accept a token minted by the LOCALHOST issuer?
 #
 # The overlay says what the configuration intends; this says what the process is
@@ -169,25 +201,17 @@ restart_prod_server() { # <origin>
 # learned: "the server accepted it" and "the server can use it" are different
 # claims, and only one of them can be read off a config file.
 backend_accepts_localhost() {
-    local token
-    token="$(curl -s --max-time 10 \
-        -X POST "http://localhost:8180/realms/hackagon/protocol/openid-connect/token" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d client_id=hackagon-backend -d username=alice -d password=aliceandbob \
-        -d grant_type=password -d scope="openid profile" 2>/dev/null |
-        jq -r '.access_token // empty' 2>/dev/null)"
-
+    local rc=0
+    backend_accepts_issuer "http://localhost:8180" || rc=$?
     # No token means Keycloak is down or unreachable, which is a different
     # problem: answer "fine" so this never restarts the backend for a reason that
     # has nothing to do with the issuer.
-    if [ -z "$token" ]; then
+    if [ "$rc" = 2 ]; then
         echo "note: could not mint a localhost token (is Keycloak up?) — skipping" \
             "the backend issuer check" >&2
         return 0
     fi
-
-    grpcurl -plaintext -H "authorization: Bearer $token" -max-time 10 \
-        localhost:3000 user.UserService/WhoAmI >/dev/null 2>&1
+    return "$rc"
 }
 
 # Restart the e2e harness's :8081 built server, which reads its OIDC issuer
@@ -276,14 +300,28 @@ esac
 URL_HTTP="http://${URL#https://}"
 HOST="${URL#https://}"
 
-# Fresh trycloudflare hostnames routinely lose the DNS race: the first lookup
-# lands before propagation and the local resolver negative-caches NXDOMAIN,
-# which would break both this script's checks and the frontend's server-side
-# token exchange. Resolve via DNS-over-HTTPS straight at Cloudflare and pin
-# the hostname in /etc/hosts (real edge IP + real TLS cert — traffic still
-# flows through the tunnel). --restore removes the pin.
-if ! getent hosts "$HOST" >/dev/null 2>&1; then
-    echo "==> Local DNS has not caught up with '$HOST' — pinning via /etc/hosts..."
+# Fresh hostnames routinely lose the DNS race: the first lookup lands before
+# propagation and the local resolver negative-caches NXDOMAIN, which would break
+# both this script's checks and the frontend's server-side token exchange.
+# Resolve via DNS-over-HTTPS straight at Cloudflare and pin the hostname in
+# /etc/hosts (real edge IP + real TLS cert — traffic still flows through the
+# tunnel). --restore removes the pin.
+#
+# ⚠ THE TEST IS REACHABILITY, NOT RESOLVABILITY, and the difference is not
+# academic. This used to ask `getent hosts`, which answers YES for a name that
+# resolves to an address nothing here can reach — and that is a real state: the
+# resolver on the machine this was developed against returns Cloudflare's IPv6
+# edge and no A record at all, on a network with no IPv6 route out. Every lookup
+# succeeded, every connection failed instantly, and the pin that exists for
+# exactly this never fired because the question it asked had the wrong answer.
+# A DoH A-record pin fixes both cases, because it forces IPv4.
+host_reachable() {
+    # No -f: any HTTP status means the name resolved AND the edge answered. Only
+    # a resolve (6) or connect (7) failure is what this is looking for.
+    curl -sS -o /dev/null --max-time 8 "https://$HOST/" >/dev/null 2>&1
+}
+if ! host_reachable; then
+    echo "==> '$HOST' is not reachable from here yet — pinning an IPv4 edge via /etc/hosts..."
     ip=$(curl -s --max-time 10 "https://1.1.1.1/dns-query?name=$HOST&type=A" \
         -H "accept: application/dns-json" |
         jq -r '[.Answer[]? | select(.type == 1) | .data][0] // empty')
@@ -332,21 +370,62 @@ echo "==> Pointing frontend/backend issuers at the tunnel (config.local.yaml)...
 # Written through config-overlay.sh, which replaces the `oidc` BLOCK and leaves
 # every other top-level key alone — `replay`, when session replay is wired into
 # the same overlay, is somebody else's and must survive a re-wire.
+CHANGED=0
 write_overlay() { # <path> <yaml-body>
-    bash "$OVERLAY" set "$1" oidc >/dev/null <<EOF
+    local answer
+    answer="$(
+        bash "$OVERLAY" set "$1" oidc <<EOF
 $2
   # Tunnel: $URL — removed by \`auth-wire.sh --restore\`, which down.sh calls
   # for you. A quick-tunnel hostname is this machine's for the next few hours
-  # and belongs nowhere near a tracked file.
+  # and belongs nowhere near a tracked file; a NAMED tunnel's hostname is
+  # stable, and still belongs here rather than in a tracked config, because it
+  # is this machine's deployment choice and not the repo's.
 EOF
+    )"
+    [ "$answer" = "changed" ] && CHANGED=1
+    return 0
 }
 write_overlay "$FRONTEND_LOCAL" "oidc:
   issuer: $URL/realms/$REALM"
 write_overlay "$BACKEND_LOCAL" "oidc:
   issuerurl: \"$URL/realms/$REALM\""
 
-restart_and_wait
-restart_prod_server "$URL"
+# ── the restart, and when it can be skipped ──────────────────────────────────
+#
+# THIS IS WHAT MAKES A NAMED TUNNEL CHEAP TO RE-RUN. With a quick tunnel the
+# hostname is different every time, so the overlay always changes and both
+# processes always have to be restarted — the "re-wiring dance". With a stable
+# hostname the second and every later `up.sh --with-auth` writes byte-identical
+# bytes, and restarting the backend (a cold rebuild here, measured at ~8 min in
+# the devcontainer) to load a config it already has is pure cost.
+#
+# But an unchanged FILE is not a correct PROCESS: a backend started while the
+# overlay said something else is still validating against the issuer it booted
+# with, and that stale-process case is the one this script has already been
+# bitten by three times. So the skip is granted only by the far end — mint a
+# token from the issuer we just wired and see whether the running backend takes
+# it. "Could not ask" restarts, because a skip has to be earned.
+NEEDS_RESTART=1
+if [ "$CHANGED" = 0 ]; then
+    rc=0
+    backend_accepts_issuer "$URL" || rc=$?
+    if [ "$rc" = 0 ]; then
+        NEEDS_RESTART=0
+        echo "==> Issuer already wired to $URL and the running backend accepts its"
+        echo "    tokens — nothing to write, nothing to restart."
+    else
+        echo "==> Issuer overlay was already correct, but the running backend does" \
+            "not accept a token from it (it outlived its config). Restarting:"
+    fi
+fi
+if [ "$NEEDS_RESTART" = 1 ]; then
+    restart_and_wait
+    # Only alongside a real restart: this one rebuilds nothing but does take the
+    # public URL's upstream down and back up, and doing that to load a config it
+    # already holds is a hole in the link for no gain.
+    restart_prod_server "$URL"
+fi
 
 echo
 echo "Login-capable tunnel ready: $URL"

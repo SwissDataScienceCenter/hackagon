@@ -74,9 +74,42 @@ export const load: LayoutServerLoad = async (event) => {
   )
   const consent = parseReplayConsent(event.cookies.get(REPLAY_CONSENT_COOKIE))
 
+  // Audience measurement, if a deployment switched it on. ONE switch, not two —
+  // and that difference from `replay` directly above is the deliberate part.
+  //
+  // WHY THIS IS NOT BEHIND THE REPLAY CONSENT BANNER. The banner asks one
+  // question, in its own words: may we RECORD YOUR SESSION. Consent is scoped
+  // to what was asked, so reusing that answer to authorise a second, different
+  // collection would be helping ourselves to permission nobody gave — the same
+  // reason a registration consent could not be reused for replay
+  // ($lib/utils/replayConsent). A second banner was the other option and is
+  // worse for everyone: two asks on a first visit, for one question that has a
+  // real answer and one that does not need asking.
+  //
+  // What makes "does not need asking" true here is a property, not a vendor
+  // claim: nothing is stored in or read from the visitor's browser — no
+  // cookie, no localStorage, no fingerprint — which is the thing consent is
+  // required for under ePrivacy, and it is why Plausible was picked over the
+  // alternatives. What remains is an IP address processed in transit to
+  // compute a daily-salted hash, which is a legitimate-interest processing
+  // decision the deployment makes and STATES (docs/frontend/analytics.md),
+  // not a box to trick someone into ticking.
+  //
+  // The visitor's own signal is still honoured: DNT/GPC suppresses the script
+  // entirely, client-side, before it is fetched (PlausibleAnalytics.svelte).
+  // And there is nothing here to withdraw later, because there is nothing
+  // stored to withdraw — which is the whole difference between the two
+  // features on this page.
+  const plausible = event.locals.config?.plausible
+  const plausibleConfig =
+    plausible?.enabled && plausible.scriptUrl && plausible.domain
+      ? { scriptUrl: plausible.scriptUrl, domain: plausible.domain }
+      : null
+
   return {
     session: event.locals.session,
     publicOrigin: `${proto}://${host}`,
+    plausible: plausibleConfig,
     replay: {
       configured,
       consent,

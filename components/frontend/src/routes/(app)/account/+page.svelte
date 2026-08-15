@@ -152,15 +152,37 @@
                  consent you gave it — belongs to that event's registration and is
                  edited there. Consents especially: agreeing to one event's code
                  of conduct is not a standing agreement with the platform, and
-                 showing it here would imply it was. -->
-            <p class="m-0 border-t border-line pt-3 text-meta text-ink-3">
+                 showing it here would imply it was.
+
+                 The route it names is the one that EXISTS. This sentence used to
+                 send people to "Your registration answers → View or edit" — a
+                 block on the event overview that c596683c removed, so for anyone
+                 following it the instruction dead-ended on a page that no longer
+                 had the control. 76037844 moved the way in to the participants
+                 roster, where your own row's View opens your editable form
+                 (`?userId=` opens someone else's, for organisers).
+
+                 The `<strong>`s are the contract, not decoration:
+                 smoke/07-account-menu reads them out of this paragraph and walks
+                 the trail they name, so re-wording it to a control that does not
+                 exist turns that spec red rather than shipping a second dead
+                 instruction. Name a control here only if you can click it.
+
+                 No link, and that is a limit rather than an oversight: this page
+                 has no event in hand (`load` returns your profile and nothing
+                 else), so any href here would have to guess WHICH event's
+                 answers you meant. -->
+            <p
+                class="m-0 border-t border-line pt-3 text-meta text-ink-3"
+                data-testid="event-answers-note"
+            >
                 This is your profile across the whole platform. Answers you gave to a
                 <em>particular</em> event — its own extra questions, and the consents you
                 agreed to, such as its code of conduct or event photography — live with that
-                event's registration, not here: open the event and use
-                <strong>“Your registration answers → View or edit”</strong>. Changing this
-                profile does not change what an event already recorded, and organisers see
-                the answers you gave them at the time.
+                event's registration, not here: open the event, go to
+                <strong>Participants</strong>, and use <strong>View</strong> on your own row.
+                Changing this profile does not change what an event already recorded, and
+                organisers see the answers you gave them at the time.
             </p>
 
             <dl

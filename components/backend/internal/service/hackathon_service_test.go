@@ -1426,6 +1426,189 @@ var _ = Describe("HackathonService", func() {
 			Expect(status.Code(err)).To(BeElementOf(codes.NotFound, codes.PermissionDenied))
 		})
 
+		// SetCapabilities used to answer NotFound if ANY capability in the batch
+		// had no stored row, and the organiser's panel posts all six switches on
+		// every save — so one absent row made the whole capability screen
+		// unusable, with a 404 as its only explanation.
+		Describe("SetCapabilities with an ungoverned capability", func() {
+			// The six the panel sends, every save. Written out rather than
+			// derived so a capability added to the enum shows up here as a
+			// compile-time gap rather than as a batch that quietly got smaller.
+			wholeForm := func(vote bool) []*entities.CapabilityToggle {
+				return []*entities.CapabilityToggle{
+					{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: false},
+					{
+						Capability: entities.Capability_CAPABILITY_PROPOSE_PROJECTS,
+						Enabled:    true,
+					},
+					{
+						Capability: entities.Capability_CAPABILITY_SET_TEAM_PREFERENCES,
+						Enabled:    true,
+					},
+					{
+						Capability: entities.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+						Enabled:    true,
+					},
+					{Capability: entities.Capability_CAPABILITY_VOTE, Enabled: vote},
+					{
+						Capability: entities.Capability_CAPABILITY_VIEW_RESULTS,
+						Enabled:    true,
+					},
+				}
+			}
+
+			// stateOf reads one capability's state out of Get, which reports the
+			// whole vocabulary — including UNGOVERNED for a capability with no
+			// row, which is the state under test.
+			stateOf := func(c entities.Capability) entities.CapabilityState {
+				resp, err := client.Get(adminCtx, &msgs.GetRequest{HackathonId: hackathonID})
+				Expect(err).NotTo(HaveOccurred())
+				for _, s := range resp.GetHackathon().GetCapabilities() {
+					if s.GetCapability() == c {
+						return s.GetState()
+					}
+				}
+				Fail("capability missing from Get response")
+
+				return entities.CapabilityState_CAPABILITY_STATE_UNSPECIFIED
+			}
+
+			// Deleting the row is the ONLY way to reach this state, and that is
+			// the whole reason the bug survived: Create seeds all six and no RPC
+			// removes one, so nothing driven through the API is ever ungoverned.
+			// The gap is real off the API (an event older than a capability the
+			// enum gained later, a partial restore) and has to be made here.
+			BeforeEach(func() {
+				n, err := dbClient.Capability.Delete().
+					Where(
+						entcapability.HasHackathonWith(
+							enthackathon.IDEQ(uuid.MustParse(hackathonID)),
+						),
+						entcapability.CapabilityEQ(entcapability.CapabilityVote),
+					).
+					Exec(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					n,
+				).To(Equal(1), "nothing was ungoverned — the specs below would prove nothing")
+
+				// The positive control. Without it, every claim under this
+				// Describe would also hold against a governed row, i.e. against
+				// the setup silently failing.
+				Expect(stateOf(entities.Capability_CAPABILITY_VOTE)).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_UNGOVERNED),
+				)
+			})
+
+			It("creates the missing row instead of refusing the whole batch", func() {
+				_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId:  hackathonID,
+					Capabilities: wholeForm(true),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stateOf(entities.Capability_CAPABILITY_VOTE)).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_OPEN),
+				)
+			})
+
+			It("lands the rest of the batch, which the refusal used to lose", func() {
+				// The cost of the old behaviour was never the one row: it was the
+				// other five. `register: false` is the switch that decides whether
+				// anyone can still sign up, and it never reached the database.
+				_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId:  hackathonID,
+					Capabilities: wholeForm(true),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stateOf(entities.Capability_CAPABILITY_REGISTER)).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+				)
+			})
+
+			It("governs a capability asked to be OFF rather than leaving it allowed", func() {
+				// Why creating beats skipping, stated as the outcome rather than
+				// as a preference. UNGOVERNED is ALLOWED (`capability.State`'s
+				// Allowed returns true for it), so a handler that skipped the
+				// missing row would report a successful save while participants
+				// kept the permission the organiser had just switched off.
+				_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId:  hackathonID,
+					Capabilities: wholeForm(false),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stateOf(entities.Capability_CAPABILITY_VOTE)).To(
+					Equal(entities.CapabilityState_CAPABILITY_STATE_CLOSED),
+					"an ungoverned capability set to false must end up governed and "+
+						"closed — UNGOVERNED here would mean the save was a no-op on a gate",
+				)
+			})
+
+			It("attributes the row it creates to whoever saved the form", func() {
+				// A created row is a row like any other: "who last changed this"
+				// has to keep working across the gap, or the first save after a
+				// restore is the one edit with no author.
+				_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId:  hackathonID,
+					Capabilities: wholeForm(true),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				row, err := dbClient.Capability.Query().
+					Where(
+						entcapability.HasHackathonWith(
+							enthackathon.IDEQ(uuid.MustParse(hackathonID)),
+						),
+						entcapability.CapabilityEQ(entcapability.CapabilityVote),
+					).
+					WithModifier().
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(row.Edges.Modifier).NotTo(BeNil())
+				Expect(row.Edges.Modifier.KeycloakID).To(Equal(testAdmin))
+			})
+
+			It("still refuses a hackathon that does not exist, and says so", func() {
+				// The other half of removing the NotFound: an id that names
+				// nothing must not be answered by creating rows for it. It keeps
+				// NotFound — but now about the HACKATHON, which is the true
+				// statement; the old reply named a capability and was misleading
+				// about which thing was missing.
+				missing := uuid.New()
+
+				_, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId: missing.String(),
+					Capabilities: []*entities.CapabilityToggle{
+						{Capability: entities.Capability_CAPABILITY_VOTE, Enabled: true},
+					},
+				})
+				Expect(status.Code(err)).To(Equal(codes.NotFound))
+				Expect(err.Error()).To(ContainSubstring("hackathon"))
+
+				n, qErr := dbClient.Capability.Query().
+					Where(entcapability.HasHackathonWith(enthackathon.IDEQ(missing))).
+					Count(context.Background())
+				Expect(qErr).NotTo(HaveOccurred())
+				Expect(n).To(Equal(0), "a refused call must not have written rows")
+			})
+
+			It("reports the created row in its own response, not only on the next Get", func() {
+				// `capabilityStatuses` says it "reports every capability the way
+				// Get does" and used to build from the stored rows alone, so a
+				// capability with no row was simply absent from this reply while
+				// Get reported it as UNGOVERNED. Two answers to the same question
+				// from one handler.
+				resp, err := client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId:  hackathonID,
+					Capabilities: wholeForm(true),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetCapabilities()).To(HaveLen(6))
+			})
+		})
+
 		Describe("phase schedule", func() {
 			var adminUserID uuid.UUID
 

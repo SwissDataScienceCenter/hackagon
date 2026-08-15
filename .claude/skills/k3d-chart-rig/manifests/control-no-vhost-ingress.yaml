@@ -1,0 +1,41 @@
+# THE NEGATIVE CONTROL for claim 1.
+#
+# A copy of the Ingress the chart renders for /objects, differing in EXACTLY ONE
+# thing: no `nginx.ingress.kubernetes.io/upstream-vhost`. Same backend, same
+# regex path, same rewrite-target, same body size, same class.
+#
+# Without it, "the presigned PUT returned 200" is only evidence that a PUT can
+# reach a store. With it, a 403 SignatureDoesNotMatch here and a 200 through the
+# chart's own route are evidence that THE ANNOTATION is what makes uploads work
+# — which is the claim, and the one that has already cost this project days
+# because unsigned public reads keep working while every upload dies.
+#
+# On its own hostname so both routes exist at once and the same signed URL can
+# be sent down each. verify.sh asserts that the annotation sets differ by that
+# one key and nothing else, so this file cannot quietly drift away from what the
+# chart renders.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rig-objects-control
+  namespace: NAMESPACE_PLACEHOLDER
+  labels:
+    hackagon.rig/purpose: negative-control
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: CONTROL_HOST_PLACEHOLDER
+      http:
+        paths:
+          - path: /objects(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: OBJECTS_SERVICE_PLACEHOLDER
+                port:
+                  number: STORE_PORT_PLACEHOLDER

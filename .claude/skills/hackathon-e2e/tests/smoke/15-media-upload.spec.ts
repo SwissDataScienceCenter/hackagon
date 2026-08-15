@@ -44,13 +44,11 @@ test.describe("media upload", () => {
 
     // The control is a <label> wrapping a hidden input — a styled button cannot
     // open a file picker — so the input is set directly.
-    await page
-      .locator("input[type=file]")
-      .setInputFiles({
-        name: "venue-photo.png",
-        mimeType: "image/png",
-        buffer: PNG,
-      })
+    await page.locator("input[type=file]").setInputFiles({
+      name: "venue-photo.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    })
 
     // Check the editor's own error line FIRST. Without this the failure is
     // "the textarea is still empty", which is the symptom; the component

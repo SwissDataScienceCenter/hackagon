@@ -63,10 +63,13 @@
             : `${unmetNames.slice(0, -1).join(', ')} and ${unmetNames.at(-1)}`
     );
 
-    // Capabilities with no stored row. `SetCapabilities` answers NotFound for
-    // any of them and refuses the WHOLE batch, and the save posts all six — so
-    // one ungoverned row makes the form unusable, which the organiser should
-    // read here rather than deduce from a 404.
+    // Capabilities with no stored row. This used to be a warning that the save
+    // would be REFUSED: `SetCapabilities` answered NotFound for any ungoverned
+    // capability and threw away the whole batch, and this form posts all six —
+    // so one absent row made the panel unusable and the copy existed to explain
+    // a 404. The handler creates the row now, so what is left to say is the part
+    // that was always the real news: nothing governs this yet, which means the
+    // server is ALLOWING it.
     const ungoverned = $derived(rows.filter((c) => capabilityIsUngoverned(c.state)));
     const ungovernedSentence = $derived(
         ungoverned.map((c) => capabilitySubject(c.capability) ?? 'A capability').join(', ')
@@ -174,14 +177,19 @@
         </form>
 
         {#if ungoverned.length > 0}
-            <!-- Not a permission check — the backend decides, and it decides by
-                 refusing. This says so before the organiser spends a save on it. -->
+            <!-- The state itself, not an error about it. An unticked box and an
+                 ungoverned capability look the same in this form and mean
+                 opposite things — nobody has switched it on, versus nobody has
+                 switched it on and everyone may do it anyway — so the sentence
+                 has to say which, and say what saving will do about it. -->
             <p class="m-0 text-xs text-warning-ink" role="status">
                 {ungovernedSentence}
                 {ungoverned.length === 1 ? 'has' : 'have'} no stored setting on this hackathon, so
                 the server allows
-                {ungoverned.length === 1 ? 'it' : 'them'} and will refuse to save this form until the
-                {ungoverned.length === 1 ? 'row exists' : 'rows exist'}.
+                {ungoverned.length === 1 ? 'it' : 'them'} right now, whatever the box above says.
+                Saving this form creates the
+                {ungoverned.length === 1 ? 'setting' : 'settings'} and puts
+                {ungoverned.length === 1 ? 'it' : 'them'} under these switches.
             </p>
         {/if}
 

@@ -1,0 +1,34 @@
+{{- if and .Values.storage.enabled .Values.storage.objects.ingress.enabled .Values.frontend.ingress.enabled }}
+{{- if not .Values.storage.objects.ingress.service.name }}
+{{- /*
+An Ingress can only send traffic to a Service, and the object store this chart
+expects is OUTSIDE the cluster (see values.yaml: the chart deploys no store on
+purpose). An ExternalName Service is the adapter that makes it addressable.
+
+The name resolved here is the store's hostname WITHOUT its port — kube-dns
+returns a CNAME and knows nothing about ports — while the port travels on the
+Service. Both come from `storage.endpoint`, so neither can drift from what the
+backend signs.
+
+When the store DOES run in this cluster, set
+`storage.objects.ingress.service.name` to its Service and this object is not
+rendered at all.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hackagon.storageObjectsServiceName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  type: ExternalName
+  externalName: {{ include "hackagon.storageHostname" . | quote }}
+  ports:
+    - port: {{ include "hackagon.storagePort" . }}
+      targetPort: {{ include "hackagon.storagePort" . }}
+      protocol: TCP
+      name: s3
+{{- end }}
+{{- end }}

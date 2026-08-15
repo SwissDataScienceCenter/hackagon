@@ -10,7 +10,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -177,6 +179,44 @@ var _ = Describe("Auth Middleware", func() {
 			retrievedClaims, ok := middleware.GetClaims(ctx)
 			Expect(ok).To(BeFalse())
 			Expect(retrievedClaims).To(BeNil())
+		})
+	})
+
+	// RequireSubject admits the anonymous subject on purpose — casbin evaluates
+	// it as an unprivileged caller, which is what makes public reads work
+	// without a token. RequireUser is the variant for endpoints that treat the
+	// subject as an IDENTITY, and the whole of it is one rejection.
+	//
+	// Nothing else can stand in for it: a handler that lost this check answers
+	// whatever its next step answers — NotFound for an id that does not exist,
+	// which lets an unauthenticated caller probe which ids do.
+	Describe("RequireUser Function", func() {
+		It("refuses the anonymous subject", func() {
+			ctx := middleware.CtxWithClaims(middleware.AnonSubject)
+
+			sub, claims, err := middleware.RequireUser(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
+			Expect(sub).To(BeEmpty(), "an admitted subject is the bug this guards")
+			Expect(claims).To(BeNil())
+		})
+
+		// The control: the same call on a real subject has to get through, or
+		// the rejection above would agree with a function that refused everyone.
+		It("passes a real subject through with its claims", func() {
+			ctx := middleware.CtxWithClaims("keycloak-alice")
+
+			sub, claims, err := middleware.RequireUser(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sub).To(Equal("keycloak-alice"))
+			Expect(claims["sub"]).To(Equal("keycloak-alice"))
+		})
+
+		It("refuses a context with no claims at all", func() {
+			sub, _, err := middleware.RequireUser(context.Background())
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
+			Expect(sub).To(BeEmpty())
 		})
 	})
 

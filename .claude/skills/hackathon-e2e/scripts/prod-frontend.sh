@@ -31,7 +31,7 @@
 #                   this container localhost is ::1.
 #   AUTH_URL  must accompany ORIGIN, or login completes and then does nothing.
 #
-# :8081 rather than :8082 because Keycloak's hackagon-dev client only allows
+# :8081 rather than :8082 because Keycloak's hackagon-frontend client only allows
 # redirect URIs on 8081; moving the app dies at login with
 # "Invalid parameter: redirect_uri". :8082 belongs to the cloudflare-tunnel
 # skill's own built server, which is why everything here is scoped to servers
@@ -55,7 +55,7 @@ FRONTEND_DIR="$ROOT_DIR/components/frontend"
 ENTRY="build/service/index.js"
 PIDFILE="$ROOT_DIR/.output/run/e2e-prod-frontend.pid"
 LOG="$ROOT_DIR/.output/run/e2e-prod-frontend.log"
-BUILD_LOG="$ROOT_DIR/.output/run/e2e-prod-frontend-build.log"
+# The build log belongs to the build, which is shared — see FRONTEND_BUILD below.
 # Written by `just deploy::up` (tools/deploy/process-compose/justfile); holds
 # the path of the process-compose control socket.
 PC_SOCKET_FILE="$ROOT_DIR/tools/deploy/process-compose/.socket-path-test-services"
@@ -118,6 +118,25 @@ resolve_pid() {
     return 0
 }
 
+# Put process-compose's `frontend` (vite) DOWN and keep it down.
+#
+# This is not tidiness — an un-stopped vite next to our server on :8081 is the
+# single most expensive failure mode this container has. vite cannot bind, exits
+# 1, and `availability.restart` sends it round again; each round is a full
+# `just develop` = `nix develop`, which takes the repo-wide fetch lock on
+# `git+file:///workspaces/hackagon`. Entering that shell is ~5 s unopposed
+# (re-measured 2026-08-14) and serializes everything else that wants the lock,
+# and a stack found in this state had 54 restarts in 50 minutes — a lock
+# acquisition every ~55 s, forever. Everything else that enters the shell then queues behind it: the
+# backend's own start command is `just develop just run`, and its readiness
+# budget is spent WAITING FOR NIX rather than on the server. When the budget
+# runs out process-compose SIGTERMs it, the Go server shuts down gracefully,
+# exit code 0 — which `restart: on_failure` does not consider a failure, so the
+# backend stays down and everything downstream reads as connection refused.
+#
+# It is invisible from `process list`, which reported `frontend Running Ready`
+# throughout: the readiness probe is `curl http://localhost:8081` and OUR server
+# was answering it. The probe measures the PORT, not the PROCESS.
 stop_vite() {
     local sock
     sock="$(cat "$PC_SOCKET_FILE" 2>/dev/null || true)"
@@ -158,13 +177,18 @@ stop() {
 # vite served source; the build is a snapshot, so it has to be rebuilt when the
 # source moved under it. Skipping this is how a suite silently tests yesterday's
 # frontend and reports green.
+#
+# Both the question and the build now live in .claude/skills/lib/frontend-build.sh,
+# because this script is not the only caller: cloudflare-tunnel/prod-serve.sh
+# builds and serves the SAME build/service tree on :8082. Two concurrent
+# `pnpm build`s into one output directory is not a theoretical race — it
+# corrupted that tree three times in one day (`Unexpected end of JSON input`,
+# then a missing build/service/server/index.js at boot). The helper holds an
+# exclusive lock and swaps a COMPLETE tree into place; nothing here needs to
+# know that, which is the point.
+FRONTEND_BUILD="$ROOT_DIR/.claude/skills/lib/frontend-build.sh"
 needs_build() {
-    [ -f "$FRONTEND_DIR/$ENTRY" ] || return 0
-    local newer
-    newer="$(cd "$FRONTEND_DIR" &&
-        find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
-            -newer "$ENTRY" -print -quit 2>/dev/null || true)"
-    [ -n "$newer" ]
+    bash "$FRONTEND_BUILD" stale
 }
 
 launch() {
@@ -196,13 +220,12 @@ start() {
     mkdir -p "$(dirname "$PIDFILE")"
     stop
 
-    if needs_build; then
-        echo "==> Building the frontend (build/ is missing or older than src/)..."
-        if ! (cd "$FRONTEND_DIR" && pnpm build) >"$BUILD_LOG" 2>&1; then
-            echo "error: pnpm build failed — see $BUILD_LOG" >&2
-            tail -30 "$BUILD_LOG" >&2
-            return 1
-        fi
+    # `if-stale` re-asks the question INSIDE the lock, so two harnesses starting at
+    # once produce one build and the loser serves it rather than rebuilding over
+    # the winner. Do not hoist the staleness check back out here.
+    if ! bash "$FRONTEND_BUILD" if-stale; then
+        echo "error: the frontend build failed — see $ROOT_DIR/.output/run/frontend-build.log" >&2
+        return 1
     fi
 
     for attempt in 1 2 3; do
@@ -241,6 +264,15 @@ ensure)
     # and current, is left alone.
     if ours_is_up && serving && ! needs_build; then
         echo "==> The built frontend already serves :$PORT — leaving it alone."
+        # "Leaving it alone" is about OUR server, never about vite. This branch
+        # used to return without touching process-compose at all, and that is the
+        # whole of how the crash loop documented above survived: `just deploy::up`
+        # starts vite on every boot, our server already holds :8081 whenever a
+        # previous run left one up (the common case — nothing stops it between
+        # runs), vite therefore exits 1 and is restarted forever, and this fast
+        # path was the one place that would have stopped it. `stop_vite` is
+        # idempotent and costs one socket call, so it is unconditional now.
+        stop_vite
     else
         start "${1:-}"
     fi

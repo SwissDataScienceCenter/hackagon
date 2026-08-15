@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hackagon.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hackagon.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      annotations:
+        {{- /*
+        THE CONFIG RELOAD. Both files this pod reads are `subPath` mounts
+        (below), and a subPath mount is resolved ONCE at container start — the
+        kubelet refreshes a plain ConfigMap volume and never refreshes this
+        one. With no annotation here the pod template is byte-identical after a
+        config-only upgrade, so nothing rolls and the running pod keeps serving
+        the old file while `kubectl get configmap` shows the new one. The whole
+        story is in backend-deployment.yaml's copy of this comment.
+
+        Two hashes because there are two mounts, and either can change without
+        the other.
+        */}}
+        checksum/config: {{ include (print $.Template.BasePath "/frontend-configmap.yaml") . | sha256sum }}
+        {{- /*
+        ⚠ THIS PUTS A HASH OF SECRET MATERIAL IN THE POD SPEC, which anyone
+        with `get deployment` on the namespace can read while the Secret itself
+        needs `get secret`. A sha256 is not the secret, but it IS an oracle: a
+        reader who guesses `frontendSecrets.clientSecret` can confirm the guess
+        here without asking Keycloak.
+
+        Kept anyway, because every alternative is worse. Any value that changes
+        when the secret changes is the same oracle, and a value that does not
+        change is the bug — an OIDC client secret rotated by `helm upgrade` and
+        never picked up by a running pod, which is exactly the failure this
+        chart shipped with. What bounds it is entropy: `clientSecret` and
+        `authSecret` are meant to be long random strings (the k3d rig mints 24
+        and 32 bytes of hex). Do not put a guessable one in `frontendSecrets` —
+        that was never safe, and this makes the guess cheap to check.
+        */}}
+        checksum/secret: {{ include (print $.Template.BasePath "/frontend-secrets.yaml") . | sha256sum }}
+        {{- with .Values.frontend.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "hackagon.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          args:
+            - "--config-dir=/etc/hackagon"
+          env:
+            - name: PORT
+              value: "3000"
+            {{- /*
+            THE PUBLIC ORIGIN. adapter-node does not know what scheme the
+            browser used; it INFERS one, and with neither ORIGIN nor
+            PROTOCOL_HEADER set its inference is the literal string "https".
+            Everything downstream is built from that guess: SvelteKit's CSRF
+            check compares the request's `Origin` header against it, and
+            Auth.js picks its cookie NAMES from it (`__Secure-…` when it
+            believes the connection is secure).
+
+            Observed on a chart install reached over plain http: /auth/providers
+            advertised `https://app…:8090/auth/callback/keycloak`, the sign-in
+            form POSTed to an https URL nothing served, and the CSRF cookie was
+            never stored because it was issued `Secure` over an http
+            connection. Login was dead, and every page still returned 200 —
+            which is exactly why "the pods are Running" is not the test.
+
+            ingress-nginx always sets X-Forwarded-Proto, so reading it makes the
+            scheme OBSERVED instead of assumed, and correct in both directions.
+
+            ⚠ This is not the trap recorded in .claude/CLAUDE.md about
+            X-Forwarded-Proto and the tunnel. That one is about the VITE dev
+            server, which ignores PROTOCOL_HEADER — the header changed what
+            Auth.js believed while `event.url` stayed http, and the two
+            disagreed about the cookie name. adapter-node applies this header to
+            `event.url` itself, so here the two cannot disagree. Keep
+            `frontend.config.cookies.useSecure` in step with the real scheme
+            anyway.
+
+            HOST_HEADER is deliberately left at its default (`host`): ingress
+            controllers forward the requested host including its port, and a
+            missing X-Forwarded-Host would leave the origin undefined.
+            */}}
+            {{- with .Values.frontend.protocolHeader }}
+            - name: PROTOCOL_HEADER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.storage.enabled }}
+            {{- /*
+            The app owns `/objects/*` as a FALLBACK route
+            (src/routes/objects/[...path]/+server.ts) for when nothing in front
+            of it serves that path. It re-issues the request to STORAGE_ENDPOINT,
+            so `fetch` sets Host from that URL and the SigV4 signature still
+            matches — no rewrite needed on this path.
+
+            Set even when the /objects Ingress is on: the Ingress is the fast
+            path, this is what keeps the app correct if that route is removed.
+            No credentials here — the URL the browser presents is already
+            signed.
+            */}}
+            - name: STORAGE_ENDPOINT
+              value: {{ include "hackagon.storageEndpointURL" . | quote }}
+            {{- end }}
+            {{- /*
+            Escape hatch. adapter-node reads several more environment variables
+            (ORIGIN, ADDRESS_HEADER, XFF_DEPTH, BODY_SIZE_LIMIT) and node itself
+            reads NODE_EXTRA_CA_CERTS; a topology this chart did not anticipate
+            needs somewhere to say so without a template change.
+            */}}
+            {{- with .Values.frontend.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/hackagon/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: secrets
+              mountPath: /etc/hackagon/secrets.yaml
+              subPath: secrets.yaml
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hackagon.fullname" . }}-frontend-config
+        - name: secrets
+          secret:
+            secretName: {{ include "hackagon.fullname" . }}-frontend-secrets

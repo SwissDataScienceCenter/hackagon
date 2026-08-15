@@ -121,6 +121,13 @@ export interface RecipeAction {
   expect?: {
     ok?: boolean
     error?: string
+    /** With `error`: a case-insensitive regex the refusal's TEXT must match.
+     * A status code says how the server refused, never what it refused about,
+     * and two different faults answering the same code is exactly how a
+     * re-specified action keeps passing while its `outcome` has become a lie —
+     * `SetCapabilities` used to answer NotFound for a missing capability ROW
+     * and now answers it for a missing HACKATHON, from the same request. */
+    errorMatches?: string
     check?: string
     checkArgs?: unknown
     /** Succeed, OR fail with one of these codes — for restore steps whose
@@ -1169,70 +1176,90 @@ const UI_ASSERTS: Record<string, UiAssert> = {
   },
 
   /**
-   * The folded Manage nav: it opens, it closes, it stays open inside the
-   * section, and it remembers.
+   * The FLAT Manage nav: every organiser entry sits on the rail directly, with
+   * no disclosure to open, and the rail does not change when you walk into the
+   * section.
    *
-   * Asserted on a PARTICIPANT page, deliberately: on the hub itself the tiles
-   * carry the same labels as the folded entries, so a link "appearing" would say
-   * nothing about the fold. And asserted with `getByRole`, because the entries
-   * stay in the DOM while closed — `inert` + `aria-hidden` is what hides them,
-   * and the accessibility tree is the only place that reads as hidden. A CSS
-   * visibility check would agree with a fold that leaves ten links as the next
-   * thing Tab reaches.
+   * ⚠ Re-specified 2026-08-14, and it used to pin the exact OPPOSITE — the
+   * section started folded behind a "Show Manage Hackathon pages" chevron,
+   * toggled, remembered the choice per browser, and self-opened on a page inside
+   * itself. develop's `942b60a7` removed the fold: because entering the section
+   * force-opened it, the disclosure was already open everywhere an organiser
+   * actually used it, while the sidebar's height still depended on a state
+   * nothing on the page announced. Both branches watched that same force-open
+   * and drew opposite conclusions from it; develop owns the product decision, so
+   * the action is re-specified to it rather than deleted. The id stays
+   * `act5.nav.fold` — it is the stable reference the run report joins on, and a
+   * fold returning is what should turn this red.
+   *
+   * The load-bearing claim is the EQUALITY of the rail outside and inside
+   * Manage. "The links are there" passes against a fold too, once it is open,
+   * and the fold this replaced opened itself on exactly the pages a presence
+   * check would have looked at — so a per-page presence assertion could never
+   * have told the two designs apart.
+   *
+   * `getByRole` for the disclosure, not CSS: the folded entries stayed in the
+   * DOM and were hidden with `inert` + `aria-hidden`, so the accessibility tree
+   * was the only place that ever read as hidden.
    */
   async sidebarManageFold(page, args) {
     const id = requireHackathonId(args)
     const entryName = args.entry as string
+    const insidePath = (args.insidePath as string) ?? "tracks"
+
+    // Every entry the rail draws, by its own text. Sorted, because this is a
+    // claim about the SET — reordering is `manageNav`'s business and has its own
+    // fix history (develop's 4dc83705 undid an accidental swap).
+    const railNames = async () =>
+      (await page.locator("aside nav a").allInnerTexts())
+        .map((t) => t.trim())
+        .sort()
+
     await page.goto(`/my/hackathon/${id}/overview`)
 
-    const entry = () => page.getByRole("link", { name: entryName, exact: true })
-    const show = () =>
-      page.getByRole("button", { name: "Show Manage Hackathon pages" })
-    const hide = () =>
-      page.getByRole("button", { name: "Hide Manage Hackathon pages" })
+    const hub = page.getByRole("link", {
+      name: "Manage Hackathon",
+      exact: true,
+    })
+    const entry = page.getByRole("link", { name: entryName, exact: true })
 
     await expect(
-      page.getByRole("link", { name: "Manage Hackathon", exact: true }),
-      "the hub stays on the rail whatever the fold state — it is how the section is entered",
+      hub,
+      "the hub names the section and is on the rail — it is how the section is entered",
     ).toBeVisible()
-    await expect(show(), "the section starts folded").toHaveCount(1)
     await expect(
-      entry(),
-      `'${entryName}' must not be reachable while the section is folded`,
+      entry,
+      `'${entryName}' must be reachable from a PARTICIPANT page with nothing to open first`,
+    ).toBeVisible()
+
+    // The two above are this one's positive control: with the section proven
+    // present, a zero here reads as "there is no disclosure" and not as "there
+    // is no nav" — which is the shape an absence assertion agrees with
+    // otherwise.
+    await expect(
+      page.getByRole("button", { name: /^(Show|Hide) .+ pages$/ }),
+      "flat means no disclosure at all — a chevron here is the fold coming back",
     ).toHaveCount(0)
 
-    await show().click()
-    await expect(
-      entry(),
-      "opening the section reveals its entries",
-    ).toBeVisible()
-    await expect(
-      hide(),
-      "the disclosure must now say it closes — an aria-label stuck on 'Show' is a control that lies",
-    ).toHaveCount(1)
+    const outside = await railNames()
+    expect(
+      outside.length,
+      "the rail has to have entries before comparing two copies of it",
+    ).toBeGreaterThan(1)
+    expect(outside, "the hub is one of them").toContain("Manage Hackathon")
 
-    await hide().click()
-    await expect(entry(), "closing it hides them again").toHaveCount(0)
-
-    await show().click()
-    await expect(entry()).toBeVisible()
-    await page.goto("/dashboard")
-    await page.goto(`/my/hackathon/${id}/overview`)
+    await page.goto(`/my/hackathon/${id}/${insidePath}`)
     await expect(
-      entry(),
-      "the fold preference is per browser and must survive a page load",
+      entry,
+      "and still reachable from inside the section",
     ).toBeVisible()
 
-    // Folded again, then walk INTO the section: entering opens it, which is why
-    // the chevron is not simply derived from the route (that made it a no-op on
-    // every manage page, which reads as a broken control).
-    await hide().click()
-    await expect(entry()).toHaveCount(0)
-    await page.goto(`/my/hackathon/${id}/${args.insidePath ?? "tracks"}`)
-    await expect(
-      entry(),
-      "opening a page inside Manage must unfold the section that leads to it",
-    ).toBeVisible()
+    expect(
+      await railNames(),
+      "the rail must be identical inside Manage and outside it — that equality IS " +
+        "'flat', and it is what a fold, which by construction differs between the two, " +
+        "cannot satisfy",
+    ).toEqual(outside)
   },
 
   /**
@@ -1383,6 +1410,19 @@ const UI_ASSERTS: Record<string, UiAssert> = {
     const warning = panel
       .locator("div[role=status]")
       .filter({ hasText: "is meant to include" })
+
+    // WHICH of the two meanings of "current" is in play, read off the badge
+    // that states it rather than assumed from the story so far. The button
+    // below used to work only against a DECLARED phase while the warning was
+    // drawn for either — so an action that clicks it without pinning the
+    // resolution proves nothing about the case that was broken, and would go on
+    // passing if a declaration leaked in from an earlier step.
+    if (args.nowBadge) {
+      await expect(
+        phaseCard(page, "Now").locator("span.badge"),
+        "the Now card must state this is the resolution under test",
+      ).toHaveText(args.nowBadge as string)
+    }
 
     await expect(warning, "the mismatch warning did not render").toBeVisible()
     await expect(
@@ -2203,6 +2243,13 @@ async function runRpc(test: AnyTest, a: RecipeAction): Promise<void> {
       false,
     )
     expect(res.code, res.raw).toBe(a.expect.error)
+    if (a.expect.errorMatches) {
+      expect(
+        res.raw,
+        `the call refused with the right code for an unknown reason — ` +
+          `expected the message to match /${a.expect.errorMatches}/i`,
+      ).toMatch(new RegExp(a.expect.errorMatches, "i"))
+    }
   } else {
     expect(res.ok, `${a.method} failed: ${res.raw}`).toBe(true)
   }

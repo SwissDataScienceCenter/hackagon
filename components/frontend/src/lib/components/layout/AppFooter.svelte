@@ -17,7 +17,8 @@
 
     // The SDSC org site, off-site from here — read out of datascience.ch's own
     // markup rather than guessed. Distinct from the Platform column's own About,
-    // which is about Hackagon, not about SDSC.
+    // which is about Hackagon, not about SDSC: see the note on that link for why
+    // the two must not share a NAME, only a column heading.
     const SDSC_LINKS = [
         { label: 'About', href: 'https://datascience.ch/about' },
         { label: 'Events', href: 'https://datascience.ch/events' },
@@ -74,16 +75,47 @@
                 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- static route, matches NavBar's own convention -->
                 <a href="/hackathon" class={LINK}>Hackathons</a>
                 <a href={resolve('/(app)/dashboard')} class={LINK}>Dashboard</a>
+                <!-- "About Hackagon", not "About". The SDSC column beside this
+                     one links datascience.ch/about, and two links whose
+                     accessible name is exactly "About" cannot be told apart in a
+                     screen reader's link list — which is a flat list of NAMES,
+                     with the column heading that distinguishes them on screen
+                     thrown away. Fixed in the visible text rather than with an
+                     aria-label on one of them: an aria-label REPLACES the label
+                     a sighted person reads, so "click About" would stop working
+                     for voice control and the visible text would no longer be
+                     contained in the accessible name (WCAG 2.5.3).
+                     The rule that keeps it fixed: each link names its
+                     destination the way that destination names ITSELF. "About
+                     Hackagon" is this SitePage's own <h1> (cmd/seed/main.go, and
+                     the journey's act0 authors it under the same title);
+                     "About" is datascience.ch's own label for theirs. Two pages,
+                     two titles, so the collision cannot come back through a copy
+                     edit on one side. -->
                 <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- SitePage slug, not a typed route -->
-                <a href="/about" class={LINK}>About</a>
+                <a href="/about" class={LINK}>About Hackagon</a>
             </nav>
 
             <nav class="flex flex-col gap-3" aria-label="Swiss Data Science Center">
                 <h2 class="meta">SDSC</h2>
                 {#each SDSC_LINKS as link (link.href)}
+                    <!-- The sr-only suffix APPENDS to the accessible name, so the
+                         visible word stays contained in it and voice control
+                         ("click Events") keeps working — the opposite trade to an
+                         aria-label, which would replace the label a sighted person
+                         reads (WCAG 2.5.3, and the reason the About collision was
+                         fixed in visible text instead).
+                         target="_blank" is the ONLY signal today that these leave
+                         the site, and nothing announces it: the nav landmark is
+                         named "Swiss Data Science Center", but a screen reader's
+                         link list is a flat list of NAMES and landmark context is
+                         exactly what it discards — the same reason "About" and
+                         "About" collided one column apart. -->
                     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- absolute off-site URL; resolve() is for app routes -->
                     <a href={link.href} class={LINK} target="_blank" rel="noopener noreferrer">
-                        {link.label}
+                        {link.label}<span class="sr-only">
+                            (datascience.ch, opens in a new tab)</span
+                        >
                     </a>
                 {/each}
             </nav>
@@ -94,15 +126,22 @@
              asset-level swap, not a hand-rolled colour mode. -->
         <div class="flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
             <span class="meta">A joint venture of</span>
+            <!-- These two already NAME their destination, through the image alt
+                 that is their whole accessible name — so they take the bare "opens
+                 in a new tab" and not the host suffix the SDSC column carries.
+                 Saying "ethz.ch" after "ETH Zurich" is the doubling-up that makes
+                 a link list harder to read, not easier. -->
             <a href="https://ethz.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
                 <img
                     src="/images/logos/eth-zurich.svg"
                     alt="ETH Zurich"
                     class="h-4 invert dark:invert-0"
                 />
+                <span class="sr-only"> (opens in a new tab)</span>
             </a>
             <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
                 <img src="/images/logos/epfl.svg" alt="EPFL" class="h-4 invert dark:invert-0" />
+                <span class="sr-only"> (opens in a new tab)</span>
             </a>
         </div>
     </div>
@@ -135,9 +174,15 @@
                 <div class="flex items-center gap-1">
                     {#each SOCIALS as social (social.href)}
                         {@const Icon = social.icon}
+                        <!-- Icon-only, so aria-label is the ENTIRE accessible name
+                             and an sr-only child would be ignored — it is extended
+                             rather than added to. There is no visible text label
+                             here for it to contradict, which is why replacing the
+                             name is safe on these three and wrong on the five
+                             above. `title` stays the sighted tooltip. -->
                         <a
                             href={social.href}
-                            aria-label={social.label}
+                            aria-label="{social.label} (opens in a new tab)"
                             title={social.label}
                             target="_blank"
                             rel="noopener noreferrer"

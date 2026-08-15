@@ -1,16 +1,6 @@
 ---
 name: hackathon-e2e
-description:
-  Deterministic end-to-end testing of the full hackathon lifecycle. Boots the
-  whole stack from scratch (Keycloak, Postgres, backend, frontend), then runs
-  Playwright (Firefox) suites with a 15-person cast — admin, organizer, a
-  13-strong registration wave, capacity cut-off, waitlist, dropout, day-1
-  no-show, and a same-day walk-in — plus generated file-upload fixtures and a
-  309-action recipe (recipe.jsonl) with priority/outcome/gate triage. Runs
-  inside the devcontainer by default (see the devcontainer-up skill). Use when
-  asked to run e2e/browser tests, verify the hackathon lifecycle (publication →
-  registration → teams → event → voting → post-event), smoke-test the platform,
-  or check which lifecycle RPCs the backend implements.
+description: Deterministic end-to-end testing of the full hackathon lifecycle. Boots the whole stack from scratch (Keycloak, Postgres, backend, frontend), then runs Playwright (Firefox) suites with a 15-person cast — admin, organizer, a 13-strong registration wave, capacity cut-off, waitlist, dropout, day-1 no-show, and a same-day walk-in — plus generated file-upload fixtures and a 309-action recipe (recipe.jsonl) with priority/outcome/gate triage. Runs inside the devcontainer by default (see the devcontainer-up skill). Also owns mutation testing (`mutations/`, `scripts/mutate.sh`): breaks the product on purpose and checks the suites notice, so a passing test is one that has been seen to go red. Use when asked to run e2e/browser tests, verify the hackathon lifecycle (publication → registration → teams → event → voting → post-event), smoke-test the platform, check which lifecycle RPCs the backend implements, or ask whether a test would actually catch a given bug.
 ---
 
 # Hackathon lifecycle e2e testing
@@ -324,7 +314,14 @@ recipe.jsonl              THE SCREENPLAY: one action per line, full lifecycle in
                           each with priority/outcome/gate triage fields
 recipe-player.html        self-contained animated replay of the recipe (also published
                           as an artifact); rebuild after recipe edits by re-splicing the
-                          JSONL between the <script id="recipe-data"> markers
+                          JSONL between the <script id="recipe-data"> markers.
+                          Holds THREE inline script blocks — the recipe, a reduced
+                          journey report (run-report), and the program — and every `</`
+                          in the two data blocks is escaped as `<\/`, because a block
+                          ends at the first LITERAL close tag even inside a JSON string
+scripts/splice-player.mjs re-splice recipe.jsonl into the player, count-checked
+scripts/embed-run-report.mjs  reduce .artifacts/results.json (id + outcome + duration)
+                          and splice it in, so `run outcome` colours on open
 personas.ts               principals + seed matrix + JOURNEY_CAST constants
 cast.json                 the 11 extras (incl. the walk-in) (names, emails, shared dev password)
 playwright.config.ts      Firefox-only; setup/smoke/journey/mobile/docs/tunnel/openreplay projects
@@ -395,6 +392,38 @@ largely made of look like ordinary failures in a log.
 - **UI landed for a mutation** (e.g. a real Join button or an upload form):
   convert that `rpc` action into a `ui.flow` (clicks / `setInputFiles` with the
   generated bundle); keep the expectations.
+
+## Mutation testing (`mutations/`)
+
+A green suite proves nothing until you have watched it go red. `mutations/`
+holds a manifest of deliberate, reversible breakages, each paired with the tests
+that MUST notice; `scripts/mutate.sh` applies one, runs them, and asserts
+**exactly** the expected set failed.
+
+```bash
+bash scripts/mutate.sh list      # the manifest
+bash scripts/mutate.sh check     # every anchor still matches its source
+bash scripts/mutate.sh run       # the fast tier — go + vitest, NO stack needed
+bash scripts/mutate.sh run cap   # one id, or every id under a prefix
+bash scripts/mutate.sh run --tier all --arena journey
+bash scripts/mutate.sh restore   # only after a run was killed outright
+```
+
+**`NO REDS` fails the run**: nothing in the suite holds that property. That is
+the result the tool exists to produce, not an aside. `MISMATCH` fails too and
+names the extras (over-broad mutation, or coupling). Only `EXACT` passes.
+
+The fast tier drives `go test` and `vitest` straight from source, so it needs no
+running stack and never enters `nix develop` (`.devenv/profile/bin` has the
+binaries; the dev shell is a repo-wide mutex — container trap 4). The `journey`
+arena exists but is the last resort: the recipe is serial with chained `vars`,
+so `--until-act N` is the only lever, and a backend mutation needs the server
+rebuilt against it first. Where a cheap arena is the real witness, the journey
+action that ALSO pins the property is recorded in the entry's `crossRef` — the
+two are related, not interchangeable.
+
+Full contract — how to add an entry, what `gap` means, how restoration is
+verified — is in `.claude/CLAUDE.md`, "Mutation testing".
 
 ## Troubleshooting
 

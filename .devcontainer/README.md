@@ -18,14 +18,14 @@ container runtime in the picture at all.
 Everything below is **optional**, and here is what each piece buys you and what
 you lose without it:
 
-| Piece                                    | Buys you                                                                  | Without it                                                                                                                                                                                      |
-| ---------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| This devcontainer (Docker)               | A Linux box with Nix on a Windows/macOS host; pinned browser libs for e2e | Nothing, if you are on Linux. On Windows you need _some_ Linux (WSL2 works) because Nix does not run natively there.                                                                            |
-| `rustfs` object store (Docker)           | File uploads: event logos, page media, submission attachments             | The app still **boots and serves** (verified: backend `health.HealthService/Check` OK, frontend `/` 200). Uploads fail at use time and `/objects/*` answers **500**. Nothing warns you at boot. |
-| Cloudflare tunnel (`tunnel`+`caddy`)     | A public `*.trycloudflare.com` URL with working OIDC login                | Localhost only. No effect on anything else.                                                                                                                                                     |
-| OpenReplay rig (`.claude/skills`)        | Session replay for debugging                                              | Nothing — session replay is **off unless** a `replay:` block exists in the frontend `config.yaml` (`src/lib/schemas/config-schema.ts`).                                                         |
-| `services` compose profile               | Postgres + Keycloak as real containers instead of devenv processes        | Nothing; the devenv copies are the default and the two sets fight over ports, which is why the profile is opt-in.                                                                               |
-| `.claude/` skills (e2e, tunnel, docs, …) | The Playwright suites, the recipe spec, the tunnel and docs tooling       | Nothing in the app's build, test or run path. Grep confirms: outside `.claude/` the only references to it are explanatory comments.                                                             |
+| Piece                                    | Buys you                                                                                                                 | Without it                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| This devcontainer (Docker)               | A Linux box with Nix on a Windows/macOS host; pinned browser libs for e2e                                                | Nothing, if you are on Linux. On Windows you need _some_ Linux (WSL2 works) because Nix does not run natively there.                                                                                                                                                                                             |
+| `rustfs` object store (Docker)           | File uploads: event logos, page media, submission attachments                                                            | The app still **boots and serves** (verified: backend `health.HealthService/Check` OK, frontend `/` 200). Uploads fail at use time and `/objects/*` answers **500**. Nothing warns you at boot.                                                                                                                  |
+| Cloudflare tunnel (`tunnel`+`caddy`)     | A public URL with working OIDC login — a throwaway `*.trycloudflare.com` one, or a persistent hostname on a zone you own | Localhost only. No effect on anything else.                                                                                                                                                                                                                                                                      |
+| Debug rigs: OpenReplay, Plausible        | Session replay; cookieless audience measurement. Each is its own compose project with its own tunnel                     | Nothing — both are **off unless** a `replay:` / `plausible:` block reaches the frontend config (`src/lib/schemas/config-schema.ts`); the rigs write theirs into the gitignored `config.local.yaml` overlay. Idle cost when you do run them: ~750 MB for Plausible, 8 GB of its own for OpenReplay. They coexist. |
+| `services` compose profile               | Postgres + Keycloak as real containers instead of devenv processes                                                       | Nothing; the devenv copies are the default and the two sets fight over ports, which is why the profile is opt-in.                                                                                                                                                                                                |
+| `.claude/` skills (e2e, tunnel, docs, …) | The Playwright suites, the recipe spec, the mutation manifest and quality report, the tunnel and docs tooling            | Nothing in the app's build, test or run path. Grep confirms: outside `.claude/` the only references to it are explanatory comments.                                                                                                                                                                              |
 
 ### Minimal path from a clean machine to a running app
 
@@ -58,11 +58,28 @@ just develop just deploy::proc-comp process restart backend   # casbin reload
 seeding is not optional: casbin loads its policy once at startup and the seed
 writes roles straight into Postgres.
 
-⚠ **The bootstrap leaves the tree dirty.** On a clean clone,
-`GOWORK=off go mod tidy` prunes ~26 lines from the committed
-`components/backend/go.sum`, so your first `git status` is not clean. The build
-is unaffected. `just ci::codegen-check` runs the same command followed by
-`git diff --exit-code`, so this needs resolving rather than ignoring.
+Neither script prepares the object store — nothing in the app's own build path
+knows it exists. If you are using the container, run
+`bash .devcontainer/rustfs-init.sh` once (idempotent) or let
+`.claude/skills/devcontainer-up/scripts/up.sh` do it for you; without it the
+store is up but empty, which shows as three broken `<img>` frames on the
+hackathon list and 404s under `/objects`.
+
+⚠ **The bootstrap leaves the tree dirty.** `GOWORK=off go mod tidy` prunes
+exactly 26 lines from the committed `components/backend/go.sum`, so your first
+`git status` is not clean. The build is unaffected. `just ci::codegen-check`
+runs the same command followed by `git diff --exit-code`, so this needs
+resolving rather than ignoring. (Still true: re-run in this container on
+2026-08-14 at `a5003590`, same 26 deletions.)
+
+Nothing _else_ should be dirty. `git-lfs` is in the image as of 2026-08-13, so
+the three LFS-tracked binaries (`components/frontend/static/favicon.png`,
+`static/og-default.jpg`, the Keycloak theme's `favicon.ico`) no longer read as
+permanently modified. They used to: the workspace is bind-mounted from a Windows
+host that HAS git-lfs, so the worktree held real bytes while HEAD held a
+129-byte pointer, and a container with no `filter.lfs` config compared the two
+and reported ` M` forever. That was a filter that was never installed, not an
+edit — and while it lasted, `git status` was not a signal anything could read.
 
 **Budget the first run.** It downloads and partly _compiles_ the toolchain —
 devenv's own Rust binaries build from source, because the flake declares its
@@ -71,6 +88,29 @@ caches under `extra-trusted-substituters` (permission to use) rather than
 bootstrap ≈ 12 minutes to a ~10 GB Nix store, then `deploy::up` ≈ 5 more minutes
 before process-compose reports the stack started (Keycloak's `kc.sh build` runs
 in that window), and the frontend needs a few minutes more before Vite listens.
+
+**After that, entering the shell is cheap — and an earlier claim that it was not
+was wrong.** Every `just develop …` (and therefore every service in the stack,
+whose start commands are `just develop just run` / `just develop just serve`)
+re-enters `nix develop`. Measured in this container on 2026-08-14 at `a5003590`,
+`just nix::develop default true`:
+
+|                                         | measured                                      |
+| --------------------------------------- | --------------------------------------------- |
+| steady state, tree clean                | **4.6–5.0 s**                                 |
+| steady state, one tracked file modified | 4.7–5.0 s — **no difference**                 |
+| first entry after a tree edit           | 4.7–10.6 s (one 36 s outlier, not reproduced) |
+| against a _fixed_ devenv-root file      | 3.2–4.5 s                                     |
+
+That last row is where the avoidable cost is: `tools/just/devenv.sh` rewrites
+`.devenv/state/pwd` on **every** invocation, so the `devenv-root` flake input
+gets a new `lastModified` and Nix's eval cache misses every single run — about
+1.7 s of the 4.8 s, self-inflicted. Clean-versus-dirty is not the variable; the
+"44 s floor on a permanently dirty worktree" written down previously was almost
+certainly measured while `frontend` was crash-looping through one full
+`nix develop` per round (see "When the stack starves itself" below), and
+installing git-lfs — which does make the tree genuinely clean — moved the number
+not at all. Keep git-lfs for the truthful `git status`, not for speed.
 
 **On the native path.** These commands are what the container runs — the
 container adds nothing but Nix — but the run behind this document was performed
@@ -170,16 +210,40 @@ the e2e suite ran in the second without touching the first. The cost is a second
 Nix store (~10 GB): the `nix-store` volume is per project, so the new checkout
 re-downloads the toolchain.
 
+There is a **fourth** collision axis if both checkouts use named Cloudflare
+tunnels and share one Cloudflare account: the tunnel names default to
+`hackagon`, `hackagon-plausible`, `hackagon-openreplay`, so the second checkout
+would reuse the first's tunnel and repoint its DNS. Set `HACKAGON_TUNNEL_NAME`
+(and the Plausible/OpenReplay equivalents) in
+`.claude/skills/cloudflare-tunnel/.env` — a different file from the
+`.devcontainer/.env` above.
+
 ## Ports
 
-| Port | Service        | Where it binds                             |
-| ---- | -------------- | ------------------------------------------ |
-| 3000 | backend (gRPC) | inside `dev`, all interfaces               |
-| 8081 | frontend       | inside `dev`, `[::1]` (vite)               |
-| 8180 | keycloak       | inside `dev`, 0.0.0.0                      |
-| 5432 | postgres       | inside `dev`, 127.0.0.1                    |
-| 9000 | rustfs S3 API  | own container — see the object store       |
-| 9001 | rustfs console | own container — subpath `/rustfs/console/` |
+| Port | Service                     | Where it binds                                         |
+| ---- | --------------------------- | ------------------------------------------------------ |
+| 3000 | backend (gRPC)              | inside `dev`, all interfaces                           |
+| 8081 | frontend                    | inside `dev`, `[::1]` — vite, **or** the built server  |
+| 8082 | frontend (production build) | inside `dev`, **not published** — caddy's first choice |
+| 8180 | keycloak                    | inside `dev`, 0.0.0.0                                  |
+| 5432 | postgres                    | inside `dev`, 127.0.0.1                                |
+| 9000 | rustfs S3 API               | own container — see the object store                   |
+| 9001 | rustfs console              | own container — subpath `/rustfs/console/`             |
+
+**Two things can hold :8081.** `just up` starts `vite dev` there; the e2e
+harness stops vite and parks the adapter-node production build on the same port
+(`hackathon-e2e/scripts/prod-frontend.sh`), because after a codegen regeneration
+vite's first SSR takes longer than any readiness probe will wait. :8081 is the
+port to prefer for anything driving a browser — the realm export's
+`hackagon-frontend` client allows exactly one redirect URI,
+`http://localhost:8081/*`, so a login on :8082 dies with
+`Invalid parameter: redirect_uri`. :8082 exists for the tunnel
+(`cloudflare-tunnel/scripts/prod-serve.sh`), whose `Caddyfile.tunnel` tries
+`dev:8082` first and falls back to `dev:8081`, so a public URL and a suite run
+stop fighting over one port. It binds `HOST=::` (dual-stack) because caddy
+reaches it as `dev:8082` on the container's eth0 while local checks use `::1` —
+and it is deliberately not published, so nothing on the host can reach it and
+mistake it for the app.
 
 The `rustfs` ports need no bridging: it is its own container, published straight
 to the host, and reached from `dev` as `rustfs:9000`. Note that 9000 is **also**
@@ -199,14 +263,15 @@ docker compose -f .devcontainer/docker-compose.yml exec -u vscode dev \
 
 ### Access: public imagery, private everything else
 
-`rustfs-init.sh` applies a bucket policy on every run. Two prefixes are readable
-with **no credentials at all**; nothing else is.
+`rustfs-init.sh` applies a bucket policy on every run. Three prefixes are
+readable with **no credentials at all**; nothing else is.
 
-| Prefix          | Read access | Holds                           |
-| --------------- | ----------- | ------------------------------- |
-| `hackathons/*`  | public      | event covers, gallery photos    |
-| `users/*`       | public      | profile pictures                |
-| everything else | private     | submission attachments, exports |
+| Prefix          | Read access | Holds                                           |
+| --------------- | ----------- | ----------------------------------------------- |
+| `hackathons/*`  | public      | event covers, gallery photos                    |
+| `users/*`       | public      | profile pictures                                |
+| `site/*`        | public      | media pasted into platform pages (`SITE_MEDIA`) |
+| everything else | private     | submission attachments, exports                 |
 
 Public-read is a decision, not an accident (see `docs/storage.md`): these images
 already render on pages that need no login, so a public prefix gives a stable
@@ -219,6 +284,15 @@ casbin has approved the read.
 each prefix, reads them unsigned, and fails unless it sees 200 and 403
 respectively. Getting this backwards is silent — signed callers keep working
 while the private half is world-readable — so it is tested rather than assumed.
+Run here on 2026-08-14:
+`hackathons/* 200, users/* 200, site/* 200, teams/* 403`.
+
+**The list has to track `storage_service.go`.** A kind the backend marks public
+but this policy has no prefix for uploads perfectly and then answers 403 to
+every read, because the handler returns a `publicUrl` it has no way to know is
+unreadable. That is exactly what happened when `SITE_MEDIA` landed, which is why
+`check_public_policy` now probes _every_ public prefix rather than a
+representative one.
 
 ### Objects are served from the app's own origin
 
@@ -257,11 +331,14 @@ leaving three broken image frames. Content-Type is set from the file extension �
 curl otherwise stores `application/x-www-form-urlencoded`, the bytes upload
 fine, and the browser then refuses to render them.
 
-## Public URL (Cloudflare quick tunnel, optional)
+## Public URL (Cloudflare tunnel, optional)
 
-An opt-in `tunnel` service (compose profile `tunnel`) exposes the running
-frontend on a random `*.trycloudflare.com` URL — no Cloudflare account needed.
-The bridge script must be running so the tunnel container can reach Vite:
+Two modes, and the tooling picks between them.
+
+**Quick tunnel — the zero-setup default.** An opt-in `tunnel` service (compose
+profile `tunnel`) exposes the running frontend on a random `*.trycloudflare.com`
+URL — no Cloudflare account needed, and a new hostname on every start. The
+bridge script must be running so the tunnel container can reach Vite:
 
 ```bash
 docker compose -f .devcontainer/docker-compose.yml exec -u vscode dev \
@@ -271,16 +348,74 @@ docker compose -f .devcontainer/docker-compose.yml logs tunnel | grep -o 'https:
 ```
 
 The tunnel targets `caddy`, which path-splits the one public hostname:
-`/realms/*` + `/resources/*` reach Keycloak, everything else the frontend
-(`Caddyfile.tunnel`). Anonymous browsing works out of the box; **login through
-the tunnel** additionally needs the OIDC issuers rewired to the (ephemeral)
-public URL — scripted as
+`/realms/*` + `/resources/*` reach Keycloak, `/objects/*` the object store,
+everything else the frontend (`Caddyfile.tunnel`). Anonymous browsing works out
+of the box; **login through the tunnel** additionally needs the OIDC issuers
+rewired to the public URL — scripted as
 `bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth`, undone by the
 matching `down.sh`. Keycloak trusts forwarded headers for this
 (`proxy-headers=xforwarded` in toolchain.nix); the admin console is not routed
 through the tunnel. Stop with
-`docker compose -f .devcontainer/docker-compose.yml --profile tunnel down tunnel caddy`
-(quick-tunnel URLs are ephemeral and change on every start).
+`docker compose -f .devcontainer/docker-compose.yml --profile tunnel down tunnel caddy`.
+
+**Named tunnel — a hostname that stops changing.** Most of the re-wiring above
+exists only because a quick-tunnel hostname is thrown away on every restart. A
+named tunnel is a persistent hostname on a zone you own, and there is one per
+rig, driven by `.claude/skills/lib/cf-named-tunnel.sh` from a **gitignored**
+`.claude/skills/cloudflare-tunnel/.env` (copy `.env.example` beside it):
+
+| rig        | hostname variable     | tunnel                | origin                  |
+| ---------- | --------------------- | --------------------- | ----------------------- |
+| the app    | `HACKAGON_HOSTNAME`   | `hackagon`            | `http://caddy:80`       |
+| Plausible  | `PLAUSIBLE_HOSTNAME`  | `hackagon-plausible`  | `http://plausible:8000` |
+| OpenReplay | `OPENREPLAY_HOSTNAME` | `hackagon-openreplay` | `http://caddy:80`       |
+
+```bash
+bash .claude/skills/lib/cf-named-tunnel.sh check    # credentials + zone only
+bash .claude/skills/lib/cf-named-tunnel.sh status   # which named tunnels run
+bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth           # auto-selects
+bash .claude/skills/cloudflare-tunnel/scripts/up.sh --with-auth --quick   # force ephemeral
+```
+
+`up.sh` chooses named when those credentials exist and quick otherwise, **prints
+which mode it is in**, and stops the other mode's tunnel — the OIDC issuer names
+exactly one hostname, so a second public URL would serve every page and fail
+every login, which is the failure nobody notices until somebody signs in. Caddy
+needed no change: `Caddyfile.tunnel` binds `:80` for any Host, so the path mux
+applies identically. Nothing tracked ever carries the hostname; the issuer goes
+into the gitignored `config.local.yaml` overlay, and a spec in
+`components/backend/internal/config/config_test.go` asserts both tracked configs
+still say `localhost`.
+
+⚠ **A Cloudflare API token scopes to a ZONE, not to a hostname.** There is no
+per-subdomain grant. The narrowest token that can do this job can edit **any DNS
+record in the whole zone** — do not describe it as limited to the three
+subdomains above, and use a zone you are willing to hand to a dev script. The
+tooling supplies the guard Cloudflare cannot: `cf_dns_point` refuses to replace
+a record that is not already a `*.cfargotunnel.com` CNAME (`CF_FORCE_DNS=1`
+overrides).
+
+**The token is a SETUP credential.** Once the tunnels exist, `cloudflared` runs
+from a per-tunnel credentials file under `.state/named/<name>/` that can serve
+that one tunnel and nothing else: it cannot touch DNS, cannot enumerate the zone
+and cannot create anything. A machine that only _runs_ a tunnel should hold that
+directory and no token at all.
+
+⚠ **A named hostname can look dead from the Windows host and be perfectly
+healthy.** On this LAN the resolver answers **AAAA-only** for these names on a
+network with no IPv6 route out, so every lookup succeeds and every connection
+fails in milliseconds — while the same URL works from inside the dev container.
+The tooling detects this rather than reporting a broken tunnel:
+`cf-named-tunnel.sh` retries against a DoH-resolved IPv4 edge and, when that
+answers, says "the tunnel is fine, this machine's resolver is not";
+`auth-wire.sh` pins the name in `/etc/hosts` inside the container, and tests
+reachability rather than asking `getent hosts`, which says yes about a name
+nothing can reach. The manual check:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  --resolve app.example.org:443:<a-cloudflare-ipv4> https://app.example.org/
+```
 
 ## Object store (service `rustfs`)
 
@@ -500,6 +635,91 @@ container's hostname, so its first boot can hang spamming
 stale member ages out. The frontend also takes a few minutes on first boot (pnpm
 install + svelte-kit sync before vite listens).
 
+## When the stack starves itself
+
+Fixed 2026-08-13, and worth recognising because for several days it read as
+product bugs in four different places rather than as an infrastructure fault.
+
+Every process in the stack starts with `just develop just …`, so **entering the
+Nix shell is inside every service's startup**, while process-compose's readiness
+clock is already running. That is fine at ~5 s a go. It stops being fine when
+something enters that shell in a loop.
+
+What happened: `vite dev` binds `[::1]:8081`, and so does the adapter-node build
+the e2e harness parks there. Whenever a previous run had left that server up —
+the common case, since nothing stopped it between runs — vite could not bind,
+exited 1 with `Error: Port 8081 is already in use`, and an **uncapped**
+`restart: on_failure` sent it round again roughly every 55 seconds. Found live
+at **54 restarts in 50 minutes**, each one a full `nix develop`.
+
+Two lessons generalise past this instance:
+
+- ⚠ **A readiness probe on a PORT cannot say which PROCESS holds it.**
+  `process list` reported `frontend Running Ready` the entire time, because the
+  probe is `curl http://localhost:8081` and the _other_ server was answering it.
+  The `RESTARTS` column said 54 throughout and nothing read it.
+- ⚠ **A SIGTERM that lands after the Go signal handler is up exits 0**, and
+  `restart: on_failure` does not consider 0 a failure — so a backend killed by
+  its own readiness budget stays down and is recorded as `Completed`,
+  `exit_code=0`, which reads like a clean stop. The log line sequence is
+  `grpc server listening` → `received shutdown signal` → nothing, forever.
+
+The fixes are in `tools/nix/hackagon/lib/toolchain.nix` and the harness, and
+none of them is a rule anyone has to remember:
+
+- frontend: `max_restarts = 3`, so a port conflict costs three shell entries
+  rather than one an hour.
+- backend: `restart = "always"` **plus `max_restarts = 3`**. `always` alone
+  converts a permanent outage into an unbounded loop (measured with the budget
+  scaled down to force it: 149 restarts in 151 seconds); the cap is what makes
+  `always` safe. `failure_threshold` went 50 → 150 (~37 min) because a cold
+  restart of that service — Nix shell, build quitsh, build the Go service, boot
+  — was measured at 486 s on a quiet lock. A generous budget costs nothing when
+  healthy, since probing stops at the first success, and the thing that should
+  decide "the backend did not come up" is
+  `hackathon-e2e/scripts/wait-ready.sh`'s own 300 s-per-service timeout, which
+  names the service.
+- `prod-frontend.sh ensure` calls `stop_vite` **unconditionally**. Its fast path
+  ("the built frontend already serves :8081 — leaving it alone") used to return
+  without touching process-compose, and that was the whole of how the loop
+  survived. "Leaving it alone" is about _our_ server, never about vite.
+- `wait-ready.sh` reads the restart counters back and warns, with the exit code,
+  when any service is at ≥3.
+
+## One writer for the frontend build
+
+**Never run a bare `pnpm build` in `components/frontend`.** Two independent
+callers build _and serve_ the same `build/service` tree —
+`hackathon-e2e/scripts/prod-frontend.sh` on :8081 and
+`cloudflare-tunnel/scripts/prod-serve.sh` on :8082 — so they do not merely race
+to build it, they race to replace it while the other is serving it. Symptoms
+(three agents hit this in one day): `Unexpected end of JSON input`, then a
+missing `build/service/server/index.js` at boot.
+
+Both go through `.claude/skills/lib/frontend-build.sh`:
+
+```bash
+bash .claude/skills/lib/frontend-build.sh if-stale   # build only if src/ moved
+bash .claude/skills/lib/frontend-build.sh build      # unconditional
+bash .claude/skills/lib/frontend-build.sh stale      # exit 0 when a build is due
+```
+
+It closes two different holes. An exclusive `flock` stops two builds
+interleaving, and re-checks staleness **inside** the lock, so the second caller
+waits and then finds the first one's fresh output — checking staleness outside
+the lock is how both callers decide to build. And it builds into a temp dir and
+swaps atomically, so `build/service` only ever holds a complete tree; the lock
+cannot help there, because an interrupted build's writer is gone rather than
+concurrent, and what it had written so far stays behind looking like a build.
+
+⚠ **A directory rename on the 9p bind mount intermittently answers `EPERM`**
+(`mv: cannot move '…/build/service' to '…/build/.service-old-352884': Permission denied`),
+with no open descriptors involved — the same rename succeeded a minute later
+with the same servers running. The swap therefore retries and rolls the old tree
+back if the second rename fails, so `build/service` is never left missing.
+Anything else here that renames a directory on this mount needs the same
+treatment.
+
 ## Adding sidecar services
 
 The app itself (backend, frontend, Keycloak, Postgres) runs in-container via
@@ -527,3 +747,70 @@ Two rules, both learned the hard way (the `rustfs` service follows them):
 
 Pin the image tag (never `latest`) and put persistent state in a named volume,
 not the workspace bind mount.
+
+### Before you recreate `dev`: find what is only in the writable layer
+
+Anything apt-installed at runtime dies with the container, and it dies silently
+— the first symptom is a suite failing on a missing shared library some days
+later. That is how Firefox's system libraries were lost once, and a check before
+the 2026-08-13 recreate found **21 more Playwright packages** in the same
+position (xvfb, libavcodec60, six font packages, and the usual X/cairo/pango
+set). All of them are baked into `Dockerfile` now.
+
+The recovery procedure is recorded in `Dockerfile`'s own comment above the
+browser-deps block, and it is the thing to re-run after any Playwright bump or
+before any deliberate recreate: install into a container, then **diff
+`apt-mark showmanual` against the same list in a fresh container of this
+image**. Anything the diff names is living in the writable layer. Add it to the
+Dockerfile before recreating, not after.
+
+When you do recreate, `up -d --no-deps dev` keeps compose from touching `caddy`
+and the tunnel alongside it. Afterwards, restart the stack
+(`hackathon-e2e/scripts/up.sh` + `wait-ready.sh`) before anything else.
+
+## Two artefacts you would not guess were there
+
+Neither is needed to build or run the app — nothing outside `.claude/`
+references them — but both answer questions people ask about this repo, so they
+are worth knowing about before someone re-derives them by hand.
+
+**Mutation testing** (`.claude/skills/hackathon-e2e/mutations/`) turns "would
+this test go red?" into something that runs. `manifest.jsonl` is a list of
+deliberate, reversible breakages, each paired with the exact set of tests that
+must notice; the runner applies one, runs them, and asserts exactly that set
+failed. `NO REDS` **fails** the run — it means nothing in the suite holds the
+property. Only an exact match passes.
+
+```bash
+bash .claude/skills/devcontainer-up/scripts/mutate.sh check   # anchors still match source
+bash .claude/skills/devcontainer-up/scripts/mutate.sh list
+bash .claude/skills/devcontainer-up/scripts/mutate.sh run     # fast tier: go + vitest
+bash .claude/skills/devcontainer-up/scripts/mutate.sh restore # after a run was killed
+```
+
+The fast tier drives `go test` and `vitest` straight from source and needs the
+container but **no running stack**. `check` is cheap enough for every commit and
+is the one to run after touching backend or frontend source: it verifies each
+mutation's anchor still matches its file, and an anchor that has drifted is the
+same disease as a test that has stopped asserting. Run here on 2026-08-14:
+`all 38 mutations still anchor`.
+
+**The quality report** (`.claude/skills/hackathon-e2e/quality-report.html`) is a
+single self-contained page: what is tested, how well, what is not, what is
+known-broken. Nothing in it is hand-typed — every figure is read from a file at
+build time and then read back out of the finished HTML and re-derived by a
+second code path before the build is allowed to succeed. Rebuild it after
+changing the recipe, the manifest or a run report:
+
+```bash
+bash .claude/skills/devcontainer-up/scripts/exec.sh \
+  just develop node .claude/skills/hackathon-e2e/scripts/build-quality-report.mjs
+```
+
+(`node` is not on the login shell's `PATH` — it comes from the dev shell, or
+from `.devenv/profile/bin` if you would rather not enter one.) The build prints
+every claim it re-derived and refuses to write a page it could not verify; a run
+on 2026-08-14 reported `205 figures re-derived … and matched`. Its animated
+sibling, `recipe-player.html`, is rebuilt separately — same shell, same
+directory, with `node .claude/skills/hackathon-e2e/scripts/splice-player.mjs` —
+and that rebuild is required rather than cosmetic after any recipe edit.

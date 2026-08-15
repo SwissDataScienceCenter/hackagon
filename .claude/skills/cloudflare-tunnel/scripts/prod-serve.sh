@@ -243,8 +243,15 @@ cmd_start() {
     fi
 
     if [ "$build" -eq 1 ]; then
-        echo "==> Building the frontend (pnpm run build:prod)..."
-        (cd "$FRONTEND_DIR" && pnpm run build:prod)
+        # Through the shared serializer, NOT a bare `pnpm build`. This script and
+        # hackathon-e2e/scripts/prod-frontend.sh both build AND SERVE the same
+        # `build/service` tree (this one on :8082, that one on :8081), so they do
+        # not merely race to build it — they race to replace it while the other is
+        # serving it. Two concurrent builds into that one directory corrupted it
+        # three times in one day: `Unexpected end of JSON input`, then a missing
+        # build/service/server/index.js at boot. The helper takes an exclusive lock
+        # and swaps a complete tree into place.
+        bash "$ROOT_DIR/.claude/skills/lib/frontend-build.sh" build
     fi
     if [ ! -f "$FRONTEND_DIR/$SERVER_ENTRY" ]; then
         echo "error: $SERVER_ENTRY missing — run without --no-build." >&2
@@ -387,14 +394,15 @@ cmd_ensure() {
 
 # The bundle is a snapshot of src/, so it has to be rebuilt when src/ moved
 # under it — but rebuilding a current one costs ~40s of a tunnel handover for
-# nothing. Same freshness test as hackathon-e2e/scripts/prod-frontend.sh.
+# nothing.
+#
+# The test lives in the shared builder now, so this script and
+# hackathon-e2e/scripts/prod-frontend.sh cannot drift apart on what "stale"
+# means — they build and serve the SAME build/service tree, and two callers
+# disagreeing about whether it needs rebuilding is one of them rebuilding it
+# under the other.
 bundle_is_stale() {
-    [ -f "$FRONTEND_DIR/$SERVER_ENTRY" ] || return 0
-    local newer
-    newer="$(cd "$FRONTEND_DIR" &&
-        find src static package.json pnpm-lock.yaml svelte.config.js vite.config.ts \
-            -newer "$SERVER_ENTRY" -print -quit 2>/dev/null || true)"
-    [ -n "$newer" ]
+    bash "$ROOT_DIR/.claude/skills/lib/frontend-build.sh" stale
 }
 
 start_with_current_bundle() { # <origin>

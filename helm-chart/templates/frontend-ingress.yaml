@@ -1,0 +1,68 @@
+{{- if .Values.frontend.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "hackagon.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+  annotations:
+    {{- /*
+    ⚠ LOAD-BEARING, and the failure it prevents is the last hop of login.
+
+    Auth.js keeps the session in a JWT cookie, and this app puts the Keycloak
+    access token, refresh token and expiry inside it (src/auth.ts). The
+    resulting Set-Cookie block is several kilobytes and Auth.js chunks it across
+    `authjs.session-token.0`, `.1`, … — so the RESPONSE HEADERS of
+    /auth/callback/<provider> are far larger than a normal response's.
+
+    nginx buffers a whole upstream header block in a single `proxy_buffer_size`,
+    which ingress-nginx defaults to 4k. Over that it does not truncate, it
+    fails: "upstream sent too big header while reading response header from
+    upstream", 502 to the browser.
+
+    OBSERVED on a k3d install of this chart, and worth noting for how it
+    presents: Keycloak had authenticated, the code had been exchanged, and the
+    frontend logged "JWT Callback: Initial sign-in successful" with the right
+    user id — the app's own logs say login worked. Only the browser sees the
+    502, and only on the last redirect. Every other page is 200.
+
+    Applies to the AKS app-routing addon too: it is ingress-nginx, with the same
+    default. Blank the value to omit the annotation on a controller that does
+    not understand it.
+    */}}
+    {{- with .Values.frontend.ingress.proxyBufferSize }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: {{ . | quote }}
+    {{- end }}
+    {{- with .Values.frontend.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.frontend.ingress.ingressClass }}
+  rules:
+    {{- range .Values.frontend.ingress.hosts }}
+    - host: {{ .host | replace "{baseDomain}" $.Values.baseDomain | replace "{releaseName}" $.Release.Name }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "hackagon.frontendServiceName" $ }}
+                port:
+                  number: {{ $.Values.frontend.service.port }}
+          {{- end }}
+    {{- end }}
+  {{- with .Values.frontend.ingress.tls }}
+  tls:
+    {{- range . }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | replace "{baseDomain}" $.Values.baseDomain | replace "{releaseName}" $.Release.Name }}
+        {{- end }}
+      secretName: {{ .secretName | replace "{releaseName}" $.Release.Name }}
+    {{- end }}
+  {{- end }}
+{{- end }}

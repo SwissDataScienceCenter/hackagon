@@ -1,0 +1,197 @@
+# ============================================================
+# TEST VALUES — a laptop, a throwaway cluster, plain HTTP.
+# NOT a deployment template. Do not copy this into one.
+# ============================================================
+#
+# Used by .claude/skills/k3d-chart-rig, which creates a k3d cluster, installs
+# ingress-nginx over the disabled bundled Traefik, runs an object store the
+# chart deliberately does not deploy, and then installs this chart on top so the
+# three things the rendered manifest can only ASSERT can be OBSERVED instead:
+#
+#   1. a presigned PUT survives the /objects Ingress's Host rewrite;
+#   2. the regex path on that separate Ingress beats the frontend's `/`;
+#   3. ingress-nginx really does accept an ExternalName upstream.
+#
+# Everything here that differs from values.yaml differs because this rig has no
+# TLS, no DNS and no cert-manager. Read each one as "what a deployment must NOT
+# do":
+#
+#   * `http://` everywhere, and `cookies.useSecure: false` with it. A session
+#     cookie without Secure is a session cookie an attacker on the network can
+#     read. It is set false here only because there is no certificate to make
+#     the page https in the first place, and Auth.js would then set a
+#     `__Secure-` cookie the browser refuses to send back.
+#   * no TLS blocks and no cert-manager annotations: nothing issues certificates
+#     on this cluster.
+#   * the object store is in-cluster and reached by its cluster DNS name. A
+#     deployment points at S3/Ceph/MinIO run as its own release with its own
+#     backups — see the `storage:` comment in values.yaml.
+#
+# NO CREDENTIAL APPEARS IN THIS FILE. The postgres, keycloak-db, OIDC-client and
+# object-store secrets are minted per cluster by scripts/up.sh into a gitignored
+# .state/, and the storage credentials arrive as a Secret the script creates.
+#
+# ⚠ The rig also imports tools/configs/keycloak/realm-hackagon.json, which
+# carries the DEVELOPMENT ACCOUNTS (alice/bob/charles/hackagon-admin, password
+# `aliceandbob`). That import is done by the script, not by this file, and it is
+# why the whole rig is opt-in and binds loopback only.
+
+# `*.localhost` rather than nip.io/sslip.io: those need a resolver willing to
+# answer with a loopback address, and a resolver with DNS-rebinding protection —
+# which is the default on plenty of home routers, and was the case on the
+# machine this was written on — refuses. `*.localhost` is resolved by curl and
+# by browsers themselves (RFC 6761), so nothing is written to any hosts file.
+baseDomain: "hackagon.localhost"
+
+frontend:
+  image:
+    # The rig pulls the published images. They are built from the mainline and
+    # PREDATE the object-storage work on this branch, which is why the rig signs
+    # its own upload URLs instead of asking StorageService for one — see
+    # scripts/presign.sh.
+    tag: "latest"
+  config:
+    log:
+      forceDevLog: true
+    cookies:
+      # See the banner. http-only rig; a deployment leaves this true.
+      useSecure: false
+    oidc:
+      # One string, used by two very different callers: the BROWSER follows it
+      # to Keycloak, and the frontend POD fetches the discovery document from
+      # it. That is why the ingress controller listens on the same ports
+      # in-cluster as it does on the host — so this URL is true from both sides,
+      # and why CoreDNS is taught to answer `auth.hackagon.localhost`.
+      issuer: "https://auth.hackagon.localhost:8443/realms/hackagon"
+  # ⚠⚠ TEST-ONLY, AND THE WORST LINE IN THIS FILE. It turns off certificate
+  # verification for EVERY outbound TLS connection this Node process makes.
+  # It is here because the Keycloak certificate is self-signed by scripts/up.sh
+  # and the frontend fetches the OIDC discovery document and exchanges the
+  # authorization code over it. The alternative — mounting a CA bundle and
+  # setting NODE_EXTRA_CA_CERTS — needs an extraVolumes hook the chart does not
+  # have, and inventing one to make a test pass is how test-only surface gets
+  # into a production chart.
+  #
+  # A deployment sets neither this nor anything like it. If a deployment ever
+  # needs a private CA, add extraVolumes and use NODE_EXTRA_CA_CERTS.
+  extraEnv:
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
+    # replay and plausible are left at their values.yaml defaults (absent /
+    # disabled) ON PURPOSE: the rig asserts that no `replay:` or `plausible:`
+    # key reaches the running pod's config.yaml.
+  ingress:
+    enabled: true
+    ingressClass: "nginx"
+    # `null`, not `{}`. Helm DEEP-MERGES values files, and an empty map merges
+    # as "no change" — values.yaml's cert-manager annotation would survive it
+    # and stay on the object. Only an explicit null removes a key.
+    annotations: null
+    hosts:
+      - host: "app.{baseDomain}"
+        paths:
+          - path: /
+            pathType: Prefix
+    # No TLS: nothing issues certificates here. The /objects Ingress copies
+    # this block, so leaving it empty keeps both Ingresses plain http.
+    tls: []
+
+backend:
+  image:
+    tag: "latest"
+  config:
+    server:
+      # The `id` of `hackagon-admin` in tools/configs/keycloak/realm-hackagon.json.
+      # A realm import preserves user ids, so this is stable across re-creations
+      # of the cluster. The backend REFUSES TO START without this value — the
+      # chart now fails the render rather than letting it reach a pod log.
+      adminkeycloakid: "1183370a-46a2-4dad-b8fd-dd927d083e14"
+    oidc:
+      # THESE TWO ARE DIFFERENT ON PURPOSE, and the chart separating them is
+      # what makes it possible. `issuerurl` is a STRING COMPARED against the
+      # `iss` claim, so it must be the public URL a browser was sent to.
+      # `jwksurl` is a URL the backend FETCHES, so it may take the short path:
+      # the in-cluster Keycloak Service over plain http. The keys are the same
+      # keys either way, and Go's TLS stack would refuse the rig's self-signed
+      # certificate with no env hook on this deployment to relax it.
+      jwksurl: "http://hackagon-keycloak:8080/realms/hackagon/protocol/openid-connect/certs"
+      issuerurl: "https://auth.hackagon.localhost:8443/realms/hackagon"
+    logging:
+      level: debug
+
+storage:
+  enabled: true
+  # An in-cluster store in ANOTHER namespace, addressed by cluster DNS. The
+  # namespace matters: it is what keeps `objects.ingress.service.name` empty, so
+  # the chart renders the ExternalName Service — the object claim 3 is about.
+  # Naming the Service directly would carry the same traffic while skipping the
+  # thing under test.
+  endpoint: "http://store.hackagon-store.svc.cluster.local:9000"
+  bucket: "hackagon"
+  region: "us-east-1"
+  usePathStyle: true
+  publicPrefix: "/objects"
+  # Created by scripts/up.sh with `kubectl create secret`, from values minted
+  # into a gitignored file. The chart refuses to read these from values at all.
+  existingSecret: "hackagon-storage"
+  objects:
+    ingress:
+      enabled: true
+      maxBodySize: "64m"
+      service:
+        name: ""
+        port: null
+
+keycloak:
+  enabled: true
+  mode: production
+  hostname:
+    # Scheme included, and the PORT included. Keycloak 26 takes a full URL here
+    # and derives the public scheme from it; without the port every link it
+    # generates would point at :443 and the browser would land nowhere.
+    hostname: "https://auth.hackagon.localhost:8443"
+  admin:
+    username: hackagon-admin
+  database:
+    external:
+      vendor: postgres
+      host: "hackagon-postgresql"
+      port: 5432
+      # NOTE: the subchart reads `name` and `username`, not `database`/`user`.
+      # values.yaml sets the latter pair, which the subchart ignores; the
+      # defaults happen to be the same two strings, so it works by coincidence.
+      database: keycloak
+      user: keycloak
+  proxy:
+    # Keycloak is behind ingress-nginx, which sets X-Forwarded-*. Without this
+    # Keycloak builds its own URLs from the request it physically received.
+    headers: xforwarded
+  ingress:
+    enabled: true
+    # Was hard-coded to webapprouting.kubernetes.azure.com until this rig
+    # observed Keycloak answering nothing while the frontend answered fine.
+    ingressClass: "nginx"
+    annotations: null
+    # LEFT AT THE CHART DEFAULT (`{releaseName}-keycloak-tls`), which is the
+    # point: scripts/up.sh creates a Secret of exactly that name holding a
+    # self-signed certificate, so the chart's own naming is exercised rather
+    # than routed around. TLS is required here and only here — Keycloak's
+    # federation cookies are SameSite=None, hence Secure, hence unusable over
+    # plain http. The app itself deliberately stays on http; see lib.sh.
+
+postgresql:
+  enabled: true
+  auth:
+    username: postgres
+    database: postgres
+  primary:
+    persistence:
+      # A throwaway cluster: `down.sh` deletes the node, so a PVC would only be
+      # a slower way to lose the same data.
+      enabled: false
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

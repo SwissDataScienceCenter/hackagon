@@ -33,6 +33,26 @@ First run pulls ~25 images and runs DB migrations — expect a long wait. There 
 no signing up by hand: **`up.sh` creates the admin account itself** from
 `.secrets.env` (see below) and prints the project key when done.
 
+## Named hostname (`--named`)
+
+`up.sh --named` puts this rig on a **persistent hostname you own** instead of a
+quick tunnel, using the same Cloudflare credentials as the app's tunnel —
+`OPENREPLAY_HOSTNAME` in the gitignored `.claude/skills/cloudflare-tunnel/.env`.
+See that skill's SKILL.md for the token and its real (zone-wide) scope. Named is
+the default when configured; `--quick` forces the old behaviour, which still
+needs no account at all.
+
+**This is the rig a stable hostname helps most.** `COMMON_DOMAIN_NAME` is baked
+into ~25 containers at boot, so every new quick-tunnel URL means rewriting
+`common.env` and recreating the whole stack — and the app's `replay.ingestPoint`
+with it. A tracker still holding the old ingest host posts sessions into
+nothing, and an empty OpenReplay UI looks exactly like the correct default (the
+tracker is consent-gated), so that failure is silent in the worst way. With a
+named hostname, `wire-frontend.sh` is run once and stays true.
+
+Only one tunnel runs at a time: `--named` stops the quick tunnel and vice versa,
+because `COMMON_DOMAIN_NAME` names exactly one of them.
+
 ## Layout
 
 ```

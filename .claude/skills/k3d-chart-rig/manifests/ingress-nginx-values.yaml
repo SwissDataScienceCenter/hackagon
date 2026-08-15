@@ -1,0 +1,84 @@
+# ingress-nginx for the k3d rig.
+#
+# k3d ships TRAEFIK, and every annotation the chart writes on its /objects
+# Ingress (`nginx.ingress.kubernetes.io/upstream-vhost`, `rewrite-target`,
+# `use-regex`, `proxy-body-size`) is ingress-nginx's. On Traefik the Host
+# rewrite is not expressible in a core Ingress object at all — it needs a
+# Traefik CRD — so with the bundled controller the one thing this rig exists to
+# test cannot work. `up.sh` therefore creates the cluster with
+# `--disable=traefik` and installs this instead.
+#
+# THE PORT IS THE INTERESTING PART. The controller Service listens on 8090, not
+# 80, so that the port in the public URL is the same port the cluster's own DNS
+# answer reaches. Keycloak's issuer is ONE string: the browser fetches
+# `http://auth.hackagon.localhost:8090/realms/hackagon` and the frontend pod
+# fetches the discovery document from the same string. If the in-cluster
+# listener were on :80 the two could not agree, and Auth.js rejects a discovery
+# document whose `issuer` differs from the configured one.
+#
+# k3s's ServiceLB turns a LoadBalancer Service into a DaemonSet with
+# hostPort: 8090 on the node, and k3d publishes host 8090 to that same node
+# port — so one number runs the whole way through.
+controller:
+  replicaCount: 1
+
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: true
+  ingressClass: nginx
+  # An Ingress with no class must NOT be picked up: the point of this rig is to
+  # observe that the chart's own ingressClassName selects this controller.
+  watchIngressWithoutClass: false
+
+  service:
+    type: LoadBalancer
+    ports:
+      http: 8090
+      https: 8443
+    targetPorts:
+      http: http
+      https: https
+
+  # Snippets stay off. Nothing in helm-chart/ uses them, and leaving them
+  # enabled would let a rig-only annotation stand in for a chart-only one.
+  allowSnippetAnnotations: false
+
+  config:
+    # THE SCHEME HAS TO SURVIVE A HOP THIS CONTROLLER DID NOT TERMINATE.
+    #
+    # ingress-nginx always sends `X-Forwarded-Proto: $pass_access_scheme`
+    # upstream, and by default `$pass_access_scheme` is `$scheme` — the scheme of
+    # the connection IT accepted. Behind a tunnel that terminates TLS at
+    # Cloudflare's edge and speaks plain http to this controller, that is `http`,
+    # so the frontend would be told `http` on a request the browser made over
+    # https: it would advertise an http callback URL, drop the `__Secure-` cookie
+    # prefix, and 403 the sign-in POST whose `Origin` is https. Every page would
+    # still answer 200.
+    #
+    # With this on, the map becomes `default $http_x_forwarded_proto; '' $scheme`
+    # — so cloudflared's header is believed when present and the connection's own
+    # scheme is used when it is not. That second half is why this is safe to
+    # leave on in the plain `*.localhost` mode: nothing sends the header there,
+    # the fallback is exactly the previous behaviour, and `verify.sh` still
+    # passes unchanged.
+    #
+    # ⚠ It does mean any client that can reach this controller directly can claim
+    # to be on https. That is the standard trade for running behind a proxy and
+    # it is why this rig binds loopback only; a deployment pairs it with
+    # `proxy-real-ip-cidr` scoped to the proxies it actually has.
+    use-forwarded-headers: "true"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 90Mi
+
+  admissionWebhooks:
+    enabled: true
+
+  # A single-node cluster: no reason to spread or to keep a second copy.
+  minAvailable: 0
+
+defaultBackend:
+  enabled: false

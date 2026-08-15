@@ -1,0 +1,59 @@
+{{- if and .Values.keycloak.enabled .Values.keycloak.ingress.enabled -}}
+{{- $keycloakHost := include "hackagon.keycloakHost" . }}
+{{- /*
+Keycloak's public route, rendered by THIS chart rather than by the subchart:
+the subchart's own ingress.public/ingress.admin stay disabled so there is one
+place the hostname is decided, and it is the same `{baseDomain}` the frontend
+and the OIDC issuer are built from.
+
+Everything below used to be hard-coded — the ingress class
+(webapprouting.kubernetes.azure.com), the cert-manager issuer and a TLS block —
+so the object rendered identically on every cluster and was CLAIMED BY NO
+CONTROLLER on any cluster that is not the AKS app-routing addon. The frontend
+Ingress has had `frontend.ingress.ingressClass` since the beginning; this one
+ignoring it meant a deployment could serve the app and not its login. Observed,
+not deduced: on a k3d cluster running ingress-nginx the frontend answered and
+auth.<baseDomain> answered nothing at all.
+
+`keycloak.ingress.enabled` also did nothing — the object was rendered whatever
+it said, and values.yaml said `false`. Its default is now `true`, which is what
+the chart has always DONE, so the flag finally means what it reads as without
+changing any existing deployment.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "hackagon.fullname" . }}-keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+  {{- with .Values.keycloak.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- /*
+  Empty means "whatever serves the frontend". Keycloak is reached from the same
+  browser on the same cluster; two classes here would be a mistake far more
+  often than a choice.
+  */}}
+  ingressClassName: {{ .Values.keycloak.ingress.ingressClass | default .Values.frontend.ingress.ingressClass }}
+  rules:
+    - host: {{ $keycloakHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "hackagon.keycloakServiceName" . }}
+                port:
+                  number: 8080
+  {{- with .Values.keycloak.ingress.tlsSecretName }}
+  tls:
+    - hosts:
+        - {{ $keycloakHost }}
+      secretName: {{ . | replace "{releaseName}" $.Release.Name }}
+  {{- end }}
+{{- end }}

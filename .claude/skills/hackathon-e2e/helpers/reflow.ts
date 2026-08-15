@@ -15,11 +15,15 @@ import { expect, type Page } from "@playwright/test"
 //  4. the consent banner — the one piece of chrome that LAYERS over the page —
 //     is on screen without being asked to be, and covers no control once the
 //     document is scrolled to its end (expectConsentBannerClearsContent);
-//  5. the footer exists on this route and its four links are hit-testable at
+//  5. the footer exists on this route and its links are hit-testable at
 //     the bottom of the document (expectFooterOperable). Presence is a claim
 //     of its own here — the footer is the only inbound link to the platform's
 //     own SitePages, and it was absent from the whole signed-in half of the app
-//     while checks 2 and 3 "passed" on it by returning early.
+//     while checks 2 and 3 "passed" on it by returning early;
+//  6. no two links inside the footer landmark answer to the same accessible
+//     name (expectFooterLinkNamesUnique) — a screen reader's link list is a
+//     flat list of NAMES, so two "About"s in one region are two destinations
+//     a reader cannot choose between.
 
 /** Horizontal overflow, with the widest offenders named (same contract as
  * responsive.spec.ts, which owns the 390px battery). */
@@ -254,12 +258,33 @@ export async function expectNoClippedText(
 // ─── The site footer: present AND clickable ──────────────────────────────────
 
 /**
- * The links the footer carries. Privacy, Terms and About are SitePages —
- * `[slug=sitepage]` records authored in /manage/pages — and this footer is the
- * ONLY inbound link to any of them. A route without it is a route from which
- * the platform's own pages cannot be reached.
+ * The links the footer carries, each with the nav landmark that owns it.
+ *
+ * Privacy, Terms of use and About are SitePages — `[slug=sitepage]` records
+ * authored in /manage/pages — and this footer is the ONLY inbound link to any
+ * of them. A route without it is a route from which the platform's own pages
+ * cannot be reached.
+ *
+ * ⚠ "About Hackagon", not "About" — and the history is the reason this file
+ * says so twice. develop's rebuilt footer (`02658384`) put the SDSC org site's
+ * links beside ours, one of them named exactly "About" (datascience.ch/about,
+ * next to our /about), so footer-wide these constants matched TWO links each
+ * pointing somewhere different. This scoped to the nav landmark to survive
+ * that, which made the tooling correct and left the product broken: a landmark
+ * is exactly the context a screen reader's link list discards.
+ *
+ * The product side is fixed now — our link carries the SitePage's own title —
+ * and `expectFooterLinkNamesUnique` below is what stops it coming back. The
+ * landmark scoping stays anyway: it costs nothing and it says WHICH link each
+ * of these means, which a bare name never did.
  */
-export const FOOTER_LINKS = ["Privacy", "Terms", "About", "GitHub"]
+export const FOOTER_LINKS: { label: string; nav: string }[] = [
+  { label: "Hackathons", nav: "Platform" },
+  { label: "Dashboard", nav: "Platform" },
+  { label: "About Hackagon", nav: "Platform" },
+  { label: "Privacy", nav: "Legal" },
+  { label: "Terms of use", nav: "Legal" },
+]
 
 /**
  * TWO claims, and the second is the one that keeps costing money here.
@@ -296,10 +321,12 @@ export async function expectFooterOperable(page: Page, name: string) {
   ).toHaveCount(1)
   await expect(footer).toBeVisible()
 
-  for (const label of FOOTER_LINKS) {
+  for (const { label, nav } of FOOTER_LINKS) {
     await expect(
-      footer.getByRole("link", { name: label, exact: true }),
-      `${name}: the footer carries no "${label}" link`,
+      footer
+        .getByRole("navigation", { name: nav })
+        .getByRole("link", { name: label, exact: true }),
+      `${name}: the footer's "${nav}" nav carries no "${label}" link`,
     ).toHaveCount(1)
   }
 
@@ -367,6 +394,191 @@ export async function expectFooterOperable(page: Page, name: string) {
       `document scrolled to its end — something is drawn on top of them, and ` +
       `the footer is the only route to the platform's own pages: ` +
       blocked.join(" | "),
+  ).toEqual([])
+}
+
+// ─── Footer link NAMES: what a screen reader's link list would show ──────────
+
+/** One link, as a link list would list it: its destination, the name a screen
+ * reader announces for it, and whether following it leaves the current tab. */
+export interface NamedLink {
+  href: string
+  name: string
+  target: string
+}
+
+/**
+ * Every link inside the footer landmark, with its ACCESSIBLE NAME — not its
+ * text.
+ *
+ * The difference is not academic and this repo has already paid for it once:
+ * the first version of the off-site check read `aria-label ?? textContent` and
+ * reported the two parent-institution logos as nameless. They are
+ * `<a><img alt="ETH Zurich"></a>` — perfectly well named, by the alt text of
+ * the image inside them, which is content and therefore part of the name. A
+ * check that calls a correct page broken gets deleted, so the computation lives
+ * here now and both footer name checks share it.
+ *
+ * What it covers is what this footer uses: `aria-label` wins, otherwise the
+ * link's content, and content includes `alt`. No `aria-labelledby` (nothing
+ * here uses one) and no `title` fallback. That approximation is deliberately
+ * NOT trusted on its own — it ENUMERATES candidates, and
+ * `expectFooterLinkNamesUnique` hands each one back to Playwright's own
+ * spec-compliant role/name engine to be counted. If the two ever disagree, the
+ * count comes back 0 and the assertion says so rather than quietly agreeing.
+ *
+ * Whitespace is normalised for the same reason: an accessible name is
+ * collapsed and trimmed, and these labels sit on their own indented lines in
+ * the markup.
+ *
+ * ⚠ Content is gathered in DOCUMENT ORDER, which the first version was not: it
+ * read `textContent` and then appended every `alt`, so a link whose image comes
+ * BEFORE its text was named back to front. That is not academic either — the
+ * parent-institution logos are `<a><img alt="ETH Zurich"><span class="sr-only">
+ * (opens in a new tab)</span></a>`, and the old order called that
+ * "(opens in a new tab) ETH Zurich", a name no screen reader would ever say.
+ * The uniqueness check below hands these names back to Playwright's own engine
+ * to be counted, so a back-to-front name does not read as a wrong name — it
+ * comes back with a count of 0 and reads as a MISSING link.
+ */
+export async function footerLinkNames(page: Page): Promise<NamedLink[]> {
+  return page
+    .locator("footer")
+    .getByRole("link")
+    .evaluateAll((els) =>
+      els.map((e) => {
+        // Depth-first over child nodes: text as itself, <img> as its alt, and
+        // anything carrying its own aria-label as that label (it names its
+        // subtree, so recursing past it would double-count).
+        const parts: string[] = []
+        const walk = (n: Node) => {
+          for (const c of Array.from(n.childNodes)) {
+            if (c.nodeType === Node.TEXT_NODE) parts.push(c.textContent ?? "")
+            else if (c.nodeType === Node.ELEMENT_NODE) {
+              const el = c as Element
+              if (el.tagName === "IMG") parts.push(el.getAttribute("alt") ?? "")
+              else if (el.hasAttribute("aria-label"))
+                parts.push(el.getAttribute("aria-label") ?? "")
+              else walk(el)
+            }
+          }
+        }
+        walk(e)
+        return {
+          href: e.getAttribute("href") ?? "",
+          target: e.getAttribute("target") ?? "",
+          name: (e.getAttribute("aria-label") ?? parts.join(" "))
+            .replace(/\s+/g, " ")
+            .trim(),
+        }
+      }),
+    )
+}
+
+/**
+ * Inside the footer landmark, an accessible name identifies exactly ONE link.
+ *
+ * The bug this exists for shipped in develop's rebuilt footer (`02658384`):
+ * our own /about link and datascience.ch/about were both named exactly
+ * "About". Nothing on screen was wrong — the column headings ("Platform",
+ * "SDSC") tell them apart perfectly — but a screen reader's link list is a flat
+ * list of NAMES, and headings are the first thing it throws away. Someone
+ * pulling up that list saw "About, About" and could not tell which one leaves
+ * the site.
+ *
+ * ⚠ It is the PROPERTY that is asserted, never a list of expected names. The
+ * previous generation of this check compared the footer against a five-entry
+ * constant, which made it a claim about the footer's SIZE — it went wrong the
+ * day develop grew the footer to fourteen links, i.e. on a copy edit rather
+ * than on a defect (.claude/CLAUDE.md, `03-dashboard`'s `connectedCount: 3` is
+ * the same disease). Uniqueness holds at four links and at forty.
+ *
+ * Two positive controls, because this is an absence claim and an absence claim
+ * with nothing behind it agrees with everything: the footer must carry links at
+ * all (an empty footer has no duplicates), and none of them may be nameless (an
+ * icon-only anchor that lost its aria-label is invisible to the same reader,
+ * and empty names would otherwise collide with each other in a way this loop
+ * would have to special-case).
+ */
+export async function expectFooterLinkNamesUnique(page: Page, name: string) {
+  const footer = page.locator("footer")
+  await expect(footer, `${name}: expected exactly one <footer>`).toHaveCount(1)
+
+  const links = await footerLinkNames(page)
+
+  expect(
+    links.length,
+    `${name}: the footer carries no links at all — a footer that is gone has ` +
+      `no duplicate names either, which is the one way this check could agree ` +
+      `with the thing it is looking for`,
+  ).toBeGreaterThan(4)
+
+  expect(
+    links.filter((l) => l.name === "").map((l) => l.href),
+    `${name}: a footer link has no accessible name — an icon-only anchor whose ` +
+      `aria-label was dropped looks perfectly fine on screen and does not ` +
+      `exist for a screen reader`,
+  ).toEqual([])
+
+  for (const wanted of new Set(links.map((l) => l.name))) {
+    const sharing = links.filter((l) => l.name === wanted).map((l) => l.href)
+    await expect(
+      footer.getByRole("link", { name: wanted, exact: true }),
+      `${name}: "${wanted}" does not name exactly one link in the footer. ` +
+        `Candidates computed from the DOM: ${sharing.join(", ")}. Two links ` +
+        `with one name cannot be told apart in a screen reader's link list — ` +
+        `give each one its destination's own title in its VISIBLE text (an ` +
+        `aria-label would hide the fix from voice control). A count of ZERO ` +
+        `instead means footerLinkNames() and Playwright's own accessible-name ` +
+        `computation have drifted apart, which is a bug in this helper`,
+    ).toHaveCount(1)
+  }
+}
+
+/**
+ * A link that moves you to a new tab must SAY so in its accessible name.
+ *
+ * `target="_blank"` is a silent instruction: it changes where you end up and
+ * announces nothing. Sighted visitors get no icon here, and a screen reader
+ * gets no word — the SDSC column's nav landmark is named "Swiss Data Science
+ * Center", which would tell you, and a link list is a flat list of NAMES with
+ * exactly that context thrown away. Same failure mode as the two "About"s one
+ * column apart that `expectFooterLinkNamesUnique` exists for.
+ *
+ * ⚠ A PROPERTY over whatever opens a new tab, never a list of the five links it
+ * was written for. A list would be an assertion about how many off-site links
+ * the footer HAS — which is the mistake the uniqueness check shipped once, when
+ * its five-entry constant broke the day the footer grew to fourteen links.
+ *
+ * The fix it asks for is a visually-hidden suffix INSIDE the anchor, which
+ * appends to the accessible name and leaves the visible word contained in it.
+ * An aria-label would replace that word, so "click Events" would stop working
+ * for voice control (WCAG 2.5.3) — the same trade that made the About
+ * collision a visible-text fix. Icon-only anchors are the exception and may
+ * extend their aria-label: there is no visible text there to contradict.
+ */
+export async function expectNewTabLinksAnnounced(page: Page, name: string) {
+  const newTab = (await footerLinkNames(page)).filter(
+    (l) => l.target === "_blank",
+  )
+
+  // Positive control: every assertion here is an absence, and an empty array
+  // satisfies all of them.
+  expect(
+    newTab.length,
+    `${name}: no footer link opens in a new tab at all — SDSC's five content ` +
+      `links, the two parent-institution logos and the three social icons all ` +
+      `do, so an empty set means the off-site row is gone rather than fixed`,
+  ).toBeGreaterThanOrEqual(4)
+
+  expect(
+    newTab
+      .filter((l) => !/opens in a new tab/i.test(l.name))
+      .map((l) => `${l.name || "(unnamed)"} → ${l.href}`),
+    `${name}: a footer link opens in a new tab without saying so in its ` +
+      `accessible name. Append a visually-hidden suffix inside the anchor ` +
+      `(class="sr-only"), which ADDS to the name; an aria-label would REPLACE ` +
+      `the visible word and break voice control`,
   ).toEqual([])
 }
 

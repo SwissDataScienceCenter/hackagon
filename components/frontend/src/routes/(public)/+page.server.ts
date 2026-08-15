@@ -15,13 +15,35 @@ export const load: PageServerLoad = async (event) => {
   // This awaited bare, so any unreachable backend turned the platform's front
   // page into a 500 — measured at 98 of 356 samples during one e2e run, which
   // wipes and reboots Postgres and the backend by design. The rest of the page
-  // is static marketing copy that needs no backend at all, and "no events to
-  // show" is a truthful, calm thing to render; a stack trace is not.
+  // is static marketing copy that needs no backend at all, and a stack trace is
+  // not something to render at a visitor.
   //
-  // The awards block below already degrades this way. Now the list does too.
-  const result = await publicHackathonClient
-    .list({ visibilityFilter: Visibility.VISIBILITY_PUBLIC })
-    .catch(() => ({ hackathons: [] }))
+  // But "no events to show" is NOT the truthful thing to render, which is what
+  // the comment here used to claim. It is truthful only when there are no
+  // events; when the list could not be FETCHED it is a different fact, and
+  // flattening the two cost hours on 2026-08-13 — this page and /hackathon both
+  // showed nothing while the database held eight public editions and `grpcurl`
+  // returned them (the gRPC channel was waiting out its reconnect backoff; see
+  // lib/server/grpc/client.ts). In a container where every test run wipes and
+  // reseeds the database, "empty" and "unreachable" looking identical is the
+  // most expensive confusion available. So the failure is carried, not hidden.
+  let hackathons: Awaited<
+    ReturnType<typeof publicHackathonClient.list>
+  >["hackathons"] = []
+  let listUnavailable = false
+  try {
+    const listed = await publicHackathonClient.list({
+      visibilityFilter: Visibility.VISIBILITY_PUBLIC,
+    })
+    hackathons = listed.hackathons
+  } catch (e) {
+    event.locals.logger.error(
+      { err: e },
+      "Public hackathon list unavailable on the landing page — rendering the outage state, not an empty platform.",
+    )
+    listUnavailable = true
+  }
+  const result = { hackathons }
 
   // Winners, from the events that actually finished and recorded them.
   //
@@ -70,6 +92,7 @@ export const load: PageServerLoad = async (event) => {
   return {
     session: event.locals.session,
     hackathons: result.hackathons,
+    listUnavailable,
     awards,
   }
 }

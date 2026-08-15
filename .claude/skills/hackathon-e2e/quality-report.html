@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hackagon — e2e quality report</title>
+<style>
+/* ── Hackagon quality report ───────────────────────────────────────────────
+   Same palette and the same theme mechanism as recipe-player.html, so the two
+   artefacts read as one system: prefers-color-scheme decides by default and a
+   data-theme stamp on <html> overrides it, in both directions. Every colour is
+   a token; a theme is a palette swap, never a second set of rules.
+   The five categorical slots are the validated dataviz reference palette in
+   slot order — the order is the CVD-safety mechanism, so do not re-order it.
+   Three light-mode slots sit under 3:1 on white, which is why every bar in
+   this file is accompanied by its numbers in text (the relief rule). */
+:root {
+  --bg:#0d0d0d; --surface:#1a1a19; --panel:#201f1e; --line:#2c2c2a; --line-strong:#383835;
+  --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181;
+  --st-good:#0ca30c; --st-warn:#fab219; --st-crit:#d03b3b;
+  --on-good:#ffffff; --on-warn:#0d0d0d; --on-crit:#ffffff; --on-info:#0d0d0d;
+  --accent:#3987e5; --shadow:rgba(0,0,0,.5); --wash:rgba(255,255,255,.045);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg:#f6f6f3; --surface:#ffffff; --panel:#ebebe6; --line:#dedcd4; --line-strong:#c2c0b6;
+  --ink:#14140e; --ink2:#3f3e36; --muted:#6a6961;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+  --st-good:#067306; --st-warn:#8a5c00; --st-crit:#b52626;
+  --on-good:#ffffff; --on-warn:#ffffff; --on-crit:#ffffff; --on-info:#ffffff;
+  --accent:#1a5fc0; --shadow:rgba(0,0,0,.14); --wash:rgba(20,20,14,.04);
+  color-scheme: light;
+} }
+:root[data-theme="light"] {
+  --bg:#f6f6f3; --surface:#ffffff; --panel:#ebebe6; --line:#dedcd4; --line-strong:#c2c0b6;
+  --ink:#14140e; --ink2:#3f3e36; --muted:#6a6961;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+  --st-good:#067306; --st-warn:#8a5c00; --st-crit:#b52626;
+  --on-good:#ffffff; --on-warn:#ffffff; --on-crit:#ffffff; --on-info:#ffffff;
+  --accent:#1a5fc0; --shadow:rgba(0,0,0,.14); --wash:rgba(20,20,14,.04);
+  color-scheme: light;
+}
+
+*,*::before,*::after { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body {
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+h1,h2,h3,h4 { line-height:1.25; margin:0; font-weight:600; }
+p { margin:0 0 .6rem; }
+a { color:var(--accent); }
+code,.mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.small { font-size:12.5px; }
+
+/* header */
+.topbar {
+  position:sticky; top:0; z-index:5; background:var(--surface);
+  border-bottom:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:.75rem 1rem; align-items:center;
+  padding:.7rem clamp(1rem,4vw,2.5rem);
+}
+.brand { font-weight:600; font-size:16px; }
+.brand span { color:var(--muted); font-weight:400; }
+.topmeta { color:var(--muted); font-size:12.5px; font-family:ui-monospace,monospace; }
+.topbar nav { margin-left:auto; display:flex; gap:.5rem; align-items:center; }
+.btn {
+  font:inherit; font-size:13px; color:var(--ink2); background:var(--panel);
+  border:1px solid var(--line-strong); border-radius:7px; padding:.32rem .7rem;
+  cursor:pointer; text-decoration:none; display:inline-flex; gap:.4rem; align-items:center;
+}
+.btn:hover { color:var(--ink); border-color:var(--muted); }
+
+main { max-width:1080px; margin:0 auto; padding:0 clamp(1rem,4vw,2.5rem) 4rem; }
+section { padding-top:2.6rem; }
+/* the header is sticky, so anything a #hash lands on must reserve its height —
+   otherwise every source footnote scrolls its own row under the bar */
+[id] { scroll-margin-top:4.2rem; }
+section > h2 {
+  font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+  border-bottom:1px solid var(--line); padding-bottom:.5rem; margin-bottom:1.1rem;
+}
+.lede { color:var(--ink2); max-width:70ch; }
+
+/* hero */
+.hero { display:flex; flex-wrap:wrap; gap:1.5rem 2.5rem; align-items:flex-end; padding-top:2.2rem; }
+.hero .fig { font-size:clamp(52px,9vw,76px); font-weight:600; line-height:1; letter-spacing:-.02em; }
+.hero .cap { color:var(--ink2); max-width:52ch; }
+
+/* numbers + source marks. Tabular figures align columns; at display size they
+   give every digit the width of a 0, so the hero and the tile values keep the
+   font's proportional figures. */
+.num { font-variant-numeric:tabular-nums; }
+.hero .fig .num, .tile .val .num { font-variant-numeric:normal; }
+a.src {
+  font-size:9.5px; vertical-align:super; margin-left:.15em; text-decoration:none;
+  color:var(--muted); border:1px solid var(--line-strong); border-radius:3px;
+  padding:0 .18em; line-height:1;
+}
+a.src:hover { color:var(--ink); border-color:var(--muted); }
+
+/* tiles */
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(255px,1fr)); gap:.9rem; }
+.tile { background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:.95rem 1.05rem; }
+.tile h3 { font-size:12.5px; color:var(--muted); font-weight:500; }
+.tile .val { font-size:34px; font-weight:600; line-height:1.1; margin:.35rem 0 .1rem; }
+.tile .unit { font-size:12.5px; color:var(--muted); font-weight:400; margin-left:.45em; }
+.tile .when { color:var(--muted); font-size:12px; margin:.45rem 0 0; }
+.tile .note { color:var(--ink2); font-size:12.5px; margin:.5rem 0 0; }
+.chips { display:flex; flex-wrap:wrap; gap:.3rem; margin:.4rem 0 0; }
+
+/* status chips — colour never travels alone: glyph + word, always */
+.chip {
+  display:inline-flex; align-items:center; gap:.32em; font-size:11.5px; font-weight:500;
+  border-radius:999px; padding:.1rem .5rem .13rem; white-space:nowrap;
+}
+.chip .glyph { font-weight:700; font-size:11px; }
+.chip.good { background:var(--st-good); color:var(--on-good); }
+.chip.warn { background:var(--st-warn); color:var(--on-warn); }
+.chip.crit { background:var(--st-crit); color:var(--on-crit); }
+.chip.info { background:var(--line-strong); color:var(--ink); }
+
+/* tables */
+table { width:100%; border-collapse:collapse; margin:.4rem 0 1rem; }
+caption { text-align:left; color:var(--muted); font-size:12.5px; padding-bottom:.5rem; }
+th,td { text-align:left; padding:.42rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+thead th { color:var(--muted); font-size:11.5px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; }
+tbody tr:hover { background:var(--wash); }
+.numcell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.srckey { color:var(--muted); font-family:ui-monospace,monospace; width:2rem; }
+.wrap { overflow-x:auto; }
+
+/* bars — 2px surface gaps do the separating; no strokes on marks */
+.bar { display:flex; height:13px; width:100%; min-width:110px; border-radius:3px; overflow:hidden; background:var(--panel); }
+.bar.solo { max-width:180px; }
+.seg { height:100%; box-shadow:2px 0 0 var(--surface) inset; }
+.seg:first-child { box-shadow:none; }
+.s1 { background:var(--s1); } .s2 { background:var(--s2); } .s3 { background:var(--s3); }
+.s4 { background:var(--s4); } .s5 { background:var(--s5); }
+.barcell { width:26%; min-width:130px; }
+.actno { display:block; font-weight:600; }
+.actabout { display:block; color:var(--ink2); font-size:12.5px; font-weight:400; }
+
+/* legend */
+.legend { display:flex; flex-wrap:wrap; gap:.35rem 1.1rem; margin:.2rem 0 1rem; font-size:12.5px; color:var(--ink2); }
+.legend b { font-weight:600; color:var(--ink); }
+.key { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:.4em; vertical-align:-1px; }
+
+/* callouts */
+.callout {
+  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--st-warn);
+  border-radius:0 9px 9px 0; padding:.85rem 1.05rem; margin:1rem 0;
+}
+.callout.crit { border-left-color:var(--st-crit); }
+.callout.good { border-left-color:var(--st-good); }
+.callout h3 { font-size:14px; margin-bottom:.35rem; }
+.callout p:last-child { margin-bottom:0; }
+.callout ul { margin:.4rem 0 .7rem; padding-left:1.1rem; }
+.callout li { margin-bottom:.2rem; }
+
+/* gap cards */
+.gaps { display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:.8rem; }
+.gap { background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:.85rem 1rem; }
+.gap h4 { font-size:13.5px; display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
+.gap h4 .glyph { color:var(--st-crit); }
+.gap .prop { font-size:13px; color:var(--ink); margin:.45rem 0 .3rem; }
+.gap .reason { font-size:12.5px; color:var(--ink2); }
+.gap .tagrow { margin-left:auto; }
+
+/* open items */
+.item { background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:.95rem 1.1rem; margin-bottom:.8rem; }
+.item h3 { font-size:15px; display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.4rem; }
+.item h3 .chip { margin-left:auto; }
+code.cmd { display:block; font-size:12px; color:var(--ink2); word-break:break-all; }
+
+footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line); margin-top:3rem; padding-top:1rem; }
+
+@media print {
+  .topbar { position:static; } .btn { display:none; }
+  section { break-inside:avoid-page; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Hackagon <span>· e2e quality report</span></div>
+  <div class="topmeta">sketch/06-08-26 @ ea66ff97 · 2026-08-15</div>
+  <nav>
+    <a class="btn" href="recipe-player.html">▶ Recipe player</a>
+    <button class="btn" id="btnTheme" type="button" aria-pressed="false">
+      <span id="themeIcon">◐</span> <span id="themeLabel">Theme</span>
+    </button>
+  </nav>
+</header>
+
+<main>
+
+<div class="hero">
+  <div>
+    <div class="fig"><span class="num" data-claim="recipe.actions" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a></div>
+    <p class="small" style="color:var(--muted);margin:.3rem 0 0">recipe actions</p>
+  </div>
+  <p class="cap">Every one of them ran, in order, in the last journey suite — <span class="num" data-claim="journey.recipeSpecsHero" data-value="465">465</span><a class="src" href="#src-B" title="Source B">B</a> specs on <span class="num" data-claim="journey.day" data-value="2026-08-15">2026-08-15</span><a class="src" href="#src-B" title="Source B">B</a>, <span class="num" data-claim="journey.unexpectedHero" data-value="0">0</span><a class="src" href="#src-B" title="Source B">B</a> failed and
+  <span class="num" data-claim="journey.skippedHero" data-value="0">0</span><a class="src" href="#src-B" title="Source B">B</a> skipped. The recipe is the product spec: it is
+  what this report is mostly about, and what the numbers below qualify.</p>
+</div>
+
+<section id="headline">
+  <h2>Headline</h2>
+  <p class="lede">A result without a date is a claim about now that may not be true, so every tile
+  carries the day it was observed. Only the journey tile is read from a machine-readable run report;
+  the rest are the suite table in <code>.claude/CLAUDE.md</code><a class="src" href="#src-F" title="Source F">F</a>, which is a written record,
+  not an artefact — treat those as reported rather than measured here.</p>
+  <div class="tiles">
+<article class="tile">
+    <h3>journey — the lifecycle recipe</h3>
+    <p class="val"><span class="num" data-claim="journey.expected" data-value="469">469</span><a class="src" href="#src-B" title="Source B">B</a><span class="unit">specs passed</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.unexpected" data-value="0">0</span>&nbsp;failed</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.skipped" data-value="0">0</span>&nbsp;skipped</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="journey.flaky" data-value="0">0</span>&nbsp;flaky</span></p>
+    <p class="when">observed <span class="num" data-claim="journey.when" data-value="2026-08-15">2026-08-15</span><a class="src" href="#src-B" title="Source B">B</a></p>
+    <p class="note"><span class="num" data-claim="journey.setupSpecs" data-value="4">4</span><a class="src" href="#src-B" title="Source B">B</a> auth-setup + <span class="num" data-claim="journey.recipeSpecs" data-value="465">465</span><a class="src" href="#src-B" title="Source B">B</a> recipe actions, serial, in <span class="num" data-claim="journey.minutes" data-value="3.2">3.2</span><a class="src" href="#src-B" title="Source B">B</a> min.</p>
+  </article>
+<article class="tile">
+    <h3>smoke — the seeded fixture</h3>
+    <p class="val"><span class="num" data-claim="smoke.passed" data-value="148">148</span><a class="src" href="#src-F" title="Source F">F</a><span class="unit">passed</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="smoke.failed" data-value="0">0</span>&nbsp;failed</span><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="smoke.notrun" data-value="0">0</span>&nbsp;did not run</span></p>
+    <p class="when">observed <span class="num" data-claim="smoke.when" data-value="2026-08-14">2026-08-14</span><a class="src" href="#src-F" title="Source F">F</a></p>
+    <p class="note">At baseline. The drag failure that was deterministic three days earlier did not
+         reproduce — recorded open, not fixed: <a href="#open-drag">below</a>.</p>
+  </article>
+<article class="tile">
+    <h3>backend — go test ./internal/…</h3>
+    <p class="val"><span class="num" data-claim="backend.serviceSpecs" data-value="336">336</span><a class="src" href="#src-F" title="Source F">F</a><span class="unit">of <span class="num" data-claim="backend.serviceTotal" data-value="337">337</span><a class="src" href="#src-F" title="Source F">F</a> service specs</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>all packages ok</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span>capability&nbsp;<span class="num" data-claim="backend.capability" data-value="37">37</span></span><span class="chip info"><span class="glyph" aria-hidden="true">•</span>middleware&nbsp;<span class="num" data-claim="backend.middleware" data-value="46">46</span></span></p>
+    <p class="when">observed <span class="num" data-claim="backend.when" data-value="2026-08-15">2026-08-15</span><a class="src" href="#src-F" title="Source F">F</a></p>
+    <p class="note">One spec is pending. Six packages; the fast tier the mutation runner drives.</p>
+  </article>
+<article class="tile">
+    <h3>frontend units — vitest</h3>
+    <p class="val"><span class="num" data-claim="feunits.passed" data-value="488">488</span><a class="src" href="#src-F" title="Source F">F</a><span class="unit">passed</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>no failures reported</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="feunits.files" data-value="29">29</span>&nbsp;files</span></p>
+    <p class="when">observed <span class="num" data-claim="feunits.when" data-value="2026-08-14">2026-08-14</span><a class="src" href="#src-F" title="Source F">F</a></p>
+    
+  </article>
+<article class="tile">
+    <h3>mobile — phone viewport</h3>
+    <p class="val"><span class="num" data-claim="mobile.passed" data-value="121">121</span><a class="src" href="#src-F" title="Source F">F</a><span class="unit">passed</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>no failures reported</span><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>older observation</span></p>
+    <p class="when">observed <span class="num" data-claim="mobile.when" data-value="2026-08-10">2026-08-10</span><a class="src" href="#src-F" title="Source F">F</a></p>
+    
+  </article>
+<article class="tile">
+    <h3>openreplay — replay privacy</h3>
+    <p class="val"><span class="num" data-claim="openreplay.passed" data-value="13">13</span><a class="src" href="#src-F" title="Source F">F</a><span class="unit">passed</span></p>
+    <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span><span class="num" data-claim="openreplay.skipped" data-value="0">0</span>&nbsp;skipped</span><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>needs the replay rig</span></p>
+    <p class="when">observed <span class="num" data-claim="openreplay.when" data-value="2026-08-11">2026-08-11</span><a class="src" href="#src-F" title="Source F">F</a></p>
+    
+  </article>
+  </div>
+
+  <div class="callout good">
+    <h3>The run and the recipe are the same list</h3>
+    <p>The <span class="num" data-claim="xcheck.runIds" data-value="465">465</span><a class="src" href="#src-B" title="Source B">B</a> spec titles in the run report carry an
+           <code>[id]</code> prefix, and that sequence is identical — same members, same order — to the
+           <span class="num" data-claim="xcheck.recipeIds" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a> action ids in <code>recipe.jsonl</code>.
+           The recipe's count and the run's count are therefore the same
+           <span class="num" data-claim="xcheck.same" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a> things, which is the claim a headline number
+           normally leaves unproven — a suite can pass every test it ran while never running the ones
+           that matter.</p>
+  </div>
+</section>
+
+<section id="recipe">
+  <h2>What the recipe covers</h2>
+  <p class="lede">"<span class="num" data-claim="recipe.actionsLede" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a> specs passed" says nothing about what
+  they exercise. These are the nine acts, in the order they run, and the split between the two things
+  an action can be: a call on the wire, or a browser using the product.</p>
+
+  <div class="tiles" style="margin-bottom:1.4rem">
+    <article class="tile"><h3>Driver</h3>
+      <p class="val"><span class="num" data-claim="recipe.grpc" data-value="330">330</span><a class="src" href="#src-A" title="Source A">A</a><span class="unit">over gRPC</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.browser" data-value="134">134</span>&nbsp;in a browser</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.files" data-value="1">1</span>&nbsp;fixture</span></p>
+      <p class="note">A browser action is the only shape that catches a control wired to the wrong
+      argument; an rpc action is the only shape that can name a status code.</p>
+    </article>
+    <article class="tile"><h3>Priority</h3>
+      <p class="val"><span class="num" data-claim="recipe.P1" data-value="325">325</span><a class="src" href="#src-A" title="Source A">A</a><span class="unit">P1</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span>P2&nbsp;<span class="num" data-claim="recipe.P2" data-value="131">131</span></span><span class="chip info"><span class="glyph" aria-hidden="true">•</span>P3&nbsp;<span class="num" data-claim="recipe.P3" data-value="9">9</span></span></p>
+      <p class="note">Nothing is deferred: no action sets <code>implement: false</code> any more.</p>
+    </article>
+    <article class="tile"><h3>Expected refusals</h3>
+      <p class="val"><span class="num" data-claim="recipe.denials" data-value="87">87</span><a class="src" href="#src-A" title="Source A">A</a><span class="unit">declare an error</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.gates" data-value="24">24</span>&nbsp;gated</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.todos" data-value="69">69</span>&nbsp;carry a todo</span></p>
+      <p class="note">A gated action skips until its RPC probes as present, then wakes up on its own.</p>
+    </article>
+    <article class="tile"><h3>Surface reached</h3>
+      <p class="val"><span class="num" data-claim="recipe.methods" data-value="66">66</span><a class="src" href="#src-A" title="Source A">A</a><span class="unit">of <span class="num" data-claim="proto.declarations" data-value="108">108</span><a class="src" href="#src-G" title="Source G">G</a> declared RPCs</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.services" data-value="12">12</span>&nbsp;services</span><span class="chip info"><span class="glyph" aria-hidden="true">•</span><span class="num" data-claim="recipe.actors" data-value="16">16</span>&nbsp;people</span></p>
+      <p class="note">Called <em>directly</em>. The <span class="num" data-claim="recipe.browserAgain" data-value="134">134</span><a class="src" href="#src-A" title="Source A">A</a> browser actions reach more of them through the UI — this counts grpcurl, so it is a floor, not total coverage.</p>
+    </article>
+  </div>
+
+  <div class="legend">
+    <span><b>Action kinds</b></span>
+    <span><span class="key s1"></span><b>rpc</b> <span class="num" data-claim="recipe.kind.rpc" data-value="324">324</span><a class="src" href="#src-A" title="Source A">A</a> — one grpcurl call, judged on its status code and payload</span>
+    <span><span class="key s2"></span><b>ui.flow</b> <span class="num" data-claim="recipe.kind.ui.flow" data-value="49">49</span><a class="src" href="#src-A" title="Source A">A</a> — a browser drives the product: click, type, submit</span>
+    <span><span class="key s3"></span><b>ui.assert</b> <span class="num" data-claim="recipe.kind.ui.assert" data-value="85">85</span><a class="src" href="#src-A" title="Source A">A</a> — a browser reads a page back and asserts what it says</span>
+    <span><span class="key s4"></span><b>rpc.race</b> <span class="num" data-claim="recipe.kind.rpc.race" data-value="6">6</span><a class="src" href="#src-A" title="Source A">A</a> — several calls fired simultaneously, judged in aggregate</span>
+    <span><span class="key s5"></span><b>files.generate</b> <span class="num" data-claim="recipe.kind.files.generate" data-value="1">1</span><a class="src" href="#src-A" title="Source A">A</a> — produces a fixture file for a later action</span>
+  </div>
+
+  <div class="wrap"><table>
+    <caption>Each act, what it is about, and what it is made of. Bars are stacked in the legend's
+    order; the counts beside them carry the same information in text.</caption>
+    <thead><tr><th scope="col">Act</th><th scope="col" class="numcell">Actions</th><th scope="col">Composition</th><th scope="col">Counts</th></tr></thead>
+    <tbody>
+<tr>
+      <th scope="row"><span class="actno">Act 0</span><span class="actabout">platform setup: the site itself, before any hackathon exists</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act0" data-value="15">15</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 8, ui.flow 6, ui.assert 1"><span class="seg s1" style="width:53.333%" title="rpc: 8"></span><span class="seg s2" style="width:40.000%" title="ui.flow: 6"></span><span class="seg s3" style="width:6.667%" title="ui.assert: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act0.rpc" data-value="8">8</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act0.ui.flow" data-value="6">6</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act0.ui.assert" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 1</span><span class="actabout">T-4 months: PUBLICATION &amp; ANNOUNCEMENT</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act1" data-value="63">63</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 35, ui.flow 8, ui.assert 19, rpc.race 1"><span class="seg s1" style="width:55.556%" title="rpc: 35"></span><span class="seg s2" style="width:12.698%" title="ui.flow: 8"></span><span class="seg s3" style="width:30.159%" title="ui.assert: 19"></span><span class="seg s4" style="width:1.587%" title="rpc.race: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act1.rpc" data-value="35">35</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act1.ui.flow" data-value="8">8</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act1.ui.assert" data-value="19">19</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act1.rpc.race" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 2</span><span class="actabout">T-3 months: REGISTRATION OPENS (13 sign-ups vs capacity 8)</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act2" data-value="51">51</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 42, ui.flow 5, ui.assert 4"><span class="seg s1" style="width:82.353%" title="rpc: 42"></span><span class="seg s2" style="width:9.804%" title="ui.flow: 5"></span><span class="seg s3" style="width:7.843%" title="ui.assert: 4"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act2.rpc" data-value="42">42</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act2.ui.flow" data-value="5">5</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act2.ui.assert" data-value="4">4</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 2b</span><span class="actabout">T-3 months: THE CAPACITY PILOT (a capped side sprint)</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act2b" data-value="15">15</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 11, ui.assert 3, rpc.race 1"><span class="seg s1" style="width:73.333%" title="rpc: 11"></span><span class="seg s3" style="width:20.000%" title="ui.assert: 3"></span><span class="seg s4" style="width:6.667%" title="rpc.race: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act2b.rpc" data-value="11">11</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act2b.ui.assert" data-value="3">3</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act2b.rpc.race" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 3</span><span class="actabout">T-2 months: PROJECT PROPOSALS DUE</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act3" data-value="13">13</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 11, ui.flow 1, ui.assert 1"><span class="seg s1" style="width:84.615%" title="rpc: 11"></span><span class="seg s2" style="width:7.692%" title="ui.flow: 1"></span><span class="seg s3" style="width:7.692%" title="ui.assert: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act3.rpc" data-value="11">11</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act3.ui.flow" data-value="1">1</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act3.ui.assert" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 4</span><span class="actabout">T-1.5 months: TEAMS ARRANGEMENT + T-1 month: WEBINARS</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act4" data-value="29">29</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 27, ui.flow 1, ui.assert 1"><span class="seg s1" style="width:93.103%" title="rpc: 27"></span><span class="seg s2" style="width:3.448%" title="ui.flow: 1"></span><span class="seg s3" style="width:3.448%" title="ui.assert: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act4.rpc" data-value="27">27</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act4.ui.flow" data-value="1">1</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act4.ui.assert" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 5</span><span class="actabout">T-1 week: REGISTRATION CLOSES (approve 8, dropout, backfill)</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act5" data-value="28">28</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 19, ui.flow 5, ui.assert 3, rpc.race 1"><span class="seg s1" style="width:67.857%" title="rpc: 19"></span><span class="seg s2" style="width:17.857%" title="ui.flow: 5"></span><span class="seg s3" style="width:10.714%" title="ui.assert: 3"></span><span class="seg s4" style="width:3.571%" title="rpc.race: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act5.rpc" data-value="19">19</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act5.ui.flow" data-value="5">5</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act5.ui.assert" data-value="3">3</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act5.rpc.race" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 5 (cont.)</span><span class="actabout">the organizer&#39;s own screens: the manage hub, the flat Manage nav, the capability switches, bulk team composition</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act5cont" data-value="92">92</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 55, ui.flow 6, ui.assert 29, rpc.race 2"><span class="seg s1" style="width:59.783%" title="rpc: 55"></span><span class="seg s2" style="width:6.522%" title="ui.flow: 6"></span><span class="seg s3" style="width:31.522%" title="ui.assert: 29"></span><span class="seg s4" style="width:2.174%" title="rpc.race: 2"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act5cont.rpc" data-value="55">55</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act5cont.ui.flow" data-value="6">6</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act5cont.ui.assert" data-value="29">29</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act5cont.rpc.race" data-value="2">2</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 6</span><span class="actabout">T=0 / T+1: HACKATHON DAYS (time travel: move the event, not the clock)</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act6" data-value="62">62</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 43, ui.flow 7, ui.assert 11, files.generate 1"><span class="seg s1" style="width:69.355%" title="rpc: 43"></span><span class="seg s2" style="width:11.290%" title="ui.flow: 7"></span><span class="seg s3" style="width:17.742%" title="ui.assert: 11"></span><span class="seg s5" style="width:1.613%" title="files.generate: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act6.rpc" data-value="43">43</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act6.ui.flow" data-value="7">7</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act6.ui.assert" data-value="11">11</span> · files.generate&nbsp;<span class="num" data-claim="recipe.section.act6.files.generate" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 7</span><span class="actabout">T+1 evening: VOTING &amp; AWARDS</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act7" data-value="40">40</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 37, ui.flow 2, rpc.race 1"><span class="seg s1" style="width:92.500%" title="rpc: 37"></span><span class="seg s2" style="width:5.000%" title="ui.flow: 2"></span><span class="seg s4" style="width:2.500%" title="rpc.race: 1"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act7.rpc" data-value="37">37</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act7.ui.flow" data-value="2">2</span> · rpc.race&nbsp;<span class="num" data-claim="recipe.section.act7.rpc.race" data-value="1">1</span></td>
+    </tr>
+<tr>
+      <th scope="row"><span class="actno">Act 8</span><span class="actabout">T+1 week: POST-EVENT</span></th>
+      <td class="numcell"><span class="num" data-claim="recipe.section.act8" data-value="57">57</span><a class="src" href="#src-A" title="Source A">A</a></td>
+      <td class="barcell"><span class="bar" role="img" aria-label="rpc 36, ui.flow 8, ui.assert 13"><span class="seg s1" style="width:63.158%" title="rpc: 36"></span><span class="seg s2" style="width:14.035%" title="ui.flow: 8"></span><span class="seg s3" style="width:22.807%" title="ui.assert: 13"></span></span></td>
+      <td class="mono small">rpc&nbsp;<span class="num" data-claim="recipe.section.act8.rpc" data-value="36">36</span> · ui.flow&nbsp;<span class="num" data-claim="recipe.section.act8.ui.flow" data-value="8">8</span> · ui.assert&nbsp;<span class="num" data-claim="recipe.section.act8.ui.assert" data-value="13">13</span></td>
+    </tr>
+    </tbody>
+  </table></div>
+
+  <div class="wrap"><table>
+    <caption>The <span class="num" data-claim="recipe.denialsTable" data-value="87">87</span><a class="src" href="#src-A" title="Source A">A</a> actions that expect to be REFUSED, by the
+    status code they demand. A refusal with the right code from the wrong reason is still a bug, which
+    is why one action additionally pins the message with <code>errorMatches</code>.</caption>
+    <thead><tr><th scope="col">Status code</th><th scope="col" class="numcell">Actions</th><th scope="col">Share</th></tr></thead>
+    <tbody>
+<tr><td class="mono">PermissionDenied</td><td class="numcell"><span class="num" data-claim="recipe.denial.PermissionDenied" data-value="27">27</span><a class="src" href="#src-A" title="Source A">A</a></td><td class="barcell"><span class="bar solo"><span class="seg s1" style="width:31.03%"></span></span></td></tr>
+<tr><td class="mono">InvalidArgument</td><td class="numcell"><span class="num" data-claim="recipe.denial.InvalidArgument" data-value="25">25</span><a class="src" href="#src-A" title="Source A">A</a></td><td class="barcell"><span class="bar solo"><span class="seg s1" style="width:28.74%"></span></span></td></tr>
+<tr><td class="mono">Unauthenticated</td><td class="numcell"><span class="num" data-claim="recipe.denial.Unauthenticated" data-value="17">17</span><a class="src" href="#src-A" title="Source A">A</a></td><td class="barcell"><span class="bar solo"><span class="seg s1" style="width:19.54%"></span></span></td></tr>
+<tr><td class="mono">FailedPrecondition</td><td class="numcell"><span class="num" data-claim="recipe.denial.FailedPrecondition" data-value="10">10</span><a class="src" href="#src-A" title="Source A">A</a></td><td class="barcell"><span class="bar solo"><span class="seg s1" style="width:11.49%"></span></span></td></tr>
+<tr><td class="mono">NotFound</td><td class="numcell"><span class="num" data-claim="recipe.denial.NotFound" data-value="6">6</span><a class="src" href="#src-A" title="Source A">A</a></td><td class="barcell"><span class="bar solo"><span class="seg s1" style="width:6.90%"></span></span></td></tr>
+<tr><td class="mono">AlreadyExists</td><td class="numcell"><span class="num" data-claim="recipe.denial.AlreadyExists" data-value="2">2</span><a class="src" href="#src-A" title="Source A">A</a></td><td class="barcell"><span class="bar solo"><span class="seg s1" style="width:2.30%"></span></span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="mutations">
+  <h2>Mutation results — can these tests go red?</h2>
+  <p class="lede">A green suite proves nothing until you know it can fail. The manifest is
+  <span class="num" data-claim="mut.total" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a> deliberate, reversible breakages, each paired with the exact
+  set of tests that MUST notice; the runner applies one, runs the tests and asserts exactly that set
+  went red. <strong>A gap means nothing in the fast tier would notice if that behaviour broke.</strong></p>
+
+  <div class="tiles" style="margin-bottom:1.2rem">
+    <article class="tile"><h3>Properties with a declared witness</h3>
+      <p class="val"><span class="num" data-claim="mut.caught" data-value="37">37</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">of <span class="num" data-claim="mut.totalTile" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a></span></p>
+      <p class="chips"><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>provably catchable</span></p>
+    </article>
+    <article class="tile"><h3>Gaps — nothing goes red</h3>
+      <p class="val"><span class="num" data-claim="mut.gaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">of <span class="num" data-claim="mut.totalTile2" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a></span></p>
+      <p class="chips"><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>unguarded in the fast tier</span></p>
+      <p class="note">Every one is a backend property.</p>
+    </article>
+    <article class="tile"><h3>Arenas</h3>
+      <p class="val"><span class="num" data-claim="mut.go" data-value="30">30</span><a class="src" href="#src-C" title="Source C">C</a><span class="unit">go</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span>vitest&nbsp;<span class="num" data-claim="mut.vitest" data-value="8">8</span></span></p>
+      <p class="note">The fast tier needs no running stack — it drives the compilers from source, so the
+      whole manifest is a five-minute check. All <span class="num" data-claim="mut.vitest2" data-value="8">8</span><a class="src" href="#src-C" title="Source C">C</a> frontend entries produced reds.</p>
+    </article>
+    <article class="tile"><h3>Verification run</h3>
+      <p class="val"><span class="num" data-claim="mut.verifyRows" data-value="38">38</span><a class="src" href="#src-D" title="Source D">D</a><span class="unit">entries judged</span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span>recorded&nbsp;<span class="num" data-claim="mut.verifyDay" data-value="2026-08-13">2026-08-13</span></span></p>
+      <p class="note">Verdicts below. <code>NO REDS</code> is not a curiosity to note and move past — it
+      fails the run.</p>
+    </article>
+  </div>
+
+  <div class="wrap"><table>
+    <caption>Verdicts as recorded in <code>mutations/.state/verify.json</code><a class="src" href="#src-D" title="Source D">D</a> on
+    <span class="num" data-claim="mut.verifyDate" data-value="2026-08-13">2026-08-13</span><a class="src" href="#src-D" title="Source D">D</a>.</caption>
+    <thead><tr><th scope="col">Verdict</th><th scope="col" class="numcell">Entries</th><th scope="col">What it means</th></tr></thead>
+    <tbody>
+<tr>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>EXACT</span></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.EXACT" data-value="23">23</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td>exactly the declared tests went red — the property is provably catchable</td>
+    </tr>
+<tr>
+      <td><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>MISMATCH</span></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.MISMATCH" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td>the declared set failed plus something else; every extra here is the one declared-flaky spec</td>
+    </tr>
+<tr>
+      <td><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>GAP</span></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.GAP" data-value="11">11</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td>nothing went red — no test in the fast tier holds this property</td>
+    </tr>
+<tr>
+      <td><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>GAP CLOSED</span></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.GAPCLOSED" data-value="1">1</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td>declared a gap, but a red appeared — promote it to a real entry</td>
+    </tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout">
+    <h3>The verdicts above judge an older manifest than the one below</h3>
+    <p>That run recorded <span class="num" data-claim="mut.verdict.GAP2" data-value="11">11</span><a class="src" href="#src-D" title="Source D">D</a>
+    <code>GAP</code> verdicts. The manifest declares <span class="num" data-claim="mut.gaps5" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gap
+    today<a class="src" href="#src-C" title="Source C">C</a> — Go specs written after the run closed the rest, and <strong>nothing above has
+    been re-judged</strong>. Everything from here down is derived from the manifest and is current;
+    the table above is a snapshot of <span class="num" data-claim="mut.verifyDay2" data-value="2026-08-13">2026-08-13</span><a class="src" href="#src-D" title="Source D">D</a>.</p>
+  </div>
+
+  <div class="callout">
+    <h3>All <span class="num" data-claim="mut.mismatch.rows" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a> MISMATCH verdicts have the same single
+    unexpected red</h3>
+    <p><code>service::Capacity &gt; never oversells the last place under simultaneous joins</code> — it fails roughly one run in five under in-memory
+    SQLite, has nothing to do with any mutation, and is declared in the runner's
+    <code>KNOWN_FLAKY</code> with that reason. Every ignored red is printed with its excuse, because a
+    list of failures that don't count is exactly the shape that could hide a real one.</p>
+    <p><span class="num" data-claim="mut.mismatch.superseded" data-value="1">1</span><a class="src" href="#src-D" title="Source D">D</a> of the
+    <span class="num" data-claim="mut.mismatch.rows2" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a> would be judged differently today:
+    <code>capacity.oversell-by-one</code> now lists that spec in its
+    OWN <code>expectReds</code>, where the excuse cannot reach it — a flaky test can still be a genuine
+    witness, and this one hammers concurrent joins against a cap, which is precisely what the mutation
+    breaks. The recorded run counted it as an unexpected extra, so the file and the manifest disagree,
+    and the timestamps do not explain it: the manifest is newer
+    than the run (<span class="num" data-claim="mut.manifestTime" data-value="2026-08-14 16:34:51Z">2026-08-14 16:34:51Z</span><a class="src" href="#src-C" title="Source C">C</a> vs
+    <span class="num" data-claim="mut.verifyTime" data-value="2026-08-13 21:53:17Z">2026-08-13 21:53:17Z</span><a class="src" href="#src-D" title="Source D">D</a>).
+    <strong>The table above is the last recorded judgement, not a live one</strong> — re-run the
+    manifest to refresh it.</p>
+  </div>
+
+  <div class="wrap"><table>
+    <caption>Gaps cluster. Grouping is by the id prefix, so this is derived from the manifest rather
+    than editorial: <span class="num" data-claim="mut.majorClusters" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> surfaces carry more than one gap
+           now, and <span class="num" data-claim="mut.gaps2" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> of <span class="num" data-claim="mut.totalTile3" data-value="38">38</span><a class="src" href="#src-C" title="Source C">C</a>
+           entries is a gap at all.</caption>
+    <thead><tr><th scope="col">Cluster</th><th scope="col" class="numcell">Entries</th><th scope="col" class="numcell">Caught</th><th scope="col" class="numcell">Gaps</th><th scope="col">State</th><th scope="col">Files</th></tr></thead>
+    <tbody>
+<tr>
+      <td class="mono">owner.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.total" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.owner.gaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>partly uncovered</span></td>
+      <td class="mono small">hackathon_service.go</td>
+    </tr>
+<tr>
+      <td class="mono">cap.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.cap.total" data-value="8">8</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.cap.caught" data-value="8">8</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.cap.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">capability.go, capability.go</td>
+    </tr>
+<tr>
+      <td class="mono">join.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join.total" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join.caught" data-value="4">4</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">hackathon_service.go</td>
+    </tr>
+<tr>
+      <td class="mono">rbac.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.rbac.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.rbac.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.rbac.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">rbac.go</td>
+    </tr>
+<tr>
+      <td class="mono">capacity.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.capacity.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.capacity.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.capacity.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">capacity.go</td>
+    </tr>
+<tr>
+      <td class="mono">window.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.window.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.window.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.window.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">config_service.go</td>
+    </tr>
+<tr>
+      <td class="mono">presign.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.presign.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.presign.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.presign.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">client.go, sigv4.go</td>
+    </tr>
+<tr>
+      <td class="mono">markdown.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.markdown.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.markdown.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.markdown.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">markdown.ts</td>
+    </tr>
+<tr>
+      <td class="mono">join-offer.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join-offer.total" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join-offer.caught" data-value="3">3</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.join-offer.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">joinOffer.ts</td>
+    </tr>
+<tr>
+      <td class="mono">cap-client.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.cap-client.total" data-value="2">2</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.cap-client.caught" data-value="2">2</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.cap-client.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">capability.ts</td>
+    </tr>
+<tr>
+      <td class="mono">auth.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.total" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.caught" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.auth.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">auth.go</td>
+    </tr>
+<tr>
+      <td class="mono">upload.*</td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.total" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.caught" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.cluster.upload.gaps" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>covered</span></td>
+      <td class="mono small">storage_service.go</td>
+    </tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout good">
+    <h3>The clustering is gone — the worst surface carries
+    <span class="num" data-claim="mut.maxClusterGaps" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gap</h3>
+    <p>This callout names the surfaces where more than one mutation went unnoticed, and there are
+    <span class="num" data-claim="mut.majorClustersHeading" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> of them. That is the threshold doing
+    its job rather than an editorial judgement: a surface that gets a test drops out on its own, and one
+    that loses its tests tomorrow names itself here without anyone editing this file. Windows,
+    <code>RemoveOwner</code> and <code>Join</code>'s guards were the three; the cluster table above is
+    where to check that, not this sentence.</p>
+  </div>
+
+  <div class="callout crit">
+    <h3>The honesty caveat</h3>
+    <p>A gap is a gap in the FAST tier, not proof the product is unguarded:
+    <span class="num" data-claim="mut.gaps.crossRef" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> of the <span class="num" data-claim="mut.gaps3" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a>
+    name journey actions in their <code>crossRef</code>, and <span class="num" data-claim="mut.gaps.proseOnly" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> more describe a journey witness in prose without naming one. <strong>But those reds are DEDUCED</strong>
+    — from each action's declared <code>expect.error</code>, not observed, because no journey mutation
+    has been run. <span class="num" data-claim="mut.gaps.noWitness" data-value="0">0</span><a class="src" href="#src-C" title="Source C">C</a> entries are witnessed
+           nowhere at all — every gap in the manifest points at something that would notice.</p>
+    <p>What that adds up to: for each of those properties, the only thing standing behind it is a
+           suite that costs minutes, needs the whole stack, and cannot be run on a branch.</p>
+  </div>
+
+  <h3 style="margin:1.6rem 0 .7rem;font-size:14px">All <span class="num" data-claim="mut.gapsHeading" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gaps</h3>
+  <div class="gaps">
+<article class="gap">
+      <h4><span class="glyph" aria-hidden="true">⚠</span> <code>owner.mutex-dropped</code>
+        <span class="tagrow"><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>journey only</span></span></h4>
+      <p class="prop">RemoveOwner&#39;s read-owners/check/remove sequence is one decision under ownerMu — two owners demoting each other concurrently must not leave the event with none.</p>
+      <p class="small mono">components/backend/internal/service/hackathon_service.go</p>
+      <p class="reason">CONCURRENCY, AND STILL OPEN. RemoveOwner now has Go specs (the three owner.* entries above are caught by them), but every one of them is SERIAL: a dropped mutex changes nothing about a sequence of calls that never overlap, so none of them can go red here and adding one that did would be pinning a coincidence. Witnessing this needs two RemoveOwner calls in flight at once against one service instance — which is what act5.race.owner.remove does, and it reaches only the real backend. Promote to arena &#39;journey&#39; once a backend-restart path is safe to automate.</p>
+      <p class="small">Pinned by <span class="num" data-claim="mut.gap.owner.mutex-dropped.refs" data-value="2">2</span><a class="src" href="#src-C" title="Source C">C</a> journey actions: <code>act5.race.owner.remove</code> <code>act5.race.owner.invariant</code></p>
+    </article>
+  </div>
+</section>
+
+<section id="open">
+  <h2>Known-broken and open</h2>
+
+  <div class="item" id="open-drag">
+    <h3>the drag failure stopped reproducing, and that is not an explanation <span class="chip warn"><span class="glyph" aria-hidden="true">!</span>open</span></h3>
+    <p>The row above is at baseline: <span class="num" data-claim="open.smokeFailedRepeat" data-value="0">0</span><a class="src" href="#src-F" title="Source F">F</a> failed,
+           <span class="num" data-claim="open.smokeNotRunRepeat" data-value="0">0</span><a class="src" href="#src-F" title="Source F">F</a> did not run. This entry stays OPEN anyway.
+           It was deterministic on 2026-08-13 and passed on both runs after the develop merge, which
+           touched nothing in <code>dragRowTo</code> — a timing-shaped defect that stops reproducing has
+           not been fixed, it has stopped being visible. The diagnosis is kept for whoever picks it
+           up:</p>
+    <p><code>tests/smoke/22-hackathon-pages.spec.ts:<span class="num" data-claim="open.dragLine" data-value="248">248</span><a class="src" href="#src-I" title="Source I">I</a></code> — "dragging a row saves the whole new order in one write". The first drag passes; the
+    RESTORE drag lands one position short. It is test-side: <code>dragRowTo</code> computes
+    <code>endY</code> at line <span class="num" data-claim="open.endYLine" data-value="86">86</span><a class="src" href="#src-I" title="Source I">I</a> from the destination row's
+    bounding box <em>before the drag starts</em>, while the list reorders live on <code>dragover</code>.
+    Moving down, everything below the lifted row shifts up by one row height and the pointer arrives at
+    what has become the middle row — which is exactly why one direction passes and the other does not.
+    When it does fail, the two specs after it are the rest of a <code>mode: "serial"</code> describe and
+    never run at all. The last recorded smoke run:
+    <span class="num" data-claim="open.smokeSum" data-value="148 + 0 + 0">148 + 0 + 0</span><a class="src" href="#src-F" title="Source F">F</a> = <span class="num" data-claim="open.smokeTotal" data-value="148">148</span><a class="src" href="#src-F" title="Source F">F</a>.</p>
+  </div>
+
+  <div class="item">
+    <h3><code>just check::test -c backend</code> is red on one flaky spec <span class="chip warn"><span class="glyph" aria-hidden="true">!</span>open</span></h3>
+    <p>The quitsh runner appends <code>--ginkgo.v</code> to every package's test binary, and
+    <code>internal/audit</code> and <code>internal/storage</code> were plain <code>testing</code>
+    packages that exited 1 on <code>flag provided but not defined: -ginkgo.v</code> before running
+    anything. That is no longer why it fails. Both packages carry a Ginkgo bootstrap whose only job is to register those flags:
+    <code>components/backend/internal/audit/audit_suite_test.go</code> (present) and <code>components/backend/internal/storage/storage_suite_test.go</code> (present) — both added in <code><span class="num" data-claim="open.bootstrapCommit" data-value="13331242e">13331242e</span><a class="src" href="#src-I" title="Source I">I</a></code>,
+    an ancestor of this commit.</p>
+    <p><code>.claude/CLAUDE.md</code><a class="src" href="#src-F" title="Source F">F</a> now records the command as red on a single
+           SPEC — <code>service::Capacity &gt; never oversells the last place under simultaneous joins</code>, the same one the mutation runner
+                 declares flaky and excuses in <span class="num" data-claim="mut.mismatch.rows3" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a>
+                 of the verdicts above<a class="src" href="#src-D" title="Source D">D</a>. That is a test-side race, and CI runs this command, so it is a red CI run whenever it
+           lands — not a runner quirk to route around.</p>
+  </div>
+
+  <div class="item">
+    <h3>RPCs with no frontend caller <span class="chip warn"><span class="glyph" aria-hidden="true">!</span>by design</span></h3>
+    <p>An endpoint nobody calls is an endpoint no test can reach through the product — and three of
+    them once turned out to be missing features rather than spare capacity. The audit is re-run here
+    against the tree, not copied from the doc: <code>api/proto/**/*_service.proto</code><a class="src" href="#src-G" title="Source G">G</a> declares <span class="num" data-claim="proto.declarationsAudit" data-value="108">108</span><a class="src" href="#src-G" title="Source G">G</a> RPCs under
+    <span class="num" data-claim="proto.names" data-value="75">75</span><a class="src" href="#src-G" title="Source G">G</a> distinct method names (names repeat across services), and
+    <span class="num" data-claim="api.uncalledNow" data-value="7">7</span><a class="src" href="#src-H" title="Source H">H</a> of those names appear nowhere in
+    <code>components/frontend/src</code> outside the generated clients — exactly the
+    <span class="num" data-claim="api.uncalledDoc" data-value="7">7</span><a class="src" href="#src-E" title="Source E">E</a> that <code>docs/testing.md</code><a class="src" href="#src-E" title="Source E">E</a> lists.</p>
+    <div class="wrap"><table>
+      <thead><tr><th scope="col">RPC</th><th scope="col">Why nothing calls it</th><th scope="col">Re-checked</th></tr></thead>
+      <tbody>
+<tr>
+      <td class="mono">HackathonService.SetCurrentPhase</td>
+      <td>aliases the <code>AdvancePhase</code> the timeline calls</td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+<tr>
+      <td class="mono">VoteService.GetVoteCategory</td>
+      <td>covered by the list endpoint already driving the UI</td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+<tr>
+      <td class="mono">VoteService.ListVotes</td>
+      <td>same</td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+<tr>
+      <td class="mono">TeamService.GetSubmission</td>
+      <td>same</td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+<tr>
+      <td class="mono">VoteService.SuggestResults</td>
+      <td>computes a tally the UI records by hand with <code>CreateVoteResult</code></td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+<tr>
+      <td class="mono">StorageService.CreateDownloadUrl</td>
+      <td>waits for something private to serve</td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+<tr>
+      <td class="mono">ProjectService.RemovePreference</td>
+      <td>there is no un-prefer control to call it</td>
+      <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>audit agrees</span></td>
+    </tr>
+      </tbody>
+    </table></div>
+    <p class="small">Two limits worth knowing. The grep matches by method NAME, so a
+    <code>Get</code> called on one service masks an uncalled <code>Get</code> on another — the count is
+    a floor. And the denominator moves whenever a service gains a method, so the ratio dates faster
+    than the list does: <code>.claude/CLAUDE.md</code><a class="src" href="#src-F" title="Source F">F</a> says <span class="num" data-claim="claudemd.uncalled" data-value="7">7</span><a class="src" href="#src-F" title="Source F">F</a> of <span class="num" data-claim="claudemd.total" data-value="108">108</span><a class="src" href="#src-F" title="Source F">F</a>, which is what this audit re-derived from
+    <code>api/proto</code><a class="src" href="#src-G" title="Source G">G</a> and <code>components/frontend/src</code><a class="src" href="#src-H" title="Source H">H</a> just now —
+    the written record and the tree agree.</p>
+  </div>
+
+  <div class="item">
+    <h3>Two states the recipe declines to fake <span class="chip info"><span class="glyph" aria-hidden="true">•</span>not asserted end-to-end</span></h3>
+    <p><strong>An individually ungoverned capability.</strong>
+    <code>act5.pilot.cap.states</code><a class="src" href="#src-A" title="Source A">A</a> says it plainly:
+    &#39;Not governed&#39; is absent because HackathonService.Create seeds a row for all six capabilities, so nothing reachable through the app is ungoverned - the state is unreachable here by construction, and the three states present are the positive control for asserting its absence.</p>
+    <p><strong>A waitlisted owner.</strong> One state in that set is unreachable from outside and therefore not asserted end-to-end: a WAITLISTED owner (AddOwner answers FailedPrecondition for anyone on the waiting list, so canEditHackathon&#39;s narrower gate cannot be exercised end-to-end). It is written down in the action&#39;s own todo rather than faked.<a class="src" href="#src-F" title="Source F">F</a> The RPC-level
+    refusal is still pinned — <code>act5.owner.waitlisted</code><a class="src" href="#src-A" title="Source A">A</a> expects
+    <code>FailedPrecondition</code> — it is
+    the narrower UI gate behind it that nothing can reach.</p>
+    <p class="small">Neither is faked with a fixture, and both are pinned in Go instead: a state
+    manufactured by the test is not the state the product can be in, so an end-to-end assertion about
+    it would be an assertion about the harness.</p>
+  </div>
+</section>
+
+<section id="repro">
+  <h2>How to reproduce every number</h2>
+  <p class="lede">All of these run inside the devcontainer. The two that write the files this report is
+  built from are marked; everything else here is read-only.</p>
+  <div class="wrap"><table>
+    <thead><tr><th scope="col">What</th><th scope="col">Command</th><th scope="col">Note</th></tr></thead>
+    <tbody>
+<tr><th scope="row">journey — the <span class="num" data-claim="repro.actions" data-value="465">465</span><a class="src" href="#src-A" title="Source A">A</a> recipe actions</th><td><code class="cmd">bash .claude/skills/devcontainer-up/scripts/e2e.sh journey</code></td><td class="small">writes .artifacts/results.json (source B); do not redirect stdout — the json reporter is the durable copy</td></tr>
+<tr><th scope="row">smoke — the seeded fixture</th><td><code class="cmd">bash .claude/skills/devcontainer-up/scripts/e2e.sh smoke</code></td><td class="small"><span class="num" data-claim="repro.smokeTotal" data-value="148">148</span><a class="src" href="#src-F" title="Source F">F</a> specs; one is the open drag failure</td></tr>
+<tr><th scope="row">mobile / openreplay</th><td><code class="cmd">bash .claude/skills/hackathon-e2e/scripts/run.sh mobile</code></td><td class="small">openreplay needs the rig up and the app wired at it, or every spec self-skips</td></tr>
+<tr><th scope="row">backend units</th><td><code class="cmd">go test -tags &quot;test unittest&quot; ./internal/... -count=1</code></td><td class="small">from components/backend, with .devenv/profile/bin on PATH</td></tr>
+<tr><th scope="row">frontend units</th><td><code class="cmd">just check::test -c frontend</code></td><td class="small">vitest, jsdom</td></tr>
+<tr><th scope="row">mutations — the whole manifest</th><td><code class="cmd">bash .claude/skills/devcontainer-up/scripts/mutate.sh run</code></td><td class="small">rewrites mutations/.state/verify.json (source D); NO REDS fails the run</td></tr>
+<tr><th scope="row">mutations — anchors only</th><td><code class="cmd">bash .claude/skills/hackathon-e2e/scripts/mutate.sh check</code></td><td class="small">cheap enough for every commit: asserts every find: still matches its file exactly once</td></tr>
+<tr><th scope="row">API-to-UI audit</th><td><code class="cmd">grep -rn &#39;\.&lt;method&gt;(&#39; components/frontend/src --include=&#39;*.ts&#39; --include=&#39;*.svelte&#39;</code></td><td class="small">ignore hits under src/lib/server/grpc/generated/</td></tr>
+<tr><th scope="row">this report</th><td><code class="cmd">node .claude/skills/hackathon-e2e/scripts/build-quality-report.mjs</code></td><td class="small">re-derives every figure and refuses to write one that disagrees with its source</td></tr>
+<tr><th scope="row">the recipe player</th><td><code class="cmd">node .claude/skills/hackathon-e2e/scripts/splice-player.mjs</code></td><td class="small">required after any recipe edit — the player shows what is embedded, not the file</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="sources">
+  <h2>Sources</h2>
+  <p class="lede">Every figure above carries a superscript letter pointing at the file it was read
+  from. The build refuses to write a figure it cannot re-derive from that file by a second, independent
+  code path — so a number here is traceable by construction, not by discipline.</p>
+  <div class="wrap"><table>
+    <thead><tr><th scope="col">Key</th><th scope="col">Path</th><th scope="col" class="numcell">Size</th><th scope="col">Modified</th><th scope="col">What was read</th></tr></thead>
+    <tbody>
+<tr id="src-A">
+    <th scope="row" class="srckey">A</th>
+    <td class="mono">.claude/skills/hackathon-e2e/recipe.jsonl</td>
+    <td class="numcell small mono">255.1 KiB</td>
+    <td class="small mono">2026-08-14</td>
+    <td class="small"><span class="num" data-claim="src.actionLines" data-value="465">465</span> action lines + <span class="num" data-claim="src.bannerLines" data-value="12">12</span> comment banners (<span class="num" data-claim="src.actSections" data-value="11">11</span> of them act headings): kinds,
+      priorities, actors, gates, todos, expected status codes, and every RPC the recipe calls.</td>
+  </tr>
+<tr id="src-B">
+    <th scope="row" class="srckey">B</th>
+    <td class="mono">.claude/skills/hackathon-e2e/.artifacts/results.json</td>
+    <td class="numcell small mono">500.6 KiB</td>
+    <td class="small mono">2026-08-15</td>
+    <td class="small">Playwright's json reporter from the last journey run: stats block, per-project spec counts, and the [id] prefix on every spec title.</td>
+  </tr>
+<tr id="src-C">
+    <th scope="row" class="srckey">C</th>
+    <td class="mono">.claude/skills/hackathon-e2e/mutations/manifest.jsonl</td>
+    <td class="numcell small mono">29.0 KiB</td>
+    <td class="small mono">2026-08-14</td>
+    <td class="small">The mutation manifest: one deliberate breakage per line, its arena, its expected reds, and — for a gap — why nothing catches it.</td>
+  </tr>
+<tr id="src-D">
+    <th scope="row" class="srckey">D</th>
+    <td class="mono">.claude/skills/hackathon-e2e/mutations/.state/verify.json</td>
+    <td class="numcell small mono">23.4 KiB</td>
+    <td class="small mono">2026-08-13</td>
+    <td class="small">The verdict the mutation runner recorded for all <span class="num" data-claim="src.verifyRows" data-value="38">38</span> entries, with the reds each one actually produced.</td>
+  </tr>
+<tr id="src-E">
+    <th scope="row" class="srckey">E</th>
+    <td class="mono">docs/testing.md</td>
+    <td class="numcell small mono">6.3 KiB</td>
+    <td class="small mono">2026-08-14</td>
+    <td class="small">The API-to-UI coverage table: which declared RPCs have no frontend caller, and why each is deliberate.</td>
+  </tr>
+<tr id="src-F">
+    <th scope="row" class="srckey">F</th>
+    <td class="mono">.claude/CLAUDE.md</td>
+    <td class="numcell small mono">91.7 KiB</td>
+    <td class="small mono">2026-08-15</td>
+    <td class="small">The suite-results table (the only source for smoke, mobile, openreplay, backend and frontend-unit numbers) and the known-broken prose.</td>
+  </tr>
+<tr id="src-G">
+    <th scope="row" class="srckey">G</th>
+    <td class="mono">api/proto/</td>
+    <td class="numcell small mono">—</td>
+    <td class="small mono">2026-08-14</td>
+    <td class="small">Every rpc declaration in api/proto/**/*_service.proto — the denominator for both coverage counts.</td>
+  </tr>
+<tr id="src-H">
+    <th scope="row" class="srckey">H</th>
+    <td class="mono">components/frontend/src/</td>
+    <td class="numcell small mono">—</td>
+    <td class="small mono">2026-08-14</td>
+    <td class="small">The frontend call sites: the API-to-UI audit is re-run here at build time rather than copied from the doc.</td>
+  </tr>
+<tr id="src-I">
+    <th scope="row" class="srckey">I</th>
+    <td class="mono">.claude/skills/hackathon-e2e/tests/smoke/22-hackathon-pages.spec.ts</td>
+    <td class="numcell small mono">15.0 KiB</td>
+    <td class="small mono">2026-08-14</td>
+    <td class="small">The failing smoke spec and the helper that causes it; line numbers below are read out of the file.</td>
+  </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  <p>Generated by <code>.claude/skills/hackathon-e2e/scripts/build-quality-report.mjs</code> from
+  sketch/06-08-26 @ ea66ff97 (2026-08-15). No wall-clock is embedded, so two builds over one
+  tree are byte-identical. This is the status report; the animated replay of the recipe is
+  <a href="recipe-player.html">recipe-player.html</a>.</p>
+</footer>
+
+</main>
+
+<script>
+/* Theme: prefers-color-scheme decides by default; the toggle writes data-theme
+   on <html>, which both palette blocks are keyed to, and that wins over the OS.
+   localStorage throws outright on some file:// origins, so every access is
+   wrapped rather than guarded — a remembered preference is a nicety. */
+var LS = {
+  get: function (k) { try { return localStorage.getItem(k) } catch (e) { return null } },
+  set: function (k, v) { try { localStorage.setItem(k, v) } catch (e) {} }
+}
+var KEY = "hqr-theme"
+var lightMQ = matchMedia("(prefers-color-scheme: light)")
+var $ = function (id) { return document.getElementById(id) }
+function effective() {
+  return document.documentElement.getAttribute("data-theme") || (lightMQ.matches ? "light" : "dark")
+}
+function applyTheme(t) {
+  if (t) document.documentElement.setAttribute("data-theme", t)
+  else document.documentElement.removeAttribute("data-theme")
+  var light = effective() === "light"
+  $("themeIcon").textContent = light ? "☀" : "☾"
+  $("themeLabel").textContent = light ? "Light" : "Dark"
+  $("btnTheme").setAttribute("aria-pressed", light ? "true" : "false")
+  $("btnTheme").title = "Switch to the " + (light ? "dark" : "light") + " palette"
+}
+applyTheme(LS.get(KEY))
+$("btnTheme").addEventListener("click", function () {
+  var next = effective() === "light" ? "dark" : "light"
+  applyTheme(next); LS.set(KEY, next)
+})
+if (lightMQ.addEventListener) lightMQ.addEventListener("change", function () {
+  if (!document.documentElement.hasAttribute("data-theme")) applyTheme(null)
+})
+</script>
+</body>
+</html>

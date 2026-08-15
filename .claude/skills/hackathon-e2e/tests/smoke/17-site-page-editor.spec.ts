@@ -228,13 +228,11 @@ test.describe("platform page editor", () => {
 
     // The control is a <label> wrapping a hidden input — a styled button cannot
     // open a file picker — so the input is set directly.
-    await form
-      .locator("input[type=file]")
-      .setInputFiles({
-        name: "venue-photo.png",
-        mimeType: "image/png",
-        buffer: PNG,
-      })
+    await form.locator("input[type=file]").setInputFiles({
+      name: "venue-photo.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    })
 
     // The editor's own error line FIRST. Without it the failure reads "the
     // textarea did not change", which is the symptom; the component already

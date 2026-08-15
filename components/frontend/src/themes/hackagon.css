@@ -593,4 +593,27 @@
     background-color: color-mix(in oklab, var(--color-accent) 20%, transparent);
     color: var(--color-accent-ink);
   }
+  /* The selected chip, hovered. Without this the pointer ERASED the selection:
+   * `.chip:hover` is (0,2,0) and `.chip-active` is (0,1,0), so the tab the
+   * viewer is on lost its accent tint for exactly as long as they pointed at
+   * it — the one moment they are most likely to be reading which tab is which.
+   *
+   * A rule of its own rather than raising `.chip-active`, for two reasons.
+   * `.chip-active` is also worn by a `btn btn-icon btn-quiet` (the markdown
+   * editor's table toggle), so `.chip.chip-active` would have left that one
+   * untinted; and `.btn-quiet:hover` is (0,2,0) too, so the same erasure was
+   * happening there. This selector is (0,2,0) and covers both.
+   *
+   * ⚠ It TIES with `.chip:hover` and `.btn-quiet:hover` and wins on source
+   * order, which is the same way `.chip-active` already beats `.chip`. Keep it
+   * last: moved above either of those it stops applying and nothing but the
+   * computed-style check in `24-chip-states.spec.ts` would notice.
+   *
+   * 20% → 30% is the step `.btn-accent`/`.btn-accent:hover` already uses, so
+   * selected-and-hovered reads as both: still accent (not the neutral
+   * `raised` an unselected chip gets), and visibly lifted from selected-at-rest. */
+  .chip-active:hover {
+    background-color: color-mix(in oklab, var(--color-accent) 30%, transparent);
+    color: var(--color-accent-ink);
+  }
 }
