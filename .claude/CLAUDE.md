@@ -29,7 +29,7 @@ event days (no-show, same-day walk-in, deadline overrides) → voting
 `tests/journey/recipe.spec.ts` via `helpers/recipe.ts`.
 
 Each action carries: `priority` (P1 325 / P2 131 / P3 9), `outcome`
-(human-readable expectation), an optional `todo` (placeholder note, 66 actions)
+(human-readable expectation), an optional `todo` (placeholder note, 69 actions)
 and an optional `gate` (24 actions — skip until the listed RPCs exist,
 capability-probed at runtime by `scripts/probe.sh`, so actions wake up
 automatically as the backend lands). `implement: false` meant "deliberately
@@ -190,10 +190,10 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 
 | Suite                                                  | Result                                                                                         | When       |
 | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ---------- |
-| journey (465-action recipe)                            | **469 passed / 0 failed / 0 skipped**                                                          | 2026-08-14 |
-| smoke                                                  | **142 passed / 0 failed / 0 did not run**                                                      | 2026-08-14 |
+| journey (465-action recipe)                            | **469 passed / 0 failed / 0 skipped**                                                          | 2026-08-15 |
+| smoke                                                  | **148 passed / 0 failed / 0 did not run**                                                      | 2026-08-14 |
 | mobile                                                 | **121 passed**                                                                                 | 2026-08-10 |
-| backend `go test -tags "test unittest" ./internal/...` | all 6 packages ok in ~13 s — service 336/337 specs (one pending), capability 37, middleware 46 | 2026-08-14 |
+| backend `go test -tags "test unittest" ./internal/...` | all 6 packages ok in ~11 s — service 336/337 specs (one pending), capability 37, middleware 46 | 2026-08-15 |
 | openreplay (9 tests)                                   | **13 passed / 0 skipped**                                                                      | 2026-08-11 |
 | frontend units (29 files)                              | **488 passed**                                                                                 | 2026-08-14 |
 
@@ -230,22 +230,35 @@ serial ON and exclude the already-proven ones with `--grep-invert`
 duplicates, so an action line can no longer be silently dropped (see the traps
 below).
 
-⚠ **`just check::test -c backend` is currently RED**, and not because a test
-fails. The quitsh runner appends `--ginkgo.v` to every package's test binary;
-`internal/audit` and `internal/storage` are plain `testing` packages with no
-ginkgo bootstrap, so they exit 1 on `flag provided but not defined: -ginkgo.v`
-before running anything. Both pass under a plain `go test`. The three Ginkgo
-suites are green: service 258 of 259 specs (one pending), middleware 43/43,
-capability 37/37. CI runs the failing command.
+⚠ **`just check::test -c backend` is RED, and the reason recorded here for
+months is no longer the reason** (re-run 2026-08-15). It used to be the runner,
+not a test: quitsh appends `--ginkgo.v` to every package's test binary, and
+`internal/audit` and `internal/storage` were plain `testing` packages with no
+ginkgo bootstrap, so they exited 1 on `flag provided but not defined: -ginkgo.v`
+before running anything. **Both carry a bootstrap now** (`13331242`, an ancestor
+of this branch) and both report `ok` under the runner.
 
-**API-to-UI coverage: 99 of 107 RPC declarations have a frontend caller.** The
-eight without one are accounted for in `docs/testing.md` —
-`PageService.SetOrder` is a bulk alternative to the MoveUp/MoveDown the CMS
-uses, `HackathonService.SetCurrentPhase` aliases the `AdvancePhase` the timeline
+What fails today is one SPEC, and it is the declared flake:
+`Capacity > never oversells the last place under simultaneous joins`
+(`capacity_test.go:326`) — the entry in the mutation runner's `KNOWN_FLAKY`,
+which fails roughly one run in five under in-memory SQLite. Three consecutive
+re-runs of `./internal/service/` after it went green. The rest of that run:
+service 335 passed / 1 failed / 1 pending of 337, capability 37/37, middleware
+46/46, config 6/6, audit and storage `ok`. CI runs this command, so **that flake
+is a red CI run whenever it lands** — it is a test-side race to fix, not a
+runner quirk to route around.
+
+**API-to-UI coverage: 101 of 108 RPC declarations have a frontend caller.** The
+seven without one are accounted for in `docs/testing.md` —
+`HackathonService.SetCurrentPhase` aliases the `AdvancePhase` the timeline
 calls, `GetVoteCategory`/`ListVotes`/`GetSubmission` are covered by the list
 endpoints already driving the UI, `SuggestResults` computes a tally the UI
 records by hand with `CreateVoteResult`, `CreateDownloadUrl` waits for something
 private to serve, and `RemovePreference` has no un-prefer control to call it.
+`PageService.SetOrder` left that list on 2026-08-12, when drag-and-drop on
+Manage Pages started sending the whole sequence in one call. **The denominator
+moves whenever a service gains a method** — it was 107 at `833a7388` — so the
+list is the part worth keeping current, not the ratio.
 
 ### What landed most recently
 

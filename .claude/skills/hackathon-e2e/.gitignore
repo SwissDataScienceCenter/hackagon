@@ -3,3 +3,7 @@ node_modules/
 .artifacts/
 test-results/
 playwright-report/
+# build-quality-report.mjs stages the report beside itself and renames it into
+# place, so this only exists while a build is in flight — or after one was
+# killed mid-write, which is exactly when it must not read as a tracked change.
+.quality-report.html.tmp-*

@@ -15,6 +15,21 @@
  * stamps `data-claim`/`data-value` on every figure, and why `rederive()`
  * counts with textual scans rather than reusing the parsed objects.
  *
+ * ── The check GATES the write; it does not follow it ────────────────────────
+ * The document is assembled in memory, every read-back check runs against that
+ * string, and only a clean pass reaches the disk — through a temp file in the
+ * same directory and a rename, so an interrupted run cannot leave half a file
+ * and a failing run leaves the previous report byte-for-byte intact.
+ *
+ * This used to be the other way round: `writeFileSync` first, `read(OUT)` and
+ * re-derive after. **A validator that runs after the write certifies nothing**
+ * — the bad artefact is on disk either way, its exit code is the only thing
+ * standing between it and a commit, and one run whose CLAUDE.md row disagreed
+ * with results.json left an `undefined`-filled report that had to be reverted
+ * by hand. Reading the string rather than the file loses nothing: the string
+ * IS the finished document, and the bytes that land are compared against it
+ * after the rename, so "what was checked" and "what is on disk" stay one thing.
+ *
  * Sources (all repo-relative, all read fresh):
  *   A  .claude/skills/hackathon-e2e/recipe.jsonl
  *   B  .claude/skills/hackathon-e2e/.artifacts/results.json
@@ -307,6 +322,9 @@ const clusterList = [...clusters.values()].sort(
 const MAJOR_GAP = 2
 const majorGapClusters = clusterList.filter((c) => c.gaps >= MAJOR_GAP)
 const majorGapTotal = majorGapClusters.reduce((a, c) => a + c.gaps, 0)
+/** The worst surface, so the "no cluster meets the threshold" case can still
+ *  state a figure read off the manifest rather than restating the constant. */
+const maxClusterGaps = clusterList.reduce((a, c) => Math.max(a, c.gaps), 0)
 
 /* ══ E. docs/testing.md — the API-to-UI table ═════════════════════════════ */
 const testingDoc = read(P.testingDoc)
@@ -375,6 +393,11 @@ const need = (re, what) => {
   if (!m) throw new Error(`could not find ${what} in .claude/CLAUDE.md`)
   return m
 }
+/** Does CLAUDE.md still blame the `--ginkgo.v` flag for the backend check being
+ *  red? Derived, so retiring that entry retires the report item that exists to
+ *  contradict it, instead of leaving a contradiction of something nobody says. */
+const claudeMdBlamesGinkgoFlag =
+  /check::test -c backend` is currently RED/.test(claudeFlat)
 /** CLAUDE.md's own claim about the API-to-UI ratio — kept to be contrasted. */
 const claudeMdUncalled = (() => {
   const m = need(
@@ -432,6 +455,13 @@ const lcFirst = (s) => s[0].toLowerCase() + s.slice(1)
 const uncalledNow = [...methodNames]
   .filter((m) => !frontendCorpus.includes(`.${lcFirst(m)}(`))
   .sort()
+/** Whether CLAUDE.md's written ratio still matches what the audit finds in the
+ *  tree. Derived, because "the doc is stale" is itself a claim that goes stale
+ *  the moment somebody fixes the doc — and it needs both G and H, so it cannot
+ *  live beside the sentence it reads in section F. */
+const claudeMdAgrees =
+  claudeMdUncalled.total === declarations.length &&
+  claudeMdUncalled.total - claudeMdUncalled.called === uncalledNow.length
 
 /* ══ I. the two known-broken code sites ═══════════════════════════════════ */
 const dragSpec = read(P.dragSpec)
@@ -610,6 +640,15 @@ function tile({ id, name, value, unit, chip, when, src, note }) {
 }
 
 const smoke = suiteRow("smoke")
+/** The drag failure's state is DERIVED from the row, never asserted in prose:
+ *  it was deterministic on 2026-08-13, did not reproduce on either post-merge
+ *  run, and is recorded OPEN rather than fixed. A report whose text says "one
+ *  deterministic failure" beside its own "0 failed" is the stale-count failure
+ *  this whole file exists to prevent — so both the chips and the item below
+ *  read the numbers and say what they actually show. */
+const smokeFailed = grab(smoke.result, /(\d+) failed/)
+const smokeNotRun = grab(smoke.result, /(\d+) did not run/)
+const smokeAtBaseline = smokeFailed === 0 && smokeNotRun === 0
 const mobile = suiteRow("mobile")
 const openreplay = suiteRow("openreplay")
 const feUnits = suiteRow("frontend")
@@ -646,20 +685,23 @@ const tiles = [
     unit: "passed",
     chip:
       chipNum(
-        "crit",
+        smokeFailed ? "crit" : "good",
         "smoke.failed",
-        grab(smoke.result, /(\d+) failed/),
+        smokeFailed,
         "failed",
       ) +
       chipNum(
-        "warn",
+        smokeNotRun ? "warn" : "good",
         "smoke.notrun",
-        grab(smoke.result, /(\d+) did not run/),
+        smokeNotRun,
         "did not run",
       ),
     when: smoke.when,
     src: "F",
-    note: `One deterministic failure and the two specs behind it in the same serial describe — <a href="#open-drag">below</a>.`,
+    note: smokeAtBaseline
+      ? `At baseline. The drag failure that was deterministic three days earlier did not
+         reproduce — recorded open, not fixed: <a href="#open-drag">below</a>.`
+      : `One deterministic failure and the two specs behind it in the same serial describe — <a href="#open-drag">below</a>.`,
   }),
   tile({
     id: "backend",
@@ -1293,6 +1335,24 @@ ${verdictRows}
   </table></div>
 
   ${
+    /* Source D is a RECORDING; source C is the file as it stands. When the two
+       disagree about how many gaps there are, the table above is judging a
+       manifest that no longer exists — say so where it is read, not only in the
+       source list. Deriving the condition means the notice disappears by itself
+       the moment the manifest is re-run. */
+    (verdictCount.get("GAP") || 0) !== gaps.length
+      ? `<div class="callout">
+    <h3>The verdicts above judge an older manifest than the one below</h3>
+    <p>That run recorded ${n("mut.verdict.GAP2", verdictCount.get("GAP") || 0, "D")}
+    <code>GAP</code> verdicts. The manifest declares ${n("mut.gaps5", gaps.length, "C")} gap
+    today${sup("C")} — Go specs written after the run closed the rest, and <strong>nothing above has
+    been re-judged</strong>. Everything from here down is derived from the manifest and is current;
+    the table above is a snapshot of ${n("mut.verifyDay2", verifyDay, "D")}.</p>
+  </div>`
+      : ""
+  }
+
+  ${
     mismatchRows.length && mismatchExtras.length === 1
       ? `<div class="callout">
     <h3>All ${n("mut.mismatch.rows", mismatchRows.length, "D")} MISMATCH verdicts have the same single
@@ -1318,18 +1378,33 @@ ${verdictRows}
 
   <div class="wrap"><table>
     <caption>Gaps cluster. Grouping is by the id prefix, so this is derived from the manifest rather
-    than editorial: ${n("mut.majorClusters", majorGapClusters.length, "C")} surfaces account for ${n(
-      "mut.clusterGapShare",
-      majorGapTotal,
-      "C",
-    )} of the ${n("mut.gaps2", gaps.length, "C")} gaps.</caption>
+    than editorial: ${
+      majorGapClusters.length
+        ? `${n("mut.majorClusters", majorGapClusters.length, "C")} surfaces account for ${n(
+            "mut.clusterGapShare",
+            majorGapTotal,
+            "C",
+          )} of the ${n("mut.gaps2", gaps.length, "C")} gaps.`
+        : `${n("mut.majorClusters", majorGapClusters.length, "C")} surfaces carry more than one gap
+           now, and ${n("mut.gaps2", gaps.length, "C")} of ${n("mut.totalTile3", manifest.length, "C")}
+           entries is a gap at all.`
+    }</caption>
     <thead><tr><th scope="col">Cluster</th><th scope="col" class="numcell">Entries</th><th scope="col" class="numcell">Caught</th><th scope="col" class="numcell">Gaps</th><th scope="col">State</th><th scope="col">Files</th></tr></thead>
     <tbody>
 ${clusterRows}
     </tbody>
   </table></div>
 
-  <div class="callout crit">
+  ${
+    /* The threshold picks this callout's subject; when nothing meets the
+       threshold the callout has no subject, and a heading reading "0 surfaces
+       carry 0 of the 1 gaps" over an empty list is the vacuous shape this file
+       is supposed to make impossible. The prose that used to live here named
+       three surfaces (windows, RemoveOwner, Join) that have since been covered
+       by Go specs — keeping it would have been a report asserting the opposite
+       of its own table. */
+    majorGapClusters.length
+      ? `<div class="callout crit">
     <h3>${n("mut.majorClustersHeading", majorGapClusters.length, "C")} surfaces carry
     ${n("mut.clusterGapShareHeading", majorGapTotal, "C")} of the
     ${n("mut.gaps4", gaps.length, "C")} gaps</h3>
@@ -1347,34 +1422,49 @@ ${clusterRows}
           }, in ${[...c.files].map((f) => `<code>${esc(f.split("/").pop())}</code>`).join(", ")}</li>`,
       )
       .join("")}</ul>
-    <p>No Go spec exercises a deadline window in any package. <code>RemoveOwner</code> has no Go specs
-    whatsoever, so the last-organizer guard — one of the two invariants a real concurrency bug broke —
-    is held up entirely by journey actions; ownership is a casbin fact on this branch with no column to
-    assert against, which is probably why the specs were never written. And <code>Join</code>'s guards:
-    the invite requirement on a private event, the already-finished refusal, and the ROLE a join grants
-    — <code>join.grants-member</code> hands every joiner OWNER instead of Member and not one Go spec
-    notices.</p>
-  </div>
+    <p>A cluster this size means the surface, not the entry: the manifest is saying that nothing in the
+    fast tier holds ANY of the properties on it.</p>
+  </div>`
+      : `<div class="callout good">
+    <h3>The clustering is gone — the worst surface carries
+    ${n("mut.maxClusterGaps", maxClusterGaps, "C")} gap</h3>
+    <p>This callout names the surfaces where more than one mutation went unnoticed, and there are
+    ${n("mut.majorClustersHeading", majorGapClusters.length, "C")} of them. That is the threshold doing
+    its job rather than an editorial judgement: a surface that gets a test drops out on its own, and one
+    that loses its tests tomorrow names itself here without anyone editing this file. Windows,
+    <code>RemoveOwner</code> and <code>Join</code>'s guards were the three; the cluster table above is
+    where to check that, not this sentence.</p>
+  </div>`
+  }
 
-  <div class="callout crit">
+  <div class="callout ${gaps.length ? "crit" : "good"}">
     <h3>The honesty caveat</h3>
-    <p>These are gaps in the FAST tier, not proof the product is unguarded:
-    ${n("mut.gaps.crossRef", gapsWithCrossRef.length, "C")} of the ${n("mut.gaps3", gaps.length, "C")} name journey actions in their <code>crossRef</code>, and ${n(
+    <p>A gap is a gap in the FAST tier, not proof the product is unguarded:
+    ${n("mut.gaps.crossRef", gapsWithCrossRef.length, "C")} of the ${n("mut.gaps3", gaps.length, "C")}
+    name journey actions in their <code>crossRef</code>, and ${n(
       "mut.gaps.proseOnly",
       gaps.length - gapsWithCrossRef.length - gapsNoWitnessAnywhere.length,
       "C",
     )} more describe a journey witness in prose without naming one. <strong>But those reds are DEDUCED</strong>
     — from each action's declared <code>expect.error</code>, not observed, because no journey mutation
-    has been run. And ${n(
-      "mut.gaps.noWitness",
-      gapsNoWitnessAnywhere.length,
-      "C",
-    )} entry has no witness anywhere at all: <code>${esc(
-      (gapsNoWitnessAnywhere[0] || {}).id || "—",
-    )}</code>, the rule that keeps <code>image/svg+xml</code> out of an origin we serve. That one is a
-    request for a test, not a pointer to one.</p>
-    <p>What it adds up to: the only thing standing behind window enforcement and the last-organizer
-    invariant is a suite that costs minutes, needs the whole stack, and cannot be run on a branch.</p>
+    has been run.${
+      gapsNoWitnessAnywhere.length
+        ? ` And ${n(
+            "mut.gaps.noWitness",
+            gapsNoWitnessAnywhere.length,
+            "C",
+          )} entry has no witness anywhere at all: <code>${esc(
+            (gapsNoWitnessAnywhere[0] || {}).id || "—",
+          )}</code>. That one is a request for a test, not a pointer to one.`
+        : ` ${n("mut.gaps.noWitness", gapsNoWitnessAnywhere.length, "C")} entries are witnessed
+           nowhere at all — every gap in the manifest points at something that would notice.`
+    }</p>
+    <p>${
+      gaps.length
+        ? `What that adds up to: for each of those properties, the only thing standing behind it is a
+           suite that costs minutes, needs the whole stack, and cannot be run on a branch.`
+        : `Nothing is left in this state.`
+    }</p>
   </div>
 
   <h3 style="margin:1.6rem 0 .7rem;font-size:14px">All ${n("mut.gapsHeading", gaps.length, "C")} gaps</h3>
@@ -1387,7 +1477,21 @@ ${gapCards}
   <h2>Known-broken and open</h2>
 
   <div class="item" id="open-drag">
-    <h3>smoke is one short of its baseline, deterministically ${statusChip("crit", "open")}</h3>
+    <h3>${
+      smokeAtBaseline
+        ? `the drag failure stopped reproducing, and that is not an explanation ${statusChip("warn", "open")}`
+        : `smoke is one short of its baseline, deterministically ${statusChip("crit", "open")}`
+    }</h3>
+    ${
+      smokeAtBaseline
+        ? `<p>The row above is at baseline: ${n("open.smokeFailedRepeat", smokeFailed, "F")} failed,
+           ${n("open.smokeNotRunRepeat", smokeNotRun, "F")} did not run. This entry stays OPEN anyway.
+           It was deterministic on 2026-08-13 and passed on both runs after the develop merge, which
+           touched nothing in <code>dragRowTo</code> — a timing-shaped defect that stops reproducing has
+           not been fixed, it has stopped being visible. The diagnosis is kept for whoever picks it
+           up:</p>`
+        : ""
+    }
     <p><code>tests/smoke/22-hackathon-pages.spec.ts:${n(
       "open.dragLine",
       dragTestLine,
@@ -1398,7 +1502,8 @@ ${gapCards}
     bounding box <em>before the drag starts</em>, while the list reorders live on <code>dragover</code>.
     Moving down, everything below the lifted row shifts up by one row height and the pointer arrives at
     what has become the middle row — which is exactly why one direction passes and the other does not.
-    The two specs after it are the rest of a <code>mode: "serial"</code> describe, so they never run:
+    When it does fail, the two specs after it are the rest of a <code>mode: "serial"</code> describe and
+    never run at all. The last recorded smoke run:
     ${n(
       "open.smokeSum",
       `${firstInt(smoke.result)} + ${grab(smoke.result, /(\d+) failed/)} + ${grab(
@@ -1416,18 +1521,20 @@ ${gapCards}
   </div>
 
   <div class="item">
-    <h3><code>just check::test -c backend</code> under <code>--ginkgo.v</code> ${statusChip(
-      "good",
-      "stale entry — re-checked",
-    )}</h3>
-    <p><code>.claude/CLAUDE.md</code>${sup(
-      "F",
-    )} records this as currently RED: the quitsh runner appends <code>--ginkgo.v</code> to every
-    package's test binary, and <code>internal/audit</code> and <code>internal/storage</code> were plain
-    <code>testing</code> packages that exited 1 on <code>flag provided but not defined: -ginkgo.v</code>
-    before running anything.</p>
-    <p><strong>The tree says otherwise.</strong> Both packages now carry a Ginkgo bootstrap whose only
-    job is to register those flags:
+    <h3><code>just check::test -c backend</code> ${
+      claudeMdBlamesGinkgoFlag
+        ? `under <code>--ginkgo.v</code> ${statusChip("good", "stale entry — re-checked")}`
+        : `is red on one flaky spec ${statusChip("warn", "open")}`
+    }</h3>
+    <p>The quitsh runner appends <code>--ginkgo.v</code> to every package's test binary, and
+    <code>internal/audit</code> and <code>internal/storage</code> were plain <code>testing</code>
+    packages that exited 1 on <code>flag provided but not defined: -ginkgo.v</code> before running
+    anything. ${
+      claudeMdBlamesGinkgoFlag
+        ? `<code>.claude/CLAUDE.md</code>${sup("F")} records that as the reason the command is
+           currently RED. <strong>The tree says otherwise.</strong>`
+        : `That is no longer why it fails.`
+    } Both packages carry a Ginkgo bootstrap whose only job is to register those flags:
     ${ginkgoBootstraps
       .map(
         (b) =>
@@ -1436,11 +1543,20 @@ ${gapCards}
       .join(
         " and ",
       )} — both added in <code>${n("open.bootstrapCommit", bootstrapCommit, "I")}</code>,
-    ${bootstrapIsAncestor ? "an ancestor of this commit" : "<strong>NOT an ancestor of this commit</strong>"}.
-    Confirmed once by hand on 2026-08-14 by running
-    <code class="cmd">go test -tags "test unittest" ./internal/audit/ ./internal/storage/ -count=1 --ginkgo.v</code>
-    which reports <code>ok</code> for both. The CLAUDE.md entry is stale and should be retired; the
-    full quitsh command was not re-run for this report.</p>
+    ${bootstrapIsAncestor ? "an ancestor of this commit" : "<strong>NOT an ancestor of this commit</strong>"}.</p>
+    ${
+      claudeMdBlamesGinkgoFlag
+        ? `<p>The CLAUDE.md entry is stale and should be retired.</p>`
+        : `<p><code>.claude/CLAUDE.md</code>${sup("F")} now records the command as red on a single
+           SPEC${
+             mismatchExtras.length === 1
+               ? ` — <code>${esc(mismatchExtras[0])}</code>, the same one the mutation runner
+                 declares flaky and excuses in ${n("mut.mismatch.rows3", mismatchRows.length, "D")}
+                 of the verdicts above${sup("D")}`
+               : ""
+           }. That is a test-side race, and CI runs this command, so it is a red CI run whenever it
+           lands — not a runner quirk to route around.</p>`
+    }
   </div>
 
   <div class="item">
@@ -1462,16 +1578,19 @@ ${uncalledRows}
     </table></div>
     <p class="small">Two limits worth knowing. The grep matches by method NAME, so a
     <code>Get</code> called on one service masks an uncalled <code>Get</code> on another — the count is
-    a floor. And <code>.claude/CLAUDE.md</code>${sup("F")} still says ${
-      claudeMdUncalled
-        ? `${n("claudemd.uncalled", claudeMdUncalled.total - claudeMdUncalled.called, "F")} of ${n(
-            "claudemd.total",
-            claudeMdUncalled.total,
-            "F",
-          )}`
-        : "a different figure"
-    }; <code>PageService.SetOrder</code> left the list on 2026-08-12 when drag-and-drop started sending
-    the whole sequence in one call, and the denominator has moved to ${n("proto.declarationsAudit2", declarations.length, "G")} since. Prefer the table.</p>
+    a floor. And the denominator moves whenever a service gains a method, so the ratio dates faster
+    than the list does: <code>.claude/CLAUDE.md</code>${sup("F")} says ${n(
+      "claudemd.uncalled",
+      claudeMdUncalled.total - claudeMdUncalled.called,
+      "F",
+    )} of ${n("claudemd.total", claudeMdUncalled.total, "F")}${
+      claudeMdAgrees
+        ? `, which is what this audit re-derived from
+    <code>api/proto</code>${sup("G")} and <code>components/frontend/src</code>${sup("H")} just now —
+    the written record and the tree agree.`
+        : `, against ${n("proto.declarationsAudit2", declarations.length, "G")} declared here today.
+    Prefer the table.`
+    }</p>
   </div>
 
   <div class="item">
@@ -1560,9 +1679,10 @@ if (lightMQ.addEventListener) lightMQ.addEventListener("change", function () {
 </html>
 `
 
-fs.writeFileSync(OUT, html)
-
-/* ══════════════ read back, re-derive, and refuse to disagree ═════════════ */
+/* ══════════ read back, re-derive, and refuse to WRITE on a disagreement ═══ */
+/* Nothing has touched the disk at this point, and nothing will until every
+   check below has passed. See the header note: the write is the last thing
+   this script does, not the first. */
 
 /**
  * The second code path. Deliberately textual where the first was structural:
@@ -1724,6 +1844,11 @@ function rederive() {
   }
   out["mut.majorClusters"] = major.length
   out["mut.majorClustersHeading"] = major.length
+  out["mut.totalTile3"] = ml.length
+  out["mut.maxClusterGaps"] = clusterList.reduce(
+    (a, c) => Math.max(a, out[`mut.cluster.${c.key}.gaps`]),
+    0,
+  )
   out["mut.clusterGapShare"] = major.reduce(
     (a, c) => a + out[`mut.cluster.${c.key}.gaps`],
     0,
@@ -1739,6 +1864,8 @@ function rederive() {
   }
   // "GAP" also matches inside "GAP CLOSED"? No — the quote terminates it. Verify:
   out["mut.verdict.GAP"] = (vr.match(/"verdict"\s*:\s*"GAP"/g) || []).length
+  out["mut.verdict.GAP2"] = out["mut.verdict.GAP"]
+  out["mut.gaps5"] = ml.filter((l) => /"gap"\s*:\s*true/.test(l)).length
   out["mut.verifyRows"] = (vr.match(/"verdict"\s*:/g) || []).length
   out["src.verifyRows"] = out["mut.verifyRows"]
   out["src.actionLines"] = out["recipe.actions"]
@@ -1758,6 +1885,7 @@ function rederive() {
     vr.match(/"verdict"\s*:\s*"MISMATCH"/g) || []
   ).length
   out["mut.mismatch.rows2"] = out["mut.mismatch.rows"]
+  out["mut.mismatch.rows3"] = out["mut.mismatch.rows"]
   out["mut.manifestTime"] =
     fs.statSync(P.manifest).mtime.toISOString().slice(0, 19).replace("T", " ") +
     "Z"
@@ -1812,6 +1940,8 @@ function rederive() {
   out["smoke.failed"] = num(sm[2], /(\d+) failed/)
   out["smoke.notrun"] = num(sm[2], /(\d+) did not run/)
   out["smoke.when"] = sm[3]
+  out["open.smokeFailedRepeat"] = out["smoke.failed"]
+  out["open.smokeNotRunRepeat"] = out["smoke.notrun"]
   out["open.smokeSum"] =
     `${out["smoke.passed"]} + ${out["smoke.failed"]} + ${out["smoke.notrun"]}`
   out["open.smokeTotal"] =
@@ -1854,7 +1984,10 @@ function rederive() {
   return out
 }
 
-const back = read(OUT)
+/** The finished document, checked as a string. It is not read from `OUT` —
+ *  `OUT` still holds the PREVIOUS report and must keep holding it if any check
+ *  below fails. `writeChecked()` compares the bytes it lands against this. */
+const back = html
 
 // One script block, exactly — a second close tag means data truncated the page.
 const opens = (back.match(/<script\b/g) || []).length
@@ -1920,7 +2053,7 @@ if (!idsIdentical)
 /* ── print what was embedded, the way splice-player.mjs does ─────────────── */
 const line = (k, v) => console.log("  " + String(k).padEnd(34) + String(v))
 console.log(
-  `quality-report.html — ${(back.length / 1024).toFixed(1)} KiB, ${branch} @ ${headSha}`,
+  `built quality-report.html — ${(back.length / 1024).toFixed(1)} KiB, ${branch} @ ${headSha}`,
 )
 line(
   "recipe actions",
@@ -1975,9 +2108,71 @@ line("figures stamped", `${stamped.size} (${CLAIMS.size} claims registered)`)
 if (problems.length) {
   console.error(`\n✗ ${problems.length} figure(s) disagree with their source:`)
   for (const p of problems) console.error("   " + p)
+  console.error(
+    `\n✗ NOTHING WAS WRITTEN. ${rel(OUT)} still holds the previous report, ` +
+      `byte for byte — fix the source (or the figure) and run this again.`,
+  )
   process.exit(1)
 }
+
+/**
+ * Land the checked bytes, or land nothing at all.
+ *
+ * The temp file goes in the SAME directory: a rename across filesystems is a
+ * copy, and a copy is precisely the interruptible write this exists to avoid.
+ * fsync before the rename, so the rename cannot publish a name pointing at
+ * contents still sitting in a buffer. Then read the destination back and
+ * require it to equal the string every check above ran against — otherwise
+ * "verified" and "on disk" are two different documents and only one of them
+ * was ever inspected.
+ *
+ * The rename retries on EPERM: renames on this repo's 9p bind mount
+ * intermittently refuse with nothing holding the file (CLAUDE.md, container
+ * trap 5) and succeed a moment later. Every failure path removes the temp, so
+ * a refused build leaves the directory exactly as it found it.
+ */
+function writeChecked(dest, text) {
+  const tmp = path.join(
+    path.dirname(dest),
+    `.${path.basename(dest)}.tmp-${process.pid}`,
+  )
+  const sleep = (ms) =>
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+  try {
+    const fd = fs.openSync(tmp, "w")
+    try {
+      fs.writeFileSync(fd, text)
+      fs.fsyncSync(fd)
+    } finally {
+      fs.closeSync(fd)
+    }
+    for (let attempt = 1; ; attempt++) {
+      try {
+        fs.renameSync(tmp, dest)
+        break
+      } catch (e) {
+        if (attempt >= 3 || e.code !== "EPERM") throw e
+        sleep(250)
+      }
+    }
+  } catch (e) {
+    try {
+      fs.unlinkSync(tmp)
+    } catch {}
+    throw e
+  }
+  const landed = read(dest)
+  if (landed !== text)
+    throw new Error(
+      `${rel(dest)} does not hold the bytes that were checked ` +
+        `(${landed.length} chars on disk vs ${text.length} verified) — do not trust it`,
+    )
+}
+
+writeChecked(OUT, html)
+
 console.log(
   `\n✓ ${CLAIMS.size} figures re-derived from their sources by a second code path and matched ` +
     `(${stamped.size} of them also stamped in the HTML as data-claim/data-value)`,
 )
+console.log(`✓ checked first, then written: ${rel(OUT)}`)
