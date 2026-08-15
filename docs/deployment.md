@@ -7,10 +7,10 @@ survived in a chart that looked fine in every diff.
 
 This page has two halves and they are for different people.
 
-| If you are…                                    | Read                                                      |
-| ---------------------------------------------- | --------------------------------------------------------- |
-| **deploying this for real**                    | [Part 1](#part-1--deploying-it) — what you supply, what will bite you, what the chart deliberately does not do |
-| **testing or changing the chart**              | [Part 2](#part-2--testing-the-chart-locally) — the k3d rig, its two modes, and what each can and cannot prove |
+| If you are…                       | Read                                                                                                           |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **deploying this for real**       | [Part 1](#part-1--deploying-it) — what you supply, what will bite you, what the chart deliberately does not do |
+| **testing or changing the chart** | [Part 2](#part-2--testing-the-chart-locally) — the k3d rig, its two modes, and what each can and cannot prove  |
 
 Every hostname below is `example.org`. Nothing tracked in this repository names
 a real zone, and that is a rule rather than a habit: a tunnel hostname once sat
@@ -33,11 +33,12 @@ an Ingress for the app, one for Keycloak, and one for `/objects`.
   outlive the release, and a StatefulSet inside an application chart invites
   `helm uninstall` to take the uploads with it. You point the chart at S3, Ceph
   RGW, MinIO — whatever the platform already runs and already backs up.
-- **The bucket policy.** See [the object store](#the-object-store-is-yours-and-so-is-its-policy);
-  a store without it answers 403 to every image.
-- **Certificates.** The chart writes `cert-manager.io/cluster-issuer:
-  letsencrypt-production` as a default annotation and names TLS secrets; it
-  installs no issuer and mints nothing.
+- **The bucket policy.** See
+  [the object store](#the-object-store-is-yours-and-so-is-its-policy); a store
+  without it answers 403 to every image.
+- **Certificates.** The chart writes
+  `cert-manager.io/cluster-issuer: letsencrypt-production` as a default
+  annotation and names TLS secrets; it installs no issuer and mints nothing.
 - **Anything below the pod.** There is no ServiceAccount, PodSecurityContext,
   NetworkPolicy, PodDisruptionBudget, HPA, `nodeSelector`, `tolerations`,
   `affinity` or `imagePullSecrets` in any template — verified by grep across
@@ -53,27 +54,27 @@ The chart refuses to render without these. The list is not from reading
 `values.yaml` — it is what `helm template` demanded, one failure at a time,
 until it rendered (25 objects, `helm lint` clean):
 
-| Value                                     | Why it is required                                            |
-| ----------------------------------------- | ------------------------------------------------------------- |
-| `backend.config.server.adminkeycloakid`   | the Keycloak `sub` of the platform admin; the backend refuses to boot without it |
-| `backend.config.database.postgresPassword`| the app's Postgres user                                        |
-| `frontendSecrets.clientSecret`            | the OIDC client secret for `hackagon-frontend`                 |
-| `frontendSecrets.authSecret`              | Auth.js session signing key                                    |
-| `keycloak.hostname.hostname`              | full URL with scheme; Keycloak 26 in production mode           |
-| `keycloak.database.external.host`         | e.g. `hackagon-postgresql`                                     |
-| `keycloak.database.external.password`     | Keycloak's own Postgres user                                   |
-| `storage.endpoint`                        | when `storage.enabled` (the default)                           |
-| `storage.bucket`                          | "                                                              |
-| `storage.existingSecret`                  | " — the chart **refuses** to read storage credentials from values |
+| Value                                      | Why it is required                                                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| `backend.config.server.adminkeycloakid`    | the Keycloak `sub` of the platform admin; the backend refuses to boot without it |
+| `backend.config.database.postgresPassword` | the app's Postgres user                                                          |
+| `frontendSecrets.clientSecret`             | the OIDC client secret for `hackagon-frontend`                                   |
+| `frontendSecrets.authSecret`               | Auth.js session signing key                                                      |
+| `keycloak.hostname.hostname`               | full URL with scheme; Keycloak 26 in production mode                             |
+| `keycloak.database.external.host`          | e.g. `hackagon-postgresql`                                                       |
+| `keycloak.database.external.password`      | Keycloak's own Postgres user                                                     |
+| `storage.endpoint`                         | when `storage.enabled` (the default)                                             |
+| `storage.bucket`                           | "                                                                                |
+| `storage.existingSecret`                   | " — the chart **refuses** to read storage credentials from values                |
 
 `baseDomain` has a default (`example.com`) that is wrong everywhere, and
-`postgresql.auth.postgresPassword` is *not* render-required — left empty, the
+`postgresql.auth.postgresPassword` is _not_ render-required — left empty, the
 Bitnami subchart looks the existing Secret up and, failing that,
 `randAlphaNum 24`s one. That lookup is what makes `helm upgrade` against a live
-cluster safe, and it is exactly what a rendered pipeline does not have: `helm
-template` piped to `kubectl apply`, or any GitOps flow that renders without
-cluster access, mints a *new* password on every render while the database keeps
-the old one. Set it explicitly.
+cluster safe, and it is exactly what a rendered pipeline does not have:
+`helm template` piped to `kubectl apply`, or any GitOps flow that renders
+without cluster access, mints a _new_ password on every render while the
+database keeps the old one. Set it explicitly.
 
 A minimal file, then:
 
@@ -106,9 +107,9 @@ helm upgrade --install hackagon ./helm-chart \
 ```
 
 **The release must be called `hackagon`.** `values.yaml` sets
-`keycloak.realmImport.existingConfigMap: hackagon-realm`, while the ConfigMap the
-chart creates is `<fullname>-realm`. Rendered as release `hackapp`, the chart
-creates `hackapp-hackagon-realm` and Keycloak mounts `hackagon-realm` — a
+`keycloak.realmImport.existingConfigMap: hackagon-realm`, while the ConfigMap
+the chart creates is `<fullname>-realm`. Rendered as release `hackapp`, the
+chart creates `hackapp-hackagon-realm` and Keycloak mounts `hackagon-realm` — a
 ConfigMap that does not exist. `hackagon-keycloak-init` (the Postgres initdb
 script) is hard-coded on both sides, so it survives a rename but collides
 between two releases in one namespace.
@@ -116,8 +117,8 @@ between two releases in one namespace.
 ### The object store is yours, and so is its policy
 
 Uploads go **from the browser straight to the store** over a presigned URL; the
-bytes never pass through the app. The design is
-[storage.md](storage.md) — read it before wiring a bucket, not after.
+bytes never pass through the app. The design is [storage.md](storage.md) — read
+it before wiring a bucket, not after.
 
 What the chart needs from you: a bucket, an endpoint, credentials in a Secret,
 and **a per-prefix policy**:
@@ -131,9 +132,9 @@ and **a per-prefix policy**:
 
 **A store without that policy answers 403 to every image.** The upload succeeds,
 the backend hands back a `publicUrl` it has no way to know is unreadable, and
-the row in the database is correct — so the failure looks like a broken frontend.
-It has happened once already, when `SITE_MEDIA` was added to the upload rules
-and not to the policy.
+the row in the database is correct — so the failure looks like a broken
+frontend. It has happened once already, when `SITE_MEDIA` was added to the
+upload rules and not to the policy.
 
 `.devcontainer/rustfs-init.sh` is the reference: it carries the exact policy
 document (`put_public_policy`) and a `--selftest` that proves both halves —
@@ -141,8 +142,8 @@ public prefixes readable with no credentials, private ones refused, with a
 presigned GET as the positive control so the 403 is a refusal and not a miss. It
 resolves its endpoint and credentials from `RUSTFS_ENDPOINT`,
 `HACKAGON_RUSTFS_ACCESS_KEY`, `HACKAGON_RUSTFS_SECRET_KEY` and
-`HACKAGON_RUSTFS_BUCKET`, so it can be pointed at a real bucket — *not run
-against one while writing this*, only against the k3d rig's store.
+`HACKAGON_RUSTFS_BUCKET`, so it can be pointed at a real bucket — _not run
+against one while writing this_, only against the k3d rig's store.
 
 `storage.enabled: false` is honest rather than absent: the chart writes an
 **empty** endpoint into the backend config so the storage RPCs answer
@@ -160,9 +161,10 @@ presigned PUT answers `403 SignatureDoesNotMatch`.
 days at the tunnel edge: every page renders, every image loads, and only people
 uploading find out.
 
-The chart writes the fix for you, on a **separate** Ingress (`<release>-objects`)
-because `upstream-vhost` and `rewrite-target` are per-Ingress annotations and
-applying them to the app's own rules would rewrite every application URL:
+The chart writes the fix for you, on a **separate** Ingress
+(`<release>-objects`) because `upstream-vhost` and `rewrite-target` are
+per-Ingress annotations and applying them to the app's own rules would rewrite
+every application URL:
 
 ```
 nginx.ingress.kubernetes.io/upstream-vhost: <store host[:port]>
@@ -172,17 +174,17 @@ nginx.ingress.kubernetes.io/proxy-body-size: 64m
 nginx.ingress.kubernetes.io/backend-protocol: HTTP|HTTPS
 ```
 
-**The observed negative control**, run against the k3d rig on 2026-08-14 —
-same store, same presigned URL, one annotation apart:
+**The observed negative control**, run against the k3d rig on 2026-08-14 — same
+store, same presigned URL, one annotation apart:
 
-| Route                                                    | Result                        |
-| -------------------------------------------------------- | ----------------------------- |
-| the chart's `/objects` Ingress                            | `200`                         |
-| an Ingress identical **but for `upstream-vhost`**          | `SignatureDoesNotMatch`       |
-| the chart's route again, **same signature**                | `200`                         |
-| public prefix, no credentials                              | `200`                         |
-| `teams/` (private)                                         | `403`                         |
-| `/objectsnotaprefix`                                       | `303` — the app, not the store |
+| Route                                             | Result                         |
+| ------------------------------------------------- | ------------------------------ |
+| the chart's `/objects` Ingress                    | `200`                          |
+| an Ingress identical **but for `upstream-vhost`** | `SignatureDoesNotMatch`        |
+| the chart's route again, **same signature**       | `200`                          |
+| public prefix, no credentials                     | `200`                          |
+| `teams/` (private)                                | `403`                          |
+| `/objectsnotaprefix`                              | `303` — the app, not the store |
 
 The third row is what makes the second mean anything: without it, the refusal is
 equally consistent with the URL having gone stale. The last row is the `(/|$)`
@@ -236,7 +238,7 @@ stored, and **every page still returns 200**.
 
 ⚠ **The header has to be TRUE, which is a property of your ingress, not of this
 chart.** ingress-nginx sends `X-Forwarded-Proto: $pass_access_scheme`, which
-defaults to the scheme of the connection *it* accepted. If TLS terminates in
+defaults to the scheme of the connection _it_ accepted. If TLS terminates in
 front of the controller (a cloud LB, a CDN, a tunnel), the controller sees http
 and will happily tell the app so. The controller then needs
 `use-forwarded-headers: "true"` — and, as the rig's own
@@ -249,9 +251,10 @@ Keep `frontend.config.cookies.useSecure` in step with the real scheme.
 ### A config-only upgrade used to change nothing at all
 
 Fixed 2026-08-14. It is written up rather than deleted because **the symptom was
-that there was no symptom**: `helm upgrade` reported success, `kubectl get
-configmap` showed the new value, and every running pod went on serving the old
-one. Rotating the OIDC client secret that way changed nothing that was running.
+that there was no symptom**: `helm upgrade` reported success,
+`kubectl get configmap` showed the new value, and every running pod went on
+serving the old one. Rotating the OIDC client secret that way changed nothing
+that was running.
 
 Two things combined, and either alone would have been survivable:
 
@@ -274,7 +277,13 @@ of the rendered config, so changing the config changes the pod template and the
 Deployment rolls itself.
 
 ```yaml
-checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+checksum/config:
+  {
+    {
+      include (print $.Template.BasePath "/backend-configmap.yaml") . |
+      sha256sum,
+    },
+  }
 ```
 
 Three of them: `checksum/config` on the backend, and `checksum/config` +
@@ -296,15 +305,15 @@ come from values. `verify.sh` now asserts it on every run.
 
 **What it does not cover, and what the annotation costs:**
 
-- **Editing a ConfigMap or Secret directly** — `kubectl edit`, or any
-  controller writing to it — still does not reach a running pod. The `subPath`
-  mount is unchanged; only a pod-template change rolls it, and Helm is what
-  produces one. Outside Helm, `kubectl rollout restart` remains the answer.
+- **Editing a ConfigMap or Secret directly** — `kubectl edit`, or any controller
+  writing to it — still does not reach a running pod. The `subPath` mount is
+  unchanged; only a pod-template change rolls it, and Helm is what produces one.
+  Outside Helm, `kubectl rollout restart` remains the answer.
 - **Keycloak and Postgres are the subcharts' business.** The Keycloak subchart
   already carries its own `checksum/secrets`; nothing here changed for either.
 - **`checksum/secret` puts a hash of secret material into the pod spec**, which
-  anyone with `get deployment` can read while the Secret itself needs `get
-  secret`. A sha256 is not the secret, but it *is* an oracle: someone who
+  anyone with `get deployment` can read while the Secret itself needs
+  `get secret`. A sha256 is not the secret, but it _is_ an oracle: someone who
   guesses `frontendSecrets.clientSecret` can confirm the guess without asking
   Keycloak. Kept anyway, because every alternative is worse — any value that
   changes when the secret changes is the same oracle, and a value that does not
@@ -315,7 +324,7 @@ come from values. `verify.sh` now asserts it on every run.
 
 `hackagon.keycloakHost` derives `auth.{baseDomain}`, and
 `frontend.ingress.hosts[].host` has always been free-form. So the moment the app
-is *not* at `app.{baseDomain}`, the two part company — and if `baseDomain` is
+is _not_ at `app.{baseDomain}`, the two part company — and if `baseDomain` is
 the app's own one-label name, Keycloak lands **one label deeper**.
 
 That matters because **Cloudflare's free Universal SSL covers the apex plus one
@@ -329,13 +338,13 @@ deployment publishes the product on a certificate that does not cover its login.
 `{releaseName}` substitution as every other host value), defaulting to the old
 derivation so no existing deployment changes.
 
-⚠ **The Keycloak hostname appears in five values and none derives from another.**
-Change it and change all of them:
+⚠ **The Keycloak hostname appears in five values and none derives from
+another.** Change it and change all of them:
 
 ```yaml
 keycloak:
-  hostname: { hostname: "https://auth-app.example.org" }   # subchart, full URL
-  ingress:  { host: "auth-app.example.org" }               # the Ingress rule + TLS
+  hostname: { hostname: "https://auth-app.example.org" } # subchart, full URL
+  ingress: { host: "auth-app.example.org" } # the Ingress rule + TLS
 frontend:
   config: { oidc: { issuer: "https://auth-app.example.org/realms/hackagon" } }
 backend:
@@ -390,46 +399,46 @@ recognise the next one**, and none of them showed up in a rendered manifest.
 - **`hackagon.frontendHost` ignores `frontend.ingress.hosts` entirely.** It is
   `app.{baseDomain}`, full stop, and it is what the realm ConfigMap rewrites the
   OIDC client's redirect URIs to. Rendered with the app at
-  `hackathons.example.org`, the realm still says
-  `https://app.example.org/*` — a hostname that does not exist — and Keycloak
-  answers the login with `Invalid parameter: redirect_uri`, which names the
-  parameter and not the mistake. **If your app is not at `app.{baseDomain}`,
-  fix the redirect URIs on the running Keycloak; a realm imports once, so an
-  upgrade cannot change them anyway.**
+  `hackathons.example.org`, the realm still says `https://app.example.org/*` — a
+  hostname that does not exist — and Keycloak answers the login with
+  `Invalid parameter: redirect_uri`, which names the parameter and not the
+  mistake. **If your app is not at `app.{baseDomain}`, fix the redirect URIs on
+  the running Keycloak; a realm imports once, so an upgrade cannot change them
+  anyway.**
 
-- **`NOTES.txt` prints the wrong URL on every install.** `Frontend:
-  https://{{ .Values.baseDomain }}` — not `app.{baseDomain}`, not
+- **`NOTES.txt` prints the wrong URL on every install.**
+  `Frontend: https://{{ .Values.baseDomain }}` — not `app.{baseDomain}`, not
   `frontend.ingress.hosts` — and the Keycloak line ignores
   `keycloak.ingress.host`. Verified with `helm install --dry-run`. Same family
   as the item above.
 
 - **The backend hard-exits on any dependency that is not up yet.** Postgres
   refusing connections (`create schema`) and Keycloak's JWKS endpoint not
-  answering (`create server`) both reach `logx.Fatal` in
-  `cmd/service/main.go`. On a fresh install Keycloak takes ~90 s (image pull
-  plus schema migration) and the backend crash-loops until then. It self-heals —
-  the rig's own cluster shows `RESTARTS 3`, the last termination being
+  answering (`create server`) both reach `logx.Fatal` in `cmd/service/main.go`.
+  On a fresh install Keycloak takes ~90 s (image pull plus schema migration) and
+  the backend crash-loops until then. It self-heals — the rig's own cluster
+  shows `RESTARTS 3`, the last termination being
   `dial tcp …:5432: connect: connection refused`, exit 1 — so nothing is broken.
   **The cost is diagnostic: this is indistinguishable from bug 2, which looks
   identical and never recovers.** Either retry at startup or give the Deployment
   an init container that waits.
 
-- **`livenessProbe` on the frontend is `GET /`, which renders the landing page.**
-  Both of that page's backend calls are caught today
+- **`livenessProbe` on the frontend is `GET /`, which renders the landing
+  page.** Both of that page's backend calls are caught today
   (`(public)/+page.server.ts` carries `listUnavailable` precisely so an outage
-  and an empty platform stop looking alike), so a backend outage no longer
-  fails the probe — but it still costs up to five gRPC calls per pod every 15 s
-  to answer "is this process alive", and liveness and readiness use the same
-  path, so neither distinguishes wedged from degraded. Liveness wants a route
-  that does not fan out.
+  and an empty platform stop looking alike), so a backend outage no longer fails
+  the probe — but it still costs up to five gRPC calls per pod every 15 s to
+  answer "is this process alive", and liveness and readiness use the same path,
+  so neither distinguishes wedged from degraded. Liveness wants a route that
+  does not fan out.
 
 - **`postgresPassword` renders into a ConfigMap in plaintext.** Two of them:
   `<release>-backend-config` (the app DB password, inside `config.yaml`) and
   `hackagon-keycloak-init` (both DB passwords, inside the initdb SQL). A
   ConfigMap is readable by anything with `get` on the namespace. The storage
-  credentials are handled correctly — Secret only, and the chart refuses to
-  read them from values at all — so the pattern exists; the DB passwords have
-  not been moved to it.
+  credentials are handled correctly — Secret only, and the chart refuses to read
+  them from values at all — so the pattern exists; the DB passwords have not
+  been moved to it.
 
 - **`keycloak.database.external.database` / `.user` are ignored** by the
   subchart, which reads `name` / `username`. They happen to carry the same
@@ -444,9 +453,9 @@ recognise the next one**, and none of them showed up in a rendered manifest.
   export one that has no users in it.
 
 - **Three helpers in `_helpers.tpl` are defined and never used**:
-  `hackagon.serviceAccountName`, `hackagon.randAlphaNum`, `hackagon.getPassword`.
-  The first would nil-pointer if anything called it — there is no
-  `serviceAccount` key in `values.yaml`.
+  `hackagon.serviceAccountName`, `hackagon.randAlphaNum`,
+  `hackagon.getPassword`. The first would nil-pointer if anything called it —
+  there is no `serviceAccount` key in `values.yaml`.
 
 ### What has never been tested on a cluster
 
@@ -519,11 +528,10 @@ bash .claude/skills/k3d-chart-rig/scripts/tunnel.sh destroy
 
 > ### ⚠ This publishes the development realm to the internet
 >
-> While the tunnel is up, **anyone who learns the hostname can sign in as
-> alice, bob, charles or hackagon-admin with the password `aliceandbob`** — the
-> last of those being a global Admin. There is no authentication in front of the
-> tunnel, and an obscure hostname is not one; these names are guessable by
-> design.
+> While the tunnel is up, **anyone who learns the hostname can sign in as alice,
+> bob, charles or hackagon-admin with the password `aliceandbob`** — the last of
+> those being a global Admin. There is no authentication in front of the tunnel,
+> and an obscure hostname is not one; these names are guessable by design.
 >
 > Treat a tunnelled cluster as a demo you are watching, not as something to
 > leave running. `tunnel.sh down` is one command, and `down.sh` stops the tunnel
@@ -539,31 +547,31 @@ cloudflared is what puts `X-Forwarded-Proto: https` on the request the cluster
 receives.
 
 Both hostnames are one label deep because they have to be — see
-[`keycloakHost`](#keycloakhost-and-the-certificate-that-does-not-cover-it).
-This mode is also what removed `NODE_TLS_REJECT_UNAUTHORIZED=0`, the line
+[`keycloakHost`](#keycloakhost-and-the-certificate-that-does-not-cover-it). This
+mode is also what removed `NODE_TLS_REJECT_UNAUTHORIZED=0`, the line
 `values.k3d.yaml` calls the worst in the file: with a real certificate the
 frontend does not need it, so the overlay sets `frontend.extraEnv: []` and the
 pod runs with node's trust store intact.
 
 **What only a browser can answer** (`browser-check.sh`, 13 checks, Firefox):
-signing alice in through the public URL sets
-`__Secure-authjs.session-token` (`Secure; HttpOnly; SameSite=Lax`), Firefox
-stores it, **no unprefixed twin is set beside it**, `/auth/session` returns
-alice and a Keycloak access token, and it survives a full page load.
+signing alice in through the public URL sets `__Secure-authjs.session-token`
+(`Secure; HttpOnly; SameSite=Lax`), Firefox stores it, **no unprefixed twin is
+set beside it**, `/auth/session` returns alice and a Keycloak access token, and
+it survives a full page load.
 
 ### Why both modes exist — the result that argues for it
 
 Three experiments through the tunnel, from `e0d2f6d2`:
 
-| change                                            | advertised origin | sign-in POST |
-| ------------------------------------------------- | ----------------- | ------------ |
-| baseline                                          | `https://…`       | 302          |
-| ingress-nginx `use-forwarded-headers: false`      | `http://…`        | **403**      |
-| chart `frontend.protocolHeader: ""`               | `https://…`       | 302          |
+| change                                       | advertised origin | sign-in POST |
+| -------------------------------------------- | ----------------- | ------------ |
+| baseline                                     | `https://…`       | 302          |
+| ingress-nginx `use-forwarded-headers: false` | `http://…`        | **403**      |
+| chart `frontend.protocolHeader: ""`          | `https://…`       | 302          |
 
-The 403 is SvelteKit's own `Cross-site POST form submissions are forbidden`:
-the app computed an http origin, the browser sent an https `Origin`, and the
-CSRF check refused them. Every page still answered 200.
+The 403 is SvelteKit's own `Cross-site POST form submissions are forbidden`: the
+app computed an http origin, the browser sent an https `Origin`, and the CSRF
+check refused them. Every page still answered 200.
 
 **The third row is the honest result — under real https, removing
 `protocolHeader` breaks nothing**, because adapter-node's guess is right by
@@ -579,9 +587,9 @@ Numbers and behaviours here come from one of three places, and it is worth
 knowing which.
 
 **Run on 2026-08-14 against a live k3d cluster and `helm template`:** the
-required-values list (added one failure at a time until it rendered); `helm
-lint`; the rendered annotations, hosts, ExternalName Service and `NOTES.txt`;
-the release-name coupling (rendered as `hackapp`); the whole
+required-values list (added one failure at a time until it rendered);
+`helm lint`; the rendered annotations, hosts, ExternalName Service and
+`NOTES.txt`; the release-name coupling (rendered as `hackapp`); the whole
 [`/objects` control table](#the-objects-host-rewrite--the-failure-nobody-diagnoses);
 `/auth/providers` advertising `http://` with `PROTOCOL_HEADER` set; the
 backend's restart reason read off the live pod; and the unset-`postgresPassword`
@@ -603,9 +611,9 @@ themselves reverted-and-run, to see them fail.
 **Attributed, not re-measured:** the 4k `proxy_buffer_size` 502, the
 ExternalName flag experiment, the `use-forwarded-headers` / `protocolHeader`
 table, the `__Secure-` browser results, Cloudflare's TLS alert 40 below one
-label, and the 13 browser checks — all from `b98fbdda`, `e0d2f6d2` and the
-rig's `SKILL.md`. (`verify.sh` was 37 checks in those commits and is 55 now;
-the 18 added on 2026-08-14 are the config-reload step above, and they were run.)
+label, and the 13 browser checks — all from `b98fbdda`, `e0d2f6d2` and the rig's
+`SKILL.md`. (`verify.sh` was 37 checks in those commits and is 55 now; the 18
+added on 2026-08-14 are the config-reload step above, and they were run.)
 
 ## See also
 

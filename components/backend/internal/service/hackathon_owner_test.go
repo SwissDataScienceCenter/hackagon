@@ -148,27 +148,32 @@ var _ = Describe("HackathonService owner roles", func() {
 			)
 		})
 
-		It("refuses an organizer demoting themselves, even with a co-organizer to fall back on", func() {
-			// The co-organizer matters: with one owner this would be refused by
-			// the last-organizer guard, which runs first, and the spec would
-			// pass with the self-demotion rule deleted.
-			_, err := client.AddOwner(
-				adminCtx,
-				&msgs.AddOwnerRequest{HackathonId: hackathonID, UserId: bob.ID.String()},
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(owners()).To(ConsistOf(admin, bob.KeycloakID))
+		It(
+			"refuses an organizer demoting themselves, even with a co-organizer to fall back on",
+			func() {
+				// The co-organizer matters: with one owner this would be refused by
+				// the last-organizer guard, which runs first, and the spec would
+				// pass with the self-demotion rule deleted.
+				_, err := client.AddOwner(
+					adminCtx,
+					&msgs.AddOwnerRequest{HackathonId: hackathonID, UserId: bob.ID.String()},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(owners()).To(ConsistOf(admin, bob.KeycloakID))
 
-			_, err = client.RemoveOwner(
-				adminCtx,
-				&msgs.RemoveOwnerRequest{HackathonId: hackathonID, UserId: platformID(admin)},
-			)
-			Expect(err).To(HaveOccurred())
-			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
-			Expect(status.Convert(err).Message()).To(ContainSubstring("your own organizer role"))
+				_, err = client.RemoveOwner(
+					adminCtx,
+					&msgs.RemoveOwnerRequest{HackathonId: hackathonID, UserId: platformID(admin)},
+				)
+				Expect(err).To(HaveOccurred())
+				Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+				Expect(
+					status.Convert(err).Message(),
+				).To(ContainSubstring("your own organizer role"))
 
-			Expect(owners()).To(ContainElement(admin))
-		})
+				Expect(owners()).To(ContainElement(admin))
+			},
+		)
 
 		It("gives a demoted co-organizer Member back", func() {
 			_, err := client.AddOwner(

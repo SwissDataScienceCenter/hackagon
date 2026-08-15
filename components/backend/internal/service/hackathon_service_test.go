@@ -1488,7 +1488,9 @@ var _ = Describe("HackathonService", func() {
 					).
 					Exec(context.Background())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(n).To(Equal(1), "nothing was ungoverned — the specs below would prove nothing")
+				Expect(
+					n,
+				).To(Equal(1), "nothing was ungoverned — the specs below would prove nothing")
 
 				// The positive control. Without it, every claim under this
 				// Describe would also hold against a governed row, i.e. against

@@ -79,7 +79,8 @@ const plausibleSchema = z
     domain: z.string().min(1).optional(),
   })
   .refine((p) => !p.enabled || (!!p.scriptUrl && !!p.domain), {
-    message: "plausible.enabled requires plausible.scriptUrl and plausible.domain",
+    message:
+      "plausible.enabled requires plausible.scriptUrl and plausible.domain",
   })
   .default({})
 

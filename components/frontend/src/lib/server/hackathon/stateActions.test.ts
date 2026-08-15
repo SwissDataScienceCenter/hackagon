@@ -152,7 +152,9 @@ describe("applyPhaseCapabilities", () => {
     const sent = written(setCapabilities)
 
     expect(sent[VOTE], "voting was on and no phase names it").toBe(true)
-    expect(sent[REGISTER], "registration was off and no phase names it").toBe(false)
+    expect(sent[REGISTER], "registration was off and no phase names it").toBe(
+      false,
+    )
   })
 
   it("refuses when neither a declaration nor the calendar names a phase", async () => {
@@ -201,7 +203,9 @@ describe("applyPhaseCapabilities", () => {
       capabilities: gap,
     })
 
-    const result = (await applyPhaseCapabilities(event, "h1")) as { status: number }
+    const result = (await applyPhaseCapabilities(event, "h1")) as {
+      status: number
+    }
 
     expect(result.status).toBe(400)
     expect(setCapabilities).not.toHaveBeenCalled()

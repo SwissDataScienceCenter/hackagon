@@ -68,9 +68,9 @@ describe("analyticsReferrer", () => {
   it("drops an internal referrer entirely", () => {
     // Positive control lives in the next test: if this function returned ""
     // unconditionally, "keeps an external origin" would fail.
-    expect(
-      analyticsReferrer(`${origin}/invite/abc-123-secret`, origin),
-    ).toBe("")
+    expect(analyticsReferrer(`${origin}/invite/abc-123-secret`, origin)).toBe(
+      "",
+    )
   })
 
   it("keeps an external origin and nothing else of it", () => {

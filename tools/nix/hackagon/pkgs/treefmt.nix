@@ -44,6 +44,13 @@ _: {
     # would reappear as a format failure. Same reason the codegen dirs are
     # excluded above: a generated file belongs to its generator.
     "**/pnpm-lock.yaml"
+    # Helm templates are Go templates that happen to end in .yaml — a
+    # directive can stand where a key belongs (`name: {{ include … }}`, and
+    # whole blocks under `{{- if }}`), so NO yaml parser accepts them. prettier
+    # exits 2 on backend-configmap.yaml at line 4 and takes the whole formatter
+    # run with it, which is what made CI red the moment the chart landed.
+    # `helm lint` and `helm template` are what check these files.
+    "helm-chart/templates/**"
   ];
 
   programs.ruff-format.enable = true;
