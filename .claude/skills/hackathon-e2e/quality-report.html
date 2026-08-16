@@ -186,7 +186,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
 <header class="topbar">
   <div class="brand">Hackagon <span>· e2e quality report</span></div>
-  <div class="topmeta">sketch/06-08-26 @ ea66ff97 · 2026-08-15</div>
+  <div class="topmeta">chore/loose-ends @ abb7f921 · 2026-08-15</div>
   <nav>
     <a class="btn" href="recipe-player.html">▶ Recipe player</a>
     <button class="btn" id="btnTheme" type="button" aria-pressed="false">
@@ -425,7 +425,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
     </article>
     <article class="tile"><h3>Verification run</h3>
       <p class="val"><span class="num" data-claim="mut.verifyRows" data-value="38">38</span><a class="src" href="#src-D" title="Source D">D</a><span class="unit">entries judged</span></p>
-      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span>recorded&nbsp;<span class="num" data-claim="mut.verifyDay" data-value="2026-08-13">2026-08-13</span></span></p>
+      <p class="chips"><span class="chip info"><span class="glyph" aria-hidden="true">•</span>recorded&nbsp;<span class="num" data-claim="mut.verifyDay" data-value="2026-08-15">2026-08-15</span></span></p>
       <p class="note">Verdicts below. <code>NO REDS</code> is not a curiosity to note and move past — it
       fails the run.</p>
     </article>
@@ -433,60 +433,35 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
   <div class="wrap"><table>
     <caption>Verdicts as recorded in <code>mutations/.state/verify.json</code><a class="src" href="#src-D" title="Source D">D</a> on
-    <span class="num" data-claim="mut.verifyDate" data-value="2026-08-13">2026-08-13</span><a class="src" href="#src-D" title="Source D">D</a>.</caption>
+    <span class="num" data-claim="mut.verifyDate" data-value="2026-08-15">2026-08-15</span><a class="src" href="#src-D" title="Source D">D</a>.</caption>
     <thead><tr><th scope="col">Verdict</th><th scope="col" class="numcell">Entries</th><th scope="col">What it means</th></tr></thead>
     <tbody>
 <tr>
       <td><span class="chip good"><span class="glyph" aria-hidden="true">✓</span>EXACT</span></td>
-      <td class="numcell"><span class="num" data-claim="mut.verdict.EXACT" data-value="23">23</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.EXACT" data-value="37">37</span><a class="src" href="#src-D" title="Source D">D</a></td>
       <td>exactly the declared tests went red — the property is provably catchable</td>
     </tr>
 <tr>
       <td><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>MISMATCH</span></td>
-      <td class="numcell"><span class="num" data-claim="mut.verdict.MISMATCH" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.MISMATCH" data-value="0">0</span><a class="src" href="#src-D" title="Source D">D</a></td>
       <td>the declared set failed plus something else; every extra here is the one declared-flaky spec</td>
     </tr>
 <tr>
       <td><span class="chip crit"><span class="glyph" aria-hidden="true">✗</span>GAP</span></td>
-      <td class="numcell"><span class="num" data-claim="mut.verdict.GAP" data-value="11">11</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.GAP" data-value="1">1</span><a class="src" href="#src-D" title="Source D">D</a></td>
       <td>nothing went red — no test in the fast tier holds this property</td>
     </tr>
 <tr>
       <td><span class="chip warn"><span class="glyph" aria-hidden="true">!</span>GAP CLOSED</span></td>
-      <td class="numcell"><span class="num" data-claim="mut.verdict.GAPCLOSED" data-value="1">1</span><a class="src" href="#src-D" title="Source D">D</a></td>
+      <td class="numcell"><span class="num" data-claim="mut.verdict.GAPCLOSED" data-value="0">0</span><a class="src" href="#src-D" title="Source D">D</a></td>
       <td>declared a gap, but a red appeared — promote it to a real entry</td>
     </tr>
     </tbody>
   </table></div>
 
-  <div class="callout">
-    <h3>The verdicts above judge an older manifest than the one below</h3>
-    <p>That run recorded <span class="num" data-claim="mut.verdict.GAP2" data-value="11">11</span><a class="src" href="#src-D" title="Source D">D</a>
-    <code>GAP</code> verdicts. The manifest declares <span class="num" data-claim="mut.gaps5" data-value="1">1</span><a class="src" href="#src-C" title="Source C">C</a> gap
-    today<a class="src" href="#src-C" title="Source C">C</a> — Go specs written after the run closed the rest, and <strong>nothing above has
-    been re-judged</strong>. Everything from here down is derived from the manifest and is current;
-    the table above is a snapshot of <span class="num" data-claim="mut.verifyDay2" data-value="2026-08-13">2026-08-13</span><a class="src" href="#src-D" title="Source D">D</a>.</p>
-  </div>
+  
 
-  <div class="callout">
-    <h3>All <span class="num" data-claim="mut.mismatch.rows" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a> MISMATCH verdicts have the same single
-    unexpected red</h3>
-    <p><code>service::Capacity &gt; never oversells the last place under simultaneous joins</code> — it fails roughly one run in five under in-memory
-    SQLite, has nothing to do with any mutation, and is declared in the runner's
-    <code>KNOWN_FLAKY</code> with that reason. Every ignored red is printed with its excuse, because a
-    list of failures that don't count is exactly the shape that could hide a real one.</p>
-    <p><span class="num" data-claim="mut.mismatch.superseded" data-value="1">1</span><a class="src" href="#src-D" title="Source D">D</a> of the
-    <span class="num" data-claim="mut.mismatch.rows2" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a> would be judged differently today:
-    <code>capacity.oversell-by-one</code> now lists that spec in its
-    OWN <code>expectReds</code>, where the excuse cannot reach it — a flaky test can still be a genuine
-    witness, and this one hammers concurrent joins against a cap, which is precisely what the mutation
-    breaks. The recorded run counted it as an unexpected extra, so the file and the manifest disagree,
-    and the timestamps do not explain it: the manifest is newer
-    than the run (<span class="num" data-claim="mut.manifestTime" data-value="2026-08-14 16:34:51Z">2026-08-14 16:34:51Z</span><a class="src" href="#src-C" title="Source C">C</a> vs
-    <span class="num" data-claim="mut.verifyTime" data-value="2026-08-13 21:53:17Z">2026-08-13 21:53:17Z</span><a class="src" href="#src-D" title="Source D">D</a>).
-    <strong>The table above is the last recorded judgement, not a live one</strong> — re-run the
-    manifest to refresh it.</p>
-  </div>
+  
 
   <div class="wrap"><table>
     <caption>Gaps cluster. Grouping is by the id prefix, so this is derived from the manifest rather
@@ -661,9 +636,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
     <code>components/backend/internal/audit/audit_suite_test.go</code> (present) and <code>components/backend/internal/storage/storage_suite_test.go</code> (present) — both added in <code><span class="num" data-claim="open.bootstrapCommit" data-value="13331242e">13331242e</span><a class="src" href="#src-I" title="Source I">I</a></code>,
     an ancestor of this commit.</p>
     <p><code>.claude/CLAUDE.md</code><a class="src" href="#src-F" title="Source F">F</a> now records the command as red on a single
-           SPEC — <code>service::Capacity &gt; never oversells the last place under simultaneous joins</code>, the same one the mutation runner
-                 declares flaky and excuses in <span class="num" data-claim="mut.mismatch.rows3" data-value="3">3</span><a class="src" href="#src-D" title="Source D">D</a>
-                 of the verdicts above<a class="src" href="#src-D" title="Source D">D</a>. That is a test-side race, and CI runs this command, so it is a red CI run whenever it
+           SPEC. That is a test-side race, and CI runs this command, so it is a red CI run whenever it
            lands — not a runner quirk to route around.</p>
   </div>
 
@@ -793,8 +766,8 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-D">
     <th scope="row" class="srckey">D</th>
     <td class="mono">.claude/skills/hackathon-e2e/mutations/.state/verify.json</td>
-    <td class="numcell small mono">23.4 KiB</td>
-    <td class="small mono">2026-08-13</td>
+    <td class="numcell small mono">21.5 KiB</td>
+    <td class="small mono">2026-08-15</td>
     <td class="small">The verdict the mutation runner recorded for all <span class="num" data-claim="src.verifyRows" data-value="38">38</span> entries, with the reds each one actually produced.</td>
   </tr>
 <tr id="src-E">
@@ -807,7 +780,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 <tr id="src-F">
     <th scope="row" class="srckey">F</th>
     <td class="mono">.claude/CLAUDE.md</td>
-    <td class="numcell small mono">91.7 KiB</td>
+    <td class="numcell small mono">93.9 KiB</td>
     <td class="small mono">2026-08-15</td>
     <td class="small">The suite-results table (the only source for smoke, mobile, openreplay, backend and frontend-unit numbers) and the known-broken prose.</td>
   </tr>
@@ -838,7 +811,7 @@ footer { color:var(--muted); font-size:12.5px; border-top:1px solid var(--line);
 
 <footer>
   <p>Generated by <code>.claude/skills/hackathon-e2e/scripts/build-quality-report.mjs</code> from
-  sketch/06-08-26 @ ea66ff97 (2026-08-15). No wall-clock is embedded, so two builds over one
+  chore/loose-ends @ abb7f921 (2026-08-15). No wall-clock is embedded, so two builds over one
   tree are byte-identical. This is the status report; the animated replay of the recipe is
   <a href="recipe-player.html">recipe-player.html</a>.</p>
 </footer>

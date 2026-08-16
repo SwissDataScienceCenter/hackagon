@@ -202,6 +202,47 @@ function apply(mut) {
 }
 
 /**
+ * Put one backup back, retrying the 9p refusal — and never by COPYING.
+ *
+ * `fs.copyFileSync` on this repo's bind mount intermittently answers
+ * `EPERM: operation not permitted, copyfile` with nothing holding either file:
+ * the same refusal container trap 5 documents for a rename, and the same one
+ * `writeChecked` in build-quality-report.mjs already retries around. Here it was
+ * far worse than a failed restore, because **Node removes the destination when a
+ * copy fails after opening it** — so the file being restored was DELETED, the
+ * journal still claimed the mutation was applied, and every later entry aborted
+ * on `assertCleanTree`. Observed three times in one afternoon (2026-08-15), at
+ * entries 1, 7 and 9 of three separate runs; each run lost every entry after it.
+ *
+ * Two changes, for two different halves of that:
+ *   - read-then-write instead of copyfile. A write can leave the destination
+ *     wrong, but it cannot unlink it, so the worst case stops being "the source
+ *     file is gone" — which is the only outcome nothing downstream can undo.
+ *   - retry the EPERM, because it is transient (the very next restore of the
+ *     same file succeeded, every time).
+ * The bytes are read back and compared, because a restore this tool did not
+ * verify is exactly what "restoration is verified, not assumed" is about.
+ */
+function restoreFile(backup, abs) {
+  const bytes = fs.readFileSync(backup)
+  const sleep = (ms) =>
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+  for (let attempt = 1; ; attempt++) {
+    try {
+      fs.writeFileSync(abs, bytes)
+      break
+    } catch (e) {
+      if (attempt >= 5 || e.code !== "EPERM") throw e
+      sleep(250)
+    }
+  }
+  if (!fs.readFileSync(abs).equals(bytes))
+    throw new Error(
+      `restore: ${abs} does not match its backup after being written back`,
+    )
+}
+
+/**
  * Undo everything the journal records, NEWEST FIRST.
  *
  * The order is load-bearing and was a real bug, caught by this tool's own
@@ -225,7 +266,7 @@ function restore({ quiet = false } = {}) {
       spawnSync("git", ["checkout", "--", e.file], { cwd: ROOT, env: ENV })
       continue
     }
-    fs.copyFileSync(e.backup, path.join(ROOT, e.file))
+    restoreFile(e.backup, path.join(ROOT, e.file))
     if (!quiet) console.log(C.dim(`  restored ${e.file} (${e.id})`))
   }
   writeJournal([])

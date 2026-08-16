@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en" data-mode="dark">
+  <head>
+    <meta charset="utf-8" />
+    <title>SDSC Hackathons — link preview card</title>
+    <style>
+      /* The source for static/og-default.jpg. Rendered by render.mjs; open this
+       * file directly in a browser to work on it.
+       *
+       * Everything here is local: no webfont, no remote asset, no network. The
+       * card is composited onto whatever background a scraper puts it on, so it
+       * is fully opaque and does not read the viewer's colour scheme.
+       *
+       * The values below are the product's own palette from
+       * src/themes/hackagon.css, in its default (dark) mode — not re-picked by
+       * eye. The theme states them in oklch; they are written here as the
+       * sRGB each one converts to, because a JPEG is sRGB anyway and because
+       * of the trap below. If the theme moves, move these.
+       *
+       *   theme (oklch)             sRGB      token
+       *   oklch(17.5% 0.009 196)    #0c1212   --hk-canvas
+       *   oklch(33%   0.013 196)    #2e3837   --hk-line
+       *   oklch(95%   0.005 196)    #ebefef   --hk-ink
+       *   oklch(79%   0.009 196)    #b4bcbc   --hk-ink-2
+       *   oklch(64%   0.011 196)    #858e8e   --hk-ink-3
+       *   oklch(80%   0.155 131)    #9ad261   --hk-accent
+       *   oklch(68%   0.11  225)    #3aa6cb   --hk-info
+       *
+       * ⚠ Do not put oklch() back into the gradients. The renderer used here
+       * (Playwright's Firefox) draws NOTHING for an oklch colour stop in a
+       * repeating-linear-gradient — no error, no warning, no console message,
+       * and getComputedStyle happily reports the fully-resolved gradient. The
+       * grid below was invisible in the first two renders of this card for
+       * exactly that reason, and it was only found by sampling pixels out of
+       * the PNG. render.mjs now asserts the grid is really there. */
+      :root {
+        --hk-canvas: #0c1212;
+        --hk-line: #2e3837;
+        --hk-ink: #ebefef;
+        --hk-ink-2: #b4bcbc;
+        --hk-ink-3: #858e8e;
+        --hk-accent: #9ad261;
+
+        /* The theme's two system stacks, with "Liberation Mono"/"Liberation
+         * Sans" appended. Those are the faces the render container actually
+         * has, and they must be NAMED: its fontconfig resolves the bare
+         * `monospace` and `sans-serif` generics to a CJK face (WenQuanYi Zen
+         * Hei), so a stack that falls through to the generic renders the card
+         * in the wrong typeface and nothing errors. render.mjs measures the
+         * headline to catch that. */
+        --font-mono:
+          ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code",
+          "JetBrains Mono", Menlo, Consolas, "Liberation Mono",
+          "DejaVu Sans Mono", monospace;
+        --font-sans:
+          ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        /* Exactly the OG box. render.mjs screenshots this element at 2x. */
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--hk-canvas);
+      }
+
+      #card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        padding: 72px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: var(--hk-canvas);
+        overflow: hidden;
+      }
+
+      /* Two washes over the flat ground, both very low contrast. The grid is
+       * the same motif the app uses behind its hero; the glow keeps the card
+       * from reading as a black rectangle, which is the difference between
+       * "technical" and "welcoming" at this size. Neither survives a thumbnail,
+       * and neither is meant to. */
+      #card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          repeating-linear-gradient(
+            to right,
+            var(--hk-line) 0 1px,
+            transparent 1px 60px
+          ),
+          repeating-linear-gradient(
+            to bottom,
+            var(--hk-line) 0 1px,
+            transparent 1px 60px
+          );
+        opacity: 0.5;
+      }
+
+      #card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            60% 75% at 84% 12%,
+            rgb(154 210 97 / 0.13),
+            transparent 70%
+          ),
+          radial-gradient(
+            70% 90% at 8% 96%,
+            rgb(58 166 203 / 0.09),
+            transparent 70%
+          );
+      }
+
+      /* Everything readable sits above both washes. */
+      #card > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* The SDSC mark, alone and unaltered: SDSC's identity is theirs, so it is
+       * placed and scaled but never restyled or redrawn. 111x41 is the file's
+       * own viewBox; 34px tall keeps that ratio. The word "Hackathons" is NOT
+       * set beside it here — the headline says it, and the app's own footer
+       * uses the bare mark in the same identity slot. */
+      #mark {
+        height: 34px;
+        width: auto;
+        display: block;
+        /* Without this the column's default `stretch` gives the <img> the full
+         * content width; the SVG then letterboxes itself inside that box and
+         * the mark renders small and centred, which looks like a deliberate
+         * (bad) layout rather than a bug. */
+        align-self: flex-start;
+      }
+
+      #rule {
+        width: 76px;
+        height: 5px;
+        border-radius: 2px;
+        background: var(--hk-accent);
+        margin-bottom: 30px;
+      }
+
+      /* Mono, because mono is this product's voice for anything scanned —
+       * headings included (src/themes/hackagon.css). This is the one line that
+       * has to survive being rendered ~300px wide in a feed, so it gets the
+       * whole middle band and nothing competes with it. */
+      #headline {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 104px;
+        line-height: 1.04;
+        letter-spacing: -0.035em;
+        color: var(--hk-ink);
+        white-space: nowrap;
+      }
+
+      /* Sans, because this one is a sentence: the theme keeps mono for labels
+       * and sans for prose, and an invitation set in a typewriter face reads
+       * like a terminal banner rather than a welcome. */
+      #subline {
+        font-family: var(--font-sans);
+        font-size: 31px;
+        line-height: 1.45;
+        letter-spacing: -0.004em;
+        color: var(--hk-ink-2);
+        margin-top: 30px;
+        max-width: 900px;
+      }
+
+      #footer {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+
+      #hairline {
+        flex: 1;
+        height: 1px;
+        background: var(--hk-line);
+      }
+
+      /* The lifecycle, in the order the product runs it. Deliberately small:
+       * texture at full size, gone at thumbnail size, and never carrying
+       * anything the card depends on. */
+      #lifecycle {
+        font-family: var(--font-mono);
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.2em;
+        color: var(--hk-ink-3);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <img id="mark" src="../../static/logos/sdsc_white.svg" alt="SDSC" />
+
+      <div>
+        <div id="rule"></div>
+        <h1 id="headline">SDSC Hackathons</h1>
+        <p id="subline">Bring an idea, or join one. Then build it together.</p>
+      </div>
+
+      <div id="footer">
+        <div id="hairline"></div>
+        <div id="lifecycle">PROPOSE · TEAM UP · BUILD · VOTE</div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -19,6 +19,25 @@
 // the hazard: an inline script block ends at the first LITERAL close tag even
 // inside a JSON string, so every `</` is escaped here the same way
 // splice-player.mjs escapes the recipe.
+//
+// ── The checks GATE the write; they do not follow it ────────────────────────
+// The spliced document is assembled in memory, the read-back/count/close-tag
+// checks all run against that string, and only a clean pass reaches the disk —
+// through a temp file in the same directory and a rename, so an interrupted run
+// cannot leave half a player and a refused run leaves the previous one
+// byte-for-byte intact.
+//
+// This used to be the other way round: `writeFileSync` first, re-read and check
+// after. **A validator that runs after the write certifies nothing** — the
+// corrupt artefact is on disk either way, and its exit code is the only thing
+// standing between a truncated player and a commit. The player is exactly the
+// file where that matters: a data block that swallows its own close tag is how
+// it once showed 10 actions of 274 while every suite stayed green.
+//
+// Same treatment as scripts/build-quality-report.mjs, deliberately the same
+// shape — with ONE invariant that differs and must not be copied across: this
+// file asserts the player still has THREE literal close tags (recipe data, run
+// report, program), where the quality report asserts one.
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -126,25 +145,105 @@ const bodyStart = start + open.length
 const close = "</" + "script>"
 const end = html.indexOf(close, bodyStart)
 if (end < 0) throw new Error("run-report close marker not found")
-fs.writeFileSync(
-  playerPath,
-  html.slice(0, bodyStart) + "\n" + escaped + "\n" + html.slice(end),
-)
 
-// read it back and prove it parses in place, and that the file still has the
-// three close tags it is supposed to have — a splice nobody verified is how the
-// player once showed 10 actions of 274
-const back = fs.readFileSync(playerPath, "utf8")
-const s2 = back.indexOf(open) + open.length
-const e2 = back.indexOf(close, s2)
-const round = JSON.parse(back.slice(s2, e2).trim().split("<\\/").join("</"))
-const tags = back.split(close).length - 1
-if (Object.keys(round.status).length !== matched)
-  throw new Error(
+// The finished document — in memory. Nothing has touched the disk yet.
+const next = html.slice(0, bodyStart) + "\n" + escaped + "\n" + html.slice(end)
+
+// Read the block back OUT of that string and prove it parses in place, and that
+// the document still has the three close tags it is supposed to have. Reading
+// the string rather than the file loses nothing: the string IS the finished
+// player, and the bytes that land are compared against it after the rename, so
+// "what was checked" and "what is on disk" stay one thing.
+const problems = []
+const s2 = next.indexOf(open) + open.length
+const e2 = next.indexOf(close, s2)
+let round = null
+try {
+  round = JSON.parse(next.slice(s2, e2).trim().split("<\\/").join("</"))
+} catch (e) {
+  problems.push(
+    `the embedded run-report block does not parse back: ${e.message}. ` +
+      `A block that ends early is a block whose escape did not hold.`,
+  )
+}
+const tags = next.split(close).length - 1
+if (round && Object.keys(round.status).length !== matched)
+  problems.push(
     `embedded ${Object.keys(round.status).length} entries, expected ${matched}`,
   )
+// THREE, not one: recipe data, run report, program. The quality report's twin
+// of this check asserts one close tag — same treatment, different invariant.
 if (tags !== 3)
-  throw new Error(`expected 3 literal close tags in the player, found ${tags}`)
+  problems.push(`expected 3 literal close tags in the player, found ${tags}`)
+
+if (problems.length) {
+  console.error(
+    `\n✗ ${problems.length} problem(s) with the spliced player:\n` +
+      problems.map((p) => "   " + p).join("\n"),
+  )
+  console.error(
+    `\n✗ NOTHING WAS WRITTEN. ${path.basename(playerPath)} still holds the ` +
+      `previous run report, byte for byte — fix the input (or this script) and ` +
+      `run it again.`,
+  )
+  process.exit(1)
+}
+
+/**
+ * Land the checked bytes, or land nothing at all.
+ *
+ * Lifted from build-quality-report.mjs deliberately, down to the retry: the
+ * temp file goes in the SAME directory, because a rename across filesystems is
+ * a copy and a copy is precisely the interruptible write this exists to avoid;
+ * fsync precedes the rename so the rename cannot publish a name pointing at
+ * contents still sitting in a buffer; and the destination is read back and
+ * required to equal the string every check above ran against, or "verified" and
+ * "on disk" are two different documents and only one of them was inspected.
+ *
+ * The rename retries on EPERM: renames on this repo's 9p bind mount
+ * intermittently refuse with nothing holding the file (CLAUDE.md, container
+ * trap 5) and succeed a moment later. Every failure path removes the temp, so a
+ * refused run leaves the directory exactly as it found it.
+ */
+function writeChecked(dest, text) {
+  const tmp = path.join(
+    path.dirname(dest),
+    `.${path.basename(dest)}.tmp-${process.pid}`,
+  )
+  const sleep = (ms) =>
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+  try {
+    const fd = fs.openSync(tmp, "w")
+    try {
+      fs.writeFileSync(fd, text)
+      fs.fsyncSync(fd)
+    } finally {
+      fs.closeSync(fd)
+    }
+    for (let attempt = 1; ; attempt++) {
+      try {
+        fs.renameSync(tmp, dest)
+        break
+      } catch (e) {
+        if (attempt >= 3 || e.code !== "EPERM") throw e
+        sleep(250)
+      }
+    }
+  } catch (e) {
+    try {
+      fs.unlinkSync(tmp)
+    } catch {}
+    throw e
+  }
+  const landed = fs.readFileSync(dest, "utf8")
+  if (landed !== text)
+    throw new Error(
+      `${path.basename(dest)} does not hold the bytes that were checked ` +
+        `(${landed.length} chars on disk vs ${text.length} verified) — do not trust it`,
+    )
+}
+
+writeChecked(playerPath, next)
 
 const pct = (100 * escaped.length) / raw.length
 console.log(
@@ -156,5 +255,6 @@ console.log(
 console.log(
   `reduced ${(raw.length / 1024).toFixed(1)} KiB → ${(escaped.length / 1024).toFixed(1)} KiB ` +
     `(${pct.toFixed(1)}% of the report) · run of ${payload.generatedAt} · ` +
-    `${Math.round(payload.durationMs / 1000)}s · 3 literal close tags`,
+    `${Math.round(payload.durationMs / 1000)}s · ${tags} literal close tags`,
 )
+console.log(`✓ checked first, then written: ${path.basename(playerPath)}`)
