@@ -903,15 +903,16 @@ the mutation. Same root cause (a join that errors out under SQLite contention
 seats one fewer, so the oversell never materialises), opposite symptom, and an
 expected red that does not arrive is exactly what a MISMATCH is for.
 
-So the entry is judged by something that cannot flake. `Capacity > seats exactly
-the capacity, counting the roster after every join` makes the same END-STATE
-claim the race spec makes — the confirmed roster equals the cap, read back from
-the DB — by filling an event to exactly its capacity one join at a time and
-asserting the next arrival queues with the count unmoved. Three capacities,
-because a rule that is off by one is off by one at every cap, and the seated
-joins at 2 and 3 are the positive control against an event that simply queues
-everybody. It fails under the mutation in 0.012 s with no goroutines anywhere.
-Five consecutive `mutate.sh run capacity.oversell-by-one` came back EXACT.
+So the entry is judged by something that cannot flake.
+`Capacity > seats exactly the capacity, counting the roster after every join`
+makes the same END-STATE claim the race spec makes — the confirmed roster equals
+the cap, read back from the DB — by filling an event to exactly its capacity one
+join at a time and asserting the next arrival queues with the count unmoved.
+Three capacities, because a rule that is off by one is off by one at every cap,
+and the seated joins at 2 and 3 are the positive control against an event that
+simply queues everybody. It fails under the mutation in 0.012 s with no
+goroutines anywhere. Five consecutive `mutate.sh run capacity.oversell-by-one`
+came back EXACT.
 
 **The rule that survived: a verdict may only rest on witnesses that cannot
 flake.** The race spec is KEPT as a test — it pins `capacityMu`, which once
@@ -1161,9 +1162,9 @@ sees a truncated image and every cache honours an ETag that is a lie. The card
 exists for link-preview crawlers, which is exactly the audience that would have
 got the broken one. **Compare the HEADERS, and read curl's exit code, not just
 its output.** Any rebuild has to restart every server on that tree —
-`prod-frontend.sh start` for :8081 and
-`prod-serve.sh start <url> --no-build` for :8082 — because there are two of
-them and only one of them is ever the one you were thinking about.
+`prod-frontend.sh start` for :8081 and `prod-serve.sh start <url> --no-build`
+for :8082 — because there are two of them and only one of them is ever the one
+you were thinking about.
 
 **6. An empty list is not an answer — say "I could not ask"** (fixed
 2026-08-13). The built :8081 server keeps ONE module-scope gRPC channel
