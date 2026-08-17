@@ -680,15 +680,24 @@ const ARENAS = {
  * is a claim about the SUITE that someone has to justify — not a way to quieten
  * a mutation that is genuinely over-broad.
  *
- * ⚠ **A flaky test can still be a genuine witness**, and that trap fired within
- * an hour of this list existing. The capacity spec below hammers concurrent
- * joins against a cap — which is exactly what `capacity.oversell-by-one` breaks,
- * so under THAT mutation its failure is the evidence, not noise. The rule is:
- * when a listed test is a real witness for a mutation, it goes in that
- * mutation's `expectReds`, where the excuse does not apply (this filter only
- * ever looks at reds that are NOT expected). Excusing an extra therefore prints
- * a warning saying so, because "ignored" is the one word that could hide the
- * thing the mutation was written to find.
+ * ⚠ **A flaky test can be genuine evidence and still be the wrong thing to
+ * judge by**, and the capacity spec below has been both. It hammers concurrent
+ * joins against a cap — exactly what `capacity.oversell-by-one` breaks — so its
+ * red under THAT mutation is the evidence, not noise. The first fix was to list
+ * it in that entry's `expectReds`, where this filter cannot reach it (it only
+ * ever looks at reds that are NOT expected). That bought a correct reading in
+ * one direction and a coin flip in the other: an expected red that does not
+ * ARRIVE is a MISMATCH, and this spec flakes green under the mutation too (a
+ * join that errors out under SQLite contention seats one fewer, so the oversell
+ * never materialises). No excuse list can help there, by construction.
+ *
+ * The rule that survived: **a verdict may only rest on witnesses that cannot
+ * flake.** Write a deterministic witness for the same property, name THAT in
+ * `expectReds`, and leave the flaky one to be excused here — where its red is
+ * still printed, with its reason, on every entry it touches. That is what
+ * `Capacity > seats exactly the capacity, counting the roster after every join`
+ * is for. Excusing an extra prints a warning precisely because "ignored" is the
+ * one word that could hide the thing the mutation was written to find.
  */
 const KNOWN_FLAKY = [
   {
@@ -1082,8 +1091,12 @@ function main() {
           console.log(C.dim(`      declared in KNOWN_FLAKY: ${flakyReason(x)}`))
           console.log(
             C.dim(
-              `      if this test is a REAL witness for this mutation, put it in ` +
-                `expectReds — the excuse only applies to unexpected reds.`,
+              `      if this test is a REAL witness for this mutation, that is worth ` +
+                `knowing — but do NOT answer it by listing a flaky test in ` +
+                `expectReds. The excuse cannot reach a listed test, so the entry ` +
+                `then flakes in both directions (a red that stays green is a ` +
+                `MISMATCH). Write a deterministic witness for the same property ` +
+                `and name that one instead.`,
             ),
           )
         } else {

@@ -286,6 +286,67 @@ var _ = Describe("Capacity", func() {
 		Expect(resp.GetWaitlisted()).To(BeTrue())
 	})
 
+	// The seat accounting AT the boundary, walked one join at a time.
+	//
+	// This is the deterministic twin of the concurrency spec below. That one
+	// asks whether two simultaneous joins can share the last place; this one
+	// asks where the last place IS, which is the half an off-by-one cap breaks
+	// and the half that needs no goroutines to see. The claim is read back from
+	// the DB after every join rather than inferred from the responses, because
+	// "Join answered waitlisted" and "the roster holds N" are different facts —
+	// the same distinction the race spec makes when it counts rows at the end.
+	//
+	// Three capacities, because a rule that is off by one is off by one at every
+	// cap and a single number cannot tell "the boundary moved" from "this
+	// particular event was set up wrong". Capacity 1 has no free seat to hand
+	// out at all; capacities 2 and 3 do, and their confirmed joins are the
+	// positive control that keeps the waitlist assertions from agreeing with an
+	// event that simply queues everybody.
+	It("seats exactly the capacity, counting the roster after every join", func() {
+		for _, capacity := range []int{1, 2, 3} {
+			hid := createHackathon(int32(capacity))
+
+			// The creator already holds seat 1, so capacity-1 more joiners fill
+			// the room exactly. Each one must be seated, and the confirmed count
+			// must be exactly the seat they took.
+			for seat := 2; seat <= capacity; seat++ {
+				_, uctx := newJoiner(fmt.Sprintf("seats-%d-%d", capacity, seat))
+				resp, err := client.Join(uctx, &msgs.JoinRequest{HackathonId: hid})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetWaitlisted()).To(
+					BeFalse(),
+					"capacity %d: seat %d is still free, so it is handed out", capacity, seat,
+				)
+
+				confirmed, waiting := rosterCounts(hid)
+				Expect(confirmed).To(
+					Equal(seat),
+					"capacity %d: confirmed roster after filling seat %d", capacity, seat,
+				)
+				Expect(waiting).To(Equal(0))
+			}
+
+			// The room is now exactly full. The next arrival queues, and the
+			// confirmed roster does NOT move: capacity is the number of seats,
+			// not the number of seats plus one.
+			_, overCtx := newJoiner(fmt.Sprintf("seats-%d-over", capacity))
+			resp, err := client.Join(overCtx, &msgs.JoinRequest{HackathonId: hid})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetWaitlisted()).To(
+				BeTrue(),
+				"capacity %d: there is no seat %d — the room is full", capacity, capacity+1,
+			)
+			Expect(resp.GetQueuePosition()).To(BeInt32(1))
+
+			confirmed, waiting := rosterCounts(hid)
+			Expect(confirmed).To(
+				Equal(capacity),
+				"capacity %d: the confirmed roster equals the capacity, never one more", capacity,
+			)
+			Expect(waiting).To(Equal(1))
+		}
+	})
+
 	It("never oversells the last place under simultaneous joins", func() {
 		// Capacity 3, creator + one joiner confirmed: ONE place left.
 		hid := createHackathon(3)

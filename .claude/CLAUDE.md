@@ -193,7 +193,7 @@ directories under it are ignored (`node_modules/`, `.state/`, `.artifacts/`,
 | journey (465-action recipe)                            | **469 passed / 0 failed / 0 skipped**                                                          | 2026-08-15 |
 | smoke                                                  | **148 passed / 0 failed / 0 did not run**                                                      | 2026-08-14 |
 | mobile                                                 | **121 passed**                                                                                 | 2026-08-10 |
-| backend `go test -tags "test unittest" ./internal/...` | all 6 packages ok in ~11 s — service 336/337 specs (one pending), capability 37, middleware 46 | 2026-08-15 |
+| backend `go test -tags "test unittest" ./internal/...` | all 6 packages ok in ~10 s — service 337/338 specs (one pending), capability 37, middleware 46 | 2026-08-16 |
 | openreplay (9 tests)                                   | **13 passed / 0 skipped**                                                                      | 2026-08-11 |
 | frontend units (29 files)                              | **488 passed**                                                                                 | 2026-08-14 |
 
@@ -240,13 +240,15 @@ of this branch) and both report `ok` under the runner.
 
 What fails today is one SPEC, and it is the declared flake:
 `Capacity > never oversells the last place under simultaneous joins`
-(`capacity_test.go:326`) — the entry in the mutation runner's `KNOWN_FLAKY`,
+(`capacity_test.go:350`) — the entry in the mutation runner's `KNOWN_FLAKY`,
 which fails roughly one run in five under in-memory SQLite. Three consecutive
 re-runs of `./internal/service/` after it went green. The rest of that run:
 service 335 passed / 1 failed / 1 pending of 337, capability 37/37, middleware
 46/46, config 6/6, audit and storage `ok`. CI runs this command, so **that flake
 is a red CI run whenever it lands** — it is a test-side race to fix, not a
-runner quirk to route around.
+runner quirk to route around. As of 2026-08-16 no mutation VERDICT depends on it
+any more (see the capacity witness below), which removes the ambiguity from the
+manifest and changes nothing about CI.
 
 **API-to-UI coverage: 101 of 108 RPC declarations have a frontend caller.** The
 seven without one are accounted for in `docs/testing.md` —
@@ -887,24 +889,39 @@ don't count is precisely the shape that could hide a real one. Adding a line to
 `KNOWN_FLAKY` is a claim about the SUITE that wants justifying — never a way to
 quieten a mutation that is genuinely over-broad.
 
-⚠ **A flaky test can still be a genuine witness, and that trap fired within the
-hour.** That capacity spec hammers concurrent joins against a cap — which is
-precisely what `capacity.oversell-by-one` breaks — so under THAT mutation its
-failure is the evidence, and the first freeze had stripped it as noise. The
-rule: when a listed test really does witness a mutation, it belongs in that
-mutation's `expectReds`, where the excuse cannot reach it (the filter only ever
-looks at reds that are NOT expected). Excusing an extra prints that reminder
-every time.
+⚠ **A flaky test can be genuine evidence and still be the wrong thing to judge
+by — closed 2026-08-16.** That capacity spec hammers concurrent joins against a
+cap, which is precisely what `capacity.oversell-by-one` breaks, so under THAT
+mutation its failure is the evidence and the first freeze had stripped it as
+noise. The fix then was to list it in the entry's own `expectReds`, where the
+excuse cannot reach it (the filter only ever looks at reds that are NOT
+expected). That bought a correct reading in one direction and a coin flip in the
+other: **it flakes in BOTH directions, and no filter can excuse the second
+one.** Observed 2026-08-14, `capacity.oversell-by-one` came back MISMATCH with
+that same spec under "expected but stayed GREEN" — its witness had PASSED under
+the mutation. Same root cause (a join that errors out under SQLite contention
+seats one fewer, so the oversell never materialises), opposite symptom, and an
+expected red that does not arrive is exactly what a MISMATCH is for.
 
-⚠ **And it flakes in BOTH directions, which no filter can excuse.** Observed
-2026-08-14: `capacity.oversell-by-one` came back MISMATCH with that same spec
-under "expected but stayed GREEN" — its witness had passed under the mutation.
-Same root cause (a join that errors out under SQLite contention seats one fewer,
-so the oversell never materialises), opposite symptom, and the `KNOWN_FLAKY`
-list cannot help: an expected red that does not arrive is exactly what a
-MISMATCH is for. Three re-runs of that one id came back EXACT. So a MISMATCH
-naming ONLY a `KNOWN_FLAKY` test in the "stayed GREEN" column wants a re-run
-before it is believed — the same courtesy the extras column already gets.
+So the entry is judged by something that cannot flake.
+`Capacity > seats exactly the capacity, counting the roster after every join`
+makes the same END-STATE claim the race spec makes — the confirmed roster equals
+the cap, read back from the DB — by filling an event to exactly its capacity one
+join at a time and asserting the next arrival queues with the count unmoved.
+Three capacities, because a rule that is off by one is off by one at every cap,
+and the seated joins at 2 and 3 are the positive control against an event that
+simply queues everybody. It fails under the mutation in 0.012 s with no
+goroutines anywhere. Five consecutive `mutate.sh run capacity.oversell-by-one`
+came back EXACT.
+
+**The rule that survived: a verdict may only rest on witnesses that cannot
+flake.** The race spec is KEPT as a test — it pins `capacityMu`, which once
+genuinely oversold — and it is out of `expectReds`, so its red now lands in the
+extras column, is excused by `KNOWN_FLAKY`, and is PRINTED with its reason on
+every run of that entry. The evidence is still on screen; it is no longer on the
+ballot. ⚠ The flake itself is still open and still reds CI (see
+`just check::test -c backend` above) — this changes what the MUTATION is judged
+by, not the underlying test-side race.
 
 ## Container traps (Windows/macOS hosts) — read before touching compose
 
@@ -1120,6 +1137,34 @@ Two things measured while building that, both worth keeping:
   retries, and rolls the old tree back if the second rename fails, so
   `build/service` is never left missing. Anything else here that renames a
   directory on this mount needs the same treatment.
+- ⚠ **But one cause of that EPERM IS reproducible — a server still SERVING the
+  tree** (2026-08-16). `frontend-build.sh build` with the :8081 adapter-node
+  server up burned all five attempts and gave up; `prod-frontend.sh stop`, then
+  the very next attempt, succeeded — with the :8082 server still running. So
+  when the retries all fail, the question is who is serving it, not the
+  filesystem. The order is **stop, build, start**, which is what
+  `prod-frontend.sh start` already does; calling the helper directly against a
+  live server is the case that hits the wall.
+
+⚠ **Swapping the tree in does NOT reach a server that booted against the old
+one, and the bytes will still be right** (2026-08-16). adapter-node serves
+`build/service/client` through `sirv`, which builds its manifest — sizes and
+ETags included — ONCE at boot. After a swap it streams the file that is on disk
+NOW while advertising the length and ETag of the file that was there when it
+started. Measured on the tunnel's :8082 server after rebuilding the social card:
+`Content-Length: 85099`, `ETag: W/"85099-…"`, and 58,130 correct bytes on the
+wire, every request, `curl: (18) transfer closed with 26969 bytes remaining`.
+
+**This is a silent-green trap aimed straight at how you would check.** Hash what
+arrived and it MATCHES the file on disk — the body is genuinely the new card —
+so a `sha256sum` of the download says the deploy worked while every real client
+sees a truncated image and every cache honours an ETag that is a lie. The card
+exists for link-preview crawlers, which is exactly the audience that would have
+got the broken one. **Compare the HEADERS, and read curl's exit code, not just
+its output.** Any rebuild has to restart every server on that tree —
+`prod-frontend.sh start` for :8081 and `prod-serve.sh start <url> --no-build`
+for :8082 — because there are two of them and only one of them is ever the one
+you were thinking about.
 
 **6. An empty list is not an answer — say "I could not ask"** (fixed
 2026-08-13). The built :8081 server keeps ONE module-scope gRPC channel

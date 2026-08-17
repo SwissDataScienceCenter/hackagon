@@ -123,10 +123,18 @@ build_locked() {
     #       Permission denied
     #
     # Observed 2026-08-13 mid-run and NOT reproducible a minute later with the same
-    # processes running and no open descriptors anywhere under the tree — so it is
-    # the filesystem, not a lock we could take or a handle we could close. An
-    # abort here is safe (the working tree is untouched) but it fails a build for a
-    # reason that clears itself, which is its own kind of flake.
+    # processes running and no open descriptors anywhere under the tree — so at
+    # least some of it is the filesystem, not a lock we could take or a handle we
+    # could close. An abort here is safe (the working tree is untouched) but it
+    # fails a build for a reason that clears itself, which is its own kind of flake.
+    #
+    # ⚠ ONE cause IS reproducible, found 2026-08-16: a server still SERVING this
+    # tree. `frontend-build.sh build` called with the :8081 adapter-node server up
+    # failed all five attempts; `prod-frontend.sh stop` and the very next attempt
+    # succeeded, with the :8082 server still running. So the retries are not the
+    # answer when a live server holds it — the order is stop, build, start, which
+    # is exactly what prod-frontend.sh's `start` already does. Calling this script
+    # directly against a running server is the case that hits the wall.
     local old="$OUT_PARENT/.service-old-$$" i
     rm -rf "$old"
     for i in 1 2 3 4 5; do
