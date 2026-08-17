@@ -2,6 +2,11 @@
 <html lang="en" data-mode="dark">
   <head>
     <meta charset="utf-8" />
+    <!-- Slack and other unfurlers fetch /favicon.ico from the site root by
+         hard-coded convention and never read these tags, so the FILE has to
+         exist or the preview card draws a broken-image glyph. Declared without
+         a type or sizes so the more specific PNG below wins in browsers. -->
+    <link rel="icon" href="%sveltekit.assets%/favicon.ico" />
     <link
       rel="icon"
       type="image/png"
