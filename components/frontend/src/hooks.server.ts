@@ -201,8 +201,24 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
         event.locals.logger.info(
           "HOOKS: User not in DB, auto-registering via Register RPC.",
         )
-        const regResp = await event.locals.grpc.user.register({})
-        event.locals.platformUser = regResp.user ?? undefined
+        try {
+          const regResp = await event.locals.grpc.user.register({})
+          event.locals.platformUser = regResp.user ?? undefined
+        } catch (regErr) {
+          // Same rescue as WhoAmI below: the backend can drop between the two
+          // calls, and letting that escape the hook turns a first login into an
+          // unexpected 500 rather than a handled "backend is down".
+          if (
+            regErr instanceof ClientError &&
+            regErr.code === Status.UNAVAILABLE
+          ) {
+            event.locals.logger.warn(
+              "HOOKS: Backend unavailable for Register, proceeding without platform user.",
+            )
+          } else {
+            throw regErr
+          }
+        }
       } else if (
         err instanceof ClientError &&
         err.code === Status.UNAVAILABLE
