@@ -126,3 +126,39 @@ export function mayManageParticipants(
 
   return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
 }
+
+/**
+ * Whether to show the organiser's voting panel — open and close voting, set the
+ * ballot rules, create and edit categories, record placements, export ballots.
+ *
+ * Mirrors the backend exactly, same as `mayManageParticipants`: every mutation
+ * behind that panel enforces hackathon-scoped `hackathon:write` —
+ * `CreateVoteCategory` (`vote_service.go:257`), `EditVoteCategory` (`:315`),
+ * `DeleteVoteCategory` (`:418`), `ExportVotes` (`:1071`), `CreateVoteResult`
+ * (`:1286`), `EditVoteResult` (`:1329`), `DeleteVoteResult` (`:1378`),
+ * `SuggestResults` (`:1419`), `ExportResults` (`:1593`) — which casbin grants to
+ * `Owner` outright and to an admin through the global escape hatch
+ * (`rbac.go:176`). It is the same rule `VoteService.isOrganizer`
+ * (`vote_service.go:791`) applies when it decides who may not cast a ballot.
+ *
+ * **Fails closed, and that is the point.** The voting route used to read
+ * "no membership row" as "an admin looking in", on the reasoning that
+ * `HackathonService.Get` admits nobody else without one. The premise holds for
+ * the BACKEND's view; it does not hold for the frontend's, because
+ * `myMembership` is matched against `locals.platformUser`, and
+ * `hooks.server.ts` deliberately proceeds with that unset when `WhoAmI` answers
+ * `UNAVAILABLE`. A backend that has come back by the time the layout issues its
+ * `Get` — the reconnect backoff is capped at 2s — therefore serves a plain
+ * member a page with no membership row on it, and the old default handed them
+ * the whole organiser panel. Unknown membership is now not-an-organiser, which
+ * is also what the backend's own `isOrganizer` does with a role lookup that
+ * errors.
+ */
+export function mayManageVoting(
+  membership: HackathonMember | undefined,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return membership?.role === HackathonRole.HACKATHON_ROLE_OWNER
+}

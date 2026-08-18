@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from "./$types"
 import type { ActionFailure, Cookies } from "@sveltejs/kit"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { mayManageVoting } from "$lib/server/hackathon/capabilities"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -37,9 +38,6 @@ const SUBMISSION_STATUS_LABEL: Partial<Record<number, string>> = {
 /** ExportFormat: CSV=1, JSON=2 */
 const EXPORT_CSV = 1
 const EXPORT_JSON = 2
-
-/** HackathonRole: UNSPECIFIED=0, OWNER=1, MEMBER=2 */
-const HACKATHON_ROLE_OWNER = 1
 
 /** Every action answers with this one shape, so `form?.x` stays typed. */
 type VotingForm = {
@@ -171,15 +169,17 @@ function safeName(raw: string): string {
 
 export const load: PageServerLoad = async (event) => {
   const { vote, team } = requireGrpc(event.locals.grpc)
-  const { hackathon, myMembership } = await event.parent()
+  const { hackathon, myMembership, isGlobalAdmin } = await event.parent()
   const hackathonId = event.params.id
   const myUserId = event.locals.platformUser?.id ?? ""
 
-  // The parent layout's Get only admits confirmed participants, hackathon
-  // owners and global admins — so a viewer who reached this page with no
-  // membership row at all is an admin looking in.
-  const isOrganizer =
-    !myMembership || myMembership.role === HACKATHON_ROLE_OWNER
+  // Owner-or-admin, and nothing else — see `mayManageVoting`. This used to read
+  // "no membership row" as "an admin looking in", which is the one gate in the
+  // app that failed OPEN: `myMembership` is matched against
+  // `locals.platformUser`, which `hooks.server.ts` leaves unset when `WhoAmI`
+  // answers `UNAVAILABLE`, so a plain member could be handed the whole
+  // organiser panel. The admin escape hatch is now stated rather than inferred.
+  const isOrganizer = mayManageVoting(myMembership ?? undefined, isGlobalAdmin)
 
   let categories: Category[] = []
   let serviceAvailable = true
