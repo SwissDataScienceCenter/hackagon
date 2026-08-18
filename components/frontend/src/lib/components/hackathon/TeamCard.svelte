@@ -125,9 +125,16 @@
             </button>
         {/if}
 
-        <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
-        <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">
-            More Information
-        </a>
+        <!-- Only a real in-app route can be resolved; a placeholder '#' or a
+             bare '#fragment' throws inside resolve(). Teams have no detail page
+             on this branch (main's teams/[teamId] was not carried over), so the
+             list passes a fragment and this used to error on click. Offer no
+             dead link until there is somewhere to point. -->
+        {#if moreInfoHref.startsWith('/')}
+            <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
+            <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">
+                More Information
+            </a>
+        {/if}
     </div>
 </div>

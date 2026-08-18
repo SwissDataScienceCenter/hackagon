@@ -84,6 +84,10 @@
             </p>
         {:else}
             {#each pagedTeams as team (team.id)}
+                <!-- No moreInfoHref: teams have no detail page on this branch
+                     (main's teams/[teamId] was not carried over), and the
+                     placeholder "#team-{id}" this used to pass threw inside
+                     TeamCard's resolve(). TeamCard hides the link without one. -->
                 <TeamCard
                     num={team.num}
                     title={team.title}
@@ -91,7 +95,6 @@
                     imageUrl={team.imageUrl}
                     members={team.members}
                     isOwn={team.isOwn}
-                    moreInfoHref="#team-{team.id}"
                 />
             {/each}
         {/if}
