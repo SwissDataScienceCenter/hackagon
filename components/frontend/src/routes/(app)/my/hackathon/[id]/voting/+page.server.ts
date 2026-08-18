@@ -579,7 +579,14 @@ export const actions: Actions = {
         })
       }
       if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION) {
-        return bad(409, { message: "Voting is not open for this hackathon." })
+        // Surface the server's specific reason. SubmitVote answers
+        // FAILED_PRECONDITION for two distinct states — the votingEnabled
+        // master switch being off ("voting is closed") and the VOTE capability
+        // being closed by the current phase (capabilityClosedMessage) — and one
+        // hardcoded string cannot tell an organiser which of the two to fix.
+        return bad(409, {
+          message: e.details || "Voting is not open for this hackathon.",
+        })
       }
       return formError(e)
     }
