@@ -199,14 +199,20 @@ func (s *VoteService) ListVoteCategories(
 	ctx context.Context,
 	req *voteMsgs.ListVoteCategoriesRequest,
 ) (*voteMsgs.ListVoteCategoriesResponse, error) {
-	// TODO: casbin check once member-read rules for votes exist; JWT-only for
-	// the bootstrap read path.
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 	hackathonID, err := uuid.Parse(req.GetHackathonId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+	// Member-scoped, never anonymous: the entry mapper embeds jury members'
+	// emails, so leaving this on RequireSubject let anyone who could name a
+	// private event's id read its jury roster.
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID.String(), m.Hackathon, m.Read,
+	); err != nil {
+		return nil, err
 	}
 	categories, err := s.dbClient.VoteCategory.Query().
 		Where(entvotecategory.HasHackathonWith(enthackathon.IDEQ(hackathonID))).
@@ -230,8 +236,7 @@ func (s *VoteService) GetVoteCategory(
 	ctx context.Context,
 	req *voteMsgs.GetVoteCategoryRequest,
 ) (*voteMsgs.GetVoteCategoryResponse, error) {
-	// TODO: casbin check once member-read rules for votes exist.
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 	id, err := uuid.Parse(req.GetId())
@@ -240,6 +245,12 @@ func (s *VoteService) GetVoteCategory(
 	}
 	c, err := s.categoryWithHackathon(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	// Member-scoped for the same reason as List: the entry carries jury emails.
+	if err := s.enforcer.RequirePermission(
+		ctx, c.Edges.Hackathon.ID.String(), m.Hackathon, m.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1013,7 +1024,7 @@ func (s *VoteService) GetVote(
 	ctx context.Context,
 	req *voteMsgs.GetVoteRequest,
 ) (*voteMsgs.GetVoteResponse, error) {
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 	id, err := uuid.Parse(req.GetId())
@@ -1022,6 +1033,18 @@ func (s *VoteService) GetVote(
 	}
 	v, err := s.voteByID(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	// Ballots are secret: gate reading one exactly as ListVotes gates reading
+	// many — organizer/admin only. Without this any authenticated member could
+	// fetch any voter's ballot by id, and before it an anonymous caller could.
+	cat, err := s.categoryWithHackathon(ctx, v.Edges.Category.ID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.enforcer.RequirePermission(
+		ctx, cat.Edges.Hackathon.ID.String(), m.Hackathon, m.Write,
+	); err != nil {
 		return nil, err
 	}
 
