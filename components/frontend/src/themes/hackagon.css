@@ -568,6 +568,26 @@
     color: var(--color-ink-3);
   }
 
+  /* Three forms asked for `.checkbox` while nothing defined it, so every switch
+   * was a browser-default box that ignored the mode. Checked is a solid accent
+   * field rather than a native tick: the lime sits at 80% lightness, so
+   * `accent-color` would draw the white checkmark `on-accent` exists to rule
+   * out, and filled-vs-empty carries the state on its own at this size. */
+  .checkbox {
+    appearance: none;
+    height: --spacing(4);
+    width: --spacing(4);
+    flex-shrink: 0;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-field);
+    background-color: var(--color-raised);
+    cursor: pointer;
+  }
+  .checkbox:checked {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+  }
+
   .chip {
     display: inline-flex;
     align-items: center;

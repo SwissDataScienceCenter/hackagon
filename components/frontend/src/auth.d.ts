@@ -19,8 +19,10 @@ declare module "@auth/core/types" {
 
 declare module "@auth/core/jwt" {
   interface JWT extends DefaultJWT {
+    // Every field here is encrypted into the session cookie, which Auth.js
+    // chunks past 3936 bytes. Keep it to what is actually read: the access
+    // token (gRPC auth) and the refresh token (renewal). No id_token.
     accessToken?: string
-    idToken?: string
     refreshToken?: string
     expiresAt?: number
     organization?: unknown

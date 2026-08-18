@@ -96,7 +96,7 @@ describe("Auth.js jwt Callback", () => {
     expect(result.error).toBeUndefined()
     // idToken and organization are intentionally not stored in the JWT
     // to keep the session cookie under the 4096 byte limit
-    expect(result.idToken).toBeUndefined()
+    expect(result).not.toHaveProperty("idToken")
     expect(result.organization).toBeUndefined()
   })
 
@@ -114,8 +114,33 @@ describe("Auth.js jwt Callback", () => {
       account: null,
     } as JwtCallbackParams)) as CustomJWT
 
-    expect(result).toBe(mockToken) // Should return the exact same object
+    // Value-equal rather than identical: the callback rebuilds the token to
+    // strip a legacy `idToken`, so the still-valid path returns a copy.
+    expect(result).toEqual(mockToken)
     expect(mockFetch).not.toHaveBeenCalled() // Fetch should not be called
+  })
+
+  it("should strip a legacy idToken without waiting for a refresh", async () => {
+    const mockToken = {
+      sub: "user1",
+      accessToken: "valid_access",
+      refreshToken: "valid_refresh",
+      expiresAt: Math.floor(Date.now() / 1000) + 600, // Nowhere near expiry
+      userId: "user1",
+      // Minted before the cookie-size fix. The refresh path is not reached on
+      // this request, so evicting only there would leave the oversized cookie —
+      // and the 502 — in place until this token neared expiry.
+      idToken: "stale_id",
+    } as CustomJWT & { idToken?: string }
+
+    const result = (await jwtCallback({
+      token: mockToken as JWT,
+      account: null,
+    } as JwtCallbackParams)) as CustomJWT
+
+    expect(result).not.toHaveProperty("idToken")
+    expect(result.accessToken).toBe("valid_access")
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it("should proactively refresh if token expires within 30 seconds", async () => {
@@ -148,13 +173,17 @@ describe("Auth.js jwt Callback", () => {
   })
 
   it("should attempt refresh if token is expired", async () => {
-    const mockToken: CustomJWT = {
+    const mockToken = {
       sub: "user1",
       accessToken: "expired_access",
       refreshToken: "valid_refresh", // Need this to refresh
       expiresAt: Math.floor(Date.now() / 1000) - 60, // Expired 1 min ago
       userId: "user1",
-    }
+      // A session minted before the cookie-size fix still carries this. Refresh
+      // must evict it rather than spread it forward, or those sessions keep the
+      // oversized cookie — and the 502 — forever.
+      idToken: "stale_id",
+    } as CustomJWT & { idToken?: string }
 
     // Mock a successful fetch response for refresh
     mockFetch.mockResolvedValueOnce({
@@ -174,7 +203,10 @@ describe("Auth.js jwt Callback", () => {
 
     expect(mockFetch).toHaveBeenCalledOnce() // Ensure fetch was called
     expect(result.accessToken).toBe("refreshed_access")
-    expect(result.idToken).toBe("refreshed_id")
+    // Same budget as initial sign-in: the refreshed id_token must not be stored
+    // either, or the cookie crosses the chunk threshold ~5 min into every
+    // session and the proxy answers 502.
+    expect(result).not.toHaveProperty("idToken")
     expect(result.refreshToken).toBe("rotated_refresh") // Check if refresh token updated
     expect(result.expiresAt).toBeGreaterThan(mockToken.expiresAt!)
     expect(result.error).toBeUndefined()

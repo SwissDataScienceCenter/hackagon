@@ -2,12 +2,24 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { joinIsOffered } from "$lib/server/hackathon/joinOffer"
-import { fail, redirect } from "@sveltejs/kit"
+import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
-  const participantId = event.locals.platformUser!.id
+  // hooks.server.ts leaves platformUser undefined when WhoAmI (or the
+  // auto-Register that follows it) came back UNAVAILABLE, and also when it
+  // succeeded but returned no user. Without this guard the first page after
+  // login died on a bare TypeError, surfaced as an unexpected 500 that named
+  // nothing. The message stays on the symptom rather than blaming the
+  // connection, since both causes land here.
+  const participantId = event.locals.platformUser?.id
+  if (!participantId) {
+    error(
+      503,
+      "Could not load your account from the backend. Please try again.",
+    )
+  }
   const { isGlobalAdmin } = await event.parent()
 
   // TODO(backend: enroll creator as participant): myResult is participation, not
