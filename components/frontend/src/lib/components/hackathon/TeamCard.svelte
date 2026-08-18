@@ -1,6 +1,5 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
-    import { Pencil } from 'lucide-svelte';
 
     type TeamMember = {
         name: string;
@@ -72,6 +71,16 @@
                          the list scrolls. -->
                     <span class="tnum shrink-0 text-ink-3">{num}.</span>
                     <span class="min-w-0">{title}</span>
+                    <!-- Which of these rows is yours, said the same way the
+                         submissions page says it. This is all `isOwn` draws
+                         now: it used to draw an "Edit team" pencil with no
+                         handler on it, and editing a team is done from the
+                         organiser's Manage Teams board — so the one control
+                         this participant-facing list offered was an organiser
+                         affordance that could not have worked. -->
+                    {#if isOwn}
+                        <span class="badge shrink-0 badge-accent">Your team</span>
+                    {/if}
                 </h3>
                 <div class="block w-2/3 min-w-0">
                     <p class="m-0 text-xs leading-snug text-ink-2">
@@ -114,16 +123,6 @@
                 {/each}
             </div>
         </div>
-
-        {#if isOwn}
-            <button
-                type="button"
-                class="btn btn-sm btn-ghost"
-                aria-label="Edit team"
-            >
-                <Pencil class="size-4" />
-            </button>
-        {/if}
 
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
         <a href={resolve(moreInfoHref as any)} class="btn btn-sm btn-ghost">
