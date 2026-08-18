@@ -125,8 +125,16 @@
             <!-- The rules of the vote. They were stored and never read on the
                  server, and never written from anywhere at all — an event could
                  not state its own rules. Prefilled, because SetVotingPolicy
-                 replaces the whole record. -->
-            <form method="POST" action="?/setPolicy" use:enhance class="card flex flex-col gap-3 p-4">
+                 replaces the whole record.
+
+                 keepValues, not a bare use:enhance: checked={…} sets the
+                 checkbox PROPERTY, never the defaultChecked attribute, so the
+                 default form.reset() after a successful save reverts the boxes
+                 to unchecked. ownTeamVoting defaults to checked and round-trips
+                 to the same value, so Svelte's reactivity never re-asserts it —
+                 the reset's uncheck sticks, and saving looks like it silently
+                 turned the rule off. -->
+            <form method="POST" action="?/setPolicy" use:enhance={keepValues} class="card flex flex-col gap-3 p-4">
                 <h2 class="m-0 text-xl font-bold">Rules</h2>
 
                 <label class="flex items-start gap-2 text-sm">
