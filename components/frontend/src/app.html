@@ -2,13 +2,24 @@
 <html lang="en" data-mode="dark">
   <head>
     <meta charset="utf-8" />
+    <!-- Slack and other unfurlers fetch /favicon.ico from the site root by
+         hard-coded convention and never read these tags, so the FILE has to
+         exist or the preview card draws a broken-image glyph. Declared without
+         a type or sizes so the more specific PNG below wins in browsers. -->
+    <link rel="icon" href="%sveltekit.assets%/favicon.ico" />
     <link
       rel="icon"
       type="image/png"
       sizes="32x32"
       href="%sveltekit.assets%/favicon.png"
     />
-    <link rel="apple-touch-icon" href="%sveltekit.assets%/favicon.png" />
+    <!-- Link-preview cards and iOS home screens render this one, and Apple asks
+         for at least 180x180 — so it cannot be the 32x32 favicon. -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="%sveltekit.assets%/apple-touch-icon.png"
+    />
     <!-- Colours the browser chrome on mobile. -->
     <meta name="theme-color" content="#83b91d" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
