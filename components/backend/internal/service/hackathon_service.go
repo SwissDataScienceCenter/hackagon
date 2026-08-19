@@ -1833,6 +1833,30 @@ func (s *HackathonService) resolveRegistrationTarget(
 	onBehalfOf *string,
 ) (*ent.User, error) {
 	if onBehalfOf == nil {
+		// The self path still needs a gate. Without one, any authenticated caller
+		// could file a registration response into ANY hackathon — a private one
+		// they were never invited to included — and read its form schema off the
+		// validation errors below (which name missing and unknown fields).
+		// Registration follows Join, which writes the Participant row and, for a
+		// private event, requires an invite; a participant row is the proof this
+		// caller belongs in this form. Waitlisted participants pass — they are
+		// exactly who still needs to submit or correct their answers.
+		isParticipant, err := s.dbClient.Participant.Query().
+			Where(
+				entparticipant.HasUserWith(entuser.IDEQ(caller.ID)),
+				entparticipant.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+			).
+			Exist(ctx)
+		if err != nil {
+			slog.Error("query participant for registration", "err", err)
+
+			return nil, status.Error(codes.Internal, "couldn't query database")
+		}
+		if !isParticipant {
+			return nil, status.Error(codes.PermissionDenied,
+				"join this hackathon before submitting its registration form")
+		}
+
 		return caller, nil
 	}
 	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Write); err != nil {

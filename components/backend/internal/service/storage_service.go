@@ -14,6 +14,7 @@ import (
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/capability"
 	m "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	storagepb "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage"
 	ents "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/storage/entities"
@@ -369,6 +370,21 @@ func (s *StorageService) authorizeUpload(
 		if err := s.enforcer.RequirePermission(
 			ctx, hackathonID.String(), m.Submission, m.Write,
 			m.WithTeam(team.ID.String()),
+		); err != nil {
+			return "", err
+		}
+		// Presigning an attachment IS a submission write, so it is bound by the
+		// same clock and switch CreateSubmission is (team_service.go). Without
+		// these, an attachment could be uploaded after the submissions window
+		// closes, or while the submit capability is off — slipping work in past
+		// the deadline every other submission path enforces.
+		if err := requireWindowOpen(
+			ctx, s.dbClient, hackathonID, windowSubmissions, time.Now(),
+		); err != nil {
+			return "", err
+		}
+		if err := requireCapability(
+			ctx, s.dbClient, s.enforcer, hackathonID, capability.CreateProjectSubmissions,
 		); err != nil {
 			return "", err
 		}
