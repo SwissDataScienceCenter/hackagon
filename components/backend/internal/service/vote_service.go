@@ -1253,7 +1253,13 @@ func (s *VoteService) ListVoteResults(
 	//
 	// requireCapability lets organisers through regardless, which is what makes
 	// reviewing a tally before publishing it possible.
-	if _, _, err := m.RequireSubject(ctx); err != nil {
+	//
+	// RequireUser, not RequireSubject: the comment above says "any signed-in
+	// user", but RequireSubject admits the anonymous subject, so an unauthenticated
+	// caller could read placements the moment VIEW_RESULTS was open. Results are
+	// an in-event surface; there is no anonymous caller of ListVoteResults (only
+	// the authenticated /my/hackathon/[id]/voting route reads it).
+	if _, _, err := m.RequireUser(ctx); err != nil {
 		return nil, err
 	}
 	categoryID, err := uuid.Parse(req.GetCategoryId())

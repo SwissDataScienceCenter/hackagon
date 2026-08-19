@@ -9,6 +9,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	enthackathonforms "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonforms"
+	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entproject "github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
 	entsubmission "github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	entteam "github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -585,6 +586,52 @@ func (s *TeamService) CreateSubmission(
 	return &msgs.CreateSubmissionResponse{Id: subm.ID.String()}, nil
 }
 
+// authorizeSubmissionRead decides who may read a team's submissions. A member of
+// THIS team reads their own team's, team-scoped. The hackathon-wide grant — which
+// exists so participants can read every team's work to vote on it — is for
+// CONFIRMED participants only (D5): a waitlisted registrant holds the Member role
+// (granted at Join so they can propose) but has not been approved into the event,
+// so without this an unapproved registrant could read every team's submissions.
+// Organizers and admins reach the hackathon-wide grant via Owner/admin, not a
+// participant row, so they are unaffected.
+func (s *TeamService) authorizeSubmissionRead(
+	ctx context.Context,
+	hackathonID, teamID uuid.UUID,
+) error {
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID.String(), m.Submission, m.Read, m.WithTeam(teamID.String()),
+	); err == nil {
+		return nil
+	}
+	if err := s.enforcer.RequirePermission(
+		ctx, hackathonID.String(), m.Submission, m.Read,
+	); err != nil {
+		return err
+	}
+	uid, _, err := m.RequireSubject(ctx)
+	if err != nil {
+		return err
+	}
+	waitlisted, err := s.dbClient.Participant.Query().
+		Where(
+			entparticipant.HasUserWith(entuser.KeycloakIDEQ(uid)),
+			entparticipant.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+			entparticipant.IsWaiting(true),
+		).
+		Exist(ctx)
+	if err != nil {
+		slog.Error("query participant for submission read", "err", err)
+
+		return status.Error(codes.Internal, "couldn't query database")
+	}
+	if waitlisted {
+		return status.Error(codes.PermissionDenied,
+			"your registration is still on the waiting list")
+	}
+
+	return nil
+}
+
 func (s *TeamService) GetSubmission(
 	ctx context.Context,
 	req *msgs.GetSubmissionRequest,
@@ -603,16 +650,10 @@ func (s *TeamService) GetSubmission(
 		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
 
-	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
-	if err := s.enforcer.RequirePermission(
-		ctx, hackathonID, m.Submission, m.Read,
-		m.WithTeam(t.ID.String()),
+	if err := s.authorizeSubmissionRead(
+		ctx, t.Edges.Project.Edges.Hackathon.ID, t.ID,
 	); err != nil {
-		if err := s.enforcer.RequirePermission(
-			ctx, hackathonID, m.Submission, m.Read,
-		); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// Find the latest submission for this team (highest version).
@@ -656,16 +697,10 @@ func (s *TeamService) ListSubmissions(
 		return nil, status.Error(codes.Internal, "team project or hackathon not found")
 	}
 
-	hackathonID := t.Edges.Project.Edges.Hackathon.ID.String()
-	if err := s.enforcer.RequirePermission(
-		ctx, hackathonID, m.Submission, m.Read,
-		m.WithTeam(t.ID.String()),
+	if err := s.authorizeSubmissionRead(
+		ctx, t.Edges.Project.Edges.Hackathon.ID, t.ID,
 	); err != nil {
-		if err := s.enforcer.RequirePermission(
-			ctx, hackathonID, m.Submission, m.Read,
-		); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	submissions, err := s.dbClient.Submission.Query().
