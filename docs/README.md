@@ -26,6 +26,7 @@ per-hackathon RBAC. The whole stack runs locally under a Nix dev shell driven by
 | [TODO.md](TODO.md)                                         | Known bugs, open decisions, and the cleanup checklist (from the 2026-08-04 code audit).                                             |
 | [requirements.md](requirements.md)                         | Requirements summary (backend/frontend split, per-act themes) generated from the executable spec.                                   |
 | [roadmap.md](roadmap.md)                                   | What is MVP vs Core, the designed user flow scored step by step, and what is explicitly unscheduled.                                |
+| [branch-strategy.md](branch-strategy.md)                   | Should `develop` and `main` stay apart? Branch contents, a security review, the triaged test feedback, both paths costed.           |
 | [glossary.md](glossary.md)                                 | The domain vocabulary, code-grounded — including the collision-prone terms (capability, member, phase…).                            |
 | [infrastructure.md](infrastructure.md)                     | What runs today vs what production needs; a paperdraw.dev build sheet with real load profiles.                                      |
 | [deployment.md](deployment.md)                             | The Helm chart: what an operator must supply, what will bite them, and the k3d rig that proved it (two modes, what each can prove). |
