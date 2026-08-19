@@ -36,7 +36,12 @@
     const hackathon = $derived(data.hackathon);
     const title = $derived(hackathon.name);
     const dates = $derived(formatDates(hackathon.startsAt, hackathon.endsAt));
-    const participantCount = $derived(hackathon.members.length);
+    // Confirmed participants only: a waitlisted person has not joined yet, so
+    // counting them inflates the headline number the hero shows to everyone
+    // (issue #184). The roster still lists them — this is the count, not the list.
+    const participantCount = $derived(
+        hackathon.members.filter((m) => !m.isWaiting).length
+    );
     // Same resolution the timeline page uses, so the header bar and the page never
     // disagree about which phase is the live one.
     const phases = $derived(
