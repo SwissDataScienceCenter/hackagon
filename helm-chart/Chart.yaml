@@ -1,0 +1,18 @@
+apiVersion: v2
+name: hackagon
+description: A Helm chart for Hackagon on Kubernetes
+
+type: application
+
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: postgresql
+    version: 18.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: keycloak
+    version: 3.x
+    repository: https://repo.helmforge.dev
+    condition: keycloak.enabled

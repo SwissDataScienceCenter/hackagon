@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hackagon.fullname" . }}-frontend-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    log:
+      forceDevLog: {{ .Values.frontend.config.log.forceDevLog }}
+    backend:
+      hostname: {{ .Values.frontend.config.backend.hostname | quote }}
+      port: {{ .Values.frontend.config.backend.port }}
+    cookies:
+      useSecure: {{ .Values.frontend.config.cookies.useSecure }}
+    oidc:
+      clientId: {{ .Values.frontend.config.oidc.clientId | quote }}
+      issuer: {{ .Values.frontend.config.oidc.issuer | replace "{baseDomain}" .Values.baseDomain | quote }}
+      audience: {{ .Values.frontend.config.oidc.audience | quote }}

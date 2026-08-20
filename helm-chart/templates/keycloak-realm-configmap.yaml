@@ -1,0 +1,17 @@
+{{- $host := .Values.keycloak.database.external.host | required "keycloak.database.external.host is required (e.g. \"hackagon-postgresql\")" -}}
+{{- $keycloakPassword := .Values.keycloak.database.external.password | required "keycloak.database.external.password is required" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hackagon.fullname" . }}-realm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hackagon.labels" . | nindent 4 }}
+data:
+  hackagon.json: |
+    {{- $frontendHost := include "hackagon.frontendHost" . }}
+    {{- $raw := .Values.realmJson | default "" }}
+    {{- $processed := $raw | replace "http://localhost:8081/*##http://localhost:8081/auth/callback/keycloak" (printf "%s/*##%s/auth/callback/keycloak" $frontendHost $frontendHost) }}
+    {{- $processed = $processed | replace "http://localhost:8081/*" (printf "%s/*" $frontendHost) }}
+    {{- $processed = $processed | replace "http://localhost:8081" $frontendHost }}
+    {{- $processed | nindent 4 }}

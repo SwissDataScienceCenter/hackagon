@@ -38,5 +38,8 @@ result
 # All .env files
 .env
 .env.yaml
+# Helm dev values with passwords
+helm-chart/values.dev.yaml
+helm-chart/charts/
 ## ============================================================================
 
