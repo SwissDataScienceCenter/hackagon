@@ -37,7 +37,12 @@
     const hackathon = $derived(data.hackathon);
     const title = $derived(hackathon.name);
     const dates = $derived(formatDates(hackathon.startsAt, hackathon.endsAt));
-    const participantCount = $derived(hackathon.members.length);
+    // Counted the way the Participants list counts its rows — which drops
+    // waitlisted members, for everyone — so the hero and that page never
+    // disagree. How many are waiting is the Manage hub's badge, not this number.
+    const participantCount = $derived(
+        hackathon.members.filter((m) => !m.isWaiting).length,
+    );
     // Same resolution the timeline page uses, so the header bar and the page never
     // disagree about which phase is the live one.
     const phases = $derived(
