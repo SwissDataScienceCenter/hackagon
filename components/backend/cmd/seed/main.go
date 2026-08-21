@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"math/rand"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -161,10 +163,9 @@ const (
 // `voting_enabled` is false is a legitimate fixture: it says "this is when
 // voting is meant to happen", not "voting is open".
 //
-// `capRegister` appears on no phase. Registering is not something that happens
-// *during* a phase in this fixture — all three hackathons run Ideation → build →
-// judge, none of which is a sign-up window — so tagging one with it would
-// misdescribe the data.
+// `capRegister` appears on exactly one phase, H4's "Registration". The other
+// three hackathons run Ideation → build → judge, none of which is a sign-up
+// window, so tagging any of their phases with it would misdescribe the data.
 type phaseSeed struct {
 	name, desc string
 	start, end time.Time
@@ -338,6 +339,11 @@ func seedInTx(
 	}
 	if err := seedH3(ctx, db, now, admin, alice, enf); err != nil {
 		return fmt.Errorf("h3: %w", err)
+	}
+	// alice runs H4 too — the large team-formation fixture, where the other
+	// hundred participants exist only in Postgres and cannot log in.
+	if err := seedH4(ctx, db, now, admin, alice, bob, charles, enf); err != nil {
+		return fmt.Errorf("h4: %w", err)
 	}
 
 	return nil
@@ -582,11 +588,17 @@ func seedH1(
 	if err != nil {
 		return fmt.Errorf("team Beta: %w", err)
 	}
-	if _, err := db.TeamParticipant.Create().SetTeam(teamBeta).SetUser(alice).Save(ctx); err != nil {
-		return fmt.Errorf("team Beta member alice: %w", err)
+	// bob, not alice. Nobody in this fixture belongs to two teams: a person
+	// works on one project, and alice already has Team Alpha. It also sharpens
+	// the cross-team read case — bob is a plain Member of Team Beta with no
+	// policy row matching Team Alpha's domain, where alice's hackathon-wide
+	// Owner made every such read succeed for the wrong reason.
+	// See mydocs/docs/backend-tickets/submission-cross-team-read.md.
+	if _, err := db.TeamParticipant.Create().SetTeam(teamBeta).SetUser(bob).Save(ctx); err != nil {
+		return fmt.Errorf("team Beta member bob: %w", err)
 	}
-	if _, err := enf.AddRole(alice.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamBeta.ID.String())); err != nil {
-		return fmt.Errorf("assign Beta member alice: %w", err)
+	if _, err := enf.AddRole(bob.KeycloakID, middleware.Member, h.ID.String(), middleware.WithTeam(teamBeta.ID.String())); err != nil {
+		return fmt.Errorf("assign Beta member bob: %w", err)
 	}
 
 	// Submissions for team Alpha: draft v1, then final v2
@@ -1218,6 +1230,428 @@ func seedH3(
 		vote:               true,
 		viewResults:        true,
 	}, phases["Demo"]); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// dataForGoodParticipants is how many synthetic participants seedH4 creates.
+//
+// They exist in Postgres only — there is no matching Keycloak account, so none
+// of them can log in, and that is the point: they are bulk, not actors. The
+// four dev users take part in the same hackathon so there is always somebody
+// you can actually sign in as to look at what the bulk produced.
+const dataForGoodParticipants = 100
+
+// dataForGoodSeed fixes the PRNG that shapes the preference distribution.
+// Everything else in this file is deterministic; re-running the seed must not
+// quietly produce a different fixture, so the randomness comes from a constant
+// and never from the clock.
+const dataForGoodSeed = 20260421
+
+// dfgProject is one of the fifteen project ideas seedH4 proposes.
+//
+// `weight` is how strongly a synthetic participant is drawn to it, and the
+// spread is the whole reason this fixture exists: a team-formation algorithm
+// run against an even distribution is not being exercised at all. Three
+// projects are heavily oversubscribed, three attract almost nobody, and the
+// rest sit in between — so the fixture contains both the project that needs
+// splitting into two teams and the one that will never reach quorum.
+type dfgProject struct {
+	title, desc string
+	track       int // index into the tracks created by seedH4
+	weight      int
+}
+
+// pickPreferences draws n distinct project indices, weighted, without
+// replacement. rng is seeded from dataForGoodSeed, so the same fixture comes
+// out of every run.
+func pickPreferences(rng *rand.Rand, weights []int, n int) []int {
+	remaining := make([]int, len(weights))
+	copy(remaining, weights)
+
+	total := 0
+	for _, w := range remaining {
+		total += w
+	}
+
+	picked := make([]int, 0, n)
+	for len(picked) < n && total > 0 {
+		r := rng.Intn(total)
+		for i, w := range remaining {
+			if w == 0 {
+				continue
+			}
+			if r < w {
+				picked = append(picked, i)
+				total -= w
+				remaining[i] = 0
+
+				break
+			}
+			r -= w
+		}
+	}
+
+	return picked
+}
+
+// seedH4 seeds the Data for Good Hackathon: the large fixture, and the only one
+// sitting in team formation.
+//
+// Registration has closed, a hundred people are confirmed in, fifteen projects
+// are on the table and everybody has said which ones they would like to work
+// on — and no team exists yet. That is the input a team-assignment algorithm
+// takes, and none of the other three hackathons provide it: H1 and H2 have
+// their teams pre-baked, H3 is over.
+//
+// Deliberately absent, do not "fix":
+//
+//   - No teams and no submissions. The state being modelled is the moment
+//     before teams exist.
+//   - The hundred synthetic users hold `Member` and nothing else. No hackathon
+//     `Owner`, no project-scoped `Owner` — they are participants, and an
+//     organizer view that looks wrong at a hundred owners is not the thing
+//     being tested here.
+//   - `register` is off. Sign-up closed three days ago; this is the fixture
+//     where `Join` is refused because the window shut, not because the
+//     hackathon is misconfigured.
+func seedH4(
+	ctx context.Context,
+	db *ent.Client,
+	now time.Time,
+	admin, alice, bob, charles *ent.User,
+	enf *middleware.Enforcer,
+) error {
+	h, err := db.Hackathon.Create().
+		SetName("Data for Good Hackathon 2026").
+		SetVisibility(hackathon.VisibilityPublic).
+		SetDescription("A week-long hackathon putting open data to work on public-interest problems. Registration is closed; teams are being formed from participants' project preferences.").
+		SetStartsAt(now.AddDate(0, 0, 5)).
+		SetEndsAt(now.AddDate(0, 0, 8)).
+		SetCreator(alice).
+		SetModifier(alice).
+		// See H1 — the `owners` edge is the half RemoveOwner counts.
+		AddOwners(alice).
+		Save(ctx)
+	if err != nil {
+		return err
+	}
+
+	phases, err := seedPhases(ctx, db, h, alice, []phaseSeed{
+		{
+			"Registration", "Sign up and tell us which projects interest you.",
+			now.AddDate(0, 0, -21), now.AddDate(0, 0, -3),
+			[]string{capRegister},
+		},
+		{
+			"Team Formation", "Organizers group participants into teams based on the preferences they expressed.",
+			now.AddDate(0, 0, -3), now.AddDate(0, 0, 4),
+			[]string{capPropose, capTeamPrefs},
+		},
+		{
+			"Hacking", "Build your project with your new team.",
+			now.AddDate(0, 0, 5).Add(9 * time.Hour), now.AddDate(0, 0, 7).Add(18 * time.Hour),
+			[]string{capSubmissions},
+		},
+		{
+			"Demo", "Show what you built and vote on the others.",
+			now.AddDate(0, 0, 8).Add(10 * time.Hour), now.AddDate(0, 0, 8).Add(17 * time.Hour),
+			[]string{capVote, capViewResults},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	for i, pg := range []struct {
+		title, content string
+		visible        bool
+	}{
+		{
+			"About",
+			"# Data for Good Hackathon 2026\n\nOne week, fifteen projects, and a hundred participants working with open data on problems that matter: public health, education, and civic transparency.\n\nRegistration has closed. We are now forming teams from the project preferences you gave us.",
+			true,
+		},
+		{
+			"How teams are formed",
+			"## From preferences to teams\n\nEveryone picked between one and four projects they would like to work on. Organizers now assign each participant to exactly **one** team, weighing:\n\n1. Your stated preferences, highest first\n2. Team size — we aim for 4–6 people per project\n3. A spread of skills within each team\n\nProjects that nobody picked will not run. Projects that everybody picked may be split into two teams.",
+			true,
+		},
+		{
+			"Code of Conduct",
+			"Be decent to each other. Harassment of any kind ends your participation immediately. Report concerns to any organizer.",
+			true,
+		},
+	} {
+		if _, err := db.Page.Create().
+			SetTitle(pg.title).
+			SetContent(pg.content).
+			SetVisible(pg.visible).
+			SetOrder(i + 1).
+			SetHackathon(h).
+			SetCreator(alice).
+			SetModifier(alice).
+			Save(ctx); err != nil {
+			return fmt.Errorf("page %q: %w", pg.title, err)
+		}
+	}
+
+	trackNames := []struct{ name, desc string }{
+		{
+			"Public Health",
+			"Disease surveillance, health equity, access to care, and epidemiological modelling.",
+		},
+		{
+			"Education",
+			"Learning analytics, curriculum tooling, accessibility, and school resource allocation.",
+		},
+		{"Civic Data", "Transparency, open budgets, mobility, housing, and public infrastructure."},
+	}
+	tracks := make([]*ent.Track, 0, len(trackNames))
+	for _, t := range trackNames {
+		tr, err := db.Track.Create().
+			SetName(t.name).
+			SetDescription(t.desc).
+			SetHackathon(h).
+			SetCreator(alice).
+			SetModifier(alice).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("track %q: %w", t.name, err)
+		}
+		tracks = append(tracks, tr)
+	}
+
+	// Fifteen ideas. The weights are the fixture: 12, 11 and 10 are the three
+	// everyone wants, 1 apiece are the three nobody does.
+	specs := []dfgProject{
+		{
+			"Outbreak Early Warning",
+			"Fuse wastewater sampling, pharmacy sales and clinic visits into a signal that flags a local outbreak days before case counts do.",
+			0,
+			12,
+		},
+		{
+			"Vaccine Desert Mapper",
+			"Map travel time to the nearest vaccination site by public transport, and rank neighbourhoods by how badly they are served.",
+			0,
+			6,
+		},
+		{
+			"Clinical Trial Matcher",
+			"Plain-language search that matches a patient's condition and location to trials currently recruiting.",
+			0,
+			4,
+		},
+		{
+			"Air Quality & Asthma",
+			"Correlate street-level air quality readings with paediatric asthma admissions and publish the per-school picture.",
+			0,
+			3,
+		},
+		{
+			"Ambulance Response Equity",
+			"Analyse response times by district and income band; a small dashboard for the health authority.",
+			0,
+			1,
+		},
+
+		{
+			"Open Textbook Search",
+			"One search across every openly licensed textbook, filtered by curriculum, reading level and language.",
+			1,
+			11,
+		},
+		{
+			"Dropout Early Signal",
+			"A model over attendance and grade trajectories that flags students at risk while there is still time to act.",
+			1,
+			7,
+		},
+		{
+			"School Meal Coverage",
+			"Show which schools have meal programmes, which qualify but have none, and what the gap costs.",
+			1,
+			5,
+		},
+		{
+			"Sign Language Tutor",
+			"Webcam-based practice tool that gives immediate feedback on fingerspelling.",
+			1,
+			3,
+		},
+		{
+			"Classroom Energy Audit",
+			"Cheap sensor kit plus a report template so a class can audit its own building.",
+			1,
+			1,
+		},
+
+		{
+			"Open Budget Explorer",
+			"Make a municipal budget legible: where the money goes, how it changed, and who decided.",
+			2,
+			10,
+		},
+		{
+			"Bike Lane Gap Finder",
+			"Find the missing links in a cycle network by routing real trips and measuring the detours they are forced into.",
+			2,
+			8,
+		},
+		{
+			"Rental Listing Watchdog",
+			"Track listing prices over time and surface the ones that jump right after a tenant leaves.",
+			2,
+			5,
+		},
+		{
+			"Pothole Report Triage",
+			"Cluster citizen reports, dedupe them, and rank streets by how much damage they are doing.",
+			2,
+			2,
+		},
+		{
+			"Council Minutes Search",
+			"Full-text search across a decade of council minutes, with speaker and topic filters.",
+			2,
+			1,
+		},
+	}
+
+	projects := make([]*ent.Project, 0, len(specs))
+	weights := make([]int, 0, len(specs))
+	for i, s := range specs {
+		// alice proposes as organizer; every third is bob's, so the fixture
+		// also has projects proposed by a plain participant — and he gets the
+		// project-scoped Owner that goes with having proposed one.
+		author := alice
+		if i%3 == 0 {
+			author = bob
+		}
+		p, err := db.Project.Create().
+			SetTitle(s.title).
+			SetDescription(s.desc).
+			SetStatus(project.StatusApproved).
+			SetTrack(tracks[s.track]).
+			SetHackathon(h).
+			SetCreator(author).
+			SetModifier(author).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("project %q: %w", s.title, err)
+		}
+		if _, err := enf.AddRole(author.KeycloakID, middleware.Owner, h.ID.String(), middleware.WithProject(p.ID.String())); err != nil {
+			return fmt.Errorf("assign %q owner: %w", s.title, err)
+		}
+		projects = append(projects, p)
+		weights = append(weights, s.weight)
+	}
+
+	// The four dev users, then the hundred. Everybody is confirmed: the
+	// waitlist case lives in H1, and a waitlisted row here would just be noise
+	// in the input to team formation.
+	// Combined index-wise: 20 × 20 = 400 distinct pairs, so the first
+	// dataForGoodParticipants of them are unique in both display name and
+	// username.
+	firstNames := []string{
+		"Amara", "Bruno", "Chiara", "Dmitri", "Elena",
+		"Farid", "Greta", "Hassan", "Ines", "Jonas",
+		"Kavita", "Lars", "Mira", "Nikolai", "Olga",
+		"Priya", "Quentin", "Rosa", "Sven", "Tamar",
+	}
+	lastNames := []string{
+		"Abela", "Berger", "Costa", "Duarte", "Egger",
+		"Fournier", "Gruber", "Haldar", "Iversen", "Jensen",
+		"Keller", "Lindqvist", "Moreau", "Nakamura", "Oduya",
+		"Petrov", "Quesada", "Rossi", "Steiner", "Toldeo",
+	}
+
+	participants := []*ent.User{admin, alice, bob, charles}
+	for i := range dataForGoodParticipants {
+		first := firstNames[i%len(firstNames)]
+		last := lastNames[(i/len(firstNames))%len(lastNames)]
+		username := strings.ToLower(first + "." + last)
+
+		u, err := getOrCreateUser(
+			ctx,
+			db,
+			fmt.Sprintf("seed-dfg-%03d", i+1),
+			username,
+			first+" "+last,
+			username+"@example.org",
+		)
+		if err != nil {
+			return fmt.Errorf("synthetic participant %s: %w", username, err)
+		}
+		participants = append(participants, u)
+	}
+
+	for _, u := range participants {
+		if _, err := db.Participant.Create().
+			SetHackathon(h).
+			SetUser(u).
+			SetIsWaiting(false).
+			Save(ctx); err != nil {
+			return fmt.Errorf("participant %s: %w", u.Username, err)
+		}
+		// Member, and only Member — see the note on seedH4. Without it the row
+		// exists and the person can do nothing, which reads as a handler bug.
+		if _, err := enf.AddRole(u.KeycloakID, middleware.Member, h.ID.String()); err != nil {
+			return fmt.Errorf("assign member %s in h4: %w", u.Username, err)
+		}
+	}
+	// alice runs this one. Owner on top of Member, because casbin has no
+	// inheritance and every capability below is granted to Member.
+	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String()); err != nil {
+		return fmt.Errorf("assign alice owner in h4: %w", err)
+	}
+
+	// Preferences. Each participant names one to four projects; the counts are
+	// skewed towards two and three so the fixture is neither everyone-picks-one
+	// nor everyone-picks-everything.
+	// The fixture has to be reproducible, which is the opposite of what a
+	// crypto source gives you.
+	//nolint:gosec // deterministic fixture, not security
+	rng := rand.New(rand.NewSource(dataForGoodSeed))
+	countFor := func() int {
+		switch n := rng.Intn(100); {
+		case n < 10:
+			return 1
+		case n < 45:
+			return 2
+		case n < 80:
+			return 3
+		default:
+			return 4
+		}
+	}
+
+	for _, u := range participants {
+		picks := pickPreferences(rng, weights, countFor())
+
+		update := db.User.UpdateOne(u)
+		for _, i := range picks {
+			update = update.AddPreferredProjects(projects[i])
+		}
+		if _, err := update.Save(ctx); err != nil {
+			return fmt.Errorf("preferences for %s: %w", u.Username, err)
+		}
+	}
+
+	// Team formation: registration shut, preferences open so an organizer can
+	// still correct one, proposals open so a late idea can land. Submissions,
+	// voting and results all wait on teams that do not exist yet.
+	if err := seedCapabilities(ctx, db, enf, h, alice, capabilities{
+		register:           false,
+		proposeProjects:    true,
+		teamPreferences:    true,
+		projectSubmissions: false,
+		vote:               false,
+		viewResults:        false,
+	}, phases["Team Formation"]); err != nil {
 		return err
 	}
 
