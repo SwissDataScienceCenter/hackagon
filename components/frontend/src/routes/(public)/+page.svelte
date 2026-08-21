@@ -4,7 +4,6 @@
         ArrowRight,
         Code,
         Trophy,
-        Archive,
         Users,
         Lightbulb,
         Upload,
@@ -111,14 +110,6 @@
         <button class="chip chip-active">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
-        </button>
-        <button class="chip">
-            <Trophy class="h-3.5 w-3.5" />
-            <span>Challenges</span>
-        </button>
-        <button class="chip">
-            <Archive class="h-3.5 w-3.5" />
-            <span>Past Events</span>
         </button>
     </div>
 
