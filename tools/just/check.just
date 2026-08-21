@@ -37,7 +37,19 @@ build *args:
 # Run tests for a component. Usage: just check::test -c frontend
 [group('checks')]
 test *args:
-    cd "{{root_dir}}" && just quitsh test "$@"
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{root_dir}}"
+    # Go coverage data accumulates in this directory across runs, and
+    # `go tool covdata` merges every covmeta it finds there. Run the tests on
+    # one branch and then on another, and the merged profile still names source
+    # files that only existed on the first — at which point `go tool cover
+    # -html` fails reading them and the whole test target goes red with every
+    # spec passing. CI gets a fresh workspace, so this only ever bites locally,
+    # after a branch switch. Dropping the directory costs nothing: the run
+    # about to happen regenerates all of it.
+    rm -rf .output/*/coverage/data
+    just quitsh test "$@"
 
 # Lint a component. Usage: just check::lint -c backend
 [group('checks')]
