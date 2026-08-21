@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Answer is the predicate function for answer builders.
+type Answer func(*sql.Selector)
+
 // Hackathon is the predicate function for hackathon builders.
 type Hackathon func(*sql.Selector)
 
@@ -23,6 +26,9 @@ type Phase func(*sql.Selector)
 
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
+
+// Question is the predicate function for question builders.
+type Question func(*sql.Selector)
 
 // Submission is the predicate function for submission builders.
 type Submission func(*sql.Selector)

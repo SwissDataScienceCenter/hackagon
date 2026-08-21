@@ -7,12 +7,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/db/schema"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/teamparticipant"
@@ -27,6 +29,25 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	answerMixin := schema.Answer{}.Mixin()
+	answerMixinFields0 := answerMixin[0].Fields()
+	_ = answerMixinFields0
+	answerFields := schema.Answer{}.Fields()
+	_ = answerFields
+	// answerDescCreatedAt is the schema descriptor for created_at field.
+	answerDescCreatedAt := answerFields[4].Descriptor()
+	// answer.DefaultCreatedAt holds the default value on creation for the created_at field.
+	answer.DefaultCreatedAt = answerDescCreatedAt.Default.(func() time.Time)
+	// answerDescUpdatedAt is the schema descriptor for updated_at field.
+	answerDescUpdatedAt := answerFields[5].Descriptor()
+	// answer.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	answer.DefaultUpdatedAt = answerDescUpdatedAt.Default.(func() time.Time)
+	// answer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	answer.UpdateDefaultUpdatedAt = answerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// answerDescID is the schema descriptor for id field.
+	answerDescID := answerMixinFields0[0].Descriptor()
+	// answer.DefaultID holds the default value on creation for the id field.
+	answer.DefaultID = answerDescID.Default.(func() uuid.UUID)
 	hackathonMixin := schema.Hackathon{}.Mixin()
 	hackathonMixinFields0 := hackathonMixin[0].Fields()
 	_ = hackathonMixinFields0
@@ -176,6 +197,37 @@ func init() {
 	projectDescID := projectMixinFields0[0].Descriptor()
 	// project.DefaultID holds the default value on creation for the id field.
 	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
+	questionMixin := schema.Question{}.Mixin()
+	questionMixinFields0 := questionMixin[0].Fields()
+	_ = questionMixinFields0
+	questionFields := schema.Question{}.Fields()
+	_ = questionFields
+	// questionDescKey is the schema descriptor for key field.
+	questionDescKey := questionFields[1].Descriptor()
+	// question.KeyValidator is a validator for the "key" field. It is called by the builders before save.
+	question.KeyValidator = questionDescKey.Validators[0].(func(string) error)
+	// questionDescMandatory is the schema descriptor for mandatory field.
+	questionDescMandatory := questionFields[4].Descriptor()
+	// question.DefaultMandatory holds the default value on creation for the mandatory field.
+	question.DefaultMandatory = questionDescMandatory.Default.(bool)
+	// questionDescOrder is the schema descriptor for order field.
+	questionDescOrder := questionFields[5].Descriptor()
+	// question.DefaultOrder holds the default value on creation for the order field.
+	question.DefaultOrder = questionDescOrder.Default.(int)
+	// questionDescCreatedAt is the schema descriptor for created_at field.
+	questionDescCreatedAt := questionFields[6].Descriptor()
+	// question.DefaultCreatedAt holds the default value on creation for the created_at field.
+	question.DefaultCreatedAt = questionDescCreatedAt.Default.(func() time.Time)
+	// questionDescModifiedAt is the schema descriptor for modified_at field.
+	questionDescModifiedAt := questionFields[7].Descriptor()
+	// question.DefaultModifiedAt holds the default value on creation for the modified_at field.
+	question.DefaultModifiedAt = questionDescModifiedAt.Default.(func() time.Time)
+	// question.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.
+	question.UpdateDefaultModifiedAt = questionDescModifiedAt.UpdateDefault.(func() time.Time)
+	// questionDescID is the schema descriptor for id field.
+	questionDescID := questionMixinFields0[0].Descriptor()
+	// question.DefaultID holds the default value on creation for the id field.
+	question.DefaultID = questionDescID.Default.(func() uuid.UUID)
 	submissionMixin := schema.Submission{}.Mixin()
 	submissionMixinFields0 := submissionMixin[0].Fields()
 	_ = submissionMixinFields0

@@ -11,11 +11,13 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
@@ -351,6 +353,51 @@ func (_c *UserCreate) AddModifiedTracks(v ...*Track) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddModifiedTrackIDs(ids...)
+}
+
+// AddCreatedQuestionIDs adds the "created_questions" edge to the Question entity by IDs.
+func (_c *UserCreate) AddCreatedQuestionIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddCreatedQuestionIDs(ids...)
+	return _c
+}
+
+// AddCreatedQuestions adds the "created_questions" edges to the Question entity.
+func (_c *UserCreate) AddCreatedQuestions(v ...*Question) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedQuestionIDs(ids...)
+}
+
+// AddModifiedQuestionIDs adds the "modified_questions" edge to the Question entity by IDs.
+func (_c *UserCreate) AddModifiedQuestionIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddModifiedQuestionIDs(ids...)
+	return _c
+}
+
+// AddModifiedQuestions adds the "modified_questions" edges to the Question entity.
+func (_c *UserCreate) AddModifiedQuestions(v ...*Question) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedQuestionIDs(ids...)
+}
+
+// AddCreatedAnswerIDs adds the "created_answers" edge to the Answer entity by IDs.
+func (_c *UserCreate) AddCreatedAnswerIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddCreatedAnswerIDs(ids...)
+	return _c
+}
+
+// AddCreatedAnswers adds the "created_answers" edges to the Answer entity.
+func (_c *UserCreate) AddCreatedAnswers(v ...*Answer) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedAnswerIDs(ids...)
 }
 
 // AddModifiedStateIDs adds the "modified_states" edge to the HackathonState entity by IDs.
@@ -820,6 +867,54 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedQuestionsTable,
+			Columns: []string{user.CreatedQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedQuestionsTable,
+			Columns: []string{user.ModifiedQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedAnswersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedAnswersTable,
+			Columns: []string{user.CreatedAnswersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

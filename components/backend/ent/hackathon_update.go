@@ -18,6 +18,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -259,6 +260,21 @@ func (_u *HackathonUpdate) AddVoteCategories(v ...*VoteCategory) *HackathonUpdat
 	return _u.AddVoteCategoryIDs(ids...)
 }
 
+// AddQuestionIDs adds the "questions" edge to the Question entity by IDs.
+func (_u *HackathonUpdate) AddQuestionIDs(ids ...uuid.UUID) *HackathonUpdate {
+	_u.mutation.AddQuestionIDs(ids...)
+	return _u
+}
+
+// AddQuestions adds the "questions" edges to the Question entity.
+func (_u *HackathonUpdate) AddQuestions(v ...*Question) *HackathonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddQuestionIDs(ids...)
+}
+
 // AddOwnerIDs adds the "owners" edge to the User entity by IDs.
 func (_u *HackathonUpdate) AddOwnerIDs(ids ...uuid.UUID) *HackathonUpdate {
 	_u.mutation.AddOwnerIDs(ids...)
@@ -420,6 +436,27 @@ func (_u *HackathonUpdate) RemoveVoteCategories(v ...*VoteCategory) *HackathonUp
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveVoteCategoryIDs(ids...)
+}
+
+// ClearQuestions clears all "questions" edges to the Question entity.
+func (_u *HackathonUpdate) ClearQuestions() *HackathonUpdate {
+	_u.mutation.ClearQuestions()
+	return _u
+}
+
+// RemoveQuestionIDs removes the "questions" edge to Question entities by IDs.
+func (_u *HackathonUpdate) RemoveQuestionIDs(ids ...uuid.UUID) *HackathonUpdate {
+	_u.mutation.RemoveQuestionIDs(ids...)
+	return _u
+}
+
+// RemoveQuestions removes "questions" edges to Question entities.
+func (_u *HackathonUpdate) RemoveQuestions(v ...*Question) *HackathonUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveQuestionIDs(ids...)
 }
 
 // ClearOwners clears all "owners" edges to the User entity.
@@ -862,6 +899,51 @@ func (_u *HackathonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.QuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedQuestionsIDs(); len(nodes) > 0 && !_u.mutation.QuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.QuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.OwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -1179,6 +1261,21 @@ func (_u *HackathonUpdateOne) AddVoteCategories(v ...*VoteCategory) *HackathonUp
 	return _u.AddVoteCategoryIDs(ids...)
 }
 
+// AddQuestionIDs adds the "questions" edge to the Question entity by IDs.
+func (_u *HackathonUpdateOne) AddQuestionIDs(ids ...uuid.UUID) *HackathonUpdateOne {
+	_u.mutation.AddQuestionIDs(ids...)
+	return _u
+}
+
+// AddQuestions adds the "questions" edges to the Question entity.
+func (_u *HackathonUpdateOne) AddQuestions(v ...*Question) *HackathonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddQuestionIDs(ids...)
+}
+
 // AddOwnerIDs adds the "owners" edge to the User entity by IDs.
 func (_u *HackathonUpdateOne) AddOwnerIDs(ids ...uuid.UUID) *HackathonUpdateOne {
 	_u.mutation.AddOwnerIDs(ids...)
@@ -1340,6 +1437,27 @@ func (_u *HackathonUpdateOne) RemoveVoteCategories(v ...*VoteCategory) *Hackatho
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveVoteCategoryIDs(ids...)
+}
+
+// ClearQuestions clears all "questions" edges to the Question entity.
+func (_u *HackathonUpdateOne) ClearQuestions() *HackathonUpdateOne {
+	_u.mutation.ClearQuestions()
+	return _u
+}
+
+// RemoveQuestionIDs removes the "questions" edge to Question entities by IDs.
+func (_u *HackathonUpdateOne) RemoveQuestionIDs(ids ...uuid.UUID) *HackathonUpdateOne {
+	_u.mutation.RemoveQuestionIDs(ids...)
+	return _u
+}
+
+// RemoveQuestions removes "questions" edges to Question entities.
+func (_u *HackathonUpdateOne) RemoveQuestions(v ...*Question) *HackathonUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveQuestionIDs(ids...)
 }
 
 // ClearOwners clears all "owners" edges to the User entity.
@@ -1805,6 +1923,51 @@ func (_u *HackathonUpdateOne) sqlSave(ctx context.Context) (_node *Hackathon, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(votecategory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.QuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedQuestionsIDs(); len(nodes) > 0 && !_u.mutation.QuestionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.QuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

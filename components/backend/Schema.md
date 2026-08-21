@@ -1,5 +1,31 @@
 # Database Schema
 
+## Answer
+
+A participant's answer to a registration question. One answer per user per question.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `question_id` | uuid.UUID | yes | no | no | no | The question this answer belongs to. |
+| `user_id` | uuid.UUID | yes | no | no | no | The user who submitted this answer. |
+| `value` | string | yes | no | no | no | The answer value. For bool questions, stored as "true" or "false". |
+| `type` | enum(text, bool) | yes | no | no | no | The type of the question (for readability when reading answers). |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the answer was first submitted. |
+| `updated_at` | time.Time | yes | no | no | yes | Timestamp of the last update. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `question` | Question | M2O | yes | yes | The question this answer belongs to. |
+| `user` | User | M2O | yes | yes | The user who submitted this answer. |
+
+### Indexes
+
+- `question_id, user_id` *(unique)*
+
 ## Hackathon
 
 A hackathon event containing tracks, projects, phases, and participants.
@@ -28,6 +54,7 @@ A hackathon event containing tracks, projects, phases, and participants.
 | `phases` | Phase | O2M | no | no | Temporal phases (e.g. ideation, hacking, judging). |
 | `state` | HackathonState | O2O | no | no | Configuration state for this hackathon. |
 | `vote_categories` | VoteCategory | O2M | no | no | Voting categories scoped to this hackathon. |
+| `questions` | Question | O2M | no | no | Registration questions configured for this hackathon. |
 | `owners` | User | M2M | no | no | Users who are owners of this hackathon (in addition to the creator). |
 | `creator` | User | M2O | yes | yes | The user who created this hackathon. |
 | `modifier` | User | M2O | yes | yes | The user who last modified this hackathon. |
@@ -184,6 +211,37 @@ A project proposal within a hackathon track.
 - `title`
 - `status`
 
+## Question
+
+A registration question configured by a hackathon owner.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `hackathon_id` | uuid.UUID | yes | no | no | no | The hackathon this question belongs to. |
+| `key` | string | yes | no | no | no | Unique identifier for the question within the hackathon. |
+| `label` | string | yes | no | no | no | Display label for the question. |
+| `type` | enum(text, bool) | yes | no | no | no | The type of answer expected from participants. |
+| `mandatory` | bool | yes | no | no | yes | Whether the participant must answer this question to join. |
+| `order` | int | yes | no | no | yes | Display order; lower values appear first. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the question was created. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | yes | yes | The hackathon this question belongs to. |
+| `creator` | User | M2O | yes | yes | The user who created the question. |
+| `modifier` | User | M2O | yes | yes | The user who last modified the question. |
+| `answers` | Answer | O2M | no | no | Answers submitted by participants for this question. |
+
+### Indexes
+
+- `key, hackathon_id` *(unique)*
+- `order`
+
 ## Submission
 
 A versioned submission from a team for a project.
@@ -317,6 +375,9 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_submissions` | Submission | O2M | no | no | Submissions this user last modified. |
 | `created_tracks` | Track | O2M | no | no | Tracks this user created. |
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
+| `created_questions` | Question | O2M | no | no | Registration questions this user created. |
+| `modified_questions` | Question | O2M | no | no | Registration questions this user last modified. |
+| `created_answers` | Answer | O2M | no | no | Registration answers this user submitted. |
 | `modified_states` | HackathonState | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |

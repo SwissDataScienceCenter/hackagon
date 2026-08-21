@@ -61,6 +61,8 @@ type HackathonEdges struct {
 	State *HackathonState `json:"state,omitempty"`
 	// Voting categories scoped to this hackathon.
 	VoteCategories []*VoteCategory `json:"vote_categories,omitempty"`
+	// Registration questions configured for this hackathon.
+	Questions []*Question `json:"questions,omitempty"`
 	// Users who are owners of this hackathon (in addition to the creator).
 	Owners []*User `json:"owners,omitempty"`
 	// The user who created this hackathon.
@@ -71,7 +73,7 @@ type HackathonEdges struct {
 	Participants []*Participant `json:"participants,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [11]bool
+	loadedTypes [12]bool
 }
 
 // TracksOrErr returns the Tracks value or an error if the edge
@@ -139,10 +141,19 @@ func (e HackathonEdges) VoteCategoriesOrErr() ([]*VoteCategory, error) {
 	return nil, &NotLoadedError{edge: "vote_categories"}
 }
 
+// QuestionsOrErr returns the Questions value or an error if the edge
+// was not loaded in eager-loading.
+func (e HackathonEdges) QuestionsOrErr() ([]*Question, error) {
+	if e.loadedTypes[7] {
+		return e.Questions, nil
+	}
+	return nil, &NotLoadedError{edge: "questions"}
+}
+
 // OwnersOrErr returns the Owners value or an error if the edge
 // was not loaded in eager-loading.
 func (e HackathonEdges) OwnersOrErr() ([]*User, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.Owners, nil
 	}
 	return nil, &NotLoadedError{edge: "owners"}
@@ -153,7 +164,7 @@ func (e HackathonEdges) OwnersOrErr() ([]*User, error) {
 func (e HackathonEdges) CreatorOrErr() (*User, error) {
 	if e.Creator != nil {
 		return e.Creator, nil
-	} else if e.loadedTypes[8] {
+	} else if e.loadedTypes[9] {
 		return nil, &NotFoundError{label: user.Label}
 	}
 	return nil, &NotLoadedError{edge: "creator"}
@@ -164,7 +175,7 @@ func (e HackathonEdges) CreatorOrErr() (*User, error) {
 func (e HackathonEdges) ModifierOrErr() (*User, error) {
 	if e.Modifier != nil {
 		return e.Modifier, nil
-	} else if e.loadedTypes[9] {
+	} else if e.loadedTypes[10] {
 		return nil, &NotFoundError{label: user.Label}
 	}
 	return nil, &NotLoadedError{edge: "modifier"}
@@ -173,7 +184,7 @@ func (e HackathonEdges) ModifierOrErr() (*User, error) {
 // ParticipantsOrErr returns the Participants value or an error if the edge
 // was not loaded in eager-loading.
 func (e HackathonEdges) ParticipantsOrErr() ([]*Participant, error) {
-	if e.loadedTypes[10] {
+	if e.loadedTypes[11] {
 		return e.Participants, nil
 	}
 	return nil, &NotLoadedError{edge: "participants"}
@@ -334,6 +345,11 @@ func (_m *Hackathon) QueryState() *HackathonStateQuery {
 // QueryVoteCategories queries the "vote_categories" edge of the Hackathon entity.
 func (_m *Hackathon) QueryVoteCategories() *VoteCategoryQuery {
 	return NewHackathonClient(_m.config).QueryVoteCategories(_m)
+}
+
+// QueryQuestions queries the "questions" edge of the Hackathon entity.
+func (_m *Hackathon) QueryQuestions() *QuestionQuery {
+	return NewHackathonClient(_m.config).QueryQuestions(_m)
 }
 
 // QueryOwners queries the "owners" edge of the Hackathon entity.

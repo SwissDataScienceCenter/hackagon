@@ -59,6 +59,12 @@ const (
 	EdgeCreatedTracks = "created_tracks"
 	// EdgeModifiedTracks holds the string denoting the modified_tracks edge name in mutations.
 	EdgeModifiedTracks = "modified_tracks"
+	// EdgeCreatedQuestions holds the string denoting the created_questions edge name in mutations.
+	EdgeCreatedQuestions = "created_questions"
+	// EdgeModifiedQuestions holds the string denoting the modified_questions edge name in mutations.
+	EdgeModifiedQuestions = "modified_questions"
+	// EdgeCreatedAnswers holds the string denoting the created_answers edge name in mutations.
+	EdgeCreatedAnswers = "created_answers"
 	// EdgeModifiedStates holds the string denoting the modified_states edge name in mutations.
 	EdgeModifiedStates = "modified_states"
 	// EdgePreferredProjects holds the string denoting the preferred_projects edge name in mutations.
@@ -183,6 +189,27 @@ const (
 	ModifiedTracksInverseTable = "tracks"
 	// ModifiedTracksColumn is the table column denoting the modified_tracks relation/edge.
 	ModifiedTracksColumn = "user_modified_tracks"
+	// CreatedQuestionsTable is the table that holds the created_questions relation/edge.
+	CreatedQuestionsTable = "questions"
+	// CreatedQuestionsInverseTable is the table name for the Question entity.
+	// It exists in this package in order to avoid circular dependency with the "question" package.
+	CreatedQuestionsInverseTable = "questions"
+	// CreatedQuestionsColumn is the table column denoting the created_questions relation/edge.
+	CreatedQuestionsColumn = "user_created_questions"
+	// ModifiedQuestionsTable is the table that holds the modified_questions relation/edge.
+	ModifiedQuestionsTable = "questions"
+	// ModifiedQuestionsInverseTable is the table name for the Question entity.
+	// It exists in this package in order to avoid circular dependency with the "question" package.
+	ModifiedQuestionsInverseTable = "questions"
+	// ModifiedQuestionsColumn is the table column denoting the modified_questions relation/edge.
+	ModifiedQuestionsColumn = "user_modified_questions"
+	// CreatedAnswersTable is the table that holds the created_answers relation/edge.
+	CreatedAnswersTable = "answers"
+	// CreatedAnswersInverseTable is the table name for the Answer entity.
+	// It exists in this package in order to avoid circular dependency with the "answer" package.
+	CreatedAnswersInverseTable = "answers"
+	// CreatedAnswersColumn is the table column denoting the created_answers relation/edge.
+	CreatedAnswersColumn = "user_id"
 	// ModifiedStatesTable is the table that holds the modified_states relation/edge.
 	ModifiedStatesTable = "hackathon_states"
 	// ModifiedStatesInverseTable is the table name for the HackathonState entity.
@@ -546,6 +573,48 @@ func ByModifiedTracks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByCreatedQuestionsCount orders the results by created_questions count.
+func ByCreatedQuestionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreatedQuestionsStep(), opts...)
+	}
+}
+
+// ByCreatedQuestions orders the results by created_questions terms.
+func ByCreatedQuestions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedQuestionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByModifiedQuestionsCount orders the results by modified_questions count.
+func ByModifiedQuestionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newModifiedQuestionsStep(), opts...)
+	}
+}
+
+// ByModifiedQuestions orders the results by modified_questions terms.
+func ByModifiedQuestions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newModifiedQuestionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCreatedAnswersCount orders the results by created_answers count.
+func ByCreatedAnswersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreatedAnswersStep(), opts...)
+	}
+}
+
+// ByCreatedAnswers orders the results by created_answers terms.
+func ByCreatedAnswers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedAnswersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByModifiedStatesCount orders the results by modified_states count.
 func ByModifiedStatesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -753,6 +822,27 @@ func newModifiedTracksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ModifiedTracksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ModifiedTracksTable, ModifiedTracksColumn),
+	)
+}
+func newCreatedQuestionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedQuestionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreatedQuestionsTable, CreatedQuestionsColumn),
+	)
+}
+func newModifiedQuestionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ModifiedQuestionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ModifiedQuestionsTable, ModifiedQuestionsColumn),
+	)
+}
+func newCreatedAnswersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedAnswersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreatedAnswersTable, CreatedAnswersColumn),
 	)
 }
 func newModifiedStatesStep() *sqlgraph.Step {

@@ -16,6 +16,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -245,6 +246,21 @@ func (_c *HackathonCreate) AddVoteCategories(v ...*VoteCategory) *HackathonCreat
 		ids[i] = v[i].ID
 	}
 	return _c.AddVoteCategoryIDs(ids...)
+}
+
+// AddQuestionIDs adds the "questions" edge to the Question entity by IDs.
+func (_c *HackathonCreate) AddQuestionIDs(ids ...uuid.UUID) *HackathonCreate {
+	_c.mutation.AddQuestionIDs(ids...)
+	return _c
+}
+
+// AddQuestions adds the "questions" edges to the Question entity.
+func (_c *HackathonCreate) AddQuestions(v ...*Question) *HackathonCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddQuestionIDs(ids...)
 }
 
 // AddOwnerIDs adds the "owners" edge to the User entity by IDs.
@@ -539,6 +555,22 @@ func (_c *HackathonCreate) createSpec() (*Hackathon, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(votecategory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.QuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   hackathon.QuestionsTable,
+			Columns: []string{hackathon.QuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

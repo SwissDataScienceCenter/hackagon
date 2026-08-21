@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
@@ -20,6 +21,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/teamparticipant"
@@ -52,6 +54,9 @@ type UserQuery struct {
 	withModifiedSubmissions      *SubmissionQuery
 	withCreatedTracks            *TrackQuery
 	withModifiedTracks           *TrackQuery
+	withCreatedQuestions         *QuestionQuery
+	withModifiedQuestions        *QuestionQuery
+	withCreatedAnswers           *AnswerQuery
 	withModifiedStates           *HackathonStateQuery
 	withPreferredProjects        *ProjectQuery
 	withVotes                    *VoteQuery
@@ -447,6 +452,72 @@ func (_q *UserQuery) QueryModifiedTracks() *TrackQuery {
 	return query
 }
 
+// QueryCreatedQuestions chains the current query on the "created_questions" edge.
+func (_q *UserQuery) QueryCreatedQuestions() *QuestionQuery {
+	query := (&QuestionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedQuestionsTable, user.CreatedQuestionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryModifiedQuestions chains the current query on the "modified_questions" edge.
+func (_q *UserQuery) QueryModifiedQuestions() *QuestionQuery {
+	query := (&QuestionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedQuestionsTable, user.ModifiedQuestionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedAnswers chains the current query on the "created_answers" edge.
+func (_q *UserQuery) QueryCreatedAnswers() *AnswerQuery {
+	query := (&AnswerClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(answer.Table, answer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedAnswersTable, user.CreatedAnswersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryModifiedStates chains the current query on the "modified_states" edge.
 func (_q *UserQuery) QueryModifiedStates() *HackathonStateQuery {
 	query := (&HackathonStateClient{config: _q.config}).Query()
@@ -809,6 +880,9 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withModifiedSubmissions:      _q.withModifiedSubmissions.Clone(),
 		withCreatedTracks:            _q.withCreatedTracks.Clone(),
 		withModifiedTracks:           _q.withModifiedTracks.Clone(),
+		withCreatedQuestions:         _q.withCreatedQuestions.Clone(),
+		withModifiedQuestions:        _q.withModifiedQuestions.Clone(),
+		withCreatedAnswers:           _q.withCreatedAnswers.Clone(),
 		withModifiedStates:           _q.withModifiedStates.Clone(),
 		withPreferredProjects:        _q.withPreferredProjects.Clone(),
 		withVotes:                    _q.withVotes.Clone(),
@@ -998,6 +1072,39 @@ func (_q *UserQuery) WithModifiedTracks(opts ...func(*TrackQuery)) *UserQuery {
 	return _q
 }
 
+// WithCreatedQuestions tells the query-builder to eager-load the nodes that are connected to
+// the "created_questions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedQuestions(opts ...func(*QuestionQuery)) *UserQuery {
+	query := (&QuestionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedQuestions = query
+	return _q
+}
+
+// WithModifiedQuestions tells the query-builder to eager-load the nodes that are connected to
+// the "modified_questions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithModifiedQuestions(opts ...func(*QuestionQuery)) *UserQuery {
+	query := (&QuestionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withModifiedQuestions = query
+	return _q
+}
+
+// WithCreatedAnswers tells the query-builder to eager-load the nodes that are connected to
+// the "created_answers" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedAnswers(opts ...func(*AnswerQuery)) *UserQuery {
+	query := (&AnswerClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedAnswers = query
+	return _q
+}
+
 // WithModifiedStates tells the query-builder to eager-load the nodes that are connected to
 // the "modified_states" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *UserQuery) WithModifiedStates(opts ...func(*HackathonStateQuery)) *UserQuery {
@@ -1153,7 +1260,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [23]bool{
+		loadedTypes = [26]bool{
 			_q.withCreatedHackathons != nil,
 			_q.withModifiedHackathons != nil,
 			_q.withCreatedProjects != nil,
@@ -1170,6 +1277,9 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			_q.withModifiedSubmissions != nil,
 			_q.withCreatedTracks != nil,
 			_q.withModifiedTracks != nil,
+			_q.withCreatedQuestions != nil,
+			_q.withModifiedQuestions != nil,
+			_q.withCreatedAnswers != nil,
 			_q.withModifiedStates != nil,
 			_q.withPreferredProjects != nil,
 			_q.withVotes != nil,
@@ -1308,6 +1418,27 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadModifiedTracks(ctx, query, nodes,
 			func(n *User) { n.Edges.ModifiedTracks = []*Track{} },
 			func(n *User, e *Track) { n.Edges.ModifiedTracks = append(n.Edges.ModifiedTracks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedQuestions; query != nil {
+		if err := _q.loadCreatedQuestions(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedQuestions = []*Question{} },
+			func(n *User, e *Question) { n.Edges.CreatedQuestions = append(n.Edges.CreatedQuestions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withModifiedQuestions; query != nil {
+		if err := _q.loadModifiedQuestions(ctx, query, nodes,
+			func(n *User) { n.Edges.ModifiedQuestions = []*Question{} },
+			func(n *User, e *Question) { n.Edges.ModifiedQuestions = append(n.Edges.ModifiedQuestions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedAnswers; query != nil {
+		if err := _q.loadCreatedAnswers(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedAnswers = []*Answer{} },
+			func(n *User, e *Answer) { n.Edges.CreatedAnswers = append(n.Edges.CreatedAnswers, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1914,6 +2045,98 @@ func (_q *UserQuery) loadModifiedTracks(ctx context.Context, query *TrackQuery, 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_tracks" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedQuestions(ctx context.Context, query *QuestionQuery, nodes []*User, init func(*User), assign func(*User, *Question)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Question(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedQuestionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_questions
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_questions" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_questions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadModifiedQuestions(ctx context.Context, query *QuestionQuery, nodes []*User, init func(*User), assign func(*User, *Question)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Question(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ModifiedQuestionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_modified_questions
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_modified_questions" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_modified_questions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedAnswers(ctx context.Context, query *AnswerQuery, nodes []*User, init func(*User), assign func(*User, *Answer)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(answer.FieldUserID)
+	}
+	query.Where(predicate.Answer(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedAnswersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
