@@ -37,6 +37,25 @@
         return GRADIENTS[i % GRADIENTS.length]!;
     }
 
+    // Same shape and light/dark handling as OrganizersSection: a dark asset when
+    // one exists, otherwise invert the light-on-transparent source. Only these
+    // three have logo assets in static/ today.
+    const INSTITUTIONS = [
+        {
+            name: 'SDSC',
+            url: 'https://datascience.ch',
+            logoUrl: '/logos/sdsc.svg',
+            logoDarkUrl: '/logos/sdsc_white.svg',
+        },
+        { name: 'ETH Zurich', url: 'https://ethz.ch', logoUrl: '/images/logos/eth-zurich.svg' },
+        { name: 'EPFL', url: 'https://epfl.ch', logoUrl: '/images/logos/epfl.svg' },
+    ];
+
+    // Matches AppFooter's LOGO_LINK.
+    const LOGO_LINK = 'no-underline opacity-80 transition-opacity hover:opacity-100';
+
+    // The same destination AppFooter's "Contact" link points at.
+    const SDSC_CONTACT_URL = 'https://datascience.ch/contact';
 </script>
 
 <!-- Hero (full-bleed width) -->
@@ -84,10 +103,7 @@
 <div class="mx-auto w-full max-w-7xl">
 <!-- Trending -->
 <section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
-    <div class="flex items-center justify-between">
-        <h2 class="text-title">Trending this month</h2>
-        <a href={resolve('/')} class="text-sm text-accent-ink no-underline">Browse all →</a>
-    </div>
+    <h2 class="text-title">Trending this month</h2>
 
     <div class="mt-6 flex gap-1 border-b border-line">
         <button class="chip chip-active">
@@ -146,12 +162,36 @@
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
     <h2 class="text-title">Trusted by Swiss research institutions</h2>
-    <div class="flex items-center gap-12">
-        {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
-            <div class="flex flex-col items-center gap-2">
-                <div class="flex h-14 w-14 items-center justify-center rounded-card border border-line"></div>
-                <span class="text-xs font-medium text-ink-3">{name}</span>
-            </div>
+    <div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+        {#each INSTITUTIONS as org, i (i)}
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- off-site institution URL -->
+            <a
+                href={org.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="{org.name} (opens in a new tab)"
+                class="flex h-7 w-28 items-center justify-center {LOGO_LINK}"
+            >
+                {#if org.logoDarkUrl}
+                    <img
+                        src={org.logoUrl}
+                        alt={org.name}
+                        class="block max-h-full max-w-full object-contain dark:hidden"
+                    />
+                    <img
+                        src={org.logoDarkUrl}
+                        alt={org.name}
+                        class="hidden max-h-full max-w-full object-contain dark:block"
+                    />
+                {:else}
+                    <img
+                        src={org.logoUrl}
+                        alt={org.name}
+                        class="max-h-full max-w-full object-contain invert dark:invert-0"
+                    />
+                {/if}
+            </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
         {/each}
     </div>
 </section>
@@ -160,7 +200,8 @@
     heading="Want to host your own hackathon?"
     subtitle="SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it."
     buttonLabel="Contact Us"
-    buttonHref={resolve('/')}
+    buttonHref={SDSC_CONTACT_URL}
+    external
 />
 
 </div>
