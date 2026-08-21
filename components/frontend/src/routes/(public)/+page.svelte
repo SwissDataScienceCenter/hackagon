@@ -3,14 +3,10 @@
     import {
         ArrowRight,
         Code,
-        Trophy,
-        Archive,
         Users,
         Lightbulb,
         Upload,
         Vote,
-        ChevronLeft,
-        ChevronRight,
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
@@ -41,20 +37,25 @@
         return GRADIENTS[i % GRADIENTS.length]!;
     }
 
-    let carouselIndex = $state(0);
-    const carouselSlides = [
-        { src: '/images/hackathon-ord-2024/ambiance/ambiance_1.webp', caption: 'ORD Hackathon 2024 — Opening ceremony' },
-        { src: '/images/hackathon-ord-2024/teams/teams_1.webp', caption: 'ORD Hackathon 2024 — Team collaboration' },
-        { src: '/images/hackathon-ord-2024/ambiance/ambiance_3.webp', caption: 'ORD Hackathon 2024 — Working sessions' },
-        { src: '/images/hackathon-ord-2024/winners/winners_1.webp', caption: 'ORD Hackathon 2024 — Award ceremony' },
+    // Same shape and light/dark handling as OrganizersSection: a dark asset when
+    // one exists, otherwise invert the light-on-transparent source. Only these
+    // three have logo assets in static/ today.
+    const INSTITUTIONS = [
+        {
+            name: 'SDSC',
+            url: 'https://datascience.ch',
+            logoUrl: '/logos/sdsc.svg',
+            logoDarkUrl: '/logos/sdsc_white.svg',
+        },
+        { name: 'ETH Zurich', url: 'https://ethz.ch', logoUrl: '/images/logos/eth-zurich.svg' },
+        { name: 'EPFL', url: 'https://epfl.ch', logoUrl: '/images/logos/epfl.svg' },
     ];
 
-    function nextSlide() {
-        carouselIndex = (carouselIndex + 1) % carouselSlides.length;
-    }
-    function prevSlide() {
-        carouselIndex = (carouselIndex - 1 + carouselSlides.length) % carouselSlides.length;
-    }
+    // Matches AppFooter's LOGO_LINK.
+    const LOGO_LINK = 'no-underline opacity-80 transition-opacity hover:opacity-100';
+
+    // The same destination AppFooter's "Contact" link points at.
+    const SDSC_CONTACT_URL = 'https://datascience.ch/contact';
 </script>
 
 <!-- Hero (full-bleed width) -->
@@ -102,23 +103,12 @@
 <div class="mx-auto w-full max-w-7xl">
 <!-- Trending -->
 <section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
-    <div class="flex items-center justify-between">
-        <h2 class="text-title">Trending this month</h2>
-        <a href={resolve('/')} class="text-sm text-accent-ink no-underline">Browse all →</a>
-    </div>
+    <h2 class="text-title">Trending this month</h2>
 
     <div class="mt-6 flex gap-1 border-b border-line">
         <button class="chip chip-active">
             <Code class="h-3.5 w-3.5" />
             <span>Hackathons</span>
-        </button>
-        <button class="chip">
-            <Trophy class="h-3.5 w-3.5" />
-            <span>Challenges</span>
-        </button>
-        <button class="chip">
-            <Archive class="h-3.5 w-3.5" />
-            <span>Past Events</span>
         </button>
     </div>
 
@@ -138,86 +128,6 @@
                 />
             {/each}
         {/if}
-    </div>
-</section>
-
-<!-- Winners -->
-<section class="px-4 py-12 sm:px-10 md:px-20">
-    <div class="flex items-center justify-between">
-        <h2 class="text-title">Award-winning projects</h2>
-        <a href={resolve('/')} class="text-sm text-accent-ink no-underline">See all →</a>
-    </div>
-
-    <div class="mt-6 grid grid-cols-3 gap-4">
-        {#each [
-            { hackathon: 'ORD Hackathon 2025', project: 'AutoORD: Automated\nResearch Data Pipelines', team: 'by Team DataFlow', summary: 'Automated pipeline for converting raw research data into FAIR-compliant open datasets.' },
-            { hackathon: 'GenAI Hackathon 2025', project: 'GenomeLens', team: 'by BioViz Crew', summary: 'Interactive visualization of genomic variants powered by generative models.' },
-            { hackathon: 'Climate Data 2025', project: 'ClimateQA', team: 'by Green Bytes', summary: 'RAG-based Q&A trained on Swiss climate data, making decades of measurements queryable.' },
-        ] as card, i (i)}
-            <div class="card overflow-hidden">
-                <div
-                    class="flex h-10 items-center justify-between border-b border-line px-4"
-                >
-                    <div class="flex items-center gap-1.5 text-warning-ink">
-                        <Trophy class="h-3.5 w-3.5" />
-                        <span class="text-xs font-bold">1st Place</span>
-                    </div>
-                    <span class="text-xs text-ink-3">{card.hackathon}</span>
-                </div>
-                <div class="flex flex-col gap-2 p-4">
-                    <p class="text-sm font-semibold leading-tight whitespace-pre-line">{card.project}</p>
-                    <span class="text-xs text-accent-ink">{card.team}</span>
-                    <p class="text-xs leading-snug text-ink-3">{card.summary}</p>
-                </div>
-            </div>
-        {/each}
-    </div>
-</section>
-
-<!-- Event Showcase Carousel -->
-<section class="px-4 py-12 sm:px-10 md:px-20">
-    <div class="flex items-center justify-between">
-        <h2 class="text-title">Event showcase</h2>
-        <div class="flex items-center gap-2">
-            <button onclick={prevSlide} class="btn btn-icon btn-sm btn-outline">
-                <ChevronLeft class="h-4 w-4" />
-            </button>
-            <button onclick={nextSlide} class="btn btn-icon btn-sm btn-outline">
-                <ChevronRight class="h-4 w-4" />
-            </button>
-        </div>
-    </div>
-
-    <div class="relative mt-6 overflow-hidden">
-        <div
-            class="flex gap-4 transition-transform duration-500 ease-in-out"
-            style="transform: translateX(-{carouselIndex * 25}%)"
-        >
-            {#each carouselSlides as slide, i (i)}
-                <div class="w-[calc(25%-12px)] shrink-0">
-                    <div class="relative aspect-video overflow-hidden rounded-card border border-line">
-                        <img
-                            src={slide.src}
-                            alt={slide.caption}
-                            class="h-full w-full object-cover"
-                        />
-                    </div>
-                    <p class="mt-2 text-xs text-ink-3">{slide.caption}</p>
-                </div>
-            {/each}
-        </div>
-    </div>
-
-    <div class="mt-4 flex justify-center gap-1.5">
-        {#each carouselSlides as slide, i (i)}
-            <button
-                onclick={() => carouselIndex = i}
-                class="h-1.5 w-1.5 rounded-full transition-colors {i === carouselIndex
-                    ? 'bg-accent'
-                    : 'bg-overlay'}"
-                aria-label="Go to slide: {slide.caption}"
-            ></button>
-        {/each}
     </div>
 </section>
 
@@ -252,12 +162,36 @@
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
     <h2 class="text-title">Trusted by Swiss research institutions</h2>
-    <div class="flex items-center gap-12">
-        {#each ['SDSC', 'ETH Zurich', 'EPFL', 'Univ. of Bern', 'Univ. of Zurich', 'SOAD'] as name, i (i)}
-            <div class="flex flex-col items-center gap-2">
-                <div class="flex h-14 w-14 items-center justify-center rounded-card border border-line"></div>
-                <span class="text-xs font-medium text-ink-3">{name}</span>
-            </div>
+    <div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+        {#each INSTITUTIONS as org, i (i)}
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- off-site institution URL -->
+            <a
+                href={org.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="{org.name} (opens in a new tab)"
+                class="flex h-7 w-28 items-center justify-center {LOGO_LINK}"
+            >
+                {#if org.logoDarkUrl}
+                    <img
+                        src={org.logoUrl}
+                        alt={org.name}
+                        class="block max-h-full max-w-full object-contain dark:hidden"
+                    />
+                    <img
+                        src={org.logoDarkUrl}
+                        alt={org.name}
+                        class="hidden max-h-full max-w-full object-contain dark:block"
+                    />
+                {:else}
+                    <img
+                        src={org.logoUrl}
+                        alt={org.name}
+                        class="max-h-full max-w-full object-contain invert dark:invert-0"
+                    />
+                {/if}
+            </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
         {/each}
     </div>
 </section>
@@ -266,7 +200,8 @@
     heading="Want to host your own hackathon?"
     subtitle="SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it."
     buttonLabel="Contact Us"
-    buttonHref={resolve('/')}
+    buttonHref={SDSC_CONTACT_URL}
+    external
 />
 
 </div>
