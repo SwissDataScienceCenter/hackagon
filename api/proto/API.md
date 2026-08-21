@@ -3,6 +3,14 @@
 
 ## Table of Contents
 
+- [hackathon/entities/question.proto](#hackathon_entities_question-proto)
+    - [Question](#hackathon-entities-Question)
+  
+    - [QuestionType](#hackathon-entities-QuestionType)
+  
+- [hackathon/entities/answer.proto](#hackathon_entities_answer-proto)
+    - [Answer](#hackathon-entities-Answer)
+  
 - [hackathon/entities/capability.proto](#hackathon_entities_capability-proto)
     - [Capability](#hackathon-entities-Capability)
   
@@ -70,11 +78,23 @@
 - [hackathon/messages/hackathon_svc/approve_participant_response.proto](#hackathon_messages_hackathon_svc_approve_participant_response-proto)
     - [ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse)
   
+- [hackathon/messages/hackathon_svc/create_question_request.proto](#hackathon_messages_hackathon_svc_create_question_request-proto)
+    - [CreateQuestionRequest](#hackathon-messages-hackathon_svc-CreateQuestionRequest)
+  
+- [hackathon/messages/hackathon_svc/create_question_response.proto](#hackathon_messages_hackathon_svc_create_question_response-proto)
+    - [CreateQuestionResponse](#hackathon-messages-hackathon_svc-CreateQuestionResponse)
+  
 - [hackathon/messages/hackathon_svc/create_request.proto](#hackathon_messages_hackathon_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-hackathon_svc-CreateRequest)
   
 - [hackathon/messages/hackathon_svc/create_response.proto](#hackathon_messages_hackathon_svc_create_response-proto)
     - [CreateResponse](#hackathon-messages-hackathon_svc-CreateResponse)
+  
+- [hackathon/messages/hackathon_svc/edit_question_request.proto](#hackathon_messages_hackathon_svc_edit_question_request-proto)
+    - [EditQuestionRequest](#hackathon-messages-hackathon_svc-EditQuestionRequest)
+  
+- [hackathon/messages/hackathon_svc/edit_question_response.proto](#hackathon_messages_hackathon_svc_edit_question_response-proto)
+    - [EditQuestionResponse](#hackathon-messages-hackathon_svc-EditQuestionResponse)
   
 - [hackathon/messages/hackathon_svc/edit_request.proto](#hackathon_messages_hackathon_svc_edit_request-proto)
     - [EditRequest](#hackathon-messages-hackathon_svc-EditRequest)
@@ -94,6 +114,18 @@
 - [hackathon/messages/hackathon_svc/join_response.proto](#hackathon_messages_hackathon_svc_join_response-proto)
     - [JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse)
   
+- [hackathon/messages/hackathon_svc/list_participant_answers_request.proto](#hackathon_messages_hackathon_svc_list_participant_answers_request-proto)
+    - [ListParticipantAnswersRequest](#hackathon-messages-hackathon_svc-ListParticipantAnswersRequest)
+  
+- [hackathon/messages/hackathon_svc/list_participant_answers_response.proto](#hackathon_messages_hackathon_svc_list_participant_answers_response-proto)
+    - [ListParticipantAnswersResponse](#hackathon-messages-hackathon_svc-ListParticipantAnswersResponse)
+  
+- [hackathon/messages/hackathon_svc/list_questions_request.proto](#hackathon_messages_hackathon_svc_list_questions_request-proto)
+    - [ListQuestionsRequest](#hackathon-messages-hackathon_svc-ListQuestionsRequest)
+  
+- [hackathon/messages/hackathon_svc/list_questions_response.proto](#hackathon_messages_hackathon_svc_list_questions_response-proto)
+    - [ListQuestionsResponse](#hackathon-messages-hackathon_svc-ListQuestionsResponse)
+  
 - [hackathon/messages/hackathon_svc/list_request.proto](#hackathon_messages_hackathon_svc_list_request-proto)
     - [ListRequest](#hackathon-messages-hackathon_svc-ListRequest)
   
@@ -112,6 +144,12 @@
 - [hackathon/messages/hackathon_svc/remove_participant_response.proto](#hackathon_messages_hackathon_svc_remove_participant_response-proto)
     - [RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse)
   
+- [hackathon/messages/hackathon_svc/remove_question_request.proto](#hackathon_messages_hackathon_svc_remove_question_request-proto)
+    - [RemoveQuestionRequest](#hackathon-messages-hackathon_svc-RemoveQuestionRequest)
+  
+- [hackathon/messages/hackathon_svc/remove_question_response.proto](#hackathon_messages_hackathon_svc_remove_question_response-proto)
+    - [RemoveQuestionResponse](#hackathon-messages-hackathon_svc-RemoveQuestionResponse)
+  
 - [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
     - [CapabilityState](#hackathon-messages-hackathon_svc-CapabilityState)
     - [SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest)
@@ -124,6 +162,12 @@
   
 - [hackathon/messages/hackathon_svc/set_current_phase_response.proto](#hackathon_messages_hackathon_svc_set_current_phase_response-proto)
     - [SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse)
+  
+- [hackathon/messages/hackathon_svc/submit_answers_request.proto](#hackathon_messages_hackathon_svc_submit_answers_request-proto)
+    - [SubmitAnswersRequest](#hackathon-messages-hackathon_svc-SubmitAnswersRequest)
+  
+- [hackathon/messages/hackathon_svc/submit_answers_response.proto](#hackathon_messages_hackathon_svc_submit_answers_response-proto)
+    - [SubmitAnswersResponse](#hackathon-messages-hackathon_svc-SubmitAnswersResponse)
   
 - [hackathon/hackathon_service.proto](#hackathon_hackathon_service-proto)
     - [HackathonService](#hackathon-HackathonService)
@@ -542,6 +586,88 @@
     - [VoteService](#vote-VoteService)
   
 - [Scalar Value Types](#scalar-value-types)
+
+
+
+<a name="hackathon_entities_question-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/question.proto
+
+
+
+<a name="hackathon-entities-Question"></a>
+
+### Question
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| key | [string](#string) |  |  |
+| label | [string](#string) |  |  |
+| type | [QuestionType](#hackathon-entities-QuestionType) |  |  |
+| mandatory | [bool](#bool) |  |  |
+| order | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+
+<a name="hackathon-entities-QuestionType"></a>
+
+### QuestionType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| QUESTION_TYPE_UNSPECIFIED | 0 |  |
+| QUESTION_TYPE_TEXT | 1 |  |
+| QUESTION_TYPE_BOOL | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_answer-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/answer.proto
+
+
+
+<a name="hackathon-entities-Answer"></a>
+
+### Answer
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| question_id | [string](#string) |  |  |
+| value | [string](#string) |  |  |
+| type | [QuestionType](#hackathon-entities-QuestionType) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
 
 
 
@@ -1326,6 +1452,73 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_create_question_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_question_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateQuestionRequest"></a>
+
+### CreateQuestionRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| key | [string](#string) |  |  |
+| label | [string](#string) |  |  |
+| type | [hackathon.entities.QuestionType](#hackathon-entities-QuestionType) |  |  |
+| mandatory | [bool](#bool) |  |  |
+| order | [int32](#int32) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_create_question_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_question_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateQuestionResponse"></a>
+
+### CreateQuestionResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| question_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1378,6 +1571,68 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_edit_question_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/edit_question_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-EditQuestionRequest"></a>
+
+### EditQuestionRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| question_id | [string](#string) |  |  |
+| label | [string](#string) | optional |  |
+| type | [hackathon.entities.QuestionType](#hackathon-entities-QuestionType) | optional |  |
+| mandatory | [bool](#bool) | optional |  |
+| order | [int32](#int32) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_edit_question_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/edit_question_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-EditQuestionResponse"></a>
+
+### EditQuestionResponse
+
 
 
 
@@ -1539,6 +1794,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+| answers | [hackathon.entities.Answer](#hackathon-entities-Answer) | repeated |  |
 
 
 
@@ -1570,6 +1826,131 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_participant_answers_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_participant_answers_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListParticipantAnswersRequest"></a>
+
+### ListParticipantAnswersRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| user_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_participant_answers_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_participant_answers_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListParticipantAnswersResponse"></a>
+
+### ListParticipantAnswersResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| answers | [hackathon.entities.Answer](#hackathon-entities-Answer) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_questions_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_questions_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListQuestionsRequest"></a>
+
+### ListQuestionsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_questions_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_questions_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListQuestionsResponse"></a>
+
+### ListQuestionsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| questions | [hackathon.entities.Question](#hackathon-entities-Question) | repeated |  |
 
 
 
@@ -1766,6 +2147,64 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_remove_question_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/remove_question_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RemoveQuestionRequest"></a>
+
+### RemoveQuestionRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| question_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_remove_question_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/remove_question_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RemoveQuestionResponse"></a>
+
+### RemoveQuestionResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_set_capabilities_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1908,6 +2347,64 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_submit_answers_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/submit_answers_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitAnswersRequest"></a>
+
+### SubmitAnswersRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| answers | [hackathon.entities.Answer](#hackathon-entities-Answer) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_submit_answers_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/submit_answers_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-SubmitAnswersResponse"></a>
+
+### SubmitAnswersResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_hackathon_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1939,6 +2436,12 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |
 | AddOwner | [messages.hackathon_svc.AddOwnerRequest](#hackathon-messages-hackathon_svc-AddOwnerRequest) | [messages.hackathon_svc.AddOwnerResponse](#hackathon-messages-hackathon_svc-AddOwnerResponse) |  |
 | RemoveOwner | [messages.hackathon_svc.RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest) | [messages.hackathon_svc.RemoveOwnerResponse](#hackathon-messages-hackathon_svc-RemoveOwnerResponse) |  |
+| CreateQuestion | [messages.hackathon_svc.CreateQuestionRequest](#hackathon-messages-hackathon_svc-CreateQuestionRequest) | [messages.hackathon_svc.CreateQuestionResponse](#hackathon-messages-hackathon_svc-CreateQuestionResponse) | Registration questions |
+| EditQuestion | [messages.hackathon_svc.EditQuestionRequest](#hackathon-messages-hackathon_svc-EditQuestionRequest) | [messages.hackathon_svc.EditQuestionResponse](#hackathon-messages-hackathon_svc-EditQuestionResponse) |  |
+| RemoveQuestion | [messages.hackathon_svc.RemoveQuestionRequest](#hackathon-messages-hackathon_svc-RemoveQuestionRequest) | [messages.hackathon_svc.RemoveQuestionResponse](#hackathon-messages-hackathon_svc-RemoveQuestionResponse) |  |
+| ListQuestions | [messages.hackathon_svc.ListQuestionsRequest](#hackathon-messages-hackathon_svc-ListQuestionsRequest) | [messages.hackathon_svc.ListQuestionsResponse](#hackathon-messages-hackathon_svc-ListQuestionsResponse) |  |
+| SubmitAnswers | [messages.hackathon_svc.SubmitAnswersRequest](#hackathon-messages-hackathon_svc-SubmitAnswersRequest) | [messages.hackathon_svc.SubmitAnswersResponse](#hackathon-messages-hackathon_svc-SubmitAnswersResponse) |  |
+| ListParticipantAnswers | [messages.hackathon_svc.ListParticipantAnswersRequest](#hackathon-messages-hackathon_svc-ListParticipantAnswersRequest) | [messages.hackathon_svc.ListParticipantAnswersResponse](#hackathon-messages-hackathon_svc-ListParticipantAnswersResponse) | Participant answers (admin) |
 
  
 

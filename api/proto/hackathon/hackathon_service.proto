@@ -6,24 +6,36 @@ import "hackathon/messages/hackathon_svc/add_owner_request.proto";
 import "hackathon/messages/hackathon_svc/add_owner_response.proto";
 import "hackathon/messages/hackathon_svc/approve_participant_request.proto";
 import "hackathon/messages/hackathon_svc/approve_participant_response.proto";
+import "hackathon/messages/hackathon_svc/create_question_request.proto";
+import "hackathon/messages/hackathon_svc/create_question_response.proto";
 import "hackathon/messages/hackathon_svc/create_request.proto";
 import "hackathon/messages/hackathon_svc/create_response.proto";
+import "hackathon/messages/hackathon_svc/edit_question_request.proto";
+import "hackathon/messages/hackathon_svc/edit_question_response.proto";
 import "hackathon/messages/hackathon_svc/edit_request.proto";
 import "hackathon/messages/hackathon_svc/edit_response.proto";
 import "hackathon/messages/hackathon_svc/get_request.proto";
 import "hackathon/messages/hackathon_svc/get_response.proto";
 import "hackathon/messages/hackathon_svc/join_request.proto";
 import "hackathon/messages/hackathon_svc/join_response.proto";
+import "hackathon/messages/hackathon_svc/list_participant_answers_request.proto";
+import "hackathon/messages/hackathon_svc/list_participant_answers_response.proto";
+import "hackathon/messages/hackathon_svc/list_questions_request.proto";
+import "hackathon/messages/hackathon_svc/list_questions_response.proto";
 import "hackathon/messages/hackathon_svc/list_request.proto";
 import "hackathon/messages/hackathon_svc/list_response.proto";
 import "hackathon/messages/hackathon_svc/remove_owner_request.proto";
 import "hackathon/messages/hackathon_svc/remove_owner_response.proto";
 import "hackathon/messages/hackathon_svc/remove_participant_request.proto";
 import "hackathon/messages/hackathon_svc/remove_participant_response.proto";
+import "hackathon/messages/hackathon_svc/remove_question_request.proto";
+import "hackathon/messages/hackathon_svc/remove_question_response.proto";
 import "hackathon/messages/hackathon_svc/set_capabilities_request.proto";
 import "hackathon/messages/hackathon_svc/set_capabilities_response.proto";
 import "hackathon/messages/hackathon_svc/set_current_phase_request.proto";
 import "hackathon/messages/hackathon_svc/set_current_phase_response.proto";
+import "hackathon/messages/hackathon_svc/submit_answers_request.proto";
+import "hackathon/messages/hackathon_svc/submit_answers_response.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
 
@@ -39,4 +51,12 @@ service HackathonService {
   rpc RemoveParticipant(hackathon.messages.hackathon_svc.RemoveParticipantRequest) returns (hackathon.messages.hackathon_svc.RemoveParticipantResponse);
   rpc AddOwner(hackathon.messages.hackathon_svc.AddOwnerRequest) returns (hackathon.messages.hackathon_svc.AddOwnerResponse);
   rpc RemoveOwner(hackathon.messages.hackathon_svc.RemoveOwnerRequest) returns (hackathon.messages.hackathon_svc.RemoveOwnerResponse);
+  // Registration questions
+  rpc CreateQuestion(hackathon.messages.hackathon_svc.CreateQuestionRequest) returns (hackathon.messages.hackathon_svc.CreateQuestionResponse);
+  rpc EditQuestion(hackathon.messages.hackathon_svc.EditQuestionRequest) returns (hackathon.messages.hackathon_svc.EditQuestionResponse);
+  rpc RemoveQuestion(hackathon.messages.hackathon_svc.RemoveQuestionRequest) returns (hackathon.messages.hackathon_svc.RemoveQuestionResponse);
+  rpc ListQuestions(hackathon.messages.hackathon_svc.ListQuestionsRequest) returns (hackathon.messages.hackathon_svc.ListQuestionsResponse);
+  rpc SubmitAnswers(hackathon.messages.hackathon_svc.SubmitAnswersRequest) returns (hackathon.messages.hackathon_svc.SubmitAnswersResponse);
+  // Participant answers (admin)
+  rpc ListParticipantAnswers(hackathon.messages.hackathon_svc.ListParticipantAnswersRequest) returns (hackathon.messages.hackathon_svc.ListParticipantAnswersResponse);
 }

@@ -2,38 +2,37 @@
 // versions:
 //   protoc-gen-ts_proto  v2.11.6
 //   protoc               unknown
-// source: hackathon/messages/hackathon_svc/join_request.proto
+// source: hackathon/messages/hackathon_svc/list_participant_answers_request.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Answer } from "../../entities/answer";
 
 export const protobufPackage = "hackathon.messages.hackathon_svc";
 
-export interface JoinRequest {
+export interface ListParticipantAnswersRequest {
   hackathonId: string;
-  answers: Answer[];
+  userId?: string | undefined;
 }
 
-function createBaseJoinRequest(): JoinRequest {
-  return { hackathonId: "", answers: [] };
+function createBaseListParticipantAnswersRequest(): ListParticipantAnswersRequest {
+  return { hackathonId: "", userId: undefined };
 }
 
-export const JoinRequest: MessageFns<JoinRequest> = {
-  encode(message: JoinRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const ListParticipantAnswersRequest: MessageFns<ListParticipantAnswersRequest> = {
+  encode(message: ListParticipantAnswersRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.hackathonId !== "") {
       writer.uint32(10).string(message.hackathonId);
     }
-    for (const v of message.answers) {
-      Answer.encode(v!, writer.uint32(18).fork()).join();
+    if (message.userId !== undefined) {
+      writer.uint32(18).string(message.userId);
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): JoinRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): ListParticipantAnswersRequest {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseJoinRequest();
+    const message = createBaseListParticipantAnswersRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -50,7 +49,7 @@ export const JoinRequest: MessageFns<JoinRequest> = {
             break;
           }
 
-          message.answers.push(Answer.decode(reader, reader.uint32()));
+          message.userId = reader.string();
           continue;
         }
       }
@@ -62,35 +61,39 @@ export const JoinRequest: MessageFns<JoinRequest> = {
     return message;
   },
 
-  fromJSON(object: any): JoinRequest {
+  fromJSON(object: any): ListParticipantAnswersRequest {
     return {
       hackathonId: isSet(object.hackathonId)
         ? globalThis.String(object.hackathonId)
         : isSet(object.hackathon_id)
         ? globalThis.String(object.hackathon_id)
         : "",
-      answers: globalThis.Array.isArray(object?.answers) ? object.answers.map((e: any) => Answer.fromJSON(e)) : [],
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : undefined,
     };
   },
 
-  toJSON(message: JoinRequest): unknown {
+  toJSON(message: ListParticipantAnswersRequest): unknown {
     const obj: any = {};
     if (message.hackathonId !== "") {
       obj.hackathonId = message.hackathonId;
     }
-    if (message.answers?.length) {
-      obj.answers = message.answers.map((e) => Answer.toJSON(e));
+    if (message.userId !== undefined) {
+      obj.userId = message.userId;
     }
     return obj;
   },
 
-  create(base?: DeepPartial<JoinRequest>): JoinRequest {
-    return JoinRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<ListParticipantAnswersRequest>): ListParticipantAnswersRequest {
+    return ListParticipantAnswersRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<JoinRequest>): JoinRequest {
-    const message = createBaseJoinRequest();
+  fromPartial(object: DeepPartial<ListParticipantAnswersRequest>): ListParticipantAnswersRequest {
+    const message = createBaseListParticipantAnswersRequest();
     message.hackathonId = object.hackathonId ?? "";
-    message.answers = object.answers?.map((e) => Answer.fromPartial(e)) || [];
+    message.userId = object.userId ?? undefined;
     return message;
   },
 };

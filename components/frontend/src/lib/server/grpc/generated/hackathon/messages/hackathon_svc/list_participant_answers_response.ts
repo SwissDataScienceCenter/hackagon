@@ -2,7 +2,7 @@
 // versions:
 //   protoc-gen-ts_proto  v2.11.6
 //   protoc               unknown
-// source: hackathon/messages/hackathon_svc/join_request.proto
+// source: hackathon/messages/hackathon_svc/list_participant_answers_response.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
@@ -10,43 +10,31 @@ import { Answer } from "../../entities/answer";
 
 export const protobufPackage = "hackathon.messages.hackathon_svc";
 
-export interface JoinRequest {
-  hackathonId: string;
+export interface ListParticipantAnswersResponse {
   answers: Answer[];
 }
 
-function createBaseJoinRequest(): JoinRequest {
-  return { hackathonId: "", answers: [] };
+function createBaseListParticipantAnswersResponse(): ListParticipantAnswersResponse {
+  return { answers: [] };
 }
 
-export const JoinRequest: MessageFns<JoinRequest> = {
-  encode(message: JoinRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.hackathonId !== "") {
-      writer.uint32(10).string(message.hackathonId);
-    }
+export const ListParticipantAnswersResponse: MessageFns<ListParticipantAnswersResponse> = {
+  encode(message: ListParticipantAnswersResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     for (const v of message.answers) {
-      Answer.encode(v!, writer.uint32(18).fork()).join();
+      Answer.encode(v!, writer.uint32(10).fork()).join();
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): JoinRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): ListParticipantAnswersResponse {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseJoinRequest();
+    const message = createBaseListParticipantAnswersResponse();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
-          }
-
-          message.hackathonId = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
             break;
           }
 
@@ -62,34 +50,25 @@ export const JoinRequest: MessageFns<JoinRequest> = {
     return message;
   },
 
-  fromJSON(object: any): JoinRequest {
+  fromJSON(object: any): ListParticipantAnswersResponse {
     return {
-      hackathonId: isSet(object.hackathonId)
-        ? globalThis.String(object.hackathonId)
-        : isSet(object.hackathon_id)
-        ? globalThis.String(object.hackathon_id)
-        : "",
       answers: globalThis.Array.isArray(object?.answers) ? object.answers.map((e: any) => Answer.fromJSON(e)) : [],
     };
   },
 
-  toJSON(message: JoinRequest): unknown {
+  toJSON(message: ListParticipantAnswersResponse): unknown {
     const obj: any = {};
-    if (message.hackathonId !== "") {
-      obj.hackathonId = message.hackathonId;
-    }
     if (message.answers?.length) {
       obj.answers = message.answers.map((e) => Answer.toJSON(e));
     }
     return obj;
   },
 
-  create(base?: DeepPartial<JoinRequest>): JoinRequest {
-    return JoinRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<ListParticipantAnswersResponse>): ListParticipantAnswersResponse {
+    return ListParticipantAnswersResponse.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<JoinRequest>): JoinRequest {
-    const message = createBaseJoinRequest();
-    message.hackathonId = object.hackathonId ?? "";
+  fromPartial(object: DeepPartial<ListParticipantAnswersResponse>): ListParticipantAnswersResponse {
+    const message = createBaseListParticipantAnswersResponse();
     message.answers = object.answers?.map((e) => Answer.fromPartial(e)) || [];
     return message;
   },
@@ -102,10 +81,6 @@ export type DeepPartial<T> = T extends Builtin ? T
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
-
-function isSet(value: any): boolean {
-  return value !== null && value !== undefined;
-}
 
 export interface MessageFns<T> {
   encode(message: T, writer?: BinaryWriter): BinaryWriter;

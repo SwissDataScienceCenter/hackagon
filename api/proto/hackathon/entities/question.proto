@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+enum QuestionType {
+  QUESTION_TYPE_UNSPECIFIED = 0;
+  QUESTION_TYPE_TEXT = 1;
+  QUESTION_TYPE_BOOL = 2;
+}
+
+message Question {
+  string id = 1;
+  string key = 2 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]*$"];
+  string label = 3;
+  QuestionType type = 4 [(buf.validate.field).enum.defined_only = true];
+  bool mandatory = 5;
+  int32 order = 6;
+}

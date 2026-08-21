@@ -20,17 +20,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	HackathonService_List_FullMethodName               = "/hackathon.HackathonService/List"
-	HackathonService_Get_FullMethodName                = "/hackathon.HackathonService/Get"
-	HackathonService_Create_FullMethodName             = "/hackathon.HackathonService/Create"
-	HackathonService_Edit_FullMethodName               = "/hackathon.HackathonService/Edit"
-	HackathonService_SetCapabilities_FullMethodName    = "/hackathon.HackathonService/SetCapabilities"
-	HackathonService_SetCurrentPhase_FullMethodName    = "/hackathon.HackathonService/SetCurrentPhase"
-	HackathonService_Join_FullMethodName               = "/hackathon.HackathonService/Join"
-	HackathonService_ApproveParticipant_FullMethodName = "/hackathon.HackathonService/ApproveParticipant"
-	HackathonService_RemoveParticipant_FullMethodName  = "/hackathon.HackathonService/RemoveParticipant"
-	HackathonService_AddOwner_FullMethodName           = "/hackathon.HackathonService/AddOwner"
-	HackathonService_RemoveOwner_FullMethodName        = "/hackathon.HackathonService/RemoveOwner"
+	HackathonService_List_FullMethodName                   = "/hackathon.HackathonService/List"
+	HackathonService_Get_FullMethodName                    = "/hackathon.HackathonService/Get"
+	HackathonService_Create_FullMethodName                 = "/hackathon.HackathonService/Create"
+	HackathonService_Edit_FullMethodName                   = "/hackathon.HackathonService/Edit"
+	HackathonService_SetCapabilities_FullMethodName        = "/hackathon.HackathonService/SetCapabilities"
+	HackathonService_SetCurrentPhase_FullMethodName        = "/hackathon.HackathonService/SetCurrentPhase"
+	HackathonService_Join_FullMethodName                   = "/hackathon.HackathonService/Join"
+	HackathonService_ApproveParticipant_FullMethodName     = "/hackathon.HackathonService/ApproveParticipant"
+	HackathonService_RemoveParticipant_FullMethodName      = "/hackathon.HackathonService/RemoveParticipant"
+	HackathonService_AddOwner_FullMethodName               = "/hackathon.HackathonService/AddOwner"
+	HackathonService_RemoveOwner_FullMethodName            = "/hackathon.HackathonService/RemoveOwner"
+	HackathonService_CreateQuestion_FullMethodName         = "/hackathon.HackathonService/CreateQuestion"
+	HackathonService_EditQuestion_FullMethodName           = "/hackathon.HackathonService/EditQuestion"
+	HackathonService_RemoveQuestion_FullMethodName         = "/hackathon.HackathonService/RemoveQuestion"
+	HackathonService_ListQuestions_FullMethodName          = "/hackathon.HackathonService/ListQuestions"
+	HackathonService_SubmitAnswers_FullMethodName          = "/hackathon.HackathonService/SubmitAnswers"
+	HackathonService_ListParticipantAnswers_FullMethodName = "/hackathon.HackathonService/ListParticipantAnswers"
 )
 
 // HackathonServiceClient is the client API for HackathonService service.
@@ -48,6 +54,14 @@ type HackathonServiceClient interface {
 	RemoveParticipant(ctx context.Context, in *hackathon_svc.RemoveParticipantRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveParticipantResponse, error)
 	AddOwner(ctx context.Context, in *hackathon_svc.AddOwnerRequest, opts ...grpc.CallOption) (*hackathon_svc.AddOwnerResponse, error)
 	RemoveOwner(ctx context.Context, in *hackathon_svc.RemoveOwnerRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveOwnerResponse, error)
+	// Registration questions
+	CreateQuestion(ctx context.Context, in *hackathon_svc.CreateQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.CreateQuestionResponse, error)
+	EditQuestion(ctx context.Context, in *hackathon_svc.EditQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.EditQuestionResponse, error)
+	RemoveQuestion(ctx context.Context, in *hackathon_svc.RemoveQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveQuestionResponse, error)
+	ListQuestions(ctx context.Context, in *hackathon_svc.ListQuestionsRequest, opts ...grpc.CallOption) (*hackathon_svc.ListQuestionsResponse, error)
+	SubmitAnswers(ctx context.Context, in *hackathon_svc.SubmitAnswersRequest, opts ...grpc.CallOption) (*hackathon_svc.SubmitAnswersResponse, error)
+	// Participant answers (admin)
+	ListParticipantAnswers(ctx context.Context, in *hackathon_svc.ListParticipantAnswersRequest, opts ...grpc.CallOption) (*hackathon_svc.ListParticipantAnswersResponse, error)
 }
 
 type hackathonServiceClient struct {
@@ -168,6 +182,66 @@ func (c *hackathonServiceClient) RemoveOwner(ctx context.Context, in *hackathon_
 	return out, nil
 }
 
+func (c *hackathonServiceClient) CreateQuestion(ctx context.Context, in *hackathon_svc.CreateQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.CreateQuestionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.CreateQuestionResponse)
+	err := c.cc.Invoke(ctx, HackathonService_CreateQuestion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) EditQuestion(ctx context.Context, in *hackathon_svc.EditQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.EditQuestionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.EditQuestionResponse)
+	err := c.cc.Invoke(ctx, HackathonService_EditQuestion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) RemoveQuestion(ctx context.Context, in *hackathon_svc.RemoveQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveQuestionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.RemoveQuestionResponse)
+	err := c.cc.Invoke(ctx, HackathonService_RemoveQuestion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) ListQuestions(ctx context.Context, in *hackathon_svc.ListQuestionsRequest, opts ...grpc.CallOption) (*hackathon_svc.ListQuestionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.ListQuestionsResponse)
+	err := c.cc.Invoke(ctx, HackathonService_ListQuestions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) SubmitAnswers(ctx context.Context, in *hackathon_svc.SubmitAnswersRequest, opts ...grpc.CallOption) (*hackathon_svc.SubmitAnswersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.SubmitAnswersResponse)
+	err := c.cc.Invoke(ctx, HackathonService_SubmitAnswers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) ListParticipantAnswers(ctx context.Context, in *hackathon_svc.ListParticipantAnswersRequest, opts ...grpc.CallOption) (*hackathon_svc.ListParticipantAnswersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.ListParticipantAnswersResponse)
+	err := c.cc.Invoke(ctx, HackathonService_ListParticipantAnswers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // HackathonServiceServer is the server API for HackathonService service.
 // All implementations must embed UnimplementedHackathonServiceServer
 // for forward compatibility.
@@ -183,6 +257,14 @@ type HackathonServiceServer interface {
 	RemoveParticipant(context.Context, *hackathon_svc.RemoveParticipantRequest) (*hackathon_svc.RemoveParticipantResponse, error)
 	AddOwner(context.Context, *hackathon_svc.AddOwnerRequest) (*hackathon_svc.AddOwnerResponse, error)
 	RemoveOwner(context.Context, *hackathon_svc.RemoveOwnerRequest) (*hackathon_svc.RemoveOwnerResponse, error)
+	// Registration questions
+	CreateQuestion(context.Context, *hackathon_svc.CreateQuestionRequest) (*hackathon_svc.CreateQuestionResponse, error)
+	EditQuestion(context.Context, *hackathon_svc.EditQuestionRequest) (*hackathon_svc.EditQuestionResponse, error)
+	RemoveQuestion(context.Context, *hackathon_svc.RemoveQuestionRequest) (*hackathon_svc.RemoveQuestionResponse, error)
+	ListQuestions(context.Context, *hackathon_svc.ListQuestionsRequest) (*hackathon_svc.ListQuestionsResponse, error)
+	SubmitAnswers(context.Context, *hackathon_svc.SubmitAnswersRequest) (*hackathon_svc.SubmitAnswersResponse, error)
+	// Participant answers (admin)
+	ListParticipantAnswers(context.Context, *hackathon_svc.ListParticipantAnswersRequest) (*hackathon_svc.ListParticipantAnswersResponse, error)
 	mustEmbedUnimplementedHackathonServiceServer()
 }
 
@@ -225,6 +307,24 @@ func (UnimplementedHackathonServiceServer) AddOwner(context.Context, *hackathon_
 }
 func (UnimplementedHackathonServiceServer) RemoveOwner(context.Context, *hackathon_svc.RemoveOwnerRequest) (*hackathon_svc.RemoveOwnerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveOwner not implemented")
+}
+func (UnimplementedHackathonServiceServer) CreateQuestion(context.Context, *hackathon_svc.CreateQuestionRequest) (*hackathon_svc.CreateQuestionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateQuestion not implemented")
+}
+func (UnimplementedHackathonServiceServer) EditQuestion(context.Context, *hackathon_svc.EditQuestionRequest) (*hackathon_svc.EditQuestionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EditQuestion not implemented")
+}
+func (UnimplementedHackathonServiceServer) RemoveQuestion(context.Context, *hackathon_svc.RemoveQuestionRequest) (*hackathon_svc.RemoveQuestionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveQuestion not implemented")
+}
+func (UnimplementedHackathonServiceServer) ListQuestions(context.Context, *hackathon_svc.ListQuestionsRequest) (*hackathon_svc.ListQuestionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListQuestions not implemented")
+}
+func (UnimplementedHackathonServiceServer) SubmitAnswers(context.Context, *hackathon_svc.SubmitAnswersRequest) (*hackathon_svc.SubmitAnswersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitAnswers not implemented")
+}
+func (UnimplementedHackathonServiceServer) ListParticipantAnswers(context.Context, *hackathon_svc.ListParticipantAnswersRequest) (*hackathon_svc.ListParticipantAnswersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListParticipantAnswers not implemented")
 }
 func (UnimplementedHackathonServiceServer) mustEmbedUnimplementedHackathonServiceServer() {}
 func (UnimplementedHackathonServiceServer) testEmbeddedByValue()                          {}
@@ -445,6 +545,114 @@ func _HackathonService_RemoveOwner_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HackathonService_CreateQuestion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.CreateQuestionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).CreateQuestion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_CreateQuestion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).CreateQuestion(ctx, req.(*hackathon_svc.CreateQuestionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_EditQuestion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.EditQuestionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).EditQuestion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_EditQuestion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).EditQuestion(ctx, req.(*hackathon_svc.EditQuestionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_RemoveQuestion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.RemoveQuestionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).RemoveQuestion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_RemoveQuestion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).RemoveQuestion(ctx, req.(*hackathon_svc.RemoveQuestionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_ListQuestions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.ListQuestionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).ListQuestions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_ListQuestions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).ListQuestions(ctx, req.(*hackathon_svc.ListQuestionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_SubmitAnswers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.SubmitAnswersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).SubmitAnswers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_SubmitAnswers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).SubmitAnswers(ctx, req.(*hackathon_svc.SubmitAnswersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_ListParticipantAnswers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.ListParticipantAnswersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).ListParticipantAnswers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_ListParticipantAnswers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).ListParticipantAnswers(ctx, req.(*hackathon_svc.ListParticipantAnswersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // HackathonService_ServiceDesc is the grpc.ServiceDesc for HackathonService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -495,6 +703,30 @@ var HackathonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveOwner",
 			Handler:    _HackathonService_RemoveOwner_Handler,
+		},
+		{
+			MethodName: "CreateQuestion",
+			Handler:    _HackathonService_CreateQuestion_Handler,
+		},
+		{
+			MethodName: "EditQuestion",
+			Handler:    _HackathonService_EditQuestion_Handler,
+		},
+		{
+			MethodName: "RemoveQuestion",
+			Handler:    _HackathonService_RemoveQuestion_Handler,
+		},
+		{
+			MethodName: "ListQuestions",
+			Handler:    _HackathonService_ListQuestions_Handler,
+		},
+		{
+			MethodName: "SubmitAnswers",
+			Handler:    _HackathonService_SubmitAnswers_Handler,
+		},
+		{
+			MethodName: "ListParticipantAnswers",
+			Handler:    _HackathonService_ListParticipantAnswers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

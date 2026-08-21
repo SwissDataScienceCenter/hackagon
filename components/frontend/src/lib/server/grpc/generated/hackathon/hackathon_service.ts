@@ -10,24 +10,36 @@ import { AddOwnerRequest } from "./messages/hackathon_svc/add_owner_request";
 import { AddOwnerResponse } from "./messages/hackathon_svc/add_owner_response";
 import { ApproveParticipantRequest } from "./messages/hackathon_svc/approve_participant_request";
 import { ApproveParticipantResponse } from "./messages/hackathon_svc/approve_participant_response";
+import { CreateQuestionRequest } from "./messages/hackathon_svc/create_question_request";
+import { CreateQuestionResponse } from "./messages/hackathon_svc/create_question_response";
 import { CreateRequest } from "./messages/hackathon_svc/create_request";
 import { CreateResponse } from "./messages/hackathon_svc/create_response";
+import { EditQuestionRequest } from "./messages/hackathon_svc/edit_question_request";
+import { EditQuestionResponse } from "./messages/hackathon_svc/edit_question_response";
 import { EditRequest } from "./messages/hackathon_svc/edit_request";
 import { EditResponse } from "./messages/hackathon_svc/edit_response";
 import { GetRequest } from "./messages/hackathon_svc/get_request";
 import { GetResponse } from "./messages/hackathon_svc/get_response";
 import { JoinRequest } from "./messages/hackathon_svc/join_request";
 import { JoinResponse } from "./messages/hackathon_svc/join_response";
+import { ListParticipantAnswersRequest } from "./messages/hackathon_svc/list_participant_answers_request";
+import { ListParticipantAnswersResponse } from "./messages/hackathon_svc/list_participant_answers_response";
+import { ListQuestionsRequest } from "./messages/hackathon_svc/list_questions_request";
+import { ListQuestionsResponse } from "./messages/hackathon_svc/list_questions_response";
 import { ListRequest } from "./messages/hackathon_svc/list_request";
 import { ListResponse } from "./messages/hackathon_svc/list_response";
 import { RemoveOwnerRequest } from "./messages/hackathon_svc/remove_owner_request";
 import { RemoveOwnerResponse } from "./messages/hackathon_svc/remove_owner_response";
 import { RemoveParticipantRequest } from "./messages/hackathon_svc/remove_participant_request";
 import { RemoveParticipantResponse } from "./messages/hackathon_svc/remove_participant_response";
+import { RemoveQuestionRequest } from "./messages/hackathon_svc/remove_question_request";
+import { RemoveQuestionResponse } from "./messages/hackathon_svc/remove_question_response";
 import { SetCapabilitiesRequest } from "./messages/hackathon_svc/set_capabilities_request";
 import { SetCapabilitiesResponse } from "./messages/hackathon_svc/set_capabilities_response";
 import { SetCurrentPhaseRequest } from "./messages/hackathon_svc/set_current_phase_request";
 import { SetCurrentPhaseResponse } from "./messages/hackathon_svc/set_current_phase_response";
+import { SubmitAnswersRequest } from "./messages/hackathon_svc/submit_answers_request";
+import { SubmitAnswersResponse } from "./messages/hackathon_svc/submit_answers_response";
 
 export const protobufPackage = "hackathon";
 
@@ -124,6 +136,56 @@ export const HackathonServiceDefinition = {
       responseStream: false,
       options: {},
     },
+    /** Registration questions */
+    createQuestion: {
+      name: "CreateQuestion",
+      requestType: CreateQuestionRequest as typeof CreateQuestionRequest,
+      requestStream: false,
+      responseType: CreateQuestionResponse as typeof CreateQuestionResponse,
+      responseStream: false,
+      options: {},
+    },
+    editQuestion: {
+      name: "EditQuestion",
+      requestType: EditQuestionRequest as typeof EditQuestionRequest,
+      requestStream: false,
+      responseType: EditQuestionResponse as typeof EditQuestionResponse,
+      responseStream: false,
+      options: {},
+    },
+    removeQuestion: {
+      name: "RemoveQuestion",
+      requestType: RemoveQuestionRequest as typeof RemoveQuestionRequest,
+      requestStream: false,
+      responseType: RemoveQuestionResponse as typeof RemoveQuestionResponse,
+      responseStream: false,
+      options: {},
+    },
+    listQuestions: {
+      name: "ListQuestions",
+      requestType: ListQuestionsRequest as typeof ListQuestionsRequest,
+      requestStream: false,
+      responseType: ListQuestionsResponse as typeof ListQuestionsResponse,
+      responseStream: false,
+      options: {},
+    },
+    submitAnswers: {
+      name: "SubmitAnswers",
+      requestType: SubmitAnswersRequest as typeof SubmitAnswersRequest,
+      requestStream: false,
+      responseType: SubmitAnswersResponse as typeof SubmitAnswersResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** Participant answers (admin) */
+    listParticipantAnswers: {
+      name: "ListParticipantAnswers",
+      requestType: ListParticipantAnswersRequest as typeof ListParticipantAnswersRequest,
+      requestStream: false,
+      responseType: ListParticipantAnswersResponse as typeof ListParticipantAnswersResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
 
@@ -154,6 +216,32 @@ export interface HackathonServiceImplementation<CallContextExt = {}> {
     request: RemoveOwnerRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<RemoveOwnerResponse>>;
+  /** Registration questions */
+  createQuestion(
+    request: CreateQuestionRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<CreateQuestionResponse>>;
+  editQuestion(
+    request: EditQuestionRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<EditQuestionResponse>>;
+  removeQuestion(
+    request: RemoveQuestionRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<RemoveQuestionResponse>>;
+  listQuestions(
+    request: ListQuestionsRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<ListQuestionsResponse>>;
+  submitAnswers(
+    request: SubmitAnswersRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<SubmitAnswersResponse>>;
+  /** Participant answers (admin) */
+  listParticipantAnswers(
+    request: ListParticipantAnswersRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<ListParticipantAnswersResponse>>;
 }
 
 export interface HackathonServiceClient<CallOptionsExt = {}> {
@@ -183,6 +271,32 @@ export interface HackathonServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<RemoveOwnerRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<RemoveOwnerResponse>;
+  /** Registration questions */
+  createQuestion(
+    request: DeepPartial<CreateQuestionRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<CreateQuestionResponse>;
+  editQuestion(
+    request: DeepPartial<EditQuestionRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<EditQuestionResponse>;
+  removeQuestion(
+    request: DeepPartial<RemoveQuestionRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<RemoveQuestionResponse>;
+  listQuestions(
+    request: DeepPartial<ListQuestionsRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<ListQuestionsResponse>;
+  submitAnswers(
+    request: DeepPartial<SubmitAnswersRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<SubmitAnswersResponse>;
+  /** Participant answers (admin) */
+  listParticipantAnswers(
+    request: DeepPartial<ListParticipantAnswersRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<ListParticipantAnswersResponse>;
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;

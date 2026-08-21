@@ -2,38 +2,37 @@
 // versions:
 //   protoc-gen-ts_proto  v2.11.6
 //   protoc               unknown
-// source: hackathon/messages/hackathon_svc/join_request.proto
+// source: hackathon/messages/hackathon_svc/remove_question_request.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Answer } from "../../entities/answer";
 
 export const protobufPackage = "hackathon.messages.hackathon_svc";
 
-export interface JoinRequest {
+export interface RemoveQuestionRequest {
   hackathonId: string;
-  answers: Answer[];
+  questionId: string;
 }
 
-function createBaseJoinRequest(): JoinRequest {
-  return { hackathonId: "", answers: [] };
+function createBaseRemoveQuestionRequest(): RemoveQuestionRequest {
+  return { hackathonId: "", questionId: "" };
 }
 
-export const JoinRequest: MessageFns<JoinRequest> = {
-  encode(message: JoinRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const RemoveQuestionRequest: MessageFns<RemoveQuestionRequest> = {
+  encode(message: RemoveQuestionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.hackathonId !== "") {
       writer.uint32(10).string(message.hackathonId);
     }
-    for (const v of message.answers) {
-      Answer.encode(v!, writer.uint32(18).fork()).join();
+    if (message.questionId !== "") {
+      writer.uint32(18).string(message.questionId);
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): JoinRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): RemoveQuestionRequest {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseJoinRequest();
+    const message = createBaseRemoveQuestionRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -50,7 +49,7 @@ export const JoinRequest: MessageFns<JoinRequest> = {
             break;
           }
 
-          message.answers.push(Answer.decode(reader, reader.uint32()));
+          message.questionId = reader.string();
           continue;
         }
       }
@@ -62,35 +61,39 @@ export const JoinRequest: MessageFns<JoinRequest> = {
     return message;
   },
 
-  fromJSON(object: any): JoinRequest {
+  fromJSON(object: any): RemoveQuestionRequest {
     return {
       hackathonId: isSet(object.hackathonId)
         ? globalThis.String(object.hackathonId)
         : isSet(object.hackathon_id)
         ? globalThis.String(object.hackathon_id)
         : "",
-      answers: globalThis.Array.isArray(object?.answers) ? object.answers.map((e: any) => Answer.fromJSON(e)) : [],
+      questionId: isSet(object.questionId)
+        ? globalThis.String(object.questionId)
+        : isSet(object.question_id)
+        ? globalThis.String(object.question_id)
+        : "",
     };
   },
 
-  toJSON(message: JoinRequest): unknown {
+  toJSON(message: RemoveQuestionRequest): unknown {
     const obj: any = {};
     if (message.hackathonId !== "") {
       obj.hackathonId = message.hackathonId;
     }
-    if (message.answers?.length) {
-      obj.answers = message.answers.map((e) => Answer.toJSON(e));
+    if (message.questionId !== "") {
+      obj.questionId = message.questionId;
     }
     return obj;
   },
 
-  create(base?: DeepPartial<JoinRequest>): JoinRequest {
-    return JoinRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<RemoveQuestionRequest>): RemoveQuestionRequest {
+    return RemoveQuestionRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<JoinRequest>): JoinRequest {
-    const message = createBaseJoinRequest();
+  fromPartial(object: DeepPartial<RemoveQuestionRequest>): RemoveQuestionRequest {
+    const message = createBaseRemoveQuestionRequest();
     message.hackathonId = object.hackathonId ?? "";
-    message.answers = object.answers?.map((e) => Answer.fromPartial(e)) || [];
+    message.questionId = object.questionId ?? "";
     return message;
   },
 };

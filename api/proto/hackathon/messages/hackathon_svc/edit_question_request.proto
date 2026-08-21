@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package hackathon.messages.hackathon_svc;
+
+import "buf/validate/validate.proto";
+import "hackathon/entities/question.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
+
+message EditQuestionRequest {
+  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
+  string question_id = 2 [(buf.validate.field).string.uuid = true];
+  optional string label = 3 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 255
+  ];
+  optional hackathon.entities.QuestionType type = 4;
+  optional bool mandatory = 5;
+  optional int32 order = 6;
+}

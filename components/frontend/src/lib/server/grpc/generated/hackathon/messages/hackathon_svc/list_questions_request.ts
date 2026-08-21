@@ -2,38 +2,33 @@
 // versions:
 //   protoc-gen-ts_proto  v2.11.6
 //   protoc               unknown
-// source: hackathon/messages/hackathon_svc/join_request.proto
+// source: hackathon/messages/hackathon_svc/list_questions_request.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Answer } from "../../entities/answer";
 
 export const protobufPackage = "hackathon.messages.hackathon_svc";
 
-export interface JoinRequest {
+export interface ListQuestionsRequest {
   hackathonId: string;
-  answers: Answer[];
 }
 
-function createBaseJoinRequest(): JoinRequest {
-  return { hackathonId: "", answers: [] };
+function createBaseListQuestionsRequest(): ListQuestionsRequest {
+  return { hackathonId: "" };
 }
 
-export const JoinRequest: MessageFns<JoinRequest> = {
-  encode(message: JoinRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const ListQuestionsRequest: MessageFns<ListQuestionsRequest> = {
+  encode(message: ListQuestionsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.hackathonId !== "") {
       writer.uint32(10).string(message.hackathonId);
-    }
-    for (const v of message.answers) {
-      Answer.encode(v!, writer.uint32(18).fork()).join();
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): JoinRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): ListQuestionsRequest {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseJoinRequest();
+    const message = createBaseListQuestionsRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -45,14 +40,6 @@ export const JoinRequest: MessageFns<JoinRequest> = {
           message.hackathonId = reader.string();
           continue;
         }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.answers.push(Answer.decode(reader, reader.uint32()));
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -62,35 +49,30 @@ export const JoinRequest: MessageFns<JoinRequest> = {
     return message;
   },
 
-  fromJSON(object: any): JoinRequest {
+  fromJSON(object: any): ListQuestionsRequest {
     return {
       hackathonId: isSet(object.hackathonId)
         ? globalThis.String(object.hackathonId)
         : isSet(object.hackathon_id)
         ? globalThis.String(object.hackathon_id)
         : "",
-      answers: globalThis.Array.isArray(object?.answers) ? object.answers.map((e: any) => Answer.fromJSON(e)) : [],
     };
   },
 
-  toJSON(message: JoinRequest): unknown {
+  toJSON(message: ListQuestionsRequest): unknown {
     const obj: any = {};
     if (message.hackathonId !== "") {
       obj.hackathonId = message.hackathonId;
     }
-    if (message.answers?.length) {
-      obj.answers = message.answers.map((e) => Answer.toJSON(e));
-    }
     return obj;
   },
 
-  create(base?: DeepPartial<JoinRequest>): JoinRequest {
-    return JoinRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<ListQuestionsRequest>): ListQuestionsRequest {
+    return ListQuestionsRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<JoinRequest>): JoinRequest {
-    const message = createBaseJoinRequest();
+  fromPartial(object: DeepPartial<ListQuestionsRequest>): ListQuestionsRequest {
+    const message = createBaseListQuestionsRequest();
     message.hackathonId = object.hackathonId ?? "";
-    message.answers = object.answers?.map((e) => Answer.fromPartial(e)) || [];
     return message;
   },
 };
