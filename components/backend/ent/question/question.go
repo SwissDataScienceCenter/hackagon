@@ -22,8 +22,8 @@ const (
 	FieldKey = "key"
 	// FieldLabel holds the string denoting the label field in the database.
 	FieldLabel = "label"
-	// FieldType holds the string denoting the type field in the database.
-	FieldType = "type"
+	// FieldDataType holds the string denoting the data_type field in the database.
+	FieldDataType = "data_type"
 	// FieldMandatory holds the string denoting the mandatory field in the database.
 	FieldMandatory = "mandatory"
 	// FieldOrder holds the string denoting the order field in the database.
@@ -78,7 +78,7 @@ var Columns = []string{
 	FieldHackathonID,
 	FieldKey,
 	FieldLabel,
-	FieldType,
+	FieldDataType,
 	FieldMandatory,
 	FieldOrder,
 	FieldCreatedAt,
@@ -124,26 +124,26 @@ var (
 	DefaultID func() uuid.UUID
 )
 
-// Type defines the type for the "type" enum field.
-type Type string
+// DataType defines the type for the "data_type" enum field.
+type DataType string
 
-// Type values.
+// DataType values.
 const (
-	TypeText Type = "text"
-	TypeBool Type = "bool"
+	DataTypeText DataType = "text"
+	DataTypeBool DataType = "bool"
 )
 
-func (_type Type) String() string {
-	return string(_type)
+func (dt DataType) String() string {
+	return string(dt)
 }
 
-// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
-func TypeValidator(_type Type) error {
-	switch _type {
-	case TypeText, TypeBool:
+// DataTypeValidator is a validator for the "data_type" field enum values. It is called by the builders before save.
+func DataTypeValidator(dt DataType) error {
+	switch dt {
+	case DataTypeText, DataTypeBool:
 		return nil
 	default:
-		return fmt.Errorf("question: invalid enum value for type field: %q", _type)
+		return fmt.Errorf("question: invalid enum value for data_type field: %q", dt)
 	}
 }
 
@@ -170,9 +170,9 @@ func ByLabel(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLabel, opts...).ToFunc()
 }
 
-// ByType orders the results by the type field.
-func ByType(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldType, opts...).ToFunc()
+// ByDataType orders the results by the data_type field.
+func ByDataType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDataType, opts...).ToFunc()
 }
 
 // ByMandatory orders the results by the mandatory field.

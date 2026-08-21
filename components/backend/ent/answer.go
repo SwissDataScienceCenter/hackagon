@@ -15,23 +15,21 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 )
 
-// A participant's answer to a registration question. One answer per user per question.
+// A participant's answer to a registration question. One answer per participant per question.
 type Answer struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// The question this answer belongs to.
+	// The id of the question this is an answer to.
 	QuestionID uuid.UUID `json:"question_id,omitempty"`
-	// The user who submitted this answer.
+	// The user that answered this question.
 	UserID uuid.UUID `json:"user_id,omitempty"`
 	// The answer value. For bool questions, stored as "true" or "false".
 	Value string `json:"value,omitempty"`
-	// The type of the question (for readability when reading answers).
-	Type answer.Type `json:"type,omitempty"`
 	// Timestamp when the answer was first submitted.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Timestamp of the last update.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	ModifiedAt time.Time `json:"modified_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AnswerQuery when eager-loading is set.
 	Edges        AnswerEdges `json:"edges"`
@@ -76,9 +74,9 @@ func (*Answer) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case answer.FieldValue, answer.FieldType:
+		case answer.FieldValue:
 			values[i] = new(sql.NullString)
-		case answer.FieldCreatedAt, answer.FieldUpdatedAt:
+		case answer.FieldCreatedAt, answer.FieldModifiedAt:
 			values[i] = new(sql.NullTime)
 		case answer.FieldID, answer.FieldQuestionID, answer.FieldUserID:
 			values[i] = new(uuid.UUID)
@@ -121,23 +119,17 @@ func (_m *Answer) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Value = value.String
 			}
-		case answer.FieldType:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field type", values[i])
-			} else if value.Valid {
-				_m.Type = answer.Type(value.String)
-			}
 		case answer.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case answer.FieldUpdatedAt:
+		case answer.FieldModifiedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+				return fmt.Errorf("unexpected type %T for field modified_at", values[i])
 			} else if value.Valid {
-				_m.UpdatedAt = value.Time
+				_m.ModifiedAt = value.Time
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -194,14 +186,11 @@ func (_m *Answer) String() string {
 	builder.WriteString("value=")
 	builder.WriteString(_m.Value)
 	builder.WriteString(", ")
-	builder.WriteString("type=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Type))
-	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString("modified_at=")
+	builder.WriteString(_m.ModifiedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -19,7 +19,7 @@ type Answer struct {
 func (Answer) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		schema.Comment(
-			"A participant's answer to a registration question. One answer per user per question.",
+			"A participant's answer to a registration question. One answer per participant per question.",
 		),
 	}
 }
@@ -28,19 +28,16 @@ func (Answer) Annotations() []schema.Annotation {
 func (Answer) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("question_id", uuid.UUID{}).
-			Comment("The question this answer belongs to."),
+			Comment("The id of the question this is an answer to."),
 		field.UUID("user_id", uuid.UUID{}).
-			Comment("The user who submitted this answer."),
+			Comment("The user that answered this question."),
 		field.String("value").
 			Comment("The answer value. For bool questions, stored as \"true\" or \"false\"."),
-		field.Enum("type").
-			Values("text", "bool").
-			Comment("The type of the question (for readability when reading answers)."),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).
 			Comment("Timestamp when the answer was first submitted."),
-		field.Time("updated_at").
+		field.Time("modified_at").
 			Default(time.Now).UpdateDefault(time.Now).
 			Comment("Timestamp of the last update."),
 	}
@@ -54,7 +51,7 @@ func (Answer) Edges() []ent.Edge {
 			Field("question_id").
 			Comment("The question this answer belongs to."),
 		edge.From("user", User.Type).
-			Ref("created_answers").Unique().Required().
+			Ref("registration_answers").Unique().Required().
 			Field("user_id").
 			Comment("The user who submitted this answer."),
 	}
@@ -63,7 +60,7 @@ func (Answer) Edges() []ent.Edge {
 // Indexes of the Answer.
 func (Answer) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("question_id", "user_id").Unique(),
+		index.Edges("question", "user").Unique(),
 	}
 }
 

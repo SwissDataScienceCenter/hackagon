@@ -7,7 +7,6 @@
 package entities
 
 import (
-	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -25,8 +24,8 @@ const (
 type Answer struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	QuestionId    string                 `protobuf:"bytes,1,opt,name=question_id,json=questionId,proto3" json:"question_id,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Type          QuestionType           `protobuf:"varint,3,opt,name=type,proto3,enum=hackathon.entities.QuestionType" json:"type,omitempty"`
+	ParticipantId string                 `protobuf:"bytes,2,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -68,6 +67,13 @@ func (x *Answer) GetQuestionId() string {
 	return ""
 }
 
+func (x *Answer) GetParticipantId() string {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return ""
+}
+
 func (x *Answer) GetValue() string {
 	if x != nil {
 		return x.Value
@@ -75,23 +81,16 @@ func (x *Answer) GetValue() string {
 	return ""
 }
 
-func (x *Answer) GetType() QuestionType {
-	if x != nil {
-		return x.Type
-	}
-	return QuestionType_QUESTION_TYPE_UNSPECIFIED
-}
-
 var File_hackathon_entities_answer_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_answer_proto_rawDesc = "" +
 	"\n" +
-	"\x1fhackathon/entities/answer.proto\x12\x12hackathon.entities\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\x7f\n" +
+	"\x1fhackathon/entities/answer.proto\x12\x12hackathon.entities\"f\n" +
 	"\x06Answer\x12\x1f\n" +
 	"\vquestion_id\x18\x01 \x01(\tR\n" +
-	"questionId\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\x12>\n" +
-	"\x04type\x18\x03 \x01(\x0e2 .hackathon.entities.QuestionTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04typeBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
+	"questionId\x12%\n" +
+	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\tR\x05valueBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
 	file_hackathon_entities_answer_proto_rawDescOnce sync.Once
@@ -107,16 +106,14 @@ func file_hackathon_entities_answer_proto_rawDescGZIP() []byte {
 
 var file_hackathon_entities_answer_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_hackathon_entities_answer_proto_goTypes = []any{
-	(*Answer)(nil),    // 0: hackathon.entities.Answer
-	(QuestionType)(0), // 1: hackathon.entities.QuestionType
+	(*Answer)(nil), // 0: hackathon.entities.Answer
 }
 var file_hackathon_entities_answer_proto_depIdxs = []int32{
-	1, // 0: hackathon.entities.Answer.type:type_name -> hackathon.entities.QuestionType
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // [0:0] is the sub-list for method output_type
+	0, // [0:0] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_hackathon_entities_answer_proto_init() }
@@ -124,7 +121,6 @@ func file_hackathon_entities_answer_proto_init() {
 	if File_hackathon_entities_answer_proto != nil {
 		return
 	}
-	file_hackathon_entities_question_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

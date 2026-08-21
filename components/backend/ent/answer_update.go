@@ -73,23 +73,9 @@ func (_u *AnswerUpdate) SetNillableValue(v *string) *AnswerUpdate {
 	return _u
 }
 
-// SetType sets the "type" field.
-func (_u *AnswerUpdate) SetType(v answer.Type) *AnswerUpdate {
-	_u.mutation.SetType(v)
-	return _u
-}
-
-// SetNillableType sets the "type" field if the given value is not nil.
-func (_u *AnswerUpdate) SetNillableType(v *answer.Type) *AnswerUpdate {
-	if v != nil {
-		_u.SetType(*v)
-	}
-	return _u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AnswerUpdate) SetUpdatedAt(v time.Time) *AnswerUpdate {
-	_u.mutation.SetUpdatedAt(v)
+// SetModifiedAt sets the "modified_at" field.
+func (_u *AnswerUpdate) SetModifiedAt(v time.Time) *AnswerUpdate {
+	_u.mutation.SetModifiedAt(v)
 	return _u
 }
 
@@ -150,19 +136,14 @@ func (_u *AnswerUpdate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_u *AnswerUpdate) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := answer.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
+	if _, ok := _u.mutation.ModifiedAt(); !ok {
+		v := answer.UpdateDefaultModifiedAt()
+		_u.mutation.SetModifiedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *AnswerUpdate) check() error {
-	if v, ok := _u.mutation.GetType(); ok {
-		if err := answer.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Answer.type": %w`, err)}
-		}
-	}
 	if _u.mutation.QuestionCleared() && len(_u.mutation.QuestionIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Answer.question"`)
 	}
@@ -187,11 +168,8 @@ func (_u *AnswerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Value(); ok {
 		_spec.SetField(answer.FieldValue, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(answer.FieldType, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(answer.FieldUpdatedAt, field.TypeTime, value)
+	if value, ok := _u.mutation.ModifiedAt(); ok {
+		_spec.SetField(answer.FieldModifiedAt, field.TypeTime, value)
 	}
 	if _u.mutation.QuestionCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -313,23 +291,9 @@ func (_u *AnswerUpdateOne) SetNillableValue(v *string) *AnswerUpdateOne {
 	return _u
 }
 
-// SetType sets the "type" field.
-func (_u *AnswerUpdateOne) SetType(v answer.Type) *AnswerUpdateOne {
-	_u.mutation.SetType(v)
-	return _u
-}
-
-// SetNillableType sets the "type" field if the given value is not nil.
-func (_u *AnswerUpdateOne) SetNillableType(v *answer.Type) *AnswerUpdateOne {
-	if v != nil {
-		_u.SetType(*v)
-	}
-	return _u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AnswerUpdateOne) SetUpdatedAt(v time.Time) *AnswerUpdateOne {
-	_u.mutation.SetUpdatedAt(v)
+// SetModifiedAt sets the "modified_at" field.
+func (_u *AnswerUpdateOne) SetModifiedAt(v time.Time) *AnswerUpdateOne {
+	_u.mutation.SetModifiedAt(v)
 	return _u
 }
 
@@ -403,19 +367,14 @@ func (_u *AnswerUpdateOne) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_u *AnswerUpdateOne) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := answer.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
+	if _, ok := _u.mutation.ModifiedAt(); !ok {
+		v := answer.UpdateDefaultModifiedAt()
+		_u.mutation.SetModifiedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *AnswerUpdateOne) check() error {
-	if v, ok := _u.mutation.GetType(); ok {
-		if err := answer.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Answer.type": %w`, err)}
-		}
-	}
 	if _u.mutation.QuestionCleared() && len(_u.mutation.QuestionIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Answer.question"`)
 	}
@@ -457,11 +416,8 @@ func (_u *AnswerUpdateOne) sqlSave(ctx context.Context) (_node *Answer, err erro
 	if value, ok := _u.mutation.Value(); ok {
 		_spec.SetField(answer.FieldValue, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(answer.FieldType, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(answer.FieldUpdatedAt, field.TypeTime, value)
+	if value, ok := _u.mutation.ModifiedAt(); ok {
+		_spec.SetField(answer.FieldModifiedAt, field.TypeTime, value)
 	}
 	if _u.mutation.QuestionCleared() {
 		edge := &sqlgraph.EdgeSpec{

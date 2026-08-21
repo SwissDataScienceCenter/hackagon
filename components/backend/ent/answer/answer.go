@@ -3,7 +3,6 @@
 package answer
 
 import (
-	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -22,12 +21,10 @@ const (
 	FieldUserID = "user_id"
 	// FieldValue holds the string denoting the value field in the database.
 	FieldValue = "value"
-	// FieldType holds the string denoting the type field in the database.
-	FieldType = "type"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
-	FieldUpdatedAt = "updated_at"
+	// FieldModifiedAt holds the string denoting the modified_at field in the database.
+	FieldModifiedAt = "modified_at"
 	// EdgeQuestion holds the string denoting the question edge name in mutations.
 	EdgeQuestion = "question"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -56,9 +53,8 @@ var Columns = []string{
 	FieldQuestionID,
 	FieldUserID,
 	FieldValue,
-	FieldType,
 	FieldCreatedAt,
-	FieldUpdatedAt,
+	FieldModifiedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -74,36 +70,13 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
-	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
-	DefaultUpdatedAt func() time.Time
-	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
-	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultModifiedAt holds the default value on creation for the "modified_at" field.
+	DefaultModifiedAt func() time.Time
+	// UpdateDefaultModifiedAt holds the default value on update for the "modified_at" field.
+	UpdateDefaultModifiedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
-
-// Type defines the type for the "type" enum field.
-type Type string
-
-// Type values.
-const (
-	TypeText Type = "text"
-	TypeBool Type = "bool"
-)
-
-func (_type Type) String() string {
-	return string(_type)
-}
-
-// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
-func TypeValidator(_type Type) error {
-	switch _type {
-	case TypeText, TypeBool:
-		return nil
-	default:
-		return fmt.Errorf("answer: invalid enum value for type field: %q", _type)
-	}
-}
 
 // OrderOption defines the ordering options for the Answer queries.
 type OrderOption func(*sql.Selector)
@@ -128,19 +101,14 @@ func ByValue(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldValue, opts...).ToFunc()
 }
 
-// ByType orders the results by the type field.
-func ByType(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldType, opts...).ToFunc()
-}
-
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
 }
 
-// ByUpdatedAt orders the results by the updated_at field.
-func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+// ByModifiedAt orders the results by the modified_at field.
+func ByModifiedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldModifiedAt, opts...).ToFunc()
 }
 
 // ByQuestionField orders the results by question field.

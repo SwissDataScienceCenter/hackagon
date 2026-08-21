@@ -385,19 +385,19 @@ func (_u *UserUpdate) AddModifiedQuestions(v ...*Question) *UserUpdate {
 	return _u.AddModifiedQuestionIDs(ids...)
 }
 
-// AddCreatedAnswerIDs adds the "created_answers" edge to the Answer entity by IDs.
-func (_u *UserUpdate) AddCreatedAnswerIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.AddCreatedAnswerIDs(ids...)
+// AddRegistrationAnswerIDs adds the "registration_answers" edge to the Answer entity by IDs.
+func (_u *UserUpdate) AddRegistrationAnswerIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddRegistrationAnswerIDs(ids...)
 	return _u
 }
 
-// AddCreatedAnswers adds the "created_answers" edges to the Answer entity.
-func (_u *UserUpdate) AddCreatedAnswers(v ...*Answer) *UserUpdate {
+// AddRegistrationAnswers adds the "registration_answers" edges to the Answer entity.
+func (_u *UserUpdate) AddRegistrationAnswers(v ...*Answer) *UserUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.AddCreatedAnswerIDs(ids...)
+	return _u.AddRegistrationAnswerIDs(ids...)
 }
 
 // AddModifiedStateIDs adds the "modified_states" edge to the HackathonState entity by IDs.
@@ -858,25 +858,25 @@ func (_u *UserUpdate) RemoveModifiedQuestions(v ...*Question) *UserUpdate {
 	return _u.RemoveModifiedQuestionIDs(ids...)
 }
 
-// ClearCreatedAnswers clears all "created_answers" edges to the Answer entity.
-func (_u *UserUpdate) ClearCreatedAnswers() *UserUpdate {
-	_u.mutation.ClearCreatedAnswers()
+// ClearRegistrationAnswers clears all "registration_answers" edges to the Answer entity.
+func (_u *UserUpdate) ClearRegistrationAnswers() *UserUpdate {
+	_u.mutation.ClearRegistrationAnswers()
 	return _u
 }
 
-// RemoveCreatedAnswerIDs removes the "created_answers" edge to Answer entities by IDs.
-func (_u *UserUpdate) RemoveCreatedAnswerIDs(ids ...uuid.UUID) *UserUpdate {
-	_u.mutation.RemoveCreatedAnswerIDs(ids...)
+// RemoveRegistrationAnswerIDs removes the "registration_answers" edge to Answer entities by IDs.
+func (_u *UserUpdate) RemoveRegistrationAnswerIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveRegistrationAnswerIDs(ids...)
 	return _u
 }
 
-// RemoveCreatedAnswers removes "created_answers" edges to Answer entities.
-func (_u *UserUpdate) RemoveCreatedAnswers(v ...*Answer) *UserUpdate {
+// RemoveRegistrationAnswers removes "registration_answers" edges to Answer entities.
+func (_u *UserUpdate) RemoveRegistrationAnswers(v ...*Answer) *UserUpdate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.RemoveCreatedAnswerIDs(ids...)
+	return _u.RemoveRegistrationAnswerIDs(ids...)
 }
 
 // ClearModifiedStates clears all "modified_states" edges to the HackathonState entity.
@@ -1897,12 +1897,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.CreatedAnswersCleared() {
+	if _u.mutation.RegistrationAnswersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.CreatedAnswersTable,
-			Columns: []string{user.CreatedAnswersColumn},
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
@@ -1910,12 +1910,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedCreatedAnswersIDs(); len(nodes) > 0 && !_u.mutation.CreatedAnswersCleared() {
+	if nodes := _u.mutation.RemovedRegistrationAnswersIDs(); len(nodes) > 0 && !_u.mutation.RegistrationAnswersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.CreatedAnswersTable,
-			Columns: []string{user.CreatedAnswersColumn},
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
@@ -1926,12 +1926,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.CreatedAnswersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RegistrationAnswersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.CreatedAnswersTable,
-			Columns: []string{user.CreatedAnswersColumn},
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
@@ -2531,19 +2531,19 @@ func (_u *UserUpdateOne) AddModifiedQuestions(v ...*Question) *UserUpdateOne {
 	return _u.AddModifiedQuestionIDs(ids...)
 }
 
-// AddCreatedAnswerIDs adds the "created_answers" edge to the Answer entity by IDs.
-func (_u *UserUpdateOne) AddCreatedAnswerIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.AddCreatedAnswerIDs(ids...)
+// AddRegistrationAnswerIDs adds the "registration_answers" edge to the Answer entity by IDs.
+func (_u *UserUpdateOne) AddRegistrationAnswerIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddRegistrationAnswerIDs(ids...)
 	return _u
 }
 
-// AddCreatedAnswers adds the "created_answers" edges to the Answer entity.
-func (_u *UserUpdateOne) AddCreatedAnswers(v ...*Answer) *UserUpdateOne {
+// AddRegistrationAnswers adds the "registration_answers" edges to the Answer entity.
+func (_u *UserUpdateOne) AddRegistrationAnswers(v ...*Answer) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.AddCreatedAnswerIDs(ids...)
+	return _u.AddRegistrationAnswerIDs(ids...)
 }
 
 // AddModifiedStateIDs adds the "modified_states" edge to the HackathonState entity by IDs.
@@ -3004,25 +3004,25 @@ func (_u *UserUpdateOne) RemoveModifiedQuestions(v ...*Question) *UserUpdateOne 
 	return _u.RemoveModifiedQuestionIDs(ids...)
 }
 
-// ClearCreatedAnswers clears all "created_answers" edges to the Answer entity.
-func (_u *UserUpdateOne) ClearCreatedAnswers() *UserUpdateOne {
-	_u.mutation.ClearCreatedAnswers()
+// ClearRegistrationAnswers clears all "registration_answers" edges to the Answer entity.
+func (_u *UserUpdateOne) ClearRegistrationAnswers() *UserUpdateOne {
+	_u.mutation.ClearRegistrationAnswers()
 	return _u
 }
 
-// RemoveCreatedAnswerIDs removes the "created_answers" edge to Answer entities by IDs.
-func (_u *UserUpdateOne) RemoveCreatedAnswerIDs(ids ...uuid.UUID) *UserUpdateOne {
-	_u.mutation.RemoveCreatedAnswerIDs(ids...)
+// RemoveRegistrationAnswerIDs removes the "registration_answers" edge to Answer entities by IDs.
+func (_u *UserUpdateOne) RemoveRegistrationAnswerIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveRegistrationAnswerIDs(ids...)
 	return _u
 }
 
-// RemoveCreatedAnswers removes "created_answers" edges to Answer entities.
-func (_u *UserUpdateOne) RemoveCreatedAnswers(v ...*Answer) *UserUpdateOne {
+// RemoveRegistrationAnswers removes "registration_answers" edges to Answer entities.
+func (_u *UserUpdateOne) RemoveRegistrationAnswers(v ...*Answer) *UserUpdateOne {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _u.RemoveCreatedAnswerIDs(ids...)
+	return _u.RemoveRegistrationAnswerIDs(ids...)
 }
 
 // ClearModifiedStates clears all "modified_states" edges to the HackathonState entity.
@@ -4073,12 +4073,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.CreatedAnswersCleared() {
+	if _u.mutation.RegistrationAnswersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.CreatedAnswersTable,
-			Columns: []string{user.CreatedAnswersColumn},
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
@@ -4086,12 +4086,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.RemovedCreatedAnswersIDs(); len(nodes) > 0 && !_u.mutation.CreatedAnswersCleared() {
+	if nodes := _u.mutation.RemovedRegistrationAnswersIDs(); len(nodes) > 0 && !_u.mutation.RegistrationAnswersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.CreatedAnswersTable,
-			Columns: []string{user.CreatedAnswersColumn},
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
@@ -4102,12 +4102,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.CreatedAnswersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RegistrationAnswersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.CreatedAnswersTable,
-			Columns: []string{user.CreatedAnswersColumn},
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),

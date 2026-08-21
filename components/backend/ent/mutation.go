@@ -65,9 +65,8 @@ type AnswerMutation struct {
 	typ             string
 	id              *uuid.UUID
 	value           *string
-	_type           *answer.Type
 	created_at      *time.Time
-	updated_at      *time.Time
+	modified_at     *time.Time
 	clearedFields   map[string]struct{}
 	question        *uuid.UUID
 	clearedquestion bool
@@ -290,42 +289,6 @@ func (m *AnswerMutation) ResetValue() {
 	m.value = nil
 }
 
-// SetType sets the "type" field.
-func (m *AnswerMutation) SetType(a answer.Type) {
-	m._type = &a
-}
-
-// GetType returns the value of the "type" field in the mutation.
-func (m *AnswerMutation) GetType() (r answer.Type, exists bool) {
-	v := m._type
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldType returns the old "type" field's value of the Answer entity.
-// If the Answer object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnswerMutation) OldType(ctx context.Context) (v answer.Type, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldType is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldType requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldType: %w", err)
-	}
-	return oldValue.Type, nil
-}
-
-// ResetType resets all changes to the "type" field.
-func (m *AnswerMutation) ResetType() {
-	m._type = nil
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *AnswerMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -362,40 +325,40 @@ func (m *AnswerMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (m *AnswerMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
+// SetModifiedAt sets the "modified_at" field.
+func (m *AnswerMutation) SetModifiedAt(t time.Time) {
+	m.modified_at = &t
 }
 
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *AnswerMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
+// ModifiedAt returns the value of the "modified_at" field in the mutation.
+func (m *AnswerMutation) ModifiedAt() (r time.Time, exists bool) {
+	v := m.modified_at
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldUpdatedAt returns the old "updated_at" field's value of the Answer entity.
+// OldModifiedAt returns the old "modified_at" field's value of the Answer entity.
 // If the Answer object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AnswerMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *AnswerMutation) OldModifiedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+		return v, errors.New("OldModifiedAt is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+		return v, errors.New("OldModifiedAt requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+		return v, fmt.Errorf("querying old value for OldModifiedAt: %w", err)
 	}
-	return oldValue.UpdatedAt, nil
+	return oldValue.ModifiedAt, nil
 }
 
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *AnswerMutation) ResetUpdatedAt() {
-	m.updated_at = nil
+// ResetModifiedAt resets all changes to the "modified_at" field.
+func (m *AnswerMutation) ResetModifiedAt() {
+	m.modified_at = nil
 }
 
 // ClearQuestion clears the "question" edge to the Question entity.
@@ -486,7 +449,7 @@ func (m *AnswerMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AnswerMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 5)
 	if m.question != nil {
 		fields = append(fields, answer.FieldQuestionID)
 	}
@@ -496,14 +459,11 @@ func (m *AnswerMutation) Fields() []string {
 	if m.value != nil {
 		fields = append(fields, answer.FieldValue)
 	}
-	if m._type != nil {
-		fields = append(fields, answer.FieldType)
-	}
 	if m.created_at != nil {
 		fields = append(fields, answer.FieldCreatedAt)
 	}
-	if m.updated_at != nil {
-		fields = append(fields, answer.FieldUpdatedAt)
+	if m.modified_at != nil {
+		fields = append(fields, answer.FieldModifiedAt)
 	}
 	return fields
 }
@@ -519,12 +479,10 @@ func (m *AnswerMutation) Field(name string) (ent.Value, bool) {
 		return m.UserID()
 	case answer.FieldValue:
 		return m.Value()
-	case answer.FieldType:
-		return m.GetType()
 	case answer.FieldCreatedAt:
 		return m.CreatedAt()
-	case answer.FieldUpdatedAt:
-		return m.UpdatedAt()
+	case answer.FieldModifiedAt:
+		return m.ModifiedAt()
 	}
 	return nil, false
 }
@@ -540,12 +498,10 @@ func (m *AnswerMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldUserID(ctx)
 	case answer.FieldValue:
 		return m.OldValue(ctx)
-	case answer.FieldType:
-		return m.OldType(ctx)
 	case answer.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
-	case answer.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
+	case answer.FieldModifiedAt:
+		return m.OldModifiedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Answer field %s", name)
 }
@@ -576,13 +532,6 @@ func (m *AnswerMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetValue(v)
 		return nil
-	case answer.FieldType:
-		v, ok := value.(answer.Type)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetType(v)
-		return nil
 	case answer.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -590,12 +539,12 @@ func (m *AnswerMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCreatedAt(v)
 		return nil
-	case answer.FieldUpdatedAt:
+	case answer.FieldModifiedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetUpdatedAt(v)
+		m.SetModifiedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Answer field %s", name)
@@ -655,14 +604,11 @@ func (m *AnswerMutation) ResetField(name string) error {
 	case answer.FieldValue:
 		m.ResetValue()
 		return nil
-	case answer.FieldType:
-		m.ResetType()
-		return nil
 	case answer.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
-	case answer.FieldUpdatedAt:
-		m.ResetUpdatedAt()
+	case answer.FieldModifiedAt:
+		m.ResetModifiedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Answer field %s", name)
@@ -6956,7 +6902,7 @@ type QuestionMutation struct {
 	id               *uuid.UUID
 	key              *string
 	label            *string
-	_type            *question.Type
+	data_type        *question.DataType
 	mandatory        *bool
 	_order           *int
 	add_order        *int
@@ -7189,40 +7135,40 @@ func (m *QuestionMutation) ResetLabel() {
 	m.label = nil
 }
 
-// SetType sets the "type" field.
-func (m *QuestionMutation) SetType(q question.Type) {
-	m._type = &q
+// SetDataType sets the "data_type" field.
+func (m *QuestionMutation) SetDataType(qt question.DataType) {
+	m.data_type = &qt
 }
 
-// GetType returns the value of the "type" field in the mutation.
-func (m *QuestionMutation) GetType() (r question.Type, exists bool) {
-	v := m._type
+// DataType returns the value of the "data_type" field in the mutation.
+func (m *QuestionMutation) DataType() (r question.DataType, exists bool) {
+	v := m.data_type
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldType returns the old "type" field's value of the Question entity.
+// OldDataType returns the old "data_type" field's value of the Question entity.
 // If the Question object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *QuestionMutation) OldType(ctx context.Context) (v question.Type, err error) {
+func (m *QuestionMutation) OldDataType(ctx context.Context) (v question.DataType, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldType is only allowed on UpdateOne operations")
+		return v, errors.New("OldDataType is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldType requires an ID field in the mutation")
+		return v, errors.New("OldDataType requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldType: %w", err)
+		return v, fmt.Errorf("querying old value for OldDataType: %w", err)
 	}
-	return oldValue.Type, nil
+	return oldValue.DataType, nil
 }
 
-// ResetType resets all changes to the "type" field.
-func (m *QuestionMutation) ResetType() {
-	m._type = nil
+// ResetDataType resets all changes to the "data_type" field.
+func (m *QuestionMutation) ResetDataType() {
+	m.data_type = nil
 }
 
 // SetMandatory sets the "mandatory" field.
@@ -7592,8 +7538,8 @@ func (m *QuestionMutation) Fields() []string {
 	if m.label != nil {
 		fields = append(fields, question.FieldLabel)
 	}
-	if m._type != nil {
-		fields = append(fields, question.FieldType)
+	if m.data_type != nil {
+		fields = append(fields, question.FieldDataType)
 	}
 	if m.mandatory != nil {
 		fields = append(fields, question.FieldMandatory)
@@ -7621,8 +7567,8 @@ func (m *QuestionMutation) Field(name string) (ent.Value, bool) {
 		return m.Key()
 	case question.FieldLabel:
 		return m.Label()
-	case question.FieldType:
-		return m.GetType()
+	case question.FieldDataType:
+		return m.DataType()
 	case question.FieldMandatory:
 		return m.Mandatory()
 	case question.FieldOrder:
@@ -7646,8 +7592,8 @@ func (m *QuestionMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldKey(ctx)
 	case question.FieldLabel:
 		return m.OldLabel(ctx)
-	case question.FieldType:
-		return m.OldType(ctx)
+	case question.FieldDataType:
+		return m.OldDataType(ctx)
 	case question.FieldMandatory:
 		return m.OldMandatory(ctx)
 	case question.FieldOrder:
@@ -7686,12 +7632,12 @@ func (m *QuestionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLabel(v)
 		return nil
-	case question.FieldType:
-		v, ok := value.(question.Type)
+	case question.FieldDataType:
+		v, ok := value.(question.DataType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetType(v)
+		m.SetDataType(v)
 		return nil
 	case question.FieldMandatory:
 		v, ok := value.(bool)
@@ -7794,8 +7740,8 @@ func (m *QuestionMutation) ResetField(name string) error {
 	case question.FieldLabel:
 		m.ResetLabel()
 		return nil
-	case question.FieldType:
-		m.ResetType()
+	case question.FieldDataType:
+		m.ResetDataType()
 		return nil
 	case question.FieldMandatory:
 		m.ResetMandatory()
@@ -11083,9 +11029,9 @@ type UserMutation struct {
 	modified_questions                map[uuid.UUID]struct{}
 	removedmodified_questions         map[uuid.UUID]struct{}
 	clearedmodified_questions         bool
-	created_answers                   map[uuid.UUID]struct{}
-	removedcreated_answers            map[uuid.UUID]struct{}
-	clearedcreated_answers            bool
+	registration_answers              map[uuid.UUID]struct{}
+	removedregistration_answers       map[uuid.UUID]struct{}
+	clearedregistration_answers       bool
 	modified_states                   map[uuid.UUID]struct{}
 	removedmodified_states            map[uuid.UUID]struct{}
 	clearedmodified_states            bool
@@ -12424,58 +12370,58 @@ func (m *UserMutation) ResetModifiedQuestions() {
 	m.removedmodified_questions = nil
 }
 
-// AddCreatedAnswerIDs adds the "created_answers" edge to the Answer entity by ids.
-func (m *UserMutation) AddCreatedAnswerIDs(ids ...uuid.UUID) {
-	if m.created_answers == nil {
-		m.created_answers = make(map[uuid.UUID]struct{})
+// AddRegistrationAnswerIDs adds the "registration_answers" edge to the Answer entity by ids.
+func (m *UserMutation) AddRegistrationAnswerIDs(ids ...uuid.UUID) {
+	if m.registration_answers == nil {
+		m.registration_answers = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.created_answers[ids[i]] = struct{}{}
+		m.registration_answers[ids[i]] = struct{}{}
 	}
 }
 
-// ClearCreatedAnswers clears the "created_answers" edge to the Answer entity.
-func (m *UserMutation) ClearCreatedAnswers() {
-	m.clearedcreated_answers = true
+// ClearRegistrationAnswers clears the "registration_answers" edge to the Answer entity.
+func (m *UserMutation) ClearRegistrationAnswers() {
+	m.clearedregistration_answers = true
 }
 
-// CreatedAnswersCleared reports if the "created_answers" edge to the Answer entity was cleared.
-func (m *UserMutation) CreatedAnswersCleared() bool {
-	return m.clearedcreated_answers
+// RegistrationAnswersCleared reports if the "registration_answers" edge to the Answer entity was cleared.
+func (m *UserMutation) RegistrationAnswersCleared() bool {
+	return m.clearedregistration_answers
 }
 
-// RemoveCreatedAnswerIDs removes the "created_answers" edge to the Answer entity by IDs.
-func (m *UserMutation) RemoveCreatedAnswerIDs(ids ...uuid.UUID) {
-	if m.removedcreated_answers == nil {
-		m.removedcreated_answers = make(map[uuid.UUID]struct{})
+// RemoveRegistrationAnswerIDs removes the "registration_answers" edge to the Answer entity by IDs.
+func (m *UserMutation) RemoveRegistrationAnswerIDs(ids ...uuid.UUID) {
+	if m.removedregistration_answers == nil {
+		m.removedregistration_answers = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.created_answers, ids[i])
-		m.removedcreated_answers[ids[i]] = struct{}{}
+		delete(m.registration_answers, ids[i])
+		m.removedregistration_answers[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedCreatedAnswers returns the removed IDs of the "created_answers" edge to the Answer entity.
-func (m *UserMutation) RemovedCreatedAnswersIDs() (ids []uuid.UUID) {
-	for id := range m.removedcreated_answers {
+// RemovedRegistrationAnswers returns the removed IDs of the "registration_answers" edge to the Answer entity.
+func (m *UserMutation) RemovedRegistrationAnswersIDs() (ids []uuid.UUID) {
+	for id := range m.removedregistration_answers {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// CreatedAnswersIDs returns the "created_answers" edge IDs in the mutation.
-func (m *UserMutation) CreatedAnswersIDs() (ids []uuid.UUID) {
-	for id := range m.created_answers {
+// RegistrationAnswersIDs returns the "registration_answers" edge IDs in the mutation.
+func (m *UserMutation) RegistrationAnswersIDs() (ids []uuid.UUID) {
+	for id := range m.registration_answers {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetCreatedAnswers resets all changes to the "created_answers" edge.
-func (m *UserMutation) ResetCreatedAnswers() {
-	m.created_answers = nil
-	m.clearedcreated_answers = false
-	m.removedcreated_answers = nil
+// ResetRegistrationAnswers resets all changes to the "registration_answers" edge.
+func (m *UserMutation) ResetRegistrationAnswers() {
+	m.registration_answers = nil
+	m.clearedregistration_answers = false
+	m.removedregistration_answers = nil
 }
 
 // AddModifiedStateIDs adds the "modified_states" edge to the HackathonState entity by ids.
@@ -13036,8 +12982,8 @@ func (m *UserMutation) AddedEdges() []string {
 	if m.modified_questions != nil {
 		edges = append(edges, user.EdgeModifiedQuestions)
 	}
-	if m.created_answers != nil {
-		edges = append(edges, user.EdgeCreatedAnswers)
+	if m.registration_answers != nil {
+		edges = append(edges, user.EdgeRegistrationAnswers)
 	}
 	if m.modified_states != nil {
 		edges = append(edges, user.EdgeModifiedStates)
@@ -13169,9 +13115,9 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeCreatedAnswers:
-		ids := make([]ent.Value, 0, len(m.created_answers))
-		for id := range m.created_answers {
+	case user.EdgeRegistrationAnswers:
+		ids := make([]ent.Value, 0, len(m.registration_answers))
+		for id := range m.registration_answers {
 			ids = append(ids, id)
 		}
 		return ids
@@ -13266,8 +13212,8 @@ func (m *UserMutation) RemovedEdges() []string {
 	if m.removedmodified_questions != nil {
 		edges = append(edges, user.EdgeModifiedQuestions)
 	}
-	if m.removedcreated_answers != nil {
-		edges = append(edges, user.EdgeCreatedAnswers)
+	if m.removedregistration_answers != nil {
+		edges = append(edges, user.EdgeRegistrationAnswers)
 	}
 	if m.removedmodified_states != nil {
 		edges = append(edges, user.EdgeModifiedStates)
@@ -13399,9 +13345,9 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeCreatedAnswers:
-		ids := make([]ent.Value, 0, len(m.removedcreated_answers))
-		for id := range m.removedcreated_answers {
+	case user.EdgeRegistrationAnswers:
+		ids := make([]ent.Value, 0, len(m.removedregistration_answers))
+		for id := range m.removedregistration_answers {
 			ids = append(ids, id)
 		}
 		return ids
@@ -13496,8 +13442,8 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedmodified_questions {
 		edges = append(edges, user.EdgeModifiedQuestions)
 	}
-	if m.clearedcreated_answers {
-		edges = append(edges, user.EdgeCreatedAnswers)
+	if m.clearedregistration_answers {
+		edges = append(edges, user.EdgeRegistrationAnswers)
 	}
 	if m.clearedmodified_states {
 		edges = append(edges, user.EdgeModifiedStates)
@@ -13557,8 +13503,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedcreated_questions
 	case user.EdgeModifiedQuestions:
 		return m.clearedmodified_questions
-	case user.EdgeCreatedAnswers:
-		return m.clearedcreated_answers
+	case user.EdgeRegistrationAnswers:
+		return m.clearedregistration_answers
 	case user.EdgeModifiedStates:
 		return m.clearedmodified_states
 	case user.EdgePreferredProjects:
@@ -13639,8 +13585,8 @@ func (m *UserMutation) ResetEdge(name string) error {
 	case user.EdgeModifiedQuestions:
 		m.ResetModifiedQuestions()
 		return nil
-	case user.EdgeCreatedAnswers:
-		m.ResetCreatedAnswers()
+	case user.EdgeRegistrationAnswers:
+		m.ResetRegistrationAnswers()
 		return nil
 	case user.EdgeModifiedStates:
 		m.ResetModifiedStates()

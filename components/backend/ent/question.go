@@ -27,7 +27,7 @@ type Question struct {
 	// Display label for the question.
 	Label string `json:"label,omitempty"`
 	// The type of answer expected from participants.
-	Type question.Type `json:"type,omitempty"`
+	DataType question.DataType `json:"data_type,omitempty"`
 	// Whether the participant must answer this question to join.
 	Mandatory bool `json:"mandatory,omitempty"`
 	// Display order; lower values appear first.
@@ -110,7 +110,7 @@ func (*Question) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case question.FieldOrder:
 			values[i] = new(sql.NullInt64)
-		case question.FieldKey, question.FieldLabel, question.FieldType:
+		case question.FieldKey, question.FieldLabel, question.FieldDataType:
 			values[i] = new(sql.NullString)
 		case question.FieldCreatedAt, question.FieldModifiedAt:
 			values[i] = new(sql.NullTime)
@@ -159,11 +159,11 @@ func (_m *Question) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Label = value.String
 			}
-		case question.FieldType:
+		case question.FieldDataType:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field type", values[i])
+				return fmt.Errorf("unexpected type %T for field data_type", values[i])
 			} else if value.Valid {
-				_m.Type = question.Type(value.String)
+				_m.DataType = question.DataType(value.String)
 			}
 		case question.FieldMandatory:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -268,8 +268,8 @@ func (_m *Question) String() string {
 	builder.WriteString("label=")
 	builder.WriteString(_m.Label)
 	builder.WriteString(", ")
-	builder.WriteString("type=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Type))
+	builder.WriteString("data_type=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DataType))
 	builder.WriteString(", ")
 	builder.WriteString("mandatory=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Mandatory))

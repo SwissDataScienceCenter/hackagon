@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -21,6 +22,7 @@ type TeamParticipantCreate struct {
 	config
 	mutation *TeamParticipantMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetTeamID sets the "team_id" field.
@@ -139,6 +141,7 @@ func (_c *TeamParticipantCreate) createSpec() (*TeamParticipant, *sqlgraph.Creat
 		_node = &TeamParticipant{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(teamparticipant.Table, nil)
 	)
+	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(teamparticipant.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -180,11 +183,173 @@ func (_c *TeamParticipantCreate) createSpec() (*TeamParticipant, *sqlgraph.Creat
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.TeamParticipant.Create().
+//		SetTeamID(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TeamParticipantUpsert) {
+//			SetTeamID(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *TeamParticipantCreate) OnConflict(opts ...sql.ConflictOption) *TeamParticipantUpsertOne {
+	_c.conflict = opts
+	return &TeamParticipantUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.TeamParticipant.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *TeamParticipantCreate) OnConflictColumns(columns ...string) *TeamParticipantUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &TeamParticipantUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// TeamParticipantUpsertOne is the builder for "upsert"-ing
+	//  one TeamParticipant node.
+	TeamParticipantUpsertOne struct {
+		create *TeamParticipantCreate
+	}
+
+	// TeamParticipantUpsert is the "OnConflict" setter.
+	TeamParticipantUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetTeamID sets the "team_id" field.
+func (u *TeamParticipantUpsert) SetTeamID(v uuid.UUID) *TeamParticipantUpsert {
+	u.Set(teamparticipant.FieldTeamID, v)
+	return u
+}
+
+// UpdateTeamID sets the "team_id" field to the value that was provided on create.
+func (u *TeamParticipantUpsert) UpdateTeamID() *TeamParticipantUpsert {
+	u.SetExcluded(teamparticipant.FieldTeamID)
+	return u
+}
+
+// SetUserID sets the "user_id" field.
+func (u *TeamParticipantUpsert) SetUserID(v uuid.UUID) *TeamParticipantUpsert {
+	u.Set(teamparticipant.FieldUserID, v)
+	return u
+}
+
+// UpdateUserID sets the "user_id" field to the value that was provided on create.
+func (u *TeamParticipantUpsert) UpdateUserID() *TeamParticipantUpsert {
+	u.SetExcluded(teamparticipant.FieldUserID)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.TeamParticipant.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *TeamParticipantUpsertOne) UpdateNewValues() *TeamParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(teamparticipant.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.TeamParticipant.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *TeamParticipantUpsertOne) Ignore() *TeamParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TeamParticipantUpsertOne) DoNothing() *TeamParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TeamParticipantCreate.OnConflict
+// documentation for more info.
+func (u *TeamParticipantUpsertOne) Update(set func(*TeamParticipantUpsert)) *TeamParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TeamParticipantUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetTeamID sets the "team_id" field.
+func (u *TeamParticipantUpsertOne) SetTeamID(v uuid.UUID) *TeamParticipantUpsertOne {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.SetTeamID(v)
+	})
+}
+
+// UpdateTeamID sets the "team_id" field to the value that was provided on create.
+func (u *TeamParticipantUpsertOne) UpdateTeamID() *TeamParticipantUpsertOne {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.UpdateTeamID()
+	})
+}
+
+// SetUserID sets the "user_id" field.
+func (u *TeamParticipantUpsertOne) SetUserID(v uuid.UUID) *TeamParticipantUpsertOne {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.SetUserID(v)
+	})
+}
+
+// UpdateUserID sets the "user_id" field to the value that was provided on create.
+func (u *TeamParticipantUpsertOne) UpdateUserID() *TeamParticipantUpsertOne {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.UpdateUserID()
+	})
+}
+
+// Exec executes the query.
+func (u *TeamParticipantUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TeamParticipantCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TeamParticipantUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
 // TeamParticipantCreateBulk is the builder for creating many TeamParticipant entities in bulk.
 type TeamParticipantCreateBulk struct {
 	config
 	err      error
 	builders []*TeamParticipantCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the TeamParticipant entities in the database.
@@ -214,6 +379,7 @@ func (_c *TeamParticipantCreateBulk) Save(ctx context.Context) ([]*TeamParticipa
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -259,6 +425,145 @@ func (_c *TeamParticipantCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *TeamParticipantCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.TeamParticipant.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TeamParticipantUpsert) {
+//			SetTeamID(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *TeamParticipantCreateBulk) OnConflict(opts ...sql.ConflictOption) *TeamParticipantUpsertBulk {
+	_c.conflict = opts
+	return &TeamParticipantUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.TeamParticipant.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *TeamParticipantCreateBulk) OnConflictColumns(columns ...string) *TeamParticipantUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &TeamParticipantUpsertBulk{
+		create: _c,
+	}
+}
+
+// TeamParticipantUpsertBulk is the builder for "upsert"-ing
+// a bulk of TeamParticipant nodes.
+type TeamParticipantUpsertBulk struct {
+	create *TeamParticipantCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.TeamParticipant.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *TeamParticipantUpsertBulk) UpdateNewValues() *TeamParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(teamparticipant.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.TeamParticipant.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *TeamParticipantUpsertBulk) Ignore() *TeamParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TeamParticipantUpsertBulk) DoNothing() *TeamParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TeamParticipantCreateBulk.OnConflict
+// documentation for more info.
+func (u *TeamParticipantUpsertBulk) Update(set func(*TeamParticipantUpsert)) *TeamParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TeamParticipantUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetTeamID sets the "team_id" field.
+func (u *TeamParticipantUpsertBulk) SetTeamID(v uuid.UUID) *TeamParticipantUpsertBulk {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.SetTeamID(v)
+	})
+}
+
+// UpdateTeamID sets the "team_id" field to the value that was provided on create.
+func (u *TeamParticipantUpsertBulk) UpdateTeamID() *TeamParticipantUpsertBulk {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.UpdateTeamID()
+	})
+}
+
+// SetUserID sets the "user_id" field.
+func (u *TeamParticipantUpsertBulk) SetUserID(v uuid.UUID) *TeamParticipantUpsertBulk {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.SetUserID(v)
+	})
+}
+
+// UpdateUserID sets the "user_id" field to the value that was provided on create.
+func (u *TeamParticipantUpsertBulk) UpdateUserID() *TeamParticipantUpsertBulk {
+	return u.Update(func(s *TeamParticipantUpsert) {
+		s.UpdateUserID()
+	})
+}
+
+// Exec executes the query.
+func (u *TeamParticipantUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TeamParticipantCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TeamParticipantCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TeamParticipantUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -63,8 +63,8 @@ const (
 	EdgeCreatedQuestions = "created_questions"
 	// EdgeModifiedQuestions holds the string denoting the modified_questions edge name in mutations.
 	EdgeModifiedQuestions = "modified_questions"
-	// EdgeCreatedAnswers holds the string denoting the created_answers edge name in mutations.
-	EdgeCreatedAnswers = "created_answers"
+	// EdgeRegistrationAnswers holds the string denoting the registration_answers edge name in mutations.
+	EdgeRegistrationAnswers = "registration_answers"
 	// EdgeModifiedStates holds the string denoting the modified_states edge name in mutations.
 	EdgeModifiedStates = "modified_states"
 	// EdgePreferredProjects holds the string denoting the preferred_projects edge name in mutations.
@@ -203,13 +203,13 @@ const (
 	ModifiedQuestionsInverseTable = "questions"
 	// ModifiedQuestionsColumn is the table column denoting the modified_questions relation/edge.
 	ModifiedQuestionsColumn = "user_modified_questions"
-	// CreatedAnswersTable is the table that holds the created_answers relation/edge.
-	CreatedAnswersTable = "answers"
-	// CreatedAnswersInverseTable is the table name for the Answer entity.
+	// RegistrationAnswersTable is the table that holds the registration_answers relation/edge.
+	RegistrationAnswersTable = "answers"
+	// RegistrationAnswersInverseTable is the table name for the Answer entity.
 	// It exists in this package in order to avoid circular dependency with the "answer" package.
-	CreatedAnswersInverseTable = "answers"
-	// CreatedAnswersColumn is the table column denoting the created_answers relation/edge.
-	CreatedAnswersColumn = "user_id"
+	RegistrationAnswersInverseTable = "answers"
+	// RegistrationAnswersColumn is the table column denoting the registration_answers relation/edge.
+	RegistrationAnswersColumn = "user_id"
 	// ModifiedStatesTable is the table that holds the modified_states relation/edge.
 	ModifiedStatesTable = "hackathon_states"
 	// ModifiedStatesInverseTable is the table name for the HackathonState entity.
@@ -601,17 +601,17 @@ func ByModifiedQuestions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 	}
 }
 
-// ByCreatedAnswersCount orders the results by created_answers count.
-func ByCreatedAnswersCount(opts ...sql.OrderTermOption) OrderOption {
+// ByRegistrationAnswersCount orders the results by registration_answers count.
+func ByRegistrationAnswersCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newCreatedAnswersStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newRegistrationAnswersStep(), opts...)
 	}
 }
 
-// ByCreatedAnswers orders the results by created_answers terms.
-func ByCreatedAnswers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByRegistrationAnswers orders the results by registration_answers terms.
+func ByRegistrationAnswers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCreatedAnswersStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newRegistrationAnswersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -838,11 +838,11 @@ func newModifiedQuestionsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, ModifiedQuestionsTable, ModifiedQuestionsColumn),
 	)
 }
-func newCreatedAnswersStep() *sqlgraph.Step {
+func newRegistrationAnswersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CreatedAnswersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, CreatedAnswersTable, CreatedAnswersColumn),
+		sqlgraph.To(RegistrationAnswersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RegistrationAnswersTable, RegistrationAnswersColumn),
 	)
 }
 func newModifiedStatesStep() *sqlgraph.Step {

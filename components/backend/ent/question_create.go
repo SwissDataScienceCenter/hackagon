@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ type QuestionCreate struct {
 	config
 	mutation *QuestionMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetHackathonID sets the "hackathon_id" field.
@@ -42,9 +45,9 @@ func (_c *QuestionCreate) SetLabel(v string) *QuestionCreate {
 	return _c
 }
 
-// SetType sets the "type" field.
-func (_c *QuestionCreate) SetType(v question.Type) *QuestionCreate {
-	_c.mutation.SetType(v)
+// SetDataType sets the "data_type" field.
+func (_c *QuestionCreate) SetDataType(v question.DataType) *QuestionCreate {
+	_c.mutation.SetDataType(v)
 	return _c
 }
 
@@ -233,12 +236,12 @@ func (_c *QuestionCreate) check() error {
 	if _, ok := _c.mutation.Label(); !ok {
 		return &ValidationError{Name: "label", err: errors.New(`ent: missing required field "Question.label"`)}
 	}
-	if _, ok := _c.mutation.GetType(); !ok {
-		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "Question.type"`)}
+	if _, ok := _c.mutation.DataType(); !ok {
+		return &ValidationError{Name: "data_type", err: errors.New(`ent: missing required field "Question.data_type"`)}
 	}
-	if v, ok := _c.mutation.GetType(); ok {
-		if err := question.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Question.type": %w`, err)}
+	if v, ok := _c.mutation.DataType(); ok {
+		if err := question.DataTypeValidator(v); err != nil {
+			return &ValidationError{Name: "data_type", err: fmt.Errorf(`ent: validator failed for field "Question.data_type": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Mandatory(); !ok {
@@ -293,6 +296,7 @@ func (_c *QuestionCreate) createSpec() (*Question, *sqlgraph.CreateSpec) {
 		_node = &Question{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(question.Table, sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -305,9 +309,9 @@ func (_c *QuestionCreate) createSpec() (*Question, *sqlgraph.CreateSpec) {
 		_spec.SetField(question.FieldLabel, field.TypeString, value)
 		_node.Label = value
 	}
-	if value, ok := _c.mutation.GetType(); ok {
-		_spec.SetField(question.FieldType, field.TypeEnum, value)
-		_node.Type = value
+	if value, ok := _c.mutation.DataType(); ok {
+		_spec.SetField(question.FieldDataType, field.TypeEnum, value)
+		_node.DataType = value
 	}
 	if value, ok := _c.mutation.Mandatory(); ok {
 		_spec.SetField(question.FieldMandatory, field.TypeBool, value)
@@ -395,11 +399,345 @@ func (_c *QuestionCreate) createSpec() (*Question, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Question.Create().
+//		SetHackathonID(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.QuestionUpsert) {
+//			SetHackathonID(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *QuestionCreate) OnConflict(opts ...sql.ConflictOption) *QuestionUpsertOne {
+	_c.conflict = opts
+	return &QuestionUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Question.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *QuestionCreate) OnConflictColumns(columns ...string) *QuestionUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &QuestionUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// QuestionUpsertOne is the builder for "upsert"-ing
+	//  one Question node.
+	QuestionUpsertOne struct {
+		create *QuestionCreate
+	}
+
+	// QuestionUpsert is the "OnConflict" setter.
+	QuestionUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetHackathonID sets the "hackathon_id" field.
+func (u *QuestionUpsert) SetHackathonID(v uuid.UUID) *QuestionUpsert {
+	u.Set(question.FieldHackathonID, v)
+	return u
+}
+
+// UpdateHackathonID sets the "hackathon_id" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateHackathonID() *QuestionUpsert {
+	u.SetExcluded(question.FieldHackathonID)
+	return u
+}
+
+// SetKey sets the "key" field.
+func (u *QuestionUpsert) SetKey(v string) *QuestionUpsert {
+	u.Set(question.FieldKey, v)
+	return u
+}
+
+// UpdateKey sets the "key" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateKey() *QuestionUpsert {
+	u.SetExcluded(question.FieldKey)
+	return u
+}
+
+// SetLabel sets the "label" field.
+func (u *QuestionUpsert) SetLabel(v string) *QuestionUpsert {
+	u.Set(question.FieldLabel, v)
+	return u
+}
+
+// UpdateLabel sets the "label" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateLabel() *QuestionUpsert {
+	u.SetExcluded(question.FieldLabel)
+	return u
+}
+
+// SetDataType sets the "data_type" field.
+func (u *QuestionUpsert) SetDataType(v question.DataType) *QuestionUpsert {
+	u.Set(question.FieldDataType, v)
+	return u
+}
+
+// UpdateDataType sets the "data_type" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateDataType() *QuestionUpsert {
+	u.SetExcluded(question.FieldDataType)
+	return u
+}
+
+// SetMandatory sets the "mandatory" field.
+func (u *QuestionUpsert) SetMandatory(v bool) *QuestionUpsert {
+	u.Set(question.FieldMandatory, v)
+	return u
+}
+
+// UpdateMandatory sets the "mandatory" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateMandatory() *QuestionUpsert {
+	u.SetExcluded(question.FieldMandatory)
+	return u
+}
+
+// SetOrder sets the "order" field.
+func (u *QuestionUpsert) SetOrder(v int) *QuestionUpsert {
+	u.Set(question.FieldOrder, v)
+	return u
+}
+
+// UpdateOrder sets the "order" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateOrder() *QuestionUpsert {
+	u.SetExcluded(question.FieldOrder)
+	return u
+}
+
+// AddOrder adds v to the "order" field.
+func (u *QuestionUpsert) AddOrder(v int) *QuestionUpsert {
+	u.Add(question.FieldOrder, v)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *QuestionUpsert) SetModifiedAt(v time.Time) *QuestionUpsert {
+	u.Set(question.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateModifiedAt() *QuestionUpsert {
+	u.SetExcluded(question.FieldModifiedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Question.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(question.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *QuestionUpsertOne) UpdateNewValues() *QuestionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(question.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(question.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Question.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *QuestionUpsertOne) Ignore() *QuestionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *QuestionUpsertOne) DoNothing() *QuestionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the QuestionCreate.OnConflict
+// documentation for more info.
+func (u *QuestionUpsertOne) Update(set func(*QuestionUpsert)) *QuestionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&QuestionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetHackathonID sets the "hackathon_id" field.
+func (u *QuestionUpsertOne) SetHackathonID(v uuid.UUID) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetHackathonID(v)
+	})
+}
+
+// UpdateHackathonID sets the "hackathon_id" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateHackathonID() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateHackathonID()
+	})
+}
+
+// SetKey sets the "key" field.
+func (u *QuestionUpsertOne) SetKey(v string) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetKey(v)
+	})
+}
+
+// UpdateKey sets the "key" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateKey() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateKey()
+	})
+}
+
+// SetLabel sets the "label" field.
+func (u *QuestionUpsertOne) SetLabel(v string) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetLabel(v)
+	})
+}
+
+// UpdateLabel sets the "label" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateLabel() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateLabel()
+	})
+}
+
+// SetDataType sets the "data_type" field.
+func (u *QuestionUpsertOne) SetDataType(v question.DataType) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetDataType(v)
+	})
+}
+
+// UpdateDataType sets the "data_type" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateDataType() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateDataType()
+	})
+}
+
+// SetMandatory sets the "mandatory" field.
+func (u *QuestionUpsertOne) SetMandatory(v bool) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetMandatory(v)
+	})
+}
+
+// UpdateMandatory sets the "mandatory" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateMandatory() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateMandatory()
+	})
+}
+
+// SetOrder sets the "order" field.
+func (u *QuestionUpsertOne) SetOrder(v int) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetOrder(v)
+	})
+}
+
+// AddOrder adds v to the "order" field.
+func (u *QuestionUpsertOne) AddOrder(v int) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.AddOrder(v)
+	})
+}
+
+// UpdateOrder sets the "order" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateOrder() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateOrder()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *QuestionUpsertOne) SetModifiedAt(v time.Time) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateModifiedAt() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *QuestionUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for QuestionCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *QuestionUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *QuestionUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: QuestionUpsertOne.ID is not supported by MySQL driver. Use QuestionUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *QuestionUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // QuestionCreateBulk is the builder for creating many Question entities in bulk.
 type QuestionCreateBulk struct {
 	config
 	err      error
 	builders []*QuestionCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Question entities in the database.
@@ -429,6 +767,7 @@ func (_c *QuestionCreateBulk) Save(ctx context.Context) ([]*Question, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -475,6 +814,228 @@ func (_c *QuestionCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *QuestionCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Question.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.QuestionUpsert) {
+//			SetHackathonID(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *QuestionCreateBulk) OnConflict(opts ...sql.ConflictOption) *QuestionUpsertBulk {
+	_c.conflict = opts
+	return &QuestionUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Question.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *QuestionCreateBulk) OnConflictColumns(columns ...string) *QuestionUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &QuestionUpsertBulk{
+		create: _c,
+	}
+}
+
+// QuestionUpsertBulk is the builder for "upsert"-ing
+// a bulk of Question nodes.
+type QuestionUpsertBulk struct {
+	create *QuestionCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Question.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(question.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *QuestionUpsertBulk) UpdateNewValues() *QuestionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(question.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(question.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Question.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *QuestionUpsertBulk) Ignore() *QuestionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *QuestionUpsertBulk) DoNothing() *QuestionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the QuestionCreateBulk.OnConflict
+// documentation for more info.
+func (u *QuestionUpsertBulk) Update(set func(*QuestionUpsert)) *QuestionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&QuestionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetHackathonID sets the "hackathon_id" field.
+func (u *QuestionUpsertBulk) SetHackathonID(v uuid.UUID) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetHackathonID(v)
+	})
+}
+
+// UpdateHackathonID sets the "hackathon_id" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateHackathonID() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateHackathonID()
+	})
+}
+
+// SetKey sets the "key" field.
+func (u *QuestionUpsertBulk) SetKey(v string) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetKey(v)
+	})
+}
+
+// UpdateKey sets the "key" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateKey() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateKey()
+	})
+}
+
+// SetLabel sets the "label" field.
+func (u *QuestionUpsertBulk) SetLabel(v string) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetLabel(v)
+	})
+}
+
+// UpdateLabel sets the "label" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateLabel() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateLabel()
+	})
+}
+
+// SetDataType sets the "data_type" field.
+func (u *QuestionUpsertBulk) SetDataType(v question.DataType) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetDataType(v)
+	})
+}
+
+// UpdateDataType sets the "data_type" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateDataType() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateDataType()
+	})
+}
+
+// SetMandatory sets the "mandatory" field.
+func (u *QuestionUpsertBulk) SetMandatory(v bool) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetMandatory(v)
+	})
+}
+
+// UpdateMandatory sets the "mandatory" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateMandatory() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateMandatory()
+	})
+}
+
+// SetOrder sets the "order" field.
+func (u *QuestionUpsertBulk) SetOrder(v int) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetOrder(v)
+	})
+}
+
+// AddOrder adds v to the "order" field.
+func (u *QuestionUpsertBulk) AddOrder(v int) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.AddOrder(v)
+	})
+}
+
+// UpdateOrder sets the "order" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateOrder() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateOrder()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *QuestionUpsertBulk) SetModifiedAt(v time.Time) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateModifiedAt() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *QuestionUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the QuestionCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for QuestionCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *QuestionUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

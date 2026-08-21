@@ -35,15 +35,15 @@ func init() {
 	answerFields := schema.Answer{}.Fields()
 	_ = answerFields
 	// answerDescCreatedAt is the schema descriptor for created_at field.
-	answerDescCreatedAt := answerFields[4].Descriptor()
+	answerDescCreatedAt := answerFields[3].Descriptor()
 	// answer.DefaultCreatedAt holds the default value on creation for the created_at field.
 	answer.DefaultCreatedAt = answerDescCreatedAt.Default.(func() time.Time)
-	// answerDescUpdatedAt is the schema descriptor for updated_at field.
-	answerDescUpdatedAt := answerFields[5].Descriptor()
-	// answer.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	answer.DefaultUpdatedAt = answerDescUpdatedAt.Default.(func() time.Time)
-	// answer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	answer.UpdateDefaultUpdatedAt = answerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// answerDescModifiedAt is the schema descriptor for modified_at field.
+	answerDescModifiedAt := answerFields[4].Descriptor()
+	// answer.DefaultModifiedAt holds the default value on creation for the modified_at field.
+	answer.DefaultModifiedAt = answerDescModifiedAt.Default.(func() time.Time)
+	// answer.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.
+	answer.UpdateDefaultModifiedAt = answerDescModifiedAt.UpdateDefault.(func() time.Time)
 	// answerDescID is the schema descriptor for id field.
 	answerDescID := answerMixinFields0[0].Descriptor()
 	// answer.DefaultID holds the default value on creation for the id field.

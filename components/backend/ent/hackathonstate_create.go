@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ type HackathonStateCreate struct {
 	config
 	mutation *HackathonStateMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetRegistrationsEnabled sets the "registrations_enabled" field.
@@ -332,6 +335,7 @@ func (_c *HackathonStateCreate) createSpec() (*HackathonState, *sqlgraph.CreateS
 		_node = &HackathonState{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(hackathonstate.Table, sqlgraph.NewFieldSpec(hackathonstate.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -422,11 +426,371 @@ func (_c *HackathonStateCreate) createSpec() (*HackathonState, *sqlgraph.CreateS
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.HackathonState.Create().
+//		SetRegistrationsEnabled(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.HackathonStateUpsert) {
+//			SetRegistrationsEnabled(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *HackathonStateCreate) OnConflict(opts ...sql.ConflictOption) *HackathonStateUpsertOne {
+	_c.conflict = opts
+	return &HackathonStateUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.HackathonState.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *HackathonStateCreate) OnConflictColumns(columns ...string) *HackathonStateUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &HackathonStateUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// HackathonStateUpsertOne is the builder for "upsert"-ing
+	//  one HackathonState node.
+	HackathonStateUpsertOne struct {
+		create *HackathonStateCreate
+	}
+
+	// HackathonStateUpsert is the "OnConflict" setter.
+	HackathonStateUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetRegistrationsEnabled sets the "registrations_enabled" field.
+func (u *HackathonStateUpsert) SetRegistrationsEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldRegistrationsEnabled, v)
+	return u
+}
+
+// UpdateRegistrationsEnabled sets the "registrations_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateRegistrationsEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldRegistrationsEnabled)
+	return u
+}
+
+// SetVotingEnabled sets the "voting_enabled" field.
+func (u *HackathonStateUpsert) SetVotingEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldVotingEnabled, v)
+	return u
+}
+
+// UpdateVotingEnabled sets the "voting_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateVotingEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldVotingEnabled)
+	return u
+}
+
+// SetProposeProjectsEnabled sets the "propose_projects_enabled" field.
+func (u *HackathonStateUpsert) SetProposeProjectsEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldProposeProjectsEnabled, v)
+	return u
+}
+
+// UpdateProposeProjectsEnabled sets the "propose_projects_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateProposeProjectsEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldProposeProjectsEnabled)
+	return u
+}
+
+// SetSetTeamPreferencesEnabled sets the "set_team_preferences_enabled" field.
+func (u *HackathonStateUpsert) SetSetTeamPreferencesEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldSetTeamPreferencesEnabled, v)
+	return u
+}
+
+// UpdateSetTeamPreferencesEnabled sets the "set_team_preferences_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateSetTeamPreferencesEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldSetTeamPreferencesEnabled)
+	return u
+}
+
+// SetCreateProjectSubmissionsEnabled sets the "create_project_submissions_enabled" field.
+func (u *HackathonStateUpsert) SetCreateProjectSubmissionsEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldCreateProjectSubmissionsEnabled, v)
+	return u
+}
+
+// UpdateCreateProjectSubmissionsEnabled sets the "create_project_submissions_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateCreateProjectSubmissionsEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldCreateProjectSubmissionsEnabled)
+	return u
+}
+
+// SetViewResultsEnabled sets the "view_results_enabled" field.
+func (u *HackathonStateUpsert) SetViewResultsEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldViewResultsEnabled, v)
+	return u
+}
+
+// UpdateViewResultsEnabled sets the "view_results_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateViewResultsEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldViewResultsEnabled)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *HackathonStateUpsert) SetModifiedAt(v time.Time) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateModifiedAt() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldModifiedAt)
+	return u
+}
+
+// SetCurrentPhaseID sets the "current_phase_id" field.
+func (u *HackathonStateUpsert) SetCurrentPhaseID(v uuid.UUID) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldCurrentPhaseID, v)
+	return u
+}
+
+// UpdateCurrentPhaseID sets the "current_phase_id" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateCurrentPhaseID() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldCurrentPhaseID)
+	return u
+}
+
+// ClearCurrentPhaseID clears the value of the "current_phase_id" field.
+func (u *HackathonStateUpsert) ClearCurrentPhaseID() *HackathonStateUpsert {
+	u.SetNull(hackathonstate.FieldCurrentPhaseID)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.HackathonState.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(hackathonstate.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *HackathonStateUpsertOne) UpdateNewValues() *HackathonStateUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(hackathonstate.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(hackathonstate.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.HackathonState.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *HackathonStateUpsertOne) Ignore() *HackathonStateUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *HackathonStateUpsertOne) DoNothing() *HackathonStateUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the HackathonStateCreate.OnConflict
+// documentation for more info.
+func (u *HackathonStateUpsertOne) Update(set func(*HackathonStateUpsert)) *HackathonStateUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&HackathonStateUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetRegistrationsEnabled sets the "registrations_enabled" field.
+func (u *HackathonStateUpsertOne) SetRegistrationsEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetRegistrationsEnabled(v)
+	})
+}
+
+// UpdateRegistrationsEnabled sets the "registrations_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateRegistrationsEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateRegistrationsEnabled()
+	})
+}
+
+// SetVotingEnabled sets the "voting_enabled" field.
+func (u *HackathonStateUpsertOne) SetVotingEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetVotingEnabled(v)
+	})
+}
+
+// UpdateVotingEnabled sets the "voting_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateVotingEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateVotingEnabled()
+	})
+}
+
+// SetProposeProjectsEnabled sets the "propose_projects_enabled" field.
+func (u *HackathonStateUpsertOne) SetProposeProjectsEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetProposeProjectsEnabled(v)
+	})
+}
+
+// UpdateProposeProjectsEnabled sets the "propose_projects_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateProposeProjectsEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateProposeProjectsEnabled()
+	})
+}
+
+// SetSetTeamPreferencesEnabled sets the "set_team_preferences_enabled" field.
+func (u *HackathonStateUpsertOne) SetSetTeamPreferencesEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetSetTeamPreferencesEnabled(v)
+	})
+}
+
+// UpdateSetTeamPreferencesEnabled sets the "set_team_preferences_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateSetTeamPreferencesEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateSetTeamPreferencesEnabled()
+	})
+}
+
+// SetCreateProjectSubmissionsEnabled sets the "create_project_submissions_enabled" field.
+func (u *HackathonStateUpsertOne) SetCreateProjectSubmissionsEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetCreateProjectSubmissionsEnabled(v)
+	})
+}
+
+// UpdateCreateProjectSubmissionsEnabled sets the "create_project_submissions_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateCreateProjectSubmissionsEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateCreateProjectSubmissionsEnabled()
+	})
+}
+
+// SetViewResultsEnabled sets the "view_results_enabled" field.
+func (u *HackathonStateUpsertOne) SetViewResultsEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetViewResultsEnabled(v)
+	})
+}
+
+// UpdateViewResultsEnabled sets the "view_results_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateViewResultsEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateViewResultsEnabled()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *HackathonStateUpsertOne) SetModifiedAt(v time.Time) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateModifiedAt() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// SetCurrentPhaseID sets the "current_phase_id" field.
+func (u *HackathonStateUpsertOne) SetCurrentPhaseID(v uuid.UUID) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetCurrentPhaseID(v)
+	})
+}
+
+// UpdateCurrentPhaseID sets the "current_phase_id" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateCurrentPhaseID() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateCurrentPhaseID()
+	})
+}
+
+// ClearCurrentPhaseID clears the value of the "current_phase_id" field.
+func (u *HackathonStateUpsertOne) ClearCurrentPhaseID() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.ClearCurrentPhaseID()
+	})
+}
+
+// Exec executes the query.
+func (u *HackathonStateUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for HackathonStateCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *HackathonStateUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *HackathonStateUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: HackathonStateUpsertOne.ID is not supported by MySQL driver. Use HackathonStateUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *HackathonStateUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // HackathonStateCreateBulk is the builder for creating many HackathonState entities in bulk.
 type HackathonStateCreateBulk struct {
 	config
 	err      error
 	builders []*HackathonStateCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the HackathonState entities in the database.
@@ -456,6 +820,7 @@ func (_c *HackathonStateCreateBulk) Save(ctx context.Context) ([]*HackathonState
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -502,6 +867,242 @@ func (_c *HackathonStateCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *HackathonStateCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.HackathonState.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.HackathonStateUpsert) {
+//			SetRegistrationsEnabled(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *HackathonStateCreateBulk) OnConflict(opts ...sql.ConflictOption) *HackathonStateUpsertBulk {
+	_c.conflict = opts
+	return &HackathonStateUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.HackathonState.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *HackathonStateCreateBulk) OnConflictColumns(columns ...string) *HackathonStateUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &HackathonStateUpsertBulk{
+		create: _c,
+	}
+}
+
+// HackathonStateUpsertBulk is the builder for "upsert"-ing
+// a bulk of HackathonState nodes.
+type HackathonStateUpsertBulk struct {
+	create *HackathonStateCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.HackathonState.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(hackathonstate.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *HackathonStateUpsertBulk) UpdateNewValues() *HackathonStateUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(hackathonstate.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(hackathonstate.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.HackathonState.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *HackathonStateUpsertBulk) Ignore() *HackathonStateUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *HackathonStateUpsertBulk) DoNothing() *HackathonStateUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the HackathonStateCreateBulk.OnConflict
+// documentation for more info.
+func (u *HackathonStateUpsertBulk) Update(set func(*HackathonStateUpsert)) *HackathonStateUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&HackathonStateUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetRegistrationsEnabled sets the "registrations_enabled" field.
+func (u *HackathonStateUpsertBulk) SetRegistrationsEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetRegistrationsEnabled(v)
+	})
+}
+
+// UpdateRegistrationsEnabled sets the "registrations_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateRegistrationsEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateRegistrationsEnabled()
+	})
+}
+
+// SetVotingEnabled sets the "voting_enabled" field.
+func (u *HackathonStateUpsertBulk) SetVotingEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetVotingEnabled(v)
+	})
+}
+
+// UpdateVotingEnabled sets the "voting_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateVotingEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateVotingEnabled()
+	})
+}
+
+// SetProposeProjectsEnabled sets the "propose_projects_enabled" field.
+func (u *HackathonStateUpsertBulk) SetProposeProjectsEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetProposeProjectsEnabled(v)
+	})
+}
+
+// UpdateProposeProjectsEnabled sets the "propose_projects_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateProposeProjectsEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateProposeProjectsEnabled()
+	})
+}
+
+// SetSetTeamPreferencesEnabled sets the "set_team_preferences_enabled" field.
+func (u *HackathonStateUpsertBulk) SetSetTeamPreferencesEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetSetTeamPreferencesEnabled(v)
+	})
+}
+
+// UpdateSetTeamPreferencesEnabled sets the "set_team_preferences_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateSetTeamPreferencesEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateSetTeamPreferencesEnabled()
+	})
+}
+
+// SetCreateProjectSubmissionsEnabled sets the "create_project_submissions_enabled" field.
+func (u *HackathonStateUpsertBulk) SetCreateProjectSubmissionsEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetCreateProjectSubmissionsEnabled(v)
+	})
+}
+
+// UpdateCreateProjectSubmissionsEnabled sets the "create_project_submissions_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateCreateProjectSubmissionsEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateCreateProjectSubmissionsEnabled()
+	})
+}
+
+// SetViewResultsEnabled sets the "view_results_enabled" field.
+func (u *HackathonStateUpsertBulk) SetViewResultsEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetViewResultsEnabled(v)
+	})
+}
+
+// UpdateViewResultsEnabled sets the "view_results_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateViewResultsEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateViewResultsEnabled()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *HackathonStateUpsertBulk) SetModifiedAt(v time.Time) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateModifiedAt() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// SetCurrentPhaseID sets the "current_phase_id" field.
+func (u *HackathonStateUpsertBulk) SetCurrentPhaseID(v uuid.UUID) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetCurrentPhaseID(v)
+	})
+}
+
+// UpdateCurrentPhaseID sets the "current_phase_id" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateCurrentPhaseID() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateCurrentPhaseID()
+	})
+}
+
+// ClearCurrentPhaseID clears the value of the "current_phase_id" field.
+func (u *HackathonStateUpsertBulk) ClearCurrentPhaseID() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.ClearCurrentPhaseID()
+	})
+}
+
+// Exec executes the query.
+func (u *HackathonStateUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the HackathonStateCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for HackathonStateCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *HackathonStateUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

@@ -12,9 +12,8 @@ var (
 	AnswersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "value", Type: field.TypeString},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"text", "bool"}},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "modified_at", Type: field.TypeTime},
 		{Name: "question_id", Type: field.TypeUUID},
 		{Name: "user_id", Type: field.TypeUUID},
 	}
@@ -26,22 +25,22 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "answers_questions_answers",
-				Columns:    []*schema.Column{AnswersColumns[5]},
+				Columns:    []*schema.Column{AnswersColumns[4]},
 				RefColumns: []*schema.Column{QuestionsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "answers_users_created_answers",
-				Columns:    []*schema.Column{AnswersColumns[6]},
+				Symbol:     "answers_users_registration_answers",
+				Columns:    []*schema.Column{AnswersColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Restrict,
+				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "answer_question_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{AnswersColumns[5], AnswersColumns[6]},
+				Columns: []*schema.Column{AnswersColumns[4], AnswersColumns[5]},
 			},
 		},
 	}
@@ -361,7 +360,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "key", Type: field.TypeString},
 		{Name: "label", Type: field.TypeString},
-		{Name: "type", Type: field.TypeEnum, Enums: []string{"text", "bool"}},
+		{Name: "data_type", Type: field.TypeEnum, Enums: []string{"text", "bool"}},
 		{Name: "mandatory", Type: field.TypeBool, Default: false},
 		{Name: "order", Type: field.TypeInt, Default: 0},
 		{Name: "created_at", Type: field.TypeTime},

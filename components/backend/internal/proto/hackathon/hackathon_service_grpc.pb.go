@@ -60,7 +60,6 @@ type HackathonServiceClient interface {
 	RemoveQuestion(ctx context.Context, in *hackathon_svc.RemoveQuestionRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveQuestionResponse, error)
 	ListQuestions(ctx context.Context, in *hackathon_svc.ListQuestionsRequest, opts ...grpc.CallOption) (*hackathon_svc.ListQuestionsResponse, error)
 	SubmitAnswers(ctx context.Context, in *hackathon_svc.SubmitAnswersRequest, opts ...grpc.CallOption) (*hackathon_svc.SubmitAnswersResponse, error)
-	// Participant answers (admin)
 	ListParticipantAnswers(ctx context.Context, in *hackathon_svc.ListParticipantAnswersRequest, opts ...grpc.CallOption) (*hackathon_svc.ListParticipantAnswersResponse, error)
 }
 
@@ -263,7 +262,6 @@ type HackathonServiceServer interface {
 	RemoveQuestion(context.Context, *hackathon_svc.RemoveQuestionRequest) (*hackathon_svc.RemoveQuestionResponse, error)
 	ListQuestions(context.Context, *hackathon_svc.ListQuestionsRequest) (*hackathon_svc.ListQuestionsResponse, error)
 	SubmitAnswers(context.Context, *hackathon_svc.SubmitAnswersRequest) (*hackathon_svc.SubmitAnswersResponse, error)
-	// Participant answers (admin)
 	ListParticipantAnswers(context.Context, *hackathon_svc.ListParticipantAnswersRequest) (*hackathon_svc.ListParticipantAnswersResponse, error)
 	mustEmbedUnimplementedHackathonServiceServer()
 }

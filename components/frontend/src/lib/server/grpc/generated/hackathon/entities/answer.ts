@@ -6,18 +6,17 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { QuestionType, questionTypeFromJSON, questionTypeToJSON } from "./question";
 
 export const protobufPackage = "hackathon.entities";
 
 export interface Answer {
   questionId: string;
+  participantId: string;
   value: string;
-  type: QuestionType;
 }
 
 function createBaseAnswer(): Answer {
-  return { questionId: "", value: "", type: 0 };
+  return { questionId: "", participantId: "", value: "" };
 }
 
 export const Answer: MessageFns<Answer> = {
@@ -25,11 +24,11 @@ export const Answer: MessageFns<Answer> = {
     if (message.questionId !== "") {
       writer.uint32(10).string(message.questionId);
     }
-    if (message.value !== "") {
-      writer.uint32(18).string(message.value);
+    if (message.participantId !== "") {
+      writer.uint32(18).string(message.participantId);
     }
-    if (message.type !== 0) {
-      writer.uint32(24).int32(message.type);
+    if (message.value !== "") {
+      writer.uint32(26).string(message.value);
     }
     return writer;
   },
@@ -54,15 +53,15 @@ export const Answer: MessageFns<Answer> = {
             break;
           }
 
-          message.value = reader.string();
+          message.participantId = reader.string();
           continue;
         }
         case 3: {
-          if (tag !== 24) {
+          if (tag !== 26) {
             break;
           }
 
-          message.type = reader.int32() as any;
+          message.value = reader.string();
           continue;
         }
       }
@@ -81,8 +80,12 @@ export const Answer: MessageFns<Answer> = {
         : isSet(object.question_id)
         ? globalThis.String(object.question_id)
         : "",
+      participantId: isSet(object.participantId)
+        ? globalThis.String(object.participantId)
+        : isSet(object.participant_id)
+        ? globalThis.String(object.participant_id)
+        : "",
       value: isSet(object.value) ? globalThis.String(object.value) : "",
-      type: isSet(object.type) ? questionTypeFromJSON(object.type) : 0,
     };
   },
 
@@ -91,11 +94,11 @@ export const Answer: MessageFns<Answer> = {
     if (message.questionId !== "") {
       obj.questionId = message.questionId;
     }
+    if (message.participantId !== "") {
+      obj.participantId = message.participantId;
+    }
     if (message.value !== "") {
       obj.value = message.value;
-    }
-    if (message.type !== 0) {
-      obj.type = questionTypeToJSON(message.type);
     }
     return obj;
   },
@@ -106,8 +109,8 @@ export const Answer: MessageFns<Answer> = {
   fromPartial(object: DeepPartial<Answer>): Answer {
     const message = createBaseAnswer();
     message.questionId = object.questionId ?? "";
+    message.participantId = object.participantId ?? "";
     message.value = object.value ?? "";
-    message.type = object.type ?? 0;
     return message;
   },
 };

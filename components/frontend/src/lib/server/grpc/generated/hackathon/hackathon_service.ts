@@ -177,7 +177,6 @@ export const HackathonServiceDefinition = {
       responseStream: false,
       options: {},
     },
-    /** Participant answers (admin) */
     listParticipantAnswers: {
       name: "ListParticipantAnswers",
       requestType: ListParticipantAnswersRequest as typeof ListParticipantAnswersRequest,
@@ -237,7 +236,6 @@ export interface HackathonServiceImplementation<CallContextExt = {}> {
     request: SubmitAnswersRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<SubmitAnswersResponse>>;
-  /** Participant answers (admin) */
   listParticipantAnswers(
     request: ListParticipantAnswersRequest,
     context: CallContext & CallContextExt,
@@ -292,7 +290,6 @@ export interface HackathonServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<SubmitAnswersRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<SubmitAnswersResponse>;
-  /** Participant answers (admin) */
   listParticipantAnswers(
     request: DeepPartial<ListParticipantAnswersRequest>,
     options?: CallOptions & CallOptionsExt,

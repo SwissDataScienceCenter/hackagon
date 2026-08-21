@@ -2,18 +2,17 @@
 
 ## Answer
 
-A participant's answer to a registration question. One answer per user per question.
+A participant's answer to a registration question. One answer per participant per question.
 
 ### Fields
 
 | Column | Type | Required | Unique | Immutable | Default | Description |
 |--------|------|----------|--------|-----------|---------|-------------|
-| `question_id` | uuid.UUID | yes | no | no | no | The question this answer belongs to. |
-| `user_id` | uuid.UUID | yes | no | no | no | The user who submitted this answer. |
+| `question_id` | uuid.UUID | yes | no | no | no | The id of the question this is an answer to. |
+| `user_id` | uuid.UUID | yes | no | no | no | The user that answered this question. |
 | `value` | string | yes | no | no | no | The answer value. For bool questions, stored as "true" or "false". |
-| `type` | enum(text, bool) | yes | no | no | no | The type of the question (for readability when reading answers). |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the answer was first submitted. |
-| `updated_at` | time.Time | yes | no | no | yes | Timestamp of the last update. |
+| `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last update. |
 
 ### Relationships
 
@@ -222,7 +221,7 @@ A registration question configured by a hackathon owner.
 | `hackathon_id` | uuid.UUID | yes | no | no | no | The hackathon this question belongs to. |
 | `key` | string | yes | no | no | no | Unique identifier for the question within the hackathon. |
 | `label` | string | yes | no | no | no | Display label for the question. |
-| `type` | enum(text, bool) | yes | no | no | no | The type of answer expected from participants. |
+| `data_type` | enum(text, bool) | yes | no | no | no | The type of answer expected from participants. |
 | `mandatory` | bool | yes | no | no | yes | Whether the participant must answer this question to join. |
 | `order` | int | yes | no | no | yes | Display order; lower values appear first. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the question was created. |
@@ -377,7 +376,7 @@ An authenticated user, synced from Keycloak on first login.
 | `modified_tracks` | Track | O2M | no | no | Tracks this user last modified. |
 | `created_questions` | Question | O2M | no | no | Registration questions this user created. |
 | `modified_questions` | Question | O2M | no | no | Registration questions this user last modified. |
-| `created_answers` | Answer | O2M | no | no | Registration answers this user submitted. |
+| `registration_answers` | Answer | O2M | no | no | Registration answers submitted by this user. |
 | `modified_states` | HackathonState | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |

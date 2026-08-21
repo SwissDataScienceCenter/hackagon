@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -21,6 +22,7 @@ type ParticipantCreate struct {
 	config
 	mutation *ParticipantMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetHackathonID sets the "hackathon_id" field.
@@ -160,6 +162,7 @@ func (_c *ParticipantCreate) createSpec() (*Participant, *sqlgraph.CreateSpec) {
 		_node = &Participant{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(participant.Table, nil)
 	)
+	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.IsWaiting(); ok {
 		_spec.SetField(participant.FieldIsWaiting, field.TypeBool, value)
 		_node.IsWaiting = value
@@ -205,11 +208,199 @@ func (_c *ParticipantCreate) createSpec() (*Participant, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Participant.Create().
+//		SetHackathonID(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ParticipantUpsert) {
+//			SetHackathonID(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *ParticipantCreate) OnConflict(opts ...sql.ConflictOption) *ParticipantUpsertOne {
+	_c.conflict = opts
+	return &ParticipantUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Participant.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *ParticipantCreate) OnConflictColumns(columns ...string) *ParticipantUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &ParticipantUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// ParticipantUpsertOne is the builder for "upsert"-ing
+	//  one Participant node.
+	ParticipantUpsertOne struct {
+		create *ParticipantCreate
+	}
+
+	// ParticipantUpsert is the "OnConflict" setter.
+	ParticipantUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetHackathonID sets the "hackathon_id" field.
+func (u *ParticipantUpsert) SetHackathonID(v uuid.UUID) *ParticipantUpsert {
+	u.Set(participant.FieldHackathonID, v)
+	return u
+}
+
+// UpdateHackathonID sets the "hackathon_id" field to the value that was provided on create.
+func (u *ParticipantUpsert) UpdateHackathonID() *ParticipantUpsert {
+	u.SetExcluded(participant.FieldHackathonID)
+	return u
+}
+
+// SetUserID sets the "user_id" field.
+func (u *ParticipantUpsert) SetUserID(v uuid.UUID) *ParticipantUpsert {
+	u.Set(participant.FieldUserID, v)
+	return u
+}
+
+// UpdateUserID sets the "user_id" field to the value that was provided on create.
+func (u *ParticipantUpsert) UpdateUserID() *ParticipantUpsert {
+	u.SetExcluded(participant.FieldUserID)
+	return u
+}
+
+// SetIsWaiting sets the "is_waiting" field.
+func (u *ParticipantUpsert) SetIsWaiting(v bool) *ParticipantUpsert {
+	u.Set(participant.FieldIsWaiting, v)
+	return u
+}
+
+// UpdateIsWaiting sets the "is_waiting" field to the value that was provided on create.
+func (u *ParticipantUpsert) UpdateIsWaiting() *ParticipantUpsert {
+	u.SetExcluded(participant.FieldIsWaiting)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.Participant.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ParticipantUpsertOne) UpdateNewValues() *ParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(participant.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Participant.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ParticipantUpsertOne) Ignore() *ParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ParticipantUpsertOne) DoNothing() *ParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ParticipantCreate.OnConflict
+// documentation for more info.
+func (u *ParticipantUpsertOne) Update(set func(*ParticipantUpsert)) *ParticipantUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ParticipantUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetHackathonID sets the "hackathon_id" field.
+func (u *ParticipantUpsertOne) SetHackathonID(v uuid.UUID) *ParticipantUpsertOne {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.SetHackathonID(v)
+	})
+}
+
+// UpdateHackathonID sets the "hackathon_id" field to the value that was provided on create.
+func (u *ParticipantUpsertOne) UpdateHackathonID() *ParticipantUpsertOne {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.UpdateHackathonID()
+	})
+}
+
+// SetUserID sets the "user_id" field.
+func (u *ParticipantUpsertOne) SetUserID(v uuid.UUID) *ParticipantUpsertOne {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.SetUserID(v)
+	})
+}
+
+// UpdateUserID sets the "user_id" field to the value that was provided on create.
+func (u *ParticipantUpsertOne) UpdateUserID() *ParticipantUpsertOne {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.UpdateUserID()
+	})
+}
+
+// SetIsWaiting sets the "is_waiting" field.
+func (u *ParticipantUpsertOne) SetIsWaiting(v bool) *ParticipantUpsertOne {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.SetIsWaiting(v)
+	})
+}
+
+// UpdateIsWaiting sets the "is_waiting" field to the value that was provided on create.
+func (u *ParticipantUpsertOne) UpdateIsWaiting() *ParticipantUpsertOne {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.UpdateIsWaiting()
+	})
+}
+
+// Exec executes the query.
+func (u *ParticipantUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ParticipantCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ParticipantUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
 // ParticipantCreateBulk is the builder for creating many Participant entities in bulk.
 type ParticipantCreateBulk struct {
 	config
 	err      error
 	builders []*ParticipantCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Participant entities in the database.
@@ -239,6 +430,7 @@ func (_c *ParticipantCreateBulk) Save(ctx context.Context) ([]*Participant, erro
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -284,6 +476,159 @@ func (_c *ParticipantCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *ParticipantCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Participant.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.ParticipantUpsert) {
+//			SetHackathonID(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *ParticipantCreateBulk) OnConflict(opts ...sql.ConflictOption) *ParticipantUpsertBulk {
+	_c.conflict = opts
+	return &ParticipantUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Participant.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *ParticipantCreateBulk) OnConflictColumns(columns ...string) *ParticipantUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &ParticipantUpsertBulk{
+		create: _c,
+	}
+}
+
+// ParticipantUpsertBulk is the builder for "upsert"-ing
+// a bulk of Participant nodes.
+type ParticipantUpsertBulk struct {
+	create *ParticipantCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Participant.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ParticipantUpsertBulk) UpdateNewValues() *ParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(participant.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Participant.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ParticipantUpsertBulk) Ignore() *ParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ParticipantUpsertBulk) DoNothing() *ParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ParticipantCreateBulk.OnConflict
+// documentation for more info.
+func (u *ParticipantUpsertBulk) Update(set func(*ParticipantUpsert)) *ParticipantUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ParticipantUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetHackathonID sets the "hackathon_id" field.
+func (u *ParticipantUpsertBulk) SetHackathonID(v uuid.UUID) *ParticipantUpsertBulk {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.SetHackathonID(v)
+	})
+}
+
+// UpdateHackathonID sets the "hackathon_id" field to the value that was provided on create.
+func (u *ParticipantUpsertBulk) UpdateHackathonID() *ParticipantUpsertBulk {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.UpdateHackathonID()
+	})
+}
+
+// SetUserID sets the "user_id" field.
+func (u *ParticipantUpsertBulk) SetUserID(v uuid.UUID) *ParticipantUpsertBulk {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.SetUserID(v)
+	})
+}
+
+// UpdateUserID sets the "user_id" field to the value that was provided on create.
+func (u *ParticipantUpsertBulk) UpdateUserID() *ParticipantUpsertBulk {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.UpdateUserID()
+	})
+}
+
+// SetIsWaiting sets the "is_waiting" field.
+func (u *ParticipantUpsertBulk) SetIsWaiting(v bool) *ParticipantUpsertBulk {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.SetIsWaiting(v)
+	})
+}
+
+// UpdateIsWaiting sets the "is_waiting" field to the value that was provided on create.
+func (u *ParticipantUpsertBulk) UpdateIsWaiting() *ParticipantUpsertBulk {
+	return u.Update(func(s *ParticipantUpsert) {
+		s.UpdateIsWaiting()
+	})
+}
+
+// Exec executes the query.
+func (u *ParticipantUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ParticipantCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ParticipantCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ParticipantUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

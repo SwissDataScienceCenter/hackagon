@@ -3152,15 +3152,15 @@ func (c *UserClient) QueryModifiedQuestions(_m *User) *QuestionQuery {
 	return query
 }
 
-// QueryCreatedAnswers queries the created_answers edge of a User.
-func (c *UserClient) QueryCreatedAnswers(_m *User) *AnswerQuery {
+// QueryRegistrationAnswers queries the registration_answers edge of a User.
+func (c *UserClient) QueryRegistrationAnswers(_m *User) *AnswerQuery {
 	query := (&AnswerClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(answer.Table, answer.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedAnswersTable, user.CreatedAnswersColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.RegistrationAnswersTable, user.RegistrationAnswersColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

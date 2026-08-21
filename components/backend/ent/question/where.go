@@ -236,24 +236,24 @@ func LabelContainsFold(v string) predicate.Question {
 	return predicate.Question(sql.FieldContainsFold(FieldLabel, v))
 }
 
-// TypeEQ applies the EQ predicate on the "type" field.
-func TypeEQ(v Type) predicate.Question {
-	return predicate.Question(sql.FieldEQ(FieldType, v))
+// DataTypeEQ applies the EQ predicate on the "data_type" field.
+func DataTypeEQ(v DataType) predicate.Question {
+	return predicate.Question(sql.FieldEQ(FieldDataType, v))
 }
 
-// TypeNEQ applies the NEQ predicate on the "type" field.
-func TypeNEQ(v Type) predicate.Question {
-	return predicate.Question(sql.FieldNEQ(FieldType, v))
+// DataTypeNEQ applies the NEQ predicate on the "data_type" field.
+func DataTypeNEQ(v DataType) predicate.Question {
+	return predicate.Question(sql.FieldNEQ(FieldDataType, v))
 }
 
-// TypeIn applies the In predicate on the "type" field.
-func TypeIn(vs ...Type) predicate.Question {
-	return predicate.Question(sql.FieldIn(FieldType, vs...))
+// DataTypeIn applies the In predicate on the "data_type" field.
+func DataTypeIn(vs ...DataType) predicate.Question {
+	return predicate.Question(sql.FieldIn(FieldDataType, vs...))
 }
 
-// TypeNotIn applies the NotIn predicate on the "type" field.
-func TypeNotIn(vs ...Type) predicate.Question {
-	return predicate.Question(sql.FieldNotIn(FieldType, vs...))
+// DataTypeNotIn applies the NotIn predicate on the "data_type" field.
+func DataTypeNotIn(vs ...DataType) predicate.Question {
+	return predicate.Question(sql.FieldNotIn(FieldDataType, vs...))
 }
 
 // MandatoryEQ applies the EQ predicate on the "mandatory" field.

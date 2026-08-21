@@ -74,16 +74,16 @@ func (_u *QuestionUpdate) SetNillableLabel(v *string) *QuestionUpdate {
 	return _u
 }
 
-// SetType sets the "type" field.
-func (_u *QuestionUpdate) SetType(v question.Type) *QuestionUpdate {
-	_u.mutation.SetType(v)
+// SetDataType sets the "data_type" field.
+func (_u *QuestionUpdate) SetDataType(v question.DataType) *QuestionUpdate {
+	_u.mutation.SetDataType(v)
 	return _u
 }
 
-// SetNillableType sets the "type" field if the given value is not nil.
-func (_u *QuestionUpdate) SetNillableType(v *question.Type) *QuestionUpdate {
+// SetNillableDataType sets the "data_type" field if the given value is not nil.
+func (_u *QuestionUpdate) SetNillableDataType(v *question.DataType) *QuestionUpdate {
 	if v != nil {
-		_u.SetType(*v)
+		_u.SetDataType(*v)
 	}
 	return _u
 }
@@ -241,9 +241,9 @@ func (_u *QuestionUpdate) check() error {
 			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Question.key": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.GetType(); ok {
-		if err := question.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Question.type": %w`, err)}
+	if v, ok := _u.mutation.DataType(); ok {
+		if err := question.DataTypeValidator(v); err != nil {
+			return &ValidationError{Name: "data_type", err: fmt.Errorf(`ent: validator failed for field "Question.data_type": %w`, err)}
 		}
 	}
 	if _u.mutation.HackathonCleared() && len(_u.mutation.HackathonIDs()) > 0 {
@@ -276,8 +276,8 @@ func (_u *QuestionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Label(); ok {
 		_spec.SetField(question.FieldLabel, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(question.FieldType, field.TypeEnum, value)
+	if value, ok := _u.mutation.DataType(); ok {
+		_spec.SetField(question.FieldDataType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Mandatory(); ok {
 		_spec.SetField(question.FieldMandatory, field.TypeBool, value)
@@ -456,16 +456,16 @@ func (_u *QuestionUpdateOne) SetNillableLabel(v *string) *QuestionUpdateOne {
 	return _u
 }
 
-// SetType sets the "type" field.
-func (_u *QuestionUpdateOne) SetType(v question.Type) *QuestionUpdateOne {
-	_u.mutation.SetType(v)
+// SetDataType sets the "data_type" field.
+func (_u *QuestionUpdateOne) SetDataType(v question.DataType) *QuestionUpdateOne {
+	_u.mutation.SetDataType(v)
 	return _u
 }
 
-// SetNillableType sets the "type" field if the given value is not nil.
-func (_u *QuestionUpdateOne) SetNillableType(v *question.Type) *QuestionUpdateOne {
+// SetNillableDataType sets the "data_type" field if the given value is not nil.
+func (_u *QuestionUpdateOne) SetNillableDataType(v *question.DataType) *QuestionUpdateOne {
 	if v != nil {
-		_u.SetType(*v)
+		_u.SetDataType(*v)
 	}
 	return _u
 }
@@ -636,9 +636,9 @@ func (_u *QuestionUpdateOne) check() error {
 			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Question.key": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.GetType(); ok {
-		if err := question.TypeValidator(v); err != nil {
-			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Question.type": %w`, err)}
+	if v, ok := _u.mutation.DataType(); ok {
+		if err := question.DataTypeValidator(v); err != nil {
+			return &ValidationError{Name: "data_type", err: fmt.Errorf(`ent: validator failed for field "Question.data_type": %w`, err)}
 		}
 	}
 	if _u.mutation.HackathonCleared() && len(_u.mutation.HackathonIDs()) > 0 {
@@ -688,8 +688,8 @@ func (_u *QuestionUpdateOne) sqlSave(ctx context.Context) (_node *Question, err 
 	if value, ok := _u.mutation.Label(); ok {
 		_spec.SetField(question.FieldLabel, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(question.FieldType, field.TypeEnum, value)
+	if value, ok := _u.mutation.DataType(); ok {
+		_spec.SetField(question.FieldDataType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Mandatory(); ok {
 		_spec.SetField(question.FieldMandatory, field.TypeBool, value)

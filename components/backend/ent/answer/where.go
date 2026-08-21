@@ -76,9 +76,9 @@ func CreatedAt(v time.Time) predicate.Answer {
 	return predicate.Answer(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldEQ(FieldUpdatedAt, v))
+// ModifiedAt applies equality check predicate on the "modified_at" field. It's identical to ModifiedAtEQ.
+func ModifiedAt(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldEQ(FieldModifiedAt, v))
 }
 
 // QuestionIDEQ applies the EQ predicate on the "question_id" field.
@@ -186,26 +186,6 @@ func ValueContainsFold(v string) predicate.Answer {
 	return predicate.Answer(sql.FieldContainsFold(FieldValue, v))
 }
 
-// TypeEQ applies the EQ predicate on the "type" field.
-func TypeEQ(v Type) predicate.Answer {
-	return predicate.Answer(sql.FieldEQ(FieldType, v))
-}
-
-// TypeNEQ applies the NEQ predicate on the "type" field.
-func TypeNEQ(v Type) predicate.Answer {
-	return predicate.Answer(sql.FieldNEQ(FieldType, v))
-}
-
-// TypeIn applies the In predicate on the "type" field.
-func TypeIn(vs ...Type) predicate.Answer {
-	return predicate.Answer(sql.FieldIn(FieldType, vs...))
-}
-
-// TypeNotIn applies the NotIn predicate on the "type" field.
-func TypeNotIn(vs ...Type) predicate.Answer {
-	return predicate.Answer(sql.FieldNotIn(FieldType, vs...))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Answer {
 	return predicate.Answer(sql.FieldEQ(FieldCreatedAt, v))
@@ -246,44 +226,44 @@ func CreatedAtLTE(v time.Time) predicate.Answer {
 	return predicate.Answer(sql.FieldLTE(FieldCreatedAt, v))
 }
 
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldEQ(FieldUpdatedAt, v))
+// ModifiedAtEQ applies the EQ predicate on the "modified_at" field.
+func ModifiedAtEQ(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldEQ(FieldModifiedAt, v))
 }
 
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldNEQ(FieldUpdatedAt, v))
+// ModifiedAtNEQ applies the NEQ predicate on the "modified_at" field.
+func ModifiedAtNEQ(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldNEQ(FieldModifiedAt, v))
 }
 
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldIn(FieldUpdatedAt, vs...))
+// ModifiedAtIn applies the In predicate on the "modified_at" field.
+func ModifiedAtIn(vs ...time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldIn(FieldModifiedAt, vs...))
 }
 
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldNotIn(FieldUpdatedAt, vs...))
+// ModifiedAtNotIn applies the NotIn predicate on the "modified_at" field.
+func ModifiedAtNotIn(vs ...time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldNotIn(FieldModifiedAt, vs...))
 }
 
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldGT(FieldUpdatedAt, v))
+// ModifiedAtGT applies the GT predicate on the "modified_at" field.
+func ModifiedAtGT(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldGT(FieldModifiedAt, v))
 }
 
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldGTE(FieldUpdatedAt, v))
+// ModifiedAtGTE applies the GTE predicate on the "modified_at" field.
+func ModifiedAtGTE(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldGTE(FieldModifiedAt, v))
 }
 
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldLT(FieldUpdatedAt, v))
+// ModifiedAtLT applies the LT predicate on the "modified_at" field.
+func ModifiedAtLT(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldLT(FieldModifiedAt, v))
 }
 
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.Answer {
-	return predicate.Answer(sql.FieldLTE(FieldUpdatedAt, v))
+// ModifiedAtLTE applies the LTE predicate on the "modified_at" field.
+func ModifiedAtLTE(v time.Time) predicate.Answer {
+	return predicate.Answer(sql.FieldLTE(FieldModifiedAt, v))
 }
 
 // HasQuestion applies the HasEdge predicate on the "question" edge.

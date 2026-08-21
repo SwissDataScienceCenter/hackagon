@@ -74,8 +74,8 @@ type UserEdges struct {
 	CreatedQuestions []*Question `json:"created_questions,omitempty"`
 	// Registration questions this user last modified.
 	ModifiedQuestions []*Question `json:"modified_questions,omitempty"`
-	// Registration answers this user submitted.
-	CreatedAnswers []*Answer `json:"created_answers,omitempty"`
+	// Registration answers submitted by this user.
+	RegistrationAnswers []*Answer `json:"registration_answers,omitempty"`
 	// Hackathon settings this user last modified.
 	ModifiedStates []*HackathonState `json:"modified_states,omitempty"`
 	// Projects this user has marked as preferred.
@@ -257,13 +257,13 @@ func (e UserEdges) ModifiedQuestionsOrErr() ([]*Question, error) {
 	return nil, &NotLoadedError{edge: "modified_questions"}
 }
 
-// CreatedAnswersOrErr returns the CreatedAnswers value or an error if the edge
+// RegistrationAnswersOrErr returns the RegistrationAnswers value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) CreatedAnswersOrErr() ([]*Answer, error) {
+func (e UserEdges) RegistrationAnswersOrErr() ([]*Answer, error) {
 	if e.loadedTypes[18] {
-		return e.CreatedAnswers, nil
+		return e.RegistrationAnswers, nil
 	}
-	return nil, &NotLoadedError{edge: "created_answers"}
+	return nil, &NotLoadedError{edge: "registration_answers"}
 }
 
 // ModifiedStatesOrErr returns the ModifiedStates value or an error if the edge
@@ -500,9 +500,9 @@ func (_m *User) QueryModifiedQuestions() *QuestionQuery {
 	return NewUserClient(_m.config).QueryModifiedQuestions(_m)
 }
 
-// QueryCreatedAnswers queries the "created_answers" edge of the User entity.
-func (_m *User) QueryCreatedAnswers() *AnswerQuery {
-	return NewUserClient(_m.config).QueryCreatedAnswers(_m)
+// QueryRegistrationAnswers queries the "registration_answers" edge of the User entity.
+func (_m *User) QueryRegistrationAnswers() *AnswerQuery {
+	return NewUserClient(_m.config).QueryRegistrationAnswers(_m)
 }
 
 // QueryModifiedStates queries the "modified_states" edge of the User entity.

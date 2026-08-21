@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
@@ -33,7 +34,7 @@ func (Question) Fields() []ent.Field {
 			Comment("Unique identifier for the question within the hackathon."),
 		field.String("label").
 			Comment("Display label for the question."),
-		field.Enum("type").
+		field.Enum("data_type").
 			Values("text", "bool").
 			Comment("The type of answer expected from participants."),
 		field.Bool("mandatory").
@@ -66,6 +67,7 @@ func (Question) Edges() []ent.Edge {
 			Ref("modified_questions").Unique().Required().
 			Comment("The user who last modified the question."),
 		edge.To("answers", Answer.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)).
 			Comment("Answers submitted by participants for this question."),
 	}
 }

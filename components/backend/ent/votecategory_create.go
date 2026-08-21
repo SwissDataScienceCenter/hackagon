@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -23,6 +25,7 @@ type VoteCategoryCreate struct {
 	config
 	mutation *VoteCategoryMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetName sets the "name" field.
@@ -284,6 +287,7 @@ func (_c *VoteCategoryCreate) createSpec() (*VoteCategory, *sqlgraph.CreateSpec)
 		_node = &VoteCategory{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(votecategory.Table, sqlgraph.NewFieldSpec(votecategory.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -384,11 +388,345 @@ func (_c *VoteCategoryCreate) createSpec() (*VoteCategory, *sqlgraph.CreateSpec)
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.VoteCategory.Create().
+//		SetName(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.VoteCategoryUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *VoteCategoryCreate) OnConflict(opts ...sql.ConflictOption) *VoteCategoryUpsertOne {
+	_c.conflict = opts
+	return &VoteCategoryUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.VoteCategory.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *VoteCategoryCreate) OnConflictColumns(columns ...string) *VoteCategoryUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &VoteCategoryUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// VoteCategoryUpsertOne is the builder for "upsert"-ing
+	//  one VoteCategory node.
+	VoteCategoryUpsertOne struct {
+		create *VoteCategoryCreate
+	}
+
+	// VoteCategoryUpsert is the "OnConflict" setter.
+	VoteCategoryUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetName sets the "name" field.
+func (u *VoteCategoryUpsert) SetName(v string) *VoteCategoryUpsert {
+	u.Set(votecategory.FieldName, v)
+	return u
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *VoteCategoryUpsert) UpdateName() *VoteCategoryUpsert {
+	u.SetExcluded(votecategory.FieldName)
+	return u
+}
+
+// SetDescription sets the "description" field.
+func (u *VoteCategoryUpsert) SetDescription(v string) *VoteCategoryUpsert {
+	u.Set(votecategory.FieldDescription, v)
+	return u
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *VoteCategoryUpsert) UpdateDescription() *VoteCategoryUpsert {
+	u.SetExcluded(votecategory.FieldDescription)
+	return u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *VoteCategoryUpsert) ClearDescription() *VoteCategoryUpsert {
+	u.SetNull(votecategory.FieldDescription)
+	return u
+}
+
+// SetVotingMethod sets the "voting_method" field.
+func (u *VoteCategoryUpsert) SetVotingMethod(v votecategory.VotingMethod) *VoteCategoryUpsert {
+	u.Set(votecategory.FieldVotingMethod, v)
+	return u
+}
+
+// UpdateVotingMethod sets the "voting_method" field to the value that was provided on create.
+func (u *VoteCategoryUpsert) UpdateVotingMethod() *VoteCategoryUpsert {
+	u.SetExcluded(votecategory.FieldVotingMethod)
+	return u
+}
+
+// SetVoterType sets the "voter_type" field.
+func (u *VoteCategoryUpsert) SetVoterType(v votecategory.VoterType) *VoteCategoryUpsert {
+	u.Set(votecategory.FieldVoterType, v)
+	return u
+}
+
+// UpdateVoterType sets the "voter_type" field to the value that was provided on create.
+func (u *VoteCategoryUpsert) UpdateVoterType() *VoteCategoryUpsert {
+	u.SetExcluded(votecategory.FieldVoterType)
+	return u
+}
+
+// SetMaxPoints sets the "max_points" field.
+func (u *VoteCategoryUpsert) SetMaxPoints(v int) *VoteCategoryUpsert {
+	u.Set(votecategory.FieldMaxPoints, v)
+	return u
+}
+
+// UpdateMaxPoints sets the "max_points" field to the value that was provided on create.
+func (u *VoteCategoryUpsert) UpdateMaxPoints() *VoteCategoryUpsert {
+	u.SetExcluded(votecategory.FieldMaxPoints)
+	return u
+}
+
+// AddMaxPoints adds v to the "max_points" field.
+func (u *VoteCategoryUpsert) AddMaxPoints(v int) *VoteCategoryUpsert {
+	u.Add(votecategory.FieldMaxPoints, v)
+	return u
+}
+
+// ClearMaxPoints clears the value of the "max_points" field.
+func (u *VoteCategoryUpsert) ClearMaxPoints() *VoteCategoryUpsert {
+	u.SetNull(votecategory.FieldMaxPoints)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *VoteCategoryUpsert) SetModifiedAt(v time.Time) *VoteCategoryUpsert {
+	u.Set(votecategory.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *VoteCategoryUpsert) UpdateModifiedAt() *VoteCategoryUpsert {
+	u.SetExcluded(votecategory.FieldModifiedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.VoteCategory.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(votecategory.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *VoteCategoryUpsertOne) UpdateNewValues() *VoteCategoryUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(votecategory.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(votecategory.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.VoteCategory.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *VoteCategoryUpsertOne) Ignore() *VoteCategoryUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *VoteCategoryUpsertOne) DoNothing() *VoteCategoryUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the VoteCategoryCreate.OnConflict
+// documentation for more info.
+func (u *VoteCategoryUpsertOne) Update(set func(*VoteCategoryUpsert)) *VoteCategoryUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&VoteCategoryUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *VoteCategoryUpsertOne) SetName(v string) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *VoteCategoryUpsertOne) UpdateName() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *VoteCategoryUpsertOne) SetDescription(v string) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *VoteCategoryUpsertOne) UpdateDescription() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *VoteCategoryUpsertOne) ClearDescription() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.ClearDescription()
+	})
+}
+
+// SetVotingMethod sets the "voting_method" field.
+func (u *VoteCategoryUpsertOne) SetVotingMethod(v votecategory.VotingMethod) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetVotingMethod(v)
+	})
+}
+
+// UpdateVotingMethod sets the "voting_method" field to the value that was provided on create.
+func (u *VoteCategoryUpsertOne) UpdateVotingMethod() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateVotingMethod()
+	})
+}
+
+// SetVoterType sets the "voter_type" field.
+func (u *VoteCategoryUpsertOne) SetVoterType(v votecategory.VoterType) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetVoterType(v)
+	})
+}
+
+// UpdateVoterType sets the "voter_type" field to the value that was provided on create.
+func (u *VoteCategoryUpsertOne) UpdateVoterType() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateVoterType()
+	})
+}
+
+// SetMaxPoints sets the "max_points" field.
+func (u *VoteCategoryUpsertOne) SetMaxPoints(v int) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetMaxPoints(v)
+	})
+}
+
+// AddMaxPoints adds v to the "max_points" field.
+func (u *VoteCategoryUpsertOne) AddMaxPoints(v int) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.AddMaxPoints(v)
+	})
+}
+
+// UpdateMaxPoints sets the "max_points" field to the value that was provided on create.
+func (u *VoteCategoryUpsertOne) UpdateMaxPoints() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateMaxPoints()
+	})
+}
+
+// ClearMaxPoints clears the value of the "max_points" field.
+func (u *VoteCategoryUpsertOne) ClearMaxPoints() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.ClearMaxPoints()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *VoteCategoryUpsertOne) SetModifiedAt(v time.Time) *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *VoteCategoryUpsertOne) UpdateModifiedAt() *VoteCategoryUpsertOne {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *VoteCategoryUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for VoteCategoryCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *VoteCategoryUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *VoteCategoryUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: VoteCategoryUpsertOne.ID is not supported by MySQL driver. Use VoteCategoryUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *VoteCategoryUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // VoteCategoryCreateBulk is the builder for creating many VoteCategory entities in bulk.
 type VoteCategoryCreateBulk struct {
 	config
 	err      error
 	builders []*VoteCategoryCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the VoteCategory entities in the database.
@@ -418,6 +756,7 @@ func (_c *VoteCategoryCreateBulk) Save(ctx context.Context) ([]*VoteCategory, er
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -464,6 +803,228 @@ func (_c *VoteCategoryCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *VoteCategoryCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.VoteCategory.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.VoteCategoryUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *VoteCategoryCreateBulk) OnConflict(opts ...sql.ConflictOption) *VoteCategoryUpsertBulk {
+	_c.conflict = opts
+	return &VoteCategoryUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.VoteCategory.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *VoteCategoryCreateBulk) OnConflictColumns(columns ...string) *VoteCategoryUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &VoteCategoryUpsertBulk{
+		create: _c,
+	}
+}
+
+// VoteCategoryUpsertBulk is the builder for "upsert"-ing
+// a bulk of VoteCategory nodes.
+type VoteCategoryUpsertBulk struct {
+	create *VoteCategoryCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.VoteCategory.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(votecategory.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *VoteCategoryUpsertBulk) UpdateNewValues() *VoteCategoryUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(votecategory.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(votecategory.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.VoteCategory.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *VoteCategoryUpsertBulk) Ignore() *VoteCategoryUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *VoteCategoryUpsertBulk) DoNothing() *VoteCategoryUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the VoteCategoryCreateBulk.OnConflict
+// documentation for more info.
+func (u *VoteCategoryUpsertBulk) Update(set func(*VoteCategoryUpsert)) *VoteCategoryUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&VoteCategoryUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *VoteCategoryUpsertBulk) SetName(v string) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *VoteCategoryUpsertBulk) UpdateName() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *VoteCategoryUpsertBulk) SetDescription(v string) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *VoteCategoryUpsertBulk) UpdateDescription() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *VoteCategoryUpsertBulk) ClearDescription() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.ClearDescription()
+	})
+}
+
+// SetVotingMethod sets the "voting_method" field.
+func (u *VoteCategoryUpsertBulk) SetVotingMethod(v votecategory.VotingMethod) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetVotingMethod(v)
+	})
+}
+
+// UpdateVotingMethod sets the "voting_method" field to the value that was provided on create.
+func (u *VoteCategoryUpsertBulk) UpdateVotingMethod() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateVotingMethod()
+	})
+}
+
+// SetVoterType sets the "voter_type" field.
+func (u *VoteCategoryUpsertBulk) SetVoterType(v votecategory.VoterType) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetVoterType(v)
+	})
+}
+
+// UpdateVoterType sets the "voter_type" field to the value that was provided on create.
+func (u *VoteCategoryUpsertBulk) UpdateVoterType() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateVoterType()
+	})
+}
+
+// SetMaxPoints sets the "max_points" field.
+func (u *VoteCategoryUpsertBulk) SetMaxPoints(v int) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetMaxPoints(v)
+	})
+}
+
+// AddMaxPoints adds v to the "max_points" field.
+func (u *VoteCategoryUpsertBulk) AddMaxPoints(v int) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.AddMaxPoints(v)
+	})
+}
+
+// UpdateMaxPoints sets the "max_points" field to the value that was provided on create.
+func (u *VoteCategoryUpsertBulk) UpdateMaxPoints() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateMaxPoints()
+	})
+}
+
+// ClearMaxPoints clears the value of the "max_points" field.
+func (u *VoteCategoryUpsertBulk) ClearMaxPoints() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.ClearMaxPoints()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *VoteCategoryUpsertBulk) SetModifiedAt(v time.Time) *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *VoteCategoryUpsertBulk) UpdateModifiedAt() *VoteCategoryUpsertBulk {
+	return u.Update(func(s *VoteCategoryUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *VoteCategoryUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the VoteCategoryCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for VoteCategoryCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *VoteCategoryUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

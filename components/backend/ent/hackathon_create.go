@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -27,6 +29,7 @@ type HackathonCreate struct {
 	config
 	mutation *HackathonMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetName sets the "name" field.
@@ -410,6 +413,7 @@ func (_c *HackathonCreate) createSpec() (*Hackathon, *sqlgraph.CreateSpec) {
 		_node = &Hackathon{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(hackathon.Table, sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -631,11 +635,384 @@ func (_c *HackathonCreate) createSpec() (*Hackathon, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Hackathon.Create().
+//		SetName(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.HackathonUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *HackathonCreate) OnConflict(opts ...sql.ConflictOption) *HackathonUpsertOne {
+	_c.conflict = opts
+	return &HackathonUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Hackathon.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *HackathonCreate) OnConflictColumns(columns ...string) *HackathonUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &HackathonUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// HackathonUpsertOne is the builder for "upsert"-ing
+	//  one Hackathon node.
+	HackathonUpsertOne struct {
+		create *HackathonCreate
+	}
+
+	// HackathonUpsert is the "OnConflict" setter.
+	HackathonUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetName sets the "name" field.
+func (u *HackathonUpsert) SetName(v string) *HackathonUpsert {
+	u.Set(hackathon.FieldName, v)
+	return u
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateName() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldName)
+	return u
+}
+
+// SetStartsAt sets the "starts_at" field.
+func (u *HackathonUpsert) SetStartsAt(v time.Time) *HackathonUpsert {
+	u.Set(hackathon.FieldStartsAt, v)
+	return u
+}
+
+// UpdateStartsAt sets the "starts_at" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateStartsAt() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldStartsAt)
+	return u
+}
+
+// ClearStartsAt clears the value of the "starts_at" field.
+func (u *HackathonUpsert) ClearStartsAt() *HackathonUpsert {
+	u.SetNull(hackathon.FieldStartsAt)
+	return u
+}
+
+// SetEndsAt sets the "ends_at" field.
+func (u *HackathonUpsert) SetEndsAt(v time.Time) *HackathonUpsert {
+	u.Set(hackathon.FieldEndsAt, v)
+	return u
+}
+
+// UpdateEndsAt sets the "ends_at" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateEndsAt() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldEndsAt)
+	return u
+}
+
+// ClearEndsAt clears the value of the "ends_at" field.
+func (u *HackathonUpsert) ClearEndsAt() *HackathonUpsert {
+	u.SetNull(hackathon.FieldEndsAt)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *HackathonUpsert) SetModifiedAt(v time.Time) *HackathonUpsert {
+	u.Set(hackathon.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateModifiedAt() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldModifiedAt)
+	return u
+}
+
+// SetVisibility sets the "visibility" field.
+func (u *HackathonUpsert) SetVisibility(v hackathon.Visibility) *HackathonUpsert {
+	u.Set(hackathon.FieldVisibility, v)
+	return u
+}
+
+// UpdateVisibility sets the "visibility" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateVisibility() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldVisibility)
+	return u
+}
+
+// SetDescription sets the "description" field.
+func (u *HackathonUpsert) SetDescription(v string) *HackathonUpsert {
+	u.Set(hackathon.FieldDescription, v)
+	return u
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateDescription() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldDescription)
+	return u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *HackathonUpsert) ClearDescription() *HackathonUpsert {
+	u.SetNull(hackathon.FieldDescription)
+	return u
+}
+
+// SetLogo sets the "logo" field.
+func (u *HackathonUpsert) SetLogo(v string) *HackathonUpsert {
+	u.Set(hackathon.FieldLogo, v)
+	return u
+}
+
+// UpdateLogo sets the "logo" field to the value that was provided on create.
+func (u *HackathonUpsert) UpdateLogo() *HackathonUpsert {
+	u.SetExcluded(hackathon.FieldLogo)
+	return u
+}
+
+// ClearLogo clears the value of the "logo" field.
+func (u *HackathonUpsert) ClearLogo() *HackathonUpsert {
+	u.SetNull(hackathon.FieldLogo)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Hackathon.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(hackathon.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *HackathonUpsertOne) UpdateNewValues() *HackathonUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(hackathon.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(hackathon.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Hackathon.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *HackathonUpsertOne) Ignore() *HackathonUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *HackathonUpsertOne) DoNothing() *HackathonUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the HackathonCreate.OnConflict
+// documentation for more info.
+func (u *HackathonUpsertOne) Update(set func(*HackathonUpsert)) *HackathonUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&HackathonUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *HackathonUpsertOne) SetName(v string) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateName() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetStartsAt sets the "starts_at" field.
+func (u *HackathonUpsertOne) SetStartsAt(v time.Time) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetStartsAt(v)
+	})
+}
+
+// UpdateStartsAt sets the "starts_at" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateStartsAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateStartsAt()
+	})
+}
+
+// ClearStartsAt clears the value of the "starts_at" field.
+func (u *HackathonUpsertOne) ClearStartsAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearStartsAt()
+	})
+}
+
+// SetEndsAt sets the "ends_at" field.
+func (u *HackathonUpsertOne) SetEndsAt(v time.Time) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetEndsAt(v)
+	})
+}
+
+// UpdateEndsAt sets the "ends_at" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateEndsAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateEndsAt()
+	})
+}
+
+// ClearEndsAt clears the value of the "ends_at" field.
+func (u *HackathonUpsertOne) ClearEndsAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearEndsAt()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *HackathonUpsertOne) SetModifiedAt(v time.Time) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateModifiedAt() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// SetVisibility sets the "visibility" field.
+func (u *HackathonUpsertOne) SetVisibility(v hackathon.Visibility) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetVisibility(v)
+	})
+}
+
+// UpdateVisibility sets the "visibility" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateVisibility() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateVisibility()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *HackathonUpsertOne) SetDescription(v string) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateDescription() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *HackathonUpsertOne) ClearDescription() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearDescription()
+	})
+}
+
+// SetLogo sets the "logo" field.
+func (u *HackathonUpsertOne) SetLogo(v string) *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetLogo(v)
+	})
+}
+
+// UpdateLogo sets the "logo" field to the value that was provided on create.
+func (u *HackathonUpsertOne) UpdateLogo() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateLogo()
+	})
+}
+
+// ClearLogo clears the value of the "logo" field.
+func (u *HackathonUpsertOne) ClearLogo() *HackathonUpsertOne {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearLogo()
+	})
+}
+
+// Exec executes the query.
+func (u *HackathonUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for HackathonCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *HackathonUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *HackathonUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: HackathonUpsertOne.ID is not supported by MySQL driver. Use HackathonUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *HackathonUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // HackathonCreateBulk is the builder for creating many Hackathon entities in bulk.
 type HackathonCreateBulk struct {
 	config
 	err      error
 	builders []*HackathonCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Hackathon entities in the database.
@@ -665,6 +1042,7 @@ func (_c *HackathonCreateBulk) Save(ctx context.Context) ([]*Hackathon, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -711,6 +1089,249 @@ func (_c *HackathonCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *HackathonCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Hackathon.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.HackathonUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *HackathonCreateBulk) OnConflict(opts ...sql.ConflictOption) *HackathonUpsertBulk {
+	_c.conflict = opts
+	return &HackathonUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Hackathon.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *HackathonCreateBulk) OnConflictColumns(columns ...string) *HackathonUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &HackathonUpsertBulk{
+		create: _c,
+	}
+}
+
+// HackathonUpsertBulk is the builder for "upsert"-ing
+// a bulk of Hackathon nodes.
+type HackathonUpsertBulk struct {
+	create *HackathonCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Hackathon.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(hackathon.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *HackathonUpsertBulk) UpdateNewValues() *HackathonUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(hackathon.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(hackathon.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Hackathon.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *HackathonUpsertBulk) Ignore() *HackathonUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *HackathonUpsertBulk) DoNothing() *HackathonUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the HackathonCreateBulk.OnConflict
+// documentation for more info.
+func (u *HackathonUpsertBulk) Update(set func(*HackathonUpsert)) *HackathonUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&HackathonUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *HackathonUpsertBulk) SetName(v string) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateName() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetStartsAt sets the "starts_at" field.
+func (u *HackathonUpsertBulk) SetStartsAt(v time.Time) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetStartsAt(v)
+	})
+}
+
+// UpdateStartsAt sets the "starts_at" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateStartsAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateStartsAt()
+	})
+}
+
+// ClearStartsAt clears the value of the "starts_at" field.
+func (u *HackathonUpsertBulk) ClearStartsAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearStartsAt()
+	})
+}
+
+// SetEndsAt sets the "ends_at" field.
+func (u *HackathonUpsertBulk) SetEndsAt(v time.Time) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetEndsAt(v)
+	})
+}
+
+// UpdateEndsAt sets the "ends_at" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateEndsAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateEndsAt()
+	})
+}
+
+// ClearEndsAt clears the value of the "ends_at" field.
+func (u *HackathonUpsertBulk) ClearEndsAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearEndsAt()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *HackathonUpsertBulk) SetModifiedAt(v time.Time) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateModifiedAt() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// SetVisibility sets the "visibility" field.
+func (u *HackathonUpsertBulk) SetVisibility(v hackathon.Visibility) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetVisibility(v)
+	})
+}
+
+// UpdateVisibility sets the "visibility" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateVisibility() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateVisibility()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *HackathonUpsertBulk) SetDescription(v string) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateDescription() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *HackathonUpsertBulk) ClearDescription() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearDescription()
+	})
+}
+
+// SetLogo sets the "logo" field.
+func (u *HackathonUpsertBulk) SetLogo(v string) *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.SetLogo(v)
+	})
+}
+
+// UpdateLogo sets the "logo" field to the value that was provided on create.
+func (u *HackathonUpsertBulk) UpdateLogo() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.UpdateLogo()
+	})
+}
+
+// ClearLogo clears the value of the "logo" field.
+func (u *HackathonUpsertBulk) ClearLogo() *HackathonUpsertBulk {
+	return u.Update(func(s *HackathonUpsert) {
+		s.ClearLogo()
+	})
+}
+
+// Exec executes the query.
+func (u *HackathonUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the HackathonCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for HackathonCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *HackathonUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

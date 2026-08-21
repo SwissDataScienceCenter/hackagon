@@ -57,6 +57,5 @@ service HackathonService {
   rpc RemoveQuestion(hackathon.messages.hackathon_svc.RemoveQuestionRequest) returns (hackathon.messages.hackathon_svc.RemoveQuestionResponse);
   rpc ListQuestions(hackathon.messages.hackathon_svc.ListQuestionsRequest) returns (hackathon.messages.hackathon_svc.ListQuestionsResponse);
   rpc SubmitAnswers(hackathon.messages.hackathon_svc.SubmitAnswersRequest) returns (hackathon.messages.hackathon_svc.SubmitAnswersResponse);
-  // Participant answers (admin)
   rpc ListParticipantAnswers(hackathon.messages.hackathon_svc.ListParticipantAnswersRequest) returns (hackathon.messages.hackathon_svc.ListParticipantAnswersResponse);
 }

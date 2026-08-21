@@ -56,7 +56,7 @@ type UserQuery struct {
 	withModifiedTracks           *TrackQuery
 	withCreatedQuestions         *QuestionQuery
 	withModifiedQuestions        *QuestionQuery
-	withCreatedAnswers           *AnswerQuery
+	withRegistrationAnswers      *AnswerQuery
 	withModifiedStates           *HackathonStateQuery
 	withPreferredProjects        *ProjectQuery
 	withVotes                    *VoteQuery
@@ -496,8 +496,8 @@ func (_q *UserQuery) QueryModifiedQuestions() *QuestionQuery {
 	return query
 }
 
-// QueryCreatedAnswers chains the current query on the "created_answers" edge.
-func (_q *UserQuery) QueryCreatedAnswers() *AnswerQuery {
+// QueryRegistrationAnswers chains the current query on the "registration_answers" edge.
+func (_q *UserQuery) QueryRegistrationAnswers() *AnswerQuery {
 	query := (&AnswerClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -510,7 +510,7 @@ func (_q *UserQuery) QueryCreatedAnswers() *AnswerQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(answer.Table, answer.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedAnswersTable, user.CreatedAnswersColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.RegistrationAnswersTable, user.RegistrationAnswersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -882,7 +882,7 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withModifiedTracks:           _q.withModifiedTracks.Clone(),
 		withCreatedQuestions:         _q.withCreatedQuestions.Clone(),
 		withModifiedQuestions:        _q.withModifiedQuestions.Clone(),
-		withCreatedAnswers:           _q.withCreatedAnswers.Clone(),
+		withRegistrationAnswers:      _q.withRegistrationAnswers.Clone(),
 		withModifiedStates:           _q.withModifiedStates.Clone(),
 		withPreferredProjects:        _q.withPreferredProjects.Clone(),
 		withVotes:                    _q.withVotes.Clone(),
@@ -1094,14 +1094,14 @@ func (_q *UserQuery) WithModifiedQuestions(opts ...func(*QuestionQuery)) *UserQu
 	return _q
 }
 
-// WithCreatedAnswers tells the query-builder to eager-load the nodes that are connected to
-// the "created_answers" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithCreatedAnswers(opts ...func(*AnswerQuery)) *UserQuery {
+// WithRegistrationAnswers tells the query-builder to eager-load the nodes that are connected to
+// the "registration_answers" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithRegistrationAnswers(opts ...func(*AnswerQuery)) *UserQuery {
 	query := (&AnswerClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withCreatedAnswers = query
+	_q.withRegistrationAnswers = query
 	return _q
 }
 
@@ -1279,7 +1279,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			_q.withModifiedTracks != nil,
 			_q.withCreatedQuestions != nil,
 			_q.withModifiedQuestions != nil,
-			_q.withCreatedAnswers != nil,
+			_q.withRegistrationAnswers != nil,
 			_q.withModifiedStates != nil,
 			_q.withPreferredProjects != nil,
 			_q.withVotes != nil,
@@ -1435,10 +1435,10 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			return nil, err
 		}
 	}
-	if query := _q.withCreatedAnswers; query != nil {
-		if err := _q.loadCreatedAnswers(ctx, query, nodes,
-			func(n *User) { n.Edges.CreatedAnswers = []*Answer{} },
-			func(n *User, e *Answer) { n.Edges.CreatedAnswers = append(n.Edges.CreatedAnswers, e) }); err != nil {
+	if query := _q.withRegistrationAnswers; query != nil {
+		if err := _q.loadRegistrationAnswers(ctx, query, nodes,
+			func(n *User) { n.Edges.RegistrationAnswers = []*Answer{} },
+			func(n *User, e *Answer) { n.Edges.RegistrationAnswers = append(n.Edges.RegistrationAnswers, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -2112,7 +2112,7 @@ func (_q *UserQuery) loadModifiedQuestions(ctx context.Context, query *QuestionQ
 	}
 	return nil
 }
-func (_q *UserQuery) loadCreatedAnswers(ctx context.Context, query *AnswerQuery, nodes []*User, init func(*User), assign func(*User, *Answer)) error {
+func (_q *UserQuery) loadRegistrationAnswers(ctx context.Context, query *AnswerQuery, nodes []*User, init func(*User), assign func(*User, *Answer)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*User)
 	for i := range nodes {
@@ -2126,7 +2126,7 @@ func (_q *UserQuery) loadCreatedAnswers(ctx context.Context, query *AnswerQuery,
 		query.ctx.AppendFieldOnce(answer.FieldUserID)
 	}
 	query.Where(predicate.Answer(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.CreatedAnswersColumn), fks...))
+		s.Where(sql.InValues(s.C(user.RegistrationAnswersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

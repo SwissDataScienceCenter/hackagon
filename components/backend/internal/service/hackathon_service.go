@@ -7,10 +7,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entanswer "github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
+	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
@@ -279,16 +281,85 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't check participant status")
 	}
 
-	// User doesn't have a participant record - create new participant with is_waiting=true (pending approval)
-	_, err = s.dbClient.Participant.Create().
+	// Fetch all questions for this hackathon (needed for mandatory validation)
+	questions, err := s.dbClient.Question.Query().Where(
+		entquestion.HackathonIDEQ(id),
+	).All(ctx)
+	if err != nil {
+		slog.Error("query questions", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query questions")
+	}
+
+	// Build set of answered question IDs
+	answeredQuestionIDs := make(map[uuid.UUID]struct{})
+	for _, a := range req.GetAnswers() {
+		qID, parseErr := uuid.Parse(a.GetQuestionId())
+		if parseErr != nil {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"invalid question_id in answer: %v",
+				parseErr,
+			)
+		}
+		answeredQuestionIDs[qID] = struct{}{}
+	}
+
+	// Check all mandatory questions have answers
+	var missingMandatory []string
+	for _, q := range questions {
+		if q.Mandatory {
+			if _, answered := answeredQuestionIDs[q.ID]; !answered {
+				missingMandatory = append(missingMandatory, q.Key)
+			}
+		}
+	}
+
+	if len(missingMandatory) > 0 {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"missing mandatory answers: %s",
+			missingMandatory,
+		)
+	}
+
+	// Create participant and answers in a transaction
+	tx, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		slog.Error("start transaction", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't start transaction")
+	}
+
+	participant, err := tx.Participant.Create().
 		SetHackathonID(id).
 		SetUserID(user.ID).
 		SetIsWaiting(true).
 		Save(ctx)
 	if err != nil {
+		_ = tx.Rollback()
 		slog.Error("create participant", "err", err)
-
 		return nil, status.Errorf(codes.Internal, "couldn't join hackathon")
+	}
+
+	// Upsert answers linked to the new participant
+	for _, a := range req.GetAnswers() {
+		qID, _ := uuid.Parse(a.GetQuestionId())
+		err := tx.Answer.Create().
+			SetQuestionID(qID).
+			SetUserID(participant.UserID).
+			SetValue(a.GetValue()).
+			OnConflict().
+			UpdateNewValues().
+			Exec(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("upsert answer", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't save answer")
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		slog.Error("commit transaction", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't commit transaction")
 	}
 
 	return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
@@ -1139,4 +1210,437 @@ func (s *HackathonService) List(
 	}
 
 	return &msgs.ListResponse{Hackathons: entries}, nil
+}
+
+// --- Registration question handlers ---
+
+func (s *HackathonService) CreateQuestion(
+	ctx context.Context,
+	req *msgs.CreateQuestionRequest,
+) (*msgs.CreateQuestionResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Write); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Check for duplicate key
+	_, err = s.dbClient.Question.Query().Where(
+		entquestion.HackathonIDEQ(id),
+		entquestion.KeyEQ(req.GetKey()),
+	).Only(ctx)
+	if err == nil {
+		return nil, status.Errorf(
+			codes.AlreadyExists,
+			"question with key %q already exists",
+			req.GetKey(),
+		)
+	}
+	if !ent.IsNotFound(err) {
+		slog.Error("check duplicate question key", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't check for duplicate key")
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	datatype, ok := questionTypeToEnt(req.GetType())
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "unknown question type")
+	}
+
+	q, err := s.dbClient.Question.Create().
+		SetHackathonID(id).
+		SetKey(req.GetKey()).
+		SetLabel(req.GetLabel()).
+		SetMandatory(req.GetMandatory()).
+		SetDataType(datatype).
+		SetOrder(int(req.GetOrder())).
+		SetCreator(user).
+		SetModifier(user).
+		Save(ctx)
+	if err != nil {
+		slog.Error("create question", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't create question in database")
+	}
+
+	return &msgs.CreateQuestionResponse{QuestionId: q.ID.String()}, nil
+}
+
+func (s *HackathonService) EditQuestion(
+	ctx context.Context,
+	req *msgs.EditQuestionRequest,
+) (*msgs.EditQuestionResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	hackID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Write); err != nil {
+		return nil, err
+	}
+
+	qID, err := uuid.Parse(req.GetQuestionId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid question_id: %v", err)
+	}
+
+	// Verify the question exists and belongs to the hackathon
+	q, err := s.dbClient.Question.Query().Where(
+		entquestion.IDEQ(qID),
+		entquestion.HackathonIDEQ(hackID),
+	).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "question %s not found", req.GetQuestionId())
+		}
+		slog.Error("query question", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Check if question has existing answers (needed for type/mandatory constraints)
+	hasAnswers, err := s.dbClient.Answer.Query().Where(
+		entanswer.HasQuestionWith(entquestion.IDEQ(qID)),
+	).Exist(ctx)
+	if err != nil {
+		slog.Error("check question answers", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't check for existing answers")
+	}
+
+	// Validate constraint: cannot change type if answers exist
+	if req.GetType() != ents.QuestionType_QUESTION_TYPE_UNSPECIFIED && hasAnswers {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot change type of question with existing answers",
+		)
+	}
+
+	// Validate constraint: cannot change mandatory if answers exist
+	if req.Mandatory != nil && req.GetMandatory() && hasAnswers {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot change mandatory of question with existing answers",
+		)
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	update := s.dbClient.Question.UpdateOne(q)
+	if label := req.GetLabel(); label != "" {
+		update = update.SetLabel(label)
+	}
+	if req.Mandatory != nil {
+		update = update.SetMandatory(req.GetMandatory())
+	}
+	if o := req.GetOrder(); o != 0 {
+		update = update.SetOrder(int(o))
+	}
+	update = update.SetModifier(user)
+
+	_, err = update.Save(ctx)
+	if err != nil {
+		slog.Error("edit question", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't edit question")
+	}
+
+	return &msgs.EditQuestionResponse{}, nil
+}
+
+func (s *HackathonService) RemoveQuestion(
+	ctx context.Context,
+	req *msgs.RemoveQuestionRequest,
+) (*msgs.RemoveQuestionResponse, error) {
+	_, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	hackID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Write); err != nil {
+		return nil, err
+	}
+
+	qID, err := uuid.Parse(req.GetQuestionId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid question_id: %v", err)
+	}
+
+	// Verify the question exists and belongs to the hackathon
+	_, err = s.dbClient.Question.Query().Where(
+		entquestion.IDEQ(qID),
+		entquestion.HackathonIDEQ(hackID),
+	).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "question %s not found", req.GetQuestionId())
+		}
+		slog.Error("query question", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Remove the question (cascade deletes answers)
+	err = s.dbClient.Question.DeleteOneID(qID).Exec(ctx)
+	if err != nil {
+		slog.Error("remove question", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't remove question")
+	}
+
+	return &msgs.RemoveQuestionResponse{}, nil
+}
+
+func (s *HackathonService) ListQuestions(
+	ctx context.Context,
+	req *msgs.ListQuestionsRequest,
+) (*msgs.ListQuestionsResponse, error) {
+	id, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
+		return nil, err
+	}
+
+	questions, err := s.dbClient.Question.Query().Where(
+		entquestion.HackathonIDEQ(id),
+	).Order(entquestion.ByOrder()).All(ctx)
+	if err != nil {
+		slog.Error("query questions", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query questions")
+	}
+
+	entries := make([]*ents.Question, 0, len(questions))
+	for _, q := range questions {
+		entries = append(entries, questionEntryFromEnt(q))
+	}
+
+	return &msgs.ListQuestionsResponse{Questions: entries}, nil
+}
+
+func (s *HackathonService) SubmitAnswers(
+	ctx context.Context,
+	req *msgs.SubmitAnswersRequest,
+) (*msgs.SubmitAnswersResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if uid == mw.AnonSubject {
+		return nil, status.Error(codes.Unauthenticated, "anonymous users cannot submit answers")
+	}
+
+	hackID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Read); err != nil {
+		return nil, err
+	}
+
+	// Verify hackathon exists
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(hackID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Find the participant
+	participant, err := s.dbClient.Participant.Query().Where(
+		entparticipant.HackathonIDEQ(hackID),
+		entparticipant.UserID(user.ID),
+	).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user is not a participant in this hackathon")
+		}
+		slog.Error("query participant", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query participant")
+	}
+
+	// Fetch all questions for this hackathon
+	questions, err := s.dbClient.Question.Query().Where(
+		entquestion.HackathonIDEQ(hackID),
+	).All(ctx)
+	if err != nil {
+		slog.Error("query questions", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query questions")
+	}
+
+	// Build set of answered question IDs
+	answeredQuestionIDs := make(map[uuid.UUID]struct{})
+	for _, a := range req.GetAnswers() {
+		qID, err := uuid.Parse(a.GetQuestionId())
+		if err != nil {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"invalid question_id in answer: %v",
+				err,
+			)
+		}
+		answeredQuestionIDs[qID] = struct{}{}
+	}
+
+	// Check all mandatory questions have answers
+	var missingMandatory []string
+	for _, q := range questions {
+		if q.Mandatory {
+			if _, answered := answeredQuestionIDs[q.ID]; !answered {
+				missingMandatory = append(missingMandatory, q.Key)
+			}
+		}
+	}
+
+	if len(missingMandatory) > 0 {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"missing mandatory answers: %s",
+			missingMandatory,
+		)
+	}
+
+	// Upsert answers linked to the participant
+	for _, a := range req.GetAnswers() {
+		qID, _ := uuid.Parse(a.GetQuestionId())
+		err := s.dbClient.Answer.Create().
+			SetQuestionID(qID).
+			SetUserID(participant.UserID).
+			SetValue(a.GetValue()).
+			OnConflict().
+			UpdateNewValues().
+			Exec(ctx)
+		if err != nil {
+			slog.Error("upsert answer", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't save answer")
+		}
+	}
+
+	return &msgs.SubmitAnswersResponse{}, nil
+}
+
+func (s *HackathonService) ListParticipantAnswers(
+	ctx context.Context,
+	req *msgs.ListParticipantAnswersRequest,
+) (*msgs.ListParticipantAnswersResponse, error) {
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	hackID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Get the requesting user's entity ID
+	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "user does not exist: %s", uid)
+		}
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	// Check if user has write access
+	hasWrite, err := s.enforcer.Enforce(ctx, hackID.String(), mw.Hackathon, mw.Write)
+	if err != nil {
+		slog.Error("enforce list participant answers", "err", err)
+		return nil, status.Error(codes.Internal, "authorization error")
+	}
+
+	// Build query
+	q := s.dbClient.Answer.Query().Where(
+		entanswer.HasQuestionWith(
+			entquestion.HasHackathonWith(enthackathon.IDEQ(hackID)),
+		),
+	)
+
+	if req.GetUserId() != "" {
+		uidParsed, err := uuid.Parse(req.GetUserId())
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+		}
+		q = q.Where(entanswer.HasUserWith(
+			entuser.ID(uidParsed),
+		))
+	} else if !hasWrite {
+		// No write access: filter by requester's own answers
+		q = q.Where(entanswer.HasUserWith(
+			entuser.ID(user.ID),
+		))
+	}
+
+	answers, err := q.All(ctx)
+	if err != nil {
+		slog.Error("query answers", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query answers")
+	}
+
+	entries := make([]*ents.Answer, 0, len(answers))
+	for _, a := range answers {
+		entries = append(entries, answerEntryFromEnt(a))
+	}
+
+	return &msgs.ListParticipantAnswersResponse{Answers: entries}, nil
 }

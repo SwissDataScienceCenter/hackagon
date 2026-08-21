@@ -97,9 +97,9 @@ func (User) Edges() []ent.Edge {
 		edge.To("modified_questions", Question.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Registration questions this user last modified."),
-		edge.To("created_answers", Answer.Type).
-			Annotations(entsql.OnDelete(entsql.Restrict)).
-			Comment("Registration answers this user submitted."),
+		edge.To("registration_answers", Answer.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)).
+			Comment("Registration answers submitted by this user."),
 		edge.To("modified_states", HackathonState.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Hackathon settings this user last modified."),
