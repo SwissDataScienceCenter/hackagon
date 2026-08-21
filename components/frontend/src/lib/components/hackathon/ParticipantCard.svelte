@@ -29,9 +29,10 @@
          * the caller so this card stays ignorant of hackathon roles and
          * permissions.
          *
-         * There is no "View" link any more: participant profiles have no page of
-         * their own, and a button onto `#` is a control that looks live and does
-         * nothing. Add one back when a profile route exists.
+         * The participants list passes a View link onto
+         * `/my/hackathon/[id]/participants/[participantId]` this way; the card
+         * itself is not a link, so a caller stays free to render no control at
+         * all.
          */
         actions?: Snippet;
     } = $props();

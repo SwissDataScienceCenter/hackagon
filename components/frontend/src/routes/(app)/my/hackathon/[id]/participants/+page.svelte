@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
     import { Search } from 'lucide-svelte';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
     import type { PageData } from './$types';
@@ -27,8 +28,9 @@
 <!--
   Who is here, and nothing to act on: Approve and Remove live on the Manage
   Participants page (see $lib/navigation's manageNav), which is the one place an
-  owner's extra capabilities are collected. No "View" link either — participant
-  profiles have no page of their own yet.
+  owner's extra capabilities are collected. The only control on a row is View,
+  onto that participant's profile — the row is a name and a role chip, which is
+  not enough to know who you are about to team up with.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -67,7 +69,18 @@
             </p>
         {:else}
             {#each filtered as participant (participant.id)}
-                <ParticipantCard name={participant.name} role={participant.roleLabel} />
+                <ParticipantCard name={participant.name} role={participant.roleLabel}>
+                    {#snippet actions()}
+                        <a
+                            href={resolve(
+                                `/my/hackathon/${data.hackathonId}/participants/${participant.id}`
+                            )}
+                            class="btn btn-sm btn-ghost no-underline"
+                        >
+                            View
+                        </a>
+                    {/snippet}
+                </ParticipantCard>
             {/each}
         {/if}
     </div>

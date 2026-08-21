@@ -27,5 +27,7 @@ export const load: PageServerLoad = async (event) => {
       roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
     }))
 
-  return { participants }
+  // The route id is returned rather than read from `$page` in the component, so
+  // the View link's target comes from the same load that produced the rows.
+  return { hackathonId: event.params.id, participants }
 }
