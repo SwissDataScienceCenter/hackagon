@@ -172,17 +172,22 @@ not the DB). Server-only helpers of this kind live in
 `src/lib/server/hackathon/` (`capabilities.ts`, `projectEdit.ts`) — they read
 generated types, so a `.svelte` file must never import them.
 
-## Capability-gated mutations fail in seeded data — expect it
+## Capability-gated mutations depend on the hackathon — read the set first
 
 Several backend mutations are gated on a **capability**, not just a role:
 `SetPreference`/`RemovePreference` need `SET_TEAM_PREFERENCES`, `Propose` needs
 `PROPOSE_PROJECTS`, submissions need `CREATE_PROJECT_SUBMISSIONS`. A capability
-is only "on" if `HackathonService.SetCapabilities` wrote both a `HackathonState`
-boolean and a casbin policy row — and `cmd/seed` creates no `HackathonState` row
-at all. Nothing in the frontend calls `setCapabilities`.
+is "on" only when both a `HackathonState` boolean and a casbin policy row exist.
+Two things write the pair: `HackathonService.SetCapabilities`, which the manage
+hub's capability panel calls from the frontend
+(`src/lib/server/hackathon/stateActions.ts`), and `cmd/seed` directly
+(`seedCapabilities`), with a **different set per hackathon**.
 
-So in a seeded hackathon these calls return `PERMISSION_DENIED` **by
-configuration, not by a bug in your wiring**. Two consequences:
+So the same call succeeds in one hackathon and returns `PERMISSION_DENIED` in
+the next, **by configuration, not by a bug in your wiring** — and an organizer
+can change the set under you. The set is already loaded: the `[id]` layout
+passes `hackathon.state` through `enabledCapabilities` into
+`hackathonState.enabled`. Read it before debugging. Two consequences:
 
 - Don't "fix" it frontend-side. Translate the error into something a user can
   read and move on.

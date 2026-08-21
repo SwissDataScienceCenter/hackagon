@@ -170,10 +170,16 @@ auto-enable or disable any capability."_ `SetCurrentPhase` sets
 and never touches state or casbin. Advancing a phase changes what the UI
 displays, not what anyone may do.
 
-**`cmd/seed` creates no `HackathonState` row at all.** Seeded hackathons
-therefore report no capabilities and every capability-gated handler refuses. If
-a mutation returns `PermissionDenied` in seeded data, check this before
-suspecting your code.
+**`cmd/seed` writes both halves itself.** `seedCapabilities`
+(`cmd/seed/main.go:67`) creates each hackathon's `HackathonState` row _and_ the
+casbin rows that go with it, copying the role each capability grants to from
+`SetCapabilities` — plus one row `SetCapabilities` does not write: team
+preferences to `Owner` as well as `Member`, so the fixture shows the intended
+behaviour ahead of the handler (see
+`mydocs/docs/backend-tickets/project-preferences-capability.md`). The set
+differs per hackathon, so a `PermissionDenied` in seeded data means that
+capability is off in _that_ hackathon — read `state` from `HackathonService.Get`
+before suspecting your code.
 
 Known gaps are written up in `mydocs/docs/backend-tickets/` — start with
 `project-preferences-capability.md`, which traces the whole chain for

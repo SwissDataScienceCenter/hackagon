@@ -26,7 +26,7 @@ Route groups carry the auth boundary:
 - `(app)/` — everything behind Keycloak login: `/dashboard`, `/manage/...`,
   `/hackathons/create`, and the member hackathon subtree
   `/my/hackathon/[id]/{overview,projects,teams,participants,submissions,timeline,pages/[pageId]}`.
-- `(participant)/`, plus top-level `signin`, `signout`, `+error.svelte`.
+- Top-level `signin`, `signout`, `+error.svelte`. There is no other route group.
 
 The public `/hackathon/[id]` and member `/my/hackathon/[id]/...` are **disjoint
 path spaces** on purpose; a signed-in visitor to the public page is redirected
@@ -54,8 +54,8 @@ Use runes, not the Svelte 4 `export let` / reactive `$:` style:
 
 ## Components (`src/lib/components/<area>/`)
 
-Areas: `hackathon/`, `dashboard/`, `layout/`, `forms/`, `profile/`. Prototype
-for a list row is `hackathon/HackathonRow.svelte`. Conventions:
+Areas: `hackathon/`, `dashboard/`, `layout/`, `forms/`. Prototype for a list row
+is `hackathon/HackathonRow.svelte`. Conventions:
 
 - Type props inline in the `$props()` destructure; give optionals defaults.
 - Keep display props **generic strings** so a component is reusable — e.g.
@@ -158,9 +158,17 @@ wanted anyway. Same for inspecting your work before a commit: one
 Bring the stack up with `just start` from the repo root, then open
 http://localhost:8081.
 
-Auth-gated `(app)` pages can't be screenshotted headlessly — Keycloak redirects
-— so either log in interactively as `alice`/`aliceandbob`, or verify the
-underlying data directly with `just rpc::as alice aliceandbob <svc>/<method>`.
+Auth-gated `(app)` pages need a real session before they render anything —
+Keycloak redirects an anonymous request away — and nothing in this repo captures
+one today. That is a missing setup, not an impossibility: Playwright can drive
+the Keycloak form (username → Sign In → password) and reuse the session, which
+is how the `sketch/experimental-frontend-deployment` branch screenshots every
+member tab at desktop and phone widths — see
+`.claude/skills/hackathon-e2e/helpers/login.ts` **on that branch** if you decide
+to port it (its realm config differs from main's, so the flow needs re-verifying
+here). Until then, either log in interactively as `alice`/`aliceandbob`, or
+verify the underlying data with `just rpc::as alice aliceandbob <svc>/<method>`.
+
 Public routes (`/`, `/hackathon/[id]`) render without a session and can be
 captured with whatever headless tool you have; if you take a screenshot, **look
 at the PNG** rather than assuming it rendered.

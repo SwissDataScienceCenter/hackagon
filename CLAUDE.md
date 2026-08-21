@@ -130,9 +130,11 @@ These hold across the whole codebase; the skills explain the mechanisms.
   of surprising `PermissionDenied`.
 - **A phase does not control what participants may do.** `Phase.capabilities` is
   informational; `HackathonState` plus its casbin rows is what actually gates
-  anything, and `SetCurrentPhase` does not touch either. `cmd/seed` creates no
-  `HackathonState`, so capability-gated mutations refuse in seeded data. Details
-  in **backend-service-dev**; diagnosis in **backend-api-explore**.
+  anything, and `SetCurrentPhase` does not touch either. `cmd/seed` writes both
+  halves (`seedCapabilities`) with a **different capability set per hackathon**,
+  so a refused mutation in seeded data means that capability is off _there_ —
+  not that the fixture is unusable. Details in **backend-service-dev**;
+  diagnosis in **backend-api-explore**.
 - **Don't trust written status.** Determine what's implemented by asking the
   running server — see **backend-api-explore**. Any inventory committed to a
   markdown file is a snapshot that starts rotting immediately, this one
