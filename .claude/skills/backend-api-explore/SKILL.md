@@ -225,15 +225,21 @@ row-count overview.
   things in order:
   1. **Is the caller a confirmed participant?** Waitlisted users are refused by
      design (`charles` in H1).
-  2. **Is it capability-gated?** `SetPreference`, `RemovePreference`, `Propose`
-     and submission RPCs need a capability that only
-     `HackathonService.SetCapabilities` can switch on — and `cmd/seed` creates
-     no `HackathonState` row, so **in seeded data these always refuse**. This is
-     configuration, not a bug. Reproducible today:
+  2. **Is it capability-gated, and is that capability on _in this hackathon_?**
+     `SetPreference`, `RemovePreference`, `Propose` and the submission RPCs are
+     gated on a capability, which is really a casbin row written alongside a
+     `HackathonState` boolean. `cmd/seed` writes both (`seedCapabilities`) with
+     a **different set per hackathon**, so the same call succeeds in one seeded
+     hackathon and is refused in the next — configuration, not a bug. Read the
+     set instead of guessing:
      ```
-     just rpc::as alice aliceandbob hackathon.ProjectService/SetPreference '{"projectId":"<uuid>"}'
-     → Code: PermissionDenied
+     just rpc::as alice aliceandbob hackathon.HackathonService/Get \
+       '{"hackathonId":"<uuid>"}' | jq '.hackathon.state'
      ```
+     As seeded: AI Innovation has register/propose/preferences/submissions on,
+     Climate Tech the same minus register, Internal Product Sprint only
+     vote/view-results. A hackathon created through `HackathonService.Create`
+     gets a state row with every capability `false`.
   3. **Is the caller an Owner where the rule grants Member?** The casbin model
      has no role inheritance, so an owner is refused by a Member-scoped policy.
 

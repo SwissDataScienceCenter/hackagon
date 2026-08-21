@@ -4,10 +4,10 @@ description:
   Adapting the Hackagon dev seed fixture (components/backend/cmd/seed) — adding
   or changing hackathons, users, projects, teams, submissions and phases, the
   casbin roles that must accompany every DB row, the sentinel-based idempotency
-  and how to force a re-seed, and the HackathonState gap that makes seeded
-  hackathons refuse capability-gated mutations. Use when asked to add or change
-  dev/test data, make a scenario reproducible locally, or fix a seeded hackathon
-  that nobody can act in.
+  and how to force a re-seed, and the HackathonState plus casbin rows that
+  decide what participants may actually do in each seeded hackathon. Use when
+  asked to add or change dev/test data, make a scenario reproducible locally, or
+  fix a seeded hackathon that nobody can act in.
 ---
 
 # Adapting the seed
@@ -120,24 +120,42 @@ are hardcoded constants at the top of the file; the admin's comes from config.
 Adding a genuinely new user means adding them to Keycloak too
 (`tools/configs/keycloak/`), not just here.
 
-## Known gap: no HackathonState row
+## Capabilities: every hackathon needs `seedCapabilities`
 
-`cmd/seed` never creates a `HackathonState`. That row is what holds the six
-capability booleans, and `HackathonService.SetCapabilities` is what flips them
-_and_ writes the matching casbin policy. With no row and no call, **every
-capability-gated mutation refuses in seeded data** — `SetPreference`,
-`RemovePreference`, `Propose`, submissions. Confirmed live: alice, a confirmed
-member of the seeded Climate Tech Hackathon, gets `PermissionDenied` from
-`SetPreference`.
+A capability is **two writes, not one**: the boolean on `HackathonState` and a
+casbin policy row. The enforcer only ever reads the policy, so a state row on
+its own grants nothing and a hackathon without both is one nobody can act in —
+this used to be the single biggest reason a seeded hackathon felt broken.
 
-This is the single biggest reason a seeded hackathon feels broken. If you're
-asked to make the seed usable, this is the fix: create a `HackathonState` per
-hackathon with capabilities appropriate to its phase, and write the matching
-casbin rows — remembering that `SetCapabilities` grants to `Member`, and the
-model has no inheritance, so an owner needs their own grant.
+`seedCapabilities` (`main.go:67`) does both, and every hackathon must call it.
+It copies the role each capability grants to from `SetCapabilities`
+(`hackathon_service.go:616-653`) so seeded hackathons behave like ones created
+through the API — registration granting to `*` rather than a role, since the
+point is that a non-member can join, and `vote` writing **two** rows
+(`Vote:Create` plus `VoteCategory:Read`, without which a member cannot see what
+there is to vote on). It also takes the phase an organizer has declared current,
+or nil.
 
-Full write-up, including a partial-write bug in `SetCapabilities` when the state
-row is missing: `mydocs/docs/backend-tickets/project-preferences-capability.md`.
+One row goes **beyond** the handler on purpose: team preferences are granted to
+`Owner` as well as `Member`. The handler grants `Member` only and the model has
+no inheritance, so an owner cannot express a preference — judged wrong and
+tracked in `mydocs/docs/backend-tickets/project-preferences-capability.md`
+(which also documents a partial-write bug in `SetCapabilities` when the state
+row is missing). Drop that row if you would rather the fixture mirror the
+handler exactly.
+
+The sets are chosen per hackathon so the fixture spans the interesting states:
+
+| Hackathon               | On                                          | Current phase |
+| ----------------------- | ------------------------------------------- | ------------- |
+| AI Innovation 2026      | register, propose, preferences, submissions | none          |
+| Climate Tech 2026       | propose, preferences, submissions           | Hacking       |
+| Internal Product Sprint | vote, view-results                          | Demo          |
+
+So "capability-gated mutation refuses" is now a question about _which_
+hackathon, not about the seed as a whole. Phase tags stay decorative: a phase
+tagged `vote` in a hackathon whose `voting_enabled` is false is a legitimate
+fixture — it says when voting is meant to happen, not that it is open.
 
 ## After changing the seed
 
