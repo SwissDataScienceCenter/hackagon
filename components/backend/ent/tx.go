@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Answer is the client for interacting with the Answer builders.
+	Answer *AnswerClient
 	// Hackathon is the client for interacting with the Hackathon builders.
 	Hackathon *HackathonClient
 	// HackathonState is the client for interacting with the HackathonState builders.
@@ -24,6 +26,8 @@ type Tx struct {
 	Phase *PhaseClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Question is the client for interacting with the Question builders.
+	Question *QuestionClient
 	// Submission is the client for interacting with the Submission builders.
 	Submission *SubmissionClient
 	// Team is the client for interacting with the Team builders.
@@ -171,12 +175,14 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Answer = NewAnswerClient(tx.config)
 	tx.Hackathon = NewHackathonClient(tx.config)
 	tx.HackathonState = NewHackathonStateClient(tx.config)
 	tx.Page = NewPageClient(tx.config)
 	tx.Participant = NewParticipantClient(tx.config)
 	tx.Phase = NewPhaseClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.Question = NewQuestionClient(tx.config)
 	tx.Submission = NewSubmissionClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)
 	tx.TeamParticipant = NewTeamParticipantClient(tx.config)
@@ -194,7 +200,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Hackathon.QueryXXX(), the query will be executed
+// applies a query, for example: Answer.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

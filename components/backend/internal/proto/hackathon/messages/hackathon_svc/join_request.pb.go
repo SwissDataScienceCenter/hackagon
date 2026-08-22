@@ -7,6 +7,8 @@
 package hackathon_svc
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	entities "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -24,6 +26,7 @@ const (
 type JoinRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HackathonId   string                 `protobuf:"bytes,1,opt,name=hackathon_id,json=hackathonId,proto3" json:"hackathon_id,omitempty"`
+	Answers       []*entities.Answer     `protobuf:"bytes,2,rep,name=answers,proto3" json:"answers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -65,13 +68,21 @@ func (x *JoinRequest) GetHackathonId() string {
 	return ""
 }
 
+func (x *JoinRequest) GetAnswers() []*entities.Answer {
+	if x != nil {
+		return x.Answers
+	}
+	return nil
+}
+
 var File_hackathon_messages_hackathon_svc_join_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_hackathon_svc_join_request_proto_rawDesc = "" +
 	"\n" +
-	"3hackathon/messages/hackathon_svc/join_request.proto\x12 hackathon.messages.hackathon_svc\"0\n" +
-	"\vJoinRequest\x12!\n" +
-	"\fhackathon_id\x18\x01 \x01(\tR\vhackathonIdBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
+	"3hackathon/messages/hackathon_svc/join_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a\x1fhackathon/entities/answer.proto\"p\n" +
+	"\vJoinRequest\x12+\n" +
+	"\fhackathon_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vhackathonId\x124\n" +
+	"\aanswers\x18\x02 \x03(\v2\x1a.hackathon.entities.AnswerR\aanswersBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
 
 var (
 	file_hackathon_messages_hackathon_svc_join_request_proto_rawDescOnce sync.Once
@@ -87,14 +98,16 @@ func file_hackathon_messages_hackathon_svc_join_request_proto_rawDescGZIP() []by
 
 var file_hackathon_messages_hackathon_svc_join_request_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_hackathon_messages_hackathon_svc_join_request_proto_goTypes = []any{
-	(*JoinRequest)(nil), // 0: hackathon.messages.hackathon_svc.JoinRequest
+	(*JoinRequest)(nil),     // 0: hackathon.messages.hackathon_svc.JoinRequest
+	(*entities.Answer)(nil), // 1: hackathon.entities.Answer
 }
 var file_hackathon_messages_hackathon_svc_join_request_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: hackathon.messages.hackathon_svc.JoinRequest.answers:type_name -> hackathon.entities.Answer
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_hackathon_messages_hackathon_svc_join_request_proto_init() }

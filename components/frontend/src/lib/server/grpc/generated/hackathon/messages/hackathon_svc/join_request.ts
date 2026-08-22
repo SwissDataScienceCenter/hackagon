@@ -6,21 +6,26 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
+import { Answer } from "../../entities/answer";
 
 export const protobufPackage = "hackathon.messages.hackathon_svc";
 
 export interface JoinRequest {
   hackathonId: string;
+  answers: Answer[];
 }
 
 function createBaseJoinRequest(): JoinRequest {
-  return { hackathonId: "" };
+  return { hackathonId: "", answers: [] };
 }
 
 export const JoinRequest: MessageFns<JoinRequest> = {
   encode(message: JoinRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.hackathonId !== "") {
       writer.uint32(10).string(message.hackathonId);
+    }
+    for (const v of message.answers) {
+      Answer.encode(v!, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -40,6 +45,14 @@ export const JoinRequest: MessageFns<JoinRequest> = {
           message.hackathonId = reader.string();
           continue;
         }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.answers.push(Answer.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -56,6 +69,7 @@ export const JoinRequest: MessageFns<JoinRequest> = {
         : isSet(object.hackathon_id)
         ? globalThis.String(object.hackathon_id)
         : "",
+      answers: globalThis.Array.isArray(object?.answers) ? object.answers.map((e: any) => Answer.fromJSON(e)) : [],
     };
   },
 
@@ -63,6 +77,9 @@ export const JoinRequest: MessageFns<JoinRequest> = {
     const obj: any = {};
     if (message.hackathonId !== "") {
       obj.hackathonId = message.hackathonId;
+    }
+    if (message.answers?.length) {
+      obj.answers = message.answers.map((e) => Answer.toJSON(e));
     }
     return obj;
   },
@@ -73,6 +90,7 @@ export const JoinRequest: MessageFns<JoinRequest> = {
   fromPartial(object: DeepPartial<JoinRequest>): JoinRequest {
     const message = createBaseJoinRequest();
     message.hackathonId = object.hackathonId ?? "";
+    message.answers = object.answers?.map((e) => Answer.fromPartial(e)) || [];
     return message;
   },
 };
