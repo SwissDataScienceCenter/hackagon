@@ -1,62 +1,23 @@
 import { describe, it, expect } from "vitest"
 import { stateAlerts } from "./hackathonState"
 
-// Capability numeric values.
-const VOTE = 5
-const VIEW_RESULTS = 6
-
 describe("stateAlerts", () => {
-  it("is silent when the configuration matches the current phase", () => {
-    expect(
-      stateAlerts({ hasState: true, currentPhaseName: "Hacking", unmet: [] }),
-    ).toEqual([])
+  // The one condition that reaches the banner: no `HackathonState` row at all,
+  // which no switch can express and which leaves participants unable to do
+  // anything.
+  it("reports a hackathon with no configuration record", () => {
+    expect(stateAlerts({ hasState: false })).toEqual([{ kind: "no-state" }])
   })
 
-  it("reports the current phase's plans that are switched off", () => {
-    expect(
-      stateAlerts({
-        hasState: true,
-        currentPhaseName: "Judging",
-        unmet: [VOTE, VIEW_RESULTS],
-      }),
-    ).toEqual([
-      {
-        kind: "unmet",
-        phaseName: "Judging",
-        capabilities: [VOTE, VIEW_RESULTS],
-      },
-    ])
+  it("is silent for a hackathon that has one", () => {
+    expect(stateAlerts({ hasState: true })).toEqual([])
   })
 
-  // Without the row nothing is enabled, so every planned capability is also
-  // unmet — reporting both would bury the one fact that explains the other.
-  it("reports only the missing state row, never the unmet list with it", () => {
-    expect(
-      stateAlerts({
-        hasState: false,
-        currentPhaseName: "Judging",
-        unmet: [VOTE, VIEW_RESULTS],
-      }),
-    ).toEqual([{ kind: "no-state" }])
-  })
-
-  // The two conditions deliberately kept off the banner: untidy rather than
-  // blocking, and the second is the steady state of every seeded hackathon.
-  it("does not report a hackathon with no current phase", () => {
-    expect(
-      stateAlerts({ hasState: true, currentPhaseName: "", unmet: [] }),
-    ).toEqual([])
-  })
-
-  // Defensive: `unmet` is computed against the current phase, so it should be
-  // empty when there is none. If a caller ever passes both, the alert must not
-  // render a sentence with an empty phase name in it.
-  it("names the phase it was given", () => {
-    const [alert] = stateAlerts({
-      hasState: true,
-      currentPhaseName: "Hacking",
-      unmet: [VOTE],
-    })
-    expect(alert).toMatchObject({ kind: "unmet", phaseName: "Hacking" })
+  // Asserted rather than left to the doc comment, because this used to be an
+  // alert and reviving it would put a banner over every page of a hackathon
+  // whose organizer deliberately switched a capability off. The mismatch belongs
+  // to `CapabilitiesPanel`, beside the switch that changes it.
+  it("says nothing about a phase whose planned capabilities are off", () => {
+    expect(stateAlerts({ hasState: true })).toEqual([])
   })
 })

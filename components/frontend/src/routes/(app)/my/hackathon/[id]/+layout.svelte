@@ -77,11 +77,7 @@
     // control over. Also empty, for everyone, when there is nothing wrong.
     const alerts = $derived(
         data.hackathonState.canManage
-            ? stateAlerts({
-                  hasState: data.hackathonState.hasState,
-                  currentPhaseName: data.hackathonState.currentPhase?.name ?? '',
-                  unmet: data.hackathonState.unmet,
-              })
+            ? stateAlerts({ hasState: data.hackathonState.hasState })
             : [],
     );
 </script>
@@ -104,7 +100,7 @@
         <!-- Above the hero and outside `showHero`: this follows an organiser
              across every page in the hackathon, because the whole failure mode is
              not knowing to go and look. -->
-        <OrganizerStateAlert hackathonId={hackathon.id} {alerts} />
+        <OrganizerStateAlert {alerts} />
 
         {#if showHero}
             <!--
