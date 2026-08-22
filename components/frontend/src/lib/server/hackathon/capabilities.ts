@@ -128,24 +128,22 @@ export function mayManageParticipants(
 }
 
 /**
- * Whether to offer proposing a project.
+ * Whether **a participant** may propose a project here — the question the
+ * participant-facing Projects page and its propose route ask.
  *
- * Mirrors the backend, which grants `project:propose` to two different subjects
- * by two different routes — so this has two branches rather than one:
+ * Deliberately the only gate in this file with **no owner or admin bypass**, and
+ * for a product reason rather than a permission one: the participant section
+ * reads the same for everyone. An organiser opening the Projects page sees what
+ * a member sees, so `CAPABILITY_PROPOSE_PROJECTS` being off means no propose CTA
+ * for anybody there, and the proposal vocabulary goes with it.
  *
- *  - an **owner** (and an admin, via the global escape hatch) holds it as a
- *    *default* policy (`rbac.go:190`), which `SetCapabilities` never touches.
- *    The capability therefore does not gate them, and gating them here would
- *    leave a hackathon that runs without proposals with no way to add a project
- *    at all: this CTA is the only create path in the app, Manage Projects has
- *    none of its own.
- *  - a **member** holds it only while `CAPABILITY_PROPOSE_PROJECTS` is on. That
- *    capability is what writes the `member → project:propose` row
- *    (`hackathon_service.go:686`), the single row `ProjectService.Propose`
- *    checks (`project_service.go:136`).
- *
- * So "only the organisers propose here" is exactly this capability switched off:
- * members lose the CTA, organisers keep it.
+ * That is not a claim about what the backend allows. An `Owner` does hold
+ * `project:propose` outright as a default policy (`rbac.go:190`) — untouched by
+ * `SetCapabilities`, which writes only the `member → project:propose` row
+ * (`hackathon_service.go:686`) — and an admin holds it through the global escape
+ * hatch. They exercise it from **Manage Projects** (`projects/manage/new`),
+ * gated on `mayReviewProjects` like everything else in that section. So nothing
+ * is taken away here; it is offered in the other section.
  *
  * `capabilityEnabled` is the matching `CapabilityState.enabled` read off
  * `hackathon.state.capabilities`; pass `false` when the hackathon has no state
@@ -158,11 +156,7 @@ export function mayManageParticipants(
 export function mayProposeProjects(
   membership: HackathonMember | undefined,
   capabilityEnabled: boolean,
-  isAdmin = false,
 ): boolean {
-  if (isAdmin) return true
-  if (membership?.role === HackathonRole.HACKATHON_ROLE_OWNER) return true
-
   return capabilityEnabled && membership !== undefined && !membership.isWaiting
 }
 

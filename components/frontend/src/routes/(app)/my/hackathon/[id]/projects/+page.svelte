@@ -51,9 +51,10 @@
             <h2 class="m-0 text-title text-ink">Projects</h2>
             <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
-        <!-- Absent when the hackathon runs without proposals, which is what the
-             capability being off means. -->
-        {#if data.mayPropose}
+        <!-- Absent when the hackathon runs without proposals, for an organiser
+             as much as for a member: this section reads the same for everyone,
+             and an organiser adds a project from Manage Projects instead. -->
+        {#if data.takesProposals}
             <a
                 href={resolve(`/my/hackathon/${data.hackathonId}/projects/propose`)}
                 class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"

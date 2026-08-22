@@ -62,23 +62,48 @@ export const load: PageServerLoad = async (event) => {
     (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
   )
 
+  // Whether this hackathon takes proposals at all. One flag for the whole
+  // proposal vocabulary on this page — the CTA and the group below — because
+  // they are one feature: an organiser who switches the capability off is saying
+  // "we put the projects up ourselves", and a page that then still showed a
+  // proposals section would be describing a workflow nobody can use.
+  //
+  // No owner or admin bypass, deliberately: this section reads the same for
+  // everyone. An organiser's own create path is `projects/manage/new`. See
+  // `mayProposeProjects`.
+  const takesProposals = mayProposeProjects(
+    myMembership ?? undefined,
+    enabledCapabilities(hackathon.state).includes(
+      Capability.CAPABILITY_PROPOSE_PROJECTS,
+    ),
+  )
+
   // The viewer's own proposals still awaiting a decision, which used to be a
   // page of their own. Theirs alone rather than every pending one: a reviewer
   // reads the queue on Manage Projects, and this group exists so an author can
   // follow and correct what they put forward, not to preview the queue.
   //
+  // Empty once proposals are off, which costs one narrow case: a member who
+  // proposed while they were open stops seeing their own pending row. It is
+  // still in the organiser's queue and it reappears here, as a project, when
+  // approved — and the alternative was a proposals section that outlives the
+  // feature it describes.
+  //
   // Not paginated with the projects below, and deliberately not sharing their
   // numbering either — see the ordinals TODO.
-  const myProposals = hackathon.projects
-    .filter(
-      (p) =>
-        myId !== undefined &&
-        p.creatorId === myId &&
-        p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
-    )
-    .sort(
-      (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
-    )
+  const myProposals = takesProposals
+    ? hackathon.projects
+        .filter(
+          (p) =>
+            myId !== undefined &&
+            p.creatorId === myId &&
+            p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
+        )
+        .sort(
+          (a, b) =>
+            (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+        )
+    : []
 
   // `Project` carries only `creatorId`, so the name comes from the membership
   // list that arrived in the same response. A creator who has since left the
@@ -132,22 +157,7 @@ export const load: PageServerLoad = async (event) => {
     proposals,
     hackathonId: hackathon.id,
     mayPrefer,
-    // Whether to offer proposing at all. A hackathon whose organisers put the
-    // projects up themselves has this capability off, and then the page is a
-    // plain list of projects with no CTA on it.
-    //
-    // Only the CTA. The proposals group above is *not* gated on this: a
-    // capability switched off after someone proposed would otherwise hide their
-    // own pending project from them entirely — it is not in the approved list
-    // either — while `Edit` still accepts it, since closing proposals does not
-    // touch the proposer's project-scoped role.
-    mayPropose: mayProposeProjects(
-      myMembership ?? undefined,
-      enabledCapabilities(hackathon.state).includes(
-        Capability.CAPABILITY_PROPOSE_PROJECTS,
-      ),
-      isAdmin,
-    ),
+    takesProposals,
   }
 }
 

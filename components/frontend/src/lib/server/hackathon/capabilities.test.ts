@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest"
 import type { HackathonMember } from "$lib/server/grpc/generated/hackathon/entities/hackathon_member"
-import { mayProposeProjects, mayPreferProjects, mayVote } from "./capabilities"
+import {
+  mayProposeProjects,
+  mayPreferProjects,
+  mayReviewProjects,
+  mayVote,
+} from "./capabilities"
 
 // HackathonRole numeric values: UNSPECIFIED=0, OWNER=1, MEMBER=2.
 const OWNER = 1
@@ -13,24 +18,25 @@ const ON = true
 const OFF = false
 
 describe("mayProposeProjects", () => {
-  // The rule the backend actually applies, and the one this gate got wrong: the
-  // capability writes the `member` row only, so an owner's own grant is a
-  // default policy the switch never touches.
-  it("offers it to an owner whether the capability is on or off", () => {
-    expect(mayProposeProjects(member(OWNER), ON)).toBe(true)
-    expect(mayProposeProjects(member(OWNER), OFF)).toBe(true)
-  })
-
-  // Why that matters: this CTA is the only create path in the app. An organiser
-  // refused here in a hackathon that runs without proposals could not add a
-  // project at all.
-  it("offers it to an admin with no membership at all", () => {
-    expect(mayProposeProjects(undefined, OFF, true)).toBe(true)
-  })
-
   it("offers it to a member only while the capability is on", () => {
     expect(mayProposeProjects(member(MEMBER), ON)).toBe(true)
     expect(mayProposeProjects(member(MEMBER), OFF)).toBe(false)
+  })
+
+  // The one gate here with no role bypass, and the assertion that says so: the
+  // participant section reads the same for everyone, so an owner is refused the
+  // participant CTA exactly as a member is. Their own create path is
+  // `projects/manage/new`, gated on `mayReviewProjects` instead — asserted below
+  // so this reads as the rule it is rather than a missing bypass.
+  it("refuses an owner too when the capability is off", () => {
+    expect(mayProposeProjects(member(OWNER), OFF)).toBe(false)
+    expect(mayProposeProjects(member(OWNER), ON)).toBe(true)
+  })
+
+  it("keeps the owner's create path in the manage section either way", () => {
+    expect(mayReviewProjects(member(OWNER))).toBe(true)
+    expect(mayReviewProjects(undefined, true)).toBe(true)
+    expect(mayReviewProjects(member(MEMBER))).toBe(false)
   })
 
   it("refuses a waitlisted member even with the capability on", () => {

@@ -2,7 +2,6 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { resolve } from "$app/paths"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
-import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayProposeProjects } from "$lib/server/hackathon/capabilities"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { error, fail, redirect } from "@sveltejs/kit"
@@ -18,20 +17,19 @@ export const load: PageServerLoad = async (event) => {
     error(403, "Your membership is still awaiting approval")
   }
 
-  const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
-    GlobalRole.GLOBAL_ROLE_ADMIN,
-  )
   // Not a 403, for the same reason the voting page is not: a hackathon whose
   // organisers put the projects up themselves has proposals off deliberately,
   // which is a configuration rather than a permission this viewer got wrong.
   // Nothing links here in that state — the Projects page drops the CTA — so this
   // is the hand-typed-URL case, and the page says so and offers no form.
+  //
+  // An organiser is refused here too, and is not a special case to add: this is
+  // the participant route, and theirs is `projects/manage/new`.
   const mayPropose = mayProposeProjects(
     myMembership ?? undefined,
     enabledCapabilities(hackathon.state).includes(
       Capability.CAPABILITY_PROPOSE_PROJECTS,
     ),
-    isAdmin,
   )
   if (!mayPropose) {
     return { hackathonId: hackathon.id, mayPropose: false, tracks: [] }
