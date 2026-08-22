@@ -128,6 +128,35 @@ export function mayManageParticipants(
 }
 
 /**
+ * Whether to offer proposing a project.
+ *
+ * Gated on `CAPABILITY_PROPOSE_PROJECTS`, and mirrors the backend exactly. The
+ * capability is what writes `member → project:propose`
+ * (`hackathon_service.go:686`), the single row `ProjectService.Propose` checks
+ * (`project_service.go:136`); an `Owner` holds it outright as a default policy
+ * (`rbac.go:190`), and an admin through the global escape hatch. So a hackathon
+ * that runs without proposals — the organisers put the projects up themselves —
+ * is exactly this capability switched off, and the CTA disappears for members
+ * while an organiser keeps it.
+ *
+ * `capabilityEnabled` is the matching `CapabilityState.enabled` read off
+ * `hackathon.state.capabilities`; pass `false` when the hackathon has no state
+ * row at all, which is also the state in which nothing is enabled.
+ *
+ * Waitlisted members are excluded: `Propose` grants `project:propose` to
+ * `Member`, which a pending participant is not yet, so it would refuse them.
+ */
+export function mayProposeProjects(
+  membership: HackathonMember | undefined,
+  capabilityEnabled: boolean,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true
+
+  return capabilityEnabled && membership !== undefined && !membership.isWaiting
+}
+
+/**
  * Whether to offer project review — approve a proposal, revoke an approval.
  *
  * Mirrors the backend exactly, same as `mayManagePhases`/`mayManagePages`:

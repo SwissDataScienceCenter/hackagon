@@ -38,7 +38,7 @@ export function capabilityHref(
 ): string | undefined {
   switch (capability) {
     case PROPOSE_PROJECTS:
-      return resolve(`/my/hackathon/${hackathonId}/projects/proposals/propose`)
+      return resolve(`/my/hackathon/${hackathonId}/projects/propose`)
     case SET_TEAM_PREFERENCES:
       return resolve(`/my/hackathon/${hackathonId}/projects`)
     case CREATE_PROJECT_SUBMISSIONS:

@@ -38,7 +38,6 @@ describe("memberNav", () => {
     expectOrder(memberNav("hack-1"), [
       "member:overview",
       "member:participants",
-      "member:my-projects",
       "member:projects",
       "member:submissions",
       "member:timeline",
@@ -111,22 +110,28 @@ describe("memberNav", () => {
     expect(ids.at(-1)).toBe("member:page:p1")
   })
 
-  // Proposals sits under /projects/proposals so that `activeNavId`'s longest-prefix
-  // match keeps it lit for its own sub-routes — propose and edit — instead of
-  // handing the highlight to Projects. That only holds while the nesting does.
-  it("nests Proposals under All Projects so the deeper entry wins the highlight", () => {
+  // Every project surface hangs off /projects, and Projects is the only entry
+  // pointing into that subtree — so `activeNavId`'s longest-prefix match lights
+  // it for all of them. Asserted because the sub-routes used to belong to a
+  // second entry, and a revived one would take the highlight back off Projects
+  // without anything else changing.
+  it("keeps Projects lit across every project sub-route", () => {
     const items = memberNav("hack-1")
 
-    expect(activeNavId("/my/hackathon/hack-1/projects", items)).toBe(
-      "member:projects",
-    )
     for (const path of [
-      "/my/hackathon/hack-1/projects/proposals",
-      "/my/hackathon/hack-1/projects/proposals/propose",
-      "/my/hackathon/hack-1/projects/proposals/p1/edit",
+      "/my/hackathon/hack-1/projects",
+      "/my/hackathon/hack-1/projects/propose",
+      "/my/hackathon/hack-1/projects/p1",
+      "/my/hackathon/hack-1/projects/p1/edit",
     ]) {
-      expect(activeNavId(path, items)).toBe("member:my-projects")
+      expect(activeNavId(path, items)).toBe("member:projects")
     }
+  })
+
+  it("offers no Proposals entry, since the projects page carries them", () => {
+    expect(idsOf(memberNav("hack-1", [], true, true))).not.toContain(
+      "member:my-projects",
+    )
   })
 
   it("labels a page entry with its title and links to it by id", () => {

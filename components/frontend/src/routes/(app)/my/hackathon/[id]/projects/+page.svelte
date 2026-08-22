@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
@@ -8,6 +9,10 @@
 
     const countLabel = $derived(
         data.projects.length === 1 ? '1 project' : `${data.projects.length} projects`
+    );
+
+    const proposalsLabel = $derived(
+        data.proposals.length === 1 ? '1 proposal' : `${data.proposals.length} proposals`
     );
 
     const pageSize = 8;
@@ -24,22 +29,67 @@
 </script>
 
 <!--
-  The approved projects, and the one action a participant has on them: marking a
-  preference. Approving and revoking live on Manage Projects (see
-  $lib/navigation's manageNav), so this page reads the same whatever the viewer's
-  role. No propose CTA either: proposing belongs to Proposals, which is the page
-  that then tracks what you put forward.
+  Every project surface a participant has, on one page: the approved projects
+  with the one action a participant has on them — marking a preference — and,
+  above them, the proposals this viewer is still waiting on a decision for.
+  Proposals had a page of its own and a sidebar entry; it is a stage of a
+  project's life rather than a place, and a hackathon that does not use proposals
+  now shows a plain list instead of an entry leading to an empty page.
+
+  Approving and revoking live on Manage Projects (see $lib/navigation's
+  manageNav), so the projects list reads the same whatever the viewer's role.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <h2 class="m-0 text-title text-ink">All Projects</h2>
-        <span class="text-xs text-ink-3">{countLabel}</span>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 flex-col gap-1">
+            <h2 class="m-0 text-title text-ink">Projects</h2>
+            <span class="text-xs text-ink-3">{countLabel}</span>
+        </div>
+        <!-- Absent when the hackathon runs without proposals, which is what the
+             capability being off means. -->
+        {#if data.mayPropose}
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/projects/propose`)}
+                class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
+            >
+                <Plus class="h-3.5 w-3.5 shrink-0" />
+                Propose a Project
+            </a>
+        {/if}
     </div>
 
     {#if form?.message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
+    {/if}
+
+    <!-- Rendered only when the viewer has one, so the page carries no empty
+         section for the many people who never propose anything. No pagination
+         either: one person's own open proposals are few, and a member with
+         enough of them to page through is not a case worth building for before
+         it exists. -->
+    {#if data.proposals.length > 0}
+        <section class="flex w-full flex-col gap-2 self-start">
+            <h3 class="m-0 text-meta text-ink-3">
+                {proposalsLabel} awaiting review
+            </h3>
+            {#each data.proposals as proposal (proposal.id)}
+                <ProjectCard
+                    num={proposal.num}
+                    title={proposal.title}
+                    description={proposal.description}
+                    creator={proposal.creator}
+                    track={proposal.track}
+                    imageUrl={proposal.imageUrl}
+                    badge={projectStatusLabel(proposal.status)}
+                    badgeVariant={projectStatusBadgeVariant(proposal.status) ??
+                        'badge-neutral'}
+                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}/edit"
+                    moreInfoLabel="Edit"
+                />
+            {/each}
+        </section>
     {/if}
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
@@ -62,21 +112,11 @@
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}
-                        {#if project.mayEdit}
-                            <!-- Offered per row, to the proposer only: the
-                                 project-side edit route, same as before, which
-                                 returns to the project when saved. The proposals
-                                 route is for rows on Proposals, which returns
-                                 there instead. -->
-                            <a
-                                href={resolve(
-                                    `/my/hackathon/${data.hackathonId}/projects/${project.id}/edit`
-                                )}
-                                class="btn btn-sm btn-ghost no-underline"
-                            >
-                                Edit
-                            </a>
-                        {/if}
+                        <!-- No Edit here. These are approved, and an approved
+                             project belongs to the hackathon: its owner edits it
+                             from Manage Projects, and the proposer's own control
+                             lives on the proposals group above, while the
+                             proposal is still open. -->
                         {#if data.mayPrefer}
                             {#if project.isPreferred}
                                 <form method="POST" action="?/unprefer">
