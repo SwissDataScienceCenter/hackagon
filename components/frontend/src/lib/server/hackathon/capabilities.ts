@@ -130,21 +130,30 @@ export function mayManageParticipants(
 /**
  * Whether to offer proposing a project.
  *
- * Gated on `CAPABILITY_PROPOSE_PROJECTS`, and mirrors the backend exactly. The
- * capability is what writes `member → project:propose`
- * (`hackathon_service.go:686`), the single row `ProjectService.Propose` checks
- * (`project_service.go:136`); an `Owner` holds it outright as a default policy
- * (`rbac.go:190`), and an admin through the global escape hatch. So a hackathon
- * that runs without proposals — the organisers put the projects up themselves —
- * is exactly this capability switched off, and the CTA disappears for members
- * while an organiser keeps it.
+ * Mirrors the backend, which grants `project:propose` to two different subjects
+ * by two different routes — so this has two branches rather than one:
+ *
+ *  - an **owner** (and an admin, via the global escape hatch) holds it as a
+ *    *default* policy (`rbac.go:190`), which `SetCapabilities` never touches.
+ *    The capability therefore does not gate them, and gating them here would
+ *    leave a hackathon that runs without proposals with no way to add a project
+ *    at all: this CTA is the only create path in the app, Manage Projects has
+ *    none of its own.
+ *  - a **member** holds it only while `CAPABILITY_PROPOSE_PROJECTS` is on. That
+ *    capability is what writes the `member → project:propose` row
+ *    (`hackathon_service.go:686`), the single row `ProjectService.Propose`
+ *    checks (`project_service.go:136`).
+ *
+ * So "only the organisers propose here" is exactly this capability switched off:
+ * members lose the CTA, organisers keep it.
  *
  * `capabilityEnabled` is the matching `CapabilityState.enabled` read off
  * `hackathon.state.capabilities`; pass `false` when the hackathon has no state
  * row at all, which is also the state in which nothing is enabled.
  *
- * Waitlisted members are excluded: `Propose` grants `project:propose` to
- * `Member`, which a pending participant is not yet, so it would refuse them.
+ * Waitlisted members are excluded: the capability grants `project:propose` to
+ * `Member`, which a pending participant is not yet, so `Propose` would refuse
+ * them.
  */
 export function mayProposeProjects(
   membership: HackathonMember | undefined,
@@ -152,6 +161,7 @@ export function mayProposeProjects(
   isAdmin = false,
 ): boolean {
   if (isAdmin) return true
+  if (membership?.role === HackathonRole.HACKATHON_ROLE_OWNER) return true
 
   return capabilityEnabled && membership !== undefined && !membership.isWaiting
 }
