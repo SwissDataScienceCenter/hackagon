@@ -2,7 +2,6 @@
     import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
-    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -38,6 +37,11 @@
 
   Approving and revoking live on Manage Projects (see $lib/navigation's
   manageNav), so the projects list reads the same whatever the viewer's role.
+
+  No status badges on either group: each one holds a single status by
+  construction and its heading says which, so a badge on every row would only
+  repeat the heading. Manage Projects is the one list that mixes the two, and
+  that is where a Proposed badge earns its place.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
@@ -82,9 +86,6 @@
                     creator={proposal.creator}
                     track={proposal.track}
                     imageUrl={proposal.imageUrl}
-                    badge={projectStatusLabel(proposal.status)}
-                    badgeVariant={projectStatusBadgeVariant(proposal.status) ??
-                        'badge-neutral'}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}/edit"
                     moreInfoLabel="Edit"
                 />
@@ -106,9 +107,6 @@
                     creator={project.creator}
                     track={project.track}
                     imageUrl={project.imageUrl}
-                    badge={projectStatusLabel(project.status)}
-                    badgeVariant={projectStatusBadgeVariant(project.status) ??
-                        'badge-neutral'}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}

@@ -119,15 +119,19 @@
         </div>
     </div>
 
-    <!-- Track and status as a labelled pair rather than more chips: this is the
-         page someone opens to find out exactly these two things. -->
+    <!-- Labelled pairs rather than more chips: this is the page someone opens to
+         find out exactly these things. Status joins them only while there is a
+         status worth naming — see $lib/utils/projectStatus. An approved project
+         drops the cell rather than printing "Approved" or, worse, "Unknown". -->
     <dl class="m-0 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="flex flex-col gap-1">
-            <dt class="text-xs font-semibold text-ink-3">Status</dt>
-            <dd class="m-0 text-xs text-ink">
-                {statusText ?? 'Unknown'}
-            </dd>
-        </div>
+        {#if statusText}
+            <div class="flex flex-col gap-1">
+                <dt class="text-xs font-semibold text-ink-3">Status</dt>
+                <dd class="m-0 text-xs text-ink">
+                    {statusText}
+                </dd>
+            </div>
+        {/if}
         <div class="flex flex-col gap-1">
             <dt class="text-xs font-semibold text-ink-3">Track</dt>
             <dd class="m-0 text-xs text-ink">

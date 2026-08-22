@@ -30,6 +30,11 @@
   happens only here. Reached from the sidebar's Manage section (see
   $lib/navigation's manageNav).
 
+  The one list that mixes statuses, so the one that badges them — and only the
+  rows awaiting review carry a badge (see $lib/utils/projectStatus). Clear the
+  queue and the badges go with it, which is the honest reading: every row left
+  is approved.
+
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
