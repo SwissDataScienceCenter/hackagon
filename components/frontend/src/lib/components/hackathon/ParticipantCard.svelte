@@ -1,4 +1,5 @@
 <script lang="ts">
+    import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import type { Snippet } from 'svelte';
 
     let {
@@ -60,26 +61,7 @@
     class="card card-raised box-border w-full px-5 py-4"
 >
     <div class="flex w-full items-start gap-4">
-        {#if avatarUrl}
-            <div
-                class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                       border-line bg-raised"
-            >
-                <img
-                    src={avatarUrl}
-                    alt=""
-                    class="absolute inset-0 block h-full w-full object-cover object-center"
-                />
-            </div>
-        {:else}
-            <div
-                class="flex size-16 shrink-0 items-center justify-center rounded-full
-                       border-2 border-line bg-overlay text-xs font-bold
-                       text-ink"
-            >
-                {initials}
-            </div>
-        {/if}
+        <RoundMedia src={avatarUrl} {initials} />
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <h3 class="m-0 text-sm leading-snug text-ink">{name}</h3>

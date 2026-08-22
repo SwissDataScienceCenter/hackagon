@@ -90,6 +90,9 @@
                 value={project.image ?? ''}
                 class="field"
             />
+            <span class="font-normal text-ink-3">
+                A link to the image file itself — a share or page link will not render.
+            </span>
         </label>
     </div>
 

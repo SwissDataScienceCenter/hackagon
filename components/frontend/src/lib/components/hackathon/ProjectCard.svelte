@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import { Tag, User } from 'lucide-svelte';
+    import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import type { Snippet } from 'svelte';
 
     let {
@@ -60,25 +61,7 @@
         {String(num).padStart(2, '0')}
     </span>
 
-    {#if imageUrl}
-        <div
-            class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                   border-line bg-raised"
-        >
-            <img
-                src={imageUrl}
-                alt=""
-                class="absolute inset-0 block h-full w-full object-cover object-center"
-            />
-        </div>
-    {:else}
-        <div
-            class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
-                   border-line bg-overlay text-xs font-bold text-ink"
-        >
-            {initials}
-        </div>
-    {/if}
+    <RoundMedia src={imageUrl} {initials} />
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <div class="flex flex-wrap items-center gap-2">

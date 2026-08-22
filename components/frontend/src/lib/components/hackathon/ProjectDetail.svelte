@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
 
     /**
@@ -78,26 +79,7 @@
     <!-- Identity block: same size-16 round media and text scale as ProjectCard,
          so arriving here from a row reads as the same project enlarged. -->
     <div class="flex items-start gap-4">
-        {#if project.imageUrl}
-            <div
-                class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                       border-line bg-raised"
-            >
-                <img
-                    src={project.imageUrl}
-                    alt=""
-                    class="absolute inset-0 block h-full w-full object-cover object-center"
-                />
-            </div>
-        {:else}
-            <div
-                class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
-                       border-line bg-overlay text-xs font-bold
-                       text-ink"
-            >
-                {initials}
-            </div>
-        {/if}
+        <RoundMedia src={project.imageUrl} {initials} />
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <div class="flex flex-wrap items-center gap-2">

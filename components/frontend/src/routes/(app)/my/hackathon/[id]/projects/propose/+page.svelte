@@ -66,6 +66,9 @@
                 <label class="field-label {data.tracks.length > 0 ? '' : 'sm:col-span-2'}">
                     Image URL (optional)
                     <input type="url" name="image" placeholder="https://…" class="field" />
+                    <span class="font-normal text-ink-3">
+                        A link to the image file itself — a share or page link will not render.
+                    </span>
                 </label>
             </div>
 
