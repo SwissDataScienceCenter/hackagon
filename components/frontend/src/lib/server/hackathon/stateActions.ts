@@ -2,8 +2,8 @@
 // and the current-phase pointer — extracted from the route that used to own
 // them all.
 //
-// They live here because the organiser's controls moved to a Manage Hackathon
-// page of their own while Manage Timeline kept the phase list and its per-phase
+// They live here because the organiser's controls moved to a Settings page of
+// their own while Manage Timeline kept the phase list and its per-phase
 // "Make current" buttons, so `setCurrent` genuinely has two callers.
 // Server-only: it reaches the generated client and the `Capability` enum
 // directly.
@@ -92,7 +92,7 @@ export async function setCurrentPhase(
  * unchecked boxes submit nothing — hence building the list from
  * `CAPABILITY_ORDER` rather than from what arrived.
  *
- * Carries no permission check of its own. The Manage Hackathon route it lives on
+ * Carries no permission check of its own. The Settings route it lives on
  * refuses a non-organiser in its `load`, and the backend's `hackathon:write` is
  * the real gate regardless — a participant who posts this by hand gets
  * PermissionDenied translated to a 403 above.

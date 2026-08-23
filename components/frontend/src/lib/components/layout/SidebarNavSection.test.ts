@@ -264,4 +264,76 @@ describe("SidebarNavSection", () => {
       expect(screen.queryByRole("button")).toBeNull()
     })
   })
+  // The Manage section has no parent row: its heading both names it and opens
+  // it, so a closed section costs one row rather than two.
+  describe("with a folding heading", () => {
+    const headed = (extra: Record<string, unknown> = {}) => ({
+      label: "Manage Hackathon",
+      items: [item("settings"), item("teams")],
+      collapsed: false,
+      onToggle: () => {},
+      ...extra,
+    })
+
+    it("folds every item away, leaving the heading behind", () => {
+      render(SidebarNavSection, headed({ open: false }))
+
+      expect(screen.getByText("Manage Hackathon")).toBeInTheDocument()
+      expect(screen.queryByRole("link", { name: "settings" })).toBeNull()
+    })
+
+    it("shows the items when unfolded", () => {
+      const { container } = render(SidebarNavSection, headed({ open: true }))
+
+      expect(screen.getByRole("link", { name: "settings" })).toBeInTheDocument()
+      expect(hiddenWrapper(container)).toBeNull()
+    })
+
+    it("puts the folded rows out of reach rather than out of the document", () => {
+      const { container } = render(SidebarNavSection, headed({ open: false }))
+
+      const wrapper = hiddenWrapper(container)
+      expect(wrapper).toContainElement(screen.getByText("teams"))
+      expect(inert(wrapper)).toBe(true)
+    })
+
+    it("discloses the items from the heading itself", async () => {
+      let toggled = 0
+      render(
+        SidebarNavSection,
+        headed({ open: false, onToggle: () => (toggled += 1) }),
+      )
+
+      const control = screen.getByRole("button", {
+        name: /Show Manage Hackathon/,
+      })
+      expect(control).toHaveAttribute("aria-expanded", "false")
+
+      await fireEvent.click(control)
+      expect(toggled).toBe(1)
+    })
+
+    // A control that toggles nothing is worse than none at all, so a heading
+    // only becomes one where the caller can act on it.
+    it("stays a plain heading when the caller offers no toggle", () => {
+      render(SidebarNavSection, {
+        label: "Platform",
+        items: [item("users")],
+        collapsed: false,
+        open: false,
+      })
+
+      expect(screen.queryByRole("button")).toBeNull()
+      expect(screen.getByRole("link", { name: "users" })).toBeInTheDocument()
+    })
+
+    // Same rule as the parent case: no chevron is drawn on the rail, so a stored
+    // "closed" must not blank the icons.
+    it("ignores the fold state on the icon rail", () => {
+      render(SidebarNavSection, headed({ collapsed: true, open: false }))
+
+      expect(screen.getByRole("link", { name: "teams" })).toBeInTheDocument()
+      expect(screen.queryByRole("button")).toBeNull()
+    })
+  })
 })

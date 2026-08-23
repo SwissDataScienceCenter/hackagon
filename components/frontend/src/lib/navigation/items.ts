@@ -241,21 +241,26 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * gating any of them. So this never offers a link that then refuses. Add a
  * per-entry gate the day an entry needs a narrower one rather than widening this
  * one: `/edit` would be the first, since `canEditHackathon` also requires the
- * owner be confirmed — which is why it is offered on the Manage Hackathon page
- * itself, behind that check of its own, rather than listed here. It nests under
- * `/manage` like every other single-record form, so Manage Hackathon stays lit
- * while it is open. `isWaiting` is deliberately not consulted; nor does the
- * backend.
+ * owner be confirmed — which is why it is offered on the Settings page itself,
+ * behind that check of its own, rather than listed here. It nests under
+ * `/manage` like every other single-record form, so Settings stays lit while it
+ * is open. `isWaiting` is deliberately not consulted; nor does the backend.
  *
  * Entries follow the order of the participant entries they extend, and most are
  * nested under that entry's route (`/teams/manage` under `/teams`) so
  * `activeNavId`'s longest match lights the Manage entry while its page is open.
- * Three are not: Manage Hackathon is the organiser's counterpart to Overview
- * rather than a child of it, Manage Tracks has no participant counterpart, and
- * Manage Pages is the *parent* of the individual `/pages/<id>` routes, so opening
- * a page lights that page rather than it.
+ * Three are not: Settings is the organiser's counterpart to Overview rather than
+ * a child of it, Manage Tracks has no participant counterpart, and Manage Pages
+ * is the *parent* of the individual `/pages/<id>` routes, so opening a page
+ * lights that page rather than it.
  *
- * `needsAttention` badges Manage Hackathon when the configuration is in a state
+ * `trackCount` decides whether Manage Tracks is offered at all: tracks are
+ * optional, and a hackathon running without them should not carry a permanent
+ * entry to a page listing nothing. Zero is the honest default — a caller that
+ * does not know cannot claim there are any — and the way to the first track is
+ * the Tracks card on Settings, which is always there.
+ *
+ * `needsAttention` badges Settings when the configuration is in a state
  * participants are blocked by — see `stateAlerts`. It marks that entry because
  * that is the page holding the switches that fix it. A bare "!" rather than a
  * count: the alerts are problems, the capabilities inside one are not, and a
@@ -267,22 +272,27 @@ export function manageNav(
   membership: ViewerMembership | undefined,
   isGlobalAdmin: boolean,
   needsAttention = false,
+  trackCount = 0,
 ): NavItem[] {
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
   return [
     // First, and the organiser's counterpart to the member Overview above: what
-    // participants may do, which phase is current, and the way in to everything
-    // below. Deliberately not nested under `/overview` — that page stays the
+    // participants may do, which phase is current, and whether the hackathon has
+    // tracks. Deliberately not nested under `/overview` — that page stays the
     // member's, and an organiser reading it sees what a participant sees.
+    //
+    // Named for what the page is rather than for the section it opens: the
+    // heading above already reads "Manage Hackathon", and a row repeating it read
+    // as the section's own row rather than as one of the pages in it.
     {
-      id: "manage:hackathon",
-      label: "Manage Hackathon",
+      id: "manage:settings",
+      label: "Settings",
       icon: SlidersHorizontal,
       href: resolve(`/my/hackathon/${hackathonId}/manage`),
       description:
-        "What participants can do right now, and which phase the hackathon " +
-        "is in.",
+        "What participants can do right now, which phase the hackathon is " +
+        "in, and its tracks.",
       ...(needsAttention
         ? { badge: "!", badgeVariant: "badge-warning" as const }
         : {}),
@@ -304,15 +314,22 @@ export function manageNav(
       icon: ClipboardCheck,
       href: resolve(`/my/hackathon/${hackathonId}/projects/manage`),
     },
-    // Shown even when the hackathon has no tracks yet: that is how an owner gets
-    // the first one. The participant surfaces (propose, project edit, overview)
-    // hide themselves when there are none.
-    {
-      id: "manage:tracks",
-      label: "Manage Tracks",
-      icon: Tag,
-      href: resolve(`/my/hackathon/${hackathonId}/tracks`),
-    },
+    // Only once a track exists. Tracks are optional, so an entry that is always
+    // there says the opposite — and with none defined it leads to an empty list
+    // whose only content is the button that creates the first one. That button
+    // lives on Settings instead, beside the other things a hackathon either has
+    // or does not. The participant surfaces (propose, project edit, overview)
+    // already hide themselves the same way.
+    ...(trackCount > 0
+      ? [
+          {
+            id: "manage:tracks",
+            label: "Manage Tracks",
+            icon: Tag,
+            href: resolve(`/my/hackathon/${hackathonId}/tracks`),
+          },
+        ]
+      : []),
     {
       id: "manage:teams",
       label: "Manage Teams",

@@ -30,6 +30,7 @@
         isGlobalAdmin,
         votingEnabled = false,
         resultsVisible = false,
+        trackCount = 0,
         stateNeedsAttention = false,
     }: {
         hackathonId: string;
@@ -55,7 +56,13 @@
          */
         resultsVisible?: boolean;
         /**
-         * Badges the Manage Hackathon entry — the page the capability switches
+         * How many tracks the hackathon has. Only the count is needed: it decides
+         * whether Manage Tracks is offered at all — see `manageNav`. Zero, and the
+         * way to the first track is the Tracks card on Settings.
+         */
+        trackCount?: number;
+        /**
+         * Badges the Settings entry — the page the capability switches
          * live on. Organiser-only by construction, since the whole Manage
          * section is, and the caller passes false for anyone who could not act
          * on it anyway.
@@ -66,8 +73,8 @@
     let collapsed = $state(false);
     let mobileOpen = $state(false);
     let isDesktop = $state(true);
-    // Closed to start with, leaving Manage Hackathon alone under the heading: a
-    // participant spine plus one way in, not a second nav of equal length.
+    // Closed to start with, leaving just the heading and its chevron: a
+    // participant spine plus one thing to open, not a second nav of equal length.
     let manageOpen = $state(false);
 
     // `collapsed` is a desktop-only preference (persisted below); on a narrow
@@ -80,7 +87,13 @@
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
     // section and the "Owner" chip can never disagree about the role.
     const manageItems = $derived(
-        manageNav(hackathonId, membership ?? undefined, isGlobalAdmin, stateNeedsAttention),
+        manageNav(
+            hackathonId,
+            membership ?? undefined,
+            isGlobalAdmin,
+            stateNeedsAttention,
+            trackCount,
+        ),
     );
 
     // One call across both sections, per activeNavId's contract: computing it per
@@ -92,14 +105,9 @@
     // Manage Pages.
     const activeId = $derived(activeNavId($page.url.pathname, [...items, ...manageItems]));
 
-    // The hub stays on the rail whatever the fold state and carries the
-    // disclosure for the rest — it is how the section is entered, and its "!" is
-    // how an organiser learns something needs attention.
-    const manageHubItem = $derived(manageItems.find((i) => i.id === 'manage:hackathon'));
-    const manageSubItems = $derived(manageItems.filter((i) => i.id !== 'manage:hackathon'));
-
-    // The hub counts as inside, not just the screens under it: opening it is how
-    // an organiser goes looking for the rest.
+    // Settings counts as inside the section like every other screen in it: it is
+    // one of the pages, not the way in. The way in is the heading, which is drawn
+    // whatever the fold state.
     const insideManage = $derived(activeId?.startsWith('manage:') ?? false);
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who
@@ -252,13 +260,15 @@
         <SidebarNavSection {items} {activeId} collapsed={effectiveCollapsed} />
 
         <!-- Organiser-only. The heading is what makes the difference legible, so
-             unlike the section above this one needs it. Manage Hackathon is always
-             drawn; the screens it leads to are disclosed from it.
+             unlike the section above this one needs it — and here it is the only
+             permanent row: it names the section, and its chevron discloses every
+             screen in it, Settings included. No entry is drawn as the section's
+             own, because none of them is.
 
              Guarded here rather than left to SidebarNavSection, which keeps a
              labelled empty section on purpose so a role chip has somewhere to
              sit. This section passes no chip, so for a member that rule left a
-             bare "Manage" heading over nothing.
+             bare heading over nothing.
 
              No role chip even though the section is role-gated: the header above
              already states the viewer's role, and a second "Owner" chip reads as
@@ -266,9 +276,8 @@
              the distinguishing instead. -->
         {#if manageItems.length > 0}
             <SidebarNavSection
-                label="Manage"
-                parentItem={manageHubItem}
-                items={manageSubItems}
+                label="Manage Hackathon"
+                items={manageItems}
                 {activeId}
                 collapsed={effectiveCollapsed}
                 accent="tertiary"

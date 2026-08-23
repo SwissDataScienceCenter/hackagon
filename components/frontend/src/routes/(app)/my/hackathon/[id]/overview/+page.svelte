@@ -12,8 +12,8 @@
 <!--
   The member's overview, and participant-shaped for every viewer — an organiser
   reading it sees what a participant sees. Nothing an organiser *acts on* belongs
-  here: their queues and switches live on Manage Hackathon, which is the page
-  named after that job, and which badges each count onto the tile that clears it.
+  here: their queues and switches live on Settings, the organiser's own page,
+  which badges each count onto the tile that clears it.
 
   Order is by how fast it changes. "Right now" leads because it is the only thing
   on the page that differs from one visit to the next; About is last because it is
@@ -30,7 +30,7 @@
 
          Participant-shaped for everyone, including organisers, who see exactly
          what a participant sees in the third person — their own controls live on
-         Manage Hackathon. -->
+         Settings. -->
     <CurrentStateCard
         hackathonId={data.hackathon.id}
         organiserVoice={data.hackathonState.canManage}

@@ -226,7 +226,7 @@
                                 />
                             </div>
                             <!-- The row's only trailing element. Editing a
-                                 hackathon is offered on its own Manage Hackathon
+                                 hackathon is offered on its own Settings
                                  page, not from here: this list is for finding a
                                  hackathon, and the edit form belongs beside the
                                  rest of what an organiser sets. -->

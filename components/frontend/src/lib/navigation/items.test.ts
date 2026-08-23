@@ -220,17 +220,17 @@ describe("manageNav", () => {
 
   // The persistent half of the organiser's state signal: the banner says what is
   // wrong, this says there is something to look at even when the banner is off
-  // screen. It marks Manage Hackathon because that is the page holding the
-  // switches. Off by default so no caller gets it by accident.
+  // screen. It marks Settings because that is the page holding the switches. Off
+  // by default so no caller gets it by accident.
   describe("needsAttention", () => {
     const entry = (items: NavItem[]) =>
-      items.find((i) => i.id === "manage:hackathon")
+      items.find((i) => i.id === "manage:settings")
 
-    it("leaves Manage Hackathon unbadged by default", () => {
+    it("leaves Settings unbadged by default", () => {
       expect(entry(manageNav("hack-1", owner, false))?.badge).toBeUndefined()
     })
 
-    it("badges Manage Hackathon, and nothing else, when set", () => {
+    it("badges Settings, and nothing else, when set", () => {
       const items = manageNav("hack-1", owner, false, true)
       expect(entry(items)).toMatchObject({
         badge: "!",
@@ -238,7 +238,7 @@ describe("manageNav", () => {
       })
       expect(
         items.filter((i) => i.badge !== undefined).map((i) => i.id),
-      ).toEqual(["manage:hackathon"])
+      ).toEqual(["manage:settings"])
     })
 
     // The badge rides on a section a participant never receives, so a caller
@@ -258,8 +258,8 @@ describe("manageNav", () => {
   // Order follows the participant entries these extend, so the two sections read
   // down the page in the same sequence.
   it("follows the order of the participant entries it extends", () => {
-    expectOrder(manageNav("hack-1", owner, false), [
-      "manage:hackathon",
+    expectOrder(manageNav("hack-1", owner, false, false, 3), [
+      "manage:settings",
       "manage:participants",
       "manage:projects",
       "manage:tracks",
@@ -268,6 +268,41 @@ describe("manageNav", () => {
       "manage:voting",
       "manage:pages",
     ])
+  })
+
+  // Tracks are optional, and the entry says so by not being there. An organiser
+  // who wants the first one goes through the Tracks card on Settings, which is
+  // always drawn — so nothing is unreachable, and a hackathon running without
+  // tracks carries no permanent link to a page listing none.
+  describe("trackCount", () => {
+    const hasTracksEntry = (count?: number) =>
+      idsOf(manageNav("hack-1", owner, false, false, count)).includes(
+        "manage:tracks",
+      )
+
+    it("omits Manage Tracks for a hackathon with no tracks", () => {
+      expect(hasTracksEntry(0)).toBe(false)
+    })
+
+    // A caller that does not know how many there are must not imply there are
+    // some: the sidebar is the only caller that can count them.
+    it("omits it when the caller says nothing", () => {
+      expect(hasTracksEntry()).toBe(false)
+    })
+
+    it("offers it as soon as one exists", () => {
+      expect(hasTracksEntry(1)).toBe(true)
+    })
+
+    // The rest of the section is the same either way — the count decides one
+    // entry, not what an organiser may do.
+    it("changes nothing else about the section", () => {
+      expect(
+        idsOf(manageNav("hack-1", owner, false, false, 2)).filter(
+          (id) => id !== "manage:tracks",
+        ),
+      ).toEqual(idsOf(manageNav("hack-1", owner, false, false, 0)))
+    })
   })
 
   // Casbin's global escape hatch grants an admin `hackathon:write`,
@@ -309,7 +344,8 @@ describe("manageNav", () => {
   it("does not collide with memberNav, and wins the highlight on its own routes", () => {
     const items = [
       ...memberNav("hack-1", [{ id: "p1", title: "Welcome", visible: true }]),
-      ...manageNav("hack-1", owner, false),
+      // With a track, so `/tracks` has an entry to light at all.
+      ...manageNav("hack-1", owner, false, false, 1),
     ]
 
     expect(new Set(idsOf(items)).size).toBe(items.length)
@@ -325,10 +361,10 @@ describe("manageNav", () => {
       ["/my/hackathon/hack-1/participants/manage", "manage:participants"],
       ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
       // The hackathon's own edit form, for the same reason as the phase forms
-      // below: it is reached from Manage Hackathon and nests under it, so that
-      // entry stays lit rather than nothing being lit at all.
-      ["/my/hackathon/hack-1/manage", "manage:hackathon"],
-      ["/my/hackathon/hack-1/manage/edit", "manage:hackathon"],
+      // below: it is reached from Settings and nests under it, so that entry
+      // stays lit rather than nothing being lit at all.
+      ["/my/hackathon/hack-1/manage", "manage:settings"],
+      ["/my/hackathon/hack-1/manage/edit", "manage:settings"],
       ["/my/hackathon/hack-1/timeline", "member:timeline"],
       ["/my/hackathon/hack-1/timeline/manage", "manage:timeline"],
       // The create and edit forms live under the manage route precisely so they

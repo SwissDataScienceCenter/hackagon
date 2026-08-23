@@ -19,7 +19,8 @@
         badge?: string;
         /**
          * The entry the section is entered through: always drawn, and the row
-         * carrying the disclosure for `items`. Without one this is a plain list.
+         * carrying the disclosure for `items`. Without one the heading carries
+         * the disclosure instead, and without either this is a plain list.
          */
         parentItem?: NavItem;
         items: NavItem[];
@@ -57,10 +58,21 @@
         items.length === 0 && parentItem === undefined && (collapsed || !label)
     );
 
-    // Only folds where there is a parent row to fold into, and never on the icon
-    // rail: no room for a chevron there, and entries hidden behind a control that
-    // is not drawn are stranded.
-    const foldable = $derived(parentItem !== undefined && items.length > 0 && !collapsed);
+    // Where the disclosure sits, and whether there is one at all. A parent row
+    // takes it when there is one; otherwise the heading does, but only when the
+    // caller passes an `onToggle` — a chevron that toggles nothing is worse than
+    // no chevron. Never on the icon rail either way: no room for the control
+    // there, and entries hidden behind one that is not drawn are stranded.
+    const foldControl = $derived(
+        collapsed || items.length === 0
+            ? 'none'
+            : parentItem !== undefined
+              ? 'parent'
+              : label !== undefined && onToggle !== undefined
+                ? 'heading'
+                : 'none'
+    );
+    const foldable = $derived(foldControl !== 'none');
     const showItems = $derived(!foldable || open);
 
     /** `SLIDE_MS` is the same 200ms, stated twice because only CSS can animate. */
@@ -152,19 +164,49 @@
 {#if !hidden}
     <div class="flex flex-col gap-0.5 border-t border-line p-2">
         {#if label && !collapsed}
-            <div class="flex items-baseline gap-2 px-2 pb-1">
-                <span class="meta min-w-0 truncate {LABEL_CLASS[accent]}">
-                    {label}
-                </span>
-                {#if badge}
-                    <span class="badge shrink-0 {BADGE_CLASS[accent]}">
-                        {badge}
+            {#if foldControl === 'heading'}
+                <!-- The whole heading is the control, not a chevron parked beside
+                     it: with no parent row there is no link here to keep clear of,
+                     and a 2rem target on a 16rem rail is a needlessly small one. -->
+                <button
+                    type="button"
+                    onclick={toggle}
+                    aria-expanded={open}
+                    aria-label={open ? `Hide ${label} pages` : `Show ${label} pages`}
+                    class="flex items-center gap-2 rounded-control px-2 pb-1 pt-0.5 text-left
+                           transition-colors hover:bg-raised"
+                >
+                    <span class="meta min-w-0 truncate {LABEL_CLASS[accent]}">
+                        {label}
                     </span>
-                {/if}
-            </div>
+                    {#if badge}
+                        <span class="badge shrink-0 {BADGE_CLASS[accent]}">
+                            {badge}
+                        </span>
+                    {/if}
+                    <ChevronDown
+                        class="ml-auto h-4 w-4 shrink-0 text-ink-3 transition-transform
+                               duration-200 motion-reduce:transition-none {open
+                            ? ''
+                            : '-rotate-90'}"
+                        aria-hidden="true"
+                    />
+                </button>
+            {:else}
+                <div class="flex items-baseline gap-2 px-2 pb-1">
+                    <span class="meta min-w-0 truncate {LABEL_CLASS[accent]}">
+                        {label}
+                    </span>
+                    {#if badge}
+                        <span class="badge shrink-0 {BADGE_CLASS[accent]}">
+                            {badge}
+                        </span>
+                    {/if}
+                </div>
+            {/if}
         {/if}
 
-        {#if parentItem && foldable}
+        {#if parentItem && foldControl === 'parent'}
             <!-- Link and disclosure as siblings: the row is a page of its own, and
                  a button nested in an anchor is not clickable. -->
             <div class="flex items-center gap-0.5">

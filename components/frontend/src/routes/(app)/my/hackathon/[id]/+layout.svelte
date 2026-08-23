@@ -91,6 +91,7 @@
         isGlobalAdmin={data.isGlobalAdmin}
         votingEnabled={data.votingEnabled}
         resultsVisible={data.resultsVisible}
+        trackCount={hackathon.tracks.length}
         stateNeedsAttention={alerts.length > 0}
     />
 
