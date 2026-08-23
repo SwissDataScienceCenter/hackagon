@@ -1260,7 +1260,6 @@ const dataForGoodSeed = 20260421
 // splitting into two teams and the one that will never reach quorum.
 type dfgProject struct {
 	title, desc string
-	track       int // index into the tracks created by seedH4
 	weight      int
 }
 
@@ -1317,6 +1316,9 @@ func pickPreferences(rng *rand.Rand, weights []int, n int) []int {
 //   - `register` is off. Sign-up closed three days ago; this is the fixture
 //     where `Join` is refused because the window shut, not because the
 //     hackathon is misconfigured.
+//   - No tracks. Every project here carries none, because this is the fixture
+//     for a hackathon that runs without them — the shape the first client
+//     needs. H1-H3 keep their tracks, so both shapes stay covered.
 func seedH4(
 	ctx context.Context,
 	db *ent.Client,
@@ -1398,125 +1400,86 @@ func seedH4(
 		}
 	}
 
-	trackNames := []struct{ name, desc string }{
-		{
-			"Public Health",
-			"Disease surveillance, health equity, access to care, and epidemiological modelling.",
-		},
-		{
-			"Education",
-			"Learning analytics, curriculum tooling, accessibility, and school resource allocation.",
-		},
-		{"Civic Data", "Transparency, open budgets, mobility, housing, and public infrastructure."},
-	}
-	tracks := make([]*ent.Track, 0, len(trackNames))
-	for _, t := range trackNames {
-		tr, err := db.Track.Create().
-			SetName(t.name).
-			SetDescription(t.desc).
-			SetHackathon(h).
-			SetCreator(alice).
-			SetModifier(alice).
-			Save(ctx)
-		if err != nil {
-			return fmt.Errorf("track %q: %w", t.name, err)
-		}
-		tracks = append(tracks, tr)
-	}
-
 	// Fifteen ideas. The weights are the fixture: 12, 11 and 10 are the three
-	// everyone wants, 1 apiece are the three nobody does.
+	// everyone wants, 1 apiece are the three nobody does. The blank lines group
+	// them by theme and mean nothing to the fixture — this hackathon has no
+	// tracks, and the order projects are created in is not significant.
 	specs := []dfgProject{
 		{
 			"Outbreak Early Warning",
 			"Fuse wastewater sampling, pharmacy sales and clinic visits into a signal that flags a local outbreak days before case counts do.",
-			0,
 			12,
 		},
 		{
 			"Vaccine Desert Mapper",
 			"Map travel time to the nearest vaccination site by public transport, and rank neighbourhoods by how badly they are served.",
-			0,
 			6,
 		},
 		{
 			"Clinical Trial Matcher",
 			"Plain-language search that matches a patient's condition and location to trials currently recruiting.",
-			0,
 			4,
 		},
 		{
 			"Air Quality & Asthma",
 			"Correlate street-level air quality readings with paediatric asthma admissions and publish the per-school picture.",
-			0,
 			3,
 		},
 		{
 			"Ambulance Response Equity",
 			"Analyse response times by district and income band; a small dashboard for the health authority.",
-			0,
 			1,
 		},
 
 		{
 			"Open Textbook Search",
 			"One search across every openly licensed textbook, filtered by curriculum, reading level and language.",
-			1,
 			11,
 		},
 		{
 			"Dropout Early Signal",
 			"A model over attendance and grade trajectories that flags students at risk while there is still time to act.",
-			1,
 			7,
 		},
 		{
 			"School Meal Coverage",
 			"Show which schools have meal programmes, which qualify but have none, and what the gap costs.",
-			1,
 			5,
 		},
 		{
 			"Sign Language Tutor",
 			"Webcam-based practice tool that gives immediate feedback on fingerspelling.",
-			1,
 			3,
 		},
 		{
 			"Classroom Energy Audit",
 			"Cheap sensor kit plus a report template so a class can audit its own building.",
 			1,
-			1,
 		},
 
 		{
 			"Open Budget Explorer",
 			"Make a municipal budget legible: where the money goes, how it changed, and who decided.",
-			2,
 			10,
 		},
 		{
 			"Bike Lane Gap Finder",
 			"Find the missing links in a cycle network by routing real trips and measuring the detours they are forced into.",
-			2,
 			8,
 		},
 		{
 			"Rental Listing Watchdog",
 			"Track listing prices over time and surface the ones that jump right after a tenant leaves.",
-			2,
 			5,
 		},
 		{
 			"Pothole Report Triage",
 			"Cluster citizen reports, dedupe them, and rank streets by how much damage they are doing.",
 			2,
-			2,
 		},
 		{
 			"Council Minutes Search",
 			"Full-text search across a decade of council minutes, with speaker and topic filters.",
-			2,
 			1,
 		},
 	}
@@ -1535,7 +1498,6 @@ func seedH4(
 			SetTitle(s.title).
 			SetDescription(s.desc).
 			SetStatus(project.StatusApproved).
-			SetTrack(tracks[s.track]).
 			SetHackathon(h).
 			SetCreator(author).
 			SetModifier(author).
