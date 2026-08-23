@@ -29,7 +29,11 @@ import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hac
  *    it, and seeded hackathons have no HackathonState row to enable it on.
  *  - the Member role, which is the only role that capability grants
  *    `project:join` to. The casbin model has no inheritance, so an owner is
- *    refused however the capability is set.
+ *    refused however the capability is set — unless they joined their own
+ *    hackathon the ordinary way and were approved, which grants them Member
+ *    alongside Owner. Whether an owner is refused therefore turns on a
+ *    participant row this function is not handed, which is a second reason not
+ *    to mirror the check here.
  *
  * Until both are addressed the control is shown and the backend's
  * PermissionDenied is surfaced as-is. Restore the checks once an owner can

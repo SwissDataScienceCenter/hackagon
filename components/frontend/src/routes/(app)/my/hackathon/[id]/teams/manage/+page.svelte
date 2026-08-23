@@ -564,6 +564,15 @@
             class:border-accent={dropTarget === POOL}
         >
             <h3 class="m-0 meta">Unassigned ({unassigned.length})</h3>
+            <!-- The organiser is not in this list unless they joined like anybody
+                 else, and an absence explains nothing on its own. No link out:
+                 owning a hackathon is not a way into it, and there is no control
+                 here that would change that. -->
+            {#if data.ownerMissingFromPool}
+                <p class="m-0 text-xs text-ink-3">
+                    You are not here: you run this hackathon without taking part in it.
+                </p>
+            {/if}
             {#if unassigned.length === 0}
                 <p class="m-0 text-xs text-ink-3">Every confirmed participant is on a team.</p>
             {:else}
