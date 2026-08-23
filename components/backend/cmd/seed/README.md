@@ -110,7 +110,7 @@ else, so a member without it cannot see what there is to vote on and
 
 **Preferences: test in H1, H2 or H4.** H2 is the clearest small case —
 `hackagon-admin` owns it, `alice` and `bob` are both confirmed members. **H4 is
-the one with volume**: 15 projects, 104 participants and ~260 preference rows
+the one with volume**: 15 projects, 103 participants and ~260 preference rows
 already on file, which is what you want if you are looking at a preference
 export, a popularity ranking, or a team-assignment algorithm.
 
@@ -180,7 +180,7 @@ fixture.
 | User           | H1 AI Innovation                  | H2 Climate Tech                   | H3 Internal Sprint                  | H4 Data for Good                           |
 | -------------- | --------------------------------- | --------------------------------- | ----------------------------------- | ------------------------------------------ |
 | hackagon-admin | member of Team Alpha              | **creator**; member of Team Gamma | **creator**; member of Team Epsilon | participant                                |
-| alice          | **creator**; member of Team Alpha | participant                       | member of Team Delta                | **creator** and owner; participant         |
+| alice          | **creator**; member of Team Alpha | participant                       | member of Team Delta                | **creator** and owner; _not_ a participant |
 | bob            | participant; member of Team Beta  | member of Team Gamma              | —                                   | participant; proposed 5 of the 15 projects |
 | charles        | _waitlisted_                      | —                                 | —                                   | participant (confirmed)                    |
 
@@ -312,7 +312,7 @@ kept true by hand if you add more.
 ## H4 — Data for Good Hackathon 2026
 
 The large fixture, and the only one sitting in **team formation**: registration
-has closed, 104 people are confirmed in, 15 projects are on the table, everybody
+has closed, 103 people are confirmed in, 15 projects are on the table, everybody
 has said which ones they would like to work on — and **no team exists yet**.
 That is the input a team-assignment algorithm takes, and none of H1–H3 provide
 it: H1 and H2 have their teams pre-baked, H3 is over.
@@ -336,16 +336,16 @@ being exercised at all. Pick counts below are what the fixed PRNG seed
 | Project                   | Weight | Picks | Proposed by |
 | ------------------------- | -----: | ----: | ----------- |
 | Outbreak Early Warning    |     12 |    43 | bob         |
-| Vaccine Desert Mapper     |      6 |    18 | alice       |
+| Vaccine Desert Mapper     |      6 |    17 | alice       |
 | Clinical Trial Matcher    |      4 |     9 | alice       |
-| Air Quality & Asthma      |      3 |    10 | bob         |
+| Air Quality & Asthma      |      3 |     9 | bob         |
 | Ambulance Response Equity |      1 |     2 | alice       |
 | Open Textbook Search      |     11 |    36 | alice       |
 | Dropout Early Signal      |      7 |    15 | bob         |
 | School Meal Coverage      |      5 |    16 | alice       |
 | Sign Language Tutor       |      3 |    14 | alice       |
 | Classroom Energy Audit    |      1 |     3 | bob         |
-| Open Budget Explorer      |     10 |    28 | alice       |
+| Open Budget Explorer      |     10 |    27 | alice       |
 | Bike Lane Gap Finder      |      8 |    31 | alice       |
 | Rental Listing Watchdog   |      5 |    20 | bob         |
 | Pothole Report Triage     |      2 |    12 | alice       |
@@ -361,8 +361,8 @@ show it here.
 
 ### Preferences
 
-Each of the 104 participants named one to four projects — 12 named one, 40 named
-two, 36 named three, 16 named four, for **264 preference rows** in total.
+Each of the 103 participants named one to four projects — 12 named one, 40 named
+two, 35 named three, 16 named four, for **261 preference rows** in total.
 Preferences are an unranked M2M edge (`user.preferred_projects`); there is no
 "first choice" in the schema, only a set.
 
@@ -374,6 +374,12 @@ the same fixture exactly. Change `dataForGoodSeed` if you want a different draw.
 - **No teams and no submissions.** The state being modelled is the moment before
   teams exist. Submissions and voting are off for the same reason: there is
   nothing to submit yet.
+- **alice owns this one without taking part in it.** She holds `Owner` and no
+  participant row, so she is absent from the participant list, from the
+  preference draw and from the pool the team formation page staffs teams from.
+  H1-H3 all have their owner participating, so this is the only fixture for an
+  organizer who sits their own hackathon out. Note that `register` being off
+  (below) means she cannot change her mind through `Join` either.
 - **`register` is off.** Sign-up closed on day `-3`. This is the fixture where
   `Join` is refused because the window shut, not because something is
   misconfigured — contrast H1, where joining works.

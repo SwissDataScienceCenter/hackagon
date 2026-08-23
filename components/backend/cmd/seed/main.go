@@ -1313,6 +1313,11 @@ func pickPreferences(rng *rand.Rand, weights []int, n int) []int {
 //     `Owner`, no project-scoped `Owner` — they are participants, and an
 //     organizer view that looks wrong at a hundred owners is not the thing
 //     being tested here.
+//   - alice owns this one and holds no participant row in it. She proposes ten
+//     of the fifteen projects as the organizer and names no preferences of her
+//     own, because she is not after a team. H1-H3 all have their owner
+//     participating as well, so this is the only fixture for an organizer who
+//     sits their own hackathon out.
 //   - `register` is off. Sign-up closed three days ago; this is the fixture
 //     where `Join` is refused because the window shut, not because the
 //     hackathon is misconfigured.
@@ -1512,9 +1517,11 @@ func seedH4(
 		weights = append(weights, s.weight)
 	}
 
-	// The four dev users, then the hundred. Everybody is confirmed: the
-	// waitlist case lives in H1, and a waitlisted row here would just be noise
-	// in the input to team formation.
+	// Three of the four dev users, then the hundred — alice is left out on
+	// purpose, see the note on seedH4: she runs this hackathon rather than
+	// taking part in it. Everybody listed is confirmed: the waitlist case lives
+	// in H1, and a waitlisted row here would just be noise in the input to team
+	// formation.
 	// Combined index-wise: 20 × 20 = 400 distinct pairs, so the first
 	// dataForGoodParticipants of them are unique in both display name and
 	// username.
@@ -1531,7 +1538,7 @@ func seedH4(
 		"Petrov", "Quesada", "Rossi", "Steiner", "Toldeo",
 	}
 
-	participants := []*ent.User{admin, alice, bob, charles}
+	participants := []*ent.User{admin, bob, charles}
 	for i := range dataForGoodParticipants {
 		first := firstNames[i%len(firstNames)]
 		last := lastNames[(i/len(firstNames))%len(lastNames)]
@@ -1565,8 +1572,13 @@ func seedH4(
 			return fmt.Errorf("assign member %s in h4: %w", u.Username, err)
 		}
 	}
-	// alice runs this one. Owner on top of Member, because casbin has no
-	// inheritance and every capability below is granted to Member.
+	// alice runs this one: Owner and nothing else, because she has no
+	// participant row to carry Member. Casbin has no inheritance, so the
+	// capabilities seedCapabilities grants below — every one of them to Member
+	// — do not reach her. Proposing still does: Owner carries `Project:Propose`
+	// from the default policy, which is the role the ten projects above are
+	// hers under. Setting a preference does not, which is what a non-
+	// participating organizer should find.
 	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String()); err != nil {
 		return fmt.Errorf("assign alice owner in h4: %w", err)
 	}
