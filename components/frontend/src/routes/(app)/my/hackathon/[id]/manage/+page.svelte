@@ -225,12 +225,23 @@
          look at. Once a track exists the sidebar entry appears and this card
          steps back to a summary. -->
     <section class="card flex flex-col gap-3 border-line-strong px-5 py-4">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <span class="meta">Tracks</span>
+        <!-- The heading says what tracks are for and that they are optional,
+             because that is the decision being offered here — with none defined
+             there is otherwise nothing on the page to say what the button would
+             even get you. -->
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex min-w-0 flex-col gap-1">
+                <span class="meta">Tracks</span>
+                <p class="m-0 text-sm text-ink-3">
+                    An optional way to group projects. A hackathon runs perfectly well
+                    without any.
+                </p>
+            </div>
             {#if data.tracks.length > 0}
                 <a
                     href={resolve(`/my/hackathon/${data.hackathonId}/tracks`)}
-                    class="text-xs font-semibold text-accent-ink no-underline hover:underline"
+                    class="shrink-0 text-xs font-semibold text-accent-ink no-underline
+                           hover:underline"
                 >
                     Manage tracks &rarr;
                 </a>
@@ -238,10 +249,6 @@
         </div>
 
         {#if data.tracks.length === 0}
-            <p class="m-0 text-sm text-ink-3">
-                No tracks. Projects are not grouped, and nobody proposing one is asked
-                to pick — which is an ordinary way to run a hackathon, not a gap.
-            </p>
             <a
                 href={resolve(`/my/hackathon/${data.hackathonId}/tracks/new`)}
                 class="btn btn-sm btn-outline w-fit no-underline"
@@ -256,8 +263,8 @@
                 {/each}
             </div>
             <p class="m-0 text-xs text-ink-3">
-                Projects can be sorted into these. Each project's track stays optional:
-                one without a track is not a project missing something.
+                Each project's track is optional too: one without a track is not a
+                project missing something.
             </p>
         {/if}
     </section>
