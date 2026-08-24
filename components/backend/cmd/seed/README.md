@@ -324,7 +324,7 @@ Phases:
 - Hacking — days `+5` to `+7`, 09:00–18:00
 - Demo — day `+8`, 10:00–17:00
 
-Tracks: **Public Health**, **Education**, **Civic Data**
+No tracks — see _Deliberately absent_ below.
 
 ### Projects and their pull
 
@@ -333,23 +333,23 @@ spread is the whole point — an algorithm run against an even distribution is n
 being exercised at all. Pick counts below are what the fixed PRNG seed
 (`dataForGoodSeed`) actually produces, so they are stable across re-seeds.
 
-| Track         | Project                   | Weight | Picks | Proposed by |
-| ------------- | ------------------------- | -----: | ----: | ----------- |
-| Public Health | Outbreak Early Warning    |     12 |    43 | bob         |
-| Public Health | Vaccine Desert Mapper     |      6 |    18 | alice       |
-| Public Health | Clinical Trial Matcher    |      4 |     9 | alice       |
-| Public Health | Air Quality & Asthma      |      3 |    10 | bob         |
-| Public Health | Ambulance Response Equity |      1 |     2 | alice       |
-| Education     | Open Textbook Search      |     11 |    36 | alice       |
-| Education     | Dropout Early Signal      |      7 |    15 | bob         |
-| Education     | School Meal Coverage      |      5 |    16 | alice       |
-| Education     | Sign Language Tutor       |      3 |    14 | alice       |
-| Education     | Classroom Energy Audit    |      1 |     3 | bob         |
-| Civic Data    | Open Budget Explorer      |     10 |    28 | alice       |
-| Civic Data    | Bike Lane Gap Finder      |      8 |    31 | alice       |
-| Civic Data    | Rental Listing Watchdog   |      5 |    20 | bob         |
-| Civic Data    | Pothole Report Triage     |      2 |    12 | alice       |
-| Civic Data    | Council Minutes Search    |      1 |     7 | alice       |
+| Project                   | Weight | Picks | Proposed by |
+| ------------------------- | -----: | ----: | ----------- |
+| Outbreak Early Warning    |     12 |    43 | bob         |
+| Vaccine Desert Mapper     |      6 |    18 | alice       |
+| Clinical Trial Matcher    |      4 |     9 | alice       |
+| Air Quality & Asthma      |      3 |    10 | bob         |
+| Ambulance Response Equity |      1 |     2 | alice       |
+| Open Textbook Search      |     11 |    36 | alice       |
+| Dropout Early Signal      |      7 |    15 | bob         |
+| School Meal Coverage      |      5 |    16 | alice       |
+| Sign Language Tutor       |      3 |    14 | alice       |
+| Classroom Energy Audit    |      1 |     3 | bob         |
+| Open Budget Explorer      |     10 |    28 | alice       |
+| Bike Lane Gap Finder      |      8 |    31 | alice       |
+| Rental Listing Watchdog   |      5 |    20 | bob         |
+| Pothole Report Triage     |      2 |    12 | alice       |
+| Council Minutes Search    |      1 |     7 | alice       |
 
 All 15 are `approved`. Every proposer holds the project-scoped `Owner` role that
 goes with having proposed one.
@@ -379,5 +379,10 @@ the same fixture exactly. Change `dataForGoodSeed` if you want a different draw.
   misconfigured — contrast H1, where joining works.
 - **The hundred hold `Member` and nothing else.** No hackathon or project
   `Owner`, and no Keycloak account, so none of them can log in.
+- **No tracks.** Every project here carries none. This is the fixture for a
+  hackathon that runs without them — the shape the first client needs — so the
+  propose and edit forms drop their track picker, project rows carry no track,
+  and the overview's track breakdown has nothing to group by. H1-H3 keep their
+  tracks, so both shapes stay covered.
 
 Pages: `About`, `How teams are formed`, `Code of Conduct` (all visible).
