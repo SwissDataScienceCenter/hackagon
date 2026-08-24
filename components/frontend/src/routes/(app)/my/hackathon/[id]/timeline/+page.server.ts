@@ -7,8 +7,10 @@ import { resolvePhaseStatus, sortPhasesByStart } from "$lib/utils/phase"
 // is the participant view and reads the same for everyone.
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns the phases
-  // and the state.
-  const { hackathon } = await event.parent()
+  // and the state, and `hackathonState` is the derivation the overview's state
+  // card reads too — so the two surfaces cannot name a different phase as the
+  // live one or disagree about what is open.
+  const { hackathon, hackathonState, myMembership } = await event.parent()
 
   // Empty string rather than undefined when nothing is declared — `state` itself
   // is absent on a hackathon with no state row, which no longer happens for
@@ -25,19 +27,30 @@ export const load: PageServerLoad = async (event) => {
     endsAt: p.endsAt,
     // A declared current phase wins over the dates — see `resolvePhaseStatus`.
     status: resolvePhaseStatus(p, currentPhaseId || undefined),
-    // What the phase is planned for, as raw enum numbers — `capabilityLabel` in
-    // `$lib/utils/phase` is keyed by them, so the page needs no server-only
-    // import to render them.
-    //
-    // Deliberately *not* accompanied by what is actually switched on: that is
-    // `enabled`/`alsoEnabled` on the manage page, where the switches are. Here
-    // the plans are plain labels, so a participant reads what a phase is for
-    // without being shown a discrepancy only an organiser can act on.
-    capabilities: p.capabilities as number[],
     // The page a phase links to. `hackathon.get` nests the pages, so the link
     // needs no lookup of its own; only phases with a page get one.
     pageId: p.pageId ?? "",
   }))
 
-  return { hackathonId: hackathon.id, phases }
+  // Deliberately *not* `Phase.capabilities`. A phase's capability tags are a
+  // plan — `db/schema/phase.go` says so outright, and advancing to a phase
+  // grants nobody anything — so showing them to a participant promises things
+  // that may well be switched off. What is actually open comes from
+  // `HackathonState`, and the page shows it against the live phase only.
+  return {
+    hackathonId: hackathon.id,
+    phases,
+    // Which row is "now". `currentAndNextPhase` picks exactly one even when two
+    // phases' dates overlap, so only one row can ever take the card treatment —
+    // an overlapping second one keeps its "In progress" label and stays a row.
+    livePhaseId: hackathonState.currentPhase?.id ?? "",
+    // Which row gets the "starts in …" countdown. Named rather than derived
+    // here so it is the same "next" the overview's card names.
+    nextPhaseId: hackathonState.nextPhase?.id ?? "",
+    enabled: hackathonState.enabled,
+    hasState: hackathonState.hasState,
+    // Every capability check also requires a confirmed membership, so "open now"
+    // is not yet true for someone still on the waitlist.
+    isWaiting: myMembership?.isWaiting ?? false,
+  }
 }
