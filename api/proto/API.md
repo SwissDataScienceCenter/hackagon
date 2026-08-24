@@ -606,7 +606,8 @@
 | ----- | ---- | ----- | ----------- |
 | question_id | [string](#string) |  |  |
 | participant_id | [string](#string) |  |  |
-| value | [string](#string) |  |  |
+| text_value | [string](#string) |  |  |
+| bool_value | [bool](#bool) |  |  |
 
 
 

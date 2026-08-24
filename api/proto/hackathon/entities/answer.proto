@@ -7,5 +7,8 @@ option go_package = "github.com/swissdatasciencecenter/hackagon/components/backe
 message Answer {
   string question_id = 1;
   string participant_id = 2;
-  string value = 3;
+  oneof value {
+    string text_value = 3;
+    bool bool_value = 4;
+  }
 }

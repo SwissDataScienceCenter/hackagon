@@ -528,6 +528,21 @@ func answerEntryFromEnt(a *ent.Answer) *hackEnts.Answer {
 	return &hackEnts.Answer{
 		QuestionId:    a.QuestionID.String(),
 		ParticipantId: a.UserID.String(),
-		Value:         a.Value,
+		Value:         &hackEnts.Answer_TextValue{TextValue: a.Value},
+	}
+}
+
+// protoAnswerValueToDB extracts the string representation from a proto Answer.
+func protoAnswerValueToDB(a *hackEnts.Answer) string {
+	switch v := a.GetValue().(type) {
+	case *hackEnts.Answer_BoolValue:
+		if v.BoolValue {
+			return "true"
+		}
+		return "false"
+	case *hackEnts.Answer_TextValue:
+		return v.TextValue
+	default:
+		return ""
 	}
 }

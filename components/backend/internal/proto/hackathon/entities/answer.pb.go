@@ -25,7 +25,11 @@ type Answer struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	QuestionId    string                 `protobuf:"bytes,1,opt,name=question_id,json=questionId,proto3" json:"question_id,omitempty"`
 	ParticipantId string                 `protobuf:"bytes,2,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
-	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	// Types that are valid to be assigned to Value:
+	//
+	//	*Answer_TextValue
+	//	*Answer_BoolValue
+	Value         isAnswer_Value `protobuf_oneof:"value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -74,23 +78,61 @@ func (x *Answer) GetParticipantId() string {
 	return ""
 }
 
-func (x *Answer) GetValue() string {
+func (x *Answer) GetValue() isAnswer_Value {
 	if x != nil {
 		return x.Value
 	}
+	return nil
+}
+
+func (x *Answer) GetTextValue() string {
+	if x != nil {
+		if x, ok := x.Value.(*Answer_TextValue); ok {
+			return x.TextValue
+		}
+	}
 	return ""
 }
+
+func (x *Answer) GetBoolValue() bool {
+	if x != nil {
+		if x, ok := x.Value.(*Answer_BoolValue); ok {
+			return x.BoolValue
+		}
+	}
+	return false
+}
+
+type isAnswer_Value interface {
+	isAnswer_Value()
+}
+
+type Answer_TextValue struct {
+	TextValue string `protobuf:"bytes,3,opt,name=text_value,json=textValue,proto3,oneof"`
+}
+
+type Answer_BoolValue struct {
+	BoolValue bool `protobuf:"varint,4,opt,name=bool_value,json=boolValue,proto3,oneof"`
+}
+
+func (*Answer_TextValue) isAnswer_Value() {}
+
+func (*Answer_BoolValue) isAnswer_Value() {}
 
 var File_hackathon_entities_answer_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_answer_proto_rawDesc = "" +
 	"\n" +
-	"\x1fhackathon/entities/answer.proto\x12\x12hackathon.entities\"f\n" +
+	"\x1fhackathon/entities/answer.proto\x12\x12hackathon.entities\"\x9b\x01\n" +
 	"\x06Answer\x12\x1f\n" +
 	"\vquestion_id\x18\x01 \x01(\tR\n" +
 	"questionId\x12%\n" +
-	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05valueBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
+	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x12\x1f\n" +
+	"\n" +
+	"text_value\x18\x03 \x01(\tH\x00R\ttextValue\x12\x1f\n" +
+	"\n" +
+	"bool_value\x18\x04 \x01(\bH\x00R\tboolValueB\a\n" +
+	"\x05valueBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
 	file_hackathon_entities_answer_proto_rawDescOnce sync.Once
@@ -120,6 +162,10 @@ func init() { file_hackathon_entities_answer_proto_init() }
 func file_hackathon_entities_answer_proto_init() {
 	if File_hackathon_entities_answer_proto != nil {
 		return
+	}
+	file_hackathon_entities_answer_proto_msgTypes[0].OneofWrappers = []any{
+		(*Answer_TextValue)(nil),
+		(*Answer_BoolValue)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

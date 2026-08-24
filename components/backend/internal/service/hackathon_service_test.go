@@ -4,6 +4,7 @@ package service_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,9 +18,12 @@ import (
 	"github.com/google/uuid"
 
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	entanswer "github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
+	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
+	entuser "github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	hackathonSvc "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -2303,6 +2307,1239 @@ var _ = Describe("HackathonService", func() {
 				Only(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h.Edges.Owners).To(HaveLen(2))
+		})
+	})
+	Describe("RegistrationForm", func() {
+
+		var (
+			hackathonID string
+		)
+		BeforeEach(func() {
+
+			// Create a hackathon for tests
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			createResp, err := client.Create(ctx, &msgs.CreateRequest{
+				Name:       "QA Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+		})
+		Describe("CreateQuestion", func() {
+			It("creates a text question successfully", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Your company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   true,
+					Order:       1,
+				}
+
+				resp, err := client.CreateQuestion(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetQuestionId()).NotTo(BeEmpty())
+
+				// Verify in database
+				q, err := dbClient.Question.Query().
+					Where(
+						entquestion.IDEQ(uuid.MustParse(resp.GetQuestionId())),
+						entquestion.HackathonIDEQ(uuid.MustParse(hackathonID)),
+					).Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.Key).To(Equal("company"))
+				Expect(q.Label).To(Equal("Your company"))
+				Expect(q.DataType).To(Equal(entquestion.DataTypeText))
+				Expect(q.Mandatory).To(BeTrue())
+				Expect(q.Order).To(Equal(1))
+			})
+
+			It("creates a bool question", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "agree_terms",
+					Label:       "I agree to the terms",
+					Type:        entities.QuestionType_QUESTION_TYPE_BOOL,
+					Mandatory:   false,
+					Order:       2,
+				}
+
+				resp, err := client.CreateQuestion(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetQuestionId()).NotTo(BeEmpty())
+
+				q, err := dbClient.Question.Query().
+					Where(
+						entquestion.IDEQ(uuid.MustParse(resp.GetQuestionId())),
+						entquestion.HackathonIDEQ(uuid.MustParse(hackathonID)),
+					).Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.DataType).To(Equal(entquestion.DataTypeBool))
+				Expect(q.Mandatory).To(BeFalse())
+			})
+
+			It("creates multiple questions with different orders", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				keys := []string{"q1", "q2", "q3"}
+				orders := []int32{10, 5, 1}
+				for i, key := range keys {
+					req := &msgs.CreateQuestionRequest{
+						HackathonId: hackathonID,
+						Key:         key,
+						Label:       fmt.Sprintf("Question %d", i+1),
+						Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+						Order:       orders[i],
+					}
+					_, err := client.CreateQuestion(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				// Verify all exist
+				questions, err := dbClient.Question.Query().
+					Where(entquestion.HackathonIDEQ(uuid.MustParse(hackathonID))).
+					Order(ent.Asc(entquestion.FieldOrder)).
+					All(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(questions).To(HaveLen(3))
+				Expect(questions[0].Order).To(Equal(int(orders[2]))) // order 1 first
+				Expect(questions[1].Order).To(Equal(int(orders[1]))) // order 5
+				Expect(questions[2].Order).To(Equal(int(orders[0]))) // order 10
+			})
+
+			It("returns ALREADY_EXISTS for duplicate key", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Your company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   true,
+					Order:       1,
+				}
+				_, err := client.CreateQuestion(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Duplicate key should fail
+				dupReq := &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Duplicate",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       2,
+				}
+				_, err = client.CreateQuestion(ctx, dupReq)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.AlreadyExists))
+			})
+
+			It("returns NOT_FOUND for invalid hackathon ID", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.CreateQuestionRequest{
+					HackathonId: uuid.NewString(),
+					Key:         "company",
+					Label:       "Your company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				}
+				_, err := client.CreateQuestion(ctx, req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("requires Write permission", func() {
+				nonOwnerKeycloakID := "non-owner-question"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("non-owner-question-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Your company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				}
+				_, err = client.CreateQuestion(ctx, req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+
+			It("denies anonymous users", func() {
+				req := &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Your company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				}
+				_, err := client.CreateQuestion(context.Background(), req)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		// --- ListQuestions ---
+
+		Describe("ListQuestions", func() {
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				questions := []struct {
+					key   string
+					label string
+					typ   entities.QuestionType
+					order int32
+				}{
+					{"company", "Your company", entities.QuestionType_QUESTION_TYPE_TEXT, 10},
+					{
+						"agree_terms",
+						"I agree to terms",
+						entities.QuestionType_QUESTION_TYPE_BOOL,
+						1,
+					},
+					{
+						"dietary",
+						"Dietary requirements",
+						entities.QuestionType_QUESTION_TYPE_TEXT,
+						5,
+					},
+				}
+
+				for _, q := range questions {
+					_, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+						HackathonId: hackathonID,
+						Key:         q.key,
+						Label:       q.label,
+						Type:        q.typ,
+						Order:       q.order,
+					})
+					Expect(err).NotTo(HaveOccurred())
+				}
+			})
+
+			It("returns questions ordered by order field", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.ListQuestions(ctx, &msgs.ListQuestionsRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetQuestions()).To(HaveLen(3))
+
+				// Should be ordered by order field ascending
+				Expect(resp.GetQuestions()[0].GetOrder()).To(Equal(int32(1)))
+				Expect(resp.GetQuestions()[0].GetKey()).To(Equal("agree_terms"))
+				Expect(resp.GetQuestions()[1].GetOrder()).To(Equal(int32(5)))
+				Expect(resp.GetQuestions()[1].GetKey()).To(Equal("dietary"))
+				Expect(resp.GetQuestions()[2].GetOrder()).To(Equal(int32(10)))
+				Expect(resp.GetQuestions()[2].GetKey()).To(Equal("company"))
+			})
+
+			It("returns correct question fields", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.ListQuestions(ctx, &msgs.ListQuestionsRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Find the agree_terms question
+				for _, q := range resp.GetQuestions() {
+					if q.GetKey() == "agree_terms" {
+						Expect(q.GetLabel()).To(Equal("I agree to terms"))
+						Expect(q.GetType()).To(Equal(entities.QuestionType_QUESTION_TYPE_BOOL))
+						Expect(q.GetMandatory()).To(BeFalse())
+						Expect(q.GetId()).NotTo(BeEmpty())
+						return
+					}
+				}
+				Fail("agree_terms question not found")
+			})
+
+			It("returns empty list for hackathon with no questions", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create a new hackathon with no questions
+				createResp, err := client.Create(ctx, &msgs.CreateRequest{
+					Name:       "Empty Hackathon",
+					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := client.ListQuestions(ctx, &msgs.ListQuestionsRequest{
+					HackathonId: createResp.GetHackathonId(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetQuestions()).To(BeEmpty())
+			})
+
+			It("requires Read permission", func() {
+				nonOwnerKeycloakID := "non-owner-list-q"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("non-owner-list-q-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.ListQuestions(ctx, &msgs.ListQuestionsRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		// --- EditQuestion ---
+
+		Describe("EditQuestion", func() {
+			var questionID string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				createResp, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Original label",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   false,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				questionID = createResp.GetQuestionId()
+			})
+
+			It("updates label", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				newLabel := "Updated label"
+				_, err := client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Label:       &newLabel,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				q, err := dbClient.Question.Query().
+					Where(entquestion.IDEQ(uuid.MustParse(questionID))).
+					Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.Label).To(Equal("Updated label"))
+			})
+
+			It("updates mandatory flag", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				m := true
+				_, err := client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Mandatory:   &m,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				q, err := dbClient.Question.Query().
+					Where(entquestion.IDEQ(uuid.MustParse(questionID))).
+					Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.Mandatory).To(BeTrue())
+			})
+
+			It("updates order", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				order := int32(99)
+				_, err := client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Order:       &order,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				q, err := dbClient.Question.Query().
+					Where(entquestion.IDEQ(uuid.MustParse(questionID))).
+					Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.Order).To(Equal(99))
+			})
+
+			It("allows partial updates (only provided fields)", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				newLabel := "New label only"
+				_, err := client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Label:       &newLabel,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				q, err := dbClient.Question.Query().
+					Where(entquestion.IDEQ(uuid.MustParse(questionID))).
+					Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.Label).To(Equal("New label only"))
+				Expect(q.Mandatory).To(BeFalse()) // unchanged
+				Expect(q.Order).To(Equal(1))      // unchanged
+			})
+
+			It("returns NOT_FOUND for invalid question ID", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  uuid.NewString(),
+					Label:       testutils.StringPtr("Should fail"),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns NOT_FOUND for question in wrong hackathon", func() {
+				// Create another hackathon and question
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+					),
+				)
+				hack2Resp, err := client.Create(adminCtx, &msgs.CreateRequest{
+					Name:       "Other Hackathon",
+					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				qResp, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+					HackathonId: hack2Resp.GetHackathonId(),
+					Key:         "other_q",
+					Label:       "Other",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Try to edit from wrong hackathon context
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  qResp.GetQuestionId(),
+					Label:       testutils.StringPtr("Should fail"),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns FAILED_PRECONDITION when changing type with existing answers", func() {
+				// Create an answer for this question first
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create a participant to link the answer
+				user, err := dbClient.User.Create().
+					SetKeycloakID("answer-test-user").
+					SetUsername("answer-test-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				participant, err := dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(user.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create an answer
+				_, err = dbClient.Answer.Create().
+					SetQuestionID(uuid.MustParse(questionID)).
+					SetUserID(participant.UserID).
+					SetValue("test answer").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Try to change type - should fail
+				_, err = client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Type:        testutils.EnumPtr(entities.QuestionType_QUESTION_TYPE_BOOL),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+			})
+
+			It(
+				"returns FAILED_PRECONDITION when setting mandatory=true with existing answers",
+				func() {
+					// Create an answer for this question first
+					token := testutils.CreateTestJWTToken(testAdmin)
+					ctx := metadata.NewOutgoingContext(
+						context.Background(),
+						metadata.Pairs("authorization", "Bearer "+token),
+					)
+
+					user, err := dbClient.User.Create().
+						SetKeycloakID("mandatory-test-user").
+						SetUsername("mandatory-test-username").
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					participant, err := dbClient.Participant.Create().
+						SetHackathonID(uuid.MustParse(hackathonID)).
+						SetUserID(user.ID).
+						SetIsWaiting(false).
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = dbClient.Answer.Create().
+						SetQuestionID(uuid.MustParse(questionID)).
+						SetUserID(participant.UserID).
+						SetValue("test").
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					m := true
+					_, err = client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+						HackathonId: hackathonID,
+						QuestionId:  questionID,
+						Mandatory:   &m,
+					})
+					Expect(err).To(HaveOccurred())
+					st := status.Convert(err)
+					Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+				},
+			)
+
+			It("allows setting mandatory=false when answers exist", func() {
+				// Create an answer for this question first
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				user, err := dbClient.User.Create().
+					SetKeycloakID("mandatory-false-user").
+					SetUsername("mandatory-false-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				participant, err := dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(user.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Answer.Create().
+					SetQuestionID(uuid.MustParse(questionID)).
+					SetUserID(participant.UserID).
+					SetValue("test").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Setting mandatory=false should be allowed even with answers
+				m := false
+				_, err = client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Mandatory:   &m,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("requires Write permission", func() {
+				nonOwnerKeycloakID := "non-owner-edit-q"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("non-owner-edit-q-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+					Label:       testutils.StringPtr("Unauthorized"),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		// --- RemoveQuestion ---
+
+		Describe("RemoveQuestion", func() {
+			var questionID string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				createResp, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "to_remove",
+					Label:       "Will be removed",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				questionID = createResp.GetQuestionId()
+			})
+
+			It("removes question successfully", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.RemoveQuestion(ctx, &msgs.RemoveQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify question is gone
+				_, err = dbClient.Question.Query().
+					Where(entquestion.IDEQ(uuid.MustParse(questionID))).
+					Only(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(ent.IsNotFound(err)).To(BeTrue())
+			})
+
+			It("cascades to delete answers", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create an answer for this question
+				user, err := dbClient.User.Create().
+					SetKeycloakID("cascade-test-user").
+					SetUsername("cascade-test-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				participant, err := dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(user.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Answer.Create().
+					SetQuestionID(uuid.MustParse(questionID)).
+					SetUserID(participant.UserID).
+					SetValue("test answer").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify answer exists
+				answerCount, err := dbClient.Answer.Query().
+					Where(entanswer.QuestionIDEQ(uuid.MustParse(questionID))).
+					Count(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(answerCount).To(Equal(1))
+
+				// Remove question
+				_, err = client.RemoveQuestion(ctx, &msgs.RemoveQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify answer was cascade-deleted
+				answerCount, err = dbClient.Answer.Query().
+					Where(entanswer.QuestionIDEQ(uuid.MustParse(questionID))).
+					Count(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(answerCount).To(Equal(0))
+			})
+
+			It("returns NOT_FOUND for invalid question ID", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.RemoveQuestion(ctx, &msgs.RemoveQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  uuid.NewString(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns NOT_FOUND for question in wrong hackathon", func() {
+				// Create another hackathon and question
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+					),
+				)
+				hack2Resp, err := client.Create(adminCtx, &msgs.CreateRequest{
+					Name:       "Other Hackathon 2",
+					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				qResp, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+					HackathonId: hack2Resp.GetHackathonId(),
+					Key:         "other_q2",
+					Label:       "Other",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.RemoveQuestion(ctx, &msgs.RemoveQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  qResp.GetQuestionId(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("requires Write permission", func() {
+				nonOwnerKeycloakID := "non-owner-remove-q"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("non-owner-remove-q-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.RemoveQuestion(ctx, &msgs.RemoveQuestionRequest{
+					HackathonId: hackathonID,
+					QuestionId:  questionID,
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		// --- SubmitAnswers ---
+
+		Describe("SubmitAnswers", func() {
+			var questionID, questionID2 string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create two questions
+				q1, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   true,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				questionID = q1.GetQuestionId()
+
+				q2, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "role",
+					Label:       "Role",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   false,
+					Order:       2,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				questionID2 = q2.GetQuestionId()
+
+				// Create a participant and make them an owner so they have Read permission
+				user, err := dbClient.User.Create().
+					SetKeycloakID("submit-answers-user").
+					SetUsername("submit-answers-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Grant owner role so they have Read permission
+				_, err = dbClient.Hackathon.Update().
+					Where(enthackathon.IDEQ(uuid.MustParse(hackathonID))).
+					AddOwners(user).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Also create a participant record for the admin user so admin token works
+				adminUser, err := dbClient.User.Query().
+					Where(entuser.KeycloakIDEQ(testAdmin)).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				_, err = dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(adminUser.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("submits answers successfully", func() {
+				// Use admin token since admin has global Read permission
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				answers := []*entities.Answer{
+					{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme Corp"}},
+					{QuestionId: questionID2, Value: &entities.Answer_TextValue{TextValue: "Developer"}},
+				}
+
+				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers:     answers,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify answers in DB - admin user's ID
+				adminUser, err := dbClient.User.Query().
+					Where(entuser.KeycloakIDEQ(testAdmin)).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				answersFromDB, err := dbClient.Answer.Query().
+					Where(
+						entanswer.QuestionIDEQ(uuid.MustParse(questionID)),
+						entanswer.UserID(adminUser.ID),
+					).All(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(answersFromDB).To(HaveLen(1))
+				Expect(answersFromDB[0].Value).To(Equal("Acme Corp"))
+
+				answers2, err := dbClient.Answer.Query().
+					Where(
+						entanswer.QuestionIDEQ(uuid.MustParse(questionID2)),
+						entanswer.UserID(adminUser.ID),
+					).All(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(answers2).To(HaveLen(1))
+				Expect(answers2[0].Value).To(Equal("Developer"))
+			})
+
+			It("rejects missing mandatory answers", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Only answer the non-mandatory question
+				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers: []*entities.Answer{
+						{QuestionId: questionID2, Value: &entities.Answer_TextValue{TextValue: "Developer"}},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+				Expect(err.Error()).To(ContainSubstring("missing mandatory answers"))
+			})
+
+			It("upserts answers on re-submit", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// First submission
+				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers: []*entities.Answer{
+						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Old Corp"}},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Second submission with updated value
+				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers: []*entities.Answer{
+						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "New Corp"}},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify only one answer exists with updated value
+				adminUser, err := dbClient.User.Query().
+					Where(entuser.KeycloakIDEQ(testAdmin)).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				answersFromDB, err := dbClient.Answer.Query().
+					Where(
+						entanswer.QuestionIDEQ(uuid.MustParse(questionID)),
+						entanswer.UserID(adminUser.ID),
+					).All(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(answersFromDB).To(HaveLen(1))
+				Expect(answersFromDB[0].Value).To(Equal("New Corp"))
+			})
+
+			It("returns NOT_FOUND for invalid hackathon ID", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: uuid.NewString(),
+					Answers: []*entities.Answer{
+						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme"}},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("denies anonymous users", func() {
+				_, err := client.SubmitAnswers(context.Background(), &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers: []*entities.Answer{
+						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme"}},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.Unauthenticated))
+			})
+
+			It("requires Read permission", func() {
+				// Create a user with no access to the hackathon
+				nonOwnerKeycloakID := "non-owner-submit"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("non-owner-submit-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create participant for this user
+				user, err := dbClient.User.Query().
+					Where(entuser.KeycloakIDEQ(nonOwnerKeycloakID)).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(user.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers: []*entities.Answer{
+						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme"}},
+					},
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		// --- ListParticipantAnswers ---
+
+		Describe("ListParticipantAnswers", func() {
+			var questionID string
+			var participantUser *ent.User
+			var participantID string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create a question
+				qResp, err := client.CreateQuestion(ctx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "company",
+					Label:       "Company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				questionID = qResp.GetQuestionId()
+
+				// Create a participant user
+				participantUser, err = dbClient.User.Create().
+					SetKeycloakID("list-answers-user").
+					SetUsername("list-answers-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				participant, err := dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(participantUser.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				participantID = participant.UserID.String()
+
+				// Create an answer
+				_, err = dbClient.Answer.Create().
+					SetQuestionID(uuid.MustParse(questionID)).
+					SetUserID(participantUser.ID).
+					SetValue("Acme Corp").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns answers for requester's own answers (no write access)", func() {
+				token := testutils.CreateTestJWTToken("list-answers-user")
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.ListParticipantAnswers(ctx, &msgs.ListParticipantAnswersRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetAnswers()).To(HaveLen(1))
+				Expect(resp.GetAnswers()[0].GetQuestionId()).To(Equal(questionID))
+				Expect(resp.GetAnswers()[0].GetTextValue()).To(Equal("Acme Corp"))
+			})
+
+			It("returns answers for specified user (write access)", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.ListParticipantAnswers(ctx, &msgs.ListParticipantAnswersRequest{
+					HackathonId: hackathonID,
+					UserId:      testutils.StringPtr(participantUser.ID.String()),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetAnswers()).To(HaveLen(1))
+				Expect(resp.GetAnswers()[0].GetQuestionId()).To(Equal(questionID))
+			})
+
+			It("returns empty list when no answers exist", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create another participant with no answers
+				otherUser, err := dbClient.User.Create().
+					SetKeycloakID("no-answers-user").
+					SetUsername("no-answers-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(otherUser.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := client.ListParticipantAnswers(ctx, &msgs.ListParticipantAnswersRequest{
+					HackathonId: hackathonID,
+					UserId:      testutils.StringPtr(otherUser.ID.String()),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetAnswers()).To(BeEmpty())
+			})
+
+			It("returns error for invalid user ID format", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.ListParticipantAnswers(ctx, &msgs.ListParticipantAnswersRequest{
+					HackathonId: hackathonID,
+					UserId:      testutils.StringPtr("not-a-uuid"),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("denies anonymous users", func() {
+				// Anonymous requests get sub="anonymous" from auth interceptor.
+				// The handler then looks up user by keycloak ID "anonymous" which doesn't exist.
+				_, err := client.ListParticipantAnswers(
+					context.Background(),
+					&msgs.ListParticipantAnswersRequest{
+						HackathonId: hackathonID,
+					},
+				)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns answers with correct participant_id", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.ListParticipantAnswers(ctx, &msgs.ListParticipantAnswersRequest{
+					HackathonId: hackathonID,
+					UserId:      testutils.StringPtr(participantUser.ID.String()),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetAnswers()).To(HaveLen(1))
+				// ParticipantId in the answer is the participant's user ID
+				Expect(resp.GetAnswers()[0].GetParticipantId()).To(Equal(participantID))
+			})
 		})
 	})
 })

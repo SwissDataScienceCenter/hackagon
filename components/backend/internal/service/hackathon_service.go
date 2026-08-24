@@ -281,45 +281,9 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't check participant status")
 	}
 
-	// Fetch all questions for this hackathon (needed for mandatory validation)
-	questions, err := s.dbClient.Question.Query().Where(
-		entquestion.HackathonIDEQ(id),
-	).All(ctx)
-	if err != nil {
-		slog.Error("query questions", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query questions")
-	}
-
-	// Build set of answered question IDs
-	answeredQuestionIDs := make(map[uuid.UUID]struct{})
-	for _, a := range req.GetAnswers() {
-		qID, parseErr := uuid.Parse(a.GetQuestionId())
-		if parseErr != nil {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"invalid question_id in answer: %v",
-				parseErr,
-			)
-		}
-		answeredQuestionIDs[qID] = struct{}{}
-	}
-
-	// Check all mandatory questions have answers
-	var missingMandatory []string
-	for _, q := range questions {
-		if q.Mandatory {
-			if _, answered := answeredQuestionIDs[q.ID]; !answered {
-				missingMandatory = append(missingMandatory, q.Key)
-			}
-		}
-	}
-
-	if len(missingMandatory) > 0 {
-		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"missing mandatory answers: %s",
-			missingMandatory,
-		)
+	// Validate answers: mandatory questions and type correctness.
+	if err := s.validateAnswers(ctx, id, req.GetAnswers()); err != nil {
+		return nil, err
 	}
 
 	// Create participant and answers in a transaction
@@ -346,7 +310,7 @@ func (s *HackathonService) Join(
 		err := tx.Answer.Create().
 			SetQuestionID(qID).
 			SetUserID(participant.UserID).
-			SetValue(a.GetValue()).
+			SetValue(protoAnswerValueToDB(a)).
 			OnConflict().
 			UpdateNewValues().
 			Exec(ctx)
@@ -1371,8 +1335,8 @@ func (s *HackathonService) EditQuestion(
 	if req.Mandatory != nil {
 		update = update.SetMandatory(req.GetMandatory())
 	}
-	if o := req.GetOrder(); o != 0 {
-		update = update.SetOrder(int(o))
+	if req.Order != nil {
+		update = update.SetOrder(int(req.GetOrder()))
 	}
 	update = update.SetModifier(user)
 
@@ -1518,45 +1482,9 @@ func (s *HackathonService) SubmitAnswers(
 		return nil, status.Error(codes.Internal, "couldn't query participant")
 	}
 
-	// Fetch all questions for this hackathon
-	questions, err := s.dbClient.Question.Query().Where(
-		entquestion.HackathonIDEQ(hackID),
-	).All(ctx)
-	if err != nil {
-		slog.Error("query questions", "err", err)
-		return nil, status.Error(codes.Internal, "couldn't query questions")
-	}
-
-	// Build set of answered question IDs
-	answeredQuestionIDs := make(map[uuid.UUID]struct{})
-	for _, a := range req.GetAnswers() {
-		qID, err := uuid.Parse(a.GetQuestionId())
-		if err != nil {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"invalid question_id in answer: %v",
-				err,
-			)
-		}
-		answeredQuestionIDs[qID] = struct{}{}
-	}
-
-	// Check all mandatory questions have answers
-	var missingMandatory []string
-	for _, q := range questions {
-		if q.Mandatory {
-			if _, answered := answeredQuestionIDs[q.ID]; !answered {
-				missingMandatory = append(missingMandatory, q.Key)
-			}
-		}
-	}
-
-	if len(missingMandatory) > 0 {
-		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"missing mandatory answers: %s",
-			missingMandatory,
-		)
+	// Validate answers: mandatory questions and type correctness.
+	if err := s.validateAnswers(ctx, hackID, req.GetAnswers()); err != nil {
+		return nil, err
 	}
 
 	// Upsert answers linked to the participant
@@ -1565,7 +1493,7 @@ func (s *HackathonService) SubmitAnswers(
 		err := s.dbClient.Answer.Create().
 			SetQuestionID(qID).
 			SetUserID(participant.UserID).
-			SetValue(a.GetValue()).
+			SetValue(protoAnswerValueToDB(a)).
 			OnConflict().
 			UpdateNewValues().
 			Exec(ctx)
@@ -1643,4 +1571,104 @@ func (s *HackathonService) ListParticipantAnswers(
 	}
 
 	return &msgs.ListParticipantAnswersResponse{Answers: entries}, nil
+}
+
+// validateAnswers checks that all mandatory questions are answered and that
+// each answer value matches the question type.
+func (s *HackathonService) validateAnswers(
+	ctx context.Context,
+	hackID uuid.UUID,
+	answers []*ents.Answer,
+) error {
+	questions, err := s.dbClient.Question.Query().Where(
+		entquestion.HackathonIDEQ(hackID),
+	).All(ctx)
+	if err != nil {
+		slog.Error("query questions", "err", err)
+		return status.Error(codes.Internal, "couldn't query questions")
+	}
+
+	// Build lookup maps.
+	questionByID := make(map[uuid.UUID]*ent.Question, len(questions))
+	for _, q := range questions {
+		questionByID[q.ID] = q
+	}
+
+	answeredIDs := make(map[uuid.UUID]struct{}, len(answers))
+	for _, a := range answers {
+		qID, err := uuid.Parse(a.GetQuestionId())
+		if err != nil {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"invalid question_id in answer: %v",
+				err,
+			)
+		}
+		answeredIDs[qID] = struct{}{}
+
+		// Validate the answer value matches the question type.
+		q, ok := questionByID[qID]
+		if !ok {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"question %s does not exist in this hackathon",
+				a.GetQuestionId(),
+			)
+		}
+		if err := validateAnswerValue(a, q.DataType); err != nil {
+			return err
+		}
+	}
+
+	// Check all mandatory questions are answered.
+	var missingMandatory []string
+	for _, q := range questions {
+		if q.Mandatory {
+			if _, answered := answeredIDs[q.ID]; !answered {
+				missingMandatory = append(missingMandatory, q.Key)
+			}
+		}
+	}
+	if len(missingMandatory) > 0 {
+		return status.Errorf(
+			codes.FailedPrecondition,
+			"missing mandatory answers: %s",
+			missingMandatory,
+		)
+	}
+
+	return nil
+}
+
+// validateAnswerValue checks that an answer's value is compatible with the
+// question's data type.  Returns a gRPC error when the value is invalid.
+func validateAnswerValue(a *ents.Answer, dataType entquestion.DataType) error {
+	switch dataType {
+	case entquestion.DataTypeBool:
+		_, ok := a.GetValue().(*ents.Answer_BoolValue)
+		if !ok {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"question %s expects a boolean answer",
+				a.GetQuestionId(),
+			)
+		}
+		return nil
+	case entquestion.DataTypeText:
+		_, ok := a.GetValue().(*ents.Answer_TextValue)
+		if !ok {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"question %s expects a text answer",
+				a.GetQuestionId(),
+			)
+		}
+		return nil
+	default:
+		return status.Errorf(
+			codes.InvalidArgument,
+			"unknown question type for question %s",
+			a.GetQuestionId(),
+		)
+	}
 }
