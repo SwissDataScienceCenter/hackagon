@@ -37,7 +37,16 @@ export const load: PageServerLoad = async (event) => {
       isMe: myUserId !== undefined && m.user!.id === myUserId,
     }))
 
-  return { hackathonId: hackathon.id, participants }
+  // The export drops members with no address, since a blank one is a row a
+  // mailing tool rejects (`User.email` is optional and defaults to empty). The
+  // count is surfaced so a file shorter than the roster is not a silent
+  // surprise; the addresses themselves stay out of this payload — the download
+  // endpoint reads them from its own `Get`.
+  const withoutEmail = hackathon.members.filter(
+    (m) => m.user !== undefined && m.user.email === "",
+  ).length
+
+  return { hackathonId: hackathon.id, participants, withoutEmail }
 }
 
 /** The gRPC errors both write paths can return, as SvelteKit failures. */
