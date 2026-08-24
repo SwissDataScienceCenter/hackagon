@@ -76,15 +76,41 @@
     // there is one at all. `new Date()` is only ever compared against, never
     // rendered — the visible clock lives in `Countdown`, which is what keeps this
     // from becoming a hydration mismatch.
-    const boundary = $derived(nextBoundary(currentPhase, nextPhase, new Date()));
+    const boundary = $derived(nextBoundary(currentPhase, nextPhase, new Date(), declared));
 
     // The two conditions deliberately kept out of the banner (see `stateAlerts`):
     // untidy rather than blocking, so an organiser reads them here without being
     // interrupted by them elsewhere.
+    //
+    // Both stay organiser-only, because both are prompts to act. A participant
+    // reading "no phase is declared current" learns nothing they can use — with no
+    // declaration the dates decide, which is what a timeline looks like anyway.
     const noCurrentPhase = $derived(organiserVoice && hasState && currentPhase === null);
     const phaseEnded = $derived(
         organiserVoice && currentPhase?.endsAt !== undefined && currentPhase.endsAt < new Date(),
     );
+
+    // The participant's version of the same fact, and the one thing manual mode
+    // owes them: with a phase declared current the dates on this card and on the
+    // timeline have stopped deciding anything, so a window that disagrees with the
+    // clock is not a mistake and not something to plan around.
+    //
+    // Both directions, unlike `phaseEnded` above: an organiser who declares a
+    // phase early leaves a "current" phase whose start is still days off, which
+    // reads just as oddly as one held past its end. Suppressing the countdown
+    // (see `nextBoundary`) removes the false statement; this is what replaces it.
+    //
+    // A declared phase whose window still covers now says nothing — the dates and
+    // the declaration agree, and there is nothing to explain.
+    const outsideWindow = $derived.by(() => {
+        if (!declared || !currentPhase) return false;
+        const now = new Date();
+        return (
+            (currentPhase.endsAt !== undefined && currentPhase.endsAt < now) ||
+            (currentPhase.startsAt !== undefined && currentPhase.startsAt > now)
+        );
+    });
+    const datesAreAGuide = $derived(!organiserVoice && outsideWindow);
 </script>
 
 <!--
@@ -241,7 +267,7 @@
         </a>
     {/if}
 
-    {#if noCurrentPhase || phaseEnded}
+    {#if noCurrentPhase || phaseEnded || datesAreAGuide}
         <div class="flex flex-col gap-1 border-t border-line pt-3">
             {#if noCurrentPhase}
                 <span class="text-xs text-ink-3">
@@ -251,6 +277,12 @@
             {#if phaseEnded}
                 <span class="text-xs text-ink-3">
                     This phase's dates have passed — it stays current until you change it.
+                </span>
+            {/if}
+            {#if datesAreAGuide}
+                <span class="text-xs text-ink-3">
+                    The organisers decide when the hackathon moves on, so the dates on the
+                    timeline are a guide rather than a deadline.
                 </span>
             {/if}
         </div>

@@ -217,7 +217,15 @@
                                     </a>
                                 {/if}
                                 <span class="ms-auto flex shrink-0 items-baseline gap-3">
-                                    {#if phase.id === data.nextPhaseId && phase.startsAt}
+                                    <!-- Withheld while a phase is declared current:
+                                         nothing but SetCurrentPhase starts the next
+                                         one then, so its start date arriving does
+                                         nothing and "starts in 3 h" would be a
+                                         promise no clock keeps. Same guard
+                                         `nextBoundary` applies for the overview's
+                                         card; the date beside it still says when it
+                                         was scheduled for. -->
+                                    {#if phase.id === data.nextPhaseId && phase.startsAt && !data.declared}
                                         <Countdown
                                             boundary={{ verb: 'starts', target: phase.startsAt }}
                                         />

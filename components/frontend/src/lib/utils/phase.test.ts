@@ -256,17 +256,62 @@ describe("formatPhaseRange", () => {
         new Date("2026-08-20T09:00"),
         new Date("2026-08-25T18:00"),
       ),
+    ).toBe("Aug 20, 2026, 09:00 – Aug 25, 2026, 18:00")
+  })
+
+  // The case the date-only format could not tell apart: three phases of one
+  // hackathon day all read "Aug 25, 2026 – Aug 25, 2026" before.
+  it("collapses the repeated date on a single-day range", () => {
+    expect(
+      formatPhaseRange(
+        new Date("2026-08-25T09:00"),
+        new Date("2026-08-25T13:00"),
+      ),
+    ).toBe("Aug 25, 2026, 09:00 – 13:00")
+  })
+
+  // Midnight on both bounds is an organizer who left the time fields alone, so
+  // the range is the whole day and there is no time worth printing.
+  it("prints dates alone when both bounds are at midnight", () => {
+    expect(
+      formatPhaseRange(
+        new Date("2026-08-20T00:00"),
+        new Date("2026-08-25T00:00"),
+      ),
     ).toBe("Aug 20, 2026 – Aug 25, 2026")
+  })
+
+  it("collapses an all-day range to the one date", () => {
+    expect(
+      formatPhaseRange(
+        new Date("2026-08-25T00:00"),
+        new Date("2026-08-25T00:00"),
+      ),
+    ).toBe("Aug 25, 2026")
+  })
+
+  // One decision for the range, not per bound: an end at 00:00 keeps its time
+  // rather than looking like a range with no end stated.
+  it("shows both times when only one bound has one", () => {
+    expect(
+      formatPhaseRange(
+        new Date("2026-08-25T09:00"),
+        new Date("2026-08-26T00:00"),
+      ),
+    ).toBe("Aug 25, 2026, 09:00 – Aug 26, 2026, 00:00")
   })
 
   // Both-or-neither is enforced on write by a CEL rule, but rows predating it can
   // still carry one alone, so neither half may render as "Invalid Date".
   it("handles one bound alone", () => {
     expect(formatPhaseRange(new Date("2026-08-20T09:00"), undefined)).toBe(
-      "From Aug 20, 2026",
+      "From Aug 20, 2026, 09:00",
     )
     expect(formatPhaseRange(undefined, new Date("2026-08-25T18:00"))).toBe(
-      "Until Aug 25, 2026",
+      "Until Aug 25, 2026, 18:00",
+    )
+    expect(formatPhaseRange(new Date("2026-08-20T00:00"), undefined)).toBe(
+      "From Aug 20, 2026",
     )
   })
 

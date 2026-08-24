@@ -47,6 +47,11 @@ export const load: PageServerLoad = async (event) => {
     // Which row gets the "starts in …" countdown. Named rather than derived
     // here so it is the same "next" the overview's card names.
     nextPhaseId: hackathonState.nextPhase?.id ?? "",
+    // Whether an organizer declared the current phase, in which case no date
+    // starts anything and the countdown above is withheld — same rule
+    // `nextBoundary` applies to the overview's card. The page needs the flag
+    // rather than deriving it from `livePhaseId`, which is set either way.
+    declared: hackathonState.declared,
     enabled: hackathonState.enabled,
     hasState: hackathonState.hasState,
     // Every capability check also requires a confirmed membership, so "open now"

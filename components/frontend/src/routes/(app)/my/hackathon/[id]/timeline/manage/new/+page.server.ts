@@ -35,8 +35,9 @@ export const actions: Actions = {
     }
     const values = parsed.values
 
+    let created
     try {
-      await phase.create({
+      created = await phase.create({
         hackathonId: event.params.id,
         name: values.name,
         description: values.description,
@@ -72,6 +73,21 @@ export const actions: Actions = {
       throw e
     }
 
-    redirect(303, resolve(`/my/hackathon/${event.params.id}/timeline/manage`))
+    // Straight to the new phase's Edit page rather than back to the list, because
+    // `Create` discards dates (see the TODO above) and Edit is therefore the only
+    // place a phase can be scheduled at all. Landing an organizer on the form that
+    // finishes the job beats a list row reading "No dates set" that they have to
+    // notice and click. `?added` is what lets that page say why they are there.
+    //
+    // Falls back to the list if the RPC somehow reports no id: an organizer looking
+    // at their new phase in the list is a worse outcome than a broken Edit URL.
+    redirect(
+      303,
+      created.phaseId
+        ? `${resolve(
+            `/my/hackathon/${event.params.id}/timeline/manage/${created.phaseId}/edit`,
+          )}?added`
+        : resolve(`/my/hackathon/${event.params.id}/timeline/manage`),
+    )
   },
 }
