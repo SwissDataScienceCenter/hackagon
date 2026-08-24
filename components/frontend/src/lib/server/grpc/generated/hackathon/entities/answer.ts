@@ -12,11 +12,12 @@ export const protobufPackage = "hackathon.entities";
 export interface Answer {
   questionId: string;
   participantId: string;
-  value: string;
+  textValue?: string | undefined;
+  boolValue?: boolean | undefined;
 }
 
 function createBaseAnswer(): Answer {
-  return { questionId: "", participantId: "", value: "" };
+  return { questionId: "", participantId: "", textValue: undefined, boolValue: undefined };
 }
 
 export const Answer: MessageFns<Answer> = {
@@ -27,8 +28,11 @@ export const Answer: MessageFns<Answer> = {
     if (message.participantId !== "") {
       writer.uint32(18).string(message.participantId);
     }
-    if (message.value !== "") {
-      writer.uint32(26).string(message.value);
+    if (message.textValue !== undefined) {
+      writer.uint32(26).string(message.textValue);
+    }
+    if (message.boolValue !== undefined) {
+      writer.uint32(32).bool(message.boolValue);
     }
     return writer;
   },
@@ -61,7 +65,15 @@ export const Answer: MessageFns<Answer> = {
             break;
           }
 
-          message.value = reader.string();
+          message.textValue = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.boolValue = reader.bool();
           continue;
         }
       }
@@ -85,7 +97,16 @@ export const Answer: MessageFns<Answer> = {
         : isSet(object.participant_id)
         ? globalThis.String(object.participant_id)
         : "",
-      value: isSet(object.value) ? globalThis.String(object.value) : "",
+      textValue: isSet(object.textValue)
+        ? globalThis.String(object.textValue)
+        : isSet(object.text_value)
+        ? globalThis.String(object.text_value)
+        : undefined,
+      boolValue: isSet(object.boolValue)
+        ? globalThis.Boolean(object.boolValue)
+        : isSet(object.bool_value)
+        ? globalThis.Boolean(object.bool_value)
+        : undefined,
     };
   },
 
@@ -97,8 +118,11 @@ export const Answer: MessageFns<Answer> = {
     if (message.participantId !== "") {
       obj.participantId = message.participantId;
     }
-    if (message.value !== "") {
-      obj.value = message.value;
+    if (message.textValue !== undefined) {
+      obj.textValue = message.textValue;
+    }
+    if (message.boolValue !== undefined) {
+      obj.boolValue = message.boolValue;
     }
     return obj;
   },
@@ -110,7 +134,8 @@ export const Answer: MessageFns<Answer> = {
     const message = createBaseAnswer();
     message.questionId = object.questionId ?? "";
     message.participantId = object.participantId ?? "";
-    message.value = object.value ?? "";
+    message.textValue = object.textValue ?? undefined;
+    message.boolValue = object.boolValue ?? undefined;
     return message;
   },
 };

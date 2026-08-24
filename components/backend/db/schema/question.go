@@ -35,7 +35,7 @@ func (Question) Fields() []ent.Field {
 		field.String("label").
 			Comment("Display label for the question."),
 		field.Enum("data_type").
-			Values("text", "bool").
+			Values("text", "bool", "enum").
 			Comment("The type of answer expected from participants."),
 		field.Bool("mandatory").
 			Default(false).
@@ -43,6 +43,8 @@ func (Question) Fields() []ent.Field {
 		field.Int("order").
 			Default(0).
 			Comment("Display order; lower values appear first."),
+		field.JSON("options", []string{}).
+			Comment("Allowed values for enum-type questions."),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).

@@ -6906,6 +6906,8 @@ type QuestionMutation struct {
 	mandatory        *bool
 	_order           *int
 	add_order        *int
+	options          *[]string
+	appendoptions    []string
 	created_at       *time.Time
 	modified_at      *time.Time
 	clearedFields    map[string]struct{}
@@ -7263,6 +7265,57 @@ func (m *QuestionMutation) ResetOrder() {
 	m.add_order = nil
 }
 
+// SetOptions sets the "options" field.
+func (m *QuestionMutation) SetOptions(s []string) {
+	m.options = &s
+	m.appendoptions = nil
+}
+
+// Options returns the value of the "options" field in the mutation.
+func (m *QuestionMutation) Options() (r []string, exists bool) {
+	v := m.options
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOptions returns the old "options" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldOptions(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOptions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOptions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOptions: %w", err)
+	}
+	return oldValue.Options, nil
+}
+
+// AppendOptions adds s to the "options" field.
+func (m *QuestionMutation) AppendOptions(s []string) {
+	m.appendoptions = append(m.appendoptions, s...)
+}
+
+// AppendedOptions returns the list of values that were appended to the "options" field in this mutation.
+func (m *QuestionMutation) AppendedOptions() ([]string, bool) {
+	if len(m.appendoptions) == 0 {
+		return nil, false
+	}
+	return m.appendoptions, true
+}
+
+// ResetOptions resets all changes to the "options" field.
+func (m *QuestionMutation) ResetOptions() {
+	m.options = nil
+	m.appendoptions = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *QuestionMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -7528,7 +7581,7 @@ func (m *QuestionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *QuestionMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.hackathon != nil {
 		fields = append(fields, question.FieldHackathonID)
 	}
@@ -7546,6 +7599,9 @@ func (m *QuestionMutation) Fields() []string {
 	}
 	if m._order != nil {
 		fields = append(fields, question.FieldOrder)
+	}
+	if m.options != nil {
+		fields = append(fields, question.FieldOptions)
 	}
 	if m.created_at != nil {
 		fields = append(fields, question.FieldCreatedAt)
@@ -7573,6 +7629,8 @@ func (m *QuestionMutation) Field(name string) (ent.Value, bool) {
 		return m.Mandatory()
 	case question.FieldOrder:
 		return m.Order()
+	case question.FieldOptions:
+		return m.Options()
 	case question.FieldCreatedAt:
 		return m.CreatedAt()
 	case question.FieldModifiedAt:
@@ -7598,6 +7656,8 @@ func (m *QuestionMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldMandatory(ctx)
 	case question.FieldOrder:
 		return m.OldOrder(ctx)
+	case question.FieldOptions:
+		return m.OldOptions(ctx)
 	case question.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case question.FieldModifiedAt:
@@ -7652,6 +7712,13 @@ func (m *QuestionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOrder(v)
+		return nil
+	case question.FieldOptions:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOptions(v)
 		return nil
 	case question.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -7748,6 +7815,9 @@ func (m *QuestionMutation) ResetField(name string) error {
 		return nil
 	case question.FieldOrder:
 		m.ResetOrder()
+		return nil
+	case question.FieldOptions:
+		m.ResetOptions()
 		return nil
 	case question.FieldCreatedAt:
 		m.ResetCreatedAt()

@@ -79,6 +79,12 @@ func (_c *QuestionCreate) SetNillableOrder(v *int) *QuestionCreate {
 	return _c
 }
 
+// SetOptions sets the "options" field.
+func (_c *QuestionCreate) SetOptions(v []string) *QuestionCreate {
+	_c.mutation.SetOptions(v)
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *QuestionCreate) SetCreatedAt(v time.Time) *QuestionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -250,6 +256,9 @@ func (_c *QuestionCreate) check() error {
 	if _, ok := _c.mutation.Order(); !ok {
 		return &ValidationError{Name: "order", err: errors.New(`ent: missing required field "Question.order"`)}
 	}
+	if _, ok := _c.mutation.Options(); !ok {
+		return &ValidationError{Name: "options", err: errors.New(`ent: missing required field "Question.options"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Question.created_at"`)}
 	}
@@ -320,6 +329,10 @@ func (_c *QuestionCreate) createSpec() (*Question, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Order(); ok {
 		_spec.SetField(question.FieldOrder, field.TypeInt, value)
 		_node.Order = value
+	}
+	if value, ok := _c.mutation.Options(); ok {
+		_spec.SetField(question.FieldOptions, field.TypeJSON, value)
+		_node.Options = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(question.FieldCreatedAt, field.TypeTime, value)
@@ -526,6 +539,18 @@ func (u *QuestionUpsert) AddOrder(v int) *QuestionUpsert {
 	return u
 }
 
+// SetOptions sets the "options" field.
+func (u *QuestionUpsert) SetOptions(v []string) *QuestionUpsert {
+	u.Set(question.FieldOptions, v)
+	return u
+}
+
+// UpdateOptions sets the "options" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdateOptions() *QuestionUpsert {
+	u.SetExcluded(question.FieldOptions)
+	return u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (u *QuestionUpsert) SetModifiedAt(v time.Time) *QuestionUpsert {
 	u.Set(question.FieldModifiedAt, v)
@@ -677,6 +702,20 @@ func (u *QuestionUpsertOne) AddOrder(v int) *QuestionUpsertOne {
 func (u *QuestionUpsertOne) UpdateOrder() *QuestionUpsertOne {
 	return u.Update(func(s *QuestionUpsert) {
 		s.UpdateOrder()
+	})
+}
+
+// SetOptions sets the "options" field.
+func (u *QuestionUpsertOne) SetOptions(v []string) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetOptions(v)
+	})
+}
+
+// UpdateOptions sets the "options" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdateOptions() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateOptions()
 	})
 }
 
@@ -1000,6 +1039,20 @@ func (u *QuestionUpsertBulk) AddOrder(v int) *QuestionUpsertBulk {
 func (u *QuestionUpsertBulk) UpdateOrder() *QuestionUpsertBulk {
 	return u.Update(func(s *QuestionUpsert) {
 		s.UpdateOrder()
+	})
+}
+
+// SetOptions sets the "options" field.
+func (u *QuestionUpsertBulk) SetOptions(v []string) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetOptions(v)
+	})
+}
+
+// UpdateOptions sets the "options" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdateOptions() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdateOptions()
 	})
 }
 

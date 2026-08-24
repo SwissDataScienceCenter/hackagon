@@ -28,6 +28,8 @@ const (
 	FieldMandatory = "mandatory"
 	// FieldOrder holds the string denoting the order field in the database.
 	FieldOrder = "order"
+	// FieldOptions holds the string denoting the options field in the database.
+	FieldOptions = "options"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldModifiedAt holds the string denoting the modified_at field in the database.
@@ -81,6 +83,7 @@ var Columns = []string{
 	FieldDataType,
 	FieldMandatory,
 	FieldOrder,
+	FieldOptions,
 	FieldCreatedAt,
 	FieldModifiedAt,
 }
@@ -131,6 +134,7 @@ type DataType string
 const (
 	DataTypeText DataType = "text"
 	DataTypeBool DataType = "bool"
+	DataTypeEnum DataType = "enum"
 )
 
 func (dt DataType) String() string {
@@ -140,7 +144,7 @@ func (dt DataType) String() string {
 // DataTypeValidator is a validator for the "data_type" field enum values. It is called by the builders before save.
 func DataTypeValidator(dt DataType) error {
 	switch dt {
-	case DataTypeText, DataTypeBool:
+	case DataTypeText, DataTypeBool, DataTypeEnum:
 		return nil
 	default:
 		return fmt.Errorf("question: invalid enum value for data_type field: %q", dt)

@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
@@ -120,6 +121,18 @@ func (_u *QuestionUpdate) SetNillableOrder(v *int) *QuestionUpdate {
 // AddOrder adds value to the "order" field.
 func (_u *QuestionUpdate) AddOrder(v int) *QuestionUpdate {
 	_u.mutation.AddOrder(v)
+	return _u
+}
+
+// SetOptions sets the "options" field.
+func (_u *QuestionUpdate) SetOptions(v []string) *QuestionUpdate {
+	_u.mutation.SetOptions(v)
+	return _u
+}
+
+// AppendOptions appends value to the "options" field.
+func (_u *QuestionUpdate) AppendOptions(v []string) *QuestionUpdate {
+	_u.mutation.AppendOptions(v)
 	return _u
 }
 
@@ -287,6 +300,14 @@ func (_u *QuestionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedOrder(); ok {
 		_spec.AddField(question.FieldOrder, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Options(); ok {
+		_spec.SetField(question.FieldOptions, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedOptions(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, question.FieldOptions, value)
+		})
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(question.FieldModifiedAt, field.TypeTime, value)
@@ -505,6 +526,18 @@ func (_u *QuestionUpdateOne) AddOrder(v int) *QuestionUpdateOne {
 	return _u
 }
 
+// SetOptions sets the "options" field.
+func (_u *QuestionUpdateOne) SetOptions(v []string) *QuestionUpdateOne {
+	_u.mutation.SetOptions(v)
+	return _u
+}
+
+// AppendOptions appends value to the "options" field.
+func (_u *QuestionUpdateOne) AppendOptions(v []string) *QuestionUpdateOne {
+	_u.mutation.AppendOptions(v)
+	return _u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (_u *QuestionUpdateOne) SetModifiedAt(v time.Time) *QuestionUpdateOne {
 	_u.mutation.SetModifiedAt(v)
@@ -699,6 +732,14 @@ func (_u *QuestionUpdateOne) sqlSave(ctx context.Context) (_node *Question, err 
 	}
 	if value, ok := _u.mutation.AddedOrder(); ok {
 		_spec.AddField(question.FieldOrder, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.Options(); ok {
+		_spec.SetField(question.FieldOptions, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedOptions(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, question.FieldOptions, value)
+		})
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(question.FieldModifiedAt, field.TypeTime, value)

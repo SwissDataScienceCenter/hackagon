@@ -1200,6 +1200,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | type | [QuestionType](#hackathon-entities-QuestionType) |  |  |
 | mandatory | [bool](#bool) |  |  |
 | order | [int32](#int32) |  |  |
+| options | [string](#string) | repeated |  |
 
 
 
@@ -1218,6 +1219,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | QUESTION_TYPE_UNSPECIFIED | 0 |  |
 | QUESTION_TYPE_TEXT | 1 |  |
 | QUESTION_TYPE_BOOL | 2 |  |
+| QUESTION_TYPE_ENUM | 3 |  |
 
 
  
@@ -1474,6 +1476,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | type | [hackathon.entities.QuestionType](#hackathon-entities-QuestionType) |  |  |
 | mandatory | [bool](#bool) |  |  |
 | order | [int32](#int32) |  |  |
+| options | [string](#string) | repeated |  |
 
 
 
@@ -1608,6 +1611,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | type | [hackathon.entities.QuestionType](#hackathon-entities-QuestionType) | optional |  |
 | mandatory | [bool](#bool) | optional |  |
 | order | [int32](#int32) | optional |  |
+| options | [string](#string) | repeated |  |
 
 
 

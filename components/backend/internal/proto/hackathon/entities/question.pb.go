@@ -28,6 +28,7 @@ const (
 	QuestionType_QUESTION_TYPE_UNSPECIFIED QuestionType = 0
 	QuestionType_QUESTION_TYPE_TEXT        QuestionType = 1
 	QuestionType_QUESTION_TYPE_BOOL        QuestionType = 2
+	QuestionType_QUESTION_TYPE_ENUM        QuestionType = 3
 )
 
 // Enum value maps for QuestionType.
@@ -36,11 +37,13 @@ var (
 		0: "QUESTION_TYPE_UNSPECIFIED",
 		1: "QUESTION_TYPE_TEXT",
 		2: "QUESTION_TYPE_BOOL",
+		3: "QUESTION_TYPE_ENUM",
 	}
 	QuestionType_value = map[string]int32{
 		"QUESTION_TYPE_UNSPECIFIED": 0,
 		"QUESTION_TYPE_TEXT":        1,
 		"QUESTION_TYPE_BOOL":        2,
+		"QUESTION_TYPE_ENUM":        3,
 	}
 )
 
@@ -79,6 +82,7 @@ type Question struct {
 	Type          QuestionType           `protobuf:"varint,4,opt,name=type,proto3,enum=hackathon.entities.QuestionType" json:"type,omitempty"`
 	Mandatory     bool                   `protobuf:"varint,5,opt,name=mandatory,proto3" json:"mandatory,omitempty"`
 	Order         int32                  `protobuf:"varint,6,opt,name=order,proto3" json:"order,omitempty"`
+	Options       []string               `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -155,22 +159,31 @@ func (x *Question) GetOrder() int32 {
 	return 0
 }
 
+func (x *Question) GetOptions() []string {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
 var File_hackathon_entities_question_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_question_proto_rawDesc = "" +
 	"\n" +
-	"!hackathon/entities/question.proto\x12\x12hackathon.entities\x1a\x1bbuf/validate/validate.proto\"\xd0\x01\n" +
+	"!hackathon/entities/question.proto\x12\x12hackathon.entities\x1a\x1bbuf/validate/validate.proto\"\xea\x01\n" +
 	"\bQuestion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
 	"\x03key\x18\x02 \x01(\tB\x18\xbaH\x15r\x132\x11^[a-z][a-z0-9_]*$R\x03key\x12\x14\n" +
 	"\x05label\x18\x03 \x01(\tR\x05label\x12>\n" +
 	"\x04type\x18\x04 \x01(\x0e2 .hackathon.entities.QuestionTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04type\x12\x1c\n" +
 	"\tmandatory\x18\x05 \x01(\bR\tmandatory\x12\x14\n" +
-	"\x05order\x18\x06 \x01(\x05R\x05order*]\n" +
+	"\x05order\x18\x06 \x01(\x05R\x05order\x12\x18\n" +
+	"\aoptions\x18\a \x03(\tR\aoptions*u\n" +
 	"\fQuestionType\x12\x1d\n" +
 	"\x19QUESTION_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12QUESTION_TYPE_TEXT\x10\x01\x12\x16\n" +
-	"\x12QUESTION_TYPE_BOOL\x10\x02BaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
+	"\x12QUESTION_TYPE_BOOL\x10\x02\x12\x16\n" +
+	"\x12QUESTION_TYPE_ENUM\x10\x03BaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
 	file_hackathon_entities_question_proto_rawDescOnce sync.Once

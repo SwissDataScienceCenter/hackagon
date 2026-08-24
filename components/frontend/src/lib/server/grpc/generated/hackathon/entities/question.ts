@@ -13,6 +13,7 @@ export enum QuestionType {
   QUESTION_TYPE_UNSPECIFIED = 0,
   QUESTION_TYPE_TEXT = 1,
   QUESTION_TYPE_BOOL = 2,
+  QUESTION_TYPE_ENUM = 3,
   UNRECOGNIZED = -1,
 }
 
@@ -27,6 +28,9 @@ export function questionTypeFromJSON(object: any): QuestionType {
     case 2:
     case "QUESTION_TYPE_BOOL":
       return QuestionType.QUESTION_TYPE_BOOL;
+    case 3:
+    case "QUESTION_TYPE_ENUM":
+      return QuestionType.QUESTION_TYPE_ENUM;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -42,6 +46,8 @@ export function questionTypeToJSON(object: QuestionType): string {
       return "QUESTION_TYPE_TEXT";
     case QuestionType.QUESTION_TYPE_BOOL:
       return "QUESTION_TYPE_BOOL";
+    case QuestionType.QUESTION_TYPE_ENUM:
+      return "QUESTION_TYPE_ENUM";
     case QuestionType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -55,10 +61,11 @@ export interface Question {
   type: QuestionType;
   mandatory: boolean;
   order: number;
+  options: string[];
 }
 
 function createBaseQuestion(): Question {
-  return { id: "", key: "", label: "", type: 0, mandatory: false, order: 0 };
+  return { id: "", key: "", label: "", type: 0, mandatory: false, order: 0, options: [] };
 }
 
 export const Question: MessageFns<Question> = {
@@ -80,6 +87,9 @@ export const Question: MessageFns<Question> = {
     }
     if (message.order !== 0) {
       writer.uint32(48).int32(message.order);
+    }
+    for (const v of message.options) {
+      writer.uint32(58).string(v!);
     }
     return writer;
   },
@@ -139,6 +149,14 @@ export const Question: MessageFns<Question> = {
           message.order = reader.int32();
           continue;
         }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.options.push(reader.string());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -156,6 +174,7 @@ export const Question: MessageFns<Question> = {
       type: isSet(object.type) ? questionTypeFromJSON(object.type) : 0,
       mandatory: isSet(object.mandatory) ? globalThis.Boolean(object.mandatory) : false,
       order: isSet(object.order) ? globalThis.Number(object.order) : 0,
+      options: globalThis.Array.isArray(object?.options) ? object.options.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -179,6 +198,9 @@ export const Question: MessageFns<Question> = {
     if (message.order !== 0) {
       obj.order = Math.round(message.order);
     }
+    if (message.options?.length) {
+      obj.options = message.options;
+    }
     return obj;
   },
 
@@ -193,6 +215,7 @@ export const Question: MessageFns<Question> = {
     message.type = object.type ?? 0;
     message.mandatory = object.mandatory ?? false;
     message.order = object.order ?? 0;
+    message.options = object.options?.map((e) => e) || [];
     return message;
   },
 };

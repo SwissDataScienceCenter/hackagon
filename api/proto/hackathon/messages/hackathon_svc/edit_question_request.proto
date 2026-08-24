@@ -17,4 +17,5 @@ message EditQuestionRequest {
   optional hackathon.entities.QuestionType type = 4;
   optional bool mandatory = 5;
   optional int32 order = 6;
+  repeated string options = 7;
 }

@@ -3218,8 +3218,14 @@ var _ = Describe("HackathonService", func() {
 				)
 
 				answers := []*entities.Answer{
-					{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme Corp"}},
-					{QuestionId: questionID2, Value: &entities.Answer_TextValue{TextValue: "Developer"}},
+					{
+						QuestionId: questionID,
+						Value:      &entities.Answer_TextValue{TextValue: "Acme Corp"},
+					},
+					{
+						QuestionId: questionID2,
+						Value:      &entities.Answer_TextValue{TextValue: "Developer"},
+					},
 				}
 
 				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
@@ -3264,7 +3270,10 @@ var _ = Describe("HackathonService", func() {
 				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
 					Answers: []*entities.Answer{
-						{QuestionId: questionID2, Value: &entities.Answer_TextValue{TextValue: "Developer"}},
+						{
+							QuestionId: questionID2,
+							Value:      &entities.Answer_TextValue{TextValue: "Developer"},
+						},
 					},
 				})
 				Expect(err).To(HaveOccurred())
@@ -3284,7 +3293,10 @@ var _ = Describe("HackathonService", func() {
 				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
 					Answers: []*entities.Answer{
-						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Old Corp"}},
+						{
+							QuestionId: questionID,
+							Value:      &entities.Answer_TextValue{TextValue: "Old Corp"},
+						},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -3293,7 +3305,10 @@ var _ = Describe("HackathonService", func() {
 				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
 					Answers: []*entities.Answer{
-						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "New Corp"}},
+						{
+							QuestionId: questionID,
+							Value:      &entities.Answer_TextValue{TextValue: "New Corp"},
+						},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -3324,7 +3339,10 @@ var _ = Describe("HackathonService", func() {
 				_, err := client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: uuid.NewString(),
 					Answers: []*entities.Answer{
-						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme"}},
+						{
+							QuestionId: questionID,
+							Value:      &entities.Answer_TextValue{TextValue: "Acme"},
+						},
 					},
 				})
 				Expect(err).To(HaveOccurred())
@@ -3336,7 +3354,10 @@ var _ = Describe("HackathonService", func() {
 				_, err := client.SubmitAnswers(context.Background(), &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
 					Answers: []*entities.Answer{
-						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme"}},
+						{
+							QuestionId: questionID,
+							Value:      &entities.Answer_TextValue{TextValue: "Acme"},
+						},
 					},
 				})
 				Expect(err).To(HaveOccurred())
@@ -3375,7 +3396,10 @@ var _ = Describe("HackathonService", func() {
 				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
 					Answers: []*entities.Answer{
-						{QuestionId: questionID, Value: &entities.Answer_TextValue{TextValue: "Acme"}},
+						{
+							QuestionId: questionID,
+							Value:      &entities.Answer_TextValue{TextValue: "Acme"},
+						},
 					},
 				})
 				Expect(err).To(HaveOccurred())

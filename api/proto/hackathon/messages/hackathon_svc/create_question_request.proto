@@ -21,4 +21,5 @@ message CreateQuestionRequest {
   hackathon.entities.QuestionType type = 4 [(buf.validate.field).enum.defined_only = true];
   bool mandatory = 5;
   int32 order = 6;
+  repeated string options = 7;
 }

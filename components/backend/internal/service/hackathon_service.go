@@ -1240,6 +1240,14 @@ func (s *HackathonService) CreateQuestion(
 		return nil, status.Error(codes.InvalidArgument, "unknown question type")
 	}
 
+	// ENUM questions require at least one option.
+	if datatype == entquestion.DataTypeEnum && len(req.GetOptions()) == 0 {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"enum questions require at least one option",
+		)
+	}
+
 	q, err := s.dbClient.Question.Create().
 		SetHackathonID(id).
 		SetKey(req.GetKey()).
@@ -1247,6 +1255,7 @@ func (s *HackathonService) CreateQuestion(
 		SetMandatory(req.GetMandatory()).
 		SetDataType(datatype).
 		SetOrder(int(req.GetOrder())).
+		SetOptions(req.GetOptions()).
 		SetCreator(user).
 		SetModifier(user).
 		Save(ctx)
@@ -1319,6 +1328,14 @@ func (s *HackathonService) EditQuestion(
 		)
 	}
 
+	// Validate constraint: cannot change options if answers exist
+	if req.Options != nil && hasAnswers {
+		return nil, status.Errorf(
+			codes.FailedPrecondition,
+			"cannot change options of question with existing answers",
+		)
+	}
+
 	user, err := s.dbClient.User.Query().Where(entuser.KeycloakIDEQ(uid)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -1337,6 +1354,9 @@ func (s *HackathonService) EditQuestion(
 	}
 	if req.Order != nil {
 		update = update.SetOrder(int(req.GetOrder()))
+	}
+	if len(req.GetOptions()) > 0 {
+		update = update.SetOptions(req.GetOptions())
 	}
 	update = update.SetModifier(user)
 
@@ -1615,7 +1635,7 @@ func (s *HackathonService) validateAnswers(
 				a.GetQuestionId(),
 			)
 		}
-		if err := validateAnswerValue(a, q.DataType); err != nil {
+		if err := validateAnswerValue(a, q.DataType, q.Options); err != nil {
 			return err
 		}
 	}
@@ -1641,8 +1661,9 @@ func (s *HackathonService) validateAnswers(
 }
 
 // validateAnswerValue checks that an answer's value is compatible with the
-// question's data type.  Returns a gRPC error when the value is invalid.
-func validateAnswerValue(a *ents.Answer, dataType entquestion.DataType) error {
+// question's data type and, for enum questions, that the value matches one of
+// the allowed options.  Returns a gRPC error when the value is invalid.
+func validateAnswerValue(a *ents.Answer, dataType entquestion.DataType, options []string) error {
 	switch dataType {
 	case entquestion.DataTypeBool:
 		_, ok := a.GetValue().(*ents.Answer_BoolValue)
@@ -1661,6 +1682,33 @@ func validateAnswerValue(a *ents.Answer, dataType entquestion.DataType) error {
 				codes.InvalidArgument,
 				"question %s expects a text answer",
 				a.GetQuestionId(),
+			)
+		}
+		return nil
+	case entquestion.DataTypeEnum:
+		_, ok := a.GetValue().(*ents.Answer_TextValue)
+		if !ok {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"question %s expects a text answer",
+				a.GetQuestionId(),
+			)
+		}
+		// Check that the answer value matches one of the allowed options.
+		answerValue := a.GetTextValue()
+		matched := false
+		for _, opt := range options {
+			if opt == answerValue {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"question %s does not have an option matching the answer %q",
+				a.GetQuestionId(),
+				answerValue,
 			)
 		}
 		return nil

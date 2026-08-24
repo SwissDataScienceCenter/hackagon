@@ -215,11 +215,11 @@ func init() {
 	// question.DefaultOrder holds the default value on creation for the order field.
 	question.DefaultOrder = questionDescOrder.Default.(int)
 	// questionDescCreatedAt is the schema descriptor for created_at field.
-	questionDescCreatedAt := questionFields[6].Descriptor()
+	questionDescCreatedAt := questionFields[7].Descriptor()
 	// question.DefaultCreatedAt holds the default value on creation for the created_at field.
 	question.DefaultCreatedAt = questionDescCreatedAt.Default.(func() time.Time)
 	// questionDescModifiedAt is the schema descriptor for modified_at field.
-	questionDescModifiedAt := questionFields[7].Descriptor()
+	questionDescModifiedAt := questionFields[8].Descriptor()
 	// question.DefaultModifiedAt holds the default value on creation for the modified_at field.
 	question.DefaultModifiedAt = questionDescModifiedAt.Default.(func() time.Time)
 	// question.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.

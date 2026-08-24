@@ -497,6 +497,8 @@ func questionTypeToEnt(t hackEnts.QuestionType) (entquestion.DataType, bool) {
 		return entquestion.DataTypeText, true
 	case hackEnts.QuestionType_QUESTION_TYPE_BOOL:
 		return entquestion.DataTypeBool, true
+	case hackEnts.QuestionType_QUESTION_TYPE_ENUM:
+		return entquestion.DataTypeEnum, true
 	default:
 		return "", false
 	}
@@ -508,6 +510,8 @@ func questionTypeFromEnt(t entquestion.DataType) hackEnts.QuestionType {
 		return hackEnts.QuestionType_QUESTION_TYPE_TEXT
 	case entquestion.DataTypeBool:
 		return hackEnts.QuestionType_QUESTION_TYPE_BOOL
+	case entquestion.DataTypeEnum:
+		return hackEnts.QuestionType_QUESTION_TYPE_ENUM
 	default:
 		return hackEnts.QuestionType_QUESTION_TYPE_UNSPECIFIED
 	}
@@ -521,6 +525,7 @@ func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 		Type:      questionTypeFromEnt(q.DataType),
 		Mandatory: q.Mandatory,
 		Order:     int32(q.Order),
+		Options:   q.Options,
 	}
 }
 

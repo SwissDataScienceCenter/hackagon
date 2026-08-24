@@ -17,10 +17,19 @@ export interface EditQuestionRequest {
   type?: QuestionType | undefined;
   mandatory?: boolean | undefined;
   order?: number | undefined;
+  options: string[];
 }
 
 function createBaseEditQuestionRequest(): EditQuestionRequest {
-  return { hackathonId: "", questionId: "", label: undefined, type: undefined, mandatory: undefined, order: undefined };
+  return {
+    hackathonId: "",
+    questionId: "",
+    label: undefined,
+    type: undefined,
+    mandatory: undefined,
+    order: undefined,
+    options: [],
+  };
 }
 
 export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
@@ -42,6 +51,9 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
     }
     if (message.order !== undefined) {
       writer.uint32(48).int32(message.order);
+    }
+    for (const v of message.options) {
+      writer.uint32(58).string(v!);
     }
     return writer;
   },
@@ -101,6 +113,14 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
           message.order = reader.int32();
           continue;
         }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.options.push(reader.string());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -126,6 +146,7 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
       type: isSet(object.type) ? questionTypeFromJSON(object.type) : undefined,
       mandatory: isSet(object.mandatory) ? globalThis.Boolean(object.mandatory) : undefined,
       order: isSet(object.order) ? globalThis.Number(object.order) : undefined,
+      options: globalThis.Array.isArray(object?.options) ? object.options.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -149,6 +170,9 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
     if (message.order !== undefined) {
       obj.order = Math.round(message.order);
     }
+    if (message.options?.length) {
+      obj.options = message.options;
+    }
     return obj;
   },
 
@@ -163,6 +187,7 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
     message.type = object.type ?? undefined;
     message.mandatory = object.mandatory ?? undefined;
     message.order = object.order ?? undefined;
+    message.options = object.options?.map((e) => e) || [];
     return message;
   },
 };

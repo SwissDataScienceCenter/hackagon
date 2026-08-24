@@ -31,6 +31,7 @@ type EditQuestionRequest struct {
 	Type          *entities.QuestionType `protobuf:"varint,4,opt,name=type,proto3,enum=hackathon.entities.QuestionType,oneof" json:"type,omitempty"`
 	Mandatory     *bool                  `protobuf:"varint,5,opt,name=mandatory,proto3,oneof" json:"mandatory,omitempty"`
 	Order         *int32                 `protobuf:"varint,6,opt,name=order,proto3,oneof" json:"order,omitempty"`
+	Options       []string               `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -107,11 +108,18 @@ func (x *EditQuestionRequest) GetOrder() int32 {
 	return 0
 }
 
+func (x *EditQuestionRequest) GetOptions() []string {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
 var File_hackathon_messages_hackathon_svc_edit_question_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_hackathon_svc_edit_question_request_proto_rawDesc = "" +
 	"\n" +
-	"<hackathon/messages/hackathon_svc/edit_question_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\xb8\x02\n" +
+	"<hackathon/messages/hackathon_svc/edit_question_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\xd2\x02\n" +
 	"\x13EditQuestionRequest\x12+\n" +
 	"\fhackathon_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vhackathonId\x12)\n" +
 	"\vquestion_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
@@ -120,7 +128,8 @@ const file_hackathon_messages_hackathon_svc_edit_question_request_proto_rawDesc 
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01H\x00R\x05label\x88\x01\x01\x129\n" +
 	"\x04type\x18\x04 \x01(\x0e2 .hackathon.entities.QuestionTypeH\x01R\x04type\x88\x01\x01\x12!\n" +
 	"\tmandatory\x18\x05 \x01(\bH\x02R\tmandatory\x88\x01\x01\x12\x19\n" +
-	"\x05order\x18\x06 \x01(\x05H\x03R\x05order\x88\x01\x01B\b\n" +
+	"\x05order\x18\x06 \x01(\x05H\x03R\x05order\x88\x01\x01\x12\x18\n" +
+	"\aoptions\x18\a \x03(\tR\aoptionsB\b\n" +
 	"\x06_labelB\a\n" +
 	"\x05_typeB\f\n" +
 	"\n" +
