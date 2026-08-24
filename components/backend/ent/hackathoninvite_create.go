@@ -189,11 +189,6 @@ func (_c *HackathonInviteCreate) check() error {
 	if _, ok := _c.mutation.Token(); !ok {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required field "HackathonInvite.token"`)}
 	}
-	if v, ok := _c.mutation.Note(); ok {
-		if err := hackathoninvite.NoteValidator(v); err != nil {
-			return &ValidationError{Name: "note", err: fmt.Errorf(`ent: validator failed for field "HackathonInvite.note": %w`, err)}
-		}
-	}
 	if len(_c.mutation.HackathonIDs()) == 0 {
 		return &ValidationError{Name: "hackathon", err: errors.New(`ent: missing required edge "HackathonInvite.hackathon"`)}
 	}

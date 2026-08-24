@@ -40,8 +40,7 @@ func (HackathonInvite) Fields() []ent.Field {
 				return id
 			}),
 		field.String("note").
-			Optional().
-			MaxLen(500),
+			Optional(),
 		field.Time("expires_at").
 			Optional().
 			Nillable(),

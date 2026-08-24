@@ -85,10 +85,6 @@ func init() {
 	hackathoninviteDescToken := hackathoninviteFields[2].Descriptor()
 	// hackathoninvite.DefaultToken holds the default value on creation for the token field.
 	hackathoninvite.DefaultToken = hackathoninviteDescToken.Default.(func() uuid.UUID)
-	// hackathoninviteDescNote is the schema descriptor for note field.
-	hackathoninviteDescNote := hackathoninviteFields[3].Descriptor()
-	// hackathoninvite.NoteValidator is a validator for the "note" field. It is called by the builders before save.
-	hackathoninvite.NoteValidator = hackathoninviteDescNote.Validators[0].(func(string) error)
 	// hackathoninviteDescID is the schema descriptor for id field.
 	hackathoninviteDescID := hackathoninviteMixinFields0[0].Descriptor()
 	// hackathoninvite.DefaultID holds the default value on creation for the id field.

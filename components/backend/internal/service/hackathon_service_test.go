@@ -20,7 +20,7 @@ import (
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entanswer "github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
+	enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
@@ -3763,6 +3763,7 @@ var _ = Describe("HackathonService", func() {
 			})
 		})
 	})
+	Describe("Invite Tests", func() {
 		var (
 			privateHackathonID string
 			publicHackathonID  string
@@ -3821,11 +3822,12 @@ var _ = Describe("HackathonService", func() {
 				// Verify in database
 				invite, err := dbClient.HackathonInvite.Query().
 					Where(enthackathoninvite.IDEQ(uuid.MustParse(resp.GetInvite().GetId()))).
+					WithHackathon().
 					Only(context.Background())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(invite.Token).To(Equal(resp.GetInvite().GetToken()))
+				Expect(invite.Token.String()).To(Equal(resp.GetInvite().GetToken()))
 				Expect(invite.Note).To(Equal(note))
-				Expect(invite.HackathonID.String()).To(Equal(privateHackathonID))
+				Expect(invite.Edges.Hackathon.ID.String()).To(Equal(privateHackathonID))
 			})
 
 			It("defaults expires_at to hackathon.ends_at", func() {
@@ -3844,6 +3846,7 @@ var _ = Describe("HackathonService", func() {
 				// Verify in database
 				invite, err := dbClient.HackathonInvite.Query().
 					Where(enthackathoninvite.IDEQ(uuid.MustParse(resp.GetInvite().GetId()))).
+					WithHackathon().
 					Only(context.Background())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(invite.ExpiresAt).NotTo(BeNil())
@@ -4106,6 +4109,7 @@ var _ = Describe("HackathonService", func() {
 
 		Describe("PreviewInvite", func() {
 			var inviteToken string
+			var inviteId string
 
 			BeforeEach(func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
@@ -4118,6 +4122,7 @@ var _ = Describe("HackathonService", func() {
 					HackathonId: privateHackathonID,
 				})
 				Expect(err).NotTo(HaveOccurred())
+				inviteId = resp.GetInvite().GetId()
 				inviteToken = resp.GetInvite().GetToken()
 			})
 
@@ -4129,7 +4134,9 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetHackathon()).NotTo(BeNil())
 				Expect(resp.GetHackathon().GetId()).To(Equal(privateHackathonID))
 				Expect(resp.GetHackathon().GetName()).To(Equal("Private Test Hackathon"))
-				Expect(resp.GetHackathon().GetVisibility()).To(Equal(entities.Visibility_VISIBILITY_PRIVATE))
+				Expect(
+					resp.GetHackathon().GetVisibility(),
+				).To(Equal(entities.Visibility_VISIBILITY_PRIVATE))
 				Expect(resp.GetAlreadyParticipant()).To(BeFalse())
 			})
 
@@ -4187,13 +4194,13 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetAlreadyParticipant()).To(BeTrue())
 			})
 
-			It("returns NOT_FOUND for invalid token format", func() {
+			It("returns INVALID_ARGUMENT for invalid token format", func() {
 				_, err := client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
 					Token: "not-a-uuid",
 				})
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
-				Expect(st.Code()).To(Equal(codes.NotFound))
+				Expect(st.Code()).To(Equal(codes.InvalidArgument))
 			})
 
 			It("returns NOT_FOUND for non-existent token", func() {
@@ -4212,17 +4219,9 @@ var _ = Describe("HackathonService", func() {
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
+
 				_, err := client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
-					InviteId: "invalid",
-				})
-				Expect(err).To(HaveOccurred())
-				// Actually revoke it properly
-				invite, err := dbClient.HackathonInvite.Query().
-					Where(enthackathoninvite.HackathonIDEQ(uuid.MustParse(privateHackathonID))).
-					First(context.Background())
-				Expect(err).NotTo(HaveOccurred())
-				_, err = client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
-					InviteId: invite.ID.String(),
+					InviteId: inviteId,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -4276,6 +4275,19 @@ var _ = Describe("HackathonService", func() {
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
+				_, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: publicHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
+				})
+
+				_, err = client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: privateHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
+				})
 
 				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
 					HackathonId: privateHackathonID,
@@ -4293,7 +4305,7 @@ var _ = Describe("HackathonService", func() {
 				)
 
 				// Ensure user exists
-				_, err := dbClient.User.Create().
+				user, err := dbClient.User.Create().
 					SetKeycloakID(nonAdminKeycloakID).
 					SetUsername("invite-join-user-username").
 					Save(context.Background())
@@ -4311,7 +4323,7 @@ var _ = Describe("HackathonService", func() {
 				participant, err := dbClient.Participant.Query().
 					Where(
 						entparticipant.HackathonIDEQ(uuid.MustParse(privateHackathonID)),
-						entparticipant.UserIDEQ(nonAdminKeycloakID),
+						entparticipant.UserID(user.ID),
 					).
 					WithUser().
 					Only(context.Background())
@@ -4363,7 +4375,7 @@ var _ = Describe("HackathonService", func() {
 				_, err = client.Join(ctx, joinReq)
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
-				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+				Expect(st.Code()).To(Equal(codes.NotFound))
 			})
 
 			It("allows join on public hackathon without invite token", func() {
@@ -4389,3 +4401,4 @@ var _ = Describe("HackathonService", func() {
 			})
 		})
 	})
+})

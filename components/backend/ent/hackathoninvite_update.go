@@ -137,11 +137,6 @@ func (_u *HackathonInviteUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *HackathonInviteUpdate) check() error {
-	if v, ok := _u.mutation.Note(); ok {
-		if err := hackathoninvite.NoteValidator(v); err != nil {
-			return &ValidationError{Name: "note", err: fmt.Errorf(`ent: validator failed for field "HackathonInvite.note": %w`, err)}
-		}
-	}
 	if _u.mutation.HackathonCleared() && len(_u.mutation.HackathonIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "HackathonInvite.hackathon"`)
 	}
@@ -325,11 +320,6 @@ func (_u *HackathonInviteUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *HackathonInviteUpdateOne) check() error {
-	if v, ok := _u.mutation.Note(); ok {
-		if err := hackathoninvite.NoteValidator(v); err != nil {
-			return &ValidationError{Name: "note", err: fmt.Errorf(`ent: validator failed for field "HackathonInvite.note": %w`, err)}
-		}
-	}
 	if _u.mutation.HackathonCleared() && len(_u.mutation.HackathonIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "HackathonInvite.hackathon"`)
 	}

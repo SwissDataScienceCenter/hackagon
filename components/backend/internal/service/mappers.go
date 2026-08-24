@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-	enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -530,11 +529,11 @@ func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 	}
 }
 
-func hackathonInviteEntryFromEnt(i *enthackathoninvite.HackathonInvite) *hackEnts.HackathonInvite {
+func hackathonInviteEntryFromEnt(i *ent.HackathonInvite) *hackEnts.HackathonInvite {
 	e := &hackEnts.HackathonInvite{
-		Id:         i.ID.String(),
-		Token:      i.Token,
-		CreatedAt:  timestamppb.New(i.CreatedAt),
+		Id:        i.ID.String(),
+		Token:     i.Token.String(),
+		CreatedAt: timestamppb.New(i.CreatedAt),
 	}
 	if i.Note != "" {
 		e.Note = &i.Note

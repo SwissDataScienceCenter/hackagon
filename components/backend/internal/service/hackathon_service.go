@@ -9,8 +9,8 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entanswer "github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
-	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
+	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entphase "github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
@@ -224,7 +224,6 @@ func (s *HackathonService) Get(
 	return &msgs.GetResponse{Hackathon: entry}, nil
 }
 
-
 // --- Invite RPCs ---
 
 func (s *HackathonService) CreateInvite(
@@ -248,7 +247,11 @@ func (s *HackathonService) CreateInvite(
 	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", req.GetHackathonId())
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
 		}
 		slog.Error("query hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query database")
@@ -273,8 +276,10 @@ func (s *HackathonService) CreateInvite(
 		createQ = createQ.SetNote(note)
 	}
 
-	// Default expires_at to hackathon.ends_at when nil
-	if req.GetExpiresAt() == nil && h.EndsAt != nil {
+	// Set expires_at: use explicit value if provided, otherwise default to hackathon.ends_at
+	if req.GetExpiresAt() != nil {
+		createQ = createQ.SetExpiresAt(req.GetExpiresAt().AsTime())
+	} else if h.EndsAt != nil {
 		createQ = createQ.SetExpiresAt(*h.EndsAt)
 	}
 
@@ -291,7 +296,7 @@ func (s *HackathonService) ListInvites(
 	ctx context.Context,
 	req *msgs.ListInvitesRequest,
 ) (*msgs.ListInvitesResponse, error) {
-	uid, _, err := mw.RequireSubject(ctx)
+	_, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -304,15 +309,29 @@ func (s *HackathonService) ListInvites(
 		return nil, err
 	}
 
+	// Verify hackathon exists
+	_, err = s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"hackathon %s not found",
+				req.GetHackathonId(),
+			)
+		}
+		slog.Error("query hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
 	invites, err := s.dbClient.HackathonInvite.Query().
-		Where(enthackathoninvite.HackathonIDEQ(id)).
+		Where(enthackathoninvite.HasHackathonWith(enthackathon.IDEQ(id))).
 		All(ctx)
 	if err != nil {
 		slog.Error("query invites", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query invites")
 	}
 
-	entries := make([]*hackEnts.HackathonInvite, 0, len(invites))
+	entries := make([]*ents.HackathonInvite, 0, len(invites))
 	for _, i := range invites {
 		entries = append(entries, hackathonInviteEntryFromEnt(i))
 	}
@@ -324,7 +343,7 @@ func (s *HackathonService) RevokeInvite(
 	ctx context.Context,
 	req *msgs.RevokeInviteRequest,
 ) (*msgs.RevokeInviteResponse, error) {
-	uid, _, err := mw.RequireSubject(ctx)
+	_, _, err := mw.RequireSubject(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -336,6 +355,7 @@ func (s *HackathonService) RevokeInvite(
 
 	invite, err := s.dbClient.HackathonInvite.Query().
 		Where(enthackathoninvite.IDEQ(inviteID)).
+		WithHackathon().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -346,7 +366,7 @@ func (s *HackathonService) RevokeInvite(
 	}
 
 	// Check write permission on the invite's hackathon
-	hackID := invite.HackathonID
+	hackID := invite.Edges.Hackathon.ID
 	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Write); err != nil {
 		return nil, err
 	}
@@ -378,7 +398,8 @@ func (s *HackathonService) PreviewInvite(
 	}
 
 	invite, err := s.dbClient.HackathonInvite.Query().
-		Where(enthackathoninvite.Token(tokenID.String())).
+		Where(enthackathoninvite.Token(tokenID)).
+		WithHackathon().
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -398,7 +419,7 @@ func (s *HackathonService) PreviewInvite(
 		return nil, status.Error(codes.NotFound, "invalid or expired invitation")
 	}
 
-	hackID := invite.HackathonID
+	hackID := invite.Edges.Hackathon.ID
 
 	// Get shallow hackathon
 	h, err := s.dbClient.Hackathon.Query().
@@ -423,7 +444,7 @@ func (s *HackathonService) PreviewInvite(
 		return nil, status.Error(codes.Internal, "couldn't query questions")
 	}
 
-	qEntries := make([]*hackEnts.Question, 0, len(questions))
+	qEntries := make([]*ents.Question, 0, len(questions))
 	for _, q := range questions {
 		qEntries = append(qEntries, questionEntryFromEnt(q))
 	}
@@ -452,6 +473,7 @@ func (s *HackathonService) PreviewInvite(
 	}, nil
 }
 
+//nolint:gocognit // Joining is pretty complex, no way around that.
 func (s *HackathonService) Join(
 	ctx context.Context,
 	req *msgs.JoinRequest,
@@ -485,39 +507,60 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Permission check: invite token OR casbin role. If either passes, allow.
-	// For private hackathons the invite is the admission ticket — without it
-	// the user has no casbin role and casbin would reject anyway. For public
-	// hackathons casbin handles everything. We check both and allow if either
-	// succeeds.
 	inviteValid := false
+	//nolint:nestif // Complexity is ok here.
 	if h.Visibility == enthackathon.VisibilityPrivate {
 		inviteToken := req.GetInviteToken()
 		if inviteToken != "" {
 			inviteID, parseErr := uuid.Parse(inviteToken)
-			if parseErr == nil {
-				invite, err := s.dbClient.HackathonInvite.Query().
-					Where(
-						enthackathoninvite.Token(inviteID.String()),
-						enthackathoninvite.HackathonIDEQ(id),
-					).Only(ctx)
-				if err == nil && invite.RevokedAt == nil && (invite.ExpiresAt == nil || !invite.ExpiresAt.Before(time.Now())) {
-					inviteValid = true
-				}
+			if parseErr != nil {
+				return nil, status.Error(codes.InvalidArgument, "invalid invite token")
 			}
+			invite, err := s.dbClient.HackathonInvite.Query().
+				Where(
+					enthackathoninvite.Token(inviteID),
+					enthackathoninvite.HasHackathonWith(enthackathon.IDEQ(id)),
+				).Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					return nil, status.Errorf(
+						codes.NotFound,
+						"invite not found",
+					)
+				}
+				slog.Error("query hackathon", "err", err)
+
+				return nil, status.Error(codes.Internal, "couldn't query database")
+			}
+			if invite.RevokedAt != nil {
+				return nil, status.Errorf(
+					codes.FailedPrecondition,
+					"this invite is not valid anymore",
+				)
+			}
+			if invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()) {
+				return nil, status.Errorf(
+					codes.FailedPrecondition,
+					"this invite expired",
+				)
+			}
+			inviteValid = true
 		}
-	} else {
-		// Public hackathons: no invite needed, rely on casbin
-		inviteValid = true
+	}
+	// a hackathon need to have join permission enabled(== registration phase open), and
+	// the user needs to either have read on the hackathon (can see the hackathon) or have
+	// a valid invite to join
+	if err = s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Join); err != nil {
+		return nil, err
 	}
 
-	casbinOk, err := s.enforcer.CheckPermission(uid, id.String(), mw.Hackathon, mw.Join)
+	hasRead, err := s.enforcer.CheckPermission(uid, id.String(), mw.Hackathon, mw.Read)
 	if err != nil {
 		slog.Error("check permission", "err", err)
 		return nil, status.Error(codes.Internal, "authorization error")
 	}
 
-	if !inviteValid && !casbinOk {
+	if !inviteValid && !hasRead {
 		return nil, status.Error(codes.PermissionDenied, "invalid or expired invitation")
 	}
 

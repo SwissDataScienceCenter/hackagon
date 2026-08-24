@@ -84,8 +84,6 @@ var (
 	DefaultCreatedAt func() time.Time
 	// DefaultToken holds the default value on creation for the "token" field.
 	DefaultToken func() uuid.UUID
-	// NoteValidator is a validator for the "note" field. It is called by the builders before save.
-	NoteValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

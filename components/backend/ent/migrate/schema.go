@@ -113,7 +113,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
 		{Name: "token", Type: field.TypeUUID, Unique: true},
-		{Name: "note", Type: field.TypeString, Nullable: true, Size: 500},
+		{Name: "note", Type: field.TypeString, Nullable: true},
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "hackathon_invite_hackathon", Type: field.TypeUUID},
 		{Name: "user_created_hackathon_invites", Type: field.TypeUUID},
