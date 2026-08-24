@@ -37,15 +37,20 @@ export const load: PageServerLoad = async (event) => {
   // participant row are unreadable, and a number that matches the row above is
   // not.
   //
-  // One row per approved project, so its team(s) can be created and staffed
-  // here. A project that already has a team but isn't approved (edge case: seed
-  // data has one) still gets a row — otherwise that team would have no drop
-  // zone anywhere on this page — tagged so it doesn't read as a mistake.
-  const projectIdsWithTeams = new Set(teams.map((t) => t.projectId))
+  // One row per approved project, and nothing else. A team belongs to an
+  // approved project: offering a drop zone on a proposal still under review is
+  // offering to build a team for something that may be rejected, and the rest of
+  // the app now refuses to show that state at all — the teams list and a team's
+  // own page each link a project only once it is approved.
+  //
+  // This used to give a row to any project that already had a team whatever its
+  // status, so such a team had somewhere to sit. That is now `save`'s problem
+  // instead: it leaves a team whose project has no row alone rather than
+  // deleting it, which is the part that actually mattered. Nothing here can
+  // create one — TODO(backend: team-create-requires-approved-project) is what
+  // stops the API from doing so.
   const rowProjects = preferences.filter(
-    (p) =>
-      p.status === ProjectStatus.PROJECT_STATUS_APPROVED ||
-      projectIdsWithTeams.has(p.id),
+    (p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
   )
   const numberByProjectId = new Map(rowProjects.map((p, i) => [p.id, i + 1]))
 
@@ -107,7 +112,6 @@ export const load: PageServerLoad = async (event) => {
     id: p.id,
     number: i + 1,
     title: p.title,
-    isApproved: p.status === ProjectStatus.PROJECT_STATUS_APPROVED,
     interested: p.preferences.length,
     teams: teamsByProject.get(p.id) ?? [],
   }))
@@ -144,7 +148,7 @@ export const actions: Actions = {
   // Distributing a hundred people is a few hundred sequential calls and takes a
   // noticeable moment; that is a backend gap, not a client one.
   save: async (event) => {
-    const { team } = requireGrpc(event.locals.grpc)
+    const { team, project } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
     const raw = form.get("teams")
@@ -168,12 +172,32 @@ export const actions: Actions = {
     }
 
     try {
-      const { teams: before } = await team.list({
+      const { teams: all } = await team.list({
         hackathonId: event.params.id,
       })
       const keep = new Set(
         plan.map((t) => t.id).filter((id): id is string => id !== null),
       )
+
+      // Only the teams this page could actually show are in scope. The load gives
+      // a row to approved projects alone, so a team on a project at any other
+      // status cannot appear in `plan` — and "absent from the plan" is how this
+      // action recognises a deletion. Without this filter, saving any unrelated
+      // change would silently destroy a team the organiser never saw.
+      //
+      // Such a team should not exist: nothing in the frontend can create one, and
+      // TODO(backend: team-create-requires-approved-project) is the API half.
+      // Until that lands this is what keeps the page from being the thing that
+      // deletes it.
+      const { projects: statuses } = await project.exportPreferences({
+        hackathonId: event.params.id,
+      })
+      const approved = new Set(
+        statuses
+          .filter((p) => p.status === ProjectStatus.PROJECT_STATUS_APPROVED)
+          .map((p) => p.id),
+      )
+      const before = all.filter((t) => approved.has(t.projectId))
 
       // Deletions first, so their members are free before anything is assigned
       // and a name being reused is no longer taken.

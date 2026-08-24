@@ -431,9 +431,6 @@
                                     {p.interested}
                                     {p.interested === 1 ? 'wants in' : 'want in'}
                                 </span>
-                                {#if !p.isApproved}
-                                    <span class="meta shrink-0">(Proposed)</span>
-                                {/if}
                             </div>
 
                             <div class="flex flex-wrap items-stretch gap-3">
