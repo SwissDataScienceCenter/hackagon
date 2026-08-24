@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest"
 import type { HackathonMember } from "$lib/server/grpc/generated/hackathon/entities/hackathon_member"
 import type { User } from "$lib/server/grpc/generated/user/entities/user"
-import { ownerMembership, viewerMembership } from "./membership"
+import {
+  ownerMembership,
+  participantRowFor,
+  viewerMembership,
+} from "./membership"
 
 // HackathonRole numeric values: UNSPECIFIED=0, OWNER=1, MEMBER=2.
 const OWNER = 1
@@ -28,6 +32,40 @@ describe("ownerMembership", () => {
     expect(m.role).toBe(OWNER)
     expect(m.isWaiting).toBe(false)
     expect(m.joinedAt).toBe(CREATED_AT)
+  })
+})
+
+describe("participantRowFor", () => {
+  it("finds the viewer's own row", () => {
+    const mine = member(ALICE, MEMBER)
+
+    expect(participantRowFor([mine, member(BOB, MEMBER)], ALICE)).toBe(mine)
+  })
+
+  // The point of the helper: an owner with no participant row does not take
+  // part, however confirmed `viewerMembership` makes them look.
+  it("reports nothing for an owner with no participant row", () => {
+    expect(participantRowFor([member(BOB, MEMBER)], ALICE)).toBeUndefined()
+  })
+
+  // An owner who joined keeps role OWNER — `GetHackathonRole` checks Owner
+  // first — so the row's existence, not its role, is what says they take part.
+  it("finds an owner who did join, still badged as owner", () => {
+    const joined = member(ALICE, OWNER)
+
+    expect(participantRowFor([joined], ALICE)).toBe(joined)
+  })
+
+  // Half-joined: Join wrote the row, ApproveParticipant did not clear it. The
+  // row is found, and `isWaiting` is what the caller reads to say so.
+  it("finds a waitlisted row rather than skipping it", () => {
+    expect(
+      participantRowFor([member(ALICE, OWNER, true)], ALICE)?.isWaiting,
+    ).toBe(true)
+  })
+
+  it("reports nothing for a viewer with no platform user", () => {
+    expect(participantRowFor([member(ALICE, OWNER)], undefined)).toBeUndefined()
   })
 })
 

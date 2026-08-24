@@ -52,6 +52,31 @@ export function ownerMembership(
 }
 
 /**
+ * The viewer's own participant row, if the backend holds one.
+ *
+ * The only honest test for whether someone *takes part* in a hackathon, as
+ * against merely having a relationship to it. Neither of the obvious answers
+ * works: `role` reports `OWNER` for an owner whether or not they also hold
+ * `MEMBER`, because `GetHackathonRole` returns the first match and checks Owner
+ * first (`rbac.go:402`); and `viewerMembership` below hands an owner with no row
+ * a synthesised one that is indistinguishable from a confirmed membership.
+ *
+ * Used by `viewerMembership` below, and by the team formation page to say why an
+ * organiser is missing from the pool it staffs teams from — an absence that
+ * otherwise reads as the page having lost them.
+ *
+ * @param platformUserId the viewer's backend user id, not their Keycloak id.
+ */
+export function participantRowFor(
+  members: HackathonMember[],
+  platformUserId: string | undefined,
+): HackathonMember | undefined {
+  if (platformUserId === undefined) return undefined
+
+  return members.find((m) => m.user?.id === platformUserId)
+}
+
+/**
  * The viewer's relationship to one hackathon, from a `Get` response.
  *
  * A real participant row wins outright, even for an owner: it is the record the
@@ -77,7 +102,7 @@ export function viewerMembership(
 ): HackathonMember | null {
   if (platformUserId === undefined) return null
 
-  const participant = members.find((m) => m.user?.id === platformUserId)
+  const participant = participantRowFor(members, platformUserId)
   if (participant !== undefined) return participant
 
   const owner = owners.find((o) => o.id === platformUserId)
