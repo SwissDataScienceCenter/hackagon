@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -527,6 +528,24 @@ func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 		Order:     int32(q.Order),
 		Options:   q.Options,
 	}
+}
+
+func hackathonInviteEntryFromEnt(i *enthackathoninvite.HackathonInvite) *hackEnts.HackathonInvite {
+	e := &hackEnts.HackathonInvite{
+		Id:         i.ID.String(),
+		Token:      i.Token,
+		CreatedAt:  timestamppb.New(i.CreatedAt),
+	}
+	if i.Note != "" {
+		e.Note = &i.Note
+	}
+	if i.RevokedAt != nil {
+		e.RevokedAt = timestamppb.New(*i.RevokedAt)
+	}
+	if i.ExpiresAt != nil {
+		e.ExpiresAt = timestamppb.New(*i.ExpiresAt)
+	}
+	return e
 }
 
 func answerEntryFromEnt(a *ent.Answer) *hackEnts.Answer {

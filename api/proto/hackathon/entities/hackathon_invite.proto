@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+message HackathonInvite {
+  string id = 1;
+  string token = 2;
+  optional string note = 3;
+  google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp revoked_at = 5;
+  optional google.protobuf.Timestamp expires_at = 6;
+}
