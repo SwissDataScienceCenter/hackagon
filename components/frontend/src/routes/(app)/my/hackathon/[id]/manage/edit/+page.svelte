@@ -31,13 +31,13 @@
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
-        <!-- Back where the form is reached from, which is Manage Hackathon —
+        <!-- Back where the form is reached from, which is Settings —
              /overview is the member's page and offers no way in here. -->
         <a
             href={resolve(`/my/hackathon/${hackathon.id}/manage`)}
             class="w-fit text-xs font-semibold text-primary-700-300 no-underline hover:underline"
         >
-            &larr; Back to Manage Hackathon
+            &larr; Back to Settings
         </a>
         <h1 class="m-0 text-lg font-bold text-surface-950-50">Edit Hackathon</h1>
     </div>

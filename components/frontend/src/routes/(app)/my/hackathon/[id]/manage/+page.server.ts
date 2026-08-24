@@ -15,7 +15,8 @@ import { error } from "@sveltejs/kit"
  * which is the member's and stays participant-shaped for every viewer.
  *
  * Everything hackathon-wide that an organiser sets lives here: what participants
- * may do, and which phase is current. The per-phase editing stayed on Manage
+ * may do, which phase is current, and whether the hackathon groups its projects
+ * into tracks at all. The per-phase editing stayed on Manage
  * Timeline, which is a list of phases — this is a single page about the
  * hackathon, and mixing the two was what buried the capability switches under a
  * heading nobody opened unless they already suspected something.
@@ -39,6 +40,11 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: hackathon.id,
     hackathonName: hackathon.name,
+    // Tracks are optional, and this is the page that says whether this hackathon
+    // has any — the sidebar offers Manage Tracks only once one exists, so with
+    // none the card below is the only way to the first. Nested in the layout's
+    // `hackathon.get` already, so it costs nothing.
+    tracks: hackathon.tracks.map((t) => ({ id: t.id, name: t.name })),
     // The switches. Built here because `CAPABILITY_ORDER` is the generated enum
     // and is server-only; the on/off flags themselves ride on `hackathonState`.
     capabilityStates: CAPABILITY_ORDER.map((c) => ({

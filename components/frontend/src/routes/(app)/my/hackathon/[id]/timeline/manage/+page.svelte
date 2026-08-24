@@ -36,7 +36,7 @@
   way in.
 
   The capability switches used to sit at the top of this page and now live on
-  Manage Hackathon, the organiser's overview. This page keeps the *phases*, and
+  Settings, the organiser's overview. This page keeps the *phases*, and
   each phase row still ticks its plan off against what is switched on — read
   here, change there, with the link below as the one way across.
 

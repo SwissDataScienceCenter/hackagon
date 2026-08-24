@@ -46,13 +46,13 @@ export function hackathonRoleBadge(
  * visibility, dates, logo) — the backend's `hackathon:write`, held by the
  * confirmed owner (a waitlisted owner does not count, same rule
  * `hackathonRoleBadge` applies) and, via the admin escape hatch, by a global
- * admin. Shared by Manage Hackathon (to offer Edit details) and the edit
+ * admin. Shared by Settings (to offer Edit details) and the edit
  * route's own load (to guard it), so the two can never disagree about who is
  * let in.
  *
  * Narrower than the owner-or-admin gate the manage routes themselves apply,
  * which is why that page asks this separately rather than reusing its own: a
- * waitlisted owner may open Manage Hackathon and still not edit the record.
+ * waitlisted owner may open Settings and still not edit the record.
  */
 export function canEditHackathon(
   membership: ViewerMembership | undefined,

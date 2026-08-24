@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ArrowRight, Pencil } from 'lucide-svelte';
+    import { ArrowRight, Pencil, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
     import { manageNav } from '$lib/navigation/items';
@@ -40,8 +40,14 @@
     });
 
     const shortcuts = $derived(
-        manageNav(data.hackathonId, data.myMembership ?? undefined, data.isGlobalAdmin)
-            .filter((i) => i.id !== 'manage:hackathon')
+        manageNav(
+            data.hackathonId,
+            data.myMembership ?? undefined,
+            data.isGlobalAdmin,
+            false,
+            data.tracks.length,
+        )
+            .filter((i) => i.id !== 'manage:settings')
             .map((i) =>
                 queueBadges[i.id]
                     ? { ...i, badge: queueBadges[i.id], badgeVariant: 'badge-warning' }
@@ -93,9 +99,10 @@
          solid: advancing the phase below is this view's one solid action. -->
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-1">
-            <h2 class="m-0 text-title text-ink">Manage Hackathon</h2>
+            <h2 class="m-0 text-title text-ink">Settings</h2>
             <span class="text-xs text-ink-3">
-                What participants may do, and where the hackathon is now.
+                What participants may do, where the hackathon is now, and how its
+                projects are grouped.
             </span>
         </div>
         {#if mayEdit}
@@ -209,6 +216,58 @@
         message={form?.message}
         saved={form?.saved ?? false}
     />
+
+    <!-- Tracks. They are optional, which is the whole reason they are settled
+         here rather than behind a permanent sidebar entry: with none defined,
+         Manage Tracks is not offered at all (see `manageNav`), so this card is
+         the only way to the first one — and a hackathon that never wants any
+         reads that as a line of prose instead of an empty list it has to go and
+         look at. Once a track exists the sidebar entry appears and this card
+         steps back to a summary. -->
+    <section class="card flex flex-col gap-3 border-line-strong px-5 py-4">
+        <!-- The heading says what tracks are for and that they are optional,
+             because that is the decision being offered here — with none defined
+             there is otherwise nothing on the page to say what the button would
+             even get you. -->
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex min-w-0 flex-col gap-1">
+                <span class="meta">Tracks</span>
+                <p class="m-0 text-sm text-ink-3">
+                    An optional way to group projects. A hackathon runs perfectly well
+                    without any.
+                </p>
+            </div>
+            {#if data.tracks.length > 0}
+                <a
+                    href={resolve(`/my/hackathon/${data.hackathonId}/tracks`)}
+                    class="shrink-0 text-xs font-semibold text-accent-ink no-underline
+                           hover:underline"
+                >
+                    Manage tracks &rarr;
+                </a>
+            {/if}
+        </div>
+
+        {#if data.tracks.length === 0}
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/tracks/new`)}
+                class="btn btn-sm btn-outline w-fit no-underline"
+            >
+                <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
+                Add a track
+            </a>
+        {:else}
+            <div class="flex flex-wrap gap-1">
+                {#each data.tracks as track (track.id)}
+                    <span class="badge badge-neutral">{track.name}</span>
+                {/each}
+            </div>
+            <p class="m-0 text-xs text-ink-3">
+                Each project's track is optional too: one without a track is not a
+                project missing something.
+            </p>
+        {/if}
+    </section>
 
     <!-- The rest of the organiser's destinations, as tiles. The sidebar lists the
          same entries; this is the landing page for someone who came to run the

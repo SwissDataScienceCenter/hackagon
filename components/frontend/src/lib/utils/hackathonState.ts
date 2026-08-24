@@ -17,7 +17,7 @@
  *    at all: `Phase.capabilities` is informational, and what participants may do
  *    is the organizer's decision, taken switch by switch. A hackathon that runs
  *    without project proposals is configured, not broken. `CapabilitiesPanel` on
- *    Manage Hackathon still reports the mismatch, beside the switches that would
+ *    Settings still reports the mismatch, beside the switches that would
  *    change it, and Manage Timeline reports it on the phase rows.
  *  - **no phase declared current** while the hackathon is running. The timeline
  *    still works; nobody is blocked.

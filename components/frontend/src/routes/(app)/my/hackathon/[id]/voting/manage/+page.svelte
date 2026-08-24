@@ -44,7 +44,7 @@
                 href={resolve(`/my/hackathon/${data.hackathonId}/manage`)}
                 class="font-semibold text-accent-ink no-underline hover:underline"
             >
-                Manage Hackathon
+                Settings
             </a>.
         </p>
     {/if}

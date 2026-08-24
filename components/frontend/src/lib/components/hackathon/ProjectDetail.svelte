@@ -26,6 +26,8 @@
             /** ProjectStatus enum value; labelled via $lib/utils/projectStatus. */
             status: number;
             imageUrl?: string;
+            /** Omitted when the project has no track, or the hackathon has none
+                at all — the Track cell is then not drawn. */
             track?: string;
             proposer?: string;
             createdAt?: Date;
@@ -102,25 +104,33 @@
     </div>
 
     <!-- Labelled pairs rather than more chips: this is the page someone opens to
-         find out exactly these things. Status joins them only while there is a
-         status worth naming — see $lib/utils/projectStatus. An approved project
-         drops the cell rather than printing "Approved" or, worse, "Unknown". -->
-    <dl class="m-0 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {#if statusText}
-            <div class="flex flex-col gap-1">
-                <dt class="text-xs font-semibold text-ink-3">Status</dt>
-                <dd class="m-0 text-xs text-ink">
-                    {statusText}
-                </dd>
-            </div>
-        {/if}
-        <div class="flex flex-col gap-1">
-            <dt class="text-xs font-semibold text-ink-3">Track</dt>
-            <dd class="m-0 text-xs text-ink">
-                {project.track ?? 'No track'}
-            </dd>
-        </div>
-    </dl>
+         find out exactly these things. Each cell appears only while it has
+         something to say. Status: only while there is a status worth naming —
+         see $lib/utils/projectStatus — so an approved project drops the cell
+         rather than printing "Approved" or, worse, "Unknown". Track: only while
+         the project has one. Tracks are optional and a hackathon may define
+         none, so "No track" was a label stating the absence of a feature that
+         hackathon never had. With neither cell the list itself goes. -->
+    {#if statusText || project.track}
+        <dl class="m-0 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {#if statusText}
+                <div class="flex flex-col gap-1">
+                    <dt class="text-xs font-semibold text-ink-3">Status</dt>
+                    <dd class="m-0 text-xs text-ink">
+                        {statusText}
+                    </dd>
+                </div>
+            {/if}
+            {#if project.track}
+                <div class="flex flex-col gap-1">
+                    <dt class="text-xs font-semibold text-ink-3">Track</dt>
+                    <dd class="m-0 text-xs text-ink">
+                        {project.track}
+                    </dd>
+                </div>
+            {/if}
+        </dl>
+    {/if}
 
     <div class="flex flex-col gap-1">
         <h2 class="m-0 meta">Description</h2>
