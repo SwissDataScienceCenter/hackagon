@@ -119,6 +119,7 @@
                 {participantCount}
                 organizers={[]}
                 badges={heroBadges}
+                description={hackathon.description}
             />
 
             {#if phases.length > 0}

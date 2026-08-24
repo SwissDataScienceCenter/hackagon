@@ -21,6 +21,10 @@
         approvedCount === 1 ? '1 project' : `${approvedCount} projects`,
     );
     const trackLabel = $derived(tracks.length === 1 ? '1 track' : `${tracks.length} tracks`);
+    // The count is already the figure when there are no bars, so the link does not
+    // repeat it — three renderings of the same number in one card is what this
+    // card is trying to stop being.
+    const linkLabel = $derived(tracks.length > 0 ? projectLabel : 'projects');
 </script>
 
 <!--
@@ -35,19 +39,33 @@
   parity, so the colour changed with position and meant nothing. Length carries
   the magnitude, and a track with no projects still shows its name — an empty
   track is worth knowing about, especially for whoever created it.
+
+  With no tracks there is nothing to group by and the count is the whole content,
+  so it is shown as a figure rather than under an apology for the missing bars: a
+  participant cannot create a track and does not need to be told grouping is off,
+  and an organiser has Manage Tracks with its own empty state. The overview drops
+  this card altogether when there is neither a track nor an approved project —
+  see the guard there, which is what stops an empty box holding half the row.
 -->
 <section class="card flex flex-col gap-4 p-5" aria-labelledby="projects-heading">
     <div class="flex flex-wrap items-baseline justify-between gap-2">
         <h2 class="m-0 text-section" id="projects-heading">Projects</h2>
-        <span class="tnum text-xs text-ink-3">
-            {projectLabel}{tracks.length > 0 ? ` · ${trackLabel}` : ''}
-        </span>
+        <!-- Only alongside the bars. Without them the figure below says the same
+             number, and saying it twice in one card reads as two facts. -->
+        {#if tracks.length > 0}
+            <span class="tnum text-xs text-ink-3">{projectLabel} · {trackLabel}</span>
+        {/if}
     </div>
 
     {#if tracks.length === 0}
-        <p class="prose m-0 text-xs">
-            No tracks have been defined, so projects are not grouped.
-        </p>
+        {#if approvedCount > 0}
+            <div class="flex items-baseline gap-2">
+                <span class="tnum text-display text-ink">{approvedCount}</span>
+                <span class="text-xs text-ink-3">
+                    approved {approvedCount === 1 ? 'project' : 'projects'}
+                </span>
+            </div>
+        {/if}
     {:else}
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
             {#each tracks as track (track.id)}
@@ -77,7 +95,7 @@
             href={resolve(`/my/hackathon/${hackathonId}/projects`)}
             class="text-xs font-semibold text-accent-ink no-underline hover:underline"
         >
-            View all {projectLabel} →
+            View all {linkLabel} →
         </a>
     {/if}
 </section>

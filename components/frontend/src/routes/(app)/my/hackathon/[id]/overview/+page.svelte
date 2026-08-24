@@ -7,6 +7,11 @@
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
+
+    // Whether there is a Projects card at all. With no track to group by and no
+    // approved project to count it would be an empty box holding half the row —
+    // and the way in to proposing one is already a row on the state card above.
+    const showProjects = $derived(data.trackCounts.length > 0 || data.approvedCount > 0);
 </script>
 
 <!--
@@ -15,9 +20,11 @@
   here: their queues and switches live on Settings, the organiser's own page,
   which badges each count onto the tile that clears it.
 
-  Order is by how fast it changes. "Right now" leads because it is the only thing
-  on the page that differs from one visit to the next; About is last because it is
-  read once, ever, and had been sitting between two things that are not.
+  Order is by how fast it changes, and only things that change are here at all.
+  "Right now" leads because it differs from one visit to the next. The About
+  section is gone: a description is read once, ever, so it sits with the rest of
+  the hackathon's identity in the hero — and the dashboard card a member clicks to
+  get here already carries it.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects).
   No width cap of its own — `.prose` caps the one thing here that needs a measure.
@@ -44,8 +51,12 @@
 
     <!-- Two-up from md: both of these are naturally narrow — a handful of labelled
          values and a short bar chart — and stacked full width they were two
-         mostly-empty rectangles. -->
-    <div class="grid gap-6 md:grid-cols-2">
+         mostly-empty rectangles. One column when there is no Projects card, so the
+         team card takes the width rather than leaving half the row empty.
+
+         `items-start`, so the shorter card keeps its own height instead of being
+         stretched to the taller one's and floating in its own whitespace. -->
+    <div class="grid items-start gap-6 {showProjects ? 'md:grid-cols-2' : ''}">
         {#if data.myTeam}
             <ParticipationCard
                 hackathonId={data.hackathon.id}
@@ -83,19 +94,12 @@
             </section>
         {/if}
 
-        <TrackBreakdown
-            hackathonId={data.hackathon.id}
-            approvedCount={data.approvedCount}
-            tracks={data.trackCounts}
-        />
-    </div>
-
-    <section class="card p-5" aria-labelledby="about">
-        <h2 class="m-0 mb-3 text-section" id="about">About</h2>
-        {#if data.hackathon.description}
-            <p class="prose m-0 text-sm">{data.hackathon.description}</p>
-        {:else}
-            <p class="m-0 text-sm text-ink-3">No description provided.</p>
+        {#if showProjects}
+            <TrackBreakdown
+                hackathonId={data.hackathon.id}
+                approvedCount={data.approvedCount}
+                tracks={data.trackCounts}
+            />
         {/if}
-    </section>
+    </div>
 </div>

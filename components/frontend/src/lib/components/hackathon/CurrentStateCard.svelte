@@ -1,5 +1,6 @@
 <script lang="ts">
     import { ArrowRight, Check } from 'lucide-svelte';
+    import { resolve } from '$app/paths';
     import { capabilityHref } from '$lib/navigation/capabilityLinks';
     import { PHASE_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
     import { nextBoundary } from '$lib/utils/relativeTime';
@@ -50,8 +51,6 @@
     } = $props();
 
     const open = $derived(PHASE_CAPABILITIES.filter((c) => enabled.includes(c.value)));
-    const closed = $derived(PHASE_CAPABILITIES.filter((c) => !enabled.includes(c.value)));
-    const closedLine = $derived(closed.map((c) => c.label).join(' · '));
 
     // Links only where following one leads somewhere the viewer is let in.
     //
@@ -72,7 +71,6 @@
     const phaseBadge = $derived(declared ? 'Current phase' : 'In progress');
 
     const openHeading = $derived(organiserVoice ? 'Participants can now' : 'You can now');
-    const closedHeading = $derived(organiserVoice ? 'Not open to participants' : 'Not open yet');
 
     // Which boundary to count down to, decided here so the card knows whether
     // there is one at all. `new Date()` is only ever compared against, never
@@ -98,9 +96,14 @@
 
   The open capabilities are rows rather than pills because they are this page's
   real navigation: each is the way in to the thing a participant came to do. As
-  pills they were 20px targets carrying the same visual weight as the closed list
-  beside them. The closed ones are now one quiet line — worth knowing, not worth
-  a third of the card.
+  pills they were 20px targets carrying the same visual weight as the list of
+  closed ones beside them.
+
+  What is *closed* is not listed at all any more. Five of the six capabilities are
+  shut for most of a hackathon, so the line was always present and never told
+  anyone anything they could act on — and the question behind it is never "is
+  voting closed" but "when does it open", which this card cannot answer and the
+  timeline can. The "Next" line at the foot now leads there.
 
   `border-line-strong` rather than the plain `card` its siblings use: this one
   leads the page and is different in kind from the cards below it. Same
@@ -215,23 +218,27 @@
                     : 'Nothing is open right now.'}
             </p>
         {/if}
-
-        {#if closed.length > 0}
-            <!-- One line, not a pill each. Closed is the normal state of most of
-                 these for most of the hackathon, so this wants to be readable at
-                 a glance and then ignored. -->
-            <p class="m-0 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-ink-3">
-                <span class="meta">{closedHeading}</span>
-                {closedLine}
-            </p>
-        {/if}
     {/if}
 
     {#if nextPhase}
-        <span class="tnum border-t border-line pt-3 text-xs text-ink-3">
-            Next: <span class="font-semibold text-ink-2">{nextPhase.name}</span>
-            · {formatPhaseRange(nextPhase.startsAt, nextPhase.endsAt)}
-        </span>
+        <!-- A link rather than a statement: this is the one forward-looking line on
+             the card, and the timeline is where the rest of the answer is — the
+             whole sequence, and how long until this phase hands over. Everyone who
+             can read this card can read that page. -->
+        <a
+            href={resolve(`/my/hackathon/${hackathonId}/timeline`)}
+            class="group flex flex-wrap items-baseline gap-x-2 border-t border-line pt-3
+                   text-xs text-ink-3 no-underline"
+        >
+            <span class="tnum group-hover:underline">
+                Next: <span class="font-semibold text-ink-2">{nextPhase.name}</span>
+                · {formatPhaseRange(nextPhase.startsAt, nextPhase.endsAt)}
+            </span>
+            <ArrowRight
+                class="h-3 w-3 shrink-0 self-center text-ink-3 group-hover:text-accent-ink"
+                aria-hidden="true"
+            />
+        </a>
     {/if}
 
     {#if noCurrentPhase || phaseEnded}
