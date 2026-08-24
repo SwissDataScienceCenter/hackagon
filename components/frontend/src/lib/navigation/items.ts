@@ -16,6 +16,7 @@ import { OWNER, type ViewerMembership } from "$lib/utils/hackathonRole"
 
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
+import UsersRound from "lucide-svelte/icons/users-round"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardCheck from "lucide-svelte/icons/clipboard-check"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
@@ -100,17 +101,23 @@ export interface HackathonPageRef {
  * function never decides what a member may see.
  *
  * `votingEnabled` and `resultsVisible` are the hackathon's `CAPABILITY_VOTE` and
- * `CAPABILITY_VIEW_RESULTS`, and gate the only two conditional entries. Each
+ * `CAPABILITY_VIEW_RESULTS`, and gate two of the three conditional entries. Each
  * capability is what grants the casbin row every read on its page depends on
  * (`vote_category:read`, `vote_result:read`), so without it the entry could only
  * lead to a 403. They gate independently because the backend keeps them
  * separate: an organiser closes voting, checks the tally, then publishes.
+ *
+ * `teamCount` gates the third. Unlike the other two it is not a permission —
+ * `TeamService.List` asks only for `hackathon:read`, which every confirmed
+ * member has — it is whether the page has anything on it yet. Zero is the honest
+ * default, the same way `manageNav` treats `trackCount`.
  */
 export function memberNav(
   hackathonId: string,
   pages: HackathonPageRef[] = [],
   votingEnabled = false,
   resultsVisible = false,
+  teamCount = 0,
 ): NavItem[] {
   return [
     {
@@ -136,11 +143,34 @@ export function memberNav(
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
-    // No Teams entry. There is no team *list* page any more — a team has a detail
-    // page (`teams/<teamId>`), reached from the ballot, where the entry a voter is
-    // judging is actually shown. A sidebar entry needs a list to point at, and
-    // listing every team was only ever a way to browse entries, which is now the
-    // ballot's job. Team management still has its own entry under Manage.
+    // Between Projects and Submissions, following the hackathon's own order of
+    // events: projects are approved, teams form on them, teams submit.
+    //
+    // This entry existed, was removed in favour of reaching a team from the
+    // ballot, and is back — because the ballot only ever lists the teams a voter
+    // may vote *on*, and only while voting is open, so there was no way to see
+    // who is on which team. The list is the browse surface; the ballot is still
+    // the only place a vote is cast.
+    //
+    // Only once teams exist. Teams form partway through a hackathon, and before
+    // they do this leads to a page with nothing on it that a participant can do
+    // nothing about — the same reason `manageNav` waits for a track. The count
+    // comes from a `TeamService.List` in the hackathon layout, because
+    // `Hackathon.Get` carries neither teams nor a count of them; see
+    // `TODO(backend: hackathon-team-count)` there.
+    //
+    // `UsersRound` rather than `Users`: Participants above already holds that
+    // one, and on the collapsed rail the icon is the whole entry.
+    ...(teamCount > 0
+      ? [
+          {
+            id: "member:teams",
+            label: "Teams",
+            icon: UsersRound,
+            href: resolve(`/my/hackathon/${hackathonId}/teams`),
+          },
+        ]
+      : []),
     {
       id: "member:submissions",
       label: "Submissions",

@@ -44,14 +44,58 @@ describe("memberNav", () => {
     ])
   })
 
-  // No team list to point at: `teams/<teamId>` is entered from the ballot, which
-  // is where a voter needs the entry a team filed. Asserted rather than left
-  // implicit, because the entry existed and an unnoticed revival would put a
-  // sidebar link on a route that no longer serves a list.
-  it("offers no Teams entry, since only a team detail route remains", () => {
-    expect(idsOf(memberNav("hack-1", [], true, true))).not.toContain(
-      "member:teams",
-    )
+  // Not a permission — every confirmed member may read teams — but whether the
+  // page has anything on it. Teams form partway through a hackathon, and before
+  // they do the entry would lead to an empty list a participant cannot act on.
+  describe("teamCount", () => {
+    it("offers no Teams entry before any team exists", () => {
+      expect(idsOf(memberNav("hack-1", [], true, true, 0))).not.toContain(
+        "member:teams",
+      )
+    })
+
+    // Zero by default, so a caller that has not counted cannot claim there are
+    // teams — the same contract `manageNav` gives `trackCount`.
+    it("defaults to offering no Teams entry", () => {
+      expect(idsOf(memberNav("hack-1"))).not.toContain("member:teams")
+    })
+
+    it("offers it once a team exists", () => {
+      const item = memberNav("hack-1", [], false, false, 1).find(
+        (i) => i.id === "member:teams",
+      )
+
+      expect(item?.label).toBe("Teams")
+      expect(item?.href).toBe("/my/hackathon/hack-1/teams")
+    })
+
+    // The list is where teams are browsed; the manage page is where they are
+    // changed. `activeNavId`'s longest match is what keeps the two apart, and
+    // `/teams/manage` nests under `/teams` precisely so it wins there.
+    it("lights the member entry on the list and the manage entry on its page", () => {
+      const items = [
+        ...memberNav("hack-1", [], false, false, 2),
+        ...manageNav("hack-1", owner, false),
+      ]
+
+      expect(activeNavId("/my/hackathon/hack-1/teams", items)).toBe(
+        "member:teams",
+      )
+      expect(activeNavId("/my/hackathon/hack-1/teams/manage", items)).toBe(
+        "manage:teams",
+      )
+    })
+
+    // A team detail page is a team, so it belongs to the list rather than to the
+    // organiser's workspace — and it is reachable from the ballot too, where
+    // nothing else in the nav would light at all.
+    it("keeps Teams lit on a team detail route", () => {
+      const items = memberNav("hack-1", [], false, false, 2)
+
+      expect(activeNavId("/my/hackathon/hack-1/teams/t1", items)).toBe(
+        "member:teams",
+      )
+    })
   })
 
   // The only entries gated on anything. CAPABILITY_VOTE grants
@@ -77,6 +121,15 @@ describe("memberNav", () => {
       expect(gated.filter((id) => ids.includes(id))).toEqual(shown)
     },
   )
+
+  // Projects are approved, teams form on them, then teams submit.
+  it("slots Teams between Projects and Submissions", () => {
+    expectOrder(memberNav("hack-1", [], false, false, 2), [
+      "member:projects",
+      "member:teams",
+      "member:submissions",
+    ])
+  })
 
   // The entries follow the hackathon's own order of events: you submit, then
   // people vote on what was submitted, then the tally is published.
@@ -194,7 +247,7 @@ describe("memberNav", () => {
   // role-dependent may appear here whatever the capabilities say — otherwise the
   // two viewers stop seeing entries in the same places.
   it("carries only member entries, so the spine is role-independent", () => {
-    const ids = idsOf(memberNav("hack-1", [pg("p1", "Welcome")], true, true))
+    const ids = idsOf(memberNav("hack-1", [pg("p1", "Welcome")], true, true, 2))
 
     expect(ids.filter((id) => !id.startsWith("member:"))).toEqual([])
   })

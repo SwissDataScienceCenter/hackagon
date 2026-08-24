@@ -30,6 +30,7 @@
         isGlobalAdmin,
         votingEnabled = false,
         resultsVisible = false,
+        teamCount = 0,
         trackCount = 0,
         stateNeedsAttention = false,
     }: {
@@ -55,6 +56,13 @@
          * the two capabilities separate — see `memberNav`.
          */
         resultsVisible?: boolean;
+        /**
+         * How many teams the hackathon has. Only the count is needed: it decides
+         * whether the participant Teams entry is offered at all — see
+         * `memberNav`. Not a permission, unlike the two above; every confirmed
+         * member may read teams, there are simply none yet.
+         */
+        teamCount?: number;
         /**
          * How many tracks the hackathon has. Only the count is needed: it decides
          * whether Manage Tracks is offered at all — see `manageNav`. Zero, and the
@@ -82,7 +90,7 @@
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
     const items = $derived(
-        memberNav(hackathonId, pages, votingEnabled, resultsVisible),
+        memberNav(hackathonId, pages, votingEnabled, resultsVisible, teamCount),
     );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
     // section and the "Owner" chip can never disagree about the role.

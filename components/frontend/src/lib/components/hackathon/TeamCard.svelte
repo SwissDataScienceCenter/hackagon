@@ -4,6 +4,7 @@
         submissionStatusBadgeVariant,
     } from '$lib/utils/submissionStatus';
     import { isHttpUrl } from '$lib/utils/url';
+    import type { Snippet } from 'svelte';
 
     type TeamMember = {
         name: string;
@@ -28,6 +29,7 @@
         members,
         isOwn = false,
         entry = null,
+        actions,
     }: {
         // Optional because it is a position in a list, not a property of the
         // team: on the detail page there is no list to be nth of.
@@ -38,6 +40,15 @@
         members: TeamMember[];
         isOwn?: boolean;
         entry?: FinalEntry | null;
+        /**
+         * The card's controls, in a column to the right — the same shape
+         * `ParticipantCard` uses, and left to the caller for the same reason:
+         * this card stays ignorant of where a team can be looked at or acted on.
+         *
+         * The teams list passes a View link onto `teams/<teamId>` this way. The
+         * detail page passes nothing, since that link would lead to itself.
+         */
+        actions?: Snippet;
     } = $props();
 
     // SubmissionStatus.SUBMISSION_STATUS_FINAL — the numeric value, since the
@@ -69,9 +80,10 @@
   ParticipantCard-style row: avatar | text column (title, description, members).
   Members sit in the text column so they line up with title/description, not under the team avatar.
 
-  No actions column: a team is read-only here. Renaming, deleting and assigning
-  people are organiser actions and live on the manage page; nothing in this view
-  acts on a single team, so there is nowhere for a per-card control to lead.
+  `actions` is the caller's, and only the list passes one: renaming, deleting and
+  assigning people are organiser actions that live on the manage page, so the one
+  control a read-only surface has to offer is a way in to the single team — which
+  is the list's View link and nothing the detail page needs.
 -->
 <div
     class="card card-raised box-border w-full px-5 py-4"
@@ -194,5 +206,11 @@
                 </div>
             {/if}
         </div>
+
+        {#if actions}
+            <div class="flex shrink-0 items-center gap-2">
+                {@render actions()}
+            </div>
+        {/if}
     </div>
 </div>

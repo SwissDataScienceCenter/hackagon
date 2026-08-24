@@ -10,7 +10,7 @@ import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: LayoutServerLoad = async (event) => {
-  const { hackathon, page } = requireGrpc(event.locals.grpc)
+  const { hackathon, page, team } = requireGrpc(event.locals.grpc)
   const platformUserId = event.locals.platformUser?.id
 
   let result
@@ -68,6 +68,33 @@ export const load: LayoutServerLoad = async (event) => {
     event.locals.logger.warn(
       { err },
       "LAYOUT: page list failed, rendering the hackathon nav without content pages",
+    )
+  }
+
+  // Whether the participant Teams entry is in the nav at all — see `memberNav`,
+  // which offers it only once teams exist. Only the count leaves this load: the
+  // teams page fetches its own rows, so no other page in the subtree pays for a
+  // payload it does not render.
+  //
+  // TODO(backend: hackathon-team-count): this is a whole `TeamService.List`
+  // — every team with its full member roster — asked on *every* page in the
+  // hackathon subtree, to answer one boolean. `Hackathon.Get` already returns
+  // tracks, projects, pages and phases but carries neither teams nor a team
+  // count, and there is no cheaper existence check. Drop this call and read the
+  // count off `hackathon.get` once it is there.
+  //
+  // A failure degrades the same way the page list above does — no entry rather
+  // than no hackathon. It hides the Teams tab on a hackathon that has teams,
+  // which is the safer of the two wrong answers: the alternative offers a link
+  // whose page would fail the same way.
+  let teamCount = 0
+  try {
+    const { teams } = await team.list({ hackathonId: event.params.id })
+    teamCount = teams.length
+  } catch (err) {
+    event.locals.logger.warn(
+      { err },
+      "LAYOUT: team list failed, rendering the hackathon nav without the Teams entry",
     )
   }
 
@@ -143,6 +170,7 @@ export const load: LayoutServerLoad = async (event) => {
     hackathonPages,
     votingEnabled,
     resultsVisible,
+    teamCount,
     hackathonState,
   }
 }
