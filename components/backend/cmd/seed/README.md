@@ -14,28 +14,42 @@ already exists is a no-op.
 ## Users
 
 Seeded via Keycloak IDs that match the dev realm. The admin's Keycloak ID comes
-from config; the other three are hardcoded constants in [main.go](main.go).
+from config; the others are hardcoded constants in [main.go](main.go).
 
-All four take part in H4, so whichever you sign in as you land inside the large
-fixture — as its organizer (`alice`) or as one of its participants.
+`bob` and `charles` take part in H4, so signing in as either lands you inside
+the large fixture; `alice` lands there as its organizer.
 
-| Username         | Display name      | Role across the seed                           |
-| ---------------- | ----------------- | ---------------------------------------------- |
-| `hackagon-admin` | Hackagon Admin    | Creator of H2 and H3; team member in all three |
-| `alice`          | Alice Wonderland  | Creator of H1 and H4; participant in H2 and H3 |
-| `bob`            | Bob Henderson     | Participant in H1, H2, H4; Teams Beta, Gamma   |
-| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed participant in H4 |
+| Username         | Display name      | Role across the seed                               | Can log in |
+| ---------------- | ----------------- | -------------------------------------------------- | ---------- |
+| `hackagon-admin` | Hackagon Admin    | Global admin; creator and owner of H2 and H3       | yes        |
+| `alice`          | Alice Wonderland  | Creator of H1 and H4; participant in H1, H2 and H3 | yes        |
+| `bob`            | Bob Henderson     | Participant in H1, H2, H4; Teams Beta, Gamma       | yes        |
+| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed participant in H4     | yes        |
+| `dana`           | Dana Okonkwo      | Participant in H1 and H3; Teams Alpha, Epsilon     | **no**     |
+| `yuki`           | Yuki Tanaka       | Participant in H2; Team Gamma                      | **no**     |
+
+**`hackagon-admin` is a participant in nothing.** He is the platform operator —
+global admin, and owner of the two hackathons he created — which is a job rather
+than a seat. Keeping him out means the global-admin escape hatch is exercised
+from genuinely outside a hackathon, not by a member who also happens to be an
+admin. The same rule covers `alice` in H4: no owner takes part in the hackathon
+they run.
+
+**`dana` and `yuki` exist in Postgres only.** They have no Keycloak account, so
+nobody can sign in as them — same as [the hundred in H4](#the-hundred-in-h4).
+They hold the team seats `hackagon-admin` used to, so every team keeps its size
+and H3 keeps two voters. Drive the app as `alice`, `bob` or `charles`.
 
 ### The hundred in H4
 
-H4 adds **100 synthetic participants** on top of the four above — Keycloak IDs
-`seed-dfg-001` … `seed-dfg-100`, names built from two 20-entry lists in
+H4 adds **100 synthetic participants** on top of `bob` and `charles` — Keycloak
+IDs `seed-dfg-001` … `seed-dfg-100`, names built from two 20-entry lists in
 [main.go](main.go) (`amara.abela`, `bruno.abela`, …).
 
 **They exist in Postgres only.** There is no Keycloak account behind any of
 them, so none can log in, and that is deliberate: they are bulk, not actors. To
-look at what they produced, sign in as one of the four real users — all of whom
-are in H4 too.
+look at what they produced, sign in as `bob` or `charles`, who are in H4 with
+them, or as `alice`, who runs it.
 
 They hold the casbin `Member` role in H4 and nothing else. No hackathon `Owner`,
 no project-scoped `Owner`.
@@ -110,7 +124,7 @@ else, so a member without it cannot see what there is to vote on and
 
 **Preferences: test in H1, H2 or H4.** H2 is the clearest small case —
 `hackagon-admin` owns it, `alice` and `bob` are both confirmed members. **H4 is
-the one with volume**: 15 projects, 103 participants and ~260 preference rows
+the one with volume**: 15 projects, 102 participants and ~260 preference rows
 already on file, which is what you want if you are looking at a preference
 export, a popularity ranking, or a team-assignment algorithm.
 
@@ -177,18 +191,22 @@ fixture.
 
 ## User involvement
 
-| User           | H1 AI Innovation                  | H2 Climate Tech                   | H3 Internal Sprint                  | H4 Data for Good                           |
-| -------------- | --------------------------------- | --------------------------------- | ----------------------------------- | ------------------------------------------ |
-| hackagon-admin | member of Team Alpha              | **creator**; member of Team Gamma | **creator**; member of Team Epsilon | participant                                |
-| alice          | **creator**; member of Team Alpha | participant                       | member of Team Delta                | **creator** and owner; _not_ a participant |
-| bob            | participant; member of Team Beta  | member of Team Gamma              | —                                   | participant; proposed 5 of the 15 projects |
-| charles        | _waitlisted_                      | —                                 | —                                   | participant (confirmed)                    |
+| User           | H1 AI Innovation                  | H2 Climate Tech                            | H3 Internal Sprint                         | H4 Data for Good                           |
+| -------------- | --------------------------------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| hackagon-admin | _not a participant_               | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | _not a participant_                        |
+| alice          | **creator**; member of Team Alpha | participant                                | member of Team Delta                       | **creator** and owner; _not_ a participant |
+| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects |
+| charles        | _waitlisted_                      | —                                          | —                                          | participant (confirmed)                    |
+| dana           | member of Team Alpha              | —                                          | member of Team Epsilon                     | —                                          |
+| yuki           | —                                 | member of Team Gamma                       | —                                          | —                                          |
 
-**Nobody belongs to two teams.** A person works on one project, so `alice` holds
-Team Alpha and `bob` holds Team Beta rather than alice holding both. That also
-sharpens the cross-team read case: bob is a plain `Member` of Team Beta with no
-policy row matching Team Alpha's domain, where alice's hackathon-wide `Owner`
-made every such read succeed for the wrong reason
+**Nobody belongs to two teams in the same hackathon.** A person works on one
+project, so `alice` holds Team Alpha and `bob` holds Team Beta rather than alice
+holding both. Across hackathons is another matter — `alice` is on Team Alpha in
+H1 and Team Delta in H3, and `dana` on Alpha and Epsilon. That also sharpens the
+cross-team read case: bob is a plain `Member` of Team Beta with no policy row
+matching Team Alpha's domain, where alice's hackathon-wide `Owner` made every
+such read succeed for the wrong reason
 (`mydocs/docs/backend-tickets/submission-cross-team-read.md`).
 
 ### Ownership is stored twice
@@ -237,10 +255,10 @@ Vision**
 | NLP   | Document Summarizer          | proposed | bob                              |
 | CV    | Real-time Object Detection   | approved | bob (modified by hackagon-admin) |
 
-| Team       | Project                 | Members               | Submissions                                                  |
-| ---------- | ----------------------- | --------------------- | ------------------------------------------------------------ |
-| Team Alpha | AutoML Pipeline Builder | alice, hackagon-admin | v1 draft; v2 final → `github.com/team-alpha/automl-pipeline` |
-| Team Beta  | Multilingual Chatbot    | bob                   | —                                                            |
+| Team       | Project                 | Members     | Submissions                                                  |
+| ---------- | ----------------------- | ----------- | ------------------------------------------------------------ |
+| Team Alpha | AutoML Pipeline Builder | alice, dana | v1 draft; v2 final → `github.com/team-alpha/automl-pipeline` |
+| Team Beta  | Multilingual Chatbot    | bob         | —                                                            |
 
 Pages: `Welcome`, `Schedule` (visible); `Rules & Guidelines` (hidden).
 
@@ -260,9 +278,9 @@ Tracks: **Energy**, **Agriculture & Food**
 | Energy    | Smart Grid Monitor    | proposed | alice       |
 | Agri-Food | Crop Disease Detector | approved | alice       |
 
-| Team       | Project               | Members             | Submissions                                        |
-| ---------- | --------------------- | ------------------- | -------------------------------------------------- |
-| Team Gamma | Solar Panel Optimizer | bob, hackagon-admin | v1 final → `github.com/team-gamma/solar-optimizer` |
+| Team       | Project               | Members   | Submissions                                        |
+| ---------- | --------------------- | --------- | -------------------------------------------------- |
+| Team Gamma | Solar Panel Optimizer | bob, yuki | v1 final → `github.com/team-gamma/solar-optimizer` |
 
 Pages: `About`, `Judging Criteria`, `Resources` (all visible).
 
@@ -282,10 +300,10 @@ Tracks: **Developer Tools**, **Data Platform**
 | DevTools | Test Coverage Dashboard  | proposed | alice       |
 | Data     | Data Pipeline Visualizer | approved | alice       |
 
-| Team         | Project                  | Members        | Submissions                                             |
-| ------------ | ------------------------ | -------------- | ------------------------------------------------------- |
-| Team Delta   | CLI Code Generator       | alice          | v1 draft; v2 final → `github.com/internal/cli-code-gen` |
-| Team Epsilon | Data Pipeline Visualizer | hackagon-admin | v1 final → `github.com/internal/data-pipeline-viz`      |
+| Team         | Project                  | Members | Submissions                                             |
+| ------------ | ------------------------ | ------- | ------------------------------------------------------- |
+| Team Delta   | CLI Code Generator       | alice   | v1 draft; v2 final → `github.com/internal/cli-code-gen` |
+| Team Epsilon | Data Pipeline Visualizer | dana    | v1 final → `github.com/internal/data-pipeline-viz`      |
 
 Pages: `Overview`, `Technical Specs`, `Timeline` (all visible).
 
@@ -299,9 +317,11 @@ results.
 **The one-member-per-team split above is what makes voting work at all.**
 `SubmitVote` refuses a vote on a submission by a team you belong to, so a
 participant who is on every team cannot vote on anything. With alice on Delta
-and admin on Epsilon, each can vote for the other, and the two seeded votes are
-exactly that. Put both people back on both teams and H3 goes back to having
-voting enabled and nothing votable in it.
+and dana on Epsilon, each can vote for the other, and the two seeded votes are
+exactly that. It is also why H3 needed a second participant once
+`hackagon-admin` stopped being one: with alice alone there is nobody left to
+cast the other vote. Put both people back on both teams and H3 goes back to
+having voting enabled and nothing votable in it.
 
 Votes and results here are written straight through ent, not through
 `SubmitVote`, so no handler validates them — the cross-team property has to be
@@ -312,7 +332,7 @@ kept true by hand if you add more.
 ## H4 — Data for Good Hackathon 2026
 
 The large fixture, and the only one sitting in **team formation**: registration
-has closed, 103 people are confirmed in, 15 projects are on the table, everybody
+has closed, 102 people are confirmed in, 15 projects are on the table, everybody
 has said which ones they would like to work on — and **no team exists yet**.
 That is the input a team-assignment algorithm takes, and none of H1–H3 provide
 it: H1 and H2 have their teams pre-baked, H3 is over.
@@ -335,7 +355,7 @@ being exercised at all. Pick counts below are what the fixed PRNG seed
 
 | Project                   | Weight | Picks | Proposed by |
 | ------------------------- | -----: | ----: | ----------- |
-| Outbreak Early Warning    |     12 |    43 | bob         |
+| Outbreak Early Warning    |     12 |    42 | bob         |
 | Vaccine Desert Mapper     |      6 |    17 | alice       |
 | Clinical Trial Matcher    |      4 |     9 | alice       |
 | Air Quality & Asthma      |      3 |     9 | bob         |
@@ -345,8 +365,8 @@ being exercised at all. Pick counts below are what the fixed PRNG seed
 | School Meal Coverage      |      5 |    16 | alice       |
 | Sign Language Tutor       |      3 |    14 | alice       |
 | Classroom Energy Audit    |      1 |     3 | bob         |
-| Open Budget Explorer      |     10 |    27 | alice       |
-| Bike Lane Gap Finder      |      8 |    31 | alice       |
+| Open Budget Explorer      |     10 |    26 | alice       |
+| Bike Lane Gap Finder      |      8 |    30 | alice       |
 | Rental Listing Watchdog   |      5 |    20 | bob         |
 | Pothole Report Triage     |      2 |    12 | alice       |
 | Council Minutes Search    |      1 |     7 | alice       |
@@ -354,15 +374,15 @@ being exercised at all. Pick counts below are what the fixed PRNG seed
 All 15 are `approved`. Every proposer holds the project-scoped `Owner` role that
 goes with having proposed one.
 
-The two ends are the interesting ones: **Outbreak Early Warning has 43 people
+The two ends are the interesting ones: **Outbreak Early Warning has 42 people
 wanting it** and will not fit in one team, while **Ambulance Response Equity has
 2** and cannot reach quorum. Any assignment that only handles the middle will
 show it here.
 
 ### Preferences
 
-Each of the 103 participants named one to four projects — 12 named one, 40 named
-two, 35 named three, 16 named four, for **261 preference rows** in total.
+Each of the 102 participants named one to four projects — 12 named one, 40 named
+two, 34 named three, 16 named four, for **258 preference rows** in total.
 Preferences are an unranked M2M edge (`user.preferred_projects`); there is no
 "first choice" in the schema, only a set.
 
@@ -377,9 +397,12 @@ the same fixture exactly. Change `dataForGoodSeed` if you want a different draw.
 - **alice owns this one without taking part in it.** She holds `Owner` and no
   participant row, so she is absent from the participant list, from the
   preference draw and from the pool the team formation page staffs teams from.
-  H1-H3 all have their owner participating, so this is the only fixture for an
-  organizer who sits their own hackathon out. Note that `register` being off
-  (below) means she cannot change her mind through `Join` either.
+  No owner takes part in the hackathon they run, here or in H1-H3. Note that
+  `register` being off (below) means she cannot change her mind through `Join`
+  either.
+- **`hackagon-admin` is not here either**, nor in any other hackathon. He is the
+  platform operator, and a global admin who is also an ordinary participant
+  tests the escape hatch against itself.
 - **`register` is off.** Sign-up closed on day `-3`. This is the fixture where
   `Join` is refused because the window shut, not because something is
   misconfigured — contrast H1, where joining works.
