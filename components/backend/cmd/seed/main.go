@@ -28,6 +28,13 @@ const (
 	aliceKeycloakID   = "a4fd1574-6564-4290-a2a4-1f64eb1025ef" // organizer
 	bobKeycloakID     = "1d091735-29c1-45bb-848d-1af7f53ef51e" // participant
 	charlesKeycloakID = "bcb2768f-83e3-426b-be4d-238de8ee1e58" // waitlisted viewer
+	// dana and yuki hold the team seats hackagon-admin used to. They exist in
+	// Postgres only — no Keycloak account, so nobody can log in as them, same as
+	// H4's hundred. They are there so a team keeps its size and H3 keeps two
+	// voters, not so you can drive the app as one; alice, bob and charles are
+	// still the accounts for that.
+	danaKeycloakID = "seed-dana" // team seat in H1 and H3
+	yukiKeycloakID = "seed-yuki" // team seat in H2
 )
 
 // sentinelHackathon is checked to make this script idempotent.
@@ -326,23 +333,51 @@ func seedInTx(
 	if err != nil {
 		return fmt.Errorf("charles: %w", err)
 	}
+	dana, err := getOrCreateUser(
+		ctx,
+		db,
+		danaKeycloakID,
+		"dana",
+		"Dana Okonkwo",
+		"dana@mail.org",
+	)
+	if err != nil {
+		return fmt.Errorf("dana: %w", err)
+	}
+	yuki, err := getOrCreateUser(
+		ctx,
+		db,
+		yukiKeycloakID,
+		"yuki",
+		"Yuki Tanaka",
+		"yuki@mail.org",
+	)
+	if err != nil {
+		return fmt.Errorf("yuki: %w", err)
+	}
 
 	now := time.Now()
 
+	// hackagon-admin takes part in none of these. He is the platform operator:
+	// global admin, and owner of H2 and H3 — which is a job, not a seat in the
+	// hackathon. He keeps every role that says so and holds no participant row
+	// anywhere, so the global-admin escape hatch is exercised by somebody who is
+	// genuinely outside the hackathon rather than a member in disguise.
+	//
 	// alice is the organizer of H1; she creates it and manages its content
-	if err := seedH1(ctx, db, now, admin, alice, bob, charles, enf); err != nil {
+	if err := seedH1(ctx, db, now, admin, alice, bob, charles, dana, enf); err != nil {
 		return fmt.Errorf("h1: %w", err)
 	}
 	// admin runs H2 and H3; charles does not participate in these
-	if err := seedH2(ctx, db, now, admin, alice, bob, enf); err != nil {
+	if err := seedH2(ctx, db, now, admin, alice, bob, yuki, enf); err != nil {
 		return fmt.Errorf("h2: %w", err)
 	}
-	if err := seedH3(ctx, db, now, admin, alice, enf); err != nil {
+	if err := seedH3(ctx, db, now, admin, alice, dana, enf); err != nil {
 		return fmt.Errorf("h3: %w", err)
 	}
 	// alice runs H4 too — the large team-formation fixture, where the other
 	// hundred participants exist only in Postgres and cannot log in.
-	if err := seedH4(ctx, db, now, admin, alice, bob, charles, enf); err != nil {
+	if err := seedH4(ctx, db, now, alice, bob, charles, enf); err != nil {
 		return fmt.Errorf("h4: %w", err)
 	}
 
@@ -355,7 +390,7 @@ func seedH1(
 	ctx context.Context,
 	db *ent.Client,
 	now time.Time,
-	admin, alice, bob, charles *ent.User,
+	admin, alice, bob, charles, dana *ent.User,
 	enf *middleware.Enforcer,
 ) error {
 	h, err := db.Hackathon.Create().
@@ -539,14 +574,17 @@ func seedH1(
 		return fmt.Errorf("assign ObjectDetection owner: %w", err)
 	}
 
-	// alice (organizer) and bob confirmed; charles waitlisted; admin also confirmed
+	// alice (organizer), bob and dana confirmed; charles waitlisted. admin is
+	// absent: he administers the platform, not this hackathon — the only thing
+	// he does here is modify a project above, which is the escape hatch working
+	// as intended and needs no participant row.
 	for _, p := range []struct {
 		u         *ent.User
 		isWaiting bool
 	}{
-		{admin, false},
 		{alice, false},
 		{bob, false},
+		{dana, false},
 		{charles, true},
 	} {
 		if _, err := db.Participant.Create().
@@ -569,7 +607,7 @@ func seedH1(
 	if err != nil {
 		return fmt.Errorf("team Alpha: %w", err)
 	}
-	for _, u := range []*ent.User{alice, admin} {
+	for _, u := range []*ent.User{alice, dana} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamAlpha).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Alpha member %s: %w", u.Username, err)
 		}
@@ -637,8 +675,8 @@ func seedH1(
 		// which reads as a broken role assignment rather than a deliberate one.
 		{alice.KeycloakID, middleware.Owner},
 		{alice.KeycloakID, middleware.Member},
-		{admin.KeycloakID, middleware.Member},
 		{bob.KeycloakID, middleware.Member},
+		{dana.KeycloakID, middleware.Member},
 	} {
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h1: %w", ra.role, ra.id, err)
@@ -676,7 +714,7 @@ func seedH2(
 	ctx context.Context,
 	db *ent.Client,
 	now time.Time,
-	admin, alice, bob *ent.User,
+	admin, alice, bob, yuki *ent.User,
 	enf *middleware.Enforcer,
 ) error {
 	h, err := db.Hackathon.Create().
@@ -815,8 +853,12 @@ func seedH2(
 		return fmt.Errorf("assign CropDisease owner: %w", err)
 	}
 
-	// Participants: all three confirmed
-	for _, u := range []*ent.User{admin, alice, bob} {
+	// Participants: alice, bob and yuki, all confirmed. Not admin — he owns this
+	// one, and owning it is not taking part in it. That also retires the oddest
+	// row this fixture used to carry: a participant holding Owner and no
+	// hackathon-level Member, which is the no-inheritance trap sitting in the
+	// seed rather than being tested by it.
+	for _, u := range []*ent.User{alice, bob, yuki} {
 		if _, err := db.Participant.Create().
 			SetHackathon(h).
 			SetUser(u).
@@ -836,7 +878,7 @@ func seedH2(
 	if err != nil {
 		return fmt.Errorf("team Gamma: %w", err)
 	}
-	for _, u := range []*ent.User{bob, admin} {
+	for _, u := range []*ent.User{bob, yuki} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamGamma).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Gamma member %s: %w", u.Username, err)
 		}
@@ -865,6 +907,7 @@ func seedH2(
 		{admin.KeycloakID, middleware.Owner},
 		{alice.KeycloakID, middleware.Member},
 		{bob.KeycloakID, middleware.Member},
+		{yuki.KeycloakID, middleware.Member},
 	} {
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h2: %w", ra.role, ra.id, err)
@@ -900,7 +943,7 @@ func seedH3(
 	ctx context.Context,
 	db *ent.Client,
 	now time.Time,
-	admin, alice *ent.User,
+	admin, alice, dana *ent.User,
 	enf *middleware.Enforcer,
 ) error {
 	h, err := db.Hackathon.Create().
@@ -1041,8 +1084,11 @@ func seedH3(
 		return fmt.Errorf("assign PipelineViz owner: %w", err)
 	}
 
-	// Participants: admin + alice confirmed
-	for _, u := range []*ent.User{admin, alice} {
+	// Participants: alice + dana confirmed. admin owns this one and does not take
+	// part in it, so dana holds the second seat — which the fixture cannot do
+	// without: see Team Epsilon below, the two participants have to be two
+	// different people or the votes have nobody to come from.
+	for _, u := range []*ent.User{alice, dana} {
 		if _, err := db.Participant.Create().
 			SetHackathon(h).
 			SetUser(u).
@@ -1113,8 +1159,9 @@ func seedH3(
 	if err != nil {
 		return fmt.Errorf("team Epsilon: %w", err)
 	}
-	// admin, not alice — see Team Delta above.
-	for _, u := range []*ent.User{admin} {
+	// dana, not alice — see Team Delta above. admin created the team, as the
+	// organizer, and is on neither.
+	for _, u := range []*ent.User{dana} {
 		if _, err := db.TeamParticipant.Create().SetTeam(teamEpsilon).SetUser(u).Save(ctx); err != nil {
 			return fmt.Errorf("team Epsilon member %s: %w", u.Username, err)
 		}
@@ -1129,8 +1176,10 @@ func seedH3(
 		SetResult(pipelineResult).
 		SetTeam(teamEpsilon).
 		SetProject(projPipelineViz).
-		SetCreator(admin).
-		SetModifier(admin).
+		// dana, because she is the one on Team Epsilon — the same reason alice
+		// authors Delta's.
+		SetCreator(dana).
+		SetModifier(dana).
 		Save(ctx); err != nil {
 		return fmt.Errorf("submission Epsilon v1: %w", err)
 	}
@@ -1147,7 +1196,7 @@ func seedH3(
 		return fmt.Errorf("vote category Best Project: %w", err)
 	}
 
-	// admin votes for CLI Code Generator, alice votes for Data Pipeline
+	// dana votes for CLI Code Generator, alice votes for Data Pipeline
 	// Visualizer — each for the team they are *not* on, which is the only kind
 	// of vote SubmitVote would accept. Written through ent rather than the
 	// handler, so nothing enforces that here; keep it true by hand.
@@ -1166,14 +1215,14 @@ func seedH3(
 		return fmt.Errorf("query Epsilon submission: %w", err)
 	}
 
-	// admin → CLI Code Generator
+	// dana → CLI Code Generator
 	if _, err := db.Vote.Create().
 		SetCategory(voteCat).
-		SetVoter(admin).
+		SetVoter(dana).
 		SetSubmission(subDelta).
 		SetVoteType(entvote.VoteTypeSingleChoice).
 		Save(ctx); err != nil {
-		return fmt.Errorf("vote admin: %w", err)
+		return fmt.Errorf("vote dana: %w", err)
 	}
 	// alice → Data Pipeline Visualizer
 	if _, err := db.Vote.Create().
@@ -1185,7 +1234,7 @@ func seedH3(
 		return fmt.Errorf("vote alice: %w", err)
 	}
 
-	// Vote results: CLI Code Generator tied for 1st (1 vote from admin), Data Pipeline tied for 1st (1 vote from alice)
+	// Vote results: CLI Code Generator tied for 1st (1 vote from dana), Data Pipeline tied for 1st (1 vote from alice)
 	_, err = db.VoteResult.Create().
 		SetVoteCategoryID(voteCat.ID).
 		SetSubmission(subDelta).
@@ -1209,6 +1258,7 @@ func seedH3(
 	}{
 		{admin.KeycloakID, middleware.Owner},
 		{alice.KeycloakID, middleware.Member},
+		{dana.KeycloakID, middleware.Member},
 	} {
 		if _, err := enf.AddRole(ra.id, ra.role, h.ID.String()); err != nil {
 			return fmt.Errorf("assign role %s to %s in h3: %w", ra.role, ra.id, err)
@@ -1239,9 +1289,10 @@ func seedH3(
 // dataForGoodParticipants is how many synthetic participants seedH4 creates.
 //
 // They exist in Postgres only — there is no matching Keycloak account, so none
-// of them can log in, and that is the point: they are bulk, not actors. The
-// four dev users take part in the same hackathon so there is always somebody
-// you can actually sign in as to look at what the bulk produced.
+// of them can log in, and that is the point: they are bulk, not actors. bob and
+// charles take part in the same hackathon, and alice runs it, so there is
+// always somebody you can actually sign in as to look at what the bulk
+// produced.
 const dataForGoodParticipants = 100
 
 // dataForGoodSeed fixes the PRNG that shapes the preference distribution.
@@ -1315,9 +1366,12 @@ func pickPreferences(rng *rand.Rand, weights []int, n int) []int {
 //     being tested here.
 //   - alice owns this one and holds no participant row in it. She proposes ten
 //     of the fifteen projects as the organizer and names no preferences of her
-//     own, because she is not after a team. H1-H3 all have their owner
-//     participating as well, so this is the only fixture for an organizer who
-//     sits their own hackathon out.
+//     own, because she is not after a team. No owner takes part in the hackathon
+//     they run, here or anywhere else in this fixture.
+//   - hackagon-admin is not a participant either, in any of the four. He is the
+//     platform operator, and the global-admin escape hatch is worth exercising
+//     from outside a hackathon rather than from a member who also happens to be
+//     an admin.
 //   - `register` is off. Sign-up closed three days ago; this is the fixture
 //     where `Join` is refused because the window shut, not because the
 //     hackathon is misconfigured.
@@ -1328,7 +1382,7 @@ func seedH4(
 	ctx context.Context,
 	db *ent.Client,
 	now time.Time,
-	admin, alice, bob, charles *ent.User,
+	alice, bob, charles *ent.User,
 	enf *middleware.Enforcer,
 ) error {
 	h, err := db.Hackathon.Create().
@@ -1517,11 +1571,11 @@ func seedH4(
 		weights = append(weights, s.weight)
 	}
 
-	// Three of the four dev users, then the hundred — alice is left out on
-	// purpose, see the note on seedH4: she runs this hackathon rather than
-	// taking part in it. Everybody listed is confirmed: the waitlist case lives
-	// in H1, and a waitlisted row here would just be noise in the input to team
-	// formation.
+	// Two of the dev users, then the hundred. alice and hackagon-admin are both
+	// left out on purpose, see the note on seedH4: she runs this hackathon
+	// rather than taking part in it, and he runs the platform. Everybody listed
+	// is confirmed: the waitlist case lives in H1, and a waitlisted row here
+	// would just be noise in the input to team formation.
 	// Combined index-wise: 20 × 20 = 400 distinct pairs, so the first
 	// dataForGoodParticipants of them are unique in both display name and
 	// username.
@@ -1538,7 +1592,7 @@ func seedH4(
 		"Petrov", "Quesada", "Rossi", "Steiner", "Toldeo",
 	}
 
-	participants := []*ent.User{admin, bob, charles}
+	participants := []*ent.User{bob, charles}
 	for i := range dataForGoodParticipants {
 		first := firstNames[i%len(firstNames)]
 		last := lastNames[(i/len(firstNames))%len(lastNames)]
