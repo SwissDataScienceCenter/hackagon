@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -23,6 +25,7 @@ type PhaseCreate struct {
 	config
 	mutation *PhaseMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetStartsAt sets the "starts_at" field.
@@ -312,6 +315,7 @@ func (_c *PhaseCreate) createSpec() (*Phase, *sqlgraph.CreateSpec) {
 		_node = &Phase{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(phase.Table, sqlgraph.NewFieldSpec(phase.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -446,11 +450,358 @@ func (_c *PhaseCreate) createSpec() (*Phase, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Phase.Create().
+//		SetStartsAt(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PhaseUpsert) {
+//			SetStartsAt(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *PhaseCreate) OnConflict(opts ...sql.ConflictOption) *PhaseUpsertOne {
+	_c.conflict = opts
+	return &PhaseUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Phase.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *PhaseCreate) OnConflictColumns(columns ...string) *PhaseUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &PhaseUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// PhaseUpsertOne is the builder for "upsert"-ing
+	//  one Phase node.
+	PhaseUpsertOne struct {
+		create *PhaseCreate
+	}
+
+	// PhaseUpsert is the "OnConflict" setter.
+	PhaseUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetStartsAt sets the "starts_at" field.
+func (u *PhaseUpsert) SetStartsAt(v time.Time) *PhaseUpsert {
+	u.Set(phase.FieldStartsAt, v)
+	return u
+}
+
+// UpdateStartsAt sets the "starts_at" field to the value that was provided on create.
+func (u *PhaseUpsert) UpdateStartsAt() *PhaseUpsert {
+	u.SetExcluded(phase.FieldStartsAt)
+	return u
+}
+
+// ClearStartsAt clears the value of the "starts_at" field.
+func (u *PhaseUpsert) ClearStartsAt() *PhaseUpsert {
+	u.SetNull(phase.FieldStartsAt)
+	return u
+}
+
+// SetEndsAt sets the "ends_at" field.
+func (u *PhaseUpsert) SetEndsAt(v time.Time) *PhaseUpsert {
+	u.Set(phase.FieldEndsAt, v)
+	return u
+}
+
+// UpdateEndsAt sets the "ends_at" field to the value that was provided on create.
+func (u *PhaseUpsert) UpdateEndsAt() *PhaseUpsert {
+	u.SetExcluded(phase.FieldEndsAt)
+	return u
+}
+
+// ClearEndsAt clears the value of the "ends_at" field.
+func (u *PhaseUpsert) ClearEndsAt() *PhaseUpsert {
+	u.SetNull(phase.FieldEndsAt)
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *PhaseUpsert) SetName(v string) *PhaseUpsert {
+	u.Set(phase.FieldName, v)
+	return u
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *PhaseUpsert) UpdateName() *PhaseUpsert {
+	u.SetExcluded(phase.FieldName)
+	return u
+}
+
+// SetDescription sets the "description" field.
+func (u *PhaseUpsert) SetDescription(v string) *PhaseUpsert {
+	u.Set(phase.FieldDescription, v)
+	return u
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *PhaseUpsert) UpdateDescription() *PhaseUpsert {
+	u.SetExcluded(phase.FieldDescription)
+	return u
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *PhaseUpsert) ClearDescription() *PhaseUpsert {
+	u.SetNull(phase.FieldDescription)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *PhaseUpsert) SetModifiedAt(v time.Time) *PhaseUpsert {
+	u.Set(phase.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *PhaseUpsert) UpdateModifiedAt() *PhaseUpsert {
+	u.SetExcluded(phase.FieldModifiedAt)
+	return u
+}
+
+// SetCapabilities sets the "capabilities" field.
+func (u *PhaseUpsert) SetCapabilities(v []string) *PhaseUpsert {
+	u.Set(phase.FieldCapabilities, v)
+	return u
+}
+
+// UpdateCapabilities sets the "capabilities" field to the value that was provided on create.
+func (u *PhaseUpsert) UpdateCapabilities() *PhaseUpsert {
+	u.SetExcluded(phase.FieldCapabilities)
+	return u
+}
+
+// ClearCapabilities clears the value of the "capabilities" field.
+func (u *PhaseUpsert) ClearCapabilities() *PhaseUpsert {
+	u.SetNull(phase.FieldCapabilities)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Phase.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(phase.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *PhaseUpsertOne) UpdateNewValues() *PhaseUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(phase.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(phase.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Phase.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *PhaseUpsertOne) Ignore() *PhaseUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PhaseUpsertOne) DoNothing() *PhaseUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PhaseCreate.OnConflict
+// documentation for more info.
+func (u *PhaseUpsertOne) Update(set func(*PhaseUpsert)) *PhaseUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PhaseUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetStartsAt sets the "starts_at" field.
+func (u *PhaseUpsertOne) SetStartsAt(v time.Time) *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetStartsAt(v)
+	})
+}
+
+// UpdateStartsAt sets the "starts_at" field to the value that was provided on create.
+func (u *PhaseUpsertOne) UpdateStartsAt() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateStartsAt()
+	})
+}
+
+// ClearStartsAt clears the value of the "starts_at" field.
+func (u *PhaseUpsertOne) ClearStartsAt() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearStartsAt()
+	})
+}
+
+// SetEndsAt sets the "ends_at" field.
+func (u *PhaseUpsertOne) SetEndsAt(v time.Time) *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetEndsAt(v)
+	})
+}
+
+// UpdateEndsAt sets the "ends_at" field to the value that was provided on create.
+func (u *PhaseUpsertOne) UpdateEndsAt() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateEndsAt()
+	})
+}
+
+// ClearEndsAt clears the value of the "ends_at" field.
+func (u *PhaseUpsertOne) ClearEndsAt() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearEndsAt()
+	})
+}
+
+// SetName sets the "name" field.
+func (u *PhaseUpsertOne) SetName(v string) *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *PhaseUpsertOne) UpdateName() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *PhaseUpsertOne) SetDescription(v string) *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *PhaseUpsertOne) UpdateDescription() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *PhaseUpsertOne) ClearDescription() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearDescription()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *PhaseUpsertOne) SetModifiedAt(v time.Time) *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *PhaseUpsertOne) UpdateModifiedAt() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// SetCapabilities sets the "capabilities" field.
+func (u *PhaseUpsertOne) SetCapabilities(v []string) *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetCapabilities(v)
+	})
+}
+
+// UpdateCapabilities sets the "capabilities" field to the value that was provided on create.
+func (u *PhaseUpsertOne) UpdateCapabilities() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateCapabilities()
+	})
+}
+
+// ClearCapabilities clears the value of the "capabilities" field.
+func (u *PhaseUpsertOne) ClearCapabilities() *PhaseUpsertOne {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearCapabilities()
+	})
+}
+
+// Exec executes the query.
+func (u *PhaseUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PhaseCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PhaseUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *PhaseUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: PhaseUpsertOne.ID is not supported by MySQL driver. Use PhaseUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *PhaseUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // PhaseCreateBulk is the builder for creating many Phase entities in bulk.
 type PhaseCreateBulk struct {
 	config
 	err      error
 	builders []*PhaseCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Phase entities in the database.
@@ -480,6 +831,7 @@ func (_c *PhaseCreateBulk) Save(ctx context.Context) ([]*Phase, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -526,6 +878,235 @@ func (_c *PhaseCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *PhaseCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Phase.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PhaseUpsert) {
+//			SetStartsAt(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *PhaseCreateBulk) OnConflict(opts ...sql.ConflictOption) *PhaseUpsertBulk {
+	_c.conflict = opts
+	return &PhaseUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Phase.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *PhaseCreateBulk) OnConflictColumns(columns ...string) *PhaseUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &PhaseUpsertBulk{
+		create: _c,
+	}
+}
+
+// PhaseUpsertBulk is the builder for "upsert"-ing
+// a bulk of Phase nodes.
+type PhaseUpsertBulk struct {
+	create *PhaseCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Phase.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(phase.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *PhaseUpsertBulk) UpdateNewValues() *PhaseUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(phase.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(phase.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Phase.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *PhaseUpsertBulk) Ignore() *PhaseUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PhaseUpsertBulk) DoNothing() *PhaseUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PhaseCreateBulk.OnConflict
+// documentation for more info.
+func (u *PhaseUpsertBulk) Update(set func(*PhaseUpsert)) *PhaseUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PhaseUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetStartsAt sets the "starts_at" field.
+func (u *PhaseUpsertBulk) SetStartsAt(v time.Time) *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetStartsAt(v)
+	})
+}
+
+// UpdateStartsAt sets the "starts_at" field to the value that was provided on create.
+func (u *PhaseUpsertBulk) UpdateStartsAt() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateStartsAt()
+	})
+}
+
+// ClearStartsAt clears the value of the "starts_at" field.
+func (u *PhaseUpsertBulk) ClearStartsAt() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearStartsAt()
+	})
+}
+
+// SetEndsAt sets the "ends_at" field.
+func (u *PhaseUpsertBulk) SetEndsAt(v time.Time) *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetEndsAt(v)
+	})
+}
+
+// UpdateEndsAt sets the "ends_at" field to the value that was provided on create.
+func (u *PhaseUpsertBulk) UpdateEndsAt() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateEndsAt()
+	})
+}
+
+// ClearEndsAt clears the value of the "ends_at" field.
+func (u *PhaseUpsertBulk) ClearEndsAt() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearEndsAt()
+	})
+}
+
+// SetName sets the "name" field.
+func (u *PhaseUpsertBulk) SetName(v string) *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *PhaseUpsertBulk) UpdateName() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *PhaseUpsertBulk) SetDescription(v string) *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *PhaseUpsertBulk) UpdateDescription() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// ClearDescription clears the value of the "description" field.
+func (u *PhaseUpsertBulk) ClearDescription() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearDescription()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *PhaseUpsertBulk) SetModifiedAt(v time.Time) *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *PhaseUpsertBulk) UpdateModifiedAt() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// SetCapabilities sets the "capabilities" field.
+func (u *PhaseUpsertBulk) SetCapabilities(v []string) *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.SetCapabilities(v)
+	})
+}
+
+// UpdateCapabilities sets the "capabilities" field to the value that was provided on create.
+func (u *PhaseUpsertBulk) UpdateCapabilities() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.UpdateCapabilities()
+	})
+}
+
+// ClearCapabilities clears the value of the "capabilities" field.
+func (u *PhaseUpsertBulk) ClearCapabilities() *PhaseUpsertBulk {
+	return u.Update(func(s *PhaseUpsert) {
+		s.ClearCapabilities()
+	})
+}
+
+// Exec executes the query.
+func (u *PhaseUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the PhaseCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PhaseCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PhaseUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

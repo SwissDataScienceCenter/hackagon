@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ type VoteCreate struct {
 	config
 	mutation *VoteMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetVoteType sets the "vote_type" field.
@@ -241,6 +244,7 @@ func (_c *VoteCreate) createSpec() (*Vote, *sqlgraph.CreateSpec) {
 		_node = &Vote{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(vote.Table, sqlgraph.NewFieldSpec(vote.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -315,11 +319,254 @@ func (_c *VoteCreate) createSpec() (*Vote, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Vote.Create().
+//		SetVoteType(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.VoteUpsert) {
+//			SetVoteType(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *VoteCreate) OnConflict(opts ...sql.ConflictOption) *VoteUpsertOne {
+	_c.conflict = opts
+	return &VoteUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Vote.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *VoteCreate) OnConflictColumns(columns ...string) *VoteUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &VoteUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// VoteUpsertOne is the builder for "upsert"-ing
+	//  one Vote node.
+	VoteUpsertOne struct {
+		create *VoteCreate
+	}
+
+	// VoteUpsert is the "OnConflict" setter.
+	VoteUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetVoteType sets the "vote_type" field.
+func (u *VoteUpsert) SetVoteType(v vote.VoteType) *VoteUpsert {
+	u.Set(vote.FieldVoteType, v)
+	return u
+}
+
+// UpdateVoteType sets the "vote_type" field to the value that was provided on create.
+func (u *VoteUpsert) UpdateVoteType() *VoteUpsert {
+	u.SetExcluded(vote.FieldVoteType)
+	return u
+}
+
+// SetValue sets the "value" field.
+func (u *VoteUpsert) SetValue(v int) *VoteUpsert {
+	u.Set(vote.FieldValue, v)
+	return u
+}
+
+// UpdateValue sets the "value" field to the value that was provided on create.
+func (u *VoteUpsert) UpdateValue() *VoteUpsert {
+	u.SetExcluded(vote.FieldValue)
+	return u
+}
+
+// AddValue adds v to the "value" field.
+func (u *VoteUpsert) AddValue(v int) *VoteUpsert {
+	u.Add(vote.FieldValue, v)
+	return u
+}
+
+// ClearValue clears the value of the "value" field.
+func (u *VoteUpsert) ClearValue() *VoteUpsert {
+	u.SetNull(vote.FieldValue)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *VoteUpsert) SetModifiedAt(v time.Time) *VoteUpsert {
+	u.Set(vote.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *VoteUpsert) UpdateModifiedAt() *VoteUpsert {
+	u.SetExcluded(vote.FieldModifiedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Vote.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(vote.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *VoteUpsertOne) UpdateNewValues() *VoteUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(vote.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(vote.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Vote.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *VoteUpsertOne) Ignore() *VoteUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *VoteUpsertOne) DoNothing() *VoteUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the VoteCreate.OnConflict
+// documentation for more info.
+func (u *VoteUpsertOne) Update(set func(*VoteUpsert)) *VoteUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&VoteUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetVoteType sets the "vote_type" field.
+func (u *VoteUpsertOne) SetVoteType(v vote.VoteType) *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.SetVoteType(v)
+	})
+}
+
+// UpdateVoteType sets the "vote_type" field to the value that was provided on create.
+func (u *VoteUpsertOne) UpdateVoteType() *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.UpdateVoteType()
+	})
+}
+
+// SetValue sets the "value" field.
+func (u *VoteUpsertOne) SetValue(v int) *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.SetValue(v)
+	})
+}
+
+// AddValue adds v to the "value" field.
+func (u *VoteUpsertOne) AddValue(v int) *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.AddValue(v)
+	})
+}
+
+// UpdateValue sets the "value" field to the value that was provided on create.
+func (u *VoteUpsertOne) UpdateValue() *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.UpdateValue()
+	})
+}
+
+// ClearValue clears the value of the "value" field.
+func (u *VoteUpsertOne) ClearValue() *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.ClearValue()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *VoteUpsertOne) SetModifiedAt(v time.Time) *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *VoteUpsertOne) UpdateModifiedAt() *VoteUpsertOne {
+	return u.Update(func(s *VoteUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *VoteUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for VoteCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *VoteUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *VoteUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: VoteUpsertOne.ID is not supported by MySQL driver. Use VoteUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *VoteUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // VoteCreateBulk is the builder for creating many Vote entities in bulk.
 type VoteCreateBulk struct {
 	config
 	err      error
 	builders []*VoteCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Vote entities in the database.
@@ -349,6 +596,7 @@ func (_c *VoteCreateBulk) Save(ctx context.Context) ([]*Vote, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -395,6 +643,179 @@ func (_c *VoteCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *VoteCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Vote.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.VoteUpsert) {
+//			SetVoteType(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *VoteCreateBulk) OnConflict(opts ...sql.ConflictOption) *VoteUpsertBulk {
+	_c.conflict = opts
+	return &VoteUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Vote.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *VoteCreateBulk) OnConflictColumns(columns ...string) *VoteUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &VoteUpsertBulk{
+		create: _c,
+	}
+}
+
+// VoteUpsertBulk is the builder for "upsert"-ing
+// a bulk of Vote nodes.
+type VoteUpsertBulk struct {
+	create *VoteCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Vote.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(vote.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *VoteUpsertBulk) UpdateNewValues() *VoteUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(vote.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(vote.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Vote.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *VoteUpsertBulk) Ignore() *VoteUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *VoteUpsertBulk) DoNothing() *VoteUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the VoteCreateBulk.OnConflict
+// documentation for more info.
+func (u *VoteUpsertBulk) Update(set func(*VoteUpsert)) *VoteUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&VoteUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetVoteType sets the "vote_type" field.
+func (u *VoteUpsertBulk) SetVoteType(v vote.VoteType) *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.SetVoteType(v)
+	})
+}
+
+// UpdateVoteType sets the "vote_type" field to the value that was provided on create.
+func (u *VoteUpsertBulk) UpdateVoteType() *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.UpdateVoteType()
+	})
+}
+
+// SetValue sets the "value" field.
+func (u *VoteUpsertBulk) SetValue(v int) *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.SetValue(v)
+	})
+}
+
+// AddValue adds v to the "value" field.
+func (u *VoteUpsertBulk) AddValue(v int) *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.AddValue(v)
+	})
+}
+
+// UpdateValue sets the "value" field to the value that was provided on create.
+func (u *VoteUpsertBulk) UpdateValue() *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.UpdateValue()
+	})
+}
+
+// ClearValue clears the value of the "value" field.
+func (u *VoteUpsertBulk) ClearValue() *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.ClearValue()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *VoteUpsertBulk) SetModifiedAt(v time.Time) *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *VoteUpsertBulk) UpdateModifiedAt() *VoteUpsertBulk {
+	return u.Update(func(s *VoteUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *VoteUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the VoteCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for VoteCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *VoteUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

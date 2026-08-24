@@ -20,6 +20,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
@@ -39,6 +40,7 @@ type HackathonQuery struct {
 	withPhases             *PhaseQuery
 	withState              *HackathonStateQuery
 	withVoteCategories     *VoteCategoryQuery
+	withQuestions          *QuestionQuery
 	withOwners             *UserQuery
 	withCreator            *UserQuery
 	withModifier           *UserQuery
@@ -227,6 +229,28 @@ func (_q *HackathonQuery) QueryVoteCategories() *VoteCategoryQuery {
 			sqlgraph.From(hackathon.Table, hackathon.FieldID, selector),
 			sqlgraph.To(votecategory.Table, votecategory.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, hackathon.VoteCategoriesTable, hackathon.VoteCategoriesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryQuestions chains the current query on the "questions" edge.
+func (_q *HackathonQuery) QueryQuestions() *QuestionQuery {
+	query := (&QuestionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hackathon.Table, hackathon.FieldID, selector),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, hackathon.QuestionsTable, hackathon.QuestionsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -521,6 +545,7 @@ func (_q *HackathonQuery) Clone() *HackathonQuery {
 		withPhases:             _q.withPhases.Clone(),
 		withState:              _q.withState.Clone(),
 		withVoteCategories:     _q.withVoteCategories.Clone(),
+		withQuestions:          _q.withQuestions.Clone(),
 		withOwners:             _q.withOwners.Clone(),
 		withCreator:            _q.withCreator.Clone(),
 		withModifier:           _q.withModifier.Clone(),
@@ -605,6 +630,17 @@ func (_q *HackathonQuery) WithVoteCategories(opts ...func(*VoteCategoryQuery)) *
 		opt(query)
 	}
 	_q.withVoteCategories = query
+	return _q
+}
+
+// WithQuestions tells the query-builder to eager-load the nodes that are connected to
+// the "questions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HackathonQuery) WithQuestions(opts ...func(*QuestionQuery)) *HackathonQuery {
+	query := (&QuestionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withQuestions = query
 	return _q
 }
 
@@ -731,7 +767,7 @@ func (_q *HackathonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ha
 		nodes       = []*Hackathon{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [11]bool{
+		loadedTypes = [12]bool{
 			_q.withTracks != nil,
 			_q.withProjects != nil,
 			_q.withParticipatingUsers != nil,
@@ -739,6 +775,7 @@ func (_q *HackathonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ha
 			_q.withPhases != nil,
 			_q.withState != nil,
 			_q.withVoteCategories != nil,
+			_q.withQuestions != nil,
 			_q.withOwners != nil,
 			_q.withCreator != nil,
 			_q.withModifier != nil,
@@ -814,6 +851,13 @@ func (_q *HackathonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Ha
 		if err := _q.loadVoteCategories(ctx, query, nodes,
 			func(n *Hackathon) { n.Edges.VoteCategories = []*VoteCategory{} },
 			func(n *Hackathon, e *VoteCategory) { n.Edges.VoteCategories = append(n.Edges.VoteCategories, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withQuestions; query != nil {
+		if err := _q.loadQuestions(ctx, query, nodes,
+			func(n *Hackathon) { n.Edges.Questions = []*Question{} },
+			func(n *Hackathon, e *Question) { n.Edges.Questions = append(n.Edges.Questions, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -1085,6 +1129,37 @@ func (_q *HackathonQuery) loadVoteCategories(ctx context.Context, query *VoteCat
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "hackathon_vote_categories" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *HackathonQuery) loadQuestions(ctx context.Context, query *QuestionQuery, nodes []*Hackathon, init func(*Hackathon), assign func(*Hackathon, *Question)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Hackathon)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(question.FieldHackathonID)
+	}
+	query.Where(predicate.Question(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(hackathon.QuestionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.HackathonID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "hackathon_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

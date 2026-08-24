@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ type PageCreate struct {
 	config
 	mutation *PageMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetTitle sets the "title" field.
@@ -268,6 +271,7 @@ func (_c *PageCreate) createSpec() (*Page, *sqlgraph.CreateSpec) {
 		_node = &Page{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(page.Table, sqlgraph.NewFieldSpec(page.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -367,11 +371,293 @@ func (_c *PageCreate) createSpec() (*Page, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Page.Create().
+//		SetTitle(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PageUpsert) {
+//			SetTitle(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *PageCreate) OnConflict(opts ...sql.ConflictOption) *PageUpsertOne {
+	_c.conflict = opts
+	return &PageUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Page.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *PageCreate) OnConflictColumns(columns ...string) *PageUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &PageUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// PageUpsertOne is the builder for "upsert"-ing
+	//  one Page node.
+	PageUpsertOne struct {
+		create *PageCreate
+	}
+
+	// PageUpsert is the "OnConflict" setter.
+	PageUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetTitle sets the "title" field.
+func (u *PageUpsert) SetTitle(v string) *PageUpsert {
+	u.Set(page.FieldTitle, v)
+	return u
+}
+
+// UpdateTitle sets the "title" field to the value that was provided on create.
+func (u *PageUpsert) UpdateTitle() *PageUpsert {
+	u.SetExcluded(page.FieldTitle)
+	return u
+}
+
+// SetContent sets the "content" field.
+func (u *PageUpsert) SetContent(v string) *PageUpsert {
+	u.Set(page.FieldContent, v)
+	return u
+}
+
+// UpdateContent sets the "content" field to the value that was provided on create.
+func (u *PageUpsert) UpdateContent() *PageUpsert {
+	u.SetExcluded(page.FieldContent)
+	return u
+}
+
+// SetVisible sets the "visible" field.
+func (u *PageUpsert) SetVisible(v bool) *PageUpsert {
+	u.Set(page.FieldVisible, v)
+	return u
+}
+
+// UpdateVisible sets the "visible" field to the value that was provided on create.
+func (u *PageUpsert) UpdateVisible() *PageUpsert {
+	u.SetExcluded(page.FieldVisible)
+	return u
+}
+
+// SetOrder sets the "order" field.
+func (u *PageUpsert) SetOrder(v int) *PageUpsert {
+	u.Set(page.FieldOrder, v)
+	return u
+}
+
+// UpdateOrder sets the "order" field to the value that was provided on create.
+func (u *PageUpsert) UpdateOrder() *PageUpsert {
+	u.SetExcluded(page.FieldOrder)
+	return u
+}
+
+// AddOrder adds v to the "order" field.
+func (u *PageUpsert) AddOrder(v int) *PageUpsert {
+	u.Add(page.FieldOrder, v)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *PageUpsert) SetModifiedAt(v time.Time) *PageUpsert {
+	u.Set(page.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *PageUpsert) UpdateModifiedAt() *PageUpsert {
+	u.SetExcluded(page.FieldModifiedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Page.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(page.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *PageUpsertOne) UpdateNewValues() *PageUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(page.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(page.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Page.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *PageUpsertOne) Ignore() *PageUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PageUpsertOne) DoNothing() *PageUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PageCreate.OnConflict
+// documentation for more info.
+func (u *PageUpsertOne) Update(set func(*PageUpsert)) *PageUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PageUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetTitle sets the "title" field.
+func (u *PageUpsertOne) SetTitle(v string) *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.SetTitle(v)
+	})
+}
+
+// UpdateTitle sets the "title" field to the value that was provided on create.
+func (u *PageUpsertOne) UpdateTitle() *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateTitle()
+	})
+}
+
+// SetContent sets the "content" field.
+func (u *PageUpsertOne) SetContent(v string) *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.SetContent(v)
+	})
+}
+
+// UpdateContent sets the "content" field to the value that was provided on create.
+func (u *PageUpsertOne) UpdateContent() *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateContent()
+	})
+}
+
+// SetVisible sets the "visible" field.
+func (u *PageUpsertOne) SetVisible(v bool) *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.SetVisible(v)
+	})
+}
+
+// UpdateVisible sets the "visible" field to the value that was provided on create.
+func (u *PageUpsertOne) UpdateVisible() *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateVisible()
+	})
+}
+
+// SetOrder sets the "order" field.
+func (u *PageUpsertOne) SetOrder(v int) *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.SetOrder(v)
+	})
+}
+
+// AddOrder adds v to the "order" field.
+func (u *PageUpsertOne) AddOrder(v int) *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.AddOrder(v)
+	})
+}
+
+// UpdateOrder sets the "order" field to the value that was provided on create.
+func (u *PageUpsertOne) UpdateOrder() *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateOrder()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *PageUpsertOne) SetModifiedAt(v time.Time) *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *PageUpsertOne) UpdateModifiedAt() *PageUpsertOne {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *PageUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PageCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PageUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *PageUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: PageUpsertOne.ID is not supported by MySQL driver. Use PageUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *PageUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // PageCreateBulk is the builder for creating many Page entities in bulk.
 type PageCreateBulk struct {
 	config
 	err      error
 	builders []*PageCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Page entities in the database.
@@ -401,6 +687,7 @@ func (_c *PageCreateBulk) Save(ctx context.Context) ([]*Page, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -447,6 +734,200 @@ func (_c *PageCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *PageCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Page.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.PageUpsert) {
+//			SetTitle(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *PageCreateBulk) OnConflict(opts ...sql.ConflictOption) *PageUpsertBulk {
+	_c.conflict = opts
+	return &PageUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Page.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *PageCreateBulk) OnConflictColumns(columns ...string) *PageUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &PageUpsertBulk{
+		create: _c,
+	}
+}
+
+// PageUpsertBulk is the builder for "upsert"-ing
+// a bulk of Page nodes.
+type PageUpsertBulk struct {
+	create *PageCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Page.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(page.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *PageUpsertBulk) UpdateNewValues() *PageUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(page.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(page.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Page.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *PageUpsertBulk) Ignore() *PageUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *PageUpsertBulk) DoNothing() *PageUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the PageCreateBulk.OnConflict
+// documentation for more info.
+func (u *PageUpsertBulk) Update(set func(*PageUpsert)) *PageUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&PageUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetTitle sets the "title" field.
+func (u *PageUpsertBulk) SetTitle(v string) *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.SetTitle(v)
+	})
+}
+
+// UpdateTitle sets the "title" field to the value that was provided on create.
+func (u *PageUpsertBulk) UpdateTitle() *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateTitle()
+	})
+}
+
+// SetContent sets the "content" field.
+func (u *PageUpsertBulk) SetContent(v string) *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.SetContent(v)
+	})
+}
+
+// UpdateContent sets the "content" field to the value that was provided on create.
+func (u *PageUpsertBulk) UpdateContent() *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateContent()
+	})
+}
+
+// SetVisible sets the "visible" field.
+func (u *PageUpsertBulk) SetVisible(v bool) *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.SetVisible(v)
+	})
+}
+
+// UpdateVisible sets the "visible" field to the value that was provided on create.
+func (u *PageUpsertBulk) UpdateVisible() *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateVisible()
+	})
+}
+
+// SetOrder sets the "order" field.
+func (u *PageUpsertBulk) SetOrder(v int) *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.SetOrder(v)
+	})
+}
+
+// AddOrder adds v to the "order" field.
+func (u *PageUpsertBulk) AddOrder(v int) *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.AddOrder(v)
+	})
+}
+
+// UpdateOrder sets the "order" field to the value that was provided on create.
+func (u *PageUpsertBulk) UpdateOrder() *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateOrder()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *PageUpsertBulk) SetModifiedAt(v time.Time) *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *PageUpsertBulk) UpdateModifiedAt() *PageUpsertBulk {
+	return u.Update(func(s *PageUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *PageUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the PageCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for PageCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *PageUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

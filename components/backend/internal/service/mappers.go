@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	entvote "github.com/swissdatasciencecenter/hackagon/components/backend/ent/vote"
 	entvotecategory "github.com/swissdatasciencecenter/hackagon/components/backend/ent/votecategory"
 	hackEnts "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities"
@@ -486,4 +487,67 @@ func voteResultEntryFromEnt(r *ent.VoteResult) *voteEnts.VoteResult {
 		entry.Title = &r.Title
 	}
 	return entry
+}
+
+func questionTypeToEnt(t hackEnts.QuestionType) (entquestion.DataType, bool) {
+	switch t {
+	case hackEnts.QuestionType_QUESTION_TYPE_UNSPECIFIED:
+		return "", false
+	case hackEnts.QuestionType_QUESTION_TYPE_TEXT:
+		return entquestion.DataTypeText, true
+	case hackEnts.QuestionType_QUESTION_TYPE_BOOL:
+		return entquestion.DataTypeBool, true
+	case hackEnts.QuestionType_QUESTION_TYPE_ENUM:
+		return entquestion.DataTypeEnum, true
+	default:
+		return "", false
+	}
+}
+
+func questionTypeFromEnt(t entquestion.DataType) hackEnts.QuestionType {
+	switch t {
+	case entquestion.DataTypeText:
+		return hackEnts.QuestionType_QUESTION_TYPE_TEXT
+	case entquestion.DataTypeBool:
+		return hackEnts.QuestionType_QUESTION_TYPE_BOOL
+	case entquestion.DataTypeEnum:
+		return hackEnts.QuestionType_QUESTION_TYPE_ENUM
+	default:
+		return hackEnts.QuestionType_QUESTION_TYPE_UNSPECIFIED
+	}
+}
+
+func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
+	return &hackEnts.Question{
+		Id:        q.ID.String(),
+		Key:       q.Key,
+		Label:     q.Label,
+		Type:      questionTypeFromEnt(q.DataType),
+		Mandatory: q.Mandatory,
+		Order:     int32(q.Order),
+		Options:   q.Options,
+	}
+}
+
+func answerEntryFromEnt(a *ent.Answer) *hackEnts.Answer {
+	return &hackEnts.Answer{
+		QuestionId:    a.QuestionID.String(),
+		ParticipantId: a.UserID.String(),
+		Value:         &hackEnts.Answer_TextValue{TextValue: a.Value},
+	}
+}
+
+// protoAnswerValueToDB extracts the string representation from a proto Answer.
+func protoAnswerValueToDB(a *hackEnts.Answer) string {
+	switch v := a.GetValue().(type) {
+	case *hackEnts.Answer_BoolValue:
+		if v.BoolValue {
+			return "true"
+		}
+		return "false"
+	case *hackEnts.Answer_TextValue:
+		return v.TextValue
+	default:
+		return ""
+	}
 }

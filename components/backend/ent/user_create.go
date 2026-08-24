@@ -8,14 +8,18 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
@@ -29,6 +33,7 @@ type UserCreate struct {
 	config
 	mutation *UserMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetUsername sets the "username" field.
@@ -353,6 +358,51 @@ func (_c *UserCreate) AddModifiedTracks(v ...*Track) *UserCreate {
 	return _c.AddModifiedTrackIDs(ids...)
 }
 
+// AddCreatedQuestionIDs adds the "created_questions" edge to the Question entity by IDs.
+func (_c *UserCreate) AddCreatedQuestionIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddCreatedQuestionIDs(ids...)
+	return _c
+}
+
+// AddCreatedQuestions adds the "created_questions" edges to the Question entity.
+func (_c *UserCreate) AddCreatedQuestions(v ...*Question) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedQuestionIDs(ids...)
+}
+
+// AddModifiedQuestionIDs adds the "modified_questions" edge to the Question entity by IDs.
+func (_c *UserCreate) AddModifiedQuestionIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddModifiedQuestionIDs(ids...)
+	return _c
+}
+
+// AddModifiedQuestions adds the "modified_questions" edges to the Question entity.
+func (_c *UserCreate) AddModifiedQuestions(v ...*Question) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddModifiedQuestionIDs(ids...)
+}
+
+// AddRegistrationAnswerIDs adds the "registration_answers" edge to the Answer entity by IDs.
+func (_c *UserCreate) AddRegistrationAnswerIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddRegistrationAnswerIDs(ids...)
+	return _c
+}
+
+// AddRegistrationAnswers adds the "registration_answers" edges to the Answer entity.
+func (_c *UserCreate) AddRegistrationAnswers(v ...*Answer) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRegistrationAnswerIDs(ids...)
+}
+
 // AddModifiedStateIDs adds the "modified_states" edge to the HackathonState entity by IDs.
 func (_c *UserCreate) AddModifiedStateIDs(ids ...uuid.UUID) *UserCreate {
 	_c.mutation.AddModifiedStateIDs(ids...)
@@ -535,6 +585,7 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_node = &User{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(user.Table, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -827,6 +878,54 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := _c.mutation.CreatedQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedQuestionsTable,
+			Columns: []string{user.CreatedQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ModifiedQuestionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ModifiedQuestionsTable,
+			Columns: []string{user.ModifiedQuestionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(question.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RegistrationAnswersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.RegistrationAnswersTable,
+			Columns: []string{user.RegistrationAnswersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(answer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	if nodes := _c.mutation.ModifiedStatesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -910,11 +1009,306 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.User.Create().
+//		SetUsername(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.UserUpsert) {
+//			SetUsername(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *UserCreate) OnConflict(opts ...sql.ConflictOption) *UserUpsertOne {
+	_c.conflict = opts
+	return &UserUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.User.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *UserCreate) OnConflictColumns(columns ...string) *UserUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &UserUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// UserUpsertOne is the builder for "upsert"-ing
+	//  one User node.
+	UserUpsertOne struct {
+		create *UserCreate
+	}
+
+	// UserUpsert is the "OnConflict" setter.
+	UserUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetUsername sets the "username" field.
+func (u *UserUpsert) SetUsername(v string) *UserUpsert {
+	u.Set(user.FieldUsername, v)
+	return u
+}
+
+// UpdateUsername sets the "username" field to the value that was provided on create.
+func (u *UserUpsert) UpdateUsername() *UserUpsert {
+	u.SetExcluded(user.FieldUsername)
+	return u
+}
+
+// SetKeycloakID sets the "keycloak_id" field.
+func (u *UserUpsert) SetKeycloakID(v string) *UserUpsert {
+	u.Set(user.FieldKeycloakID, v)
+	return u
+}
+
+// UpdateKeycloakID sets the "keycloak_id" field to the value that was provided on create.
+func (u *UserUpsert) UpdateKeycloakID() *UserUpsert {
+	u.SetExcluded(user.FieldKeycloakID)
+	return u
+}
+
+// SetDisplayName sets the "display_name" field.
+func (u *UserUpsert) SetDisplayName(v string) *UserUpsert {
+	u.Set(user.FieldDisplayName, v)
+	return u
+}
+
+// UpdateDisplayName sets the "display_name" field to the value that was provided on create.
+func (u *UserUpsert) UpdateDisplayName() *UserUpsert {
+	u.SetExcluded(user.FieldDisplayName)
+	return u
+}
+
+// ClearDisplayName clears the value of the "display_name" field.
+func (u *UserUpsert) ClearDisplayName() *UserUpsert {
+	u.SetNull(user.FieldDisplayName)
+	return u
+}
+
+// SetEmail sets the "email" field.
+func (u *UserUpsert) SetEmail(v string) *UserUpsert {
+	u.Set(user.FieldEmail, v)
+	return u
+}
+
+// UpdateEmail sets the "email" field to the value that was provided on create.
+func (u *UserUpsert) UpdateEmail() *UserUpsert {
+	u.SetExcluded(user.FieldEmail)
+	return u
+}
+
+// ClearEmail clears the value of the "email" field.
+func (u *UserUpsert) ClearEmail() *UserUpsert {
+	u.SetNull(user.FieldEmail)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *UserUpsert) SetModifiedAt(v time.Time) *UserUpsert {
+	u.Set(user.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *UserUpsert) UpdateModifiedAt() *UserUpsert {
+	u.SetExcluded(user.FieldModifiedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.User.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(user.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *UserUpsertOne) UpdateNewValues() *UserUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(user.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(user.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.User.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *UserUpsertOne) Ignore() *UserUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *UserUpsertOne) DoNothing() *UserUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the UserCreate.OnConflict
+// documentation for more info.
+func (u *UserUpsertOne) Update(set func(*UserUpsert)) *UserUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&UserUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUsername sets the "username" field.
+func (u *UserUpsertOne) SetUsername(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetUsername(v)
+	})
+}
+
+// UpdateUsername sets the "username" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateUsername() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateUsername()
+	})
+}
+
+// SetKeycloakID sets the "keycloak_id" field.
+func (u *UserUpsertOne) SetKeycloakID(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetKeycloakID(v)
+	})
+}
+
+// UpdateKeycloakID sets the "keycloak_id" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateKeycloakID() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateKeycloakID()
+	})
+}
+
+// SetDisplayName sets the "display_name" field.
+func (u *UserUpsertOne) SetDisplayName(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetDisplayName(v)
+	})
+}
+
+// UpdateDisplayName sets the "display_name" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateDisplayName() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateDisplayName()
+	})
+}
+
+// ClearDisplayName clears the value of the "display_name" field.
+func (u *UserUpsertOne) ClearDisplayName() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearDisplayName()
+	})
+}
+
+// SetEmail sets the "email" field.
+func (u *UserUpsertOne) SetEmail(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetEmail(v)
+	})
+}
+
+// UpdateEmail sets the "email" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateEmail() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateEmail()
+	})
+}
+
+// ClearEmail clears the value of the "email" field.
+func (u *UserUpsertOne) ClearEmail() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearEmail()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *UserUpsertOne) SetModifiedAt(v time.Time) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateModifiedAt() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *UserUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for UserCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *UserUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *UserUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: UserUpsertOne.ID is not supported by MySQL driver. Use UserUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *UserUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // UserCreateBulk is the builder for creating many User entities in bulk.
 type UserCreateBulk struct {
 	config
 	err      error
 	builders []*UserCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the User entities in the database.
@@ -944,6 +1338,7 @@ func (_c *UserCreateBulk) Save(ctx context.Context) ([]*User, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -990,6 +1385,207 @@ func (_c *UserCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *UserCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.User.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.UserUpsert) {
+//			SetUsername(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *UserCreateBulk) OnConflict(opts ...sql.ConflictOption) *UserUpsertBulk {
+	_c.conflict = opts
+	return &UserUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.User.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *UserCreateBulk) OnConflictColumns(columns ...string) *UserUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &UserUpsertBulk{
+		create: _c,
+	}
+}
+
+// UserUpsertBulk is the builder for "upsert"-ing
+// a bulk of User nodes.
+type UserUpsertBulk struct {
+	create *UserCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.User.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(user.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *UserUpsertBulk) UpdateNewValues() *UserUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(user.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(user.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.User.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *UserUpsertBulk) Ignore() *UserUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *UserUpsertBulk) DoNothing() *UserUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the UserCreateBulk.OnConflict
+// documentation for more info.
+func (u *UserUpsertBulk) Update(set func(*UserUpsert)) *UserUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&UserUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetUsername sets the "username" field.
+func (u *UserUpsertBulk) SetUsername(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetUsername(v)
+	})
+}
+
+// UpdateUsername sets the "username" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateUsername() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateUsername()
+	})
+}
+
+// SetKeycloakID sets the "keycloak_id" field.
+func (u *UserUpsertBulk) SetKeycloakID(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetKeycloakID(v)
+	})
+}
+
+// UpdateKeycloakID sets the "keycloak_id" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateKeycloakID() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateKeycloakID()
+	})
+}
+
+// SetDisplayName sets the "display_name" field.
+func (u *UserUpsertBulk) SetDisplayName(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetDisplayName(v)
+	})
+}
+
+// UpdateDisplayName sets the "display_name" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateDisplayName() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateDisplayName()
+	})
+}
+
+// ClearDisplayName clears the value of the "display_name" field.
+func (u *UserUpsertBulk) ClearDisplayName() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearDisplayName()
+	})
+}
+
+// SetEmail sets the "email" field.
+func (u *UserUpsertBulk) SetEmail(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetEmail(v)
+	})
+}
+
+// UpdateEmail sets the "email" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateEmail() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateEmail()
+	})
+}
+
+// ClearEmail clears the value of the "email" field.
+func (u *UserUpsertBulk) ClearEmail() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearEmail()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *UserUpsertBulk) SetModifiedAt(v time.Time) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateModifiedAt() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *UserUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the UserCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for UserCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *UserUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

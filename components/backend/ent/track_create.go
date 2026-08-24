@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ type TrackCreate struct {
 	config
 	mutation *TrackMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetName sets the "name" field.
@@ -244,6 +247,7 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 		_node = &Track{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(track.Table, sqlgraph.NewFieldSpec(track.FieldID, field.TypeUUID))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -334,11 +338,228 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Track.Create().
+//		SetName(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TrackUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *TrackCreate) OnConflict(opts ...sql.ConflictOption) *TrackUpsertOne {
+	_c.conflict = opts
+	return &TrackUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Track.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *TrackCreate) OnConflictColumns(columns ...string) *TrackUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &TrackUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// TrackUpsertOne is the builder for "upsert"-ing
+	//  one Track node.
+	TrackUpsertOne struct {
+		create *TrackCreate
+	}
+
+	// TrackUpsert is the "OnConflict" setter.
+	TrackUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetName sets the "name" field.
+func (u *TrackUpsert) SetName(v string) *TrackUpsert {
+	u.Set(track.FieldName, v)
+	return u
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *TrackUpsert) UpdateName() *TrackUpsert {
+	u.SetExcluded(track.FieldName)
+	return u
+}
+
+// SetDescription sets the "description" field.
+func (u *TrackUpsert) SetDescription(v string) *TrackUpsert {
+	u.Set(track.FieldDescription, v)
+	return u
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *TrackUpsert) UpdateDescription() *TrackUpsert {
+	u.SetExcluded(track.FieldDescription)
+	return u
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *TrackUpsert) SetModifiedAt(v time.Time) *TrackUpsert {
+	u.Set(track.FieldModifiedAt, v)
+	return u
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *TrackUpsert) UpdateModifiedAt() *TrackUpsert {
+	u.SetExcluded(track.FieldModifiedAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Track.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(track.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *TrackUpsertOne) UpdateNewValues() *TrackUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(track.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(track.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Track.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *TrackUpsertOne) Ignore() *TrackUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TrackUpsertOne) DoNothing() *TrackUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TrackCreate.OnConflict
+// documentation for more info.
+func (u *TrackUpsertOne) Update(set func(*TrackUpsert)) *TrackUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TrackUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *TrackUpsertOne) SetName(v string) *TrackUpsertOne {
+	return u.Update(func(s *TrackUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *TrackUpsertOne) UpdateName() *TrackUpsertOne {
+	return u.Update(func(s *TrackUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *TrackUpsertOne) SetDescription(v string) *TrackUpsertOne {
+	return u.Update(func(s *TrackUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *TrackUpsertOne) UpdateDescription() *TrackUpsertOne {
+	return u.Update(func(s *TrackUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *TrackUpsertOne) SetModifiedAt(v time.Time) *TrackUpsertOne {
+	return u.Update(func(s *TrackUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *TrackUpsertOne) UpdateModifiedAt() *TrackUpsertOne {
+	return u.Update(func(s *TrackUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *TrackUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TrackCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TrackUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *TrackUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: TrackUpsertOne.ID is not supported by MySQL driver. Use TrackUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *TrackUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // TrackCreateBulk is the builder for creating many Track entities in bulk.
 type TrackCreateBulk struct {
 	config
 	err      error
 	builders []*TrackCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Track entities in the database.
@@ -368,6 +589,7 @@ func (_c *TrackCreateBulk) Save(ctx context.Context) ([]*Track, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -414,6 +636,165 @@ func (_c *TrackCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *TrackCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Track.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TrackUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *TrackCreateBulk) OnConflict(opts ...sql.ConflictOption) *TrackUpsertBulk {
+	_c.conflict = opts
+	return &TrackUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Track.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *TrackCreateBulk) OnConflictColumns(columns ...string) *TrackUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &TrackUpsertBulk{
+		create: _c,
+	}
+}
+
+// TrackUpsertBulk is the builder for "upsert"-ing
+// a bulk of Track nodes.
+type TrackUpsertBulk struct {
+	create *TrackCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Track.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(track.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *TrackUpsertBulk) UpdateNewValues() *TrackUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(track.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(track.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Track.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *TrackUpsertBulk) Ignore() *TrackUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TrackUpsertBulk) DoNothing() *TrackUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TrackCreateBulk.OnConflict
+// documentation for more info.
+func (u *TrackUpsertBulk) Update(set func(*TrackUpsert)) *TrackUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TrackUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetName sets the "name" field.
+func (u *TrackUpsertBulk) SetName(v string) *TrackUpsertBulk {
+	return u.Update(func(s *TrackUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *TrackUpsertBulk) UpdateName() *TrackUpsertBulk {
+	return u.Update(func(s *TrackUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *TrackUpsertBulk) SetDescription(v string) *TrackUpsertBulk {
+	return u.Update(func(s *TrackUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *TrackUpsertBulk) UpdateDescription() *TrackUpsertBulk {
+	return u.Update(func(s *TrackUpsert) {
+		s.UpdateDescription()
+	})
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (u *TrackUpsertBulk) SetModifiedAt(v time.Time) *TrackUpsertBulk {
+	return u.Update(func(s *TrackUpsert) {
+		s.SetModifiedAt(v)
+	})
+}
+
+// UpdateModifiedAt sets the "modified_at" field to the value that was provided on create.
+func (u *TrackUpsertBulk) UpdateModifiedAt() *TrackUpsertBulk {
+	return u.Update(func(s *TrackUpsert) {
+		s.UpdateModifiedAt()
+	})
+}
+
+// Exec executes the query.
+func (u *TrackUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TrackCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TrackCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TrackUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

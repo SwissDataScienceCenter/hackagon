@@ -814,6 +814,75 @@ func HasModifiedTracksWith(preds ...predicate.Track) predicate.User {
 	})
 }
 
+// HasCreatedQuestions applies the HasEdge predicate on the "created_questions" edge.
+func HasCreatedQuestions() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreatedQuestionsTable, CreatedQuestionsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedQuestionsWith applies the HasEdge predicate on the "created_questions" edge with a given conditions (other predicates).
+func HasCreatedQuestionsWith(preds ...predicate.Question) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCreatedQuestionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasModifiedQuestions applies the HasEdge predicate on the "modified_questions" edge.
+func HasModifiedQuestions() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ModifiedQuestionsTable, ModifiedQuestionsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasModifiedQuestionsWith applies the HasEdge predicate on the "modified_questions" edge with a given conditions (other predicates).
+func HasModifiedQuestionsWith(preds ...predicate.Question) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newModifiedQuestionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRegistrationAnswers applies the HasEdge predicate on the "registration_answers" edge.
+func HasRegistrationAnswers() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RegistrationAnswersTable, RegistrationAnswersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRegistrationAnswersWith applies the HasEdge predicate on the "registration_answers" edge with a given conditions (other predicates).
+func HasRegistrationAnswersWith(preds ...predicate.Answer) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newRegistrationAnswersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasModifiedStates applies the HasEdge predicate on the "modified_states" edge.
 func HasModifiedStates() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

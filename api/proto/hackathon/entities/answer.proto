@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+message Answer {
+  string question_id = 1;
+  string participant_id = 2;
+  oneof value {
+    string text_value = 3;
+    bool bool_value = 4;
+  }
+}

@@ -70,6 +70,12 @@ type UserEdges struct {
 	CreatedTracks []*Track `json:"created_tracks,omitempty"`
 	// Tracks this user last modified.
 	ModifiedTracks []*Track `json:"modified_tracks,omitempty"`
+	// Registration questions this user created.
+	CreatedQuestions []*Question `json:"created_questions,omitempty"`
+	// Registration questions this user last modified.
+	ModifiedQuestions []*Question `json:"modified_questions,omitempty"`
+	// Registration answers submitted by this user.
+	RegistrationAnswers []*Answer `json:"registration_answers,omitempty"`
 	// Hackathon settings this user last modified.
 	ModifiedStates []*HackathonState `json:"modified_states,omitempty"`
 	// Projects this user has marked as preferred.
@@ -86,7 +92,7 @@ type UserEdges struct {
 	TeamParticipations []*TeamParticipant `json:"team_participations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [23]bool
+	loadedTypes [26]bool
 }
 
 // CreatedHackathonsOrErr returns the CreatedHackathons value or an error if the edge
@@ -233,10 +239,37 @@ func (e UserEdges) ModifiedTracksOrErr() ([]*Track, error) {
 	return nil, &NotLoadedError{edge: "modified_tracks"}
 }
 
+// CreatedQuestionsOrErr returns the CreatedQuestions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CreatedQuestionsOrErr() ([]*Question, error) {
+	if e.loadedTypes[16] {
+		return e.CreatedQuestions, nil
+	}
+	return nil, &NotLoadedError{edge: "created_questions"}
+}
+
+// ModifiedQuestionsOrErr returns the ModifiedQuestions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ModifiedQuestionsOrErr() ([]*Question, error) {
+	if e.loadedTypes[17] {
+		return e.ModifiedQuestions, nil
+	}
+	return nil, &NotLoadedError{edge: "modified_questions"}
+}
+
+// RegistrationAnswersOrErr returns the RegistrationAnswers value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) RegistrationAnswersOrErr() ([]*Answer, error) {
+	if e.loadedTypes[18] {
+		return e.RegistrationAnswers, nil
+	}
+	return nil, &NotLoadedError{edge: "registration_answers"}
+}
+
 // ModifiedStatesOrErr returns the ModifiedStates value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) ModifiedStatesOrErr() ([]*HackathonState, error) {
-	if e.loadedTypes[16] {
+	if e.loadedTypes[19] {
 		return e.ModifiedStates, nil
 	}
 	return nil, &NotLoadedError{edge: "modified_states"}
@@ -245,7 +278,7 @@ func (e UserEdges) ModifiedStatesOrErr() ([]*HackathonState, error) {
 // PreferredProjectsOrErr returns the PreferredProjects value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) PreferredProjectsOrErr() ([]*Project, error) {
-	if e.loadedTypes[17] {
+	if e.loadedTypes[20] {
 		return e.PreferredProjects, nil
 	}
 	return nil, &NotLoadedError{edge: "preferred_projects"}
@@ -254,7 +287,7 @@ func (e UserEdges) PreferredProjectsOrErr() ([]*Project, error) {
 // VotesOrErr returns the Votes value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) VotesOrErr() ([]*Vote, error) {
-	if e.loadedTypes[18] {
+	if e.loadedTypes[21] {
 		return e.Votes, nil
 	}
 	return nil, &NotLoadedError{edge: "votes"}
@@ -263,7 +296,7 @@ func (e UserEdges) VotesOrErr() ([]*Vote, error) {
 // JuryCategoriesOrErr returns the JuryCategories value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) JuryCategoriesOrErr() ([]*VoteCategory, error) {
-	if e.loadedTypes[19] {
+	if e.loadedTypes[22] {
 		return e.JuryCategories, nil
 	}
 	return nil, &NotLoadedError{edge: "jury_categories"}
@@ -272,7 +305,7 @@ func (e UserEdges) JuryCategoriesOrErr() ([]*VoteCategory, error) {
 // OwnsOrErr returns the Owns value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) OwnsOrErr() ([]*Hackathon, error) {
-	if e.loadedTypes[20] {
+	if e.loadedTypes[23] {
 		return e.Owns, nil
 	}
 	return nil, &NotLoadedError{edge: "owns"}
@@ -281,7 +314,7 @@ func (e UserEdges) OwnsOrErr() ([]*Hackathon, error) {
 // ParticipationsOrErr returns the Participations value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) ParticipationsOrErr() ([]*Participant, error) {
-	if e.loadedTypes[21] {
+	if e.loadedTypes[24] {
 		return e.Participations, nil
 	}
 	return nil, &NotLoadedError{edge: "participations"}
@@ -290,7 +323,7 @@ func (e UserEdges) ParticipationsOrErr() ([]*Participant, error) {
 // TeamParticipationsOrErr returns the TeamParticipations value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) TeamParticipationsOrErr() ([]*TeamParticipant, error) {
-	if e.loadedTypes[22] {
+	if e.loadedTypes[25] {
 		return e.TeamParticipations, nil
 	}
 	return nil, &NotLoadedError{edge: "team_participations"}
@@ -455,6 +488,21 @@ func (_m *User) QueryCreatedTracks() *TrackQuery {
 // QueryModifiedTracks queries the "modified_tracks" edge of the User entity.
 func (_m *User) QueryModifiedTracks() *TrackQuery {
 	return NewUserClient(_m.config).QueryModifiedTracks(_m)
+}
+
+// QueryCreatedQuestions queries the "created_questions" edge of the User entity.
+func (_m *User) QueryCreatedQuestions() *QuestionQuery {
+	return NewUserClient(_m.config).QueryCreatedQuestions(_m)
+}
+
+// QueryModifiedQuestions queries the "modified_questions" edge of the User entity.
+func (_m *User) QueryModifiedQuestions() *QuestionQuery {
+	return NewUserClient(_m.config).QueryModifiedQuestions(_m)
+}
+
+// QueryRegistrationAnswers queries the "registration_answers" edge of the User entity.
+func (_m *User) QueryRegistrationAnswers() *AnswerQuery {
+	return NewUserClient(_m.config).QueryRegistrationAnswers(_m)
 }
 
 // QueryModifiedStates queries the "modified_states" edge of the User entity.

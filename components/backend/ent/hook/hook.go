@@ -9,6 +9,18 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 )
 
+// The AnswerFunc type is an adapter to allow the use of ordinary
+// function as Answer mutator.
+type AnswerFunc func(context.Context, *ent.AnswerMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AnswerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AnswerMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AnswerMutation", m)
+}
+
 // The HackathonFunc type is an adapter to allow the use of ordinary
 // function as Hackathon mutator.
 type HackathonFunc func(context.Context, *ent.HackathonMutation) (ent.Value, error)
@@ -79,6 +91,18 @@ func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
+}
+
+// The QuestionFunc type is an adapter to allow the use of ordinary
+// function as Question mutator.
+type QuestionFunc func(context.Context, *ent.QuestionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f QuestionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.QuestionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.QuestionMutation", m)
 }
 
 // The SubmissionFunc type is an adapter to allow the use of ordinary

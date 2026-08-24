@@ -16,12 +16,14 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/teamparticipant"
@@ -37,6 +39,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Answer is the client for interacting with the Answer builders.
+	Answer *AnswerClient
 	// Hackathon is the client for interacting with the Hackathon builders.
 	Hackathon *HackathonClient
 	// HackathonState is the client for interacting with the HackathonState builders.
@@ -49,6 +53,8 @@ type Client struct {
 	Phase *PhaseClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// Question is the client for interacting with the Question builders.
+	Question *QuestionClient
 	// Submission is the client for interacting with the Submission builders.
 	Submission *SubmissionClient
 	// Team is the client for interacting with the Team builders.
@@ -76,12 +82,14 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Answer = NewAnswerClient(c.config)
 	c.Hackathon = NewHackathonClient(c.config)
 	c.HackathonState = NewHackathonStateClient(c.config)
 	c.Page = NewPageClient(c.config)
 	c.Participant = NewParticipantClient(c.config)
 	c.Phase = NewPhaseClient(c.config)
 	c.Project = NewProjectClient(c.config)
+	c.Question = NewQuestionClient(c.config)
 	c.Submission = NewSubmissionClient(c.config)
 	c.Team = NewTeamClient(c.config)
 	c.TeamParticipant = NewTeamParticipantClient(c.config)
@@ -182,12 +190,14 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:             ctx,
 		config:          cfg,
+		Answer:          NewAnswerClient(cfg),
 		Hackathon:       NewHackathonClient(cfg),
 		HackathonState:  NewHackathonStateClient(cfg),
 		Page:            NewPageClient(cfg),
 		Participant:     NewParticipantClient(cfg),
 		Phase:           NewPhaseClient(cfg),
 		Project:         NewProjectClient(cfg),
+		Question:        NewQuestionClient(cfg),
 		Submission:      NewSubmissionClient(cfg),
 		Team:            NewTeamClient(cfg),
 		TeamParticipant: NewTeamParticipantClient(cfg),
@@ -215,12 +225,14 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:             ctx,
 		config:          cfg,
+		Answer:          NewAnswerClient(cfg),
 		Hackathon:       NewHackathonClient(cfg),
 		HackathonState:  NewHackathonStateClient(cfg),
 		Page:            NewPageClient(cfg),
 		Participant:     NewParticipantClient(cfg),
 		Phase:           NewPhaseClient(cfg),
 		Project:         NewProjectClient(cfg),
+		Question:        NewQuestionClient(cfg),
 		Submission:      NewSubmissionClient(cfg),
 		Team:            NewTeamClient(cfg),
 		TeamParticipant: NewTeamParticipantClient(cfg),
@@ -235,7 +247,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Hackathon.
+//		Answer.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -258,9 +270,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Hackathon, c.HackathonState, c.Page, c.Participant, c.Phase, c.Project,
-		c.Submission, c.Team, c.TeamParticipant, c.Track, c.User, c.Vote,
-		c.VoteCategory, c.VoteResult,
+		c.Answer, c.Hackathon, c.HackathonState, c.Page, c.Participant, c.Phase,
+		c.Project, c.Question, c.Submission, c.Team, c.TeamParticipant, c.Track,
+		c.User, c.Vote, c.VoteCategory, c.VoteResult,
 	} {
 		n.Use(hooks...)
 	}
@@ -270,9 +282,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Hackathon, c.HackathonState, c.Page, c.Participant, c.Phase, c.Project,
-		c.Submission, c.Team, c.TeamParticipant, c.Track, c.User, c.Vote,
-		c.VoteCategory, c.VoteResult,
+		c.Answer, c.Hackathon, c.HackathonState, c.Page, c.Participant, c.Phase,
+		c.Project, c.Question, c.Submission, c.Team, c.TeamParticipant, c.Track,
+		c.User, c.Vote, c.VoteCategory, c.VoteResult,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -281,6 +293,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AnswerMutation:
+		return c.Answer.mutate(ctx, m)
 	case *HackathonMutation:
 		return c.Hackathon.mutate(ctx, m)
 	case *HackathonStateMutation:
@@ -293,6 +307,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Phase.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
+	case *QuestionMutation:
+		return c.Question.mutate(ctx, m)
 	case *SubmissionMutation:
 		return c.Submission.mutate(ctx, m)
 	case *TeamMutation:
@@ -311,6 +327,171 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.VoteResult.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AnswerClient is a client for the Answer schema.
+type AnswerClient struct {
+	config
+}
+
+// NewAnswerClient returns a client for the Answer from the given config.
+func NewAnswerClient(c config) *AnswerClient {
+	return &AnswerClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `answer.Hooks(f(g(h())))`.
+func (c *AnswerClient) Use(hooks ...Hook) {
+	c.hooks.Answer = append(c.hooks.Answer, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `answer.Intercept(f(g(h())))`.
+func (c *AnswerClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Answer = append(c.inters.Answer, interceptors...)
+}
+
+// Create returns a builder for creating a Answer entity.
+func (c *AnswerClient) Create() *AnswerCreate {
+	mutation := newAnswerMutation(c.config, OpCreate)
+	return &AnswerCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Answer entities.
+func (c *AnswerClient) CreateBulk(builders ...*AnswerCreate) *AnswerCreateBulk {
+	return &AnswerCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AnswerClient) MapCreateBulk(slice any, setFunc func(*AnswerCreate, int)) *AnswerCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AnswerCreateBulk{err: fmt.Errorf("calling to AnswerClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AnswerCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AnswerCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Answer.
+func (c *AnswerClient) Update() *AnswerUpdate {
+	mutation := newAnswerMutation(c.config, OpUpdate)
+	return &AnswerUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AnswerClient) UpdateOne(_m *Answer) *AnswerUpdateOne {
+	mutation := newAnswerMutation(c.config, OpUpdateOne, withAnswer(_m))
+	return &AnswerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AnswerClient) UpdateOneID(id uuid.UUID) *AnswerUpdateOne {
+	mutation := newAnswerMutation(c.config, OpUpdateOne, withAnswerID(id))
+	return &AnswerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Answer.
+func (c *AnswerClient) Delete() *AnswerDelete {
+	mutation := newAnswerMutation(c.config, OpDelete)
+	return &AnswerDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AnswerClient) DeleteOne(_m *Answer) *AnswerDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AnswerClient) DeleteOneID(id uuid.UUID) *AnswerDeleteOne {
+	builder := c.Delete().Where(answer.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AnswerDeleteOne{builder}
+}
+
+// Query returns a query builder for Answer.
+func (c *AnswerClient) Query() *AnswerQuery {
+	return &AnswerQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAnswer},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Answer entity by its id.
+func (c *AnswerClient) Get(ctx context.Context, id uuid.UUID) (*Answer, error) {
+	return c.Query().Where(answer.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AnswerClient) GetX(ctx context.Context, id uuid.UUID) *Answer {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryQuestion queries the question edge of a Answer.
+func (c *AnswerClient) QueryQuestion(_m *Answer) *QuestionQuery {
+	query := (&QuestionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(answer.Table, answer.FieldID, id),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, answer.QuestionTable, answer.QuestionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a Answer.
+func (c *AnswerClient) QueryUser(_m *Answer) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(answer.Table, answer.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, answer.UserTable, answer.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AnswerClient) Hooks() []Hook {
+	return c.hooks.Answer
+}
+
+// Interceptors returns the client interceptors.
+func (c *AnswerClient) Interceptors() []Interceptor {
+	return c.inters.Answer
+}
+
+func (c *AnswerClient) mutate(ctx context.Context, m *AnswerMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AnswerCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AnswerUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AnswerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AnswerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Answer mutation op: %q", m.Op())
 	}
 }
 
@@ -527,6 +708,22 @@ func (c *HackathonClient) QueryVoteCategories(_m *Hackathon) *VoteCategoryQuery 
 			sqlgraph.From(hackathon.Table, hackathon.FieldID, id),
 			sqlgraph.To(votecategory.Table, votecategory.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, hackathon.VoteCategoriesTable, hackathon.VoteCategoriesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryQuestions queries the questions edge of a Hackathon.
+func (c *HackathonClient) QueryQuestions(_m *Hackathon) *QuestionQuery {
+	query := (&QuestionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hackathon.Table, hackathon.FieldID, id),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, hackathon.QuestionsTable, hackathon.QuestionsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1588,6 +1785,203 @@ func (c *ProjectClient) mutate(ctx context.Context, m *ProjectMutation) (Value, 
 		return (&ProjectDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Project mutation op: %q", m.Op())
+	}
+}
+
+// QuestionClient is a client for the Question schema.
+type QuestionClient struct {
+	config
+}
+
+// NewQuestionClient returns a client for the Question from the given config.
+func NewQuestionClient(c config) *QuestionClient {
+	return &QuestionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `question.Hooks(f(g(h())))`.
+func (c *QuestionClient) Use(hooks ...Hook) {
+	c.hooks.Question = append(c.hooks.Question, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `question.Intercept(f(g(h())))`.
+func (c *QuestionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Question = append(c.inters.Question, interceptors...)
+}
+
+// Create returns a builder for creating a Question entity.
+func (c *QuestionClient) Create() *QuestionCreate {
+	mutation := newQuestionMutation(c.config, OpCreate)
+	return &QuestionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Question entities.
+func (c *QuestionClient) CreateBulk(builders ...*QuestionCreate) *QuestionCreateBulk {
+	return &QuestionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *QuestionClient) MapCreateBulk(slice any, setFunc func(*QuestionCreate, int)) *QuestionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &QuestionCreateBulk{err: fmt.Errorf("calling to QuestionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*QuestionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &QuestionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Question.
+func (c *QuestionClient) Update() *QuestionUpdate {
+	mutation := newQuestionMutation(c.config, OpUpdate)
+	return &QuestionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *QuestionClient) UpdateOne(_m *Question) *QuestionUpdateOne {
+	mutation := newQuestionMutation(c.config, OpUpdateOne, withQuestion(_m))
+	return &QuestionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *QuestionClient) UpdateOneID(id uuid.UUID) *QuestionUpdateOne {
+	mutation := newQuestionMutation(c.config, OpUpdateOne, withQuestionID(id))
+	return &QuestionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Question.
+func (c *QuestionClient) Delete() *QuestionDelete {
+	mutation := newQuestionMutation(c.config, OpDelete)
+	return &QuestionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *QuestionClient) DeleteOne(_m *Question) *QuestionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *QuestionClient) DeleteOneID(id uuid.UUID) *QuestionDeleteOne {
+	builder := c.Delete().Where(question.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &QuestionDeleteOne{builder}
+}
+
+// Query returns a query builder for Question.
+func (c *QuestionClient) Query() *QuestionQuery {
+	return &QuestionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeQuestion},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Question entity by its id.
+func (c *QuestionClient) Get(ctx context.Context, id uuid.UUID) (*Question, error) {
+	return c.Query().Where(question.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *QuestionClient) GetX(ctx context.Context, id uuid.UUID) *Question {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryHackathon queries the hackathon edge of a Question.
+func (c *QuestionClient) QueryHackathon(_m *Question) *HackathonQuery {
+	query := (&HackathonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(question.Table, question.FieldID, id),
+			sqlgraph.To(hackathon.Table, hackathon.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, question.HackathonTable, question.HackathonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCreator queries the creator edge of a Question.
+func (c *QuestionClient) QueryCreator(_m *Question) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(question.Table, question.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, question.CreatorTable, question.CreatorColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryModifier queries the modifier edge of a Question.
+func (c *QuestionClient) QueryModifier(_m *Question) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(question.Table, question.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, question.ModifierTable, question.ModifierColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAnswers queries the answers edge of a Question.
+func (c *QuestionClient) QueryAnswers(_m *Question) *AnswerQuery {
+	query := (&AnswerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(question.Table, question.FieldID, id),
+			sqlgraph.To(answer.Table, answer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, question.AnswersTable, question.AnswersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *QuestionClient) Hooks() []Hook {
+	return c.hooks.Question
+}
+
+// Interceptors returns the client interceptors.
+func (c *QuestionClient) Interceptors() []Interceptor {
+	return c.inters.Question
+}
+
+func (c *QuestionClient) mutate(ctx context.Context, m *QuestionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&QuestionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&QuestionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&QuestionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&QuestionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Question mutation op: %q", m.Op())
 	}
 }
 
@@ -2726,6 +3120,54 @@ func (c *UserClient) QueryModifiedTracks(_m *User) *TrackQuery {
 	return query
 }
 
+// QueryCreatedQuestions queries the created_questions edge of a User.
+func (c *UserClient) QueryCreatedQuestions(_m *User) *QuestionQuery {
+	query := (&QuestionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedQuestionsTable, user.CreatedQuestionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryModifiedQuestions queries the modified_questions edge of a User.
+func (c *UserClient) QueryModifiedQuestions(_m *User) *QuestionQuery {
+	query := (&QuestionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(question.Table, question.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ModifiedQuestionsTable, user.ModifiedQuestionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRegistrationAnswers queries the registration_answers edge of a User.
+func (c *UserClient) QueryRegistrationAnswers(_m *User) *AnswerQuery {
+	query := (&AnswerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(answer.Table, answer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.RegistrationAnswersTable, user.RegistrationAnswersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryModifiedStates queries the modified_states edge of a User.
 func (c *UserClient) QueryModifiedStates(_m *User) *HackathonStateQuery {
 	query := (&HackathonStateClient{config: c.config}).Query()
@@ -3410,11 +3852,13 @@ func (c *VoteResultClient) mutate(ctx context.Context, m *VoteResultMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Hackathon, HackathonState, Page, Participant, Phase, Project, Submission, Team,
-		TeamParticipant, Track, User, Vote, VoteCategory, VoteResult []ent.Hook
+		Answer, Hackathon, HackathonState, Page, Participant, Phase, Project, Question,
+		Submission, Team, TeamParticipant, Track, User, Vote, VoteCategory,
+		VoteResult []ent.Hook
 	}
 	inters struct {
-		Hackathon, HackathonState, Page, Participant, Phase, Project, Submission, Team,
-		TeamParticipant, Track, User, Vote, VoteCategory, VoteResult []ent.Interceptor
+		Answer, Hackathon, HackathonState, Page, Participant, Phase, Project, Question,
+		Submission, Team, TeamParticipant, Track, User, Vote, VoteCategory,
+		VoteResult []ent.Interceptor
 	}
 )

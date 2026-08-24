@@ -46,6 +46,8 @@ const (
 	EdgeState = "state"
 	// EdgeVoteCategories holds the string denoting the vote_categories edge name in mutations.
 	EdgeVoteCategories = "vote_categories"
+	// EdgeQuestions holds the string denoting the questions edge name in mutations.
+	EdgeQuestions = "questions"
 	// EdgeOwners holds the string denoting the owners edge name in mutations.
 	EdgeOwners = "owners"
 	// EdgeCreator holds the string denoting the creator edge name in mutations.
@@ -103,6 +105,13 @@ const (
 	VoteCategoriesInverseTable = "vote_categories"
 	// VoteCategoriesColumn is the table column denoting the vote_categories relation/edge.
 	VoteCategoriesColumn = "hackathon_vote_categories"
+	// QuestionsTable is the table that holds the questions relation/edge.
+	QuestionsTable = "questions"
+	// QuestionsInverseTable is the table name for the Question entity.
+	// It exists in this package in order to avoid circular dependency with the "question" package.
+	QuestionsInverseTable = "questions"
+	// QuestionsColumn is the table column denoting the questions relation/edge.
+	QuestionsColumn = "hackathon_id"
 	// OwnersTable is the table that holds the owners relation/edge. The primary key declared below.
 	OwnersTable = "hackathon_owners"
 	// OwnersInverseTable is the table name for the User entity.
@@ -351,6 +360,20 @@ func ByVoteCategories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByQuestionsCount orders the results by questions count.
+func ByQuestionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newQuestionsStep(), opts...)
+	}
+}
+
+// ByQuestions orders the results by questions terms.
+func ByQuestions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newQuestionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByOwnersCount orders the results by owners count.
 func ByOwnersCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -439,6 +462,13 @@ func newVoteCategoriesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(VoteCategoriesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, VoteCategoriesTable, VoteCategoriesColumn),
+	)
+}
+func newQuestionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(QuestionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, QuestionsTable, QuestionsColumn),
 	)
 }
 func newOwnersStep() *sqlgraph.Step {

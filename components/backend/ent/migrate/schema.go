@@ -8,6 +8,42 @@ import (
 )
 
 var (
+	// AnswersColumns holds the columns for the "answers" table.
+	AnswersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "value", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "modified_at", Type: field.TypeTime},
+		{Name: "question_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
+	}
+	// AnswersTable holds the schema information for the "answers" table.
+	AnswersTable = &schema.Table{
+		Name:       "answers",
+		Columns:    AnswersColumns,
+		PrimaryKey: []*schema.Column{AnswersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "answers_questions_answers",
+				Columns:    []*schema.Column{AnswersColumns[4]},
+				RefColumns: []*schema.Column{QuestionsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "answers_users_registration_answers",
+				Columns:    []*schema.Column{AnswersColumns[5]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "answer_question_id_user_id",
+				Unique:  true,
+				Columns: []*schema.Column{AnswersColumns[4], AnswersColumns[5]},
+			},
+		},
+	}
 	// HackathonsColumns holds the columns for the "hackathons" table.
 	HackathonsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -316,6 +352,59 @@ var (
 				Name:    "project_status",
 				Unique:  false,
 				Columns: []*schema.Column{ProjectsColumns[4]},
+			},
+		},
+	}
+	// QuestionsColumns holds the columns for the "questions" table.
+	QuestionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "key", Type: field.TypeString},
+		{Name: "label", Type: field.TypeString},
+		{Name: "data_type", Type: field.TypeEnum, Enums: []string{"text", "bool", "enum"}},
+		{Name: "mandatory", Type: field.TypeBool, Default: false},
+		{Name: "order", Type: field.TypeInt, Default: 0},
+		{Name: "options", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "modified_at", Type: field.TypeTime},
+		{Name: "hackathon_id", Type: field.TypeUUID},
+		{Name: "user_created_questions", Type: field.TypeUUID},
+		{Name: "user_modified_questions", Type: field.TypeUUID},
+	}
+	// QuestionsTable holds the schema information for the "questions" table.
+	QuestionsTable = &schema.Table{
+		Name:       "questions",
+		Columns:    QuestionsColumns,
+		PrimaryKey: []*schema.Column{QuestionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "questions_hackathons_questions",
+				Columns:    []*schema.Column{QuestionsColumns[9]},
+				RefColumns: []*schema.Column{HackathonsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "questions_users_created_questions",
+				Columns:    []*schema.Column{QuestionsColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+			{
+				Symbol:     "questions_users_modified_questions",
+				Columns:    []*schema.Column{QuestionsColumns[11]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "question_key_hackathon_id",
+				Unique:  true,
+				Columns: []*schema.Column{QuestionsColumns[1], QuestionsColumns[9]},
+			},
+			{
+				Name:    "question_order",
+				Unique:  false,
+				Columns: []*schema.Column{QuestionsColumns[5]},
 			},
 		},
 	}
@@ -671,12 +760,14 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AnswersTable,
 		HackathonsTable,
 		HackathonStatesTable,
 		PagesTable,
 		ParticipantsTable,
 		PhasesTable,
 		ProjectsTable,
+		QuestionsTable,
 		SubmissionsTable,
 		TeamsTable,
 		TeamParticipantsTable,
@@ -692,6 +783,8 @@ var (
 )
 
 func init() {
+	AnswersTable.ForeignKeys[0].RefTable = QuestionsTable
+	AnswersTable.ForeignKeys[1].RefTable = UsersTable
 	HackathonsTable.ForeignKeys[0].RefTable = PhasesTable
 	HackathonsTable.ForeignKeys[1].RefTable = UsersTable
 	HackathonsTable.ForeignKeys[2].RefTable = UsersTable
@@ -711,6 +804,9 @@ func init() {
 	ProjectsTable.ForeignKeys[1].RefTable = TracksTable
 	ProjectsTable.ForeignKeys[2].RefTable = UsersTable
 	ProjectsTable.ForeignKeys[3].RefTable = UsersTable
+	QuestionsTable.ForeignKeys[0].RefTable = HackathonsTable
+	QuestionsTable.ForeignKeys[1].RefTable = UsersTable
+	QuestionsTable.ForeignKeys[2].RefTable = UsersTable
 	SubmissionsTable.ForeignKeys[0].RefTable = ProjectsTable
 	SubmissionsTable.ForeignKeys[1].RefTable = TeamsTable
 	SubmissionsTable.ForeignKeys[2].RefTable = UsersTable

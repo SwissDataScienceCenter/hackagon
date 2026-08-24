@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
@@ -19,6 +20,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/teamparticipant"
@@ -38,12 +40,14 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAnswer          = "Answer"
 	TypeHackathon       = "Hackathon"
 	TypeHackathonState  = "HackathonState"
 	TypePage            = "Page"
 	TypeParticipant     = "Participant"
 	TypePhase           = "Phase"
 	TypeProject         = "Project"
+	TypeQuestion        = "Question"
 	TypeSubmission      = "Submission"
 	TypeTeam            = "Team"
 	TypeTeamParticipant = "TeamParticipant"
@@ -53,6 +57,654 @@ const (
 	TypeVoteCategory    = "VoteCategory"
 	TypeVoteResult      = "VoteResult"
 )
+
+// AnswerMutation represents an operation that mutates the Answer nodes in the graph.
+type AnswerMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	value           *string
+	created_at      *time.Time
+	modified_at     *time.Time
+	clearedFields   map[string]struct{}
+	question        *uuid.UUID
+	clearedquestion bool
+	user            *uuid.UUID
+	cleareduser     bool
+	done            bool
+	oldValue        func(context.Context) (*Answer, error)
+	predicates      []predicate.Answer
+}
+
+var _ ent.Mutation = (*AnswerMutation)(nil)
+
+// answerOption allows management of the mutation configuration using functional options.
+type answerOption func(*AnswerMutation)
+
+// newAnswerMutation creates new mutation for the Answer entity.
+func newAnswerMutation(c config, op Op, opts ...answerOption) *AnswerMutation {
+	m := &AnswerMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAnswer,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAnswerID sets the ID field of the mutation.
+func withAnswerID(id uuid.UUID) answerOption {
+	return func(m *AnswerMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Answer
+		)
+		m.oldValue = func(ctx context.Context) (*Answer, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Answer.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAnswer sets the old Answer of the mutation.
+func withAnswer(node *Answer) answerOption {
+	return func(m *AnswerMutation) {
+		m.oldValue = func(context.Context) (*Answer, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AnswerMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AnswerMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Answer entities.
+func (m *AnswerMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AnswerMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AnswerMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Answer.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetQuestionID sets the "question_id" field.
+func (m *AnswerMutation) SetQuestionID(u uuid.UUID) {
+	m.question = &u
+}
+
+// QuestionID returns the value of the "question_id" field in the mutation.
+func (m *AnswerMutation) QuestionID() (r uuid.UUID, exists bool) {
+	v := m.question
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuestionID returns the old "question_id" field's value of the Answer entity.
+// If the Answer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnswerMutation) OldQuestionID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuestionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuestionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuestionID: %w", err)
+	}
+	return oldValue.QuestionID, nil
+}
+
+// ResetQuestionID resets all changes to the "question_id" field.
+func (m *AnswerMutation) ResetQuestionID() {
+	m.question = nil
+}
+
+// SetUserID sets the "user_id" field.
+func (m *AnswerMutation) SetUserID(u uuid.UUID) {
+	m.user = &u
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *AnswerMutation) UserID() (r uuid.UUID, exists bool) {
+	v := m.user
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the Answer entity.
+// If the Answer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnswerMutation) OldUserID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *AnswerMutation) ResetUserID() {
+	m.user = nil
+}
+
+// SetValue sets the "value" field.
+func (m *AnswerMutation) SetValue(s string) {
+	m.value = &s
+}
+
+// Value returns the value of the "value" field in the mutation.
+func (m *AnswerMutation) Value() (r string, exists bool) {
+	v := m.value
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldValue returns the old "value" field's value of the Answer entity.
+// If the Answer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnswerMutation) OldValue(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldValue is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldValue requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldValue: %w", err)
+	}
+	return oldValue.Value, nil
+}
+
+// ResetValue resets all changes to the "value" field.
+func (m *AnswerMutation) ResetValue() {
+	m.value = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AnswerMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AnswerMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Answer entity.
+// If the Answer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnswerMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AnswerMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (m *AnswerMutation) SetModifiedAt(t time.Time) {
+	m.modified_at = &t
+}
+
+// ModifiedAt returns the value of the "modified_at" field in the mutation.
+func (m *AnswerMutation) ModifiedAt() (r time.Time, exists bool) {
+	v := m.modified_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModifiedAt returns the old "modified_at" field's value of the Answer entity.
+// If the Answer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnswerMutation) OldModifiedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModifiedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModifiedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModifiedAt: %w", err)
+	}
+	return oldValue.ModifiedAt, nil
+}
+
+// ResetModifiedAt resets all changes to the "modified_at" field.
+func (m *AnswerMutation) ResetModifiedAt() {
+	m.modified_at = nil
+}
+
+// ClearQuestion clears the "question" edge to the Question entity.
+func (m *AnswerMutation) ClearQuestion() {
+	m.clearedquestion = true
+	m.clearedFields[answer.FieldQuestionID] = struct{}{}
+}
+
+// QuestionCleared reports if the "question" edge to the Question entity was cleared.
+func (m *AnswerMutation) QuestionCleared() bool {
+	return m.clearedquestion
+}
+
+// QuestionIDs returns the "question" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// QuestionID instead. It exists only for internal usage by the builders.
+func (m *AnswerMutation) QuestionIDs() (ids []uuid.UUID) {
+	if id := m.question; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetQuestion resets all changes to the "question" edge.
+func (m *AnswerMutation) ResetQuestion() {
+	m.question = nil
+	m.clearedquestion = false
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *AnswerMutation) ClearUser() {
+	m.cleareduser = true
+	m.clearedFields[answer.FieldUserID] = struct{}{}
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *AnswerMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *AnswerMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *AnswerMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Where appends a list predicates to the AnswerMutation builder.
+func (m *AnswerMutation) Where(ps ...predicate.Answer) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AnswerMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AnswerMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Answer, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AnswerMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AnswerMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Answer).
+func (m *AnswerMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AnswerMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.question != nil {
+		fields = append(fields, answer.FieldQuestionID)
+	}
+	if m.user != nil {
+		fields = append(fields, answer.FieldUserID)
+	}
+	if m.value != nil {
+		fields = append(fields, answer.FieldValue)
+	}
+	if m.created_at != nil {
+		fields = append(fields, answer.FieldCreatedAt)
+	}
+	if m.modified_at != nil {
+		fields = append(fields, answer.FieldModifiedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AnswerMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case answer.FieldQuestionID:
+		return m.QuestionID()
+	case answer.FieldUserID:
+		return m.UserID()
+	case answer.FieldValue:
+		return m.Value()
+	case answer.FieldCreatedAt:
+		return m.CreatedAt()
+	case answer.FieldModifiedAt:
+		return m.ModifiedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AnswerMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case answer.FieldQuestionID:
+		return m.OldQuestionID(ctx)
+	case answer.FieldUserID:
+		return m.OldUserID(ctx)
+	case answer.FieldValue:
+		return m.OldValue(ctx)
+	case answer.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case answer.FieldModifiedAt:
+		return m.OldModifiedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Answer field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnswerMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case answer.FieldQuestionID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuestionID(v)
+		return nil
+	case answer.FieldUserID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	case answer.FieldValue:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetValue(v)
+		return nil
+	case answer.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case answer.FieldModifiedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModifiedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Answer field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AnswerMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AnswerMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AnswerMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Answer numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AnswerMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AnswerMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AnswerMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Answer nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AnswerMutation) ResetField(name string) error {
+	switch name {
+	case answer.FieldQuestionID:
+		m.ResetQuestionID()
+		return nil
+	case answer.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case answer.FieldValue:
+		m.ResetValue()
+		return nil
+	case answer.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case answer.FieldModifiedAt:
+		m.ResetModifiedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Answer field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AnswerMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.question != nil {
+		edges = append(edges, answer.EdgeQuestion)
+	}
+	if m.user != nil {
+		edges = append(edges, answer.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AnswerMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case answer.EdgeQuestion:
+		if id := m.question; id != nil {
+			return []ent.Value{*id}
+		}
+	case answer.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AnswerMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AnswerMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AnswerMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedquestion {
+		edges = append(edges, answer.EdgeQuestion)
+	}
+	if m.cleareduser {
+		edges = append(edges, answer.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AnswerMutation) EdgeCleared(name string) bool {
+	switch name {
+	case answer.EdgeQuestion:
+		return m.clearedquestion
+	case answer.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AnswerMutation) ClearEdge(name string) error {
+	switch name {
+	case answer.EdgeQuestion:
+		m.ClearQuestion()
+		return nil
+	case answer.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown Answer unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AnswerMutation) ResetEdge(name string) error {
+	switch name {
+	case answer.EdgeQuestion:
+		m.ResetQuestion()
+		return nil
+	case answer.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown Answer edge %s", name)
+}
 
 // HackathonMutation represents an operation that mutates the Hackathon nodes in the graph.
 type HackathonMutation struct {
@@ -89,6 +741,9 @@ type HackathonMutation struct {
 	vote_categories            map[uuid.UUID]struct{}
 	removedvote_categories     map[uuid.UUID]struct{}
 	clearedvote_categories     bool
+	questions                  map[uuid.UUID]struct{}
+	removedquestions           map[uuid.UUID]struct{}
+	clearedquestions           bool
 	owners                     map[uuid.UUID]struct{}
 	removedowners              map[uuid.UUID]struct{}
 	clearedowners              bool
@@ -908,6 +1563,60 @@ func (m *HackathonMutation) ResetVoteCategories() {
 	m.removedvote_categories = nil
 }
 
+// AddQuestionIDs adds the "questions" edge to the Question entity by ids.
+func (m *HackathonMutation) AddQuestionIDs(ids ...uuid.UUID) {
+	if m.questions == nil {
+		m.questions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.questions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearQuestions clears the "questions" edge to the Question entity.
+func (m *HackathonMutation) ClearQuestions() {
+	m.clearedquestions = true
+}
+
+// QuestionsCleared reports if the "questions" edge to the Question entity was cleared.
+func (m *HackathonMutation) QuestionsCleared() bool {
+	return m.clearedquestions
+}
+
+// RemoveQuestionIDs removes the "questions" edge to the Question entity by IDs.
+func (m *HackathonMutation) RemoveQuestionIDs(ids ...uuid.UUID) {
+	if m.removedquestions == nil {
+		m.removedquestions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.questions, ids[i])
+		m.removedquestions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedQuestions returns the removed IDs of the "questions" edge to the Question entity.
+func (m *HackathonMutation) RemovedQuestionsIDs() (ids []uuid.UUID) {
+	for id := range m.removedquestions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// QuestionsIDs returns the "questions" edge IDs in the mutation.
+func (m *HackathonMutation) QuestionsIDs() (ids []uuid.UUID) {
+	for id := range m.questions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetQuestions resets all changes to the "questions" edge.
+func (m *HackathonMutation) ResetQuestions() {
+	m.questions = nil
+	m.clearedquestions = false
+	m.removedquestions = nil
+}
+
 // AddOwnerIDs adds the "owners" edge to the User entity by ids.
 func (m *HackathonMutation) AddOwnerIDs(ids ...uuid.UUID) {
 	if m.owners == nil {
@@ -1319,7 +2028,7 @@ func (m *HackathonMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HackathonMutation) AddedEdges() []string {
-	edges := make([]string, 0, 10)
+	edges := make([]string, 0, 11)
 	if m.tracks != nil {
 		edges = append(edges, hackathon.EdgeTracks)
 	}
@@ -1340,6 +2049,9 @@ func (m *HackathonMutation) AddedEdges() []string {
 	}
 	if m.vote_categories != nil {
 		edges = append(edges, hackathon.EdgeVoteCategories)
+	}
+	if m.questions != nil {
+		edges = append(edges, hackathon.EdgeQuestions)
 	}
 	if m.owners != nil {
 		edges = append(edges, hackathon.EdgeOwners)
@@ -1397,6 +2109,12 @@ func (m *HackathonMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case hackathon.EdgeQuestions:
+		ids := make([]ent.Value, 0, len(m.questions))
+		for id := range m.questions {
+			ids = append(ids, id)
+		}
+		return ids
 	case hackathon.EdgeOwners:
 		ids := make([]ent.Value, 0, len(m.owners))
 		for id := range m.owners {
@@ -1417,7 +2135,7 @@ func (m *HackathonMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HackathonMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 10)
+	edges := make([]string, 0, 11)
 	if m.removedtracks != nil {
 		edges = append(edges, hackathon.EdgeTracks)
 	}
@@ -1435,6 +2153,9 @@ func (m *HackathonMutation) RemovedEdges() []string {
 	}
 	if m.removedvote_categories != nil {
 		edges = append(edges, hackathon.EdgeVoteCategories)
+	}
+	if m.removedquestions != nil {
+		edges = append(edges, hackathon.EdgeQuestions)
 	}
 	if m.removedowners != nil {
 		edges = append(edges, hackathon.EdgeOwners)
@@ -1482,6 +2203,12 @@ func (m *HackathonMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case hackathon.EdgeQuestions:
+		ids := make([]ent.Value, 0, len(m.removedquestions))
+		for id := range m.removedquestions {
+			ids = append(ids, id)
+		}
+		return ids
 	case hackathon.EdgeOwners:
 		ids := make([]ent.Value, 0, len(m.removedowners))
 		for id := range m.removedowners {
@@ -1494,7 +2221,7 @@ func (m *HackathonMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HackathonMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 10)
+	edges := make([]string, 0, 11)
 	if m.clearedtracks {
 		edges = append(edges, hackathon.EdgeTracks)
 	}
@@ -1515,6 +2242,9 @@ func (m *HackathonMutation) ClearedEdges() []string {
 	}
 	if m.clearedvote_categories {
 		edges = append(edges, hackathon.EdgeVoteCategories)
+	}
+	if m.clearedquestions {
+		edges = append(edges, hackathon.EdgeQuestions)
 	}
 	if m.clearedowners {
 		edges = append(edges, hackathon.EdgeOwners)
@@ -1546,6 +2276,8 @@ func (m *HackathonMutation) EdgeCleared(name string) bool {
 		return m.clearedstate
 	case hackathon.EdgeVoteCategories:
 		return m.clearedvote_categories
+	case hackathon.EdgeQuestions:
+		return m.clearedquestions
 	case hackathon.EdgeOwners:
 		return m.clearedowners
 	case hackathon.EdgeCreator:
@@ -1597,6 +2329,9 @@ func (m *HackathonMutation) ResetEdge(name string) error {
 		return nil
 	case hackathon.EdgeVoteCategories:
 		m.ResetVoteCategories()
+		return nil
+	case hackathon.EdgeQuestions:
+		m.ResetQuestions()
 		return nil
 	case hackathon.EdgeOwners:
 		m.ResetOwners()
@@ -6159,6 +6894,1079 @@ func (m *ProjectMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Project edge %s", name)
 }
 
+// QuestionMutation represents an operation that mutates the Question nodes in the graph.
+type QuestionMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	key              *string
+	label            *string
+	data_type        *question.DataType
+	mandatory        *bool
+	_order           *int
+	add_order        *int
+	options          *[]string
+	appendoptions    []string
+	created_at       *time.Time
+	modified_at      *time.Time
+	clearedFields    map[string]struct{}
+	hackathon        *uuid.UUID
+	clearedhackathon bool
+	creator          *uuid.UUID
+	clearedcreator   bool
+	modifier         *uuid.UUID
+	clearedmodifier  bool
+	answers          map[uuid.UUID]struct{}
+	removedanswers   map[uuid.UUID]struct{}
+	clearedanswers   bool
+	done             bool
+	oldValue         func(context.Context) (*Question, error)
+	predicates       []predicate.Question
+}
+
+var _ ent.Mutation = (*QuestionMutation)(nil)
+
+// questionOption allows management of the mutation configuration using functional options.
+type questionOption func(*QuestionMutation)
+
+// newQuestionMutation creates new mutation for the Question entity.
+func newQuestionMutation(c config, op Op, opts ...questionOption) *QuestionMutation {
+	m := &QuestionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeQuestion,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withQuestionID sets the ID field of the mutation.
+func withQuestionID(id uuid.UUID) questionOption {
+	return func(m *QuestionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Question
+		)
+		m.oldValue = func(ctx context.Context) (*Question, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Question.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withQuestion sets the old Question of the mutation.
+func withQuestion(node *Question) questionOption {
+	return func(m *QuestionMutation) {
+		m.oldValue = func(context.Context) (*Question, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m QuestionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m QuestionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Question entities.
+func (m *QuestionMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *QuestionMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *QuestionMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Question.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetHackathonID sets the "hackathon_id" field.
+func (m *QuestionMutation) SetHackathonID(u uuid.UUID) {
+	m.hackathon = &u
+}
+
+// HackathonID returns the value of the "hackathon_id" field in the mutation.
+func (m *QuestionMutation) HackathonID() (r uuid.UUID, exists bool) {
+	v := m.hackathon
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHackathonID returns the old "hackathon_id" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldHackathonID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHackathonID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHackathonID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHackathonID: %w", err)
+	}
+	return oldValue.HackathonID, nil
+}
+
+// ResetHackathonID resets all changes to the "hackathon_id" field.
+func (m *QuestionMutation) ResetHackathonID() {
+	m.hackathon = nil
+}
+
+// SetKey sets the "key" field.
+func (m *QuestionMutation) SetKey(s string) {
+	m.key = &s
+}
+
+// Key returns the value of the "key" field in the mutation.
+func (m *QuestionMutation) Key() (r string, exists bool) {
+	v := m.key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKey returns the old "key" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKey: %w", err)
+	}
+	return oldValue.Key, nil
+}
+
+// ResetKey resets all changes to the "key" field.
+func (m *QuestionMutation) ResetKey() {
+	m.key = nil
+}
+
+// SetLabel sets the "label" field.
+func (m *QuestionMutation) SetLabel(s string) {
+	m.label = &s
+}
+
+// Label returns the value of the "label" field in the mutation.
+func (m *QuestionMutation) Label() (r string, exists bool) {
+	v := m.label
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLabel returns the old "label" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldLabel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLabel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLabel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLabel: %w", err)
+	}
+	return oldValue.Label, nil
+}
+
+// ResetLabel resets all changes to the "label" field.
+func (m *QuestionMutation) ResetLabel() {
+	m.label = nil
+}
+
+// SetDataType sets the "data_type" field.
+func (m *QuestionMutation) SetDataType(qt question.DataType) {
+	m.data_type = &qt
+}
+
+// DataType returns the value of the "data_type" field in the mutation.
+func (m *QuestionMutation) DataType() (r question.DataType, exists bool) {
+	v := m.data_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDataType returns the old "data_type" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldDataType(ctx context.Context) (v question.DataType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDataType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDataType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDataType: %w", err)
+	}
+	return oldValue.DataType, nil
+}
+
+// ResetDataType resets all changes to the "data_type" field.
+func (m *QuestionMutation) ResetDataType() {
+	m.data_type = nil
+}
+
+// SetMandatory sets the "mandatory" field.
+func (m *QuestionMutation) SetMandatory(b bool) {
+	m.mandatory = &b
+}
+
+// Mandatory returns the value of the "mandatory" field in the mutation.
+func (m *QuestionMutation) Mandatory() (r bool, exists bool) {
+	v := m.mandatory
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMandatory returns the old "mandatory" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldMandatory(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMandatory is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMandatory requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMandatory: %w", err)
+	}
+	return oldValue.Mandatory, nil
+}
+
+// ResetMandatory resets all changes to the "mandatory" field.
+func (m *QuestionMutation) ResetMandatory() {
+	m.mandatory = nil
+}
+
+// SetOrder sets the "order" field.
+func (m *QuestionMutation) SetOrder(i int) {
+	m._order = &i
+	m.add_order = nil
+}
+
+// Order returns the value of the "order" field in the mutation.
+func (m *QuestionMutation) Order() (r int, exists bool) {
+	v := m._order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOrder returns the old "order" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldOrder(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOrder is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOrder requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOrder: %w", err)
+	}
+	return oldValue.Order, nil
+}
+
+// AddOrder adds i to the "order" field.
+func (m *QuestionMutation) AddOrder(i int) {
+	if m.add_order != nil {
+		*m.add_order += i
+	} else {
+		m.add_order = &i
+	}
+}
+
+// AddedOrder returns the value that was added to the "order" field in this mutation.
+func (m *QuestionMutation) AddedOrder() (r int, exists bool) {
+	v := m.add_order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOrder resets all changes to the "order" field.
+func (m *QuestionMutation) ResetOrder() {
+	m._order = nil
+	m.add_order = nil
+}
+
+// SetOptions sets the "options" field.
+func (m *QuestionMutation) SetOptions(s []string) {
+	m.options = &s
+	m.appendoptions = nil
+}
+
+// Options returns the value of the "options" field in the mutation.
+func (m *QuestionMutation) Options() (r []string, exists bool) {
+	v := m.options
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOptions returns the old "options" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldOptions(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOptions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOptions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOptions: %w", err)
+	}
+	return oldValue.Options, nil
+}
+
+// AppendOptions adds s to the "options" field.
+func (m *QuestionMutation) AppendOptions(s []string) {
+	m.appendoptions = append(m.appendoptions, s...)
+}
+
+// AppendedOptions returns the list of values that were appended to the "options" field in this mutation.
+func (m *QuestionMutation) AppendedOptions() ([]string, bool) {
+	if len(m.appendoptions) == 0 {
+		return nil, false
+	}
+	return m.appendoptions, true
+}
+
+// ResetOptions resets all changes to the "options" field.
+func (m *QuestionMutation) ResetOptions() {
+	m.options = nil
+	m.appendoptions = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *QuestionMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *QuestionMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *QuestionMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetModifiedAt sets the "modified_at" field.
+func (m *QuestionMutation) SetModifiedAt(t time.Time) {
+	m.modified_at = &t
+}
+
+// ModifiedAt returns the value of the "modified_at" field in the mutation.
+func (m *QuestionMutation) ModifiedAt() (r time.Time, exists bool) {
+	v := m.modified_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModifiedAt returns the old "modified_at" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldModifiedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModifiedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModifiedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModifiedAt: %w", err)
+	}
+	return oldValue.ModifiedAt, nil
+}
+
+// ResetModifiedAt resets all changes to the "modified_at" field.
+func (m *QuestionMutation) ResetModifiedAt() {
+	m.modified_at = nil
+}
+
+// ClearHackathon clears the "hackathon" edge to the Hackathon entity.
+func (m *QuestionMutation) ClearHackathon() {
+	m.clearedhackathon = true
+	m.clearedFields[question.FieldHackathonID] = struct{}{}
+}
+
+// HackathonCleared reports if the "hackathon" edge to the Hackathon entity was cleared.
+func (m *QuestionMutation) HackathonCleared() bool {
+	return m.clearedhackathon
+}
+
+// HackathonIDs returns the "hackathon" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// HackathonID instead. It exists only for internal usage by the builders.
+func (m *QuestionMutation) HackathonIDs() (ids []uuid.UUID) {
+	if id := m.hackathon; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetHackathon resets all changes to the "hackathon" edge.
+func (m *QuestionMutation) ResetHackathon() {
+	m.hackathon = nil
+	m.clearedhackathon = false
+}
+
+// SetCreatorID sets the "creator" edge to the User entity by id.
+func (m *QuestionMutation) SetCreatorID(id uuid.UUID) {
+	m.creator = &id
+}
+
+// ClearCreator clears the "creator" edge to the User entity.
+func (m *QuestionMutation) ClearCreator() {
+	m.clearedcreator = true
+}
+
+// CreatorCleared reports if the "creator" edge to the User entity was cleared.
+func (m *QuestionMutation) CreatorCleared() bool {
+	return m.clearedcreator
+}
+
+// CreatorID returns the "creator" edge ID in the mutation.
+func (m *QuestionMutation) CreatorID() (id uuid.UUID, exists bool) {
+	if m.creator != nil {
+		return *m.creator, true
+	}
+	return
+}
+
+// CreatorIDs returns the "creator" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CreatorID instead. It exists only for internal usage by the builders.
+func (m *QuestionMutation) CreatorIDs() (ids []uuid.UUID) {
+	if id := m.creator; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCreator resets all changes to the "creator" edge.
+func (m *QuestionMutation) ResetCreator() {
+	m.creator = nil
+	m.clearedcreator = false
+}
+
+// SetModifierID sets the "modifier" edge to the User entity by id.
+func (m *QuestionMutation) SetModifierID(id uuid.UUID) {
+	m.modifier = &id
+}
+
+// ClearModifier clears the "modifier" edge to the User entity.
+func (m *QuestionMutation) ClearModifier() {
+	m.clearedmodifier = true
+}
+
+// ModifierCleared reports if the "modifier" edge to the User entity was cleared.
+func (m *QuestionMutation) ModifierCleared() bool {
+	return m.clearedmodifier
+}
+
+// ModifierID returns the "modifier" edge ID in the mutation.
+func (m *QuestionMutation) ModifierID() (id uuid.UUID, exists bool) {
+	if m.modifier != nil {
+		return *m.modifier, true
+	}
+	return
+}
+
+// ModifierIDs returns the "modifier" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ModifierID instead. It exists only for internal usage by the builders.
+func (m *QuestionMutation) ModifierIDs() (ids []uuid.UUID) {
+	if id := m.modifier; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetModifier resets all changes to the "modifier" edge.
+func (m *QuestionMutation) ResetModifier() {
+	m.modifier = nil
+	m.clearedmodifier = false
+}
+
+// AddAnswerIDs adds the "answers" edge to the Answer entity by ids.
+func (m *QuestionMutation) AddAnswerIDs(ids ...uuid.UUID) {
+	if m.answers == nil {
+		m.answers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.answers[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAnswers clears the "answers" edge to the Answer entity.
+func (m *QuestionMutation) ClearAnswers() {
+	m.clearedanswers = true
+}
+
+// AnswersCleared reports if the "answers" edge to the Answer entity was cleared.
+func (m *QuestionMutation) AnswersCleared() bool {
+	return m.clearedanswers
+}
+
+// RemoveAnswerIDs removes the "answers" edge to the Answer entity by IDs.
+func (m *QuestionMutation) RemoveAnswerIDs(ids ...uuid.UUID) {
+	if m.removedanswers == nil {
+		m.removedanswers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.answers, ids[i])
+		m.removedanswers[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAnswers returns the removed IDs of the "answers" edge to the Answer entity.
+func (m *QuestionMutation) RemovedAnswersIDs() (ids []uuid.UUID) {
+	for id := range m.removedanswers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AnswersIDs returns the "answers" edge IDs in the mutation.
+func (m *QuestionMutation) AnswersIDs() (ids []uuid.UUID) {
+	for id := range m.answers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAnswers resets all changes to the "answers" edge.
+func (m *QuestionMutation) ResetAnswers() {
+	m.answers = nil
+	m.clearedanswers = false
+	m.removedanswers = nil
+}
+
+// Where appends a list predicates to the QuestionMutation builder.
+func (m *QuestionMutation) Where(ps ...predicate.Question) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the QuestionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *QuestionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Question, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *QuestionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *QuestionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Question).
+func (m *QuestionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *QuestionMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.hackathon != nil {
+		fields = append(fields, question.FieldHackathonID)
+	}
+	if m.key != nil {
+		fields = append(fields, question.FieldKey)
+	}
+	if m.label != nil {
+		fields = append(fields, question.FieldLabel)
+	}
+	if m.data_type != nil {
+		fields = append(fields, question.FieldDataType)
+	}
+	if m.mandatory != nil {
+		fields = append(fields, question.FieldMandatory)
+	}
+	if m._order != nil {
+		fields = append(fields, question.FieldOrder)
+	}
+	if m.options != nil {
+		fields = append(fields, question.FieldOptions)
+	}
+	if m.created_at != nil {
+		fields = append(fields, question.FieldCreatedAt)
+	}
+	if m.modified_at != nil {
+		fields = append(fields, question.FieldModifiedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *QuestionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case question.FieldHackathonID:
+		return m.HackathonID()
+	case question.FieldKey:
+		return m.Key()
+	case question.FieldLabel:
+		return m.Label()
+	case question.FieldDataType:
+		return m.DataType()
+	case question.FieldMandatory:
+		return m.Mandatory()
+	case question.FieldOrder:
+		return m.Order()
+	case question.FieldOptions:
+		return m.Options()
+	case question.FieldCreatedAt:
+		return m.CreatedAt()
+	case question.FieldModifiedAt:
+		return m.ModifiedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *QuestionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case question.FieldHackathonID:
+		return m.OldHackathonID(ctx)
+	case question.FieldKey:
+		return m.OldKey(ctx)
+	case question.FieldLabel:
+		return m.OldLabel(ctx)
+	case question.FieldDataType:
+		return m.OldDataType(ctx)
+	case question.FieldMandatory:
+		return m.OldMandatory(ctx)
+	case question.FieldOrder:
+		return m.OldOrder(ctx)
+	case question.FieldOptions:
+		return m.OldOptions(ctx)
+	case question.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case question.FieldModifiedAt:
+		return m.OldModifiedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Question field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *QuestionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case question.FieldHackathonID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHackathonID(v)
+		return nil
+	case question.FieldKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKey(v)
+		return nil
+	case question.FieldLabel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLabel(v)
+		return nil
+	case question.FieldDataType:
+		v, ok := value.(question.DataType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDataType(v)
+		return nil
+	case question.FieldMandatory:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMandatory(v)
+		return nil
+	case question.FieldOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOrder(v)
+		return nil
+	case question.FieldOptions:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOptions(v)
+		return nil
+	case question.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case question.FieldModifiedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModifiedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Question field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *QuestionMutation) AddedFields() []string {
+	var fields []string
+	if m.add_order != nil {
+		fields = append(fields, question.FieldOrder)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *QuestionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case question.FieldOrder:
+		return m.AddedOrder()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *QuestionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case question.FieldOrder:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOrder(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Question numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *QuestionMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *QuestionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *QuestionMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Question nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *QuestionMutation) ResetField(name string) error {
+	switch name {
+	case question.FieldHackathonID:
+		m.ResetHackathonID()
+		return nil
+	case question.FieldKey:
+		m.ResetKey()
+		return nil
+	case question.FieldLabel:
+		m.ResetLabel()
+		return nil
+	case question.FieldDataType:
+		m.ResetDataType()
+		return nil
+	case question.FieldMandatory:
+		m.ResetMandatory()
+		return nil
+	case question.FieldOrder:
+		m.ResetOrder()
+		return nil
+	case question.FieldOptions:
+		m.ResetOptions()
+		return nil
+	case question.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case question.FieldModifiedAt:
+		m.ResetModifiedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Question field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *QuestionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.hackathon != nil {
+		edges = append(edges, question.EdgeHackathon)
+	}
+	if m.creator != nil {
+		edges = append(edges, question.EdgeCreator)
+	}
+	if m.modifier != nil {
+		edges = append(edges, question.EdgeModifier)
+	}
+	if m.answers != nil {
+		edges = append(edges, question.EdgeAnswers)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *QuestionMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case question.EdgeHackathon:
+		if id := m.hackathon; id != nil {
+			return []ent.Value{*id}
+		}
+	case question.EdgeCreator:
+		if id := m.creator; id != nil {
+			return []ent.Value{*id}
+		}
+	case question.EdgeModifier:
+		if id := m.modifier; id != nil {
+			return []ent.Value{*id}
+		}
+	case question.EdgeAnswers:
+		ids := make([]ent.Value, 0, len(m.answers))
+		for id := range m.answers {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *QuestionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.removedanswers != nil {
+		edges = append(edges, question.EdgeAnswers)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *QuestionMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case question.EdgeAnswers:
+		ids := make([]ent.Value, 0, len(m.removedanswers))
+		for id := range m.removedanswers {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *QuestionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.clearedhackathon {
+		edges = append(edges, question.EdgeHackathon)
+	}
+	if m.clearedcreator {
+		edges = append(edges, question.EdgeCreator)
+	}
+	if m.clearedmodifier {
+		edges = append(edges, question.EdgeModifier)
+	}
+	if m.clearedanswers {
+		edges = append(edges, question.EdgeAnswers)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *QuestionMutation) EdgeCleared(name string) bool {
+	switch name {
+	case question.EdgeHackathon:
+		return m.clearedhackathon
+	case question.EdgeCreator:
+		return m.clearedcreator
+	case question.EdgeModifier:
+		return m.clearedmodifier
+	case question.EdgeAnswers:
+		return m.clearedanswers
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *QuestionMutation) ClearEdge(name string) error {
+	switch name {
+	case question.EdgeHackathon:
+		m.ClearHackathon()
+		return nil
+	case question.EdgeCreator:
+		m.ClearCreator()
+		return nil
+	case question.EdgeModifier:
+		m.ClearModifier()
+		return nil
+	}
+	return fmt.Errorf("unknown Question unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *QuestionMutation) ResetEdge(name string) error {
+	switch name {
+	case question.EdgeHackathon:
+		m.ResetHackathon()
+		return nil
+	case question.EdgeCreator:
+		m.ResetCreator()
+		return nil
+	case question.EdgeModifier:
+		m.ResetModifier()
+		return nil
+	case question.EdgeAnswers:
+		m.ResetAnswers()
+		return nil
+	}
+	return fmt.Errorf("unknown Question edge %s", name)
+}
+
 // SubmissionMutation represents an operation that mutates the Submission nodes in the graph.
 type SubmissionMutation struct {
 	config
@@ -9285,6 +11093,15 @@ type UserMutation struct {
 	modified_tracks                   map[uuid.UUID]struct{}
 	removedmodified_tracks            map[uuid.UUID]struct{}
 	clearedmodified_tracks            bool
+	created_questions                 map[uuid.UUID]struct{}
+	removedcreated_questions          map[uuid.UUID]struct{}
+	clearedcreated_questions          bool
+	modified_questions                map[uuid.UUID]struct{}
+	removedmodified_questions         map[uuid.UUID]struct{}
+	clearedmodified_questions         bool
+	registration_answers              map[uuid.UUID]struct{}
+	removedregistration_answers       map[uuid.UUID]struct{}
+	clearedregistration_answers       bool
 	modified_states                   map[uuid.UUID]struct{}
 	removedmodified_states            map[uuid.UUID]struct{}
 	clearedmodified_states            bool
@@ -10515,6 +12332,168 @@ func (m *UserMutation) ResetModifiedTracks() {
 	m.removedmodified_tracks = nil
 }
 
+// AddCreatedQuestionIDs adds the "created_questions" edge to the Question entity by ids.
+func (m *UserMutation) AddCreatedQuestionIDs(ids ...uuid.UUID) {
+	if m.created_questions == nil {
+		m.created_questions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.created_questions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCreatedQuestions clears the "created_questions" edge to the Question entity.
+func (m *UserMutation) ClearCreatedQuestions() {
+	m.clearedcreated_questions = true
+}
+
+// CreatedQuestionsCleared reports if the "created_questions" edge to the Question entity was cleared.
+func (m *UserMutation) CreatedQuestionsCleared() bool {
+	return m.clearedcreated_questions
+}
+
+// RemoveCreatedQuestionIDs removes the "created_questions" edge to the Question entity by IDs.
+func (m *UserMutation) RemoveCreatedQuestionIDs(ids ...uuid.UUID) {
+	if m.removedcreated_questions == nil {
+		m.removedcreated_questions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.created_questions, ids[i])
+		m.removedcreated_questions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCreatedQuestions returns the removed IDs of the "created_questions" edge to the Question entity.
+func (m *UserMutation) RemovedCreatedQuestionsIDs() (ids []uuid.UUID) {
+	for id := range m.removedcreated_questions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreatedQuestionsIDs returns the "created_questions" edge IDs in the mutation.
+func (m *UserMutation) CreatedQuestionsIDs() (ids []uuid.UUID) {
+	for id := range m.created_questions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCreatedQuestions resets all changes to the "created_questions" edge.
+func (m *UserMutation) ResetCreatedQuestions() {
+	m.created_questions = nil
+	m.clearedcreated_questions = false
+	m.removedcreated_questions = nil
+}
+
+// AddModifiedQuestionIDs adds the "modified_questions" edge to the Question entity by ids.
+func (m *UserMutation) AddModifiedQuestionIDs(ids ...uuid.UUID) {
+	if m.modified_questions == nil {
+		m.modified_questions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.modified_questions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearModifiedQuestions clears the "modified_questions" edge to the Question entity.
+func (m *UserMutation) ClearModifiedQuestions() {
+	m.clearedmodified_questions = true
+}
+
+// ModifiedQuestionsCleared reports if the "modified_questions" edge to the Question entity was cleared.
+func (m *UserMutation) ModifiedQuestionsCleared() bool {
+	return m.clearedmodified_questions
+}
+
+// RemoveModifiedQuestionIDs removes the "modified_questions" edge to the Question entity by IDs.
+func (m *UserMutation) RemoveModifiedQuestionIDs(ids ...uuid.UUID) {
+	if m.removedmodified_questions == nil {
+		m.removedmodified_questions = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.modified_questions, ids[i])
+		m.removedmodified_questions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedModifiedQuestions returns the removed IDs of the "modified_questions" edge to the Question entity.
+func (m *UserMutation) RemovedModifiedQuestionsIDs() (ids []uuid.UUID) {
+	for id := range m.removedmodified_questions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ModifiedQuestionsIDs returns the "modified_questions" edge IDs in the mutation.
+func (m *UserMutation) ModifiedQuestionsIDs() (ids []uuid.UUID) {
+	for id := range m.modified_questions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetModifiedQuestions resets all changes to the "modified_questions" edge.
+func (m *UserMutation) ResetModifiedQuestions() {
+	m.modified_questions = nil
+	m.clearedmodified_questions = false
+	m.removedmodified_questions = nil
+}
+
+// AddRegistrationAnswerIDs adds the "registration_answers" edge to the Answer entity by ids.
+func (m *UserMutation) AddRegistrationAnswerIDs(ids ...uuid.UUID) {
+	if m.registration_answers == nil {
+		m.registration_answers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.registration_answers[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRegistrationAnswers clears the "registration_answers" edge to the Answer entity.
+func (m *UserMutation) ClearRegistrationAnswers() {
+	m.clearedregistration_answers = true
+}
+
+// RegistrationAnswersCleared reports if the "registration_answers" edge to the Answer entity was cleared.
+func (m *UserMutation) RegistrationAnswersCleared() bool {
+	return m.clearedregistration_answers
+}
+
+// RemoveRegistrationAnswerIDs removes the "registration_answers" edge to the Answer entity by IDs.
+func (m *UserMutation) RemoveRegistrationAnswerIDs(ids ...uuid.UUID) {
+	if m.removedregistration_answers == nil {
+		m.removedregistration_answers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.registration_answers, ids[i])
+		m.removedregistration_answers[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRegistrationAnswers returns the removed IDs of the "registration_answers" edge to the Answer entity.
+func (m *UserMutation) RemovedRegistrationAnswersIDs() (ids []uuid.UUID) {
+	for id := range m.removedregistration_answers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RegistrationAnswersIDs returns the "registration_answers" edge IDs in the mutation.
+func (m *UserMutation) RegistrationAnswersIDs() (ids []uuid.UUID) {
+	for id := range m.registration_answers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRegistrationAnswers resets all changes to the "registration_answers" edge.
+func (m *UserMutation) ResetRegistrationAnswers() {
+	m.registration_answers = nil
+	m.clearedregistration_answers = false
+	m.removedregistration_answers = nil
+}
+
 // AddModifiedStateIDs adds the "modified_states" edge to the HackathonState entity by ids.
 func (m *UserMutation) AddModifiedStateIDs(ids ...uuid.UUID) {
 	if m.modified_states == nil {
@@ -11018,7 +12997,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 21)
+	edges := make([]string, 0, 24)
 	if m.created_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -11066,6 +13045,15 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.modified_tracks != nil {
 		edges = append(edges, user.EdgeModifiedTracks)
+	}
+	if m.created_questions != nil {
+		edges = append(edges, user.EdgeCreatedQuestions)
+	}
+	if m.modified_questions != nil {
+		edges = append(edges, user.EdgeModifiedQuestions)
+	}
+	if m.registration_answers != nil {
+		edges = append(edges, user.EdgeRegistrationAnswers)
 	}
 	if m.modified_states != nil {
 		edges = append(edges, user.EdgeModifiedStates)
@@ -11185,6 +13173,24 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeCreatedQuestions:
+		ids := make([]ent.Value, 0, len(m.created_questions))
+		for id := range m.created_questions {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeModifiedQuestions:
+		ids := make([]ent.Value, 0, len(m.modified_questions))
+		for id := range m.modified_questions {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeRegistrationAnswers:
+		ids := make([]ent.Value, 0, len(m.registration_answers))
+		for id := range m.registration_answers {
+			ids = append(ids, id)
+		}
+		return ids
 	case user.EdgeModifiedStates:
 		ids := make([]ent.Value, 0, len(m.modified_states))
 		for id := range m.modified_states {
@@ -11221,7 +13227,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 21)
+	edges := make([]string, 0, 24)
 	if m.removedcreated_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -11269,6 +13275,15 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedmodified_tracks != nil {
 		edges = append(edges, user.EdgeModifiedTracks)
+	}
+	if m.removedcreated_questions != nil {
+		edges = append(edges, user.EdgeCreatedQuestions)
+	}
+	if m.removedmodified_questions != nil {
+		edges = append(edges, user.EdgeModifiedQuestions)
+	}
+	if m.removedregistration_answers != nil {
+		edges = append(edges, user.EdgeRegistrationAnswers)
 	}
 	if m.removedmodified_states != nil {
 		edges = append(edges, user.EdgeModifiedStates)
@@ -11388,6 +13403,24 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeCreatedQuestions:
+		ids := make([]ent.Value, 0, len(m.removedcreated_questions))
+		for id := range m.removedcreated_questions {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeModifiedQuestions:
+		ids := make([]ent.Value, 0, len(m.removedmodified_questions))
+		for id := range m.removedmodified_questions {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeRegistrationAnswers:
+		ids := make([]ent.Value, 0, len(m.removedregistration_answers))
+		for id := range m.removedregistration_answers {
+			ids = append(ids, id)
+		}
+		return ids
 	case user.EdgeModifiedStates:
 		ids := make([]ent.Value, 0, len(m.removedmodified_states))
 		for id := range m.removedmodified_states {
@@ -11424,7 +13457,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 21)
+	edges := make([]string, 0, 24)
 	if m.clearedcreated_hackathons {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -11472,6 +13505,15 @@ func (m *UserMutation) ClearedEdges() []string {
 	}
 	if m.clearedmodified_tracks {
 		edges = append(edges, user.EdgeModifiedTracks)
+	}
+	if m.clearedcreated_questions {
+		edges = append(edges, user.EdgeCreatedQuestions)
+	}
+	if m.clearedmodified_questions {
+		edges = append(edges, user.EdgeModifiedQuestions)
+	}
+	if m.clearedregistration_answers {
+		edges = append(edges, user.EdgeRegistrationAnswers)
 	}
 	if m.clearedmodified_states {
 		edges = append(edges, user.EdgeModifiedStates)
@@ -11527,6 +13569,12 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedcreated_tracks
 	case user.EdgeModifiedTracks:
 		return m.clearedmodified_tracks
+	case user.EdgeCreatedQuestions:
+		return m.clearedcreated_questions
+	case user.EdgeModifiedQuestions:
+		return m.clearedmodified_questions
+	case user.EdgeRegistrationAnswers:
+		return m.clearedregistration_answers
 	case user.EdgeModifiedStates:
 		return m.clearedmodified_states
 	case user.EdgePreferredProjects:
@@ -11600,6 +13648,15 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeModifiedTracks:
 		m.ResetModifiedTracks()
+		return nil
+	case user.EdgeCreatedQuestions:
+		m.ResetCreatedQuestions()
+		return nil
+	case user.EdgeModifiedQuestions:
+		m.ResetModifiedQuestions()
+		return nil
+	case user.EdgeRegistrationAnswers:
+		m.ResetRegistrationAnswers()
 		return nil
 	case user.EdgeModifiedStates:
 		m.ResetModifiedStates()
