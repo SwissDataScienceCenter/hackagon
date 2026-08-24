@@ -66,6 +66,27 @@ A hackathon event containing tracks, projects, phases, and participants.
 - `ends_at`
 - `visibility`
 
+## HackathonInvite
+
+An invite for a hackathon.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `created_at` | time.Time | yes | no | yes | yes |  |
+| `revoked_at` | time.Time | no | no | no | no |  |
+| `token` | uuid.UUID | yes | yes | no | yes |  |
+| `note` | string | no | no | no | no |  |
+| `expires_at` | time.Time | no | no | no | no |  |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `hackathon` | Hackathon | M2O | no | yes | The hackathon this invite grants access to. |
+| `creator` | User | M2O | yes | yes | The user who created this invite. |
+
 ## HackathonState
 
 Configuration state for a hackathon. One row per hackathon, pre-created on hackathon creation.
@@ -360,6 +381,7 @@ An authenticated user, synced from Keycloak on first login.
 | Edge | Target | Relation | Inverse | Required | Description |
 |------|--------|----------|---------|----------|-------------|
 | `created_hackathons` | Hackathon | O2M | no | no | Hackathons this user created. |
+| `created_hackathon_invites` | HackathonInvite | O2M | no | no | Invites this user created. |
 | `modified_hackathons` | Hackathon | O2M | no | no | Hackathons this user last modified. |
 | `created_projects` | Project | O2M | no | no | Projects this user created. |
 | `modified_projects` | Project | O2M | no | no | Projects this user last modified. |

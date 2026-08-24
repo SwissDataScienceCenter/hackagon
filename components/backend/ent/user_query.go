@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
@@ -39,6 +40,7 @@ type UserQuery struct {
 	inters                       []Interceptor
 	predicates                   []predicate.User
 	withCreatedHackathons        *HackathonQuery
+	withCreatedHackathonInvites  *HackathonInviteQuery
 	withModifiedHackathons       *HackathonQuery
 	withCreatedProjects          *ProjectQuery
 	withModifiedProjects         *ProjectQuery
@@ -115,6 +117,28 @@ func (_q *UserQuery) QueryCreatedHackathons() *HackathonQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(hackathon.Table, hackathon.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedHackathonsTable, user.CreatedHackathonsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCreatedHackathonInvites chains the current query on the "created_hackathon_invites" edge.
+func (_q *UserQuery) QueryCreatedHackathonInvites() *HackathonInviteQuery {
+	query := (&HackathonInviteClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(hackathoninvite.Table, hackathoninvite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedHackathonInvitesTable, user.CreatedHackathonInvitesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -865,6 +889,7 @@ func (_q *UserQuery) Clone() *UserQuery {
 		inters:                       append([]Interceptor{}, _q.inters...),
 		predicates:                   append([]predicate.User{}, _q.predicates...),
 		withCreatedHackathons:        _q.withCreatedHackathons.Clone(),
+		withCreatedHackathonInvites:  _q.withCreatedHackathonInvites.Clone(),
 		withModifiedHackathons:       _q.withModifiedHackathons.Clone(),
 		withCreatedProjects:          _q.withCreatedProjects.Clone(),
 		withModifiedProjects:         _q.withModifiedProjects.Clone(),
@@ -904,6 +929,17 @@ func (_q *UserQuery) WithCreatedHackathons(opts ...func(*HackathonQuery)) *UserQ
 		opt(query)
 	}
 	_q.withCreatedHackathons = query
+	return _q
+}
+
+// WithCreatedHackathonInvites tells the query-builder to eager-load the nodes that are connected to
+// the "created_hackathon_invites" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCreatedHackathonInvites(opts ...func(*HackathonInviteQuery)) *UserQuery {
+	query := (&HackathonInviteClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedHackathonInvites = query
 	return _q
 }
 
@@ -1260,8 +1296,9 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [26]bool{
+		loadedTypes = [27]bool{
 			_q.withCreatedHackathons != nil,
+			_q.withCreatedHackathonInvites != nil,
 			_q.withModifiedHackathons != nil,
 			_q.withCreatedProjects != nil,
 			_q.withModifiedProjects != nil,
@@ -1311,6 +1348,15 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadCreatedHackathons(ctx, query, nodes,
 			func(n *User) { n.Edges.CreatedHackathons = []*Hackathon{} },
 			func(n *User, e *Hackathon) { n.Edges.CreatedHackathons = append(n.Edges.CreatedHackathons, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCreatedHackathonInvites; query != nil {
+		if err := _q.loadCreatedHackathonInvites(ctx, query, nodes,
+			func(n *User) { n.Edges.CreatedHackathonInvites = []*HackathonInvite{} },
+			func(n *User, e *HackathonInvite) {
+				n.Edges.CreatedHackathonInvites = append(n.Edges.CreatedHackathonInvites, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -1520,6 +1566,37 @@ func (_q *UserQuery) loadCreatedHackathons(ctx context.Context, query *Hackathon
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_created_hackathons" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCreatedHackathonInvites(ctx context.Context, query *HackathonInviteQuery, nodes []*User, init func(*User), assign func(*User, *HackathonInvite)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.HackathonInvite(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CreatedHackathonInvitesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_created_hackathon_invites
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_created_hackathon_invites" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_created_hackathon_invites" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

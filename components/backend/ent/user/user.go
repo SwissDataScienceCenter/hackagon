@@ -29,6 +29,8 @@ const (
 	FieldModifiedAt = "modified_at"
 	// EdgeCreatedHackathons holds the string denoting the created_hackathons edge name in mutations.
 	EdgeCreatedHackathons = "created_hackathons"
+	// EdgeCreatedHackathonInvites holds the string denoting the created_hackathon_invites edge name in mutations.
+	EdgeCreatedHackathonInvites = "created_hackathon_invites"
 	// EdgeModifiedHackathons holds the string denoting the modified_hackathons edge name in mutations.
 	EdgeModifiedHackathons = "modified_hackathons"
 	// EdgeCreatedProjects holds the string denoting the created_projects edge name in mutations.
@@ -88,6 +90,13 @@ const (
 	CreatedHackathonsInverseTable = "hackathons"
 	// CreatedHackathonsColumn is the table column denoting the created_hackathons relation/edge.
 	CreatedHackathonsColumn = "user_created_hackathons"
+	// CreatedHackathonInvitesTable is the table that holds the created_hackathon_invites relation/edge.
+	CreatedHackathonInvitesTable = "hackathon_invites"
+	// CreatedHackathonInvitesInverseTable is the table name for the HackathonInvite entity.
+	// It exists in this package in order to avoid circular dependency with the "hackathoninvite" package.
+	CreatedHackathonInvitesInverseTable = "hackathon_invites"
+	// CreatedHackathonInvitesColumn is the table column denoting the created_hackathon_invites relation/edge.
+	CreatedHackathonInvitesColumn = "user_created_hackathon_invites"
 	// ModifiedHackathonsTable is the table that holds the modified_hackathons relation/edge.
 	ModifiedHackathonsTable = "hackathons"
 	// ModifiedHackathonsInverseTable is the table name for the Hackathon entity.
@@ -360,6 +369,20 @@ func ByCreatedHackathonsCount(opts ...sql.OrderTermOption) OrderOption {
 func ByCreatedHackathons(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newCreatedHackathonsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCreatedHackathonInvitesCount orders the results by created_hackathon_invites count.
+func ByCreatedHackathonInvitesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreatedHackathonInvitesStep(), opts...)
+	}
+}
+
+// ByCreatedHackathonInvites orders the results by created_hackathon_invites terms.
+func ByCreatedHackathonInvites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedHackathonInvitesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -717,6 +740,13 @@ func newCreatedHackathonsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreatedHackathonsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CreatedHackathonsTable, CreatedHackathonsColumn),
+	)
+}
+func newCreatedHackathonInvitesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedHackathonInvitesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreatedHackathonInvitesTable, CreatedHackathonInvitesColumn),
 	)
 }
 func newModifiedHackathonsStep() *sqlgraph.Step {

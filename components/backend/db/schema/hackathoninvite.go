@@ -53,7 +53,6 @@ func (HackathonInvite) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("hackathon", Hackathon.Type).
 			Unique().Required().Immutable().
-			Field("hackathon_id").
 			Comment("The hackathon this invite grants access to."),
 		edge.From("creator", User.Type).
 			Ref("created_hackathon_invites").Unique().Required().Immutable().

@@ -12,6 +12,9 @@ type Answer func(*sql.Selector)
 // Hackathon is the predicate function for hackathon builders.
 type Hackathon func(*sql.Selector)
 
+// HackathonInvite is the predicate function for hackathoninvite builders.
+type HackathonInvite func(*sql.Selector)
+
 // HackathonState is the predicate function for hackathonstate builders.
 type HackathonState func(*sql.Selector)
 

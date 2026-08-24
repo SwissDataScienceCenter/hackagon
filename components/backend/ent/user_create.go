@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
@@ -131,6 +132,21 @@ func (_c *UserCreate) AddCreatedHackathons(v ...*Hackathon) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddCreatedHackathonIDs(ids...)
+}
+
+// AddCreatedHackathonInviteIDs adds the "created_hackathon_invites" edge to the HackathonInvite entity by IDs.
+func (_c *UserCreate) AddCreatedHackathonInviteIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddCreatedHackathonInviteIDs(ids...)
+	return _c
+}
+
+// AddCreatedHackathonInvites adds the "created_hackathon_invites" edges to the HackathonInvite entity.
+func (_c *UserCreate) AddCreatedHackathonInvites(v ...*HackathonInvite) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreatedHackathonInviteIDs(ids...)
 }
 
 // AddModifiedHackathonIDs adds the "modified_hackathons" edge to the Hackathon entity by IDs.
@@ -623,6 +639,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreatedHackathonInvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

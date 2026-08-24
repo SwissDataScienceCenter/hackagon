@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
@@ -90,6 +91,7 @@ func checkColumn(t, c string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			answer.Table:          answer.ValidColumn,
 			hackathon.Table:       hackathon.ValidColumn,
+			hackathoninvite.Table: hackathoninvite.ValidColumn,
 			hackathonstate.Table:  hackathonstate.ValidColumn,
 			page.Table:            page.ValidColumn,
 			participant.Table:     participant.ValidColumn,

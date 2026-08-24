@@ -10,6 +10,8 @@ import { AddOwnerRequest } from "./messages/hackathon_svc/add_owner_request";
 import { AddOwnerResponse } from "./messages/hackathon_svc/add_owner_response";
 import { ApproveParticipantRequest } from "./messages/hackathon_svc/approve_participant_request";
 import { ApproveParticipantResponse } from "./messages/hackathon_svc/approve_participant_response";
+import { CreateInviteRequest } from "./messages/hackathon_svc/create_invite_request";
+import { CreateInviteResponse } from "./messages/hackathon_svc/create_invite_response";
 import { CreateQuestionRequest } from "./messages/hackathon_svc/create_question_request";
 import { CreateQuestionResponse } from "./messages/hackathon_svc/create_question_response";
 import { CreateRequest } from "./messages/hackathon_svc/create_request";
@@ -22,18 +24,24 @@ import { GetRequest } from "./messages/hackathon_svc/get_request";
 import { GetResponse } from "./messages/hackathon_svc/get_response";
 import { JoinRequest } from "./messages/hackathon_svc/join_request";
 import { JoinResponse } from "./messages/hackathon_svc/join_response";
+import { ListInvitesRequest } from "./messages/hackathon_svc/list_invites_request";
+import { ListInvitesResponse } from "./messages/hackathon_svc/list_invites_response";
 import { ListParticipantAnswersRequest } from "./messages/hackathon_svc/list_participant_answers_request";
 import { ListParticipantAnswersResponse } from "./messages/hackathon_svc/list_participant_answers_response";
 import { ListQuestionsRequest } from "./messages/hackathon_svc/list_questions_request";
 import { ListQuestionsResponse } from "./messages/hackathon_svc/list_questions_response";
 import { ListRequest } from "./messages/hackathon_svc/list_request";
 import { ListResponse } from "./messages/hackathon_svc/list_response";
+import { PreviewInviteRequest } from "./messages/hackathon_svc/preview_invite_request";
+import { PreviewInviteResponse } from "./messages/hackathon_svc/preview_invite_response";
 import { RemoveOwnerRequest } from "./messages/hackathon_svc/remove_owner_request";
 import { RemoveOwnerResponse } from "./messages/hackathon_svc/remove_owner_response";
 import { RemoveParticipantRequest } from "./messages/hackathon_svc/remove_participant_request";
 import { RemoveParticipantResponse } from "./messages/hackathon_svc/remove_participant_response";
 import { RemoveQuestionRequest } from "./messages/hackathon_svc/remove_question_request";
 import { RemoveQuestionResponse } from "./messages/hackathon_svc/remove_question_response";
+import { RevokeInviteRequest } from "./messages/hackathon_svc/revoke_invite_request";
+import { RevokeInviteResponse } from "./messages/hackathon_svc/revoke_invite_response";
 import { SetCapabilitiesRequest } from "./messages/hackathon_svc/set_capabilities_request";
 import { SetCapabilitiesResponse } from "./messages/hackathon_svc/set_capabilities_response";
 import { SetCurrentPhaseRequest } from "./messages/hackathon_svc/set_current_phase_request";
@@ -93,6 +101,38 @@ export const HackathonServiceDefinition = {
       requestType: SetCurrentPhaseRequest as typeof SetCurrentPhaseRequest,
       requestStream: false,
       responseType: SetCurrentPhaseResponse as typeof SetCurrentPhaseResponse,
+      responseStream: false,
+      options: {},
+    },
+    createInvite: {
+      name: "CreateInvite",
+      requestType: CreateInviteRequest as typeof CreateInviteRequest,
+      requestStream: false,
+      responseType: CreateInviteResponse as typeof CreateInviteResponse,
+      responseStream: false,
+      options: {},
+    },
+    listInvites: {
+      name: "ListInvites",
+      requestType: ListInvitesRequest as typeof ListInvitesRequest,
+      requestStream: false,
+      responseType: ListInvitesResponse as typeof ListInvitesResponse,
+      responseStream: false,
+      options: {},
+    },
+    revokeInvite: {
+      name: "RevokeInvite",
+      requestType: RevokeInviteRequest as typeof RevokeInviteRequest,
+      requestStream: false,
+      responseType: RevokeInviteResponse as typeof RevokeInviteResponse,
+      responseStream: false,
+      options: {},
+    },
+    previewInvite: {
+      name: "PreviewInvite",
+      requestType: PreviewInviteRequest as typeof PreviewInviteRequest,
+      requestStream: false,
+      responseType: PreviewInviteResponse as typeof PreviewInviteResponse,
       responseStream: false,
       options: {},
     },
@@ -201,6 +241,22 @@ export interface HackathonServiceImplementation<CallContextExt = {}> {
     request: SetCurrentPhaseRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<SetCurrentPhaseResponse>>;
+  createInvite(
+    request: CreateInviteRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<CreateInviteResponse>>;
+  listInvites(
+    request: ListInvitesRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<ListInvitesResponse>>;
+  revokeInvite(
+    request: RevokeInviteRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<RevokeInviteResponse>>;
+  previewInvite(
+    request: PreviewInviteRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<PreviewInviteResponse>>;
   join(request: JoinRequest, context: CallContext & CallContextExt): Promise<DeepPartial<JoinResponse>>;
   approveParticipant(
     request: ApproveParticipantRequest,
@@ -255,6 +311,22 @@ export interface HackathonServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<SetCurrentPhaseRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<SetCurrentPhaseResponse>;
+  createInvite(
+    request: DeepPartial<CreateInviteRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<CreateInviteResponse>;
+  listInvites(
+    request: DeepPartial<ListInvitesRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<ListInvitesResponse>;
+  revokeInvite(
+    request: DeepPartial<RevokeInviteRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<RevokeInviteResponse>;
+  previewInvite(
+    request: DeepPartial<PreviewInviteRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<PreviewInviteResponse>;
   join(request: DeepPartial<JoinRequest>, options?: CallOptions & CallOptionsExt): Promise<JoinResponse>;
   approveParticipant(
     request: DeepPartial<ApproveParticipantRequest>,

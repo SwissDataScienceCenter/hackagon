@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
@@ -42,6 +43,7 @@ const (
 	// Node types.
 	TypeAnswer          = "Answer"
 	TypeHackathon       = "Hackathon"
+	TypeHackathonInvite = "HackathonInvite"
 	TypeHackathonState  = "HackathonState"
 	TypePage            = "Page"
 	TypeParticipant     = "Participant"
@@ -2344,6 +2346,740 @@ func (m *HackathonMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Hackathon edge %s", name)
+}
+
+// HackathonInviteMutation represents an operation that mutates the HackathonInvite nodes in the graph.
+type HackathonInviteMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *uuid.UUID
+	created_at       *time.Time
+	revoked_at       *time.Time
+	token            *uuid.UUID
+	note             *string
+	expires_at       *time.Time
+	clearedFields    map[string]struct{}
+	hackathon        *uuid.UUID
+	clearedhackathon bool
+	creator          *uuid.UUID
+	clearedcreator   bool
+	done             bool
+	oldValue         func(context.Context) (*HackathonInvite, error)
+	predicates       []predicate.HackathonInvite
+}
+
+var _ ent.Mutation = (*HackathonInviteMutation)(nil)
+
+// hackathoninviteOption allows management of the mutation configuration using functional options.
+type hackathoninviteOption func(*HackathonInviteMutation)
+
+// newHackathonInviteMutation creates new mutation for the HackathonInvite entity.
+func newHackathonInviteMutation(c config, op Op, opts ...hackathoninviteOption) *HackathonInviteMutation {
+	m := &HackathonInviteMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeHackathonInvite,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withHackathonInviteID sets the ID field of the mutation.
+func withHackathonInviteID(id uuid.UUID) hackathoninviteOption {
+	return func(m *HackathonInviteMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *HackathonInvite
+		)
+		m.oldValue = func(ctx context.Context) (*HackathonInvite, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().HackathonInvite.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withHackathonInvite sets the old HackathonInvite of the mutation.
+func withHackathonInvite(node *HackathonInvite) hackathoninviteOption {
+	return func(m *HackathonInviteMutation) {
+		m.oldValue = func(context.Context) (*HackathonInvite, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m HackathonInviteMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m HackathonInviteMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of HackathonInvite entities.
+func (m *HackathonInviteMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *HackathonInviteMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *HackathonInviteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().HackathonInvite.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *HackathonInviteMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *HackathonInviteMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the HackathonInvite entity.
+// If the HackathonInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonInviteMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *HackathonInviteMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetRevokedAt sets the "revoked_at" field.
+func (m *HackathonInviteMutation) SetRevokedAt(t time.Time) {
+	m.revoked_at = &t
+}
+
+// RevokedAt returns the value of the "revoked_at" field in the mutation.
+func (m *HackathonInviteMutation) RevokedAt() (r time.Time, exists bool) {
+	v := m.revoked_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRevokedAt returns the old "revoked_at" field's value of the HackathonInvite entity.
+// If the HackathonInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonInviteMutation) OldRevokedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRevokedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRevokedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRevokedAt: %w", err)
+	}
+	return oldValue.RevokedAt, nil
+}
+
+// ClearRevokedAt clears the value of the "revoked_at" field.
+func (m *HackathonInviteMutation) ClearRevokedAt() {
+	m.revoked_at = nil
+	m.clearedFields[hackathoninvite.FieldRevokedAt] = struct{}{}
+}
+
+// RevokedAtCleared returns if the "revoked_at" field was cleared in this mutation.
+func (m *HackathonInviteMutation) RevokedAtCleared() bool {
+	_, ok := m.clearedFields[hackathoninvite.FieldRevokedAt]
+	return ok
+}
+
+// ResetRevokedAt resets all changes to the "revoked_at" field.
+func (m *HackathonInviteMutation) ResetRevokedAt() {
+	m.revoked_at = nil
+	delete(m.clearedFields, hackathoninvite.FieldRevokedAt)
+}
+
+// SetToken sets the "token" field.
+func (m *HackathonInviteMutation) SetToken(u uuid.UUID) {
+	m.token = &u
+}
+
+// Token returns the value of the "token" field in the mutation.
+func (m *HackathonInviteMutation) Token() (r uuid.UUID, exists bool) {
+	v := m.token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldToken returns the old "token" field's value of the HackathonInvite entity.
+// If the HackathonInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonInviteMutation) OldToken(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldToken: %w", err)
+	}
+	return oldValue.Token, nil
+}
+
+// ResetToken resets all changes to the "token" field.
+func (m *HackathonInviteMutation) ResetToken() {
+	m.token = nil
+}
+
+// SetNote sets the "note" field.
+func (m *HackathonInviteMutation) SetNote(s string) {
+	m.note = &s
+}
+
+// Note returns the value of the "note" field in the mutation.
+func (m *HackathonInviteMutation) Note() (r string, exists bool) {
+	v := m.note
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNote returns the old "note" field's value of the HackathonInvite entity.
+// If the HackathonInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonInviteMutation) OldNote(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNote is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNote requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNote: %w", err)
+	}
+	return oldValue.Note, nil
+}
+
+// ClearNote clears the value of the "note" field.
+func (m *HackathonInviteMutation) ClearNote() {
+	m.note = nil
+	m.clearedFields[hackathoninvite.FieldNote] = struct{}{}
+}
+
+// NoteCleared returns if the "note" field was cleared in this mutation.
+func (m *HackathonInviteMutation) NoteCleared() bool {
+	_, ok := m.clearedFields[hackathoninvite.FieldNote]
+	return ok
+}
+
+// ResetNote resets all changes to the "note" field.
+func (m *HackathonInviteMutation) ResetNote() {
+	m.note = nil
+	delete(m.clearedFields, hackathoninvite.FieldNote)
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *HackathonInviteMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *HackathonInviteMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the HackathonInvite entity.
+// If the HackathonInvite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonInviteMutation) OldExpiresAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ClearExpiresAt clears the value of the "expires_at" field.
+func (m *HackathonInviteMutation) ClearExpiresAt() {
+	m.expires_at = nil
+	m.clearedFields[hackathoninvite.FieldExpiresAt] = struct{}{}
+}
+
+// ExpiresAtCleared returns if the "expires_at" field was cleared in this mutation.
+func (m *HackathonInviteMutation) ExpiresAtCleared() bool {
+	_, ok := m.clearedFields[hackathoninvite.FieldExpiresAt]
+	return ok
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *HackathonInviteMutation) ResetExpiresAt() {
+	m.expires_at = nil
+	delete(m.clearedFields, hackathoninvite.FieldExpiresAt)
+}
+
+// SetHackathonID sets the "hackathon" edge to the Hackathon entity by id.
+func (m *HackathonInviteMutation) SetHackathonID(id uuid.UUID) {
+	m.hackathon = &id
+}
+
+// ClearHackathon clears the "hackathon" edge to the Hackathon entity.
+func (m *HackathonInviteMutation) ClearHackathon() {
+	m.clearedhackathon = true
+}
+
+// HackathonCleared reports if the "hackathon" edge to the Hackathon entity was cleared.
+func (m *HackathonInviteMutation) HackathonCleared() bool {
+	return m.clearedhackathon
+}
+
+// HackathonID returns the "hackathon" edge ID in the mutation.
+func (m *HackathonInviteMutation) HackathonID() (id uuid.UUID, exists bool) {
+	if m.hackathon != nil {
+		return *m.hackathon, true
+	}
+	return
+}
+
+// HackathonIDs returns the "hackathon" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// HackathonID instead. It exists only for internal usage by the builders.
+func (m *HackathonInviteMutation) HackathonIDs() (ids []uuid.UUID) {
+	if id := m.hackathon; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetHackathon resets all changes to the "hackathon" edge.
+func (m *HackathonInviteMutation) ResetHackathon() {
+	m.hackathon = nil
+	m.clearedhackathon = false
+}
+
+// SetCreatorID sets the "creator" edge to the User entity by id.
+func (m *HackathonInviteMutation) SetCreatorID(id uuid.UUID) {
+	m.creator = &id
+}
+
+// ClearCreator clears the "creator" edge to the User entity.
+func (m *HackathonInviteMutation) ClearCreator() {
+	m.clearedcreator = true
+}
+
+// CreatorCleared reports if the "creator" edge to the User entity was cleared.
+func (m *HackathonInviteMutation) CreatorCleared() bool {
+	return m.clearedcreator
+}
+
+// CreatorID returns the "creator" edge ID in the mutation.
+func (m *HackathonInviteMutation) CreatorID() (id uuid.UUID, exists bool) {
+	if m.creator != nil {
+		return *m.creator, true
+	}
+	return
+}
+
+// CreatorIDs returns the "creator" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CreatorID instead. It exists only for internal usage by the builders.
+func (m *HackathonInviteMutation) CreatorIDs() (ids []uuid.UUID) {
+	if id := m.creator; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCreator resets all changes to the "creator" edge.
+func (m *HackathonInviteMutation) ResetCreator() {
+	m.creator = nil
+	m.clearedcreator = false
+}
+
+// Where appends a list predicates to the HackathonInviteMutation builder.
+func (m *HackathonInviteMutation) Where(ps ...predicate.HackathonInvite) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the HackathonInviteMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *HackathonInviteMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.HackathonInvite, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *HackathonInviteMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *HackathonInviteMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (HackathonInvite).
+func (m *HackathonInviteMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *HackathonInviteMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.created_at != nil {
+		fields = append(fields, hackathoninvite.FieldCreatedAt)
+	}
+	if m.revoked_at != nil {
+		fields = append(fields, hackathoninvite.FieldRevokedAt)
+	}
+	if m.token != nil {
+		fields = append(fields, hackathoninvite.FieldToken)
+	}
+	if m.note != nil {
+		fields = append(fields, hackathoninvite.FieldNote)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, hackathoninvite.FieldExpiresAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *HackathonInviteMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case hackathoninvite.FieldCreatedAt:
+		return m.CreatedAt()
+	case hackathoninvite.FieldRevokedAt:
+		return m.RevokedAt()
+	case hackathoninvite.FieldToken:
+		return m.Token()
+	case hackathoninvite.FieldNote:
+		return m.Note()
+	case hackathoninvite.FieldExpiresAt:
+		return m.ExpiresAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *HackathonInviteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case hackathoninvite.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case hackathoninvite.FieldRevokedAt:
+		return m.OldRevokedAt(ctx)
+	case hackathoninvite.FieldToken:
+		return m.OldToken(ctx)
+	case hackathoninvite.FieldNote:
+		return m.OldNote(ctx)
+	case hackathoninvite.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown HackathonInvite field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HackathonInviteMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case hackathoninvite.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case hackathoninvite.FieldRevokedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRevokedAt(v)
+		return nil
+	case hackathoninvite.FieldToken:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetToken(v)
+		return nil
+	case hackathoninvite.FieldNote:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNote(v)
+		return nil
+	case hackathoninvite.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown HackathonInvite field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *HackathonInviteMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *HackathonInviteMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *HackathonInviteMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown HackathonInvite numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *HackathonInviteMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(hackathoninvite.FieldRevokedAt) {
+		fields = append(fields, hackathoninvite.FieldRevokedAt)
+	}
+	if m.FieldCleared(hackathoninvite.FieldNote) {
+		fields = append(fields, hackathoninvite.FieldNote)
+	}
+	if m.FieldCleared(hackathoninvite.FieldExpiresAt) {
+		fields = append(fields, hackathoninvite.FieldExpiresAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *HackathonInviteMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *HackathonInviteMutation) ClearField(name string) error {
+	switch name {
+	case hackathoninvite.FieldRevokedAt:
+		m.ClearRevokedAt()
+		return nil
+	case hackathoninvite.FieldNote:
+		m.ClearNote()
+		return nil
+	case hackathoninvite.FieldExpiresAt:
+		m.ClearExpiresAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HackathonInvite nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *HackathonInviteMutation) ResetField(name string) error {
+	switch name {
+	case hackathoninvite.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case hackathoninvite.FieldRevokedAt:
+		m.ResetRevokedAt()
+		return nil
+	case hackathoninvite.FieldToken:
+		m.ResetToken()
+		return nil
+	case hackathoninvite.FieldNote:
+		m.ResetNote()
+		return nil
+	case hackathoninvite.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	}
+	return fmt.Errorf("unknown HackathonInvite field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *HackathonInviteMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.hackathon != nil {
+		edges = append(edges, hackathoninvite.EdgeHackathon)
+	}
+	if m.creator != nil {
+		edges = append(edges, hackathoninvite.EdgeCreator)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *HackathonInviteMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case hackathoninvite.EdgeHackathon:
+		if id := m.hackathon; id != nil {
+			return []ent.Value{*id}
+		}
+	case hackathoninvite.EdgeCreator:
+		if id := m.creator; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *HackathonInviteMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *HackathonInviteMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *HackathonInviteMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedhackathon {
+		edges = append(edges, hackathoninvite.EdgeHackathon)
+	}
+	if m.clearedcreator {
+		edges = append(edges, hackathoninvite.EdgeCreator)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *HackathonInviteMutation) EdgeCleared(name string) bool {
+	switch name {
+	case hackathoninvite.EdgeHackathon:
+		return m.clearedhackathon
+	case hackathoninvite.EdgeCreator:
+		return m.clearedcreator
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *HackathonInviteMutation) ClearEdge(name string) error {
+	switch name {
+	case hackathoninvite.EdgeHackathon:
+		m.ClearHackathon()
+		return nil
+	case hackathoninvite.EdgeCreator:
+		m.ClearCreator()
+		return nil
+	}
+	return fmt.Errorf("unknown HackathonInvite unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *HackathonInviteMutation) ResetEdge(name string) error {
+	switch name {
+	case hackathoninvite.EdgeHackathon:
+		m.ResetHackathon()
+		return nil
+	case hackathoninvite.EdgeCreator:
+		m.ResetCreator()
+		return nil
+	}
+	return fmt.Errorf("unknown HackathonInvite edge %s", name)
 }
 
 // HackathonStateMutation represents an operation that mutates the HackathonState nodes in the graph.
@@ -11048,6 +11784,9 @@ type UserMutation struct {
 	created_hackathons                map[uuid.UUID]struct{}
 	removedcreated_hackathons         map[uuid.UUID]struct{}
 	clearedcreated_hackathons         bool
+	created_hackathon_invites         map[uuid.UUID]struct{}
+	removedcreated_hackathon_invites  map[uuid.UUID]struct{}
+	clearedcreated_hackathon_invites  bool
 	modified_hackathons               map[uuid.UUID]struct{}
 	removedmodified_hackathons        map[uuid.UUID]struct{}
 	clearedmodified_hackathons        bool
@@ -11520,6 +12259,60 @@ func (m *UserMutation) ResetCreatedHackathons() {
 	m.created_hackathons = nil
 	m.clearedcreated_hackathons = false
 	m.removedcreated_hackathons = nil
+}
+
+// AddCreatedHackathonInviteIDs adds the "created_hackathon_invites" edge to the HackathonInvite entity by ids.
+func (m *UserMutation) AddCreatedHackathonInviteIDs(ids ...uuid.UUID) {
+	if m.created_hackathon_invites == nil {
+		m.created_hackathon_invites = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.created_hackathon_invites[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCreatedHackathonInvites clears the "created_hackathon_invites" edge to the HackathonInvite entity.
+func (m *UserMutation) ClearCreatedHackathonInvites() {
+	m.clearedcreated_hackathon_invites = true
+}
+
+// CreatedHackathonInvitesCleared reports if the "created_hackathon_invites" edge to the HackathonInvite entity was cleared.
+func (m *UserMutation) CreatedHackathonInvitesCleared() bool {
+	return m.clearedcreated_hackathon_invites
+}
+
+// RemoveCreatedHackathonInviteIDs removes the "created_hackathon_invites" edge to the HackathonInvite entity by IDs.
+func (m *UserMutation) RemoveCreatedHackathonInviteIDs(ids ...uuid.UUID) {
+	if m.removedcreated_hackathon_invites == nil {
+		m.removedcreated_hackathon_invites = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.created_hackathon_invites, ids[i])
+		m.removedcreated_hackathon_invites[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCreatedHackathonInvites returns the removed IDs of the "created_hackathon_invites" edge to the HackathonInvite entity.
+func (m *UserMutation) RemovedCreatedHackathonInvitesIDs() (ids []uuid.UUID) {
+	for id := range m.removedcreated_hackathon_invites {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreatedHackathonInvitesIDs returns the "created_hackathon_invites" edge IDs in the mutation.
+func (m *UserMutation) CreatedHackathonInvitesIDs() (ids []uuid.UUID) {
+	for id := range m.created_hackathon_invites {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCreatedHackathonInvites resets all changes to the "created_hackathon_invites" edge.
+func (m *UserMutation) ResetCreatedHackathonInvites() {
+	m.created_hackathon_invites = nil
+	m.clearedcreated_hackathon_invites = false
+	m.removedcreated_hackathon_invites = nil
 }
 
 // AddModifiedHackathonIDs adds the "modified_hackathons" edge to the Hackathon entity by ids.
@@ -12997,9 +13790,12 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 24)
+	edges := make([]string, 0, 25)
 	if m.created_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
+	}
+	if m.created_hackathon_invites != nil {
+		edges = append(edges, user.EdgeCreatedHackathonInvites)
 	}
 	if m.modified_hackathons != nil {
 		edges = append(edges, user.EdgeModifiedHackathons)
@@ -13080,6 +13876,12 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 	case user.EdgeCreatedHackathons:
 		ids := make([]ent.Value, 0, len(m.created_hackathons))
 		for id := range m.created_hackathons {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeCreatedHackathonInvites:
+		ids := make([]ent.Value, 0, len(m.created_hackathon_invites))
+		for id := range m.created_hackathon_invites {
 			ids = append(ids, id)
 		}
 		return ids
@@ -13227,9 +14029,12 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 24)
+	edges := make([]string, 0, 25)
 	if m.removedcreated_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
+	}
+	if m.removedcreated_hackathon_invites != nil {
+		edges = append(edges, user.EdgeCreatedHackathonInvites)
 	}
 	if m.removedmodified_hackathons != nil {
 		edges = append(edges, user.EdgeModifiedHackathons)
@@ -13310,6 +14115,12 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	case user.EdgeCreatedHackathons:
 		ids := make([]ent.Value, 0, len(m.removedcreated_hackathons))
 		for id := range m.removedcreated_hackathons {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeCreatedHackathonInvites:
+		ids := make([]ent.Value, 0, len(m.removedcreated_hackathon_invites))
+		for id := range m.removedcreated_hackathon_invites {
 			ids = append(ids, id)
 		}
 		return ids
@@ -13457,9 +14268,12 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 24)
+	edges := make([]string, 0, 25)
 	if m.clearedcreated_hackathons {
 		edges = append(edges, user.EdgeCreatedHackathons)
+	}
+	if m.clearedcreated_hackathon_invites {
+		edges = append(edges, user.EdgeCreatedHackathonInvites)
 	}
 	if m.clearedmodified_hackathons {
 		edges = append(edges, user.EdgeModifiedHackathons)
@@ -13539,6 +14353,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
 	case user.EdgeCreatedHackathons:
 		return m.clearedcreated_hackathons
+	case user.EdgeCreatedHackathonInvites:
+		return m.clearedcreated_hackathon_invites
 	case user.EdgeModifiedHackathons:
 		return m.clearedmodified_hackathons
 	case user.EdgeCreatedProjects:
@@ -13603,6 +14419,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 	switch name {
 	case user.EdgeCreatedHackathons:
 		m.ResetCreatedHackathons()
+		return nil
+	case user.EdgeCreatedHackathonInvites:
+		m.ResetCreatedHackathonInvites()
 		return nil
 	case user.EdgeModifiedHackathons:
 		m.ResetModifiedHackathons()

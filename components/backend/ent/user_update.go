@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
@@ -128,6 +129,21 @@ func (_u *UserUpdate) AddCreatedHackathons(v ...*Hackathon) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddCreatedHackathonIDs(ids...)
+}
+
+// AddCreatedHackathonInviteIDs adds the "created_hackathon_invites" edge to the HackathonInvite entity by IDs.
+func (_u *UserUpdate) AddCreatedHackathonInviteIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddCreatedHackathonInviteIDs(ids...)
+	return _u
+}
+
+// AddCreatedHackathonInvites adds the "created_hackathon_invites" edges to the HackathonInvite entity.
+func (_u *UserUpdate) AddCreatedHackathonInvites(v ...*HackathonInvite) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreatedHackathonInviteIDs(ids...)
 }
 
 // AddModifiedHackathonIDs adds the "modified_hackathons" edge to the Hackathon entity by IDs.
@@ -499,6 +515,27 @@ func (_u *UserUpdate) RemoveCreatedHackathons(v ...*Hackathon) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreatedHackathonIDs(ids...)
+}
+
+// ClearCreatedHackathonInvites clears all "created_hackathon_invites" edges to the HackathonInvite entity.
+func (_u *UserUpdate) ClearCreatedHackathonInvites() *UserUpdate {
+	_u.mutation.ClearCreatedHackathonInvites()
+	return _u
+}
+
+// RemoveCreatedHackathonInviteIDs removes the "created_hackathon_invites" edge to HackathonInvite entities by IDs.
+func (_u *UserUpdate) RemoveCreatedHackathonInviteIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveCreatedHackathonInviteIDs(ids...)
+	return _u
+}
+
+// RemoveCreatedHackathonInvites removes "created_hackathon_invites" edges to HackathonInvite entities.
+func (_u *UserUpdate) RemoveCreatedHackathonInvites(v ...*HackathonInvite) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreatedHackathonInviteIDs(ids...)
 }
 
 // ClearModifiedHackathons clears all "modified_hackathons" edges to the Hackathon entity.
@@ -1101,6 +1138,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreatedHackathonInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreatedHackathonInvitesIDs(); len(nodes) > 0 && !_u.mutation.CreatedHackathonInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedHackathonInvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2276,6 +2358,21 @@ func (_u *UserUpdateOne) AddCreatedHackathons(v ...*Hackathon) *UserUpdateOne {
 	return _u.AddCreatedHackathonIDs(ids...)
 }
 
+// AddCreatedHackathonInviteIDs adds the "created_hackathon_invites" edge to the HackathonInvite entity by IDs.
+func (_u *UserUpdateOne) AddCreatedHackathonInviteIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddCreatedHackathonInviteIDs(ids...)
+	return _u
+}
+
+// AddCreatedHackathonInvites adds the "created_hackathon_invites" edges to the HackathonInvite entity.
+func (_u *UserUpdateOne) AddCreatedHackathonInvites(v ...*HackathonInvite) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreatedHackathonInviteIDs(ids...)
+}
+
 // AddModifiedHackathonIDs adds the "modified_hackathons" edge to the Hackathon entity by IDs.
 func (_u *UserUpdateOne) AddModifiedHackathonIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.AddModifiedHackathonIDs(ids...)
@@ -2645,6 +2742,27 @@ func (_u *UserUpdateOne) RemoveCreatedHackathons(v ...*Hackathon) *UserUpdateOne
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreatedHackathonIDs(ids...)
+}
+
+// ClearCreatedHackathonInvites clears all "created_hackathon_invites" edges to the HackathonInvite entity.
+func (_u *UserUpdateOne) ClearCreatedHackathonInvites() *UserUpdateOne {
+	_u.mutation.ClearCreatedHackathonInvites()
+	return _u
+}
+
+// RemoveCreatedHackathonInviteIDs removes the "created_hackathon_invites" edge to HackathonInvite entities by IDs.
+func (_u *UserUpdateOne) RemoveCreatedHackathonInviteIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveCreatedHackathonInviteIDs(ids...)
+	return _u
+}
+
+// RemoveCreatedHackathonInvites removes "created_hackathon_invites" edges to HackathonInvite entities.
+func (_u *UserUpdateOne) RemoveCreatedHackathonInvites(v ...*HackathonInvite) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreatedHackathonInviteIDs(ids...)
 }
 
 // ClearModifiedHackathons clears all "modified_hackathons" edges to the Hackathon entity.
@@ -3277,6 +3395,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(hackathon.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreatedHackathonInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreatedHackathonInvitesIDs(); len(nodes) > 0 && !_u.mutation.CreatedHackathonInvitesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedHackathonInvitesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CreatedHackathonInvitesTable,
+			Columns: []string{user.CreatedHackathonInvitesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(hackathoninvite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -16,6 +16,8 @@ type Tx struct {
 	Answer *AnswerClient
 	// Hackathon is the client for interacting with the Hackathon builders.
 	Hackathon *HackathonClient
+	// HackathonInvite is the client for interacting with the HackathonInvite builders.
+	HackathonInvite *HackathonInviteClient
 	// HackathonState is the client for interacting with the HackathonState builders.
 	HackathonState *HackathonStateClient
 	// Page is the client for interacting with the Page builders.
@@ -177,6 +179,7 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Answer = NewAnswerClient(tx.config)
 	tx.Hackathon = NewHackathonClient(tx.config)
+	tx.HackathonInvite = NewHackathonInviteClient(tx.config)
 	tx.HackathonState = NewHackathonStateClient(tx.config)
 	tx.Page = NewPageClient(tx.config)
 	tx.Participant = NewParticipantClient(tx.config)

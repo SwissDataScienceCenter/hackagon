@@ -27,6 +27,7 @@ type JoinRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HackathonId   string                 `protobuf:"bytes,1,opt,name=hackathon_id,json=hackathonId,proto3" json:"hackathon_id,omitempty"`
 	Answers       []*entities.Answer     `protobuf:"bytes,2,rep,name=answers,proto3" json:"answers,omitempty"`
+	InviteToken   *string                `protobuf:"bytes,3,opt,name=invite_token,json=inviteToken,proto3,oneof" json:"invite_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,14 +76,23 @@ func (x *JoinRequest) GetAnswers() []*entities.Answer {
 	return nil
 }
 
+func (x *JoinRequest) GetInviteToken() string {
+	if x != nil && x.InviteToken != nil {
+		return *x.InviteToken
+	}
+	return ""
+}
+
 var File_hackathon_messages_hackathon_svc_join_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_hackathon_svc_join_request_proto_rawDesc = "" +
 	"\n" +
-	"3hackathon/messages/hackathon_svc/join_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a\x1fhackathon/entities/answer.proto\"p\n" +
+	"3hackathon/messages/hackathon_svc/join_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a\x1fhackathon/entities/answer.proto\"\xa9\x01\n" +
 	"\vJoinRequest\x12+\n" +
 	"\fhackathon_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vhackathonId\x124\n" +
-	"\aanswers\x18\x02 \x03(\v2\x1a.hackathon.entities.AnswerR\aanswersBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
+	"\aanswers\x18\x02 \x03(\v2\x1a.hackathon.entities.AnswerR\aanswers\x12&\n" +
+	"\finvite_token\x18\x03 \x01(\tH\x00R\vinviteToken\x88\x01\x01B\x0f\n" +
+	"\r_invite_tokenBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
 
 var (
 	file_hackathon_messages_hackathon_svc_join_request_proto_rawDescOnce sync.Once
@@ -115,6 +125,7 @@ func file_hackathon_messages_hackathon_svc_join_request_proto_init() {
 	if File_hackathon_messages_hackathon_svc_join_request_proto != nil {
 		return
 	}
+	file_hackathon_messages_hackathon_svc_join_request_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
