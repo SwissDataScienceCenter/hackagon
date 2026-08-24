@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { Search } from 'lucide-svelte';
+    import { Download, Search } from 'lucide-svelte';
     import { enhance } from '$app/forms';
+    import { resolve } from '$app/paths';
     import { SvelteSet } from 'svelte/reactivity';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
@@ -54,7 +55,9 @@
             <h2 class="m-0 text-title text-ink">Manage Participants</h2>
             <span class="text-xs text-ink-3">
                 {countLabel}{#if waitingCount > 0}
-                    &middot; {waitingCount} awaiting approval{/if}
+                    &middot; {waitingCount} awaiting approval{/if}{#if data.withoutEmail > 0}
+                    &middot; {data.withoutEmail}
+                    {data.withoutEmail === 1 ? 'has' : 'have'} no email address{/if}
             </span>
         </div>
         <div
@@ -74,6 +77,20 @@
                     class="field pl-9 pr-3"
                 />
             </div>
+            <!-- The whole roster, deliberately not the searched subset: this
+                 file goes into a mailing tool, and one whose contents depend on
+                 what is typed in the box beside it would be a trap. The
+                 endpoint names the download after the hackathon. -->
+            <a
+                href={resolve(
+                    `/my/hackathon/${data.hackathonId}/participants/manage/export`
+                )}
+                class="btn btn-sm btn-ghost no-underline"
+                download
+            >
+                <Download class="h-3 w-3 shrink-0" aria-hidden="true" />
+                Download CSV
+            </a>
         </div>
     </div>
 
