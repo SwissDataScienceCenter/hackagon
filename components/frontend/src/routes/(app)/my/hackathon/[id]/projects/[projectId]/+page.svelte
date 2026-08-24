@@ -7,9 +7,11 @@
 
 <!-- Thin by design: `ProjectDetail` is shared with the organiser's detail route
      under projects/manage, so the two cannot drift apart on how a project reads.
-     All that differs is where "back" goes. -->
+     All that differs is where "back" goes — and this route has two answers to
+     that, resolved in the load rather than here. -->
 <ProjectDetail
     project={data.project}
-    backHref={`/my/hackathon/${data.hackathonId}/projects`}
-    backLabel="Back to projects"
+    backHref={data.backHref}
+    backQuery={data.backQuery}
+    backLabel={data.backLabel}
 />
