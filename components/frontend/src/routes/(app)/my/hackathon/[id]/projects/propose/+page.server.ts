@@ -1,22 +1,45 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { resolve } from "$app/paths"
+import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { mayProposeProjects } from "$lib/server/hackathon/capabilities"
+import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
 
-  // The only case the layout lets through that cannot propose. Everyone else
-  // who gets this far — confirmed member, hackathon owner, global admin — holds
-  // a casbin role that grants `project:propose`, so there is nothing further
-  // for the frontend to decide. `Propose` itself stays authoritative below.
+  // A waitlisted member is refused rather than told proposals are closed: their
+  // membership is the problem, not the hackathon's configuration, and saying so
+  // is the difference between "wait to be approved" and "this will never open".
   if (myMembership?.isWaiting) {
     error(403, "Your membership is still awaiting approval")
   }
 
+  const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
+    GlobalRole.GLOBAL_ROLE_ADMIN,
+  )
+  // Not a 403, for the same reason the voting page is not: a hackathon whose
+  // organisers put the projects up themselves has proposals off deliberately,
+  // which is a configuration rather than a permission this viewer got wrong.
+  // Nothing links here in that state — the Projects page drops the CTA — so this
+  // is the hand-typed-URL case, and the page says so and offers no form.
+  const mayPropose = mayProposeProjects(
+    myMembership ?? undefined,
+    enabledCapabilities(hackathon.state).includes(
+      Capability.CAPABILITY_PROPOSE_PROJECTS,
+    ),
+    isAdmin,
+  )
+  if (!mayPropose) {
+    return { hackathonId: hackathon.id, mayPropose: false, tracks: [] }
+  }
+
   return {
     hackathonId: hackathon.id,
+    mayPropose: true,
     // Tracks arrive nested in the layout's `hackathon.get` — no RPC needed.
     tracks: hackathon.tracks.map((t) => ({ id: t.id, name: t.name })),
   }
@@ -71,12 +94,9 @@ export const actions: Actions = {
       throw e
     }
 
-    // Proposals rather than All Projects: the new project is `Proposed`, and the
-    // Projects page shows approved ones only — landing there would look like
-    // the proposal vanished.
-    redirect(
-      303,
-      resolve(`/my/hackathon/${event.params.id}/projects/proposals`),
-    )
+    // The Projects page, which is where the proposal now shows up: it is
+    // `Proposed`, so it lands in that page's proposals group rather than among
+    // the approved projects.
+    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects`))
   },
 }

@@ -18,7 +18,6 @@ import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardCheck from "lucide-svelte/icons/clipboard-check"
-import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
@@ -126,21 +125,14 @@ export function memberNav(
       icon: Users,
       href: resolve(`/my/hackathon/${hackathonId}/participants`),
     },
-    // Nested under `projects` in the URL, which is what keeps this entry lit
-    // across its own sub-routes (propose, edit) rather than handing the
-    // highlight to All Projects — `activeNavId` keeps the longest matching href.
-    // Position in this list is presentation only.
-    {
-      id: "member:my-projects",
-      label: "Proposals",
-      icon: ClipboardList,
-      href: resolve(`/my/hackathon/${hackathonId}/projects/proposals`),
-    },
-    // What "all" covers depends on the viewer — every project for a reviewer,
-    // the approved ones for everyone else.
+    // One entry for every project surface a participant has. There is no
+    // Proposals entry beside it: proposing is a phase of a project's life rather
+    // than a place, so the projects page carries the proposals a viewer is
+    // waiting on and the CTA that adds one, and this stays lit across
+    // `projects/propose` and `projects/<id>/edit` on its own.
     {
       id: "member:projects",
-      label: "All Projects",
+      label: "Projects",
       icon: Lightbulb,
       href: resolve(`/my/hackathon/${hackathonId}/projects`),
     },
@@ -304,8 +296,8 @@ export function manageNav(
       href: resolve(`/my/hackathon/${hackathonId}/participants/manage`),
     },
     // The review queue — every status, with Approve and Revoke on the rows —
-    // against All Projects' read-only list of the approved ones. Both link to a
-    // detail route rendering the same `ProjectDetail`: read there, act here.
+    // against the Projects page's read-only list of the approved ones. Both link
+    // to a detail route rendering the same `ProjectDetail`: read there, act here.
     {
       id: "manage:projects",
       label: "Manage Projects",

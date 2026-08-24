@@ -12,7 +12,7 @@ const VIEW_RESULTS = 6
 
 describe("capabilityHref", () => {
   it.each([
-    [PROPOSE_PROJECTS, "/my/hackathon/h1/projects/proposals/propose"],
+    [PROPOSE_PROJECTS, "/my/hackathon/h1/projects/propose"],
     [SET_TEAM_PREFERENCES, "/my/hackathon/h1/projects"],
     [CREATE_PROJECT_SUBMISSIONS, "/my/hackathon/h1/submissions"],
     [VOTE, "/my/hackathon/h1/voting"],

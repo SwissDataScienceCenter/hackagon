@@ -10,7 +10,7 @@ import { error } from "@sveltejs/kit"
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // project at every status, plus the tracks and the members that name the
-  // proposer. Same source All Projects and Proposals read.
+  // proposer. Same source the Projects page reads.
   const { hackathon, myMembership } = await event.parent()
 
   const project = hackathon.projects.find(
@@ -26,8 +26,8 @@ export const load: PageServerLoad = async (event) => {
   )
 
   // A proposal awaiting a decision is its author's business and the reviewer's,
-  // not something to browse — All Projects lists the approved ones only, so
-  // nothing offers this page for a pending project to anyone else.
+  // not something to browse — the Projects page lists a pending proposal to its
+  // author alone, so nothing offers this page for one to anyone else.
   //
   // The two exemptions are load-bearing rather than legacy: saving the project
   // edit form redirects here, and that form is reachable for a pending project
