@@ -7,7 +7,9 @@
         tracks,
         cancelHref,
         message,
+        submitLabel = 'Save changes',
     }: {
+        /** Empty strings throughout when this is a project being created. */
         project: {
             title: string;
             description: string;
@@ -20,6 +22,9 @@
         cancelHref: string;
         /** Failure text from the action, if the last submit failed. */
         message?: string;
+        /** The submit verb. Overridden by the create route, which is not saving
+         *  changes to anything yet. */
+        submitLabel?: string;
     } = $props();
 
     // See the TODO in the calling +page.server.ts: `Edit` cannot unset a track,
@@ -32,7 +37,10 @@
      the action is what the backend actually sees.
 
      The `?/save` action name is part of this component's contract — any page
-     using it must expose an action by that name. -->
+     using it must expose an action by that name. Two do: the project edit route,
+     which calls `ProjectService.Edit`, and the organiser's create route
+     (`projects/manage/new`), which calls `Propose`. The form is the same either
+     way; only the verb on the button and what the action does with it differ. -->
 <form method="POST" action="?/save" class="flex w-full flex-col gap-6">
     {#if message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{message}</p>
@@ -82,6 +90,9 @@
                 value={project.image ?? ''}
                 class="field"
             />
+            <span class="font-normal text-ink-3">
+                A link to the image file itself — a share or page link will not render.
+            </span>
         </label>
     </div>
 
@@ -101,7 +112,7 @@
     </div>
 
     <div class="flex gap-2">
-        <button type="submit" class="btn btn-sm btn-solid"> Save changes </button>
+        <button type="submit" class="btn btn-sm btn-solid">{submitLabel}</button>
         <!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic path from page data; resolve() is route-literal typed -->
         <a href={resolve(cancelHref as any)} class="btn btn-sm btn-ghost no-underline">
             Cancel

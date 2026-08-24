@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
 
     /**
@@ -78,26 +79,7 @@
     <!-- Identity block: same size-16 round media and text scale as ProjectCard,
          so arriving here from a row reads as the same project enlarged. -->
     <div class="flex items-start gap-4">
-        {#if project.imageUrl}
-            <div
-                class="relative size-16 shrink-0 overflow-hidden rounded-full border-2
-                       border-line bg-raised"
-            >
-                <img
-                    src={project.imageUrl}
-                    alt=""
-                    class="absolute inset-0 block h-full w-full object-cover object-center"
-                />
-            </div>
-        {:else}
-            <div
-                class="flex size-16 shrink-0 items-center justify-center rounded-full border-2
-                       border-line bg-overlay text-xs font-bold
-                       text-ink"
-            >
-                {initials}
-            </div>
-        {/if}
+        <RoundMedia src={project.imageUrl} {initials} />
 
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
             <div class="flex flex-wrap items-center gap-2">
@@ -119,15 +101,19 @@
         </div>
     </div>
 
-    <!-- Track and status as a labelled pair rather than more chips: this is the
-         page someone opens to find out exactly these two things. -->
+    <!-- Labelled pairs rather than more chips: this is the page someone opens to
+         find out exactly these things. Status joins them only while there is a
+         status worth naming — see $lib/utils/projectStatus. An approved project
+         drops the cell rather than printing "Approved" or, worse, "Unknown". -->
     <dl class="m-0 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="flex flex-col gap-1">
-            <dt class="text-xs font-semibold text-ink-3">Status</dt>
-            <dd class="m-0 text-xs text-ink">
-                {statusText ?? 'Unknown'}
-            </dd>
-        </div>
+        {#if statusText}
+            <div class="flex flex-col gap-1">
+                <dt class="text-xs font-semibold text-ink-3">Status</dt>
+                <dd class="m-0 text-xs text-ink">
+                    {statusText}
+                </dd>
+            </div>
+        {/if}
         <div class="flex flex-col gap-1">
             <dt class="text-xs font-semibold text-ink-3">Track</dt>
             <dd class="m-0 text-xs text-ink">

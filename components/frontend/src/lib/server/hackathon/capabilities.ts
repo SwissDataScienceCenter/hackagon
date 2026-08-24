@@ -128,31 +128,35 @@ export function mayManageParticipants(
 }
 
 /**
- * Whether to offer proposing a project.
+ * Whether **a participant** may propose a project here — the question the
+ * participant-facing Projects page and its propose route ask.
  *
- * Gated on `CAPABILITY_PROPOSE_PROJECTS`, and mirrors the backend exactly. The
- * capability is what writes `member → project:propose`
- * (`hackathon_service.go:686`), the single row `ProjectService.Propose` checks
- * (`project_service.go:136`); an `Owner` holds it outright as a default policy
- * (`rbac.go:190`), and an admin through the global escape hatch. So a hackathon
- * that runs without proposals — the organisers put the projects up themselves —
- * is exactly this capability switched off, and the CTA disappears for members
- * while an organiser keeps it.
+ * Deliberately the only gate in this file with **no owner or admin bypass**, and
+ * for a product reason rather than a permission one: the participant section
+ * reads the same for everyone. An organiser opening the Projects page sees what
+ * a member sees, so `CAPABILITY_PROPOSE_PROJECTS` being off means no propose CTA
+ * for anybody there, and the proposal vocabulary goes with it.
+ *
+ * That is not a claim about what the backend allows. An `Owner` does hold
+ * `project:propose` outright as a default policy (`rbac.go:190`) — untouched by
+ * `SetCapabilities`, which writes only the `member → project:propose` row
+ * (`hackathon_service.go:686`) — and an admin holds it through the global escape
+ * hatch. They exercise it from **Manage Projects** (`projects/manage/new`),
+ * gated on `mayReviewProjects` like everything else in that section. So nothing
+ * is taken away here; it is offered in the other section.
  *
  * `capabilityEnabled` is the matching `CapabilityState.enabled` read off
  * `hackathon.state.capabilities`; pass `false` when the hackathon has no state
  * row at all, which is also the state in which nothing is enabled.
  *
- * Waitlisted members are excluded: `Propose` grants `project:propose` to
- * `Member`, which a pending participant is not yet, so it would refuse them.
+ * Waitlisted members are excluded: the capability grants `project:propose` to
+ * `Member`, which a pending participant is not yet, so `Propose` would refuse
+ * them.
  */
 export function mayProposeProjects(
   membership: HackathonMember | undefined,
   capabilityEnabled: boolean,
-  isAdmin = false,
 ): boolean {
-  if (isAdmin) return true
-
   return capabilityEnabled && membership !== undefined && !membership.isWaiting
 }
 

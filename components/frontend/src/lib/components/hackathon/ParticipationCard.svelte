@@ -32,7 +32,8 @@
         memberNames: string[];
         projectName: string;
         projectTrack: string;
-        projectStatus: string;
+        /** Null while there is no status worth naming — see $lib/utils/projectStatus. */
+        projectStatus: string | null;
         /** Submissions the team has handed in, from `Team.submissions`. */
         submissionCount: number;
         /**
@@ -130,7 +131,9 @@
         <span class="meta">Project</span>
         <span class="text-sm font-semibold">{projectName}</span>
         <span class="text-xs text-accent-ink">Track: {projectTrack}</span>
-        <span class="text-xs text-ink-3">Status: {projectStatus}</span>
+        {#if projectStatus}
+            <span class="text-xs text-ink-3">Status: {projectStatus}</span>
+        {/if}
     </div>
 
     <div class="flex flex-col gap-2 border-t border-line pt-4">

@@ -67,9 +67,14 @@ export const load: PageServerLoad = async (event) => {
           role: myTeam.creatorId === platformUserId ? "Creator" : "Member",
           projectName: project?.title ?? "Unknown project",
           projectTrack: track?.name ?? "No track",
+          // Null for an approved project, and the card then omits the line:
+          // `projectStatusLabel` only names a status worth showing, and a team
+          // whose project is approved has nothing to be told. Null rather than
+          // "Unknown" — the old fallback now that approved has no label —
+          // because that would have read as a data problem.
           projectStatus: project
-            ? (projectStatusLabel(project.status) ?? "Unknown")
-            : "Unknown",
+            ? (projectStatusLabel(project.status) ?? null)
+            : null,
           submissionCount: myTeam.submissions.length,
         }
       : null,

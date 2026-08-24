@@ -2,7 +2,6 @@
     import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
-    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -39,6 +38,11 @@
   Approving and revoking live on Manage Projects (see $lib/navigation's
   manageNav), so the projects list reads the same whatever the viewer's role.
 
+  No status badges on either group: each one holds a single status by
+  construction and its heading says which, so a badge on every row would only
+  repeat the heading. Manage Projects is the one list that mixes the two, and
+  that is where a Proposed badge earns its place.
+
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
@@ -47,9 +51,10 @@
             <h2 class="m-0 text-title text-ink">Projects</h2>
             <span class="text-xs text-ink-3">{countLabel}</span>
         </div>
-        <!-- Absent when the hackathon runs without proposals, which is what the
-             capability being off means. -->
-        {#if data.mayPropose}
+        <!-- Absent when the hackathon runs without proposals, for an organiser
+             as much as for a member: this section reads the same for everyone,
+             and an organiser adds a project from Manage Projects instead. -->
+        {#if data.takesProposals}
             <a
                 href={resolve(`/my/hackathon/${data.hackathonId}/projects/propose`)}
                 class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
@@ -82,9 +87,6 @@
                     creator={proposal.creator}
                     track={proposal.track}
                     imageUrl={proposal.imageUrl}
-                    badge={projectStatusLabel(proposal.status)}
-                    badgeVariant={projectStatusBadgeVariant(proposal.status) ??
-                        'badge-neutral'}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}/edit"
                     moreInfoLabel="Edit"
                 />
@@ -106,9 +108,6 @@
                     creator={project.creator}
                     track={project.track}
                     imageUrl={project.imageUrl}
-                    badge={projectStatusLabel(project.status)}
-                    badgeVariant={projectStatusBadgeVariant(project.status) ??
-                        'badge-neutral'}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{project.id}"
                 >
                     {#snippet actions()}

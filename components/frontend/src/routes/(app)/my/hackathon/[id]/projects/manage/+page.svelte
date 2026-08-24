@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
@@ -30,16 +31,33 @@
   happens only here. Reached from the sidebar's Manage section (see
   $lib/navigation's manageNav).
 
+  The one list that mixes statuses, so the one that badges them — and only the
+  rows awaiting review carry a badge (see $lib/utils/projectStatus). Clear the
+  queue and the badges go with it, which is the honest reading: every row left
+  is approved.
+
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
-    <div class="flex min-w-0 flex-col gap-1">
-        <ManageHubBackLink hackathonId={data.hackathonId} />
-        <h2 class="m-0 text-title text-ink">Manage Projects</h2>
-        <span class="text-xs text-ink-3">
-            {countLabel}{#if data.pendingCount > 0}
-                &middot; {data.pendingCount} awaiting review{/if}
-        </span>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div class="flex min-w-0 flex-col gap-1">
+            <ManageHubBackLink hackathonId={data.hackathonId} />
+            <h2 class="m-0 text-title text-ink">Manage Projects</h2>
+            <span class="text-xs text-ink-3">
+                {countLabel}{#if data.pendingCount > 0}
+                    &middot; {data.pendingCount} awaiting review{/if}
+            </span>
+        </div>
+        <!-- Unconditional, unlike the participant page's CTA: this is the
+             organiser's create path, and it does not depend on whether
+             participants may propose. -->
+        <a
+            href={resolve(`/my/hackathon/${data.hackathonId}/projects/manage/new`)}
+            class="btn btn-solid w-full shrink-0 no-underline sm:w-auto sm:min-w-[9rem]"
+        >
+            <Plus class="h-3.5 w-3.5 shrink-0" />
+            New Project
+        </a>
     </div>
 
     {#if form?.message}

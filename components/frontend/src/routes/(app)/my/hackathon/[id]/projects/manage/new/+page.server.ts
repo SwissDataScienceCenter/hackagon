@@ -1,50 +1,50 @@
 import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { resolve } from "$app/paths"
-import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
-import { mayProposeProjects } from "$lib/server/hackathon/capabilities"
-import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { mayReviewProjects } from "$lib/server/hackathon/capabilities"
 import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
+/**
+ * The organiser's own way to put a project up, in the section their actions
+ * live in.
+ *
+ * Gated on `mayReviewProjects` — the same gate as the rest of Manage Projects —
+ * and *not* on `CAPABILITY_PROPOSE_PROJECTS`. That capability governs the
+ * participant route (`projects/propose`); an `Owner` holds `project:propose`
+ * outright as a default policy, so switching participant proposals off never
+ * takes this away. It is the reason the participant page can drop its CTA
+ * without leaving the hackathon with no create path.
+ *
+ * The RPC is the same `Propose`, so a project created here lands as `Proposed`
+ * and waits in the queue below with everything else — the organiser approves it
+ * in the same place they made it.
+ */
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
 
-  // A waitlisted member is refused rather than told proposals are closed: their
-  // membership is the problem, not the hackathon's configuration, and saying so
-  // is the difference between "wait to be approved" and "this will never open".
-  if (myMembership?.isWaiting) {
-    error(403, "Your membership is still awaiting approval")
-  }
-
-  // Not a 403, for the same reason the voting page is not: a hackathon whose
-  // organisers put the projects up themselves has proposals off deliberately,
-  // which is a configuration rather than a permission this viewer got wrong.
-  // Nothing links here in that state — the Projects page drops the CTA — so this
-  // is the hand-typed-URL case, and the page says so and offers no form.
-  //
-  // An organiser is refused here too, and is not a special case to add: this is
-  // the participant route, and theirs is `projects/manage/new`.
-  const mayPropose = mayProposeProjects(
-    myMembership ?? undefined,
-    enabledCapabilities(hackathon.state).includes(
-      Capability.CAPABILITY_PROPOSE_PROJECTS,
-    ),
+  const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
+    GlobalRole.GLOBAL_ROLE_ADMIN,
   )
-  if (!mayPropose) {
-    return { hackathonId: hackathon.id, mayPropose: false, tracks: [] }
+  // Frontend-only gate, same shape as the manage list beside it: `Propose`
+  // enforces `project:propose` for real, this only decides whether the form
+  // renders.
+  if (!mayReviewProjects(myMembership ?? undefined, isAdmin)) {
+    error(403, "Only the hackathon organizer can add projects here")
   }
 
   return {
     hackathonId: hackathon.id,
-    mayPropose: true,
     // Tracks arrive nested in the layout's `hackathon.get` — no RPC needed.
     tracks: hackathon.tracks.map((t) => ({ id: t.id, name: t.name })),
   }
 }
 
 export const actions: Actions = {
-  propose: async (event) => {
+  // `save` rather than `create`: the action name is `ProjectEditForm`'s
+  // contract, and this route reuses that form rather than growing a second one.
+  save: async (event) => {
     const { project } = requireGrpc(event.locals.grpc)
     const form = await event.request.formData()
 
@@ -53,6 +53,9 @@ export const actions: Actions = {
     const trackId = form.get("trackId")
     const image = form.get("image")
 
+    // The same rules the participant propose action applies — `Propose` is the
+    // same RPC and accepts an empty description, whatever the shared form's
+    // `required` attribute nudges towards.
     if (typeof title !== "string" || title.trim().length < 3) {
       return fail(400, { message: "Title must be at least 3 characters" })
     }
@@ -69,7 +72,6 @@ export const actions: Actions = {
       await project.propose({
         hackathonId: event.params.id,
         title: title.trim(),
-        // Propose accepts an empty description; only Edit insists on one.
         description: typeof description === "string" ? description : "",
         // Whether the track belongs to this hackathon is the backend's call —
         // it checks, and says so. Sending nothing means "no track".
@@ -86,15 +88,13 @@ export const actions: Actions = {
       }
       if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
         return fail(403, {
-          message: "You don't have permission to propose a project here",
+          message: "You don't have permission to add a project here",
         })
       }
       throw e
     }
 
-    // The Projects page, which is where the proposal now shows up: it is
-    // `Proposed`, so it lands in that page's proposals group rather than among
-    // the approved projects.
-    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects`))
+    // Back to the queue, where the new project is the top row awaiting review.
+    redirect(303, resolve(`/my/hackathon/${event.params.id}/projects/manage`))
   },
 }
