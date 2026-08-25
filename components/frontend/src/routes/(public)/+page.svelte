@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { resolve } from '$app/paths';
     import {
         ArrowRight,
         Code,
@@ -11,6 +10,7 @@
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
     import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { formatDateRange } from '$lib/utils/hackathonDates';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -24,14 +24,6 @@
             to: 'color-mix(in oklab, var(--color-success) 35%, black)',
         },
     ];
-
-    function formatMeta(h: { startsAt?: Date; endsAt?: Date }): string {
-        const fmt = (d: Date) =>
-            d.toLocaleDateString('en-CH', { day: 'numeric', month: 'short', year: 'numeric' });
-        if (h.startsAt && h.endsAt) return `${fmt(h.startsAt)} – ${fmt(h.endsAt)}`;
-        if (h.startsAt) return `Starts ${fmt(h.startsAt)}`;
-        return '';
-    }
 
     function gradient(i: number) {
         return GRADIENTS[i % GRADIENTS.length]!;
@@ -85,14 +77,12 @@
             Hosted by SDSC for the Swiss scientific community.
         </p>
 
+        <!-- One button, not two. The other went to a hardcoded `ord-2026`,
+             which /hackathon/[id] now answers with a 404 because it reads real
+             hackathons. There is nothing else here to send a visitor to that
+             the list below does not cover. -->
         <div class="flex items-center gap-3">
-            <a
-                href={resolve('/hackathon/ord-2026')}
-                class="btn btn-solid no-underline"
-            >
-                Get Started
-            </a>
-            <a href="#trending" class="btn btn-outline no-underline">
+            <a href="#trending" class="btn btn-solid no-underline">
                 Browse Hackathons
                 <ArrowRight class="h-3.5 w-3.5 opacity-60" />
             </a>
@@ -120,7 +110,7 @@
                 <HackathonRow
                     href="/hackathon/{h.id}"
                     name={h.name}
-                    meta={formatMeta(h)}
+                    meta={formatDateRange(h)}
                     badge={statusLabel(h.status)}
                     badgeVariant={statusBadgeVariant(h.status)}
                     gradFrom={gradient(i).from}
