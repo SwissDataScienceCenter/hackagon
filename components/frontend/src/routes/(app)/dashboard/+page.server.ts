@@ -2,7 +2,7 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { ownerMembership } from "$lib/server/hackathon/membership"
-import { error, fail } from "@sveltejs/kit"
+import { error, fail, redirect } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
@@ -74,6 +74,25 @@ export const actions: Actions = {
     if (typeof hackathonId !== "string" || hackathonId === "")
       return fail(400, { message: "No hackathon was given" })
 
+    // Does this event ask anything? If it does, joining is only half of signing
+    // up: `Join` validates the mandatory answers and refuses a bare press, so
+    // the form has to come first. `listQuestions` serves a public hackathon to
+    // any caller, which is what makes the check possible before joining.
+    //
+    // A refusal here means a private hackathon the viewer holds no role in.
+    // `Join` is about to refuse that too, so it falls through and lets the
+    // backend say so rather than guessing.
+    let asksQuestions = false
+    try {
+      const { questions } = await hackathon.listQuestions({ hackathonId })
+      asksQuestions = questions.length > 0
+    } catch (e) {
+      if (!(e instanceof ClientError)) throw e
+    }
+    // Outside the try: `redirect` throws, and a redirect thrown inside it would
+    // be caught by the handler above and only survive by accident.
+    if (asksQuestions) redirect(303, `/register/${hackathonId}`)
+
     try {
       await hackathon.join({ hackathonId })
     } catch (e) {
@@ -89,14 +108,23 @@ export const actions: Actions = {
           closed: true,
           message: "Registration is closed for this hackathon",
         })
-      // TODO(backend: join-nil-ends-at): unreachable for a hackathon with no
-      // end date — `Join` nil-derefs before it can answer. Correct as written;
-      // the branch just needs the backend to survive long enough to take it.
-      if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION)
+      // TODO(backend: join-nil-ends-at): the finished case is unreachable for a
+      // hackathon with no end date — `Join` nil-derefs before it can answer.
+      // Correct as written; the branch just needs the backend to survive long
+      // enough to take it.
+      if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION) {
+        // `Join` answers FAILED_PRECONDITION both for a finished hackathon and
+        // for unanswered mandatory questions, and those need opposite handling —
+        // one is over, the other is a form away. Reached only when the check
+        // above could not run, so the details are what tell them apart.
+        if (e.details.includes("mandatory"))
+          redirect(303, `/register/${hackathonId}`)
+
         return fail(409, {
           closed: true,
           message: "This hackathon has already finished",
         })
+      }
       if (e instanceof ClientError && e.code === Status.NOT_FOUND)
         return fail(404, { message: "This hackathon no longer exists" })
       throw e

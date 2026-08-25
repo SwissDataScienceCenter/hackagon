@@ -11,6 +11,29 @@ capabilities its phase calls for — see [Capabilities](#capabilities).
 Running again when the sentinel hackathon (`AI Innovation Challenge 2026`)
 already exists is a no-op.
 
+## Restart the backend after seeding
+
+The seed writes casbin rows straight into the policy table, but the running
+server loaded its policy at startup and does not reload. So immediately after
+`just db::seed` every per-hackathon role the seed just granted is invisible to
+the server, and the symptom is confusing: **the hackathon's owner is refused her
+own hackathon.** `alice` gets `PermissionDenied` on `CreateQuestion` in H1, and
+`ListParticipantAnswers` quietly returns only her own answers instead of the
+cohort's, because the handler falls back to the no-write path.
+
+A global admin is unaffected — `hackagon-admin` passes through the
+`g2(r.sub, "admin")` escape hatch, whose grant comes from config at startup
+rather than from a seeded row — which makes it look even more like a permission
+bug in the handler.
+
+```bash
+just deploy::down && just deploy::up   # keeps the data, reloads the policy
+```
+
+This applies to the documented order too
+(`just clean::state && just start && just db::seed`), since the backend is up
+before the seed runs.
+
 ## Users
 
 Seeded via Keycloak IDs that match the dev realm. The admin's Keycloak ID comes
@@ -135,6 +158,42 @@ work on. The seed grants the owner row too, so the fixture shows the intended
 behaviour. Tracked in
 `mydocs/docs/backend-tickets/project-preferences-capability.md`; the row is one
 line in `seedCapabilities` if you would rather mirror the handler exactly.
+
+## Registration questions
+
+Organizer-defined questions answered at sign-up — read with `ListQuestions`,
+answered through `Join` or later revised with `SubmitAnswers`. Three of the four
+hackathons ask something; **H3 asks nothing**, which is the fixture for a
+hackathon with no form at all.
+
+| #   | Questions                                                                              | Mandatory         | Answered by                        |
+| --- | -------------------------------------------------------------------------------------- | ----------------- | ---------------------------------- |
+| H1  | `affiliation` (text), `tshirt_size` (enum), `dietary` (text), `code_of_conduct` (bool) | all but `dietary` | alice, bob, dana — **not** charles |
+| H2  | `affiliation` (text), `experience_level` (enum)                                        | both              | alice, bob, yuki (everyone)        |
+| H3  | —                                                                                      | —                 | —                                  |
+| H4  | `affiliation` (text), `tshirt_size` (enum), `remote` (bool)                            | all but `remote`  | roughly 6 in 7 of the hundred      |
+
+H1 is where the sign-up flow is exercised: it is the only hackathon with
+`register` on, so a newcomer reads the questions before joining and sends the
+answers along with `Join`. Its mandatory questions are what make `Join` refuse
+an empty sign-up. H2's form is closed by contrast — `register` is off and
+everyone has already answered.
+
+**Only people who answered have rows at all.** `charles` in H1 is waitlisted and
+has answered nothing, and about one in seven of H4's hundred never answered
+either. The gap is deliberate: "has not filled it in" and "filled it in and left
+the optional parts blank" are different facts to an organizer chasing people,
+and `bob` in H1 is the second case — he skips `dietary`. Of the H4 participants
+who did answer, about two thirds also answered the optional `remote`, and a
+`false` there is an answer rather than an absence.
+
+Answers are stored as strings whatever the question's type — `"true"`/`"false"`
+for a bool, the option text for an enum — because that is what `SubmitAnswers`
+writes. The fixture has to agree with the handler here, or a seeded answer reads
+back as something the API could never have produced.
+
+The H4 answers are drawn from `dataForGoodAnswerSeed`, a random stream of its
+own, so adding or changing them cannot shift the preference draw that follows.
 
 ## Phases
 

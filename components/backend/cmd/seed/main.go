@@ -13,6 +13,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -207,6 +208,88 @@ func seedPhases(
 	}
 
 	return created, nil
+}
+
+// questionSpec is one registration question in the fixture. Separate from ent's
+// builder so each hackathon below reads as a list of questions rather than a
+// page of builder calls.
+type questionSpec struct {
+	key       string
+	label     string
+	dataType  question.DataType
+	mandatory bool
+	options   []string
+}
+
+// seedQuestions writes a hackathon's registration form and returns the rows by
+// key, so the answers below can address them by name rather than by index.
+//
+// `order` is the slice position: the fixture never wants a gap, and deriving it
+// here stops the two from disagreeing.
+func seedQuestions(
+	ctx context.Context,
+	db *ent.Client,
+	h *ent.Hackathon,
+	author *ent.User,
+	specs []questionSpec,
+) (map[string]*ent.Question, error) {
+	out := make(map[string]*ent.Question, len(specs))
+	for i, spec := range specs {
+		// `options` is a required JSON column, so it is always set — an empty
+		// slice for the types that have no choices. Leaving it unset fails with
+		// "missing required field", which is not obvious from the call site.
+		options := spec.options
+		if options == nil {
+			options = []string{}
+		}
+		row, err := db.Question.Create().
+			SetHackathon(h).
+			SetKey(spec.key).
+			SetLabel(spec.label).
+			SetDataType(spec.dataType).
+			SetMandatory(spec.mandatory).
+			SetOrder(i + 1).
+			SetOptions(options).
+			SetCreator(author).
+			SetModifier(author).
+			Save(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("question %s: %w", spec.key, err)
+		}
+		out[spec.key] = row
+	}
+
+	return out, nil
+}
+
+// seedAnswers records one participant's answers.
+//
+// The value is stored as a string whatever the question's type — "true"/"false"
+// for a bool, the option text for an enum — because that is exactly what
+// SubmitAnswers writes. The fixture and the handler have to agree here, or a
+// seeded answer reads back as something the API could never have produced.
+func seedAnswers(
+	ctx context.Context,
+	db *ent.Client,
+	questions map[string]*ent.Question,
+	u *ent.User,
+	answers map[string]string,
+) error {
+	for key, value := range answers {
+		q, ok := questions[key]
+		if !ok {
+			return fmt.Errorf("answer for unknown question %q", key)
+		}
+		if _, err := db.Answer.Create().
+			SetQuestion(q).
+			SetUser(u).
+			SetValue(value).
+			Save(ctx); err != nil {
+			return fmt.Errorf("answer %s for %s: %w", key, u.Username, err)
+		}
+	}
+
+	return nil
 }
 
 func main() {
@@ -596,6 +679,79 @@ func seedH1(
 		}
 	}
 
+	// The registration form. H1 is the one hackathon with `register` on, so it
+	// is where the join-and-answer flow is exercised: a newcomer reads these
+	// questions before joining (ListQuestions serves a public hackathon to
+	// anyone) and sends the answers along with Join.
+	//
+	// Mandatory questions are deliberate here — they are what makes Join refuse
+	// an empty signup, and until that path was fixed a hackathon asking anything
+	// mandatory could not be joined at all.
+	h1Questions, err := seedQuestions(ctx, db, h, alice, []questionSpec{
+		{
+			key:       "affiliation",
+			label:     "Which university or company are you with?",
+			dataType:  question.DataTypeText,
+			mandatory: true,
+			options:   nil,
+		},
+		{
+			key:       "tshirt_size",
+			label:     "T-shirt size",
+			dataType:  question.DataTypeEnum,
+			mandatory: true,
+			options:   []string{"XS", "S", "M", "L", "XL", "XXL"},
+		},
+		{
+			key:       "dietary",
+			label:     "Any dietary requirements?",
+			dataType:  question.DataTypeText,
+			mandatory: false,
+			options:   nil,
+		},
+		{
+			key:       "code_of_conduct",
+			label:     "I accept the Code of Conduct",
+			dataType:  question.DataTypeBool,
+			mandatory: true,
+			options:   nil,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("h1 questions: %w", err)
+	}
+
+	// alice, bob and dana answered; charles did not. He is waitlisted and has no
+	// answers on file, which is the fixture for the two states an organizer has
+	// to tell apart — "has not filled it in" against "filled it in and left the
+	// optional parts blank" (bob, who skips `dietary`).
+	for _, a := range []struct {
+		u       *ent.User
+		answers map[string]string
+	}{
+		{alice, map[string]string{
+			"affiliation":     "ETH Zurich",
+			"tshirt_size":     "M",
+			"dietary":         "Vegetarian",
+			"code_of_conduct": "true",
+		}},
+		{bob, map[string]string{
+			"affiliation":     "Independent",
+			"tshirt_size":     "L",
+			"code_of_conduct": "true",
+		}},
+		{dana, map[string]string{
+			"affiliation":     "University of Zurich",
+			"tshirt_size":     "S",
+			"dietary":         "No nuts",
+			"code_of_conduct": "true",
+		}},
+	} {
+		if err := seedAnswers(ctx, db, h1Questions, a.u, a.answers); err != nil {
+			return fmt.Errorf("h1 answers: %w", err)
+		}
+	}
+
 	// Teams
 	teamAlpha, err := db.Team.Create().
 		SetName("Team Alpha").
@@ -865,6 +1021,41 @@ func seedH2(
 			SetIsWaiting(false).
 			Save(ctx); err != nil {
 			return fmt.Errorf("participant %s: %w", u.Username, err)
+		}
+	}
+
+	// A closed form: H2 has `register` off, so nobody new can answer these and
+	// every participant already has. The counterpart to H1's partly-filled one.
+	h2Questions, err := seedQuestions(ctx, db, h, admin, []questionSpec{
+		{
+			key:       "affiliation",
+			label:     "Which university or company are you with?",
+			dataType:  question.DataTypeText,
+			mandatory: true,
+			options:   nil,
+		},
+		{
+			key:       "experience_level",
+			label:     "How much hackathon experience do you have?",
+			dataType:  question.DataTypeEnum,
+			mandatory: true,
+			options:   []string{"First time", "A few", "Many"},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("h2 questions: %w", err)
+	}
+
+	for _, a := range []struct {
+		u       *ent.User
+		answers map[string]string
+	}{
+		{alice, map[string]string{"affiliation": "ETH Zurich", "experience_level": "Many"}},
+		{bob, map[string]string{"affiliation": "Independent", "experience_level": "A few"}},
+		{yuki, map[string]string{"affiliation": "EPFL", "experience_level": "First time"}},
+	} {
+		if err := seedAnswers(ctx, db, h2Questions, a.u, a.answers); err != nil {
+			return fmt.Errorf("h2 answers: %w", err)
 		}
 	}
 
@@ -1301,6 +1492,11 @@ const dataForGoodParticipants = 100
 // and never from the clock.
 const dataForGoodSeed = 20260421
 
+// dataForGoodAnswerSeed drives the registration answers. Its own stream on
+// purpose: drawing them from dataForGoodSeed would shift every preference draw
+// after it and silently rewrite a fixture other tests read.
+const dataForGoodAnswerSeed = 20260422
+
 // dfgProject is one of the fifteen project ideas seedH4 proposes.
 //
 // `weight` is how strongly a synthetic participant is drawn to it, and the
@@ -1635,6 +1831,64 @@ func seedH4(
 	// participating organizer should find.
 	if _, err := enf.AddRole(alice.KeycloakID, middleware.Owner, h.ID.String()); err != nil {
 		return fmt.Errorf("assign alice owner in h4: %w", err)
+	}
+
+	// Registration answers at cohort scale. H4 is the only fixture large enough
+	// to show what an organizer's roster actually looks like — including the
+	// gap, since roughly one in seven never answered and only the people who
+	// did appear in ListParticipantAnswers.
+	h4Questions, err := seedQuestions(ctx, db, h, alice, []questionSpec{
+		{
+			key:       "affiliation",
+			label:     "Which university or company are you with?",
+			dataType:  question.DataTypeText,
+			mandatory: true,
+			options:   nil,
+		},
+		{
+			key:       "tshirt_size",
+			label:     "T-shirt size",
+			dataType:  question.DataTypeEnum,
+			mandatory: true,
+			options:   []string{"XS", "S", "M", "L", "XL", "XXL"},
+		},
+		{
+			key:       "remote",
+			label:     "I will be attending remotely",
+			dataType:  question.DataTypeBool,
+			mandatory: false,
+			options:   nil,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("h4 questions: %w", err)
+	}
+
+	//nolint:gosec // deterministic fixture, not security
+	answerRng := rand.New(rand.NewSource(dataForGoodAnswerSeed))
+	affiliations := []string{
+		"ETH Zurich", "EPFL", "University of Zurich", "University of Bern",
+		"Independent", "SDSC", "University of Basel", "ZHAW",
+	}
+	sizes := []string{"XS", "S", "M", "L", "XL", "XXL"}
+	for _, u := range participants {
+		// Not everyone answers. An organizer chasing people needs a roster where
+		// some rows are genuinely empty, not one where everybody is done.
+		if answerRng.Intn(7) == 0 {
+			continue
+		}
+		answers := map[string]string{
+			"affiliation": affiliations[answerRng.Intn(len(affiliations))],
+			"tshirt_size": sizes[answerRng.Intn(len(sizes))],
+		}
+		// The optional one is answered less often, and "false" is an answer —
+		// distinct from not having answered at all.
+		if answerRng.Intn(3) > 0 {
+			answers["remote"] = map[bool]string{true: "true", false: "false"}[answerRng.Intn(4) == 0]
+		}
+		if err := seedAnswers(ctx, db, h4Questions, u, answers); err != nil {
+			return fmt.Errorf("h4 answers for %s: %w", u.Username, err)
+		}
 	}
 
 	// Preferences. Each participant names one to four projects; the counts are

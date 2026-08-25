@@ -19,6 +19,7 @@ import Users from "lucide-svelte/icons/users"
 import UsersRound from "lucide-svelte/icons/users-round"
 import Lightbulb from "lucide-svelte/icons/lightbulb"
 import ClipboardCheck from "lucide-svelte/icons/clipboard-check"
+import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
@@ -334,6 +335,16 @@ export function manageNav(
       label: "Manage Participants",
       icon: UserRoundCheck,
       href: resolve(`/my/hackathon/${hackathonId}/participants/manage`),
+    },
+    // Straight after Participants, because it is the other half of getting
+    // people in: this decides what they are asked on the way, that page decides
+    // who is let through. Always shown — a form with no questions is a legitimate
+    // state, and this is the only way to add the first one.
+    {
+      id: "manage:forms",
+      label: "Registration Form",
+      icon: ClipboardList,
+      href: resolve(`/my/hackathon/${hackathonId}/manage/forms`),
     },
     // The review queue — every status, with Approve and Revoke on the rows —
     // against the Projects page's read-only list of the approved ones. Both link
