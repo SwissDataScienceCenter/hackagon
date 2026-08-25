@@ -324,3 +324,56 @@ export function missingMandatory(
     .filter((q) => q.mandatory && !answered.has(q.id))
     .map((q) => q.key)
 }
+
+/** One question and what a given participant answered to it. */
+export interface ParticipantAnswer {
+  questionId: string
+  key: string
+  label: string
+  /** A bool arrives as a bool; text and enum as strings. */
+  value: string | boolean
+}
+
+/**
+ * The cohort's answers, grouped by the participant who gave them and ordered by
+ * the question order so every row reads down the form the same way.
+ *
+ * Only questions the person actually answered appear, which is what
+ * `ListParticipantAnswers` returns: a participant with no entry answered
+ * nothing, and that is a different fact from answering and leaving the optional
+ * parts blank.
+ *
+ * Note that answers outlive `RemoveParticipant` — it deletes the participant row
+ * and nothing deletes the answers — so this can hold ids that are no longer on
+ * the roster. Callers should read it through the roster rather than counting it
+ * directly, or a "12 of 10 answered" becomes possible.
+ */
+export function answersByParticipant(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+): Record<string, ParticipantAnswer[]> {
+  const byId = new Map(questions.map((q) => [q.id, q]))
+  const order = new Map(questions.map((q, i) => [q.id, i]))
+  const grouped: Record<string, ParticipantAnswer[]> = {}
+
+  for (const a of answers) {
+    const q = byId.get(a.questionId)
+    // A question deleted since the answer was filed. Dropped rather than shown
+    // as an unlabelled value, which would say nothing an organizer can use.
+    if (!q) continue
+
+    const value = a.boolValue !== undefined ? a.boolValue : a.textValue
+    if (value === undefined) continue
+
+    const list = grouped[a.participantId] ?? (grouped[a.participantId] = [])
+    list.push({ questionId: q.id, key: q.key, label: q.label, value })
+  }
+
+  for (const list of Object.values(grouped)) {
+    list.sort(
+      (x, y) => (order.get(x.questionId) ?? 0) - (order.get(y.questionId) ?? 0),
+    )
+  }
+
+  return grouped
+}

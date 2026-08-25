@@ -3,8 +3,51 @@ import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { requireGrpc } from "$lib/server/grpc/client"
+import {
+  answersByParticipant,
+  questionRows,
+  type ParticipantAnswer,
+} from "$lib/server/hackathon/registrationForm"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
+
+/**
+ * What each participant answered on the registration form.
+ *
+ * Two RPCs of its own — the questions do not ride on `hackathon.get`, and the
+ * answers have no home on it at all. Both are swallowed on failure: this page
+ * exists to approve and remove people, and the answers decorate that. A
+ * hackathon asking nothing returns two empty lists, which renders identically.
+ *
+ * `ListParticipantAnswers` returns the whole cohort to a caller holding
+ * hackathon write and **silently narrows to the caller's own answers** without
+ * it. This page already requires owner-or-admin, so write is expected — but if
+ * the server's casbin policy is stale (it loads once at startup, so a fresh
+ * `db::seed` leaves it behind) the effect is a roster where only the organizer
+ * appears to have answered. That is the environment, not this code.
+ */
+async function registrationAnswers(
+  client: ReturnType<typeof requireGrpc>["hackathon"],
+  hackathonId: string,
+): Promise<{
+  questionCount: number
+  byParticipant: Record<string, ParticipantAnswer[]>
+}> {
+  try {
+    const [questions, answers] = await Promise.all([
+      client.listQuestions({ hackathonId }),
+      client.listParticipantAnswers({ hackathonId, userId: undefined }),
+    ])
+    const rows = questionRows(questions.questions)
+
+    return {
+      questionCount: rows.length,
+      byParticipant: answersByParticipant(rows, answers.answers),
+    }
+  } catch {
+    return { questionCount: 0, byParticipant: {} }
+  }
+}
 
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
@@ -24,6 +67,12 @@ export const load: PageServerLoad = async (event) => {
   // real rows in the hackathon's membership, and the label says which is which
   // — hiding them would make the page disagree with the count in the header,
   // and they are the rows Approve exists for.
+  const { hackathon: client } = requireGrpc(event.locals.grpc)
+  const { questionCount, byParticipant } = await registrationAnswers(
+    client,
+    hackathon.id,
+  )
+
   const participants = hackathon.members
     .filter((m) => m.user !== undefined)
     .map((m) => ({
@@ -35,6 +84,7 @@ export const load: PageServerLoad = async (event) => {
       // Demoting yourself would take away the `hackathon:write` this very page
       // needs, so the row for the viewer never offers it.
       isMe: myUserId !== undefined && m.user!.id === myUserId,
+      answers: byParticipant[m.user!.id] ?? [],
     }))
 
   // The export drops members with no address, since a blank one is a row a
@@ -46,7 +96,19 @@ export const load: PageServerLoad = async (event) => {
     (m) => m.user !== undefined && m.user.email === "",
   ).length
 
-  return { hackathonId: hackathon.id, participants, withoutEmail }
+  // Counted through the roster rather than off `byParticipant`, which can hold
+  // answers from people since removed — `RemoveParticipant` drops the
+  // participant row and nothing drops their answers, so counting it directly
+  // makes "12 of 10 answered" reachable.
+  const answeredCount = participants.filter((p) => p.answers.length > 0).length
+
+  return {
+    hackathonId: hackathon.id,
+    participants,
+    withoutEmail,
+    questionCount,
+    answeredCount,
+  }
 }
 
 /** The gRPC errors both write paths can return, as SvelteKit failures. */

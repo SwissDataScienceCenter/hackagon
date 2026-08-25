@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   answerValues,
+  answersByParticipant,
   missingMandatory,
   parseAnswers,
   parseQuestionForm,
@@ -368,5 +369,67 @@ describe("missingMandatory", () => {
         [{ questionId: "a", participantId: "", textValue: "x" }],
       ),
     ).toEqual([])
+  })
+})
+
+describe("answersByParticipant", () => {
+  const rows = questionRows([
+    {
+      id: "q1",
+      key: "affiliation",
+      label: "Affiliation",
+      type: TEXT,
+      mandatory: true,
+      order: 1,
+      options: [],
+    },
+    {
+      id: "q2",
+      key: "conduct",
+      label: "Code of Conduct",
+      type: BOOL,
+      mandatory: true,
+      order: 2,
+      options: [],
+    },
+  ])
+
+  it("groups by participant and orders by the question order", () => {
+    const grouped = answersByParticipant(rows, [
+      { questionId: "q2", participantId: "u1", boolValue: true },
+      { questionId: "q1", participantId: "u1", textValue: "ETH" },
+      { questionId: "q1", participantId: "u2", textValue: "EPFL" },
+    ])
+    expect(Object.keys(grouped).sort()).toEqual(["u1", "u2"])
+    expect(grouped.u1?.map((a) => a.key)).toEqual(["affiliation", "conduct"])
+    expect(grouped.u1?.[1]?.value).toBe(true)
+  })
+
+  it("leaves out a participant who answered nothing", () => {
+    // Absence is the signal an organizer chases; an empty list per person would
+    // make "has not answered" indistinguishable from "answered blankly".
+    expect(answersByParticipant(rows, [])).toEqual({})
+  })
+
+  it("drops an answer whose question has since been deleted", () => {
+    // Otherwise it renders as a value with no question, which says nothing.
+    expect(
+      answersByParticipant(rows, [
+        { questionId: "gone", participantId: "u1", textValue: "x" },
+      ]),
+    ).toEqual({})
+  })
+
+  it("keeps a false answer, which is an answer", () => {
+    const grouped = answersByParticipant(rows, [
+      { questionId: "q2", participantId: "u1", boolValue: false },
+    ])
+    expect(grouped.u1?.[0]?.value).toBe(false)
+  })
+
+  it("skips an answer carrying neither arm", () => {
+    expect(
+      answersByParticipant(rows, [{ questionId: "q1", participantId: "u1" }]),
+    ).toEqual({})
   })
 })

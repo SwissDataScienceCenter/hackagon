@@ -34,6 +34,14 @@
         })
     );
 
+    // Only people who answered have rows at all, so the gap is the number worth
+    // showing: it is the list an organizer chases before the event starts.
+    const answersLabel = $derived(
+        data.questionCount === 0
+            ? ''
+            : `${data.answeredCount} of ${data.participants.length} answered the registration form`
+    );
+
     const countLabel = $derived(
         filtered.length === 1 ? '1 participant' : `${filtered.length} participants`
     );
@@ -57,7 +65,8 @@
                 {countLabel}{#if waitingCount > 0}
                     &middot; {waitingCount} awaiting approval{/if}{#if data.withoutEmail > 0}
                     &middot; {data.withoutEmail}
-                    {data.withoutEmail === 1 ? 'has' : 'have'} no email address{/if}
+                    {data.withoutEmail === 1 ? 'has' : 'have'} no email address{/if}{#if answersLabel !== ''}
+                    &middot; {answersLabel}{/if}
             </span>
         </div>
         <div
@@ -186,6 +195,41 @@
                         {/if}
                     {/snippet}
                 </ParticipantCard>
+
+                <!-- Below the card rather than inside it: ParticipantCard takes
+                     only an `actions` snippet, and widening a component three
+                     pages share for one of them is the wrong trade. A `details`
+                     so a roster of a hundred stays readable, and so it works
+                     with no JavaScript. -->
+                {#if data.questionCount > 0}
+                    {#if participant.answers.length > 0}
+                        <details class="mt-1 mb-3 ml-4">
+                            <summary
+                                class="w-fit cursor-pointer text-xs font-semibold text-accent-ink"
+                            >
+                                Registration answers ({participant.answers.length})
+                            </summary>
+                            <dl class="mt-2 flex flex-col gap-1 border-l border-line pl-3">
+                                {#each participant.answers as answer (answer.questionId)}
+                                    <div class="flex flex-wrap gap-x-2">
+                                        <dt class="text-xs text-ink-3">{answer.label}</dt>
+                                        <dd class="m-0 text-xs text-ink">
+                                            {#if typeof answer.value === 'boolean'}
+                                                {answer.value ? 'Yes' : 'No'}
+                                            {:else}
+                                                {answer.value}
+                                            {/if}
+                                        </dd>
+                                    </div>
+                                {/each}
+                            </dl>
+                        </details>
+                    {:else}
+                        <p class="mt-1 mb-3 ml-4 text-xs text-ink-3">
+                            Has not answered the registration form.
+                        </p>
+                    {/if}
+                {/if}
             {/each}
         {/if}
     </div>
