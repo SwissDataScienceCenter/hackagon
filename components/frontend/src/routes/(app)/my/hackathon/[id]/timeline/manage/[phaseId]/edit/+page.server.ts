@@ -48,6 +48,16 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     hackathonId: hackathon.id,
+    // Arrived here straight from Add Phase, which redirects with `?added` because
+    // `Create` cannot store dates and this is where they get set. Carried in the
+    // URL rather than in state, so a phase legitimately left undated is not told
+    // it was just created when it is reached from the list.
+    //
+    // The form posts to `?/save`, which replaces the whole query string — so the
+    // notice is gone by the second render, failed save included. That is the
+    // wanted behaviour rather than a limitation: it answers "why am I on Edit",
+    // and after submitting once nobody is asking.
+    justAdded: event.url.searchParams.has("added"),
     phase: {
       id: result.phase.id,
       name: result.phase.name,

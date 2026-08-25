@@ -76,6 +76,24 @@ export function sortPhasesByStart<T extends { startsAt?: Date | undefined }>(
  * Both dates are optional in the schema, and the CEL rule only forbids one
  * *without* the other on write — rows predating it can still carry either alone,
  * so all four combinations are handled.
+ *
+ * **Times are shown when there are times to show.** The organizer's form fields
+ * are `datetime-local`, so a phase carries an hour and a minute whether or not
+ * anyone meant it to; printing the date alone made every phase of a two-day
+ * hackathon read "Aug 25, 2026 – Aug 25, 2026" and threw away the half of the
+ * schedule that actually paces a hackathon day. Midnight on both bounds is read
+ * as "the whole day" and prints as before — that is what an organizer who left
+ * the time fields alone meant, and it is the only reading under which a
+ * suppressed time loses nothing.
+ *
+ * One decision for the whole range, never per bound: a start at 09:00 against an
+ * end at midnight prints both, because "Aug 25, 2026, 09:00 – Aug 26, 2026" would
+ * read as a range whose end is unspecified rather than as one ending at 00:00.
+ *
+ * 24-hour, and the repeated date collapsed on a single-day range — "Aug 25, 2026,
+ * 09:00 – 13:00". Both keep the line short enough to sit beside a phase name in
+ * the `tnum` spans that render it, which is the whole reason the date is not
+ * simply printed twice.
  */
 export function formatPhaseRange(
   startsAt: Date | undefined,
@@ -87,11 +105,30 @@ export function formatPhaseRange(
       day: "numeric",
       year: "numeric",
     })
-  if (!startsAt && !endsAt) return "No dates set"
-  if (!startsAt) return `Until ${fmt(endsAt as Date)}`
-  if (!endsAt) return `From ${fmt(startsAt)}`
+  // Local, like `toDateTimeLocal` and for the same reason: an organizer's 09:00
+  // is their own 09:00, and `toLocaleTimeString` with no zone honours that.
+  const time = (d: Date) =>
+    d.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  const midnight = (d: Date) => d.getHours() === 0 && d.getMinutes() === 0
+  const timed = [startsAt, endsAt].some((d) => d !== undefined && !midnight(d))
+  const stamp = (d: Date) => (timed ? `${fmt(d)}, ${time(d)}` : fmt(d))
 
-  return `${fmt(startsAt)} – ${fmt(endsAt)}`
+  if (!startsAt && !endsAt) return "No dates set"
+  if (!startsAt) return `Until ${stamp(endsAt as Date)}`
+  if (!endsAt) return `From ${stamp(startsAt)}`
+
+  // Compared as rendered, so "same day" means the same thing the reader sees.
+  if (fmt(startsAt) === fmt(endsAt)) {
+    return timed
+      ? `${fmt(startsAt)}, ${time(startsAt)} – ${time(endsAt)}`
+      : fmt(startsAt)
+  }
+
+  return `${stamp(startsAt)} – ${stamp(endsAt)}`
 }
 
 /**

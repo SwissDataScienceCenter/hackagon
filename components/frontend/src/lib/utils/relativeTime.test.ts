@@ -52,28 +52,67 @@ describe("nextBoundary", () => {
       { endsAt: at("2026-08-13T12:00:00Z") },
       { startsAt: at("2026-08-13T12:00:00Z") },
       NOW,
+      false,
+    )
+    expect(b).toEqual({ verb: "ends", target: at("2026-08-13T12:00:00Z") })
+  })
+
+  it("counts down to the end of a declared phase too", () => {
+    // A declared phase's own end date is still worth naming — it is what the
+    // organizer scheduled. Only the *next* phase's start is a promise the dates
+    // cannot keep.
+    const b = nextBoundary(
+      { endsAt: at("2026-08-13T12:00:00Z") },
+      { startsAt: at("2026-08-14T09:00:00Z") },
+      NOW,
+      true,
     )
     expect(b).toEqual({ verb: "ends", target: at("2026-08-13T12:00:00Z") })
   })
 
   it("falls through to the next phase starting once the current one has ended", () => {
-    // Routine, not an edge case: a declared phase stays current until an
-    // organizer moves the pointer, so its end date passing is normal.
     const b = nextBoundary(
       { endsAt: at("2026-08-10T12:00:00Z") },
       { startsAt: at("2026-08-15T09:00:00Z") },
       NOW,
+      false,
     )
     expect(b).toEqual({ verb: "starts", target: at("2026-08-15T09:00:00Z") })
   })
 
+  it("names no start while a phase is declared current", () => {
+    // The lie this guard exists to stop: nothing starts the next phase but
+    // SetCurrentPhase, so "starts in 3 days" would be false, not just stale.
+    expect(
+      nextBoundary(
+        { endsAt: at("2026-08-10T12:00:00Z") },
+        { startsAt: at("2026-08-15T09:00:00Z") },
+        NOW,
+        true,
+      ),
+    ).toBeNull()
+  })
+
+  it("names no start for a declaration that resolves to no phase", () => {
+    // A `current_phase_id` naming a phase that is not in the list. The pointer
+    // still says an organizer is driving, so the dates still decide nothing.
+    expect(
+      nextBoundary(null, { startsAt: at("2026-08-15T09:00:00Z") }, NOW, true),
+    ).toBeNull()
+  })
+
   it("uses the next phase when there is no current one", () => {
-    const b = nextBoundary(null, { startsAt: at("2026-08-15T09:00:00Z") }, NOW)
+    const b = nextBoundary(
+      null,
+      { startsAt: at("2026-08-15T09:00:00Z") },
+      NOW,
+      false,
+    )
     expect(b).toEqual({ verb: "starts", target: at("2026-08-15T09:00:00Z") })
   })
 
   it("is null when the current phase has no end date and nothing is next", () => {
-    expect(nextBoundary({ endsAt: undefined }, null, NOW)).toBeNull()
+    expect(nextBoundary({ endsAt: undefined }, null, NOW, false)).toBeNull()
   })
 
   it("is null when every date is in the past", () => {
@@ -82,6 +121,7 @@ describe("nextBoundary", () => {
         { endsAt: at("2026-08-01T12:00:00Z") },
         { startsAt: at("2026-08-02T12:00:00Z") },
         NOW,
+        false,
       ),
     ).toBeNull()
   })

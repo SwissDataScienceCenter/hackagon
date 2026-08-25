@@ -30,8 +30,9 @@
         </a>
         <h1 class="m-0 text-title text-ink">Add Phase</h1>
         <p class="m-0 text-xs text-ink-3">
-            Participants see the phase as soon as it is saved. Undated phases sort to the
-            top of the timeline until they are scheduled.
+            Participants see the phase as soon as it is saved, and the next step is
+            scheduling it — this form hands straight over to it. Undated phases sort to
+            the top of the timeline until they are scheduled.
         </p>
     </div>
 

@@ -45,24 +45,38 @@ export type Boundary = { verb: "ends" | "starts"; target: Date }
  * The next moment the hackathon changes shape, from the current and next phase.
  *
  * The current phase ending is the boundary that matters while it is running,
- * because that is when what participants may do can change. Once it has ended —
- * which happens routinely, since a declared phase stays current until an
- * organizer moves the pointer — the next phase starting is the only boundary
- * left to name, so this falls through to it rather than reporting nothing.
+ * because that is when what participants may do can change. Once it has ended,
+ * the next phase starting is the only boundary left to name — but only where a
+ * date is what will start it.
  *
- * Null when neither date is in the future: a hackathon with no dates set, or one
- * whose last phase has run out. Both are states the card renders without a
- * countdown rather than with an invented one.
+ * **`declared` suppresses the "starts" boundary entirely.** With a phase declared
+ * current, `SetCurrentPhase` is the only thing that moves the hackathon on:
+ * `resolvePhaseStatus` stops reading the dates, the declared phase stays current
+ * after its window runs out, and the next phase's start date arriving does
+ * nothing at all. Counting down to it told a participant "Hacking starts in 3 h"
+ * about a phase that starts when an organizer clicks — the one statement on the
+ * page that could be flatly false rather than merely stale. A dangling
+ * `current_phase_id` counts as declared too: the pointer says an organizer is
+ * driving, whether or not it resolves.
+ *
+ * The "ends" boundary needs no such guard. A declared phase's end date is not a
+ * promise about what happens next, and `formatCountdown` returns null once it has
+ * passed, so a phase held past its window simply stops counting.
+ *
+ * Null when there is no boundary left to name: no dates set, the last phase run
+ * out, or a declaration with its end behind us. All are states the caller renders
+ * without a countdown rather than with an invented one.
  */
 export function nextBoundary(
   current: { endsAt?: Date | undefined } | null,
   next: { startsAt?: Date | undefined } | null,
   now: Date,
+  declared: boolean,
 ): Boundary | null {
   if (current?.endsAt && current.endsAt > now) {
     return { verb: "ends", target: current.endsAt }
   }
-  if (next?.startsAt && next.startsAt > now) {
+  if (!declared && next?.startsAt && next.startsAt > now) {
     return { verb: "starts", target: next.startsAt }
   }
 
