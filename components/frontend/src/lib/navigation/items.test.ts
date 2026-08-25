@@ -314,6 +314,7 @@ describe("manageNav", () => {
     expectOrder(manageNav("hack-1", owner, false, false, 3), [
       "manage:settings",
       "manage:participants",
+      "manage:forms",
       "manage:projects",
       "manage:tracks",
       "manage:teams",
@@ -418,6 +419,9 @@ describe("manageNav", () => {
       // stays lit rather than nothing being lit at all.
       ["/my/hackathon/hack-1/manage", "manage:settings"],
       ["/my/hackathon/hack-1/manage/edit", "manage:settings"],
+      // Nested under Settings too, but with an entry of its own — longest match
+      // is what keeps Settings from swallowing it.
+      ["/my/hackathon/hack-1/manage/forms", "manage:forms"],
       ["/my/hackathon/hack-1/timeline", "member:timeline"],
       ["/my/hackathon/hack-1/timeline/manage", "manage:timeline"],
       // The create and edit forms live under the manage route precisely so they
