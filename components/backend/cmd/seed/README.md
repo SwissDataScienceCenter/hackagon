@@ -8,8 +8,40 @@ be formed. All timestamps are relative to `time.Now()` at seed time, so
 re-seeding keeps the ongoing hackathon ongoing. Each hackathon also gets the
 capabilities its phase calls for — see [Capabilities](#capabilities).
 
-Running again when the sentinel hackathon (`AI Innovation Challenge 2026`)
-already exists is a no-op.
+Running again when all four hackathons already exist is a no-op. Finding _some_
+of them is an error rather than either a skip or a re-seed: it means a previous
+run died partway, and the fix is `just clean::state`. The seed is not atomic —
+it drives the API, and several handlers open a transaction of their own, which
+rules out wrapping the run in one.
+
+## How the fixture is built
+
+The seed calls the backend rather than writing rows. It stands the gRPC server
+up in-process on an in-memory pipe — protovalidate and the auth interceptor
+included — and drives it with tokens it signs itself, so it can act as any of
+the fixture's identities without Keycloak. [harness.go](harness.go) says why
+that is the only way to act as the hundred who have no Keycloak account, and
+[steps.go](steps.go) holds the moves a hackathon is built out of.
+
+Two consequences worth knowing:
+
+- **A capability has to be on at the moment it is used.** Nothing a participant
+  does can be seeded unless the capability behind it was enabled first, so each
+  hackathon switches its capabilities on as its history needs them and ends with
+  a call declaring the set it should be left in. That is what an organizer does
+  over a hackathon's life, and it is now what the seed does too.
+- **The rows are whatever the handlers write.** Where a handler leaves a field
+  unset — `Team.Create` and `CreateSubmission` write no modifier, `Approve` does
+  not update one — the seeded row has it unset too, and the fixture no longer
+  quietly improves on the API. Page order starts at 0 for the same reason, and a
+  single-choice vote stores `0` rather than nothing.
+- **A team is created by an organizer or not at all.** `team:create` and
+  `team:write` are granted to `owner` and nothing widens them, so Team Gamma —
+  which this fixture used to record as bob's — is now the admin's. A
+  participant-assembled team is not a state the API can produce.
+
+The one thing the seed still writes directly is a registration answer, because
+[no answer can be stored through the API at all](#the-answers-exception).
 
 ## Restart the backend after seeding
 
@@ -116,10 +148,11 @@ Phase-level timing is listed in each hackathon's section below.
 
 ## Capabilities
 
-Each hackathon gets a `HackathonState` row plus the casbin policy rows that go
-with it, so capability-gated mutations actually work in seeded data. Both writes
-are needed: the boolean on the row is what the UI reads, but the enforcer only
-ever reads the casbin policy — see `seedCapabilities` in [main.go](main.go).
+Each hackathon's capabilities are declared with `SetCapabilities`, which is the
+only call that writes both halves: the boolean on the state row, which the UI
+reads, and the casbin policy, which is the only thing the enforcer reads. The
+seed states all six on every call, so the set below is a declaration rather than
+a patch on whatever was there before.
 
 |                     | H1 upcoming | H2 ongoing | H3 past | H4 forming teams |
 | ------------------- | ----------- | ---------- | ------- | ---------------- |
@@ -139,11 +172,14 @@ misconfiguration. Voting is on in H3 only, which is where it belongs — you vot
 once the building has stopped. **H3 is therefore the only place voting is
 testable.**
 
-`vote` writes two casbin rows, not one: `Vote:Create` and `VoteCategory:Read`.
-The second is the one that looks redundant and is not — `ListVoteCategories`,
-`GetVoteCategory` and `SubmitVote` all check `VoteCategory:Read` before anything
-else, so a member without it cannot see what there is to vote on and
-`SubmitVote` refuses before `Vote:Create` is ever consulted.
+`vote` writes **three** casbin rows, not one: `Vote:Create`, `VoteCategory:Read`
+and `Submission:Read`. The second is the one that looks redundant and is not —
+`ListVoteCategories`, `GetVoteCategory` and `SubmitVote` all check
+`VoteCategory:Read` before anything else, so a member without it cannot see what
+there is to vote on and `SubmitVote` refuses before `Vote:Create` is ever
+consulted. The third lets a voter read the submissions they are voting on; the
+seed used to hand-write the first two and miss it, which is the kind of drift
+going through the handler removes.
 
 **Preferences: test in H1, H2 or H4.** H2 is the clearest small case —
 `hackagon-admin` owns it, `alice` and `bob` are both confirmed members. **H4 is
@@ -151,13 +187,27 @@ the one with volume**: 15 projects, 102 participants and ~260 preference rows
 already on file, which is what you want if you are looking at a preference
 export, a popularity ranking, or a team-assignment algorithm.
 
-One deliberate divergence from the API: `SetCapabilities` grants team
-preferences to `Member` only, and the casbin model has no role inheritance, so a
-hackathon **owner** cannot express a preference on a project they would like to
-work on. The seed grants the owner row too, so the fixture shows the intended
-behaviour. Tracked in
-`mydocs/docs/backend-tickets/project-preferences-capability.md`; the row is one
-line in `seedCapabilities` if you would rather mirror the handler exactly.
+`SetCapabilities` grants team preferences to `Member` only, and the casbin model
+has no role inheritance, so a hackathon **owner** cannot express a preference on
+a project they would like to work on. The seed used to add the owner row by hand
+so the fixture showed the intended behaviour; going through the handler means it
+no longer does, and the seeded hackathons now behave exactly as the API does.
+Tracked in `mydocs/docs/backend-tickets/project-preferences-capability.md`.
+
+### The answers exception
+
+`Join` and `SubmitAnswers` both build their upsert with no conflict target,
+which Postgres rejects when it parses the statement, so **every** call carrying
+an answer fails — see `mydocs/docs/backend-tickets/answer-upsert-sql.md`, which
+names the three-line fix. The seed calls `SubmitAnswers` anyway, so the handler
+still validates the answers, and falls back to writing the rows itself on
+exactly that failure. Two consequences while the ticket is open:
+
+- `just db::seed` logs one `upsert answer` ERROR per participant with answers.
+  That is the handler's own log line, and the seed still succeeds.
+- Signups happen **before** a hackathon's form is created, since `Join` would
+  otherwise have to carry answers it cannot store. That ordering is also what
+  leaves charles waitlisted in H1 with nothing on file.
 
 ## Registration questions
 
