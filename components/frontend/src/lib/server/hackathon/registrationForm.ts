@@ -3,7 +3,7 @@ import {
   QuestionType,
   type Question,
 } from "$lib/server/grpc/generated/hackathon/entities/question"
-import type { QuestionKind } from "$lib/utils/question"
+import { answerFieldName, type QuestionKind } from "$lib/utils/question"
 
 /**
  * Server-only: reads the generated `QuestionType` enum, so it must never be
@@ -226,4 +226,101 @@ export function parseQuestionForm(form: FormData): QuestionFormResult {
       options,
     },
   }
+}
+
+/**
+ * One answer in the shape `SubmitAnswers` and `Join` both take.
+ *
+ * `participantId` is required by the generated type but ignored by the server,
+ * which derives the answerer from the bearer token — so it goes out empty rather
+ * than letting a client name whose answer this is.
+ */
+export interface AnswerInput {
+  questionId: string
+  participantId: string
+  textValue?: string
+  boolValue?: boolean
+}
+
+/**
+ * Read a filled-in registration form.
+ *
+ * Driven by `questions` rather than by the form's own keys: the answer's arm of
+ * the `value` oneof is a fact about the question, and the backend refuses a text
+ * answer to a bool question. Anything the form carries for a question that no
+ * longer exists is dropped rather than sent, since the backend would refuse the
+ * whole submission over it.
+ *
+ * **A blank answer is omitted, not sent empty.** Two reasons. The backend checks
+ * that a mandatory question has *an answer*, not that the answer says anything,
+ * so sending `""` would let a required question through blank and make
+ * `mandatory` meaningless. And an unticked mandatory tick-box is a refusal, not
+ * an answer — omitting it is what makes the backend report "missing mandatory
+ * answers" instead of silently recording a "no" to the code of conduct.
+ *
+ * The cost is that a once-answered optional question cannot be blanked again:
+ * answers are upserted and nothing deletes them, so an omitted field leaves the
+ * previous value in place. That is a backend limitation, not a choice here, and
+ * papering over it would mean writing `""` and reintroducing the hole above.
+ */
+export function parseAnswers(
+  form: FormData,
+  questions: readonly QuestionRow[],
+): AnswerInput[] {
+  const answers: AnswerInput[] = []
+
+  for (const q of questions) {
+    const raw = form.get(answerFieldName(q.id))
+
+    if (q.kind === "bool") {
+      const ticked = raw === "true"
+      // A required box left unticked is withheld so the backend refuses it. An
+      // optional one sends `false`, which is a real answer and not an absence.
+      if (q.mandatory && !ticked) continue
+      answers.push({ questionId: q.id, participantId: "", boolValue: ticked })
+      continue
+    }
+
+    const text = typeof raw === "string" ? raw.trim() : ""
+    if (text === "") continue
+    answers.push({ questionId: q.id, participantId: "", textValue: text })
+  }
+
+  return answers
+}
+
+/**
+ * The answers already on file, keyed by question id, for prefilling the form.
+ *
+ * A bool arrives as `boolValue` now that the backend reads the arm from the
+ * question's type; a text or enum answer as `textValue`. Anything else is left
+ * out so an unanswered question renders empty rather than as the string "false".
+ */
+export function answerValues(
+  answers: readonly Answer[],
+): Record<string, string | boolean> {
+  const values: Record<string, string | boolean> = {}
+  for (const a of answers) {
+    if (a.boolValue !== undefined) values[a.questionId] = a.boolValue
+    else if (a.textValue !== undefined) values[a.questionId] = a.textValue
+  }
+
+  return values
+}
+
+/**
+ * The keys of the mandatory questions this submission leaves unanswered.
+ *
+ * A courtesy check so the page can name them before a round trip; the backend
+ * repeats it and stays the authority.
+ */
+export function missingMandatory(
+  questions: readonly QuestionRow[],
+  answers: readonly AnswerInput[],
+): string[] {
+  const answered = new Set(answers.map((a) => a.questionId))
+
+  return questions
+    .filter((q) => q.mandatory && !answered.has(q.id))
+    .map((q) => q.key)
 }

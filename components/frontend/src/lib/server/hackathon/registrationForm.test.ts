@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest"
 import {
+  answerValues,
+  missingMandatory,
+  parseAnswers,
   parseQuestionForm,
   questionKind,
   questionRows,
@@ -219,6 +222,151 @@ describe("questionRows", () => {
   })
 
   it("reports zero when no answers were passed at all", () => {
-    expect(questionRows([q()])[0].answerCount).toBe(0)
+    expect(questionRows([q()])[0]?.answerCount).toBe(0)
+  })
+})
+
+describe("parseAnswers", () => {
+  const q = (
+    id: string,
+    kind: "text" | "bool" | "enum",
+    mandatory = false,
+  ) => ({
+    id,
+    key: id,
+    label: id,
+    kind,
+    mandatory,
+    order: 1,
+    options: [] as string[],
+    answerCount: 0,
+  })
+
+  /** A form carrying `answer:<id>` fields. */
+  const answerForm = (fields: Record<string, string>) => {
+    const f = new FormData()
+    for (const [k, v] of Object.entries(fields)) f.set(`answer:${k}`, v)
+
+    return f
+  }
+
+  it("puts a text answer in textValue", () => {
+    expect(
+      parseAnswers(answerForm({ affiliation: "ETH" }), [
+        q("affiliation", "text"),
+      ]),
+    ).toEqual([
+      { questionId: "affiliation", participantId: "", textValue: "ETH" },
+    ])
+  })
+
+  it("puts a ticked box in boolValue, not textValue", () => {
+    // The backend refuses a text answer to a bool question, so the arm of the
+    // oneof has to follow the question rather than the form field.
+    expect(
+      parseAnswers(answerForm({ conduct: "true" }), [q("conduct", "bool")]),
+    ).toEqual([{ questionId: "conduct", participantId: "", boolValue: true }])
+  })
+
+  it("sends false for an optional box left unticked", () => {
+    // "No" is an answer. Only a *required* box withholds it.
+    expect(parseAnswers(new FormData(), [q("newsletter", "bool")])).toEqual([
+      { questionId: "newsletter", participantId: "", boolValue: false },
+    ])
+  })
+
+  it("withholds a required box left unticked so the backend refuses it", () => {
+    // Otherwise a blank code-of-conduct would be recorded as a cheerful "no"
+    // and the submission would succeed.
+    expect(parseAnswers(new FormData(), [q("conduct", "bool", true)])).toEqual(
+      [],
+    )
+  })
+
+  it("omits a blank text answer rather than sending an empty string", () => {
+    // The backend checks that a mandatory question has an answer, not that the
+    // answer says anything — `""` would let a required question through blank.
+    expect(
+      parseAnswers(answerForm({ diet: "   " }), [q("diet", "text", true)]),
+    ).toEqual([])
+  })
+
+  it("trims a text answer", () => {
+    expect(
+      parseAnswers(answerForm({ affiliation: "  ETH  " }), [
+        q("affiliation", "text"),
+      ])[0]?.textValue,
+    ).toBe("ETH")
+  })
+
+  it("sends an enum choice as text and omits the blank one", () => {
+    const questions = [q("size", "enum")]
+    expect(
+      parseAnswers(answerForm({ size: "M" }), questions)[0]?.textValue,
+    ).toBe("M")
+    expect(parseAnswers(answerForm({ size: "" }), questions)).toEqual([])
+  })
+
+  it("ignores a field for a question that no longer exists", () => {
+    // The backend refuses the whole submission over one unknown question id, so
+    // a stale field must not ride along.
+    expect(parseAnswers(answerForm({ gone: "x" }), [])).toEqual([])
+  })
+
+  it("never names whose answer it is", () => {
+    // The server derives the answerer from the token; sending an id would invite
+    // a client to claim someone else's.
+    const parsed = parseAnswers(answerForm({ affiliation: "ETH" }), [
+      q("affiliation", "text"),
+    ])
+    expect(parsed[0]?.participantId).toBe("")
+  })
+})
+
+describe("answerValues", () => {
+  it("keys answers by question, keeping bools as bools", () => {
+    expect(
+      answerValues([
+        { questionId: "a", participantId: "u", textValue: "ETH" },
+        { questionId: "b", participantId: "u", boolValue: true },
+        { questionId: "c", participantId: "u", boolValue: false },
+      ]),
+    ).toEqual({ a: "ETH", b: true, c: false })
+  })
+
+  it("leaves an answer with neither arm set out entirely", () => {
+    // So an unanswered question renders empty rather than as the string "false".
+    expect(answerValues([{ questionId: "a", participantId: "u" }])).toEqual({})
+  })
+})
+
+describe("missingMandatory", () => {
+  const q = (id: string, mandatory: boolean) => ({
+    id,
+    key: `${id}_key`,
+    label: id,
+    kind: "text" as const,
+    mandatory,
+    order: 1,
+    options: [] as string[],
+    answerCount: 0,
+  })
+
+  it("names the required questions with no answer", () => {
+    expect(
+      missingMandatory(
+        [q("a", true), q("b", false), q("c", true)],
+        [{ questionId: "a", participantId: "", textValue: "x" }],
+      ),
+    ).toEqual(["c_key"])
+  })
+
+  it("is empty when every required question is answered", () => {
+    expect(
+      missingMandatory(
+        [q("a", true)],
+        [{ questionId: "a", participantId: "", textValue: "x" }],
+      ),
+    ).toEqual([])
   })
 })

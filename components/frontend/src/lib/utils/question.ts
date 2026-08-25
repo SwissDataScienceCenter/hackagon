@@ -44,3 +44,14 @@ export function questionKindLabel(kind: QuestionKind): string {
 export function kindNeedsOptions(kind: QuestionKind): boolean {
   return kind === "enum"
 }
+
+/**
+ * The form field carrying an answer to one question.
+ *
+ * Here rather than beside the parser because both halves need it: the page
+ * renders the name and the server-only parser reads it, and a convention spelled
+ * in two places is one that drifts.
+ */
+export function answerFieldName(questionId: string): string {
+  return `answer:${questionId}`
+}
