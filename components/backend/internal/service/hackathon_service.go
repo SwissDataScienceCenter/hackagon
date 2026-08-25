@@ -88,6 +88,15 @@ func (s *HackathonService) Create(
 		return nil, status.Errorf(codes.Internal, "couldn't create hackathon in database")
 	}
 
+	// set permission based on visibility
+	if visibility == enthackathon.VisibilityPublic {
+		_, err = s.enforcer.AllowPublicHackathonAccess(h.ID.String())
+		if err != nil {
+			slog.Error("create hackathon", "err", err)
+			return nil, status.Error(codes.Internal, "couldn't set hackathon permission")
+		}
+	}
+
 	// Create default state (all capabilities disabled).
 	_, err = s.dbClient.HackathonState.Create().
 		SetHackathonID(h.ID).
@@ -598,6 +607,23 @@ func (s *HackathonService) Edit(
 	if err != nil {
 		slog.Error("query updated hackathon", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query updated hackathon")
+	}
+
+	//nolint:nestif // Complexity is ok here.
+	if req.Visibility != nil {
+		if updated.Visibility == enthackathon.VisibilityPublic {
+			_, err = s.enforcer.AllowPublicHackathonAccess(h.ID.String())
+			if err != nil {
+				slog.Error("edit hackathon", "err", err)
+				return nil, status.Error(codes.Internal, "couldn't change hackathon permission")
+			}
+		} else {
+			_, err = s.enforcer.RemovePublicHackathonAccess(h.ID.String())
+			if err != nil {
+				slog.Error("edit hackathon", "err", err)
+				return nil, status.Error(codes.Internal, "couldn't change hackathon permission")
+			}
+		}
 	}
 
 	entry := hackathonEntryFromEnt(updated, time.Now())
@@ -1423,7 +1449,6 @@ func (s *HackathonService) ListQuestions(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-
 	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
 		return nil, err
 	}
@@ -1496,7 +1521,10 @@ func (s *HackathonService) SubmitAnswers(
 	).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, status.Errorf(codes.NotFound, "user is not a participant in this hackathon")
+			return nil, status.Errorf(
+				codes.PermissionDenied,
+				"user is not a participant in this hackathon",
+			)
 		}
 		slog.Error("query participant", "err", err)
 		return nil, status.Error(codes.Internal, "couldn't query participant")
@@ -1562,18 +1590,23 @@ func (s *HackathonService) ListParticipantAnswers(
 		entanswer.HasQuestionWith(
 			entquestion.HasHackathonWith(enthackathon.IDEQ(hackID)),
 		),
-	)
+	).WithQuestion()
 
 	if req.GetUserId() != "" {
 		uidParsed, err := uuid.Parse(req.GetUserId())
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
 		}
+
+		if uidParsed != user.ID && !hasWrite {
+			return nil, status.Error(codes.PermissionDenied, "permission denied")
+		}
 		q = q.Where(entanswer.HasUserWith(
 			entuser.ID(uidParsed),
 		))
-	} else if !hasWrite {
-		// No write access: filter by requester's own answers
+	}
+	if !hasWrite {
+		// only return own user if user does not have write access
 		q = q.Where(entanswer.HasUserWith(
 			entuser.ID(user.ID),
 		))

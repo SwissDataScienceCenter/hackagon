@@ -530,11 +530,16 @@ func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 }
 
 func answerEntryFromEnt(a *ent.Answer) *hackEnts.Answer {
-	return &hackEnts.Answer{
+	entry := &hackEnts.Answer{
 		QuestionId:    a.QuestionID.String(),
 		ParticipantId: a.UserID.String(),
 		Value:         &hackEnts.Answer_TextValue{TextValue: a.Value},
 	}
+	if a.Edges.Question != nil && a.Edges.Question.DataType == entquestion.DataTypeBool {
+		entry.Value = &hackEnts.Answer_BoolValue{BoolValue: a.Value == "true"}
+	}
+
+	return entry
 }
 
 // protoAnswerValueToDB extracts the string representation from a proto Answer.

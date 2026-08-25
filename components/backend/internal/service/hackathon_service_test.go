@@ -2067,12 +2067,12 @@ var _ = Describe("HackathonService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h.Edges.Owners).To(HaveLen(1)) // only creator remains
 
-			// Verify casbin role was revoked (owner can no longer read hackathon)
+			// Verify casbin role was revoked (owner can no longer write hackathon)
 			ok, err := enf.CheckPermission(
 				ownerToRemove.KeycloakID,
 				createdHackathonID,
 				middleware.Hackathon,
-				middleware.Read,
+				middleware.Write,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeFalse())
@@ -2525,6 +2525,31 @@ var _ = Describe("HackathonService", func() {
 		// --- ListQuestions ---
 
 		Describe("ListQuestions", func() {
+			// Regression: this required `hackathon:read`, which a non-member does
+			// not hold. Join validates the mandatory answers and answering needs
+			// the questions, so a hackathon asking anything mandatory could not be
+			// joined by anyone at all.
+			It("serves a non-member, so signup is not deadlocked", func() {
+				_, err := dbClient.User.Create().
+					SetKeycloakID("lq-outsider").
+					SetUsername("lq-outsider").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				outsiderCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken("lq-outsider"),
+					),
+				)
+				resp, err := client.ListQuestions(outsiderCtx, &msgs.ListQuestionsRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetQuestions()).NotTo(BeEmpty())
+			})
+
 			BeforeEach(func() {
 				token := testutils.CreateTestJWTToken(testAdmin)
 				ctx := metadata.NewOutgoingContext(
@@ -2633,9 +2658,26 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetQuestions()).To(BeEmpty())
 			})
 
-			It("requires Read permission", func() {
+			It("requires Read permission on a private hackathon", func() {
+				// Narrowed from "requires Read" outright: a public hackathon's
+				// questions must be answerable before Join, and a non-member holds
+				// no read grant — so requiring one deadlocked signup. A private
+				// event still refuses an uninvited caller.
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+					),
+				)
+				priv, err := client.Create(adminCtx, &msgs.CreateRequest{
+					Name:       "QA Private Questions Hackathon",
+					Visibility: entities.Visibility_VISIBILITY_PRIVATE,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
 				nonOwnerKeycloakID := "non-owner-list-q"
-				_, err := dbClient.User.Create().
+				_, err = dbClient.User.Create().
 					SetKeycloakID(nonOwnerKeycloakID).
 					SetUsername("non-owner-list-q-username").
 					Save(context.Background())
@@ -2648,7 +2690,7 @@ var _ = Describe("HackathonService", func() {
 				)
 
 				_, err = client.ListQuestions(ctx, &msgs.ListQuestionsRequest{
-					HackathonId: hackathonID,
+					HackathonId: priv.GetHackathonId(),
 				})
 				Expect(err).To(HaveOccurred())
 				st := status.Convert(err)
@@ -3190,10 +3232,10 @@ var _ = Describe("HackathonService", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Grant owner role so they have Read permission
-				_, err = dbClient.Hackathon.Update().
-					Where(enthackathon.IDEQ(uuid.MustParse(hackathonID))).
-					AddOwners(user).
-					Save(context.Background())
+				_, err = client.AddOwner(ctx, &msgs.AddOwnerRequest{
+					HackathonId: hackathonID,
+					UserId:      user.ID.String(),
+				})
 				Expect(err).NotTo(HaveOccurred())
 
 				// Also create a participant record for the admin user so admin token works
@@ -3380,19 +3422,6 @@ var _ = Describe("HackathonService", func() {
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
 
-				// Create participant for this user
-				user, err := dbClient.User.Query().
-					Where(entuser.KeycloakIDEQ(nonOwnerKeycloakID)).
-					Only(context.Background())
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = dbClient.Participant.Create().
-					SetHackathonID(uuid.MustParse(hackathonID)).
-					SetUserID(user.ID).
-					SetIsWaiting(false).
-					Save(context.Background())
-				Expect(err).NotTo(HaveOccurred())
-
 				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
 					Answers: []*entities.Answer{
@@ -3457,6 +3486,95 @@ var _ = Describe("HackathonService", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+			// Regression: `hasWrite` was computed but only consulted on the
+			// "no user_id" path, so naming any user id skipped the check entirely
+			// and returned what that person wrote about themselves.
+			It("refuses a non-organizer naming someone else", func() {
+				_, err := dbClient.User.Create().
+					SetKeycloakID("lpa-outsider").
+					SetUsername("lpa-outsider").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				outsiderCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken("lpa-outsider"),
+					),
+				)
+				_, err = client.ListParticipantAnswers(
+					outsiderCtx,
+					&msgs.ListParticipantAnswersRequest{
+						HackathonId: hackathonID,
+						UserId:      testutils.StringPtr(participantUser.ID.String()),
+					})
+				Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+			})
+
+			// Regression: the mapper always emitted text_value, so a BOOL answer
+			// read back as text — and SubmitAnswers refuses a text answer to a
+			// bool question. Loading a form and saving it unchanged therefore
+			// failed on every bool question, which is what an edit does on save.
+			It("reads a bool answer back as a bool, so a round trip re-submits", func() {
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+					),
+				)
+				boolQ, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+					HackathonId: hackathonID,
+					Key:         "conduct",
+					Label:       "I accept the Code of Conduct",
+					Type:        entities.QuestionType_QUESTION_TYPE_BOOL,
+					Order:       2,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Answer.Create().
+					SetQuestionID(uuid.MustParse(boolQ.GetQuestionId())).
+					SetUserID(participantUser.ID).
+					SetValue("true").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// The fixture writes the Participant row directly, so unlike a real
+				// Join it grants no casbin Member role — and SubmitAnswers checks
+				// hackathon:read.
+				_, err = enf.AddRole("list-answers-user", middleware.Member, hackathonID)
+				Expect(err).NotTo(HaveOccurred())
+
+				participantCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs(
+						"authorization",
+						"Bearer "+testutils.CreateTestJWTToken("list-answers-user"),
+					),
+				)
+				resp, err := client.ListParticipantAnswers(
+					participantCtx,
+					&msgs.ListParticipantAnswersRequest{HackathonId: hackathonID})
+				Expect(err).NotTo(HaveOccurred())
+
+				var readBack *entities.Answer
+				for _, a := range resp.GetAnswers() {
+					if a.GetQuestionId() == boolQ.GetQuestionId() {
+						readBack = a
+					}
+				}
+				Expect(readBack).NotTo(BeNil())
+				Expect(readBack.GetBoolValue()).To(BeTrue())
+
+				// Hand straight back what was read: this is the save an edit form
+				// performs, and it used to fail with InvalidArgument.
+				_, err = client.SubmitAnswers(participantCtx, &msgs.SubmitAnswersRequest{
+					HackathonId: hackathonID,
+					Answers:     resp.GetAnswers(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
 			It("returns answers for requester's own answers (no write access)", func() {
 				token := testutils.CreateTestJWTToken("list-answers-user")
 				ctx := metadata.NewOutgoingContext(
