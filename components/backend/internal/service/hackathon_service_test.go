@@ -363,6 +363,84 @@ var _ = Describe("HackathonService", func() {
 			Expect(participant.IsWaiting).To(BeTrue())
 		})
 
+		It("upserts answers when user joins twice with different answers", func() {
+			// Create a question first
+			token := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			qResp, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+				HackathonId: createdHackathonID,
+				Key:         "company",
+				Label:       "Company",
+				Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+				Mandatory:   true,
+				Order:       1,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			questionID := qResp.GetQuestionId()
+
+			// Create a user
+			joinUserKeycloakID := "join-upsert-user"
+			joinUser, err := dbClient.User.Create().
+				SetKeycloakID(joinUserKeycloakID).
+				SetUsername("join-upsert-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Join first time with answer "Acme Corp"
+			joinToken := testutils.CreateTestJWTToken(joinUserKeycloakID)
+			joinCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+joinToken),
+			)
+			_, err = client.Join(joinCtx, &msgs.JoinRequest{
+				HackathonId: createdHackathonID,
+				Answers: []*entities.Answer{
+					{
+						QuestionId: questionID,
+						Value:      &entities.Answer_TextValue{TextValue: "Acme Corp"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify first answer
+			answers, err := dbClient.Answer.Query().
+				Where(
+					entanswer.QuestionIDEQ(uuid.MustParse(questionID)),
+					entanswer.UserID(joinUser.ID),
+				).All(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(answers).To(HaveLen(1))
+			Expect(answers[0].Value).To(Equal("Acme Corp"))
+
+			// Join again with different answer "Globex Inc"
+			_, err = client.Join(joinCtx, &msgs.JoinRequest{
+				HackathonId: createdHackathonID,
+				Answers: []*entities.Answer{
+					{
+						QuestionId: questionID,
+						Value:      &entities.Answer_TextValue{TextValue: "Globex Inc"},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify answer was upserted (not duplicated)
+			answers, err = dbClient.Answer.Query().
+				Where(
+					entanswer.QuestionIDEQ(uuid.MustParse(questionID)),
+					entanswer.UserID(joinUser.ID),
+				).All(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(answers).To(HaveLen(1), "should have exactly one answer, not duplicate")
+			Expect(
+				answers[0].Value,
+			).To(Equal("Globex Inc"), "answer should be updated to new value")
+		})
+
 		It("returns NOT_FOUND for invalid hackathon ID", func() {
 			token := testutils.CreateTestJWTToken(testAdmin)
 			ctx := metadata.NewOutgoingContext(

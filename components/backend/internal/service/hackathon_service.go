@@ -276,15 +276,15 @@ func (s *HackathonService) Join(
 	}
 
 	// Check if user already exists in hackathon (approved or waitlisted)
-	_, err = s.dbClient.Participant.Query().Where(
+	participant, err := s.dbClient.Participant.Query().Where(
 		entparticipant.HackathonIDEQ(id),
 		entparticipant.UserID(user.ID),
 	).Only(ctx)
+	isMember := false
 	if err == nil {
-		// Already a participant - return success with existing hackathon ID
-		return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
-	}
-	if !ent.IsNotFound(err) {
+		// Already a participant - we don't need to insert, just potentially upsert answers
+		isMember = true
+	} else if !ent.IsNotFound(err) {
 		slog.Error("check existing participant", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't check participant status")
@@ -302,15 +302,17 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't start transaction")
 	}
 
-	participant, err := tx.Participant.Create().
-		SetHackathonID(id).
-		SetUserID(user.ID).
-		SetIsWaiting(true).
-		Save(ctx)
-	if err != nil {
-		_ = tx.Rollback()
-		slog.Error("create participant", "err", err)
-		return nil, status.Errorf(codes.Internal, "couldn't join hackathon")
+	if !isMember {
+		participant, err = tx.Participant.Create().
+			SetHackathonID(id).
+			SetUserID(user.ID).
+			SetIsWaiting(true).
+			Save(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("create participant", "err", err)
+			return nil, status.Errorf(codes.Internal, "couldn't join hackathon")
+		}
 	}
 
 	// Upsert answers linked to the new participant
@@ -320,7 +322,7 @@ func (s *HackathonService) Join(
 			SetQuestionID(qID).
 			SetUserID(participant.UserID).
 			SetValue(protoAnswerValueToDB(a)).
-			OnConflict().
+			OnConflictColumns(entanswer.FieldQuestionID, entanswer.FieldUserID).
 			UpdateNewValues().
 			Exec(ctx)
 		if err != nil {
@@ -1542,7 +1544,7 @@ func (s *HackathonService) SubmitAnswers(
 			SetQuestionID(qID).
 			SetUserID(participant.UserID).
 			SetValue(protoAnswerValueToDB(a)).
-			OnConflict().
+			OnConflictColumns(entanswer.FieldQuestionID, entanswer.FieldUserID).
 			UpdateNewValues().
 			Exec(ctx)
 		if err != nil {
