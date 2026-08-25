@@ -2067,12 +2067,12 @@ var _ = Describe("HackathonService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(h.Edges.Owners).To(HaveLen(1)) // only creator remains
 
-			// Verify casbin role was revoked (owner can no longer read hackathon)
+			// Verify casbin role was revoked (owner can no longer write hackathon)
 			ok, err := enf.CheckPermission(
 				ownerToRemove.KeycloakID,
 				createdHackathonID,
 				middleware.Hackathon,
-				middleware.Read,
+				middleware.Write,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeFalse())
@@ -3232,10 +3232,10 @@ var _ = Describe("HackathonService", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Grant owner role so they have Read permission
-				_, err = dbClient.Hackathon.Update().
-					Where(enthackathon.IDEQ(uuid.MustParse(hackathonID))).
-					AddOwners(user).
-					Save(context.Background())
+				_, err = client.AddOwner(ctx, &msgs.AddOwnerRequest{
+					HackathonId: hackathonID,
+					UserId:      user.ID.String(),
+				})
 				Expect(err).NotTo(HaveOccurred())
 
 				// Also create a participant record for the admin user so admin token works
@@ -3421,19 +3421,6 @@ var _ = Describe("HackathonService", func() {
 					context.Background(),
 					metadata.Pairs("authorization", "Bearer "+token),
 				)
-
-				// Create participant for this user
-				user, err := dbClient.User.Query().
-					Where(entuser.KeycloakIDEQ(nonOwnerKeycloakID)).
-					Only(context.Background())
-				Expect(err).NotTo(HaveOccurred())
-
-				_, err = dbClient.Participant.Create().
-					SetHackathonID(uuid.MustParse(hackathonID)).
-					SetUserID(user.ID).
-					SetIsWaiting(false).
-					Save(context.Background())
-				Expect(err).NotTo(HaveOccurred())
 
 				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
 					HackathonId: hackathonID,
