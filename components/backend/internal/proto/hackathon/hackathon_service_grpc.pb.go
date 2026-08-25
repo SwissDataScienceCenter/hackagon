@@ -26,6 +26,10 @@ const (
 	HackathonService_Edit_FullMethodName                   = "/hackathon.HackathonService/Edit"
 	HackathonService_SetCapabilities_FullMethodName        = "/hackathon.HackathonService/SetCapabilities"
 	HackathonService_SetCurrentPhase_FullMethodName        = "/hackathon.HackathonService/SetCurrentPhase"
+	HackathonService_CreateInvite_FullMethodName           = "/hackathon.HackathonService/CreateInvite"
+	HackathonService_ListInvites_FullMethodName            = "/hackathon.HackathonService/ListInvites"
+	HackathonService_RevokeInvite_FullMethodName           = "/hackathon.HackathonService/RevokeInvite"
+	HackathonService_PreviewInvite_FullMethodName          = "/hackathon.HackathonService/PreviewInvite"
 	HackathonService_Join_FullMethodName                   = "/hackathon.HackathonService/Join"
 	HackathonService_ApproveParticipant_FullMethodName     = "/hackathon.HackathonService/ApproveParticipant"
 	HackathonService_RemoveParticipant_FullMethodName      = "/hackathon.HackathonService/RemoveParticipant"
@@ -49,6 +53,10 @@ type HackathonServiceClient interface {
 	Edit(ctx context.Context, in *hackathon_svc.EditRequest, opts ...grpc.CallOption) (*hackathon_svc.EditResponse, error)
 	SetCapabilities(ctx context.Context, in *hackathon_svc.SetCapabilitiesRequest, opts ...grpc.CallOption) (*hackathon_svc.SetCapabilitiesResponse, error)
 	SetCurrentPhase(ctx context.Context, in *hackathon_svc.SetCurrentPhaseRequest, opts ...grpc.CallOption) (*hackathon_svc.SetCurrentPhaseResponse, error)
+	CreateInvite(ctx context.Context, in *hackathon_svc.CreateInviteRequest, opts ...grpc.CallOption) (*hackathon_svc.CreateInviteResponse, error)
+	ListInvites(ctx context.Context, in *hackathon_svc.ListInvitesRequest, opts ...grpc.CallOption) (*hackathon_svc.ListInvitesResponse, error)
+	RevokeInvite(ctx context.Context, in *hackathon_svc.RevokeInviteRequest, opts ...grpc.CallOption) (*hackathon_svc.RevokeInviteResponse, error)
+	PreviewInvite(ctx context.Context, in *hackathon_svc.PreviewInviteRequest, opts ...grpc.CallOption) (*hackathon_svc.PreviewInviteResponse, error)
 	Join(ctx context.Context, in *hackathon_svc.JoinRequest, opts ...grpc.CallOption) (*hackathon_svc.JoinResponse, error)
 	ApproveParticipant(ctx context.Context, in *hackathon_svc.ApproveParticipantRequest, opts ...grpc.CallOption) (*hackathon_svc.ApproveParticipantResponse, error)
 	RemoveParticipant(ctx context.Context, in *hackathon_svc.RemoveParticipantRequest, opts ...grpc.CallOption) (*hackathon_svc.RemoveParticipantResponse, error)
@@ -125,6 +133,46 @@ func (c *hackathonServiceClient) SetCurrentPhase(ctx context.Context, in *hackat
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(hackathon_svc.SetCurrentPhaseResponse)
 	err := c.cc.Invoke(ctx, HackathonService_SetCurrentPhase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) CreateInvite(ctx context.Context, in *hackathon_svc.CreateInviteRequest, opts ...grpc.CallOption) (*hackathon_svc.CreateInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.CreateInviteResponse)
+	err := c.cc.Invoke(ctx, HackathonService_CreateInvite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) ListInvites(ctx context.Context, in *hackathon_svc.ListInvitesRequest, opts ...grpc.CallOption) (*hackathon_svc.ListInvitesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.ListInvitesResponse)
+	err := c.cc.Invoke(ctx, HackathonService_ListInvites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) RevokeInvite(ctx context.Context, in *hackathon_svc.RevokeInviteRequest, opts ...grpc.CallOption) (*hackathon_svc.RevokeInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.RevokeInviteResponse)
+	err := c.cc.Invoke(ctx, HackathonService_RevokeInvite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hackathonServiceClient) PreviewInvite(ctx context.Context, in *hackathon_svc.PreviewInviteRequest, opts ...grpc.CallOption) (*hackathon_svc.PreviewInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(hackathon_svc.PreviewInviteResponse)
+	err := c.cc.Invoke(ctx, HackathonService_PreviewInvite_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -251,6 +299,10 @@ type HackathonServiceServer interface {
 	Edit(context.Context, *hackathon_svc.EditRequest) (*hackathon_svc.EditResponse, error)
 	SetCapabilities(context.Context, *hackathon_svc.SetCapabilitiesRequest) (*hackathon_svc.SetCapabilitiesResponse, error)
 	SetCurrentPhase(context.Context, *hackathon_svc.SetCurrentPhaseRequest) (*hackathon_svc.SetCurrentPhaseResponse, error)
+	CreateInvite(context.Context, *hackathon_svc.CreateInviteRequest) (*hackathon_svc.CreateInviteResponse, error)
+	ListInvites(context.Context, *hackathon_svc.ListInvitesRequest) (*hackathon_svc.ListInvitesResponse, error)
+	RevokeInvite(context.Context, *hackathon_svc.RevokeInviteRequest) (*hackathon_svc.RevokeInviteResponse, error)
+	PreviewInvite(context.Context, *hackathon_svc.PreviewInviteRequest) (*hackathon_svc.PreviewInviteResponse, error)
 	Join(context.Context, *hackathon_svc.JoinRequest) (*hackathon_svc.JoinResponse, error)
 	ApproveParticipant(context.Context, *hackathon_svc.ApproveParticipantRequest) (*hackathon_svc.ApproveParticipantResponse, error)
 	RemoveParticipant(context.Context, *hackathon_svc.RemoveParticipantRequest) (*hackathon_svc.RemoveParticipantResponse, error)
@@ -290,6 +342,18 @@ func (UnimplementedHackathonServiceServer) SetCapabilities(context.Context, *hac
 }
 func (UnimplementedHackathonServiceServer) SetCurrentPhase(context.Context, *hackathon_svc.SetCurrentPhaseRequest) (*hackathon_svc.SetCurrentPhaseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetCurrentPhase not implemented")
+}
+func (UnimplementedHackathonServiceServer) CreateInvite(context.Context, *hackathon_svc.CreateInviteRequest) (*hackathon_svc.CreateInviteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateInvite not implemented")
+}
+func (UnimplementedHackathonServiceServer) ListInvites(context.Context, *hackathon_svc.ListInvitesRequest) (*hackathon_svc.ListInvitesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInvites not implemented")
+}
+func (UnimplementedHackathonServiceServer) RevokeInvite(context.Context, *hackathon_svc.RevokeInviteRequest) (*hackathon_svc.RevokeInviteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeInvite not implemented")
+}
+func (UnimplementedHackathonServiceServer) PreviewInvite(context.Context, *hackathon_svc.PreviewInviteRequest) (*hackathon_svc.PreviewInviteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewInvite not implemented")
 }
 func (UnimplementedHackathonServiceServer) Join(context.Context, *hackathon_svc.JoinRequest) (*hackathon_svc.JoinResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Join not implemented")
@@ -449,6 +513,78 @@ func _HackathonService_SetCurrentPhase_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HackathonServiceServer).SetCurrentPhase(ctx, req.(*hackathon_svc.SetCurrentPhaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_CreateInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.CreateInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).CreateInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_CreateInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).CreateInvite(ctx, req.(*hackathon_svc.CreateInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_ListInvites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.ListInvitesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).ListInvites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_ListInvites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).ListInvites(ctx, req.(*hackathon_svc.ListInvitesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_RevokeInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.RevokeInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).RevokeInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_RevokeInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).RevokeInvite(ctx, req.(*hackathon_svc.RevokeInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HackathonService_PreviewInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hackathon_svc.PreviewInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HackathonServiceServer).PreviewInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HackathonService_PreviewInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HackathonServiceServer).PreviewInvite(ctx, req.(*hackathon_svc.PreviewInviteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -681,6 +817,22 @@ var HackathonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetCurrentPhase",
 			Handler:    _HackathonService_SetCurrentPhase_Handler,
+		},
+		{
+			MethodName: "CreateInvite",
+			Handler:    _HackathonService_CreateInvite_Handler,
+		},
+		{
+			MethodName: "ListInvites",
+			Handler:    _HackathonService_ListInvites_Handler,
+		},
+		{
+			MethodName: "RevokeInvite",
+			Handler:    _HackathonService_RevokeInvite_Handler,
+		},
+		{
+			MethodName: "PreviewInvite",
+			Handler:    _HackathonService_PreviewInvite_Handler,
 		},
 		{
 			MethodName: "Join",

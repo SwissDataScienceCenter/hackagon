@@ -49,6 +49,9 @@
 - [hackathon/entities/hackathon.proto](#hackathon_entities_hackathon-proto)
     - [Hackathon](#hackathon-entities-Hackathon)
   
+- [hackathon/entities/hackathon_invite.proto](#hackathon_entities_hackathon_invite-proto)
+    - [HackathonInvite](#hackathon-entities-HackathonInvite)
+  
 - [hackathon/entities/project_preference.proto](#hackathon_entities_project_preference-proto)
     - [ProjectWithPreferences](#hackathon-entities-ProjectWithPreferences)
   
@@ -77,6 +80,12 @@
   
 - [hackathon/messages/hackathon_svc/approve_participant_response.proto](#hackathon_messages_hackathon_svc_approve_participant_response-proto)
     - [ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse)
+  
+- [hackathon/messages/hackathon_svc/create_invite_request.proto](#hackathon_messages_hackathon_svc_create_invite_request-proto)
+    - [CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/create_invite_response.proto](#hackathon_messages_hackathon_svc_create_invite_response-proto)
+    - [CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse)
   
 - [hackathon/messages/hackathon_svc/create_question_request.proto](#hackathon_messages_hackathon_svc_create_question_request-proto)
     - [CreateQuestionRequest](#hackathon-messages-hackathon_svc-CreateQuestionRequest)
@@ -114,6 +123,12 @@
 - [hackathon/messages/hackathon_svc/join_response.proto](#hackathon_messages_hackathon_svc_join_response-proto)
     - [JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse)
   
+- [hackathon/messages/hackathon_svc/list_invites_request.proto](#hackathon_messages_hackathon_svc_list_invites_request-proto)
+    - [ListInvitesRequest](#hackathon-messages-hackathon_svc-ListInvitesRequest)
+  
+- [hackathon/messages/hackathon_svc/list_invites_response.proto](#hackathon_messages_hackathon_svc_list_invites_response-proto)
+    - [ListInvitesResponse](#hackathon-messages-hackathon_svc-ListInvitesResponse)
+  
 - [hackathon/messages/hackathon_svc/list_participant_answers_request.proto](#hackathon_messages_hackathon_svc_list_participant_answers_request-proto)
     - [ListParticipantAnswersRequest](#hackathon-messages-hackathon_svc-ListParticipantAnswersRequest)
   
@@ -132,6 +147,12 @@
 - [hackathon/messages/hackathon_svc/list_response.proto](#hackathon_messages_hackathon_svc_list_response-proto)
     - [ListResponse](#hackathon-messages-hackathon_svc-ListResponse)
   
+- [hackathon/messages/hackathon_svc/preview_invite_request.proto](#hackathon_messages_hackathon_svc_preview_invite_request-proto)
+    - [PreviewInviteRequest](#hackathon-messages-hackathon_svc-PreviewInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/preview_invite_response.proto](#hackathon_messages_hackathon_svc_preview_invite_response-proto)
+    - [PreviewInviteResponse](#hackathon-messages-hackathon_svc-PreviewInviteResponse)
+  
 - [hackathon/messages/hackathon_svc/remove_owner_request.proto](#hackathon_messages_hackathon_svc_remove_owner_request-proto)
     - [RemoveOwnerRequest](#hackathon-messages-hackathon_svc-RemoveOwnerRequest)
   
@@ -149,6 +170,12 @@
   
 - [hackathon/messages/hackathon_svc/remove_question_response.proto](#hackathon_messages_hackathon_svc_remove_question_response-proto)
     - [RemoveQuestionResponse](#hackathon-messages-hackathon_svc-RemoveQuestionResponse)
+  
+- [hackathon/messages/hackathon_svc/revoke_invite_request.proto](#hackathon_messages_hackathon_svc_revoke_invite_request-proto)
+    - [RevokeInviteRequest](#hackathon-messages-hackathon_svc-RevokeInviteRequest)
+  
+- [hackathon/messages/hackathon_svc/revoke_invite_response.proto](#hackathon_messages_hackathon_svc_revoke_invite_response-proto)
+    - [RevokeInviteResponse](#hackathon-messages-hackathon_svc-RevokeInviteResponse)
   
 - [hackathon/messages/hackathon_svc/set_capabilities_request.proto](#hackathon_messages_hackathon_svc_set_capabilities_request-proto)
     - [CapabilityState](#hackathon-messages-hackathon_svc-CapabilityState)
@@ -1139,6 +1166,42 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_entities_hackathon_invite-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/hackathon_invite.proto
+
+
+
+<a name="hackathon-entities-HackathonInvite"></a>
+
+### HackathonInvite
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| token | [string](#string) |  |  |
+| note | [string](#string) | optional |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+| revoked_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_project_preference-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1440,6 +1503,70 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 ### ApproveParticipantResponse
 
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_create_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateInviteRequest"></a>
+
+### CreateInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| note | [string](#string) | optional |  |
+| expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_create_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/create_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-CreateInviteResponse"></a>
+
+### CreateInviteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invite | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) |  |  |
 
 
 
@@ -1800,6 +1927,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
 | answers | [hackathon.entities.Answer](#hackathon-entities-Answer) | repeated |  |
+| invite_token | [string](#string) | optional |  |
 
 
 
@@ -1831,6 +1959,68 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_invites_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_invites_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListInvitesRequest"></a>
+
+### ListInvitesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_list_invites_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/list_invites_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-ListInvitesResponse"></a>
+
+### ListInvitesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invites | [hackathon.entities.HackathonInvite](#hackathon-entities-HackathonInvite) | repeated |  |
 
 
 
@@ -2036,6 +2226,70 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_hackathon_svc_preview_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/preview_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-PreviewInviteRequest"></a>
+
+### PreviewInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| token | [string](#string) |  | The invite token — the only credential. No hackathon_id to prevent probing. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_preview_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/preview_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-PreviewInviteResponse"></a>
+
+### PreviewInviteResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon | [hackathon.entities.Hackathon](#hackathon-entities-Hackathon) |  |  |
+| questions | [hackathon.entities.Question](#hackathon-entities-Question) | repeated |  |
+| already_participant | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_hackathon_svc_remove_owner_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -2194,6 +2448,63 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 <a name="hackathon-messages-hackathon_svc-RemoveQuestionResponse"></a>
 
 ### RemoveQuestionResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_revoke_invite_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/revoke_invite_request.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RevokeInviteRequest"></a>
+
+### RevokeInviteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| invite_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_hackathon_svc_revoke_invite_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/hackathon_svc/revoke_invite_response.proto
+
+
+
+<a name="hackathon-messages-hackathon_svc-RevokeInviteResponse"></a>
+
+### RevokeInviteResponse
 
 
 
@@ -2436,6 +2747,10 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Edit | [messages.hackathon_svc.EditRequest](#hackathon-messages-hackathon_svc-EditRequest) | [messages.hackathon_svc.EditResponse](#hackathon-messages-hackathon_svc-EditResponse) |  |
 | SetCapabilities | [messages.hackathon_svc.SetCapabilitiesRequest](#hackathon-messages-hackathon_svc-SetCapabilitiesRequest) | [messages.hackathon_svc.SetCapabilitiesResponse](#hackathon-messages-hackathon_svc-SetCapabilitiesResponse) |  |
 | SetCurrentPhase | [messages.hackathon_svc.SetCurrentPhaseRequest](#hackathon-messages-hackathon_svc-SetCurrentPhaseRequest) | [messages.hackathon_svc.SetCurrentPhaseResponse](#hackathon-messages-hackathon_svc-SetCurrentPhaseResponse) |  |
+| CreateInvite | [messages.hackathon_svc.CreateInviteRequest](#hackathon-messages-hackathon_svc-CreateInviteRequest) | [messages.hackathon_svc.CreateInviteResponse](#hackathon-messages-hackathon_svc-CreateInviteResponse) |  |
+| ListInvites | [messages.hackathon_svc.ListInvitesRequest](#hackathon-messages-hackathon_svc-ListInvitesRequest) | [messages.hackathon_svc.ListInvitesResponse](#hackathon-messages-hackathon_svc-ListInvitesResponse) |  |
+| RevokeInvite | [messages.hackathon_svc.RevokeInviteRequest](#hackathon-messages-hackathon_svc-RevokeInviteRequest) | [messages.hackathon_svc.RevokeInviteResponse](#hackathon-messages-hackathon_svc-RevokeInviteResponse) |  |
+| PreviewInvite | [messages.hackathon_svc.PreviewInviteRequest](#hackathon-messages-hackathon_svc-PreviewInviteRequest) | [messages.hackathon_svc.PreviewInviteResponse](#hackathon-messages-hackathon_svc-PreviewInviteResponse) |  |
 | Join | [messages.hackathon_svc.JoinRequest](#hackathon-messages-hackathon_svc-JoinRequest) | [messages.hackathon_svc.JoinResponse](#hackathon-messages-hackathon_svc-JoinResponse) |  |
 | ApproveParticipant | [messages.hackathon_svc.ApproveParticipantRequest](#hackathon-messages-hackathon_svc-ApproveParticipantRequest) | [messages.hackathon_svc.ApproveParticipantResponse](#hackathon-messages-hackathon_svc-ApproveParticipantResponse) |  |
 | RemoveParticipant | [messages.hackathon_svc.RemoveParticipantRequest](#hackathon-messages-hackathon_svc-RemoveParticipantRequest) | [messages.hackathon_svc.RemoveParticipantResponse](#hackathon-messages-hackathon_svc-RemoveParticipantResponse) |  |

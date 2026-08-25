@@ -20,6 +20,7 @@ import (
 	ent "github.com/swissdatasciencecenter/hackagon/components/backend/ent"
 	entanswer "github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	enthackathoninvite "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	enthackathonstate "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	entparticipant "github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	entquestion "github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
@@ -3759,6 +3760,644 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetAnswers()).To(HaveLen(1))
 				// ParticipantId in the answer is the participant's user ID
 				Expect(resp.GetAnswers()[0].GetParticipantId()).To(Equal(participantID))
+			})
+		})
+	})
+	Describe("Invite Tests", func() {
+		var (
+			privateHackathonID string
+			publicHackathonID  string
+		)
+
+		BeforeEach(func() {
+			// Create a private hackathon
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			now := time.Now()
+			privateResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Private Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PRIVATE,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			privateHackathonID = privateResp.GetHackathonId()
+
+			// Create a public hackathon
+			publicResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Public Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			publicHackathonID = publicResp.GetHackathonId()
+		})
+
+		Describe("CreateInvite", func() {
+			It("creates an invite successfully", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				note := "Sent to mailing list"
+				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+					Note:        &note,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetInvite()).NotTo(BeNil())
+				Expect(resp.GetInvite().GetId()).NotTo(BeEmpty())
+				Expect(resp.GetInvite().GetToken()).NotTo(BeEmpty())
+				Expect(resp.GetInvite().GetNote()).To(Equal(note))
+				Expect(resp.GetInvite().GetCreatedAt()).NotTo(BeNil())
+				Expect(resp.GetInvite().GetRevokedAt()).To(BeNil())
+
+				// Verify in database
+				invite, err := dbClient.HackathonInvite.Query().
+					Where(enthackathoninvite.IDEQ(uuid.MustParse(resp.GetInvite().GetId()))).
+					WithHackathon().
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(invite.Token.String()).To(Equal(resp.GetInvite().GetToken()))
+				Expect(invite.Note).To(Equal(note))
+				Expect(invite.Edges.Hackathon.ID.String()).To(Equal(privateHackathonID))
+			})
+
+			It("defaults expires_at to hackathon.ends_at", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetInvite().GetExpiresAt()).NotTo(BeNil())
+
+				// Verify in database
+				invite, err := dbClient.HackathonInvite.Query().
+					Where(enthackathoninvite.IDEQ(uuid.MustParse(resp.GetInvite().GetId()))).
+					WithHackathon().
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(invite.ExpiresAt).NotTo(BeNil())
+			})
+
+			It("uses explicit expires_at when provided", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				expiry := time.Now().Add(7 * 24 * time.Hour)
+				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+					ExpiresAt:   timestamppb.New(expiry),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetInvite().GetExpiresAt()).NotTo(BeNil())
+			})
+
+			It("returns NOT_FOUND for non-existent hackathon", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: uuid.NewString(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("requires Write permission", func() {
+				nonOwnerKeycloakID := "invite-non-owner"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("invite-non-owner-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		Describe("ListInvites", func() {
+			It("returns all invites for a hackathon", func() {
+				// Create two invites
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// List invites
+				resp, err := client.ListInvites(ctx, &msgs.ListInvitesRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetInvites()).To(HaveLen(2))
+			})
+
+			It("returns invites with revoked_at set", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Create and revoke an invite
+				createResp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: createResp.GetInvite().GetId(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// List should still return it
+				resp, err := client.ListInvites(ctx, &msgs.ListInvitesRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetInvites()).To(HaveLen(1))
+				Expect(resp.GetInvites()[0].GetRevokedAt()).NotTo(BeNil())
+			})
+
+			It("returns empty list when no invites exist", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.ListInvites(ctx, &msgs.ListInvitesRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetInvites()).To(BeEmpty())
+			})
+
+			It("returns NOT_FOUND for non-existent hackathon", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.ListInvites(ctx, &msgs.ListInvitesRequest{
+					HackathonId: uuid.NewString(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("requires Write permission", func() {
+				nonOwnerKeycloakID := "list-invites-non-owner"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("list-invites-non-owner-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.ListInvites(ctx, &msgs.ListInvitesRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		Describe("RevokeInvite", func() {
+			var inviteID string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				inviteID = resp.GetInvite().GetId()
+			})
+
+			It("revokes an invite successfully", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: inviteID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Verify in database
+				invite, err := dbClient.HackathonInvite.Query().
+					Where(enthackathoninvite.IDEQ(uuid.MustParse(inviteID))).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(invite.RevokedAt).NotTo(BeNil())
+			})
+
+			It("is idempotent - revoking twice succeeds", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// First revoke
+				_, err := client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: inviteID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Second revoke should also succeed
+				_, err = client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: inviteID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns NOT_FOUND for non-existent invite", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: uuid.NewString(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("requires Write permission on the hackathon", func() {
+				nonOwnerKeycloakID := "revoke-non-owner"
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonOwnerKeycloakID).
+					SetUsername("revoke-non-owner-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: inviteID,
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+		})
+
+		Describe("PreviewInvite", func() {
+			var inviteToken string
+			var inviteId string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				inviteId = resp.GetInvite().GetId()
+				inviteToken = resp.GetInvite().GetToken()
+			})
+
+			It("returns shallow hackathon for valid token", func() {
+				resp, err := client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: inviteToken,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetHackathon()).NotTo(BeNil())
+				Expect(resp.GetHackathon().GetId()).To(Equal(privateHackathonID))
+				Expect(resp.GetHackathon().GetName()).To(Equal("Private Test Hackathon"))
+				Expect(
+					resp.GetHackathon().GetVisibility(),
+				).To(Equal(entities.Visibility_VISIBILITY_PRIVATE))
+				Expect(resp.GetAlreadyParticipant()).To(BeFalse())
+			})
+
+			It("returns questions in the response", func() {
+				// Create a question for the hackathon
+				adminToken := testutils.CreateTestJWTToken(testAdmin)
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+adminToken),
+				)
+				_, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+					HackathonId: privateHackathonID,
+					Key:         "name",
+					Label:       "What is your name?",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: inviteToken,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetQuestions()).To(HaveLen(1))
+				Expect(resp.GetQuestions()[0].GetKey()).To(Equal("name"))
+			})
+
+			It("returns already_participant=true for existing participant", func() {
+				// Create a user and participant
+				participantKeycloakID := "preview-participant"
+				participantUser, err := dbClient.User.Create().
+					SetKeycloakID(participantKeycloakID).
+					SetUsername("preview-participant-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(privateHackathonID)).
+					SetUserID(participantUser.ID).
+					SetIsWaiting(true).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// Preview as that user
+				token := testutils.CreateTestJWTToken(participantKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				resp, err := client.PreviewInvite(ctx, &msgs.PreviewInviteRequest{
+					Token: inviteToken,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetAlreadyParticipant()).To(BeTrue())
+			})
+
+			It("returns INVALID_ARGUMENT for invalid token format", func() {
+				_, err := client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: "not-a-uuid",
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("returns NOT_FOUND for non-existent token", func() {
+				_, err := client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: uuid.NewString(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns NOT_FOUND for revoked token", func() {
+				// Revoke the invite
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := client.RevokeInvite(ctx, &msgs.RevokeInviteRequest{
+					InviteId: inviteId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Preview should fail
+				_, err = client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: inviteToken,
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("returns NOT_FOUND for expired token", func() {
+				// Create an invite with past expiry
+				adminToken := testutils.CreateTestJWTToken(testAdmin)
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+adminToken),
+				)
+				pastExpiry := time.Now().Add(-24 * time.Hour)
+				resp, err := client.CreateInvite(adminCtx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+					ExpiresAt:   timestamppb.New(pastExpiry),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: resp.GetInvite().GetToken(),
+				})
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("works without authentication", func() {
+				// PreviewInvite should work without auth
+				resp, err := client.PreviewInvite(context.Background(), &msgs.PreviewInviteRequest{
+					Token: inviteToken,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.GetHackathon()).NotTo(BeNil())
+			})
+		})
+
+		Describe("Join with invite", func() {
+			var inviteToken string
+
+			BeforeEach(func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+				_, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: publicHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
+				})
+
+				_, err = client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: privateHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
+				})
+
+				resp, err := client.CreateInvite(ctx, &msgs.CreateInviteRequest{
+					HackathonId: privateHackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				inviteToken = resp.GetInvite().GetToken()
+			})
+
+			It("allows join with valid invite token on private hackathon", func() {
+				nonAdminKeycloakID := "invite-join-user"
+				token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// Ensure user exists
+				user, err := dbClient.User.Create().
+					SetKeycloakID(nonAdminKeycloakID).
+					SetUsername("invite-join-user-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				joinReq := &msgs.JoinRequest{
+					HackathonId: privateHackathonID,
+					InviteToken: &inviteToken,
+				}
+				joinResp, err := client.Join(ctx, joinReq)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(joinResp.GetHackathonId()).To(Equal(privateHackathonID))
+
+				// Verify participant was created
+				participant, err := dbClient.Participant.Query().
+					Where(
+						entparticipant.HackathonIDEQ(uuid.MustParse(privateHackathonID)),
+						entparticipant.UserID(user.ID),
+					).
+					WithUser().
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(participant.IsWaiting).To(BeTrue())
+			})
+
+			It("rejects join without invite token on private hackathon", func() {
+				nonAdminKeycloakID := "invite-no-token-user"
+				token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonAdminKeycloakID).
+					SetUsername("invite-no-token-user-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				joinReq := &msgs.JoinRequest{
+					HackathonId: privateHackathonID,
+				}
+				_, err = client.Join(ctx, joinReq)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.PermissionDenied))
+			})
+
+			It("rejects join with invalid invite token on private hackathon", func() {
+				nonAdminKeycloakID := "invite-invalid-token-user"
+				token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonAdminKeycloakID).
+					SetUsername("invite-invalid-token-user-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				joinReq := &msgs.JoinRequest{
+					HackathonId: privateHackathonID,
+					InviteToken: testutils.StringPtr(uuid.NewString()),
+				}
+				_, err = client.Join(ctx, joinReq)
+				Expect(err).To(HaveOccurred())
+				st := status.Convert(err)
+				Expect(st.Code()).To(Equal(codes.NotFound))
+			})
+
+			It("allows join on public hackathon without invite token", func() {
+				nonAdminKeycloakID := "public-join-user"
+				token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err := dbClient.User.Create().
+					SetKeycloakID(nonAdminKeycloakID).
+					SetUsername("public-join-user-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				joinReq := &msgs.JoinRequest{
+					HackathonId: publicHackathonID,
+				}
+				joinResp, err := client.Join(ctx, joinReq)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(joinResp.GetHackathonId()).To(Equal(publicHackathonID))
 			})
 		})
 	})

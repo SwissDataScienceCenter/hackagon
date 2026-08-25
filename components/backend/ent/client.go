@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
@@ -43,6 +44,8 @@ type Client struct {
 	Answer *AnswerClient
 	// Hackathon is the client for interacting with the Hackathon builders.
 	Hackathon *HackathonClient
+	// HackathonInvite is the client for interacting with the HackathonInvite builders.
+	HackathonInvite *HackathonInviteClient
 	// HackathonState is the client for interacting with the HackathonState builders.
 	HackathonState *HackathonStateClient
 	// Page is the client for interacting with the Page builders.
@@ -84,6 +87,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Answer = NewAnswerClient(c.config)
 	c.Hackathon = NewHackathonClient(c.config)
+	c.HackathonInvite = NewHackathonInviteClient(c.config)
 	c.HackathonState = NewHackathonStateClient(c.config)
 	c.Page = NewPageClient(c.config)
 	c.Participant = NewParticipantClient(c.config)
@@ -192,6 +196,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:          cfg,
 		Answer:          NewAnswerClient(cfg),
 		Hackathon:       NewHackathonClient(cfg),
+		HackathonInvite: NewHackathonInviteClient(cfg),
 		HackathonState:  NewHackathonStateClient(cfg),
 		Page:            NewPageClient(cfg),
 		Participant:     NewParticipantClient(cfg),
@@ -227,6 +232,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:          cfg,
 		Answer:          NewAnswerClient(cfg),
 		Hackathon:       NewHackathonClient(cfg),
+		HackathonInvite: NewHackathonInviteClient(cfg),
 		HackathonState:  NewHackathonStateClient(cfg),
 		Page:            NewPageClient(cfg),
 		Participant:     NewParticipantClient(cfg),
@@ -270,9 +276,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Answer, c.Hackathon, c.HackathonState, c.Page, c.Participant, c.Phase,
-		c.Project, c.Question, c.Submission, c.Team, c.TeamParticipant, c.Track,
-		c.User, c.Vote, c.VoteCategory, c.VoteResult,
+		c.Answer, c.Hackathon, c.HackathonInvite, c.HackathonState, c.Page,
+		c.Participant, c.Phase, c.Project, c.Question, c.Submission, c.Team,
+		c.TeamParticipant, c.Track, c.User, c.Vote, c.VoteCategory, c.VoteResult,
 	} {
 		n.Use(hooks...)
 	}
@@ -282,9 +288,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Answer, c.Hackathon, c.HackathonState, c.Page, c.Participant, c.Phase,
-		c.Project, c.Question, c.Submission, c.Team, c.TeamParticipant, c.Track,
-		c.User, c.Vote, c.VoteCategory, c.VoteResult,
+		c.Answer, c.Hackathon, c.HackathonInvite, c.HackathonState, c.Page,
+		c.Participant, c.Phase, c.Project, c.Question, c.Submission, c.Team,
+		c.TeamParticipant, c.Track, c.User, c.Vote, c.VoteCategory, c.VoteResult,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -297,6 +303,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Answer.mutate(ctx, m)
 	case *HackathonMutation:
 		return c.Hackathon.mutate(ctx, m)
+	case *HackathonInviteMutation:
+		return c.HackathonInvite.mutate(ctx, m)
 	case *HackathonStateMutation:
 		return c.HackathonState.mutate(ctx, m)
 	case *PageMutation:
@@ -817,6 +825,171 @@ func (c *HackathonClient) mutate(ctx context.Context, m *HackathonMutation) (Val
 		return (&HackathonDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Hackathon mutation op: %q", m.Op())
+	}
+}
+
+// HackathonInviteClient is a client for the HackathonInvite schema.
+type HackathonInviteClient struct {
+	config
+}
+
+// NewHackathonInviteClient returns a client for the HackathonInvite from the given config.
+func NewHackathonInviteClient(c config) *HackathonInviteClient {
+	return &HackathonInviteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `hackathoninvite.Hooks(f(g(h())))`.
+func (c *HackathonInviteClient) Use(hooks ...Hook) {
+	c.hooks.HackathonInvite = append(c.hooks.HackathonInvite, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `hackathoninvite.Intercept(f(g(h())))`.
+func (c *HackathonInviteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.HackathonInvite = append(c.inters.HackathonInvite, interceptors...)
+}
+
+// Create returns a builder for creating a HackathonInvite entity.
+func (c *HackathonInviteClient) Create() *HackathonInviteCreate {
+	mutation := newHackathonInviteMutation(c.config, OpCreate)
+	return &HackathonInviteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of HackathonInvite entities.
+func (c *HackathonInviteClient) CreateBulk(builders ...*HackathonInviteCreate) *HackathonInviteCreateBulk {
+	return &HackathonInviteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *HackathonInviteClient) MapCreateBulk(slice any, setFunc func(*HackathonInviteCreate, int)) *HackathonInviteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &HackathonInviteCreateBulk{err: fmt.Errorf("calling to HackathonInviteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*HackathonInviteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &HackathonInviteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for HackathonInvite.
+func (c *HackathonInviteClient) Update() *HackathonInviteUpdate {
+	mutation := newHackathonInviteMutation(c.config, OpUpdate)
+	return &HackathonInviteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *HackathonInviteClient) UpdateOne(_m *HackathonInvite) *HackathonInviteUpdateOne {
+	mutation := newHackathonInviteMutation(c.config, OpUpdateOne, withHackathonInvite(_m))
+	return &HackathonInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *HackathonInviteClient) UpdateOneID(id uuid.UUID) *HackathonInviteUpdateOne {
+	mutation := newHackathonInviteMutation(c.config, OpUpdateOne, withHackathonInviteID(id))
+	return &HackathonInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for HackathonInvite.
+func (c *HackathonInviteClient) Delete() *HackathonInviteDelete {
+	mutation := newHackathonInviteMutation(c.config, OpDelete)
+	return &HackathonInviteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *HackathonInviteClient) DeleteOne(_m *HackathonInvite) *HackathonInviteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *HackathonInviteClient) DeleteOneID(id uuid.UUID) *HackathonInviteDeleteOne {
+	builder := c.Delete().Where(hackathoninvite.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &HackathonInviteDeleteOne{builder}
+}
+
+// Query returns a query builder for HackathonInvite.
+func (c *HackathonInviteClient) Query() *HackathonInviteQuery {
+	return &HackathonInviteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeHackathonInvite},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a HackathonInvite entity by its id.
+func (c *HackathonInviteClient) Get(ctx context.Context, id uuid.UUID) (*HackathonInvite, error) {
+	return c.Query().Where(hackathoninvite.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *HackathonInviteClient) GetX(ctx context.Context, id uuid.UUID) *HackathonInvite {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryHackathon queries the hackathon edge of a HackathonInvite.
+func (c *HackathonInviteClient) QueryHackathon(_m *HackathonInvite) *HackathonQuery {
+	query := (&HackathonClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hackathoninvite.Table, hackathoninvite.FieldID, id),
+			sqlgraph.To(hackathon.Table, hackathon.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, hackathoninvite.HackathonTable, hackathoninvite.HackathonColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCreator queries the creator edge of a HackathonInvite.
+func (c *HackathonInviteClient) QueryCreator(_m *HackathonInvite) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hackathoninvite.Table, hackathoninvite.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, hackathoninvite.CreatorTable, hackathoninvite.CreatorColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *HackathonInviteClient) Hooks() []Hook {
+	return c.hooks.HackathonInvite
+}
+
+// Interceptors returns the client interceptors.
+func (c *HackathonInviteClient) Interceptors() []Interceptor {
+	return c.inters.HackathonInvite
+}
+
+func (c *HackathonInviteClient) mutate(ctx context.Context, m *HackathonInviteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&HackathonInviteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&HackathonInviteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&HackathonInviteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&HackathonInviteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown HackathonInvite mutation op: %q", m.Op())
 	}
 }
 
@@ -2880,6 +3053,22 @@ func (c *UserClient) QueryCreatedHackathons(_m *User) *HackathonQuery {
 	return query
 }
 
+// QueryCreatedHackathonInvites queries the created_hackathon_invites edge of a User.
+func (c *UserClient) QueryCreatedHackathonInvites(_m *User) *HackathonInviteQuery {
+	query := (&HackathonInviteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(hackathoninvite.Table, hackathoninvite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CreatedHackathonInvitesTable, user.CreatedHackathonInvitesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryModifiedHackathons queries the modified_hackathons edge of a User.
 func (c *UserClient) QueryModifiedHackathons(_m *User) *HackathonQuery {
 	query := (&HackathonClient{config: c.config}).Query()
@@ -3852,13 +4041,13 @@ func (c *VoteResultClient) mutate(ctx context.Context, m *VoteResultMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Answer, Hackathon, HackathonState, Page, Participant, Phase, Project, Question,
-		Submission, Team, TeamParticipant, Track, User, Vote, VoteCategory,
-		VoteResult []ent.Hook
+		Answer, Hackathon, HackathonInvite, HackathonState, Page, Participant, Phase,
+		Project, Question, Submission, Team, TeamParticipant, Track, User, Vote,
+		VoteCategory, VoteResult []ent.Hook
 	}
 	inters struct {
-		Answer, Hackathon, HackathonState, Page, Participant, Phase, Project, Question,
-		Submission, Team, TeamParticipant, Track, User, Vote, VoteCategory,
-		VoteResult []ent.Interceptor
+		Answer, Hackathon, HackathonInvite, HackathonState, Page, Participant, Phase,
+		Project, Question, Submission, Team, TeamParticipant, Track, User, Vote,
+		VoteCategory, VoteResult []ent.Interceptor
 	}
 )

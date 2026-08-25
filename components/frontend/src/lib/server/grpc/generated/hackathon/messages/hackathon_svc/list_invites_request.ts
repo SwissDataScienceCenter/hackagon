@@ -2,42 +2,33 @@
 // versions:
 //   protoc-gen-ts_proto  v2.11.6
 //   protoc               unknown
-// source: hackathon/messages/hackathon_svc/join_request.proto
+// source: hackathon/messages/hackathon_svc/list_invites_request.proto
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { Answer } from "../../entities/answer";
 
 export const protobufPackage = "hackathon.messages.hackathon_svc";
 
-export interface JoinRequest {
+export interface ListInvitesRequest {
   hackathonId: string;
-  answers: Answer[];
-  inviteToken?: string | undefined;
 }
 
-function createBaseJoinRequest(): JoinRequest {
-  return { hackathonId: "", answers: [], inviteToken: undefined };
+function createBaseListInvitesRequest(): ListInvitesRequest {
+  return { hackathonId: "" };
 }
 
-export const JoinRequest: MessageFns<JoinRequest> = {
-  encode(message: JoinRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const ListInvitesRequest: MessageFns<ListInvitesRequest> = {
+  encode(message: ListInvitesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.hackathonId !== "") {
       writer.uint32(10).string(message.hackathonId);
-    }
-    for (const v of message.answers) {
-      Answer.encode(v!, writer.uint32(18).fork()).join();
-    }
-    if (message.inviteToken !== undefined) {
-      writer.uint32(26).string(message.inviteToken);
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): JoinRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): ListInvitesRequest {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseJoinRequest();
+    const message = createBaseListInvitesRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -49,22 +40,6 @@ export const JoinRequest: MessageFns<JoinRequest> = {
           message.hackathonId = reader.string();
           continue;
         }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.answers.push(Answer.decode(reader, reader.uint32()));
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.inviteToken = reader.string();
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -74,44 +49,30 @@ export const JoinRequest: MessageFns<JoinRequest> = {
     return message;
   },
 
-  fromJSON(object: any): JoinRequest {
+  fromJSON(object: any): ListInvitesRequest {
     return {
       hackathonId: isSet(object.hackathonId)
         ? globalThis.String(object.hackathonId)
         : isSet(object.hackathon_id)
         ? globalThis.String(object.hackathon_id)
         : "",
-      answers: globalThis.Array.isArray(object?.answers) ? object.answers.map((e: any) => Answer.fromJSON(e)) : [],
-      inviteToken: isSet(object.inviteToken)
-        ? globalThis.String(object.inviteToken)
-        : isSet(object.invite_token)
-        ? globalThis.String(object.invite_token)
-        : undefined,
     };
   },
 
-  toJSON(message: JoinRequest): unknown {
+  toJSON(message: ListInvitesRequest): unknown {
     const obj: any = {};
     if (message.hackathonId !== "") {
       obj.hackathonId = message.hackathonId;
     }
-    if (message.answers?.length) {
-      obj.answers = message.answers.map((e) => Answer.toJSON(e));
-    }
-    if (message.inviteToken !== undefined) {
-      obj.inviteToken = message.inviteToken;
-    }
     return obj;
   },
 
-  create(base?: DeepPartial<JoinRequest>): JoinRequest {
-    return JoinRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<ListInvitesRequest>): ListInvitesRequest {
+    return ListInvitesRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<JoinRequest>): JoinRequest {
-    const message = createBaseJoinRequest();
+  fromPartial(object: DeepPartial<ListInvitesRequest>): ListInvitesRequest {
+    const message = createBaseListInvitesRequest();
     message.hackathonId = object.hackathonId ?? "";
-    message.answers = object.answers?.map((e) => Answer.fromPartial(e)) || [];
-    message.inviteToken = object.inviteToken ?? undefined;
     return message;
   },
 };

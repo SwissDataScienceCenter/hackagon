@@ -3,12 +3,9 @@ syntax = "proto3";
 package hackathon.messages.hackathon_svc;
 
 import "buf/validate/validate.proto";
-import "hackathon/entities/answer.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svc";
 
-message JoinRequest {
-  string hackathon_id = 1 [(buf.validate.field).string.uuid = true];
-  repeated hackathon.entities.Answer answers = 2;
-  optional string invite_token = 3;
+message RevokeInviteRequest {
+  string invite_id = 1 [(buf.validate.field).string.uuid = true];
 }

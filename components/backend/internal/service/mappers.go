@@ -529,6 +529,24 @@ func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 	}
 }
 
+func hackathonInviteEntryFromEnt(i *ent.HackathonInvite) *hackEnts.HackathonInvite {
+	e := &hackEnts.HackathonInvite{
+		Id:        i.ID.String(),
+		Token:     i.Token.String(),
+		CreatedAt: timestamppb.New(i.CreatedAt),
+	}
+	if i.Note != "" {
+		e.Note = &i.Note
+	}
+	if i.RevokedAt != nil {
+		e.RevokedAt = timestamppb.New(*i.RevokedAt)
+	}
+	if i.ExpiresAt != nil {
+		e.ExpiresAt = timestamppb.New(*i.ExpiresAt)
+	}
+	return e
+}
+
 func answerEntryFromEnt(a *ent.Answer) *hackEnts.Answer {
 	entry := &hackEnts.Answer{
 		QuestionId:    a.QuestionID.String(),

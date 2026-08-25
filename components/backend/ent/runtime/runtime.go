@@ -9,6 +9,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/db/schema"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/answer"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathoninvite"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathonstate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
@@ -71,6 +72,23 @@ func init() {
 	hackathonDescID := hackathonMixinFields0[0].Descriptor()
 	// hackathon.DefaultID holds the default value on creation for the id field.
 	hackathon.DefaultID = hackathonDescID.Default.(func() uuid.UUID)
+	hackathoninviteMixin := schema.HackathonInvite{}.Mixin()
+	hackathoninviteMixinFields0 := hackathoninviteMixin[0].Fields()
+	_ = hackathoninviteMixinFields0
+	hackathoninviteFields := schema.HackathonInvite{}.Fields()
+	_ = hackathoninviteFields
+	// hackathoninviteDescCreatedAt is the schema descriptor for created_at field.
+	hackathoninviteDescCreatedAt := hackathoninviteFields[0].Descriptor()
+	// hackathoninvite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	hackathoninvite.DefaultCreatedAt = hackathoninviteDescCreatedAt.Default.(func() time.Time)
+	// hackathoninviteDescToken is the schema descriptor for token field.
+	hackathoninviteDescToken := hackathoninviteFields[2].Descriptor()
+	// hackathoninvite.DefaultToken holds the default value on creation for the token field.
+	hackathoninvite.DefaultToken = hackathoninviteDescToken.Default.(func() uuid.UUID)
+	// hackathoninviteDescID is the schema descriptor for id field.
+	hackathoninviteDescID := hackathoninviteMixinFields0[0].Descriptor()
+	// hackathoninvite.DefaultID holds the default value on creation for the id field.
+	hackathoninvite.DefaultID = hackathoninviteDescID.Default.(func() uuid.UUID)
 	hackathonstateMixin := schema.HackathonState{}.Mixin()
 	hackathonstateMixinFields0 := hackathonstateMixin[0].Fields()
 	_ = hackathonstateMixinFields0

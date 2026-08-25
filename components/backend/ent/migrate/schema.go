@@ -107,6 +107,37 @@ var (
 			},
 		},
 	}
+	// HackathonInvitesColumns holds the columns for the "hackathon_invites" table.
+	HackathonInvitesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "revoked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "token", Type: field.TypeUUID, Unique: true},
+		{Name: "note", Type: field.TypeString, Nullable: true},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "hackathon_invite_hackathon", Type: field.TypeUUID},
+		{Name: "user_created_hackathon_invites", Type: field.TypeUUID},
+	}
+	// HackathonInvitesTable holds the schema information for the "hackathon_invites" table.
+	HackathonInvitesTable = &schema.Table{
+		Name:       "hackathon_invites",
+		Columns:    HackathonInvitesColumns,
+		PrimaryKey: []*schema.Column{HackathonInvitesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "hackathon_invites_hackathons_hackathon",
+				Columns:    []*schema.Column{HackathonInvitesColumns[6]},
+				RefColumns: []*schema.Column{HackathonsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "hackathon_invites_users_created_hackathon_invites",
+				Columns:    []*schema.Column{HackathonInvitesColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+		},
+	}
 	// HackathonStatesColumns holds the columns for the "hackathon_states" table.
 	HackathonStatesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -762,6 +793,7 @@ var (
 	Tables = []*schema.Table{
 		AnswersTable,
 		HackathonsTable,
+		HackathonInvitesTable,
 		HackathonStatesTable,
 		PagesTable,
 		ParticipantsTable,
@@ -788,6 +820,8 @@ func init() {
 	HackathonsTable.ForeignKeys[0].RefTable = PhasesTable
 	HackathonsTable.ForeignKeys[1].RefTable = UsersTable
 	HackathonsTable.ForeignKeys[2].RefTable = UsersTable
+	HackathonInvitesTable.ForeignKeys[0].RefTable = HackathonsTable
+	HackathonInvitesTable.ForeignKeys[1].RefTable = UsersTable
 	HackathonStatesTable.ForeignKeys[0].RefTable = HackathonsTable
 	HackathonStatesTable.ForeignKeys[1].RefTable = PhasesTable
 	HackathonStatesTable.ForeignKeys[2].RefTable = UsersTable
