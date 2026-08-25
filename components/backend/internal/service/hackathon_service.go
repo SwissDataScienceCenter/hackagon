@@ -1424,8 +1424,28 @@ func (s *HackathonService) ListQuestions(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
-		return nil, err
+	// The questions have to be readable BEFORE joining. Join validates the
+	// mandatory answers, and answering needs the questions — so requiring
+	// `hackathon:read` here deadlocked signup outright: a non-member holds no
+	// such grant (AllowPublicHackathonAccess exists but is never called), which
+	// made a hackathon with any mandatory question impossible to join.
+	//
+	// Public hackathons are therefore readable by anyone, which is the rule List
+	// already applies to the hackathons themselves. Private ones still require
+	// the grant, so an uninvited caller cannot enumerate what a closed event asks.
+	h, err := s.dbClient.Hackathon.Query().Where(enthackathon.IDEQ(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", id)
+		}
+		slog.Error("query hackathon", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	if h.Visibility != enthackathon.VisibilityPublic {
+		if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
+			return nil, err
+		}
 	}
 
 	questions, err := s.dbClient.Question.Query().Where(
@@ -1558,16 +1578,25 @@ func (s *HackathonService) ListParticipantAnswers(
 	}
 
 	// Build query
+	// WithQuestion because the answer's stored value is always a string, and only
+	// the QUESTION knows which oneof arm it belongs in on the way out.
 	q := s.dbClient.Answer.Query().Where(
 		entanswer.HasQuestionWith(
 			entquestion.HasHackathonWith(enthackathon.IDEQ(hackID)),
 		),
-	)
+	).WithQuestion()
 
 	if req.GetUserId() != "" {
 		uidParsed, err := uuid.Parse(req.GetUserId())
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+		}
+		// Naming someone else is organizer-only. Without this check the branch
+		// below was reachable by anyone: `hasWrite` was computed but only
+		// consulted on the "no user_id" path, so any authenticated caller could
+		// pass any user id and read what that person wrote about themselves.
+		if uidParsed != user.ID && !hasWrite {
+			return nil, status.Error(codes.PermissionDenied, "permission denied")
 		}
 		q = q.Where(entanswer.HasUserWith(
 			entuser.ID(uidParsed),

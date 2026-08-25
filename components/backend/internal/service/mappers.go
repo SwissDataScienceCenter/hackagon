@@ -529,12 +529,28 @@ func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 	}
 }
 
+// answerEntryFromEnt maps a stored answer back onto the wire.
+//
+// The value is stored as a string whatever the question's type, so which arm of
+// the `value` oneof it belongs in is a fact about the QUESTION, not the answer.
+// Emitting text_value unconditionally meant a BOOL question read back as
+// text_value "true" — and SubmitAnswers refuses a text answer to a bool
+// question, so loading a form and saving it unchanged failed validation every
+// time. That is exactly what an edit form does on every save.
+//
+// Requires the question edge; without it the type is unknowable and text is the
+// only safe guess.
 func answerEntryFromEnt(a *ent.Answer) *hackEnts.Answer {
-	return &hackEnts.Answer{
+	entry := &hackEnts.Answer{
 		QuestionId:    a.QuestionID.String(),
 		ParticipantId: a.UserID.String(),
 		Value:         &hackEnts.Answer_TextValue{TextValue: a.Value},
 	}
+	if a.Edges.Question != nil && a.Edges.Question.DataType == entquestion.DataTypeBool {
+		entry.Value = &hackEnts.Answer_BoolValue{BoolValue: a.Value == "true"}
+	}
+
+	return entry
 }
 
 // protoAnswerValueToDB extracts the string representation from a proto Answer.
