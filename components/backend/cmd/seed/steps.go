@@ -78,6 +78,28 @@ func (h *harness) setCaps(owner *actor, hackathonID string, on ...hackEnts.Capab
 	return nil
 }
 
+// createInvite mints one invitation to a hackathon and hands back its token.
+//
+// Only a private hackathon needs one: `Join` lets anybody through who can
+// already read the hackathon, which on a public one is everybody. On a private
+// one nobody outside can, so an invite is the only way in — see joinWithInvite.
+//
+// `ExpiresAt` is left unset deliberately. CreateInvite then defaults it to the
+// hackathon's own `ends_at`, which is the answer the fixture wants anyway and
+// the one an organizer accepting the default would get.
+func (h *harness) createInvite(owner *actor, hackathonID string) (string, error) {
+	resp, err := h.hackathon.CreateInvite(owner.ctx, &hackMsgs.CreateInviteRequest{
+		HackathonId: hackathonID,
+		Note:        ptr("Seeded invite — how the fixture's participants got in."),
+		ExpiresAt:   nil,
+	})
+	if err != nil {
+		return "", fmt.Errorf("create invite: %w", err)
+	}
+
+	return resp.GetInvite().GetToken(), nil
+}
+
 // join signs somebody up. Join always writes a waitlisted row — approval is a
 // separate act — so this on its own is the fixture's waitlisted participant.
 //
@@ -86,9 +108,29 @@ func (h *harness) setCaps(owner *actor, hackathonID string, on ...hackEnts.Capab
 // never filled it in, the form is created after the signups, and the people who
 // did answer send theirs with submitAnswers.
 func (h *harness) join(who *actor, hackathonID string) error {
+	return h.joinWithInvite(who, hackathonID, "")
+}
+
+// joinWithInvite is join, carrying an invitation.
+//
+// An empty token means none, which is what every public hackathon sends: Join
+// only looks at the token when the hackathon is private, and admits anyone who
+// can read the hackathon regardless. Pass a real one and it is the token that
+// gets somebody into a hackathon they cannot see.
+func (h *harness) joinWithInvite(who *actor, hackathonID, token string) error {
+	// Absent rather than empty on the wire. The handler compares the token
+	// against "" before parsing it as a uuid, so an empty string would take the
+	// same path — but a set-but-empty optional field says the caller had a token
+	// and it was blank, which is not what is being said here.
+	var invite *string
+	if token != "" {
+		invite = ptr(token)
+	}
+
 	if _, err := h.hackathon.Join(who.ctx, &hackMsgs.JoinRequest{
 		HackathonId: hackathonID,
 		Answers:     nil,
+		InviteToken: invite,
 	}); err != nil {
 		return fmt.Errorf("%s joins: %w", who.username, err)
 	}
@@ -100,8 +142,21 @@ func (h *harness) join(who *actor, hackathonID string) error {
 // hold the `Member` role every capability is granted to. A participant row on
 // its own leaves somebody able to do nothing, which reads as a handler bug.
 func (h *harness) joinAndApprove(owner *actor, hackathonID string, who ...*actor) error {
+	return h.joinAndApproveWithInvite(owner, hackathonID, "", who...)
+}
+
+// joinAndApproveWithInvite is joinAndApprove for a hackathon nobody can see.
+//
+// The same invitation admits everyone in `who`: an invite is a link rather than
+// a per-person ticket, and one link passed around is how a private hackathon
+// actually fills up.
+func (h *harness) joinAndApproveWithInvite(
+	owner *actor,
+	hackathonID, token string,
+	who ...*actor,
+) error {
 	for _, w := range who {
-		if err := h.join(w, hackathonID); err != nil {
+		if err := h.joinWithInvite(w, hackathonID, token); err != nil {
 			return err
 		}
 		if _, err := h.hackathon.ApproveParticipant(owner.ctx, &hackMsgs.ApproveParticipantRequest{

@@ -127,11 +127,25 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 		return err
 	}
 
+	// Private, so getting in takes an invitation. `Join` admits anyone who can
+	// already read the hackathon — which on the public fixtures is everybody —
+	// and refuses everyone else outright unless they carry a valid invite token.
+	// Neither alice nor dana holds a role here before joining, so without this
+	// they are turned away with "invalid or expired invitation".
+	//
+	// admin owns the sprint and is therefore the one who can mint the link, the
+	// same way an organizer would. It doubles as the fixture's only invite, so
+	// the invites list an organizer sees has something in it.
+	invite, err := h.createInvite(admin, id)
+	if err != nil {
+		return err
+	}
+
 	// alice and dana confirmed. admin owns this one and does not take part, so
 	// dana holds the second seat — which the fixture cannot do without: see the
 	// teams below, the two participants have to be two different people or the
 	// votes have nobody to come from.
-	if err := h.joinAndApprove(admin, id, alice, dana); err != nil {
+	if err := h.joinAndApproveWithInvite(admin, id, invite, alice, dana); err != nil {
 		return err
 	}
 
