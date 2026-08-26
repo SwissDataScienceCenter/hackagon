@@ -33,6 +33,7 @@ service ProjectService {
   rpc Propose(hackathon.messages.project_svc.ProposeRequest) returns (hackathon.messages.project_svc.ProposeResponse);
   rpc Approve(hackathon.messages.project_svc.ApproveRequest) returns (hackathon.messages.project_svc.ApproveResponse);
   rpc Disapprove(hackathon.messages.project_svc.DisapproveRequest) returns (hackathon.messages.project_svc.DisapproveResponse);
+  rpc Reject(hackathon.messages.project_svc.RejectRequest) returns (hackathon.messages.project_svc.RejectResponse);
   rpc SetPreference(hackathon.messages.project_svc.SetPreferenceRequest) returns (hackathon.messages.project_svc.SetPreferenceResponse);
   rpc GetPreference(hackathon.messages.project_svc.GetPreferenceRequest) returns (hackathon.messages.project_svc.GetPreferenceResponse);
   rpc RemovePreference(hackathon.messages.project_svc.RemovePreferenceRequest) returns (hackathon.messages.project_svc.RemovePreferenceResponse);

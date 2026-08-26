@@ -24,6 +24,8 @@ import { ListRequest } from "./messages/project_svc/list_request";
 import { ListResponse } from "./messages/project_svc/list_response";
 import { ProposeRequest } from "./messages/project_svc/propose_request";
 import { ProposeResponse } from "./messages/project_svc/propose_response";
+import { RejectRequest } from "./messages/project_svc/reject_request";
+import { RejectResponse } from "./messages/project_svc/reject_response";
 import { RemovePreferenceRequest } from "./messages/project_svc/remove_preference_request";
 import { RemovePreferenceResponse } from "./messages/project_svc/remove_preference_response";
 import { SetPreferenceRequest } from "./messages/project_svc/set_preference_request";
@@ -73,6 +75,14 @@ export const ProjectServiceDefinition = {
       requestType: DisapproveRequest as typeof DisapproveRequest,
       requestStream: false,
       responseType: DisapproveResponse as typeof DisapproveResponse,
+      responseStream: false,
+      options: {},
+    },
+    reject: {
+      name: "Reject",
+      requestType: RejectRequest as typeof RejectRequest,
+      requestStream: false,
+      responseType: RejectResponse as typeof RejectResponse,
       responseStream: false,
       options: {},
     },
@@ -136,6 +146,7 @@ export interface ProjectServiceImplementation<CallContextExt = {}> {
     request: DisapproveRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<DisapproveResponse>>;
+  reject(request: RejectRequest, context: CallContext & CallContextExt): Promise<DeepPartial<RejectResponse>>;
   setPreference(
     request: SetPreferenceRequest,
     context: CallContext & CallContextExt,
@@ -165,6 +176,7 @@ export interface ProjectServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<DisapproveRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<DisapproveResponse>;
+  reject(request: DeepPartial<RejectRequest>, options?: CallOptions & CallOptionsExt): Promise<RejectResponse>;
   setPreference(
     request: DeepPartial<SetPreferenceRequest>,
     options?: CallOptions & CallOptionsExt,

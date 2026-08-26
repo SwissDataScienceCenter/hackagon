@@ -35,6 +35,7 @@ type Project struct {
 	HackathonId   string                 `protobuf:"bytes,9,opt,name=hackathon_id,json=hackathonId,proto3" json:"hackathon_id,omitempty"`
 	CreatorId     string                 `protobuf:"bytes,10,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
 	ModifierId    string                 `protobuf:"bytes,11,opt,name=modifier_id,json=modifierId,proto3" json:"modifier_id,omitempty"`
+	Comments      []*ProjectComment      `protobuf:"bytes,12,rep,name=comments,proto3" json:"comments,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -146,11 +147,18 @@ func (x *Project) GetModifierId() string {
 	return ""
 }
 
+func (x *Project) GetComments() []*ProjectComment {
+	if x != nil {
+		return x.Comments
+	}
+	return nil
+}
+
 var File_hackathon_entities_project_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_project_proto_rawDesc = "" +
 	"\n" +
-	" hackathon/entities/project.proto\x12\x12hackathon.entities\x1a\x1fgoogle/protobuf/timestamp.proto\x1a'hackathon/entities/project_status.proto\"\xa7\x03\n" +
+	" hackathon/entities/project.proto\x12\x12hackathon.entities\x1a\x1fgoogle/protobuf/timestamp.proto\x1a(hackathon/entities/project_comment.proto\x1a'hackathon/entities/project_status.proto\"\xe7\x03\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -167,7 +175,8 @@ const file_hackathon_entities_project_proto_rawDesc = "" +
 	"creator_id\x18\n" +
 	" \x01(\tR\tcreatorId\x12\x1f\n" +
 	"\vmodifier_id\x18\v \x01(\tR\n" +
-	"modifierIdB\b\n" +
+	"modifierId\x12>\n" +
+	"\bcomments\x18\f \x03(\v2\".hackathon.entities.ProjectCommentR\bcommentsB\b\n" +
 	"\x06_imageBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
@@ -187,16 +196,18 @@ var file_hackathon_entities_project_proto_goTypes = []any{
 	(*Project)(nil),               // 0: hackathon.entities.Project
 	(ProjectStatus)(0),            // 1: hackathon.entities.ProjectStatus
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
+	(*ProjectComment)(nil),        // 3: hackathon.entities.ProjectComment
 }
 var file_hackathon_entities_project_proto_depIdxs = []int32{
 	1, // 0: hackathon.entities.Project.status:type_name -> hackathon.entities.ProjectStatus
 	2, // 1: hackathon.entities.Project.created_at:type_name -> google.protobuf.Timestamp
 	2, // 2: hackathon.entities.Project.modified_at:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3, // 3: hackathon.entities.Project.comments:type_name -> hackathon.entities.ProjectComment
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_hackathon_entities_project_proto_init() }
@@ -204,6 +215,7 @@ func file_hackathon_entities_project_proto_init() {
 	if File_hackathon_entities_project_proto != nil {
 		return
 	}
+	file_hackathon_entities_project_comment_proto_init()
 	file_hackathon_entities_project_status_proto_init()
 	file_hackathon_entities_project_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}

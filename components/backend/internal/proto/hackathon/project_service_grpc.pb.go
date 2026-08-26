@@ -25,6 +25,7 @@ const (
 	ProjectService_Propose_FullMethodName           = "/hackathon.ProjectService/Propose"
 	ProjectService_Approve_FullMethodName           = "/hackathon.ProjectService/Approve"
 	ProjectService_Disapprove_FullMethodName        = "/hackathon.ProjectService/Disapprove"
+	ProjectService_Reject_FullMethodName            = "/hackathon.ProjectService/Reject"
 	ProjectService_SetPreference_FullMethodName     = "/hackathon.ProjectService/SetPreference"
 	ProjectService_GetPreference_FullMethodName     = "/hackathon.ProjectService/GetPreference"
 	ProjectService_RemovePreference_FullMethodName  = "/hackathon.ProjectService/RemovePreference"
@@ -42,6 +43,7 @@ type ProjectServiceClient interface {
 	Propose(ctx context.Context, in *project_svc.ProposeRequest, opts ...grpc.CallOption) (*project_svc.ProposeResponse, error)
 	Approve(ctx context.Context, in *project_svc.ApproveRequest, opts ...grpc.CallOption) (*project_svc.ApproveResponse, error)
 	Disapprove(ctx context.Context, in *project_svc.DisapproveRequest, opts ...grpc.CallOption) (*project_svc.DisapproveResponse, error)
+	Reject(ctx context.Context, in *project_svc.RejectRequest, opts ...grpc.CallOption) (*project_svc.RejectResponse, error)
 	SetPreference(ctx context.Context, in *project_svc.SetPreferenceRequest, opts ...grpc.CallOption) (*project_svc.SetPreferenceResponse, error)
 	GetPreference(ctx context.Context, in *project_svc.GetPreferenceRequest, opts ...grpc.CallOption) (*project_svc.GetPreferenceResponse, error)
 	RemovePreference(ctx context.Context, in *project_svc.RemovePreferenceRequest, opts ...grpc.CallOption) (*project_svc.RemovePreferenceResponse, error)
@@ -102,6 +104,16 @@ func (c *projectServiceClient) Disapprove(ctx context.Context, in *project_svc.D
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(project_svc.DisapproveResponse)
 	err := c.cc.Invoke(ctx, ProjectService_Disapprove_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectServiceClient) Reject(ctx context.Context, in *project_svc.RejectRequest, opts ...grpc.CallOption) (*project_svc.RejectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(project_svc.RejectResponse)
+	err := c.cc.Invoke(ctx, ProjectService_Reject_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -177,6 +189,7 @@ type ProjectServiceServer interface {
 	Propose(context.Context, *project_svc.ProposeRequest) (*project_svc.ProposeResponse, error)
 	Approve(context.Context, *project_svc.ApproveRequest) (*project_svc.ApproveResponse, error)
 	Disapprove(context.Context, *project_svc.DisapproveRequest) (*project_svc.DisapproveResponse, error)
+	Reject(context.Context, *project_svc.RejectRequest) (*project_svc.RejectResponse, error)
 	SetPreference(context.Context, *project_svc.SetPreferenceRequest) (*project_svc.SetPreferenceResponse, error)
 	GetPreference(context.Context, *project_svc.GetPreferenceRequest) (*project_svc.GetPreferenceResponse, error)
 	RemovePreference(context.Context, *project_svc.RemovePreferenceRequest) (*project_svc.RemovePreferenceResponse, error)
@@ -207,6 +220,9 @@ func (UnimplementedProjectServiceServer) Approve(context.Context, *project_svc.A
 }
 func (UnimplementedProjectServiceServer) Disapprove(context.Context, *project_svc.DisapproveRequest) (*project_svc.DisapproveResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Disapprove not implemented")
+}
+func (UnimplementedProjectServiceServer) Reject(context.Context, *project_svc.RejectRequest) (*project_svc.RejectResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Reject not implemented")
 }
 func (UnimplementedProjectServiceServer) SetPreference(context.Context, *project_svc.SetPreferenceRequest) (*project_svc.SetPreferenceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetPreference not implemented")
@@ -333,6 +349,24 @@ func _ProjectService_Disapprove_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectServiceServer).Disapprove(ctx, req.(*project_svc.DisapproveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectService_Reject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(project_svc.RejectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectServiceServer).Reject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectService_Reject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectServiceServer).Reject(ctx, req.(*project_svc.RejectRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -471,6 +505,10 @@ var ProjectService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Disapprove",
 			Handler:    _ProjectService_Disapprove_Handler,
+		},
+		{
+			MethodName: "Reject",
+			Handler:    _ProjectService_Reject_Handler,
 		},
 		{
 			MethodName: "SetPreference",

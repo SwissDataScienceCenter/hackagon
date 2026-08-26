@@ -27,6 +27,7 @@ const (
 	ProjectStatus_PROJECT_STATUS_UNSPECIFIED ProjectStatus = 0
 	ProjectStatus_PROJECT_STATUS_PROPOSED    ProjectStatus = 1
 	ProjectStatus_PROJECT_STATUS_APPROVED    ProjectStatus = 2
+	ProjectStatus_PROJECT_STATUS_REJECTED    ProjectStatus = 3
 )
 
 // Enum value maps for ProjectStatus.
@@ -35,11 +36,13 @@ var (
 		0: "PROJECT_STATUS_UNSPECIFIED",
 		1: "PROJECT_STATUS_PROPOSED",
 		2: "PROJECT_STATUS_APPROVED",
+		3: "PROJECT_STATUS_REJECTED",
 	}
 	ProjectStatus_value = map[string]int32{
 		"PROJECT_STATUS_UNSPECIFIED": 0,
 		"PROJECT_STATUS_PROPOSED":    1,
 		"PROJECT_STATUS_APPROVED":    2,
+		"PROJECT_STATUS_REJECTED":    3,
 	}
 )
 
@@ -74,11 +77,12 @@ var File_hackathon_entities_project_status_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_project_status_proto_rawDesc = "" +
 	"\n" +
-	"'hackathon/entities/project_status.proto\x12\x12hackathon.entities*i\n" +
+	"'hackathon/entities/project_status.proto\x12\x12hackathon.entities*\x86\x01\n" +
 	"\rProjectStatus\x12\x1e\n" +
 	"\x1aPROJECT_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17PROJECT_STATUS_PROPOSED\x10\x01\x12\x1b\n" +
-	"\x17PROJECT_STATUS_APPROVED\x10\x02BaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
+	"\x17PROJECT_STATUS_APPROVED\x10\x02\x12\x1b\n" +
+	"\x17PROJECT_STATUS_REJECTED\x10\x03BaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
 	file_hackathon_entities_project_status_proto_rawDescOnce sync.Once

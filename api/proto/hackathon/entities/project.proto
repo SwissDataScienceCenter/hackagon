@@ -3,6 +3,7 @@ syntax = "proto3";
 package hackathon.entities;
 
 import "google/protobuf/timestamp.proto";
+import "hackathon/entities/project_comment.proto";
 import "hackathon/entities/project_status.proto";
 
 option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
@@ -19,4 +20,5 @@ message Project {
   string hackathon_id = 9;
   string creator_id = 10;
   string modifier_id = 11;
+  repeated ProjectComment comments = 12;
 }
