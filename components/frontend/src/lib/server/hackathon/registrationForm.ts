@@ -377,3 +377,21 @@ export function answersByParticipant(
 
   return grouped
 }
+
+/**
+ * The ids of the people who have filed at least one answer.
+ *
+ * For a roster that only needs to mark who is missing: the answers themselves
+ * belong on the participant's own page, and a set of ids is what a "No answers"
+ * marker actually reads. Not filtered against the questions — an answer to a
+ * since-deleted question still means this person filled the form in.
+ *
+ * Like `answersByParticipant`, this can name people who are no longer on the
+ * roster (`RemoveParticipant` deletes the participant row and nothing deletes
+ * their answers), so read it through the roster rather than counting it.
+ */
+export function answeredParticipantIds(
+  answers: readonly Answer[],
+): Set<string> {
+  return new Set(answers.map((a) => a.participantId))
+}

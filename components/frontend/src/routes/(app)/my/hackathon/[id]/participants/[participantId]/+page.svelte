@@ -37,6 +37,13 @@
   the platform admin page (/manage/users) — never to a peer — and this page is
   readable by every confirmed member of the hackathon.
 
+  Registration answers are the exception to "this page reads the same for
+  everyone": they are drawn for an organizer and for you on your own profile, and
+  for nobody else. The load explains why — the backend has no notion of an answer
+  a participant chose to share, so there is no honest way to show a peer a
+  subset. This is where an organizer reads them now that Manage Participants
+  links here instead of unfolding them in its own rows.
+
   TODO(backend: user-profile-fields): name, role, join date and teams are all
   there is to show. `User` carries only username, displayName, email and
   keycloakId, so there is no affiliation, bio, avatar, skill list or LinkedIn URL
@@ -75,6 +82,57 @@
             </div>
         </div>
     </div>
+
+    {#if data.answersVisible && data.questionCount > 0}
+        <div class="flex flex-col gap-2">
+            <h3 class="m-0 text-sm font-semibold text-ink">Registration answers</h3>
+            <!-- Who can see this, said on the page rather than left to be
+                 assumed: on your own profile because you are looking at your own
+                 answers and may reasonably wonder, and on someone else's because
+                 an organizer is reading something the person did not publish. -->
+            {#if data.answersAreMine}
+                <p class="m-0 text-xs text-ink-3">
+                    Only the hackathon's organizers can see these. Change them on the
+                    <a
+                        href={resolve(`/register/${data.hackathonId}`)}
+                        class="font-semibold text-accent-ink no-underline hover:underline"
+                    >
+                        registration form</a
+                    >.
+                </p>
+            {:else}
+                <p class="m-0 text-xs text-ink-3">
+                    Visible to organizers only — other participants do not see this
+                    section.
+                </p>
+            {/if}
+
+            {#if data.answers.length === 0}
+                <p class="m-0 text-xs text-ink-3">
+                    {data.answersAreMine
+                        ? 'You have not answered the registration form.'
+                        : `${data.participant.name} has not answered the registration form.`}
+                </p>
+            {:else}
+                <!-- Open, not a fold-out: the roster is where a hundred of these
+                     had to collapse, and this page shows one person. -->
+                <dl class="m-0 flex flex-col gap-1 border-l border-line pl-3">
+                    {#each data.answers as answer (answer.questionId)}
+                        <div class="flex flex-wrap gap-x-2">
+                            <dt class="text-xs text-ink-3">{answer.label}</dt>
+                            <dd class="m-0 text-xs text-ink">
+                                {#if typeof answer.value === 'boolean'}
+                                    {answer.value ? 'Yes' : 'No'}
+                                {:else}
+                                    {answer.value}
+                                {/if}
+                            </dd>
+                        </div>
+                    {/each}
+                </dl>
+            {/if}
+        </div>
+    {/if}
 
     <div class="flex flex-col gap-2">
         <h3 class="m-0 text-sm font-semibold text-ink">Teams</h3>

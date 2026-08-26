@@ -1,7 +1,49 @@
 import type { PageServerLoad } from "./$types"
+import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { requireGrpc } from "$lib/server/grpc/client"
+import {
+  answersByParticipant,
+  questionRows,
+  type ParticipantAnswer,
+} from "$lib/server/hackathon/registrationForm"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { error } from "@sveltejs/kit"
+
+/**
+ * What this participant answered on the registration form.
+ *
+ * Fetched only for a viewer the backend will actually answer for, which is why
+ * the caller decides before calling: `ListParticipantAnswers` refuses a named
+ * `user_id` that is neither the caller nor accompanied by hackathon write
+ * (`hackathon_service.go:1907`). Asking it with no `user_id` instead is worse —
+ * without write it silently narrows to the caller's own answers, which on
+ * someone else's profile would render one person's answers under another
+ * person's name.
+ *
+ * So peers see no answers section at all, rather than an empty or a wrong one.
+ * Making a chosen subset of answers visible to the cohort needs a visibility
+ * flag on the question and a backend that honors it; nothing is stubbed here in
+ * the meantime.
+ */
+async function registrationAnswers(
+  client: ReturnType<typeof requireGrpc>["hackathon"],
+  hackathonId: string,
+  userId: string,
+): Promise<{ questionCount: number; answers: ParticipantAnswer[] }> {
+  const [questions, answers] = await Promise.all([
+    client.listQuestions({ hackathonId }),
+    client.listParticipantAnswers({ hackathonId, userId }),
+  ])
+  const rows = questionRows(questions.questions)
+
+  // The question count decides whether the section appears at all: a hackathon
+  // that asks nothing has no form to have answered, and "has not answered" would
+  // be an accusation about a form that does not exist.
+  return {
+    questionCount: rows.length,
+    answers: answersByParticipant(rows, answers.answers)[userId] ?? [],
+  }
+}
 
 /**
  * One participant, as everyone else in the hackathon sees them. Reached from the
@@ -14,8 +56,8 @@ import { error } from "@sveltejs/kit"
  * list, so it cannot show anyone the list would have hidden.
  */
 export const load: PageServerLoad = async (event) => {
-  const { hackathon } = await event.parent()
-  const { team } = requireGrpc(event.locals.grpc)
+  const { hackathon, myMembership, isGlobalAdmin } = await event.parent()
+  const { hackathon: hackathonClient, team } = requireGrpc(event.locals.grpc)
 
   // Same filter as the list: `user` present and not waitlisted. Who has applied
   // and not been accepted is between the applicant and the organizer, so a
@@ -59,8 +101,48 @@ export const load: PageServerLoad = async (event) => {
     teamsFailed = true
   }
 
+  // Who may read the answers: an organizer, who reaches this page from Manage
+  // Participants and used to read them in a fold-out there, and you on your own
+  // profile. Both are paths `ListParticipantAnswers` answers honestly — see
+  // `registrationAnswers` for why nobody else is offered them.
+  //
+  // Failure is swallowed, unlike the teams call above: an absent section says
+  // "not shown here", which is already what a peer sees, while "not on a team"
+  // is a claim about the person that a failed load is no basis for.
+  const isOrganizer = mayManageParticipants(
+    myMembership ?? undefined,
+    isGlobalAdmin,
+  )
+  const isMe = myMembership?.user?.id === user.id
+  const answersVisible = isOrganizer || isMe
+  let answers: ParticipantAnswer[] = []
+  let questionCount = 0
+  if (answersVisible) {
+    try {
+      ;({ questionCount, answers } = await registrationAnswers(
+        hackathonClient,
+        event.params.id,
+        user.id,
+      ))
+    } catch (err) {
+      event.locals.logger.warn(
+        { err },
+        "PARTICIPANT: registration answers failed, rendering without them",
+      )
+    }
+  }
+
   return {
     hackathonId: event.params.id,
+    // `answersVisible` is what draws the section, not `answers.length`: an
+    // organizer looking at someone who answered nothing must see that, and a peer
+    // must see no section at all — the two are the same empty list otherwise.
+    // `answersAreMine` picks the line under the heading: your own answers come
+    // with the way to change them.
+    answersVisible,
+    answersAreMine: isMe,
+    questionCount,
+    answers,
     participant: {
       name: user.displayName || user.username,
       username: user.username,
