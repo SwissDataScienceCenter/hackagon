@@ -1,5 +1,4 @@
 import type { PageServerLoad } from "./$types"
-import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { requireGrpc } from "$lib/server/grpc/client"
 import {
   answersByParticipant,
@@ -13,12 +12,17 @@ import { error } from "@sveltejs/kit"
  * Who is reading this profile, which decides both how the answers are asked for
  * and what may be said about them.
  *
- * - `organizer` — hackathon write, so every answer to every question.
- * - `mine` — your own profile: every answer you gave, public or not.
- * - `public` — a peer: only their answers to questions the organizer marked
- *   "show answers to participants".
+ * - `mine` — your own profile: every answer you gave, shared or not.
+ * - `public` — anyone else's: only their answers to questions the organizer
+ *   marked "show answers to participants".
+ *
+ * There is deliberately no organizer scope. This is the participant view — the
+ * page says so, and the participants list it hangs off says so — and an
+ * organizer opening it is opening it to see what a participant sees. Their
+ * hackathon write would let the RPC hand over the whole form; not asking for it
+ * is the point.
  */
-export type AnswerScope = "organizer" | "mine" | "public"
+export type AnswerScope = "mine" | "public"
 
 /**
  * What this participant answered on the registration form, as far as the viewer
@@ -28,16 +32,17 @@ export type AnswerScope = "organizer" | "mine" | "public"
  * the scope picks between them:
  *
  * - **Named `user_id`** is refused for a caller who is neither that user nor
- *   holding hackathon write (`hackathon_service.go:1912`) — the public-answers
- *   change did not relax it. So a peer cannot use it, even for a question whose
- *   answers are public.
+ *   holding hackathon write (`hackathon_service.go:1912`), so `mine` is the only
+ *   scope that may use it.
  * - **No `user_id`** returns, to a caller without write, their own answers plus
- *   everybody's answers to the public questions. That is the peer's only route:
- *   ask for the cohort and pick this person out of it.
+ *   everybody's answers to the public questions. That is `public`: ask for the
+ *   cohort and pick this person out of it.
  *
- * A peer therefore gets a list the backend has already filtered, so nothing here
- * has to re-check `publicAnswers` — and nothing here could, since a private
- * answer never arrives to be filtered.
+ * The `public` scope therefore normally gets a list the backend has already
+ * filtered. An organizer is the exception — hackathon write makes that same call
+ * return the whole cohort's whole form — so the filter is applied here too,
+ * against `publicAnswers`. Without it this page would quietly show an organizer
+ * more than the participant view it claims to be.
  */
 async function registrationAnswers(
   client: ReturnType<typeof requireGrpc>["hackathon"],
@@ -54,18 +59,24 @@ async function registrationAnswers(
   ])
   const rows = questionRows(questions.questions)
 
-  // How many questions this viewer could be shown an answer to. For an organizer
-  // or for you on your own profile that is the whole form, and it is what lets
-  // the page say "has not answered" — an accusation only worth making about a
-  // form that exists. For a peer it is the public ones, which is a different
-  // number and a weaker claim: a public question with no answer here may mean
-  // they skipped it, so the page does not say either way.
+  // How many questions this viewer could be shown an answer to. On your own
+  // profile that is the whole form, and it is what lets the page say "you have
+  // not answered" — a claim only worth making about a form that exists. On
+  // anyone else's it is the shared ones, a different number and a weaker claim:
+  // a shared question with no answer may mean they skipped it, so the page does
+  // not say either way.
   const visible =
     scope === "public" ? rows.filter((q) => q.publicAnswers) : rows
+  const shown = new Set(visible.map((q) => q.id))
 
   return {
     questionCount: visible.length,
-    answers: answersByParticipant(rows, answers.answers)[userId] ?? [],
+    answers: (answersByParticipant(rows, answers.answers)[userId] ?? []).filter(
+      // A no-op for anyone the backend already filtered for. It is the organizer
+      // this catches: their write access makes the unnamed call return every
+      // answer to every question, and this page is not where they read those.
+      (a) => shown.has(a.questionId),
+    ),
   }
 }
 
@@ -80,7 +91,7 @@ async function registrationAnswers(
  * list, so it cannot show anyone the list would have hidden.
  */
 export const load: PageServerLoad = async (event) => {
-  const { hackathon, myMembership, isGlobalAdmin } = await event.parent()
+  const { hackathon, myMembership } = await event.parent()
   const { hackathon: hackathonClient, team } = requireGrpc(event.locals.grpc)
 
   // Same filter as the list: `user` present and not waitlisted. Who has applied
@@ -125,24 +136,16 @@ export const load: PageServerLoad = async (event) => {
     teamsFailed = true
   }
 
-  // Who is reading, and therefore how much of the form they get. Everyone gets
-  // *something* now: a peer sees the answers this event chose to share, which is
-  // what the participants list is otherwise too thin to tell them.
+  // Who is reading, and therefore how much of the form they get. Your own
+  // profile shows your whole form; everyone else's shows what this event chose
+  // to share, which is what the participants list is otherwise too thin to tell
+  // you. An organizer is nobody special here — see `AnswerScope`.
   //
   // Failure is swallowed, unlike the teams call above: an absent section says
-  // "nothing to show here", which is already an honest outcome for a peer, while
-  // "not on a team" is a claim about the person that a failed load is no basis
-  // for.
-  const isOrganizer = mayManageParticipants(
-    myMembership ?? undefined,
-    isGlobalAdmin,
-  )
+  // "nothing to show here", which is already an honest outcome, while "not on a
+  // team" is a claim about the person that a failed load is no basis for.
   const isMe = myMembership?.user?.id === user.id
-  const answerScope: AnswerScope = isOrganizer
-    ? "organizer"
-    : isMe
-      ? "mine"
-      : "public"
+  const answerScope: AnswerScope = isMe ? "mine" : "public"
   let answers: ParticipantAnswer[] = []
   let questionCount = 0
   try {
@@ -162,10 +165,9 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: event.params.id,
     // `answerScope` picks the line under the heading and decides what an empty
-    // list is allowed to mean. For an organizer or for you, an empty list is
-    // "answered nothing", which is worth saying; for a peer it is "nothing
-    // shared", which is not a fact about the person and so draws no section at
-    // all.
+    // list is allowed to mean. On your own profile an empty list is "answered
+    // nothing", which is worth saying; on anyone else's it is "nothing shared",
+    // which is not a fact about the person and so draws no section at all.
     answerScope,
     questionCount,
     answers,

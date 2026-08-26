@@ -14,13 +14,13 @@
             .slice(0, 2)
     );
 
-    // An organizer or you get the section whenever the form exists at all, so
-    // "has not answered" can be said. A peer gets it only when something was
-    // actually shared: an empty list there means the event shares nothing, which
-    // is not a fact about this person and reads as one if a heading appears
-    // above it.
+    // Your own profile gets the section whenever the form exists at all, so "you
+    // have not answered" can be said. Anyone else's gets it only when something
+    // was actually shared: an empty list there means the event shares nothing,
+    // which is not a fact about this person and reads as one if a heading
+    // appears above it.
     const answersSection = $derived(
-        data.answerScope === 'public' ? data.answers.length > 0 : data.questionCount > 0
+        data.answerScope === 'mine' ? data.questionCount > 0 : data.answers.length > 0
     );
 
     const joined = $derived(
@@ -46,12 +46,16 @@
   the platform admin page (/manage/users) — never to a peer — and this page is
   readable by every confirmed member of the hackathon.
 
-  Registration answers are the exception to "this page reads the same for
-  everyone". An organizer reads the whole form — this is where they read it, now
-  that Manage Participants links here instead of unfolding it in its own rows.
-  You read your own, whether or not the event shares them. A peer reads only the
-  questions the organizer marked "show answers to participants", which the
-  backend has already filtered down before the load sees it.
+  Registration answers keep that promise rather than breaking it. You see your
+  own whole form; everyone else — an organizer included — sees only the questions
+  marked "show answers to participants". An organizer reaching this page from
+  Manage Participants is reaching it to see what a participant sees, and their
+  hackathon write is deliberately not spent here.
+
+  TODO(participants: organizer answer read): which leaves nowhere on screen for
+  an organizer to read the unshared answers they collect — this page used to be
+  it. The roster's CSV export carries name, email and role only. A full read
+  belongs under Manage Participants, not here.
 
   TODO(backend: user-profile-fields): name, role, join date and teams are all
   there is to show. `User` carries only username, displayName, email and
@@ -95,14 +99,13 @@
     {#if answersSection}
         <div class="flex flex-col gap-2">
             <h3 class="m-0 text-sm font-semibold text-ink">
-                {data.answerScope === 'public' ? 'Shared answers' : 'Registration answers'}
+                {data.answerScope === 'mine' ? 'Registration answers' : 'Shared answers'}
             </h3>
             <!-- Who can see this, said on the page rather than left to be
                  assumed: on your own profile because you are looking at your own
-                 answers and may reasonably wonder, on an organizer's because
-                 they are reading things the person did not publish, and on a
-                 peer's because "shared" is a claim worth attributing to the
-                 event rather than to the person. -->
+                 answers and may reasonably wonder, and on anyone else's because
+                 "shared" is a claim worth attributing to the event rather than
+                 to the person. -->
             {#if data.answerScope === 'mine'}
                 <p class="m-0 text-xs text-ink-3">
                     The hackathon's organizers see all of these. The ones marked
@@ -115,18 +118,6 @@
                         registration form</a
                     >.
                 </p>
-            {:else if data.answerScope === 'organizer'}
-                <p class="m-0 text-xs text-ink-3">
-                    Organizers see all of these. Only the ones marked
-                    <span class="font-semibold text-ink-3">Shared</span>
-                    are visible to other participants — the
-                    <a
-                        href={resolve(`/my/hackathon/${data.hackathonId}/manage/forms`)}
-                        class="font-semibold text-accent-ink no-underline hover:underline"
-                    >
-                        registration form</a
-                    > is where that is decided.
-                </p>
             {:else}
                 <p class="m-0 text-xs text-ink-3">
                     Answers this event shares with everyone taking part. The rest of
@@ -135,14 +126,11 @@
             {/if}
 
             {#if data.answers.length === 0}
-                <!-- Only reachable for an organizer or for you: for a peer an
-                     empty list means "nothing shared", which is a fact about the
-                     form and not about the person, so no section is drawn at
-                     all. -->
+                <!-- Only reachable on your own profile: on anyone else's an empty
+                     list means "nothing shared", which is a fact about the form
+                     and not about the person, so no section is drawn at all. -->
                 <p class="m-0 text-xs text-ink-3">
-                    {data.answerScope === 'mine'
-                        ? 'You have not answered the registration form.'
-                        : `${data.participant.name} has not answered the registration form.`}
+                    You have not answered the registration form.
                 </p>
             {:else}
                 <!-- Open, not a fold-out: the roster is where a hundred of these
@@ -158,9 +146,10 @@
                                     {answer.value}
                                 {/if}
                             </dd>
-                            <!-- Not on a peer's profile: there every entry is
-                                 shared, so a chip on all of them says nothing. -->
-                            {#if answer.publicAnswers && data.answerScope !== 'public'}
+                            <!-- Only on your own profile: on anyone else's every
+                                 entry is shared, so a chip on all of them says
+                                 nothing. -->
+                            {#if answer.publicAnswers && data.answerScope === 'mine'}
                                 <span class="badge badge-neutral">Shared</span>
                             {/if}
                         </div>
