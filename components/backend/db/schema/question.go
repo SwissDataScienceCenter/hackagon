@@ -40,6 +40,9 @@ func (Question) Fields() []ent.Field {
 		field.Bool("mandatory").
 			Default(false).
 			Comment("Whether the participant must answer this question to join."),
+		field.Bool("public_answers").
+			Default(false).
+			Comment("Whether other participants can see answers to this question."),
 		field.Int("order").
 			Default(0).
 			Comment("Display order; lower values appear first."),

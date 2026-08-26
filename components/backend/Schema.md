@@ -263,6 +263,7 @@ A registration question configured by a hackathon owner.
 | `label` | string | yes | no | no | no | Display label for the question. |
 | `data_type` | enum(text, bool, enum) | yes | no | no | no | The type of answer expected from participants. |
 | `mandatory` | bool | yes | no | no | yes | Whether the participant must answer this question to join. |
+| `public_answers` | bool | yes | no | no | yes | Whether other participants can see answers to this question. |
 | `order` | int | yes | no | no | yes | Display order; lower values appear first. |
 | `options` | []string | yes | no | no | no | Allowed values for enum-type questions. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the question was created. |

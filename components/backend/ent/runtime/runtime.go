@@ -242,16 +242,20 @@ func init() {
 	questionDescMandatory := questionFields[4].Descriptor()
 	// question.DefaultMandatory holds the default value on creation for the mandatory field.
 	question.DefaultMandatory = questionDescMandatory.Default.(bool)
+	// questionDescPublicAnswers is the schema descriptor for public_answers field.
+	questionDescPublicAnswers := questionFields[5].Descriptor()
+	// question.DefaultPublicAnswers holds the default value on creation for the public_answers field.
+	question.DefaultPublicAnswers = questionDescPublicAnswers.Default.(bool)
 	// questionDescOrder is the schema descriptor for order field.
-	questionDescOrder := questionFields[5].Descriptor()
+	questionDescOrder := questionFields[6].Descriptor()
 	// question.DefaultOrder holds the default value on creation for the order field.
 	question.DefaultOrder = questionDescOrder.Default.(int)
 	// questionDescCreatedAt is the schema descriptor for created_at field.
-	questionDescCreatedAt := questionFields[7].Descriptor()
+	questionDescCreatedAt := questionFields[8].Descriptor()
 	// question.DefaultCreatedAt holds the default value on creation for the created_at field.
 	question.DefaultCreatedAt = questionDescCreatedAt.Default.(func() time.Time)
 	// questionDescModifiedAt is the schema descriptor for modified_at field.
-	questionDescModifiedAt := questionFields[8].Descriptor()
+	questionDescModifiedAt := questionFields[9].Descriptor()
 	// question.DefaultModifiedAt holds the default value on creation for the modified_at field.
 	question.DefaultModifiedAt = questionDescModifiedAt.Default.(func() time.Time)
 	// question.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.

@@ -364,25 +364,28 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 	// did appear in ListParticipantAnswers.
 	questions, err := h.createQuestions(alice, id, []questionSpec{
 		{
-			key:       "affiliation",
-			label:     "Which university or company are you with?",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_TEXT,
-			mandatory: true,
-			options:   nil,
+			key:           "affiliation",
+			label:         "Which university or company are you with?",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_TEXT,
+			mandatory:     true,
+			options:       nil,
+			publicAnswers: true,
 		},
 		{
-			key:       "tshirt_size",
-			label:     "T-shirt size",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_ENUM,
-			mandatory: true,
-			options:   []string{"XS", "S", "M", "L", "XL", "XXL"},
+			key:           "tshirt_size",
+			label:         "T-shirt size",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_ENUM,
+			mandatory:     true,
+			options:       []string{"XS", "S", "M", "L", "XL", "XXL"},
+			publicAnswers: false,
 		},
 		{
-			key:       "remote",
-			label:     "I will be attending remotely",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_BOOL,
-			mandatory: false,
-			options:   nil,
+			key:           "remote",
+			label:         "I will be attending remotely",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_BOOL,
+			mandatory:     false,
+			options:       nil,
+			publicAnswers: true,
 		},
 	})
 	if err != nil {

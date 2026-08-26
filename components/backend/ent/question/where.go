@@ -71,6 +71,11 @@ func Mandatory(v bool) predicate.Question {
 	return predicate.Question(sql.FieldEQ(FieldMandatory, v))
 }
 
+// PublicAnswers applies equality check predicate on the "public_answers" field. It's identical to PublicAnswersEQ.
+func PublicAnswers(v bool) predicate.Question {
+	return predicate.Question(sql.FieldEQ(FieldPublicAnswers, v))
+}
+
 // Order applies equality check predicate on the "order" field. It's identical to OrderEQ.
 func Order(v int) predicate.Question {
 	return predicate.Question(sql.FieldEQ(FieldOrder, v))
@@ -264,6 +269,16 @@ func MandatoryEQ(v bool) predicate.Question {
 // MandatoryNEQ applies the NEQ predicate on the "mandatory" field.
 func MandatoryNEQ(v bool) predicate.Question {
 	return predicate.Question(sql.FieldNEQ(FieldMandatory, v))
+}
+
+// PublicAnswersEQ applies the EQ predicate on the "public_answers" field.
+func PublicAnswersEQ(v bool) predicate.Question {
+	return predicate.Question(sql.FieldEQ(FieldPublicAnswers, v))
+}
+
+// PublicAnswersNEQ applies the NEQ predicate on the "public_answers" field.
+func PublicAnswersNEQ(v bool) predicate.Question {
+	return predicate.Question(sql.FieldNEQ(FieldPublicAnswers, v))
 }
 
 // OrderEQ applies the EQ predicate on the "order" field.

@@ -58,6 +58,15 @@ export interface QuestionRow {
   order: number
   options: string[]
   /**
+   * Whether everyone in the hackathon may read the answers to this question.
+   *
+   * Unlike the three fields the answer count locks, this one stays editable
+   * forever: `EditQuestion` accepts it on an already-answered question
+   * (`hackathon_service.go:1694`), which is what lets an organizer retract a
+   * question they should not have shared.
+   */
+  publicAnswers: boolean
+  /**
    * How many people have answered this question.
    *
    * Drives the locking in the builder: the backend refuses a type change or a
@@ -72,10 +81,11 @@ export interface QuestionRow {
  * Merge the questions with a count of the answers filed against each.
  *
  * `answers` comes from `ListParticipantAnswers`, which returns the whole cohort
- * to a caller holding hackathon write and silently narrows to the caller's own
- * answers otherwise. That degradation is invisible on the wire, so a zero here
- * means "nobody answered, as far as this caller can see" — safe for locking,
- * which errs towards leaving a control enabled and letting the backend refuse.
+ * to a caller holding hackathon write and, to anyone else, their own answers
+ * plus everybody's answers to the questions marked `publicAnswers`. That
+ * narrowing is invisible on the wire, so a count here means "answered, as far as
+ * this caller can see" — safe for locking, which errs towards leaving a control
+ * enabled and letting the backend refuse.
  */
 export function questionRows(
   questions: readonly Question[],
@@ -96,6 +106,7 @@ export function questionRows(
       mandatory: q.mandatory,
       order: q.order,
       options: q.options,
+      publicAnswers: q.publicAnswers,
       answerCount: counts.get(q.id) ?? 0,
     }))
 }
@@ -108,6 +119,7 @@ export interface QuestionFormValues {
   mandatory: boolean
   order: number
   options: string[]
+  publicAnswers: boolean
 }
 
 export type QuestionFormResult =
@@ -224,6 +236,10 @@ export function parseQuestionForm(form: FormData): QuestionFormResult {
       mandatory: form.get("mandatory") === "true",
       order,
       options,
+      // Same reading, and here absence really is the answer: an organizer who
+      // clears the box is retracting the question, and there is no third state
+      // for the form to mean "leave it as it was".
+      publicAnswers: form.get("publicAnswers") === "true",
     },
   }
 }
@@ -295,6 +311,11 @@ export function parseAnswers(
  * A bool arrives as `boolValue` now that the backend reads the arm from the
  * question's type; a text or enum answer as `textValue`. Anything else is left
  * out so an unanswered question renders empty rather than as the string "false".
+ *
+ * **Pass one person's answers only.** The key is the question, not the answerer,
+ * so a list holding two people's answers to the same question keeps whichever
+ * came last. `ListParticipantAnswers` returns a mixed list unless it is asked for
+ * a named `user_id` — see the call in `register/[id]`.
  */
 export function answerValues(
   answers: readonly Answer[],
@@ -332,6 +353,15 @@ export interface ParticipantAnswer {
   label: string
   /** A bool arrives as a bool; text and enum as strings. */
   value: string | boolean
+  /**
+   * Whether the whole cohort can read this one.
+   *
+   * Carried per answer rather than looked up again by the page, so a profile can
+   * mark which of your answers are on show without holding the question list
+   * too. On a peer's profile every entry is `true` — the backend sent nothing
+   * else — so it is the organizer's view and your own where it says anything.
+   */
+  publicAnswers: boolean
 }
 
 /**
@@ -366,7 +396,13 @@ export function answersByParticipant(
     if (value === undefined) continue
 
     const list = grouped[a.participantId] ?? (grouped[a.participantId] = [])
-    list.push({ questionId: q.id, key: q.key, label: q.label, value })
+    list.push({
+      questionId: q.id,
+      key: q.key,
+      label: q.label,
+      value,
+      publicAnswers: q.publicAnswers,
+    })
   }
 
   for (const list of Object.values(grouped)) {

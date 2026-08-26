@@ -9,7 +9,8 @@ import {
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
-// What this event asks people when they register.
+// What this event asks people when they register, and which of the answers the
+// rest of the cohort gets to read.
 //
 // One question per row, one RPC per row: there is no whole-form save, so each
 // row is its own form and each save is a `CreateQuestion` / `EditQuestion` /
@@ -108,7 +109,8 @@ export const actions: Actions = {
     const parsed = parseQuestionForm(await event.request.formData())
     if (!parsed.ok) return fail(400, { message: parsed.message })
 
-    const { key, label, type, mandatory, order, options } = parsed.values
+    const { key, label, type, mandatory, order, options, publicAnswers } =
+      parsed.values
     try {
       await client.createQuestion({
         hackathonId: event.params.id,
@@ -118,6 +120,7 @@ export const actions: Actions = {
         mandatory,
         order,
         options,
+        publicAnswers,
       })
     } catch (e) {
       return questionFail(e)
@@ -137,7 +140,8 @@ export const actions: Actions = {
 
     const parsed = parseQuestionForm(form)
     if (!parsed.ok) return fail(400, { message: parsed.message })
-    const { label, type, mandatory, order, options } = parsed.values
+    const { label, type, mandatory, order, options, publicAnswers } =
+      parsed.values
 
     // Which fields this edit may carry depends on whether anyone has answered.
     // The backend refuses each of the three below on an answered question, so
@@ -158,6 +162,10 @@ export const actions: Actions = {
         // Repeated fields have no "unset", so an empty list is how this says
         // "leave the options alone". They cannot change once answered anyway.
         options: locked ? [] : options,
+        // Sent unconditionally, unlike the three above: `EditQuestion` accepts
+        // it on an answered question, and it is the one field an organizer may
+        // need to change *because* people have answered.
+        publicAnswers,
       })
     } catch (e) {
       return questionFail(e)

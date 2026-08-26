@@ -16,6 +16,7 @@
             mandatory: boolean;
             order: number;
             options: string[];
+            publicAnswers: boolean;
             answerCount: number;
         };
         /** The named action this row posts to, e.g. `?/edit`. */
@@ -33,6 +34,10 @@
     // options list, and cannot be promoted to mandatory — the backend refuses
     // each of the three. The controls stay on screen but stop accepting input,
     // so an organizer can still read what they chose.
+    //
+    // Who may read the answers is deliberately *not* one of them: `EditQuestion`
+    // accepts `public_answers` on an answered question, which is what lets a
+    // question shared by mistake be taken back.
     //
     // Disabled inputs submit nothing, so the two that are disabled carry a hidden
     // mirror of their current value: the server-side parser validates every row
@@ -131,6 +136,24 @@
             <input type="hidden" name="mandatory" value="true" />
         {/if}
     </div>
+
+    <label class="flex items-start gap-2">
+        <input
+            type="checkbox"
+            name="publicAnswers"
+            value="true"
+            checked={question.publicAnswers}
+            class="checkbox mt-0.5 shrink-0"
+        />
+        <span class="flex flex-col gap-0.5">
+            <span class="field-label">Show answers to participants</span>
+            <span class="text-meta text-ink-3">
+                Everyone in the hackathon sees what each person answered, on their
+                profile. Leave it off and only organizers see it. Can be changed at any
+                time, including after people have answered.
+            </span>
+        </span>
+    </label>
 
     {#if kindNeedsOptions(kind)}
         <label class="field-label">

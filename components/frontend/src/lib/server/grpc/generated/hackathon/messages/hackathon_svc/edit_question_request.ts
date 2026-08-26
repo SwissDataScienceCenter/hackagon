@@ -18,6 +18,7 @@ export interface EditQuestionRequest {
   mandatory?: boolean | undefined;
   order?: number | undefined;
   options: string[];
+  publicAnswers?: boolean | undefined;
 }
 
 function createBaseEditQuestionRequest(): EditQuestionRequest {
@@ -29,6 +30,7 @@ function createBaseEditQuestionRequest(): EditQuestionRequest {
     mandatory: undefined,
     order: undefined,
     options: [],
+    publicAnswers: undefined,
   };
 }
 
@@ -54,6 +56,9 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
     }
     for (const v of message.options) {
       writer.uint32(58).string(v!);
+    }
+    if (message.publicAnswers !== undefined) {
+      writer.uint32(64).bool(message.publicAnswers);
     }
     return writer;
   },
@@ -121,6 +126,14 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
           message.options.push(reader.string());
           continue;
         }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.publicAnswers = reader.bool();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -147,6 +160,11 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
       mandatory: isSet(object.mandatory) ? globalThis.Boolean(object.mandatory) : undefined,
       order: isSet(object.order) ? globalThis.Number(object.order) : undefined,
       options: globalThis.Array.isArray(object?.options) ? object.options.map((e: any) => globalThis.String(e)) : [],
+      publicAnswers: isSet(object.publicAnswers)
+        ? globalThis.Boolean(object.publicAnswers)
+        : isSet(object.public_answers)
+        ? globalThis.Boolean(object.public_answers)
+        : undefined,
     };
   },
 
@@ -173,6 +191,9 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
     if (message.options?.length) {
       obj.options = message.options;
     }
+    if (message.publicAnswers !== undefined) {
+      obj.publicAnswers = message.publicAnswers;
+    }
     return obj;
   },
 
@@ -188,6 +209,7 @@ export const EditQuestionRequest: MessageFns<EditQuestionRequest> = {
     message.mandatory = object.mandatory ?? undefined;
     message.order = object.order ?? undefined;
     message.options = object.options?.map((e) => e) || [];
+    message.publicAnswers = object.publicAnswers ?? undefined;
     return message;
   },
 };

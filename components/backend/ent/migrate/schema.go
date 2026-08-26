@@ -421,6 +421,7 @@ var (
 		{Name: "label", Type: field.TypeString},
 		{Name: "data_type", Type: field.TypeEnum, Enums: []string{"text", "bool", "enum"}},
 		{Name: "mandatory", Type: field.TypeBool, Default: false},
+		{Name: "public_answers", Type: field.TypeBool, Default: false},
 		{Name: "order", Type: field.TypeInt, Default: 0},
 		{Name: "options", Type: field.TypeJSON},
 		{Name: "created_at", Type: field.TypeTime},
@@ -437,19 +438,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "questions_hackathons_questions",
-				Columns:    []*schema.Column{QuestionsColumns[9]},
+				Columns:    []*schema.Column{QuestionsColumns[10]},
 				RefColumns: []*schema.Column{HackathonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "questions_users_created_questions",
-				Columns:    []*schema.Column{QuestionsColumns[10]},
+				Columns:    []*schema.Column{QuestionsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
 			{
 				Symbol:     "questions_users_modified_questions",
-				Columns:    []*schema.Column{QuestionsColumns[11]},
+				Columns:    []*schema.Column{QuestionsColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
@@ -458,12 +459,12 @@ var (
 			{
 				Name:    "question_key_hackathon_id",
 				Unique:  true,
-				Columns: []*schema.Column{QuestionsColumns[1], QuestionsColumns[9]},
+				Columns: []*schema.Column{QuestionsColumns[1], QuestionsColumns[10]},
 			},
 			{
 				Name:    "question_order",
 				Unique:  false,
-				Columns: []*schema.Column{QuestionsColumns[5]},
+				Columns: []*schema.Column{QuestionsColumns[6]},
 			},
 		},
 	}

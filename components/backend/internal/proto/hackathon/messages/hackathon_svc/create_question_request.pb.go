@@ -32,6 +32,7 @@ type CreateQuestionRequest struct {
 	Mandatory     bool                   `protobuf:"varint,5,opt,name=mandatory,proto3" json:"mandatory,omitempty"`
 	Order         int32                  `protobuf:"varint,6,opt,name=order,proto3" json:"order,omitempty"`
 	Options       []string               `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
+	PublicAnswers bool                   `protobuf:"varint,8,opt,name=public_answers,json=publicAnswers,proto3" json:"public_answers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,11 +116,18 @@ func (x *CreateQuestionRequest) GetOptions() []string {
 	return nil
 }
 
+func (x *CreateQuestionRequest) GetPublicAnswers() bool {
+	if x != nil {
+		return x.PublicAnswers
+	}
+	return false
+}
+
 var File_hackathon_messages_hackathon_svc_create_question_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_hackathon_svc_create_question_request_proto_rawDesc = "" +
 	"\n" +
-	">hackathon/messages/hackathon_svc/create_question_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\xa4\x02\n" +
+	">hackathon/messages/hackathon_svc/create_question_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\xcb\x02\n" +
 	"\x15CreateQuestionRequest\x12+\n" +
 	"\fhackathon_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vhackathonId\x12.\n" +
 	"\x03key\x18\x02 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18@2\x11^[a-z][a-z0-9_]*$R\x03key\x12 \n" +
@@ -128,7 +136,8 @@ const file_hackathon_messages_hackathon_svc_create_question_request_proto_rawDes
 	"\x04type\x18\x04 \x01(\x0e2 .hackathon.entities.QuestionTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04type\x12\x1c\n" +
 	"\tmandatory\x18\x05 \x01(\bR\tmandatory\x12\x14\n" +
 	"\x05order\x18\x06 \x01(\x05R\x05order\x12\x18\n" +
-	"\aoptions\x18\a \x03(\tR\aoptionsBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
+	"\aoptions\x18\a \x03(\tR\aoptions\x12%\n" +
+	"\x0epublic_answers\x18\b \x01(\bR\rpublicAnswersBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
 
 var (
 	file_hackathon_messages_hackathon_svc_create_question_request_proto_rawDescOnce sync.Once

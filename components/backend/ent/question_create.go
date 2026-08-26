@@ -65,6 +65,20 @@ func (_c *QuestionCreate) SetNillableMandatory(v *bool) *QuestionCreate {
 	return _c
 }
 
+// SetPublicAnswers sets the "public_answers" field.
+func (_c *QuestionCreate) SetPublicAnswers(v bool) *QuestionCreate {
+	_c.mutation.SetPublicAnswers(v)
+	return _c
+}
+
+// SetNillablePublicAnswers sets the "public_answers" field if the given value is not nil.
+func (_c *QuestionCreate) SetNillablePublicAnswers(v *bool) *QuestionCreate {
+	if v != nil {
+		_c.SetPublicAnswers(*v)
+	}
+	return _c
+}
+
 // SetOrder sets the "order" field.
 func (_c *QuestionCreate) SetOrder(v int) *QuestionCreate {
 	_c.mutation.SetOrder(v)
@@ -208,6 +222,10 @@ func (_c *QuestionCreate) defaults() {
 		v := question.DefaultMandatory
 		_c.mutation.SetMandatory(v)
 	}
+	if _, ok := _c.mutation.PublicAnswers(); !ok {
+		v := question.DefaultPublicAnswers
+		_c.mutation.SetPublicAnswers(v)
+	}
 	if _, ok := _c.mutation.Order(); !ok {
 		v := question.DefaultOrder
 		_c.mutation.SetOrder(v)
@@ -252,6 +270,9 @@ func (_c *QuestionCreate) check() error {
 	}
 	if _, ok := _c.mutation.Mandatory(); !ok {
 		return &ValidationError{Name: "mandatory", err: errors.New(`ent: missing required field "Question.mandatory"`)}
+	}
+	if _, ok := _c.mutation.PublicAnswers(); !ok {
+		return &ValidationError{Name: "public_answers", err: errors.New(`ent: missing required field "Question.public_answers"`)}
 	}
 	if _, ok := _c.mutation.Order(); !ok {
 		return &ValidationError{Name: "order", err: errors.New(`ent: missing required field "Question.order"`)}
@@ -325,6 +346,10 @@ func (_c *QuestionCreate) createSpec() (*Question, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Mandatory(); ok {
 		_spec.SetField(question.FieldMandatory, field.TypeBool, value)
 		_node.Mandatory = value
+	}
+	if value, ok := _c.mutation.PublicAnswers(); ok {
+		_spec.SetField(question.FieldPublicAnswers, field.TypeBool, value)
+		_node.PublicAnswers = value
 	}
 	if value, ok := _c.mutation.Order(); ok {
 		_spec.SetField(question.FieldOrder, field.TypeInt, value)
@@ -521,6 +546,18 @@ func (u *QuestionUpsert) UpdateMandatory() *QuestionUpsert {
 	return u
 }
 
+// SetPublicAnswers sets the "public_answers" field.
+func (u *QuestionUpsert) SetPublicAnswers(v bool) *QuestionUpsert {
+	u.Set(question.FieldPublicAnswers, v)
+	return u
+}
+
+// UpdatePublicAnswers sets the "public_answers" field to the value that was provided on create.
+func (u *QuestionUpsert) UpdatePublicAnswers() *QuestionUpsert {
+	u.SetExcluded(question.FieldPublicAnswers)
+	return u
+}
+
 // SetOrder sets the "order" field.
 func (u *QuestionUpsert) SetOrder(v int) *QuestionUpsert {
 	u.Set(question.FieldOrder, v)
@@ -681,6 +718,20 @@ func (u *QuestionUpsertOne) SetMandatory(v bool) *QuestionUpsertOne {
 func (u *QuestionUpsertOne) UpdateMandatory() *QuestionUpsertOne {
 	return u.Update(func(s *QuestionUpsert) {
 		s.UpdateMandatory()
+	})
+}
+
+// SetPublicAnswers sets the "public_answers" field.
+func (u *QuestionUpsertOne) SetPublicAnswers(v bool) *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetPublicAnswers(v)
+	})
+}
+
+// UpdatePublicAnswers sets the "public_answers" field to the value that was provided on create.
+func (u *QuestionUpsertOne) UpdatePublicAnswers() *QuestionUpsertOne {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdatePublicAnswers()
 	})
 }
 
@@ -1018,6 +1069,20 @@ func (u *QuestionUpsertBulk) SetMandatory(v bool) *QuestionUpsertBulk {
 func (u *QuestionUpsertBulk) UpdateMandatory() *QuestionUpsertBulk {
 	return u.Update(func(s *QuestionUpsert) {
 		s.UpdateMandatory()
+	})
+}
+
+// SetPublicAnswers sets the "public_answers" field.
+func (u *QuestionUpsertBulk) SetPublicAnswers(v bool) *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.SetPublicAnswers(v)
+	})
+}
+
+// UpdatePublicAnswers sets the "public_answers" field to the value that was provided on create.
+func (u *QuestionUpsertBulk) UpdatePublicAnswers() *QuestionUpsertBulk {
+	return u.Update(func(s *QuestionUpsert) {
+		s.UpdatePublicAnswers()
 	})
 }
 

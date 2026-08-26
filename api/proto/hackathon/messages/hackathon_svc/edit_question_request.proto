@@ -18,4 +18,5 @@ message EditQuestionRequest {
   optional bool mandatory = 5;
   optional int32 order = 6;
   repeated string options = 7;
+  optional bool public_answers = 8;
 }

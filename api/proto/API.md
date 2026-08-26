@@ -1310,6 +1310,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | mandatory | [bool](#bool) |  |  |
 | order | [int32](#int32) |  |  |
 | options | [string](#string) | repeated |  |
+| public_answers | [bool](#bool) |  |  |
 
 
 
@@ -1650,6 +1651,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | mandatory | [bool](#bool) |  |  |
 | order | [int32](#int32) |  |  |
 | options | [string](#string) | repeated |  |
+| public_answers | [bool](#bool) |  |  |
 
 
 
@@ -1785,6 +1787,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | mandatory | [bool](#bool) | optional |  |
 | order | [int32](#int32) | optional |  |
 | options | [string](#string) | repeated |  |
+| public_answers | [bool](#bool) | optional |  |
 
 
 

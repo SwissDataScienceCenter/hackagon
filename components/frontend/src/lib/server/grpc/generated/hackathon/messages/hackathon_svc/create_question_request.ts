@@ -18,10 +18,20 @@ export interface CreateQuestionRequest {
   mandatory: boolean;
   order: number;
   options: string[];
+  publicAnswers: boolean;
 }
 
 function createBaseCreateQuestionRequest(): CreateQuestionRequest {
-  return { hackathonId: "", key: "", label: "", type: 0, mandatory: false, order: 0, options: [] };
+  return {
+    hackathonId: "",
+    key: "",
+    label: "",
+    type: 0,
+    mandatory: false,
+    order: 0,
+    options: [],
+    publicAnswers: false,
+  };
 }
 
 export const CreateQuestionRequest: MessageFns<CreateQuestionRequest> = {
@@ -46,6 +56,9 @@ export const CreateQuestionRequest: MessageFns<CreateQuestionRequest> = {
     }
     for (const v of message.options) {
       writer.uint32(58).string(v!);
+    }
+    if (message.publicAnswers !== false) {
+      writer.uint32(64).bool(message.publicAnswers);
     }
     return writer;
   },
@@ -113,6 +126,14 @@ export const CreateQuestionRequest: MessageFns<CreateQuestionRequest> = {
           message.options.push(reader.string());
           continue;
         }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.publicAnswers = reader.bool();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -135,6 +156,11 @@ export const CreateQuestionRequest: MessageFns<CreateQuestionRequest> = {
       mandatory: isSet(object.mandatory) ? globalThis.Boolean(object.mandatory) : false,
       order: isSet(object.order) ? globalThis.Number(object.order) : 0,
       options: globalThis.Array.isArray(object?.options) ? object.options.map((e: any) => globalThis.String(e)) : [],
+      publicAnswers: isSet(object.publicAnswers)
+        ? globalThis.Boolean(object.publicAnswers)
+        : isSet(object.public_answers)
+        ? globalThis.Boolean(object.public_answers)
+        : false,
     };
   },
 
@@ -161,6 +187,9 @@ export const CreateQuestionRequest: MessageFns<CreateQuestionRequest> = {
     if (message.options?.length) {
       obj.options = message.options;
     }
+    if (message.publicAnswers !== false) {
+      obj.publicAnswers = message.publicAnswers;
+    }
     return obj;
   },
 
@@ -176,6 +205,7 @@ export const CreateQuestionRequest: MessageFns<CreateQuestionRequest> = {
     message.mandatory = object.mandatory ?? false;
     message.order = object.order ?? 0;
     message.options = object.options?.map((e) => e) || [];
+    message.publicAnswers = object.publicAnswers ?? false;
     return message;
   },
 };

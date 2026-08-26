@@ -83,6 +83,7 @@ type Question struct {
 	Mandatory     bool                   `protobuf:"varint,5,opt,name=mandatory,proto3" json:"mandatory,omitempty"`
 	Order         int32                  `protobuf:"varint,6,opt,name=order,proto3" json:"order,omitempty"`
 	Options       []string               `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
+	PublicAnswers bool                   `protobuf:"varint,8,opt,name=public_answers,json=publicAnswers,proto3" json:"public_answers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -166,11 +167,18 @@ func (x *Question) GetOptions() []string {
 	return nil
 }
 
+func (x *Question) GetPublicAnswers() bool {
+	if x != nil {
+		return x.PublicAnswers
+	}
+	return false
+}
+
 var File_hackathon_entities_question_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_question_proto_rawDesc = "" +
 	"\n" +
-	"!hackathon/entities/question.proto\x12\x12hackathon.entities\x1a\x1bbuf/validate/validate.proto\"\xea\x01\n" +
+	"!hackathon/entities/question.proto\x12\x12hackathon.entities\x1a\x1bbuf/validate/validate.proto\"\x91\x02\n" +
 	"\bQuestion\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
 	"\x03key\x18\x02 \x01(\tB\x18\xbaH\x15r\x132\x11^[a-z][a-z0-9_]*$R\x03key\x12\x14\n" +
@@ -178,7 +186,8 @@ const file_hackathon_entities_question_proto_rawDesc = "" +
 	"\x04type\x18\x04 \x01(\x0e2 .hackathon.entities.QuestionTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04type\x12\x1c\n" +
 	"\tmandatory\x18\x05 \x01(\bR\tmandatory\x12\x14\n" +
 	"\x05order\x18\x06 \x01(\x05R\x05order\x12\x18\n" +
-	"\aoptions\x18\a \x03(\tR\aoptions*u\n" +
+	"\aoptions\x18\a \x03(\tR\aoptions\x12%\n" +
+	"\x0epublic_answers\x18\b \x01(\bR\rpublicAnswers*u\n" +
 	"\fQuestionType\x12\x1d\n" +
 	"\x19QUESTION_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12QUESTION_TYPE_TEXT\x10\x01\x12\x16\n" +

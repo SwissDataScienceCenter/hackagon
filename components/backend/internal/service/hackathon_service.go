@@ -1585,6 +1585,7 @@ func (s *HackathonService) CreateQuestion(
 		SetKey(req.GetKey()).
 		SetLabel(req.GetLabel()).
 		SetMandatory(req.GetMandatory()).
+		SetPublicAnswers(req.GetPublicAnswers()).
 		SetDataType(datatype).
 		SetOrder(int(req.GetOrder())).
 		SetOptions(req.GetOptions()).
@@ -1689,6 +1690,9 @@ func (s *HackathonService) EditQuestion(
 	}
 	if len(req.GetOptions()) > 0 {
 		update = update.SetOptions(req.GetOptions())
+	}
+	if req.PublicAnswers != nil {
+		update = update.SetPublicAnswers(req.GetPublicAnswers())
 	}
 	update = update.SetModifier(user)
 
@@ -1912,10 +1916,15 @@ func (s *HackathonService) ListParticipantAnswers(
 		))
 	}
 	if !hasWrite {
-		// only return own user if user does not have write access
-		q = q.Where(entanswer.HasUserWith(
-			entuser.ID(user.ID),
-		))
+		// return own answers + answers to public questions from other participants
+		q = q.Where(
+			entanswer.Or(
+				entanswer.HasUserWith(entuser.ID(user.ID)),
+				entanswer.HasQuestionWith(
+					entquestion.PublicAnswers(true),
+				),
+			),
+		)
 	}
 
 	answers, err := q.All(ctx)

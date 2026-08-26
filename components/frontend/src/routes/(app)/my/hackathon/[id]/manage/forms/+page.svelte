@@ -16,6 +16,7 @@
         mandatory: false,
         order: data.questions.length + 1,
         options: [] as string[],
+        publicAnswers: false,
         answerCount: 0
     });
 
@@ -27,7 +28,8 @@
         <h1 class="m-0 text-title text-ink">Registration Form</h1>
         <p class="m-0 text-xs text-ink-3">
             What this event asks people when they sign up. Questions marked required have
-            to be answered before someone can join.
+            to be answered before someone can join, and answers are for organizers only
+            unless you choose to show them to participants.
         </p>
     </div>
 

@@ -31,6 +31,8 @@ type Question struct {
 	DataType question.DataType `json:"data_type,omitempty"`
 	// Whether the participant must answer this question to join.
 	Mandatory bool `json:"mandatory,omitempty"`
+	// Whether other participants can see answers to this question.
+	PublicAnswers bool `json:"public_answers,omitempty"`
 	// Display order; lower values appear first.
 	Order int `json:"order,omitempty"`
 	// Allowed values for enum-type questions.
@@ -111,7 +113,7 @@ func (*Question) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case question.FieldOptions:
 			values[i] = new([]byte)
-		case question.FieldMandatory:
+		case question.FieldMandatory, question.FieldPublicAnswers:
 			values[i] = new(sql.NullBool)
 		case question.FieldOrder:
 			values[i] = new(sql.NullInt64)
@@ -175,6 +177,12 @@ func (_m *Question) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field mandatory", values[i])
 			} else if value.Valid {
 				_m.Mandatory = value.Bool
+			}
+		case question.FieldPublicAnswers:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field public_answers", values[i])
+			} else if value.Valid {
+				_m.PublicAnswers = value.Bool
 			}
 		case question.FieldOrder:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -286,6 +294,9 @@ func (_m *Question) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("mandatory=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Mandatory))
+	builder.WriteString(", ")
+	builder.WriteString("public_answers=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PublicAnswers))
 	builder.WriteString(", ")
 	builder.WriteString("order=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Order))
