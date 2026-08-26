@@ -132,25 +132,28 @@ func (h *harness) seedH5(now time.Time, alice, dana *actor) error {
 	// the form rather than just a button.
 	if _, err := h.createQuestions(alice, id, []questionSpec{
 		{
-			key:       "affiliation",
-			label:     "Which partner organization are you with?",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_TEXT,
-			mandatory: true,
-			options:   nil,
+			key:           "affiliation",
+			label:         "Which partner organization are you with?",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_TEXT,
+			mandatory:     true,
+			options:       nil,
+			publicAnswers: true,
 		},
 		{
-			key:       "data_agreement",
-			label:     "I have signed the data-sharing agreement",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_BOOL,
-			mandatory: true,
-			options:   nil,
+			key:           "data_agreement",
+			label:         "I have signed the data-sharing agreement",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_BOOL,
+			mandatory:     true,
+			options:       nil,
+			publicAnswers: false,
 		},
 		{
-			key:       "access_needs",
-			label:     "Anything we should know to make the venue work for you?",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_TEXT,
-			mandatory: false,
-			options:   nil,
+			key:           "access_needs",
+			label:         "Anything we should know to make the venue work for you?",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_TEXT,
+			mandatory:     false,
+			options:       nil,
+			publicAnswers: false,
 		},
 	}); err != nil {
 		return fmt.Errorf("questions: %w", err)
