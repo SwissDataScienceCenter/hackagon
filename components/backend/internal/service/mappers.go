@@ -106,6 +106,8 @@ func projectStatusFromEnt(s string) hackEnts.ProjectStatus {
 		return hackEnts.ProjectStatus_PROJECT_STATUS_PROPOSED
 	case "approved":
 		return hackEnts.ProjectStatus_PROJECT_STATUS_APPROVED
+	case "rejected":
+		return hackEnts.ProjectStatus_PROJECT_STATUS_REJECTED
 	default:
 		return hackEnts.ProjectStatus_PROJECT_STATUS_UNSPECIFIED
 	}
@@ -133,7 +135,24 @@ func projectEntryFromEnt(p *ent.Project, hackathonID uuid.UUID) *hackEnts.Projec
 	}
 	e.ModifierId = p.Edges.Modifier.ID.String()
 
+	if len(p.Edges.Comments) > 0 {
+		e.Comments = make([]*hackEnts.ProjectComment, 0, len(p.Edges.Comments))
+		for _, c := range p.Edges.Comments {
+			e.Comments = append(e.Comments, projectCommentEntryFromEnt(c))
+		}
+	}
+
 	return e
+}
+
+func projectCommentEntryFromEnt(c *ent.ProjectComment) *hackEnts.ProjectComment {
+	return &hackEnts.ProjectComment{
+		Id:        c.ID.String(),
+		UserId:    c.Edges.User.ID.String(),
+		UserName:  c.Edges.User.DisplayName,
+		Text:      c.Text,
+		CreatedAt: timestamppb.New(c.CreatedAt),
+	}
 }
 
 func projectWithPreferencesEntryFromEnt(
