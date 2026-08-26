@@ -538,13 +538,14 @@ func questionTypeFromEnt(t entquestion.DataType) hackEnts.QuestionType {
 
 func questionEntryFromEnt(q *ent.Question) *hackEnts.Question {
 	return &hackEnts.Question{
-		Id:        q.ID.String(),
-		Key:       q.Key,
-		Label:     q.Label,
-		Type:      questionTypeFromEnt(q.DataType),
-		Mandatory: q.Mandatory,
-		Order:     int32(q.Order),
-		Options:   q.Options,
+		Id:            q.ID.String(),
+		Key:           q.Key,
+		Label:         q.Label,
+		Type:          questionTypeFromEnt(q.DataType),
+		Mandatory:     q.Mandatory,
+		Order:         int32(q.Order),
+		Options:       q.Options,
+		PublicAnswers: q.PublicAnswers,
 	}
 }
 
