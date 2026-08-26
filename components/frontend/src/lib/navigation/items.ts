@@ -26,6 +26,7 @@ import Send from "lucide-svelte/icons/send"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
+import Info from "lucide-svelte/icons/info"
 import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
 import SlidersHorizontal from "lucide-svelte/icons/sliders-horizontal"
@@ -112,6 +113,11 @@ export interface HackathonPageRef {
  * `TeamService.List` asks only for `hackathon:read`, which every confirmed
  * member has — it is whether the page has anything on it yet. Zero is the honest
  * default, the same way `manageNav` treats `trackCount`.
+ *
+ * `hasDescription` gates About on the same principle: the hackathon's
+ * description is optional, and with none written the entry leads to a blank
+ * page. False by default, so a caller that has not looked cannot claim there is
+ * one.
  */
 export function memberNav(
   hackathonId: string,
@@ -119,6 +125,7 @@ export function memberNav(
   votingEnabled = false,
   resultsVisible = false,
   teamCount = 0,
+  hasDescription = false,
 ): NavItem[] {
   return [
     {
@@ -127,6 +134,21 @@ export function memberNav(
       icon: LayoutDashboard,
       href: resolve(`/my/hackathon/${hackathonId}/overview`),
     },
+    // Second, straight after Overview: it is what the hackathon *is*, so it is
+    // what a first visit wants and what every later visit skips. It used to be
+    // a clamped subtitle in the overview's hero, which rendered the organiser's
+    // markdown as literal `##` and `-` characters and had room for two lines of
+    // it. A destination of its own is what markdown needs.
+    ...(hasDescription
+      ? [
+          {
+            id: "member:about",
+            label: "About",
+            icon: Info,
+            href: resolve(`/my/hackathon/${hackathonId}/about`),
+          },
+        ]
+      : []),
     {
       id: "member:participants",
       label: "Participants",

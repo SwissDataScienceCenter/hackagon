@@ -93,6 +93,7 @@
         resultsVisible={data.resultsVisible}
         teamCount={data.teamCount}
         trackCount={hackathon.tracks.length}
+        hasDescription={Boolean(hackathon.description)}
         stateNeedsAttention={alerts.length > 0}
     />
 
@@ -119,7 +120,6 @@
                 {participantCount}
                 organizers={[]}
                 badges={heroBadges}
-                description={hackathon.description}
             />
 
             {#if phases.length > 0}

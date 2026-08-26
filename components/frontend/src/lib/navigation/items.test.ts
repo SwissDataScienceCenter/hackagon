@@ -44,6 +44,35 @@ describe("memberNav", () => {
     ])
   })
 
+  // The description is optional on a hackathon, so the entry is too: About with
+  // nothing on it is a destination that wastes the trip.
+  describe("hasDescription", () => {
+    it("offers no About entry when there is no description", () => {
+      expect(
+        idsOf(memberNav("hack-1", [], true, true, 1, false)),
+      ).not.toContain("member:about")
+    })
+
+    // False by default, so a caller that has not looked cannot claim there is
+    // one — the same contract `teamCount` and `trackCount` give.
+    it("defaults to offering no About entry", () => {
+      expect(idsOf(memberNav("hack-1"))).not.toContain("member:about")
+    })
+
+    it("offers it second, right after Overview", () => {
+      const items = memberNav("hack-1", [], false, false, 0, true)
+
+      expectOrder(items, [
+        "member:overview",
+        "member:about",
+        "member:participants",
+      ])
+      const item = items.find((i) => i.id === "member:about")
+      expect(item?.label).toBe("About")
+      expect(item?.href).toBe("/my/hackathon/hack-1/about")
+    })
+  })
+
   // Not a permission — every confirmed member may read teams — but whether the
   // page has anything on it. Teams form partway through a hackathon, and before
   // they do the entry would lead to an empty list a participant cannot act on.

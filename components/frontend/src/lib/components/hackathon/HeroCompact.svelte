@@ -1,15 +1,4 @@
 <script lang="ts">
-    /**
-     * Above this, the description clamps to two lines and offers to expand.
-     *
-     * A character count rather than a measurement: knowing whether text actually
-     * overflows means reading `scrollHeight` after layout, which costs an effect
-     * and a second render to save nothing. At two lines of `text-xs` in this
-     * column the threshold is wrong only for descriptions sitting right on the
-     * boundary, where both answers look the same.
-     */
-    const CLAMP_CHARS = 180;
-
     let {
         title,
         dates,
@@ -19,7 +8,6 @@
         participantCapacity,
         organizers,
         badges = [],
-        description = '',
     }: {
         title: string;
         dates: string;
@@ -34,20 +22,13 @@
         participantCapacity?: number;
         organizers: { name: string; logoUrl: string; logoDarkUrl?: string }[];
         badges?: { label: string; variant: string }[];
-        /**
-         * The hackathon's own description, or empty.
-         *
-         * It used to be an About card at the foot of the overview, which is the
-         * page for what has changed since the last visit — and a description
-         * changes never. It is identity, so it belongs with the rest of the
-         * identity, where a first visit lands and a returning one skims past.
-         * The dashboard card a member clicks to get here already shows it too.
-         */
-        description?: string;
     } = $props();
 
-    let expanded = $state(false);
-    const clampable = $derived(description.length > CLAMP_CHARS);
+    // The description is deliberately not here. It is markdown — headings,
+    // lists, links — and this hero rendered it as plain text in a two-line
+    // clamp, so a member read `## About` and `- item` as literal characters.
+    // Rendering it properly instead is what the About entry in `memberNav` is
+    // for: markdown needs room and a page of its own, not a subtitle slot.
 </script>
 
 <section
@@ -71,26 +52,6 @@
                 {#each badges as b (b.label)}
                     <span class="badge {b.variant}">{b.label}</span>
                 {/each}
-            </div>
-        {/if}
-        <!-- Clamped, because the hero is identity at a glance and a long
-             description would push the count off a phone. The toggle expands it
-             in place — there is nowhere else in the member subtree that carries
-             the full text. -->
-        {#if description}
-            <div class="flex flex-col items-start gap-0.5">
-                <p class="prose m-0 text-xs text-ink-2 {expanded ? '' : 'line-clamp-2'}">
-                    {description}
-                </p>
-                {#if clampable}
-                    <button
-                        type="button"
-                        class="text-xs font-semibold text-accent-ink hover:underline"
-                        onclick={() => (expanded = !expanded)}
-                    >
-                        {expanded ? 'Less' : 'More'}
-                    </button>
-                {/if}
             </div>
         {/if}
         <!-- Both guarded rather than always rendered: `venue` is the empty string
