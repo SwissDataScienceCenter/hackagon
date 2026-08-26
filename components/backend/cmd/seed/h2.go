@@ -178,6 +178,7 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 			description: "ML-based system that maximises solar panel output by predicting optimal tilt angles based on hyperlocal weather forecasts.",
 			track:       "Energy",
 			approvedBy:  admin,
+			rejectedBy:  nil,
 		},
 		{
 			by:          alice,
@@ -185,6 +186,7 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 			description: "Real-time dashboard for detecting grid imbalances and automating load shedding decisions using time-series anomaly detection.",
 			track:       "Energy",
 			approvedBy:  nil,
+			rejectedBy:  nil,
 		},
 		{
 			by:          alice,
@@ -192,6 +194,15 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 			description: "Mobile app using computer vision to identify crop diseases from field photos, providing treatment recommendations and outbreak tracking.",
 			track:       "Agriculture & Food",
 			approvedBy:  admin,
+			rejectedBy:  nil,
+		},
+		{
+			by:          bob,
+			title:       "Carbon Offset Marketplace",
+			description: "Peer-to-peer carbon credit trading platform for small-scale renewable energy producers.",
+			track:       "Energy",
+			approvedBy:  nil,
+			rejectedBy:  admin,
 		},
 	})
 	if err != nil {

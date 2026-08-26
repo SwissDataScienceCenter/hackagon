@@ -452,6 +452,7 @@ type projectSpec struct {
 	description string
 	track       string
 	approvedBy  *actor
+	rejectedBy  *actor
 }
 
 // proposeProjects proposes and optionally approves a hackathon's projects,
@@ -489,6 +490,14 @@ func (h *harness) proposeProjects(
 				ProjectId: resp.GetProjectId(),
 			}); err != nil {
 				return nil, fmt.Errorf("approve %q: %w", spec.title, err)
+			}
+		}
+		if spec.rejectedBy != nil {
+			if _, err := h.project.Reject(spec.rejectedBy.ctx, &projectMsgs.RejectRequest{
+				ProjectId:     resp.GetProjectId(),
+				ReviewComment: nil,
+			}); err != nil {
+				return nil, fmt.Errorf("reject %q: %w", spec.title, err)
 			}
 		}
 	}

@@ -20,6 +20,8 @@ import "hackathon/messages/project_svc/list_request.proto";
 import "hackathon/messages/project_svc/list_response.proto";
 import "hackathon/messages/project_svc/propose_request.proto";
 import "hackathon/messages/project_svc/propose_response.proto";
+import "hackathon/messages/project_svc/reject_request.proto";
+import "hackathon/messages/project_svc/reject_response.proto";
 import "hackathon/messages/project_svc/remove_preference_request.proto";
 import "hackathon/messages/project_svc/remove_preference_response.proto";
 import "hackathon/messages/project_svc/set_preference_request.proto";
