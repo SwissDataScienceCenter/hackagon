@@ -88,16 +88,61 @@ func (h *harness) setCaps(owner *actor, hackathonID string, on ...hackEnts.Capab
 // hackathon's own `ends_at`, which is the answer the fixture wants anyway and
 // the one an organizer accepting the default would get.
 func (h *harness) createInvite(owner *actor, hackathonID string) (string, error) {
-	resp, err := h.hackathon.CreateInvite(owner.ctx, &hackMsgs.CreateInviteRequest{
-		HackathonId: hackathonID,
-		Note:        ptr("Seeded invite — how the fixture's participants got in."),
-		ExpiresAt:   nil,
-	})
+	inv, err := h.mintInvite(
+		owner,
+		hackathonID,
+		"Seeded invite — how the fixture's participants got in.",
+		nil,
+	)
 	if err != nil {
-		return "", fmt.Errorf("create invite: %w", err)
+		return "", err
 	}
 
-	return resp.GetInvite().GetToken(), nil
+	return inv.GetToken(), nil
+}
+
+// mintInvite is createInvite with the note and the expiry spelled out, handing
+// back the whole entity rather than just the token.
+//
+// The id is what revokeInvite needs, and it is only ever returned here —
+// CreateInvite's response is the one place an invite's id and its token appear
+// together, so a fixture that wants to revoke what it just minted has to keep
+// hold of this.
+//
+// A nil `expiresAt` is not "never": CreateInvite defaults it to the hackathon's
+// `ends_at`, which is what an organizer accepting the default gets. Pass a time
+// in the past to mint a link that is already dead.
+func (h *harness) mintInvite(
+	owner *actor,
+	hackathonID, note string,
+	expiresAt *timestamppb.Timestamp,
+) (*hackEnts.HackathonInvite, error) {
+	resp, err := h.hackathon.CreateInvite(owner.ctx, &hackMsgs.CreateInviteRequest{
+		HackathonId: hackathonID,
+		Note:        ptr(note),
+		ExpiresAt:   expiresAt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create invite %q: %w", note, err)
+	}
+
+	return resp.GetInvite(), nil
+}
+
+// revokeInvite kills a link, which is what an organizer does when one has
+// spread further than intended.
+//
+// Revoking rather than deleting is the API's own choice — RevokeInvite stamps
+// `revoked_at` and the row stays — so a revoked invite is still listed, and the
+// fixture needs one to show what that looks like.
+func (h *harness) revokeInvite(owner *actor, inviteID string) error {
+	if _, err := h.hackathon.RevokeInvite(owner.ctx, &hackMsgs.RevokeInviteRequest{
+		InviteId: inviteID,
+	}); err != nil {
+		return fmt.Errorf("revoke invite %s: %w", inviteID, err)
+	}
+
+	return nil
 }
 
 // join signs somebody up. Join always writes a waitlisted row — approval is a

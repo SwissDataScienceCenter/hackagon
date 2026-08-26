@@ -3,12 +3,13 @@
 `just db::seed` populates the database with a fixture designed to exercise the
 UI across past / ongoing / upcoming hackathons, public and private visibility,
 approved and proposed projects, draft and final submissions, a waitlisted
-participant, and — in H4 — a hundred-person hackathon waiting for its teams to
-be formed. All timestamps are relative to `time.Now()` at seed time, so
-re-seeding keeps the ongoing hackathon ongoing. Each hackathon also gets the
-capabilities its phase calls for — see [Capabilities](#capabilities).
+participant, invitation links in all three of their states, and — in H4 — a
+hundred-person hackathon waiting for its teams to be formed. All timestamps are
+relative to `time.Now()` at seed time, so re-seeding keeps the ongoing hackathon
+ongoing. Each hackathon also gets the capabilities its phase calls for — see
+[Capabilities](#capabilities).
 
-Running again when all four hackathons already exist is a no-op. Finding _some_
+Running again when all five hackathons already exist is a no-op. Finding _some_
 of them is an error rather than either a skip or a re-seed: it means a previous
 run died partway, and the fix is `just clean::state`. The seed is not atomic —
 it drives the API, and several handlers open a transaction of their own, which
@@ -74,14 +75,14 @@ from config; the others are hardcoded constants in [main.go](main.go).
 `bob` and `charles` take part in H4, so signing in as either lands you inside
 the large fixture; `alice` lands there as its organizer.
 
-| Username         | Display name      | Role across the seed                               | Can log in |
-| ---------------- | ----------------- | -------------------------------------------------- | ---------- |
-| `hackagon-admin` | Hackagon Admin    | Global admin; creator and owner of H2 and H3       | yes        |
-| `alice`          | Alice Wonderland  | Creator of H1 and H4; participant in H1, H2 and H3 | yes        |
-| `bob`            | Bob Henderson     | Participant in H1, H2, H4; Teams Beta, Gamma       | yes        |
-| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed participant in H4     | yes        |
-| `dana`           | Dana Okonkwo      | Participant in H1 and H3; Teams Alpha, Epsilon     | **no**     |
-| `yuki`           | Yuki Tanaka       | Participant in H2; Team Gamma                      | **no**     |
+| Username         | Display name      | Role across the seed                                | Can log in |
+| ---------------- | ----------------- | --------------------------------------------------- | ---------- |
+| `hackagon-admin` | Hackagon Admin    | Global admin; creator and owner of H2 and H3        | yes        |
+| `alice`          | Alice Wonderland  | Creator of H1, H4 and H5; participant in H1, H2, H3 | yes        |
+| `bob`            | Bob Henderson     | Participant in H1, H2, H4; Teams Beta, Gamma        | yes        |
+| `charles`        | Charles Whitfield | Waitlisted for H1; confirmed participant in H4      | yes        |
+| `dana`           | Dana Okonkwo      | Participant in H1 and H3; waitlisted in H5          | **no**     |
+| `yuki`           | Yuki Tanaka       | Participant in H2; Team Gamma                       | **no**     |
 
 **`hackagon-admin` is a participant in nothing.** He is the platform operator —
 global admin, and owner of the two hackathons he created — which is a job rather
@@ -117,6 +118,7 @@ no project-scoped `Owner`.
 | H2  | Climate Tech Hackathon 2026  | public     | ongoing  | `-2` to `+2`           | hackagon-admin | 1     | Gamma: final                        |
 | H3  | Internal Product Sprint      | private    | past     | `-1mo-20` to `-1mo-18` | hackagon-admin | 2     | Delta: draft, final; Epsilon: final |
 | H4  | Data for Good Hackathon 2026 | public     | upcoming | `+5` to `+8`           | alice          | **0** | —                                   |
+| H5  | Partner Data Sprint 2026     | private    | upcoming | `+12` to `+14`         | alice          | **0** | —                                   |
 
 ## Timeline
 
@@ -136,8 +138,9 @@ gantt
     H2 Climate Tech (public)        :active, 2026-04-20, 5d
 
     section Upcoming
-    H4 Data for Good (public)       :2026-04-27, 4d
-    H1 AI Innovation (public)       :2026-05-11, 3d
+    H4 Data for Good (public)        :2026-04-27, 4d
+    H5 Partner Data Sprint (private) :2026-05-04, 3d
+    H1 AI Innovation (public)        :2026-05-11, 3d
 ```
 
 H4's registration window (`-21` to `-3`) and team-formation phase (`-3` to `+4`)
@@ -154,23 +157,26 @@ reads, and the casbin policy, which is the only thing the enforcer reads. The
 seed states all six on every call, so the set below is a declaration rather than
 a patch on whatever was there before.
 
-|                     | H1 upcoming | H2 ongoing | H3 past | H4 forming teams |
-| ------------------- | ----------- | ---------- | ------- | ---------------- |
-| Register            | ✅          | —          | —       | —                |
-| Propose projects    | ✅          | ✅         | —       | ✅               |
-| Team preferences    | ✅          | ✅         | —       | ✅               |
-| Project submissions | ✅          | ✅         | —       | —                |
-| Vote                | —           | —          | ✅      | —                |
-| View results        | —           | —          | ✅      | —                |
+|                     | H1 upcoming | H2 ongoing | H3 past | H4 forming teams | H5 invite-only |
+| ------------------- | ----------- | ---------- | ------- | ---------------- | -------------- |
+| Register            | ✅          | —          | —       | —                | ✅             |
+| Propose projects    | ✅          | ✅         | —       | ✅               | —              |
+| Team preferences    | ✅          | ✅         | —       | ✅               | —              |
+| Project submissions | ✅          | ✅         | —       | —                | —              |
+| Vote                | —           | —          | ✅      | —                | —              |
+| View results        | —           | —          | ✅      | —                | —              |
 
 Chosen to match each hackathon's phase: H1 is taking sign-ups and proposals, H2
 is running, H3 is over, H4 has closed its doors and is sorting people into
 teams. Registration is off for H2 because it started two days ago, and off for
-H4 because sign-up closed three days ago — **H1 is where joining is testable**,
-and **H4 is where a refused `Join` is the correct answer** rather than a
-misconfiguration. Voting is on in H3 only, which is where it belongs — you vote
-once the building has stopped. **H3 is therefore the only place voting is
-testable.**
+H4 because sign-up closed three days ago — **H1 is where joining a public
+hackathon is testable**, **H5 is where joining a private one is** (the only
+private hackathon with `register` on), and **H4 is where a refused `Join` is the
+correct answer** rather than a misconfiguration. H5 carries `register` and
+nothing else because it is the fixture for the door rather than the room: the
+sprint has not started, so there is nothing inside for a confirmed member to do
+yet. Voting is on in H3 only, which is where it belongs — you vote once the
+building has stopped. **H3 is therefore the only place voting is testable.**
 
 `vote` writes **three** casbin rows, not one: `Vote:Create`, `VoteCategory:Read`
 and `Submission:Read`. The second is the one that looks redundant and is not —
@@ -212,16 +218,17 @@ exactly that failure. Two consequences while the ticket is open:
 ## Registration questions
 
 Organizer-defined questions answered at sign-up — read with `ListQuestions`,
-answered through `Join` or later revised with `SubmitAnswers`. Three of the four
+answered through `Join` or later revised with `SubmitAnswers`. Four of the five
 hackathons ask something; **H3 asks nothing**, which is the fixture for a
 hackathon with no form at all.
 
-| #   | Questions                                                                              | Mandatory         | Answered by                        |
-| --- | -------------------------------------------------------------------------------------- | ----------------- | ---------------------------------- |
-| H1  | `affiliation` (text), `tshirt_size` (enum), `dietary` (text), `code_of_conduct` (bool) | all but `dietary` | alice, bob, dana — **not** charles |
-| H2  | `affiliation` (text), `experience_level` (enum)                                        | both              | alice, bob, yuki (everyone)        |
-| H3  | —                                                                                      | —                 | —                                  |
-| H4  | `affiliation` (text), `tshirt_size` (enum), `remote` (bool)                            | all but `remote`  | roughly 6 in 7 of the hundred      |
+| #   | Questions                                                                              | Mandatory              | Answered by                                  |
+| --- | -------------------------------------------------------------------------------------- | ---------------------- | -------------------------------------------- |
+| H1  | `affiliation` (text), `tshirt_size` (enum), `dietary` (text), `code_of_conduct` (bool) | all but `dietary`      | alice, bob, dana — **not** charles           |
+| H2  | `affiliation` (text), `experience_level` (enum)                                        | both                   | alice, bob, yuki (everyone)                  |
+| H3  | —                                                                                      | —                      | —                                            |
+| H4  | `affiliation` (text), `tshirt_size` (enum), `remote` (bool)                            | all but `remote`       | roughly 6 in 7 of the hundred                |
+| H5  | `affiliation` (text), `data_agreement` (bool), `access_needs` (text)                   | all but `access_needs` | nobody — dana joined before the form existed |
 
 H1 is where the sign-up flow is exercised: it is the only hackathon with
 `register` on, so a newcomer reads the questions before joining and sends the
@@ -300,14 +307,14 @@ fixture.
 
 ## User involvement
 
-| User           | H1 AI Innovation                  | H2 Climate Tech                            | H3 Internal Sprint                         | H4 Data for Good                           |
-| -------------- | --------------------------------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
-| hackagon-admin | _not a participant_               | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | _not a participant_                        |
-| alice          | **creator**; member of Team Alpha | participant                                | member of Team Delta                       | **creator** and owner; _not_ a participant |
-| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects |
-| charles        | _waitlisted_                      | —                                          | —                                          | participant (confirmed)                    |
-| dana           | member of Team Alpha              | —                                          | member of Team Epsilon                     | —                                          |
-| yuki           | —                                 | member of Team Gamma                       | —                                          | —                                          |
+| User           | H1 AI Innovation                  | H2 Climate Tech                            | H3 Internal Sprint                         | H4 Data for Good                           | H5 Partner Sprint                          |
+| -------------- | --------------------------------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| hackagon-admin | _not a participant_               | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant | _not a participant_                        | _not a participant_                        |
+| alice          | **creator**; member of Team Alpha | participant                                | member of Team Delta                       | **creator** and owner; _not_ a participant | **creator** and owner; _not_ a participant |
+| bob            | participant; member of Team Beta  | member of Team Gamma                       | —                                          | participant; proposed 5 of the 15 projects | — left free to redeem a link by hand       |
+| charles        | _waitlisted_                      | —                                          | —                                          | participant (confirmed)                    | — left free to redeem a link by hand       |
+| dana           | member of Team Alpha              | —                                          | member of Team Epsilon                     | —                                          | _waitlisted_, via the live invitation      |
+| yuki           | —                                 | member of Team Gamma                       | —                                          | —                                          | —                                          |
 
 **Nobody belongs to two teams in the same hackathon.** A person works on one
 project, so `alice` holds Team Alpha and `bob` holds Team Beta rather than alice
@@ -524,3 +531,82 @@ the same fixture exactly. Change `dataForGoodSeed` if you want a different draw.
   tracks, so both shapes stay covered.
 
 Pages: `About`, `How teams are formed`, `Code of Conduct` (all visible).
+
+## H5 — Partner Data Sprint 2026
+
+The invitation fixture, and **the only hackathon in which the invite flow can be
+exercised at all**. H3 is private too, but it is over and its `register` is off,
+so `Join` refuses before it ever looks at a token — which made every attempt to
+test an invitation come back `PermissionDenied` for a reason that had nothing to
+do with the invitation. H5 is private, upcoming and taking sign-ups, so a link
+is the only way in and following one gets you somewhere.
+
+No phases, no tracks, no projects, no pages. That is deliberate: this fixture is
+the door, not the room. What it does have is a description written in markdown,
+because the description is the whole of what an invitee sees before deciding —
+`PreviewInvite` returns the shallow hackathon and nothing nested.
+
+### The three invitations
+
+| State       | Note on it                                  | `expires_at`                       |
+| ----------- | ------------------------------------------- | ---------------------------------- |
+| **live**    | `Partner mailing list — the live link.`     | day `+14`, the event's end         |
+| **revoked** | `Forwarded outside the partners — revoked.` | day `+14`, but `revoked_at` is set |
+| **expired** | `Last year's partner list — expired.`       | day `-1`                           |
+
+The live one is the one dana used, and the one to test with. The other two exist
+because neither can reasonably be made by hand: an organizer has no way to
+backdate an expiry, and revoking is a one-way door — so without them the revoked
+and expired refusals could only be seen once, by breaking the fixture.
+
+`ListInvites` returns all three with no filter and no status field of its own,
+so whatever renders them derives the state from the three timestamps.
+
+### The links are printed
+
+A token is unguessable by design, so the seed logs each one as a ready URL:
+
+```
+INFO H5 invitation link state=live    url=http://localhost:8081/invite/<token> note=...
+INFO H5 invitation link state=revoked url=http://localhost:8081/invite/<token> note=...
+INFO H5 invitation link state=expired url=http://localhost:8081/invite/<token> note=...
+```
+
+The origin is hardcoded because the frontend's dev port is not a variable
+either: 8081 is fixed in `svelte.config.js`, held by `strictPort` in
+`vite.config.ts`, and listed in the Keycloak realm's allowed redirects. The seed
+talks to an in-process server and never sees an HTTP request, so it has no way
+to learn a deployed origin.
+
+To get them again without re-seeding, ask the API as the owner:
+
+```bash
+just rpc::as alice aliceandbob hackathon.HackathonService/ListInvites \
+  '{"hackathonId": "<H5 id>"}'
+```
+
+### Why alice owns it
+
+A global admin passes casbin's `g2(r.sub, "admin")` escape hatch, so testing the
+organizer surfaces as `hackagon-admin` proves nothing about the
+`hackathon:write` gate all four invite RPCs sit behind. alice holds `Owner` and
+nothing else, which is the permission a real organizer has. She takes no part in
+the sprint, same as in H4.
+
+### Deliberately absent — do not "fix"
+
+- **bob and charles are not in H5.** Both are left out so either can redeem a
+  link by hand, which needs an account that can sign in to Keycloak. dana holds
+  the seeded seat precisely because she cannot log in, so she can never be
+  mistaken for the account you are meant to test as.
+- **dana has answered nothing.** She joins on the live invitation _before_ the
+  form is created, the same order H1 uses and for the same reason: `Join`
+  refuses a sign-up leaving a mandatory question unanswered, and the seed's
+  `joinWithInvite` sends no answers. So she is the fixture for somebody who got
+  in before the form went up — waitlisted, with nothing on file to read.
+- **dana is not approved.** Approval is a separate act, and somebody sitting in
+  the queue is what gives the organizer's waitlist something to approve.
+- **Something in the form is mandatory** (`affiliation` and `data_agreement`). A
+  private hackathon that asked nothing could be joined by posting an empty form,
+  and then an invitation page would only ever need a button. The mandatory
+  questions are what make it have to carry the form.
