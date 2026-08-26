@@ -10,6 +10,9 @@ import {
   questionRows,
   type QuestionRow,
 } from "$lib/server/hackathon/registrationForm"
+// Shared and tested, because it is subtle: a session can carry a user and a
+// stale accessToken at once, and only `error` says so. See $lib/server/session.
+import { usableSession } from "$lib/server/session"
 // The type import also pulls in the module augmentation that puts `accessToken`
 // on Session — the same one hooks.server.ts relies on.
 import type { CustomSession } from "../../../../auth.d"
@@ -45,14 +48,14 @@ interface Preview {
   alreadyParticipant: boolean
 }
 
-/** An authorized client from the session, or undefined when nobody is signed in.
+/** An authorized client from the session, or undefined when there is no usable one.
  *
  * Built here rather than taken from `event.locals.grpc`, which `hooks.server.ts`
  * only creates for protected routes. This route is public, so `locals.grpc` is
  * undefined even on a signed-in visit and `requireGrpc` would throw.
  */
 function authorizedFor(session: CustomSession | null) {
-  return session?.accessToken
+  return usableSession(session) && session?.accessToken
     ? createAuthorizedGrpc(session.accessToken)
     : undefined
 }
@@ -102,7 +105,10 @@ async function preview(token: string): Promise<Preview> {
 export const load: PageServerLoad = async (event) => {
   const p = await preview(event.params.token)
   const session = (await event.locals.auth()) as CustomSession | null
-  const signedIn = Boolean(session?.user)
+  // A stale session counts as signed out here: the page then offers the sign-in
+  // button, which is the one control that fixes it. Offering "Request a place"
+  // to somebody holding a dead token is how this page produced a 500.
+  const signedIn = usableSession(session)
 
   // Whether an existing participant has been approved yet, derived rather than
   // asked: `PreviewInvite` reports only *that* somebody holds a participant row,
@@ -144,11 +150,15 @@ export const actions: Actions = {
   join: async (event) => {
     const session = (await event.locals.auth()) as CustomSession | null
     const grpc = authorizedFor(session)
-    // The page only offers this button to a signed-in visitor — an anonymous one
-    // gets the sign-in button instead — so this is the belt to that braces
-    // rather than the path anybody takes.
+    // Reachable, and not only through a hand-made POST: a session can go stale
+    // while the page sits open in a mail client, which is exactly what this page
+    // invites. The load re-runs after this, sees the same stale session and
+    // renders the sign-in button, so the message and the control agree.
     if (!grpc) {
-      return fail(401, { message: "Please sign in first, then ask again." })
+      return fail(401, {
+        message:
+          "Your sign-in has expired. Sign in again — this invitation still works.",
+      })
     }
 
     // Re-read the questions rather than trusting the form: the answers are
@@ -191,6 +201,22 @@ export const actions: Actions = {
         if (e.code === Status.INVALID_ARGUMENT)
           return fail(400, {
             message: e.details || "Some answers are not valid.",
+          })
+        // The backend refusing the token itself. UNAUTHENTICATED is what the
+        // middleware means to send.
+        //
+        // TODO(backend: jwt-error-codes): INTERNAL is in this branch because it
+        // is what actually arrives. `errors.go` matches jwt/**v4**'s
+        // `*ValidationError` while `auth.go` parses with **v5**, which removed
+        // that type — so `errors.As` never matches and every auth failure falls
+        // past the `unauthenticatedErrors` list to `codes.Internal`. Drop
+        // INTERNAL from here once that is fixed; until then a genuine server
+        // fault during a join is reported to the user as an expired session,
+        // which is the lesser of the two wrong answers available.
+        if (e.code === Status.UNAUTHENTICATED || e.code === Status.INTERNAL)
+          return fail(401, {
+            message:
+              "Your sign-in has expired. Sign in again — this invitation still works.",
           })
       }
       throw e
