@@ -82,6 +82,8 @@ type UserEdges struct {
 	ModifiedStates []*HackathonState `json:"modified_states,omitempty"`
 	// Projects this user has marked as preferred.
 	PreferredProjects []*Project `json:"preferred_projects,omitempty"`
+	// Review comments this user has written.
+	ProjectComments []*ProjectComment `json:"project_comments,omitempty"`
 	// Votes cast by this user.
 	Votes []*Vote `json:"votes,omitempty"`
 	// Vote categories where this user is a jury member.
@@ -94,7 +96,7 @@ type UserEdges struct {
 	TeamParticipations []*TeamParticipant `json:"team_participations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [27]bool
+	loadedTypes [28]bool
 }
 
 // CreatedHackathonsOrErr returns the CreatedHackathons value or an error if the edge
@@ -295,10 +297,19 @@ func (e UserEdges) PreferredProjectsOrErr() ([]*Project, error) {
 	return nil, &NotLoadedError{edge: "preferred_projects"}
 }
 
+// ProjectCommentsOrErr returns the ProjectComments value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ProjectCommentsOrErr() ([]*ProjectComment, error) {
+	if e.loadedTypes[22] {
+		return e.ProjectComments, nil
+	}
+	return nil, &NotLoadedError{edge: "project_comments"}
+}
+
 // VotesOrErr returns the Votes value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) VotesOrErr() ([]*Vote, error) {
-	if e.loadedTypes[22] {
+	if e.loadedTypes[23] {
 		return e.Votes, nil
 	}
 	return nil, &NotLoadedError{edge: "votes"}
@@ -307,7 +318,7 @@ func (e UserEdges) VotesOrErr() ([]*Vote, error) {
 // JuryCategoriesOrErr returns the JuryCategories value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) JuryCategoriesOrErr() ([]*VoteCategory, error) {
-	if e.loadedTypes[23] {
+	if e.loadedTypes[24] {
 		return e.JuryCategories, nil
 	}
 	return nil, &NotLoadedError{edge: "jury_categories"}
@@ -316,7 +327,7 @@ func (e UserEdges) JuryCategoriesOrErr() ([]*VoteCategory, error) {
 // OwnsOrErr returns the Owns value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) OwnsOrErr() ([]*Hackathon, error) {
-	if e.loadedTypes[24] {
+	if e.loadedTypes[25] {
 		return e.Owns, nil
 	}
 	return nil, &NotLoadedError{edge: "owns"}
@@ -325,7 +336,7 @@ func (e UserEdges) OwnsOrErr() ([]*Hackathon, error) {
 // ParticipationsOrErr returns the Participations value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) ParticipationsOrErr() ([]*Participant, error) {
-	if e.loadedTypes[25] {
+	if e.loadedTypes[26] {
 		return e.Participations, nil
 	}
 	return nil, &NotLoadedError{edge: "participations"}
@@ -334,7 +345,7 @@ func (e UserEdges) ParticipationsOrErr() ([]*Participant, error) {
 // TeamParticipationsOrErr returns the TeamParticipations value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) TeamParticipationsOrErr() ([]*TeamParticipant, error) {
-	if e.loadedTypes[26] {
+	if e.loadedTypes[27] {
 		return e.TeamParticipations, nil
 	}
 	return nil, &NotLoadedError{edge: "team_participations"}
@@ -529,6 +540,11 @@ func (_m *User) QueryModifiedStates() *HackathonStateQuery {
 // QueryPreferredProjects queries the "preferred_projects" edge of the User entity.
 func (_m *User) QueryPreferredProjects() *ProjectQuery {
 	return NewUserClient(_m.config).QueryPreferredProjects(_m)
+}
+
+// QueryProjectComments queries the "project_comments" edge of the User entity.
+func (_m *User) QueryProjectComments() *ProjectCommentQuery {
+	return NewUserClient(_m.config).QueryProjectComments(_m)
 }
 
 // QueryVotes queries the "votes" edge of the User entity.

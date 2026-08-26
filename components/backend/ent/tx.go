@@ -28,6 +28,8 @@ type Tx struct {
 	Phase *PhaseClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// ProjectComment is the client for interacting with the ProjectComment builders.
+	ProjectComment *ProjectCommentClient
 	// Question is the client for interacting with the Question builders.
 	Question *QuestionClient
 	// Submission is the client for interacting with the Submission builders.
@@ -185,6 +187,7 @@ func (tx *Tx) init() {
 	tx.Participant = NewParticipantClient(tx.config)
 	tx.Phase = NewPhaseClient(tx.config)
 	tx.Project = NewProjectClient(tx.config)
+	tx.ProjectComment = NewProjectCommentClient(tx.config)
 	tx.Question = NewQuestionClient(tx.config)
 	tx.Submission = NewSubmissionClient(tx.config)
 	tx.Team = NewTeamClient(tx.config)

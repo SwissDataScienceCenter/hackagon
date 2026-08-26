@@ -210,7 +210,7 @@ A project proposal within a hackathon track.
 | `title` | string | yes | no | no | no | Title of the project. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the project was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
-| `status` | enum(proposed, approved) | yes | no | no | no | Approval status of the project. |
+| `status` | enum(proposed, approved, rejected) | yes | no | no | no | Approval status of the project. |
 | `image` | string | no | no | no | no | URL or path to the project cover image. |
 | `description` | string | yes | no | no | no | Detailed description of the project. |
 
@@ -224,12 +224,31 @@ A project proposal within a hackathon track.
 | `modifier` | User | M2O | yes | yes | The user who last modified this project. |
 | `teams` | Team | O2M | no | no | Teams working on this project. |
 | `submissions` | Submission | O2M | no | no | Submissions made for this project. |
+| `comments` | ProjectComment | O2M | no | no | Review comments on this project. |
 | `preferred_by_users` | User | M2M | yes | no | Users who marked this project as preferred. |
 
 ### Indexes
 
 - `title`
 - `status`
+
+## ProjectComment
+
+A review comment on a project, written by a user.
+
+### Fields
+
+| Column | Type | Required | Unique | Immutable | Default | Description |
+|--------|------|----------|--------|-----------|---------|-------------|
+| `text` | string | yes | no | no | no | The comment text. |
+| `created_at` | time.Time | yes | no | yes | yes | Timestamp when the comment was created. |
+
+### Relationships
+
+| Edge | Target | Relation | Inverse | Required | Description |
+|------|--------|----------|---------|----------|-------------|
+| `project` | Project | M2O | yes | yes | The project this comment belongs to. |
+| `user` | User | M2O | yes | yes | The user who wrote this comment. |
 
 ## Question
 
@@ -402,6 +421,7 @@ An authenticated user, synced from Keycloak on first login.
 | `registration_answers` | Answer | O2M | no | no | Registration answers submitted by this user. |
 | `modified_states` | HackathonState | O2M | no | no | Hackathon settings this user last modified. |
 | `preferred_projects` | Project | M2M | no | no | Projects this user has marked as preferred. |
+| `project_comments` | ProjectComment | O2M | no | no | Review comments this user has written. |
 | `votes` | Vote | O2M | no | no | Votes cast by this user. |
 | `jury_categories` | VoteCategory | M2M | no | no | Vote categories where this user is a jury member. |
 | `owns` | Hackathon | M2M | yes | no | Hackathons this user is an owner of. |

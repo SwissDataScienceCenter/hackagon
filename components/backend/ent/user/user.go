@@ -71,6 +71,8 @@ const (
 	EdgeModifiedStates = "modified_states"
 	// EdgePreferredProjects holds the string denoting the preferred_projects edge name in mutations.
 	EdgePreferredProjects = "preferred_projects"
+	// EdgeProjectComments holds the string denoting the project_comments edge name in mutations.
+	EdgeProjectComments = "project_comments"
 	// EdgeVotes holds the string denoting the votes edge name in mutations.
 	EdgeVotes = "votes"
 	// EdgeJuryCategories holds the string denoting the jury_categories edge name in mutations.
@@ -231,6 +233,13 @@ const (
 	// PreferredProjectsInverseTable is the table name for the Project entity.
 	// It exists in this package in order to avoid circular dependency with the "project" package.
 	PreferredProjectsInverseTable = "projects"
+	// ProjectCommentsTable is the table that holds the project_comments relation/edge.
+	ProjectCommentsTable = "project_comments"
+	// ProjectCommentsInverseTable is the table name for the ProjectComment entity.
+	// It exists in this package in order to avoid circular dependency with the "projectcomment" package.
+	ProjectCommentsInverseTable = "project_comments"
+	// ProjectCommentsColumn is the table column denoting the project_comments relation/edge.
+	ProjectCommentsColumn = "user_project_comments"
 	// VotesTable is the table that holds the votes relation/edge.
 	VotesTable = "votes"
 	// VotesInverseTable is the table name for the Vote entity.
@@ -666,6 +675,20 @@ func ByPreferredProjects(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 	}
 }
 
+// ByProjectCommentsCount orders the results by project_comments count.
+func ByProjectCommentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProjectCommentsStep(), opts...)
+	}
+}
+
+// ByProjectComments orders the results by project_comments terms.
+func ByProjectComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProjectCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByVotesCount orders the results by votes count.
 func ByVotesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -887,6 +910,13 @@ func newPreferredProjectsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PreferredProjectsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2M, false, PreferredProjectsTable, PreferredProjectsPrimaryKey...),
+	)
+}
+func newProjectCommentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProjectCommentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProjectCommentsTable, ProjectCommentsColumn),
 	)
 }
 func newVotesStep() *sqlgraph.Step {

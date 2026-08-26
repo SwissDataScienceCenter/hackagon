@@ -57,11 +57,13 @@ type ProjectEdges struct {
 	Teams []*Team `json:"teams,omitempty"`
 	// Submissions made for this project.
 	Submissions []*Submission `json:"submissions,omitempty"`
+	// Review comments on this project.
+	Comments []*ProjectComment `json:"comments,omitempty"`
 	// Users who marked this project as preferred.
 	PreferredByUsers []*User `json:"preferred_by_users,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // TrackOrErr returns the Track value or an error if the edge
@@ -126,10 +128,19 @@ func (e ProjectEdges) SubmissionsOrErr() ([]*Submission, error) {
 	return nil, &NotLoadedError{edge: "submissions"}
 }
 
+// CommentsOrErr returns the Comments value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) CommentsOrErr() ([]*ProjectComment, error) {
+	if e.loadedTypes[6] {
+		return e.Comments, nil
+	}
+	return nil, &NotLoadedError{edge: "comments"}
+}
+
 // PreferredByUsersOrErr returns the PreferredByUsers value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProjectEdges) PreferredByUsersOrErr() ([]*User, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.PreferredByUsers, nil
 	}
 	return nil, &NotLoadedError{edge: "preferred_by_users"}
@@ -280,6 +291,11 @@ func (_m *Project) QueryTeams() *TeamQuery {
 // QuerySubmissions queries the "submissions" edge of the Project entity.
 func (_m *Project) QuerySubmissions() *SubmissionQuery {
 	return NewProjectClient(_m.config).QuerySubmissions(_m)
+}
+
+// QueryComments queries the "comments" edge of the Project entity.
+func (_m *Project) QueryComments() *ProjectCommentQuery {
+	return NewProjectClient(_m.config).QueryComments(_m)
 }
 
 // QueryPreferredByUsers queries the "preferred_by_users" edge of the Project entity.

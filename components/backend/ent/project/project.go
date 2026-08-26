@@ -40,6 +40,8 @@ const (
 	EdgeTeams = "teams"
 	// EdgeSubmissions holds the string denoting the submissions edge name in mutations.
 	EdgeSubmissions = "submissions"
+	// EdgeComments holds the string denoting the comments edge name in mutations.
+	EdgeComments = "comments"
 	// EdgePreferredByUsers holds the string denoting the preferred_by_users edge name in mutations.
 	EdgePreferredByUsers = "preferred_by_users"
 	// Table holds the table name of the project in the database.
@@ -86,6 +88,13 @@ const (
 	SubmissionsInverseTable = "submissions"
 	// SubmissionsColumn is the table column denoting the submissions relation/edge.
 	SubmissionsColumn = "project_submissions"
+	// CommentsTable is the table that holds the comments relation/edge.
+	CommentsTable = "project_comments"
+	// CommentsInverseTable is the table name for the ProjectComment entity.
+	// It exists in this package in order to avoid circular dependency with the "projectcomment" package.
+	CommentsInverseTable = "project_comments"
+	// CommentsColumn is the table column denoting the comments relation/edge.
+	CommentsColumn = "project_comments"
 	// PreferredByUsersTable is the table that holds the preferred_by_users relation/edge. The primary key declared below.
 	PreferredByUsersTable = "user_preferred_projects"
 	// PreferredByUsersInverseTable is the table name for the User entity.
@@ -154,6 +163,7 @@ type Status string
 const (
 	StatusProposed Status = "proposed"
 	StatusApproved Status = "approved"
+	StatusRejected Status = "rejected"
 )
 
 func (s Status) String() string {
@@ -163,7 +173,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusProposed, StatusApproved:
+	case StatusProposed, StatusApproved, StatusRejected:
 		return nil
 	default:
 		return fmt.Errorf("project: invalid enum value for status field: %q", s)
@@ -264,6 +274,20 @@ func BySubmissions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByCommentsCount orders the results by comments count.
+func ByCommentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCommentsStep(), opts...)
+	}
+}
+
+// ByComments orders the results by comments terms.
+func ByComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByPreferredByUsersCount orders the results by preferred_by_users count.
 func ByPreferredByUsersCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -317,6 +341,13 @@ func newSubmissionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(SubmissionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, SubmissionsTable, SubmissionsColumn),
+	)
+}
+func newCommentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
 	)
 }
 func newPreferredByUsersStep() *sqlgraph.Step {

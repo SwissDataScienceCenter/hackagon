@@ -105,6 +105,18 @@ func (f ProjectFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectMutation", m)
 }
 
+// The ProjectCommentFunc type is an adapter to allow the use of ordinary
+// function as ProjectComment mutator.
+type ProjectCommentFunc func(context.Context, *ent.ProjectCommentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProjectCommentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProjectCommentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProjectCommentMutation", m)
+}
+
 // The QuestionFunc type is an adapter to allow the use of ordinary
 // function as Question mutator.
 type QuestionFunc func(context.Context, *ent.QuestionMutation) (ent.Value, error)

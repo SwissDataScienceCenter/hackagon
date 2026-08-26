@@ -24,6 +24,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -56,6 +57,8 @@ type Client struct {
 	Phase *PhaseClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
+	// ProjectComment is the client for interacting with the ProjectComment builders.
+	ProjectComment *ProjectCommentClient
 	// Question is the client for interacting with the Question builders.
 	Question *QuestionClient
 	// Submission is the client for interacting with the Submission builders.
@@ -93,6 +96,7 @@ func (c *Client) init() {
 	c.Participant = NewParticipantClient(c.config)
 	c.Phase = NewPhaseClient(c.config)
 	c.Project = NewProjectClient(c.config)
+	c.ProjectComment = NewProjectCommentClient(c.config)
 	c.Question = NewQuestionClient(c.config)
 	c.Submission = NewSubmissionClient(c.config)
 	c.Team = NewTeamClient(c.config)
@@ -202,6 +206,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Participant:     NewParticipantClient(cfg),
 		Phase:           NewPhaseClient(cfg),
 		Project:         NewProjectClient(cfg),
+		ProjectComment:  NewProjectCommentClient(cfg),
 		Question:        NewQuestionClient(cfg),
 		Submission:      NewSubmissionClient(cfg),
 		Team:            NewTeamClient(cfg),
@@ -238,6 +243,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Participant:     NewParticipantClient(cfg),
 		Phase:           NewPhaseClient(cfg),
 		Project:         NewProjectClient(cfg),
+		ProjectComment:  NewProjectCommentClient(cfg),
 		Question:        NewQuestionClient(cfg),
 		Submission:      NewSubmissionClient(cfg),
 		Team:            NewTeamClient(cfg),
@@ -277,8 +283,9 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Answer, c.Hackathon, c.HackathonInvite, c.HackathonState, c.Page,
-		c.Participant, c.Phase, c.Project, c.Question, c.Submission, c.Team,
-		c.TeamParticipant, c.Track, c.User, c.Vote, c.VoteCategory, c.VoteResult,
+		c.Participant, c.Phase, c.Project, c.ProjectComment, c.Question, c.Submission,
+		c.Team, c.TeamParticipant, c.Track, c.User, c.Vote, c.VoteCategory,
+		c.VoteResult,
 	} {
 		n.Use(hooks...)
 	}
@@ -289,8 +296,9 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Answer, c.Hackathon, c.HackathonInvite, c.HackathonState, c.Page,
-		c.Participant, c.Phase, c.Project, c.Question, c.Submission, c.Team,
-		c.TeamParticipant, c.Track, c.User, c.Vote, c.VoteCategory, c.VoteResult,
+		c.Participant, c.Phase, c.Project, c.ProjectComment, c.Question, c.Submission,
+		c.Team, c.TeamParticipant, c.Track, c.User, c.Vote, c.VoteCategory,
+		c.VoteResult,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -315,6 +323,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Phase.mutate(ctx, m)
 	case *ProjectMutation:
 		return c.Project.mutate(ctx, m)
+	case *ProjectCommentMutation:
+		return c.ProjectComment.mutate(ctx, m)
 	case *QuestionMutation:
 		return c.Question.mutate(ctx, m)
 	case *SubmissionMutation:
@@ -1920,6 +1930,22 @@ func (c *ProjectClient) QuerySubmissions(_m *Project) *SubmissionQuery {
 	return query
 }
 
+// QueryComments queries the comments edge of a Project.
+func (c *ProjectClient) QueryComments(_m *Project) *ProjectCommentQuery {
+	query := (&ProjectCommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(projectcomment.Table, projectcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.CommentsTable, project.CommentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryPreferredByUsers queries the preferred_by_users edge of a Project.
 func (c *ProjectClient) QueryPreferredByUsers(_m *Project) *UserQuery {
 	query := (&UserClient{config: c.config}).Query()
@@ -1958,6 +1984,171 @@ func (c *ProjectClient) mutate(ctx context.Context, m *ProjectMutation) (Value, 
 		return (&ProjectDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Project mutation op: %q", m.Op())
+	}
+}
+
+// ProjectCommentClient is a client for the ProjectComment schema.
+type ProjectCommentClient struct {
+	config
+}
+
+// NewProjectCommentClient returns a client for the ProjectComment from the given config.
+func NewProjectCommentClient(c config) *ProjectCommentClient {
+	return &ProjectCommentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `projectcomment.Hooks(f(g(h())))`.
+func (c *ProjectCommentClient) Use(hooks ...Hook) {
+	c.hooks.ProjectComment = append(c.hooks.ProjectComment, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `projectcomment.Intercept(f(g(h())))`.
+func (c *ProjectCommentClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProjectComment = append(c.inters.ProjectComment, interceptors...)
+}
+
+// Create returns a builder for creating a ProjectComment entity.
+func (c *ProjectCommentClient) Create() *ProjectCommentCreate {
+	mutation := newProjectCommentMutation(c.config, OpCreate)
+	return &ProjectCommentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProjectComment entities.
+func (c *ProjectCommentClient) CreateBulk(builders ...*ProjectCommentCreate) *ProjectCommentCreateBulk {
+	return &ProjectCommentCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProjectCommentClient) MapCreateBulk(slice any, setFunc func(*ProjectCommentCreate, int)) *ProjectCommentCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProjectCommentCreateBulk{err: fmt.Errorf("calling to ProjectCommentClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProjectCommentCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProjectCommentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProjectComment.
+func (c *ProjectCommentClient) Update() *ProjectCommentUpdate {
+	mutation := newProjectCommentMutation(c.config, OpUpdate)
+	return &ProjectCommentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProjectCommentClient) UpdateOne(_m *ProjectComment) *ProjectCommentUpdateOne {
+	mutation := newProjectCommentMutation(c.config, OpUpdateOne, withProjectComment(_m))
+	return &ProjectCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProjectCommentClient) UpdateOneID(id uuid.UUID) *ProjectCommentUpdateOne {
+	mutation := newProjectCommentMutation(c.config, OpUpdateOne, withProjectCommentID(id))
+	return &ProjectCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProjectComment.
+func (c *ProjectCommentClient) Delete() *ProjectCommentDelete {
+	mutation := newProjectCommentMutation(c.config, OpDelete)
+	return &ProjectCommentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProjectCommentClient) DeleteOne(_m *ProjectComment) *ProjectCommentDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProjectCommentClient) DeleteOneID(id uuid.UUID) *ProjectCommentDeleteOne {
+	builder := c.Delete().Where(projectcomment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProjectCommentDeleteOne{builder}
+}
+
+// Query returns a query builder for ProjectComment.
+func (c *ProjectCommentClient) Query() *ProjectCommentQuery {
+	return &ProjectCommentQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProjectComment},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProjectComment entity by its id.
+func (c *ProjectCommentClient) Get(ctx context.Context, id uuid.UUID) (*ProjectComment, error) {
+	return c.Query().Where(projectcomment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProjectCommentClient) GetX(ctx context.Context, id uuid.UUID) *ProjectComment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProject queries the project edge of a ProjectComment.
+func (c *ProjectCommentClient) QueryProject(_m *ProjectComment) *ProjectQuery {
+	query := (&ProjectClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(projectcomment.Table, projectcomment.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, projectcomment.ProjectTable, projectcomment.ProjectColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a ProjectComment.
+func (c *ProjectCommentClient) QueryUser(_m *ProjectComment) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(projectcomment.Table, projectcomment.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, projectcomment.UserTable, projectcomment.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProjectCommentClient) Hooks() []Hook {
+	return c.hooks.ProjectComment
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProjectCommentClient) Interceptors() []Interceptor {
+	return c.inters.ProjectComment
+}
+
+func (c *ProjectCommentClient) mutate(ctx context.Context, m *ProjectCommentMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProjectCommentCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProjectCommentUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProjectCommentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProjectCommentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProjectComment mutation op: %q", m.Op())
 	}
 }
 
@@ -3389,6 +3580,22 @@ func (c *UserClient) QueryPreferredProjects(_m *User) *ProjectQuery {
 	return query
 }
 
+// QueryProjectComments queries the project_comments edge of a User.
+func (c *UserClient) QueryProjectComments(_m *User) *ProjectCommentQuery {
+	query := (&ProjectCommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(projectcomment.Table, projectcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ProjectCommentsTable, user.ProjectCommentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryVotes queries the votes edge of a User.
 func (c *UserClient) QueryVotes(_m *User) *VoteQuery {
 	query := (&VoteClient{config: c.config}).Query()
@@ -4042,12 +4249,12 @@ func (c *VoteResultClient) mutate(ctx context.Context, m *VoteResultMutation) (V
 type (
 	hooks struct {
 		Answer, Hackathon, HackathonInvite, HackathonState, Page, Participant, Phase,
-		Project, Question, Submission, Team, TeamParticipant, Track, User, Vote,
-		VoteCategory, VoteResult []ent.Hook
+		Project, ProjectComment, Question, Submission, Team, TeamParticipant, Track,
+		User, Vote, VoteCategory, VoteResult []ent.Hook
 	}
 	inters struct {
 		Answer, Hackathon, HackathonInvite, HackathonState, Page, Participant, Phase,
-		Project, Question, Submission, Team, TeamParticipant, Track, User, Vote,
-		VoteCategory, VoteResult []ent.Interceptor
+		Project, ProjectComment, Question, Submission, Team, TeamParticipant, Track,
+		User, Vote, VoteCategory, VoteResult []ent.Interceptor
 	}
 )

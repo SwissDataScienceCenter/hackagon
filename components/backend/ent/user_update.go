@@ -20,6 +20,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -444,6 +445,21 @@ func (_u *UserUpdate) AddPreferredProjects(v ...*Project) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddPreferredProjectIDs(ids...)
+}
+
+// AddProjectCommentIDs adds the "project_comments" edge to the ProjectComment entity by IDs.
+func (_u *UserUpdate) AddProjectCommentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddProjectCommentIDs(ids...)
+	return _u
+}
+
+// AddProjectComments adds the "project_comments" edges to the ProjectComment entity.
+func (_u *UserUpdate) AddProjectComments(v ...*ProjectComment) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProjectCommentIDs(ids...)
 }
 
 // AddVoteIDs adds the "votes" edge to the Vote entity by IDs.
@@ -956,6 +972,27 @@ func (_u *UserUpdate) RemovePreferredProjects(v ...*Project) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemovePreferredProjectIDs(ids...)
+}
+
+// ClearProjectComments clears all "project_comments" edges to the ProjectComment entity.
+func (_u *UserUpdate) ClearProjectComments() *UserUpdate {
+	_u.mutation.ClearProjectComments()
+	return _u
+}
+
+// RemoveProjectCommentIDs removes the "project_comments" edge to ProjectComment entities by IDs.
+func (_u *UserUpdate) RemoveProjectCommentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveProjectCommentIDs(ids...)
+	return _u
+}
+
+// RemoveProjectComments removes "project_comments" edges to ProjectComment entities.
+func (_u *UserUpdate) RemoveProjectComments(v ...*ProjectComment) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProjectCommentIDs(ids...)
 }
 
 // ClearVotes clears all "votes" edges to the Vote entity.
@@ -2114,6 +2151,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ProjectCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProjectCommentsIDs(); len(nodes) > 0 && !_u.mutation.ProjectCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProjectCommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.VotesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -2673,6 +2755,21 @@ func (_u *UserUpdateOne) AddPreferredProjects(v ...*Project) *UserUpdateOne {
 	return _u.AddPreferredProjectIDs(ids...)
 }
 
+// AddProjectCommentIDs adds the "project_comments" edge to the ProjectComment entity by IDs.
+func (_u *UserUpdateOne) AddProjectCommentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddProjectCommentIDs(ids...)
+	return _u
+}
+
+// AddProjectComments adds the "project_comments" edges to the ProjectComment entity.
+func (_u *UserUpdateOne) AddProjectComments(v ...*ProjectComment) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProjectCommentIDs(ids...)
+}
+
 // AddVoteIDs adds the "votes" edge to the Vote entity by IDs.
 func (_u *UserUpdateOne) AddVoteIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.AddVoteIDs(ids...)
@@ -3183,6 +3280,27 @@ func (_u *UserUpdateOne) RemovePreferredProjects(v ...*Project) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemovePreferredProjectIDs(ids...)
+}
+
+// ClearProjectComments clears all "project_comments" edges to the ProjectComment entity.
+func (_u *UserUpdateOne) ClearProjectComments() *UserUpdateOne {
+	_u.mutation.ClearProjectComments()
+	return _u
+}
+
+// RemoveProjectCommentIDs removes the "project_comments" edge to ProjectComment entities by IDs.
+func (_u *UserUpdateOne) RemoveProjectCommentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveProjectCommentIDs(ids...)
+	return _u
+}
+
+// RemoveProjectComments removes "project_comments" edges to ProjectComment entities.
+func (_u *UserUpdateOne) RemoveProjectComments(v ...*ProjectComment) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProjectCommentIDs(ids...)
 }
 
 // ClearVotes clears all "votes" edges to the Vote entity.
@@ -4364,6 +4482,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProjectCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProjectCommentsIDs(); len(nodes) > 0 && !_u.mutation.ProjectCommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProjectCommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

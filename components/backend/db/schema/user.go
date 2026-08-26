@@ -109,6 +109,9 @@ func (User) Edges() []ent.Edge {
 		edge.To("preferred_projects", Project.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Projects this user has marked as preferred."),
+		edge.To("project_comments", ProjectComment.Type).
+			Annotations(entsql.OnDelete(entsql.Restrict)).
+			Comment("Review comments this user has written."),
 		edge.To("votes", Vote.Type).
 			Annotations(entsql.OnDelete(entsql.Restrict)).
 			Comment("Votes cast by this user."),

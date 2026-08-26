@@ -21,6 +21,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -49,6 +50,7 @@ const (
 	TypeParticipant     = "Participant"
 	TypePhase           = "Phase"
 	TypeProject         = "Project"
+	TypeProjectComment  = "ProjectComment"
 	TypeQuestion        = "Question"
 	TypeSubmission      = "Submission"
 	TypeTeam            = "Team"
@@ -6538,6 +6540,9 @@ type ProjectMutation struct {
 	submissions               map[uuid.UUID]struct{}
 	removedsubmissions        map[uuid.UUID]struct{}
 	clearedsubmissions        bool
+	comments                  map[uuid.UUID]struct{}
+	removedcomments           map[uuid.UUID]struct{}
+	clearedcomments           bool
 	preferred_by_users        map[uuid.UUID]struct{}
 	removedpreferred_by_users map[uuid.UUID]struct{}
 	clearedpreferred_by_users bool
@@ -7143,6 +7148,60 @@ func (m *ProjectMutation) ResetSubmissions() {
 	m.removedsubmissions = nil
 }
 
+// AddCommentIDs adds the "comments" edge to the ProjectComment entity by ids.
+func (m *ProjectMutation) AddCommentIDs(ids ...uuid.UUID) {
+	if m.comments == nil {
+		m.comments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.comments[ids[i]] = struct{}{}
+	}
+}
+
+// ClearComments clears the "comments" edge to the ProjectComment entity.
+func (m *ProjectMutation) ClearComments() {
+	m.clearedcomments = true
+}
+
+// CommentsCleared reports if the "comments" edge to the ProjectComment entity was cleared.
+func (m *ProjectMutation) CommentsCleared() bool {
+	return m.clearedcomments
+}
+
+// RemoveCommentIDs removes the "comments" edge to the ProjectComment entity by IDs.
+func (m *ProjectMutation) RemoveCommentIDs(ids ...uuid.UUID) {
+	if m.removedcomments == nil {
+		m.removedcomments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.comments, ids[i])
+		m.removedcomments[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedComments returns the removed IDs of the "comments" edge to the ProjectComment entity.
+func (m *ProjectMutation) RemovedCommentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedcomments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CommentsIDs returns the "comments" edge IDs in the mutation.
+func (m *ProjectMutation) CommentsIDs() (ids []uuid.UUID) {
+	for id := range m.comments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetComments resets all changes to the "comments" edge.
+func (m *ProjectMutation) ResetComments() {
+	m.comments = nil
+	m.clearedcomments = false
+	m.removedcomments = nil
+}
+
 // AddPreferredByUserIDs adds the "preferred_by_users" edge to the User entity by ids.
 func (m *ProjectMutation) AddPreferredByUserIDs(ids ...uuid.UUID) {
 	if m.preferred_by_users == nil {
@@ -7424,7 +7483,7 @@ func (m *ProjectMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProjectMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.track != nil {
 		edges = append(edges, project.EdgeTrack)
 	}
@@ -7442,6 +7501,9 @@ func (m *ProjectMutation) AddedEdges() []string {
 	}
 	if m.submissions != nil {
 		edges = append(edges, project.EdgeSubmissions)
+	}
+	if m.comments != nil {
+		edges = append(edges, project.EdgeComments)
 	}
 	if m.preferred_by_users != nil {
 		edges = append(edges, project.EdgePreferredByUsers)
@@ -7481,6 +7543,12 @@ func (m *ProjectMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case project.EdgeComments:
+		ids := make([]ent.Value, 0, len(m.comments))
+		for id := range m.comments {
+			ids = append(ids, id)
+		}
+		return ids
 	case project.EdgePreferredByUsers:
 		ids := make([]ent.Value, 0, len(m.preferred_by_users))
 		for id := range m.preferred_by_users {
@@ -7493,12 +7561,15 @@ func (m *ProjectMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProjectMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedteams != nil {
 		edges = append(edges, project.EdgeTeams)
 	}
 	if m.removedsubmissions != nil {
 		edges = append(edges, project.EdgeSubmissions)
+	}
+	if m.removedcomments != nil {
+		edges = append(edges, project.EdgeComments)
 	}
 	if m.removedpreferred_by_users != nil {
 		edges = append(edges, project.EdgePreferredByUsers)
@@ -7522,6 +7593,12 @@ func (m *ProjectMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case project.EdgeComments:
+		ids := make([]ent.Value, 0, len(m.removedcomments))
+		for id := range m.removedcomments {
+			ids = append(ids, id)
+		}
+		return ids
 	case project.EdgePreferredByUsers:
 		ids := make([]ent.Value, 0, len(m.removedpreferred_by_users))
 		for id := range m.removedpreferred_by_users {
@@ -7534,7 +7611,7 @@ func (m *ProjectMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProjectMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedtrack {
 		edges = append(edges, project.EdgeTrack)
 	}
@@ -7552,6 +7629,9 @@ func (m *ProjectMutation) ClearedEdges() []string {
 	}
 	if m.clearedsubmissions {
 		edges = append(edges, project.EdgeSubmissions)
+	}
+	if m.clearedcomments {
+		edges = append(edges, project.EdgeComments)
 	}
 	if m.clearedpreferred_by_users {
 		edges = append(edges, project.EdgePreferredByUsers)
@@ -7575,6 +7655,8 @@ func (m *ProjectMutation) EdgeCleared(name string) bool {
 		return m.clearedteams
 	case project.EdgeSubmissions:
 		return m.clearedsubmissions
+	case project.EdgeComments:
+		return m.clearedcomments
 	case project.EdgePreferredByUsers:
 		return m.clearedpreferred_by_users
 	}
@@ -7623,11 +7705,526 @@ func (m *ProjectMutation) ResetEdge(name string) error {
 	case project.EdgeSubmissions:
 		m.ResetSubmissions()
 		return nil
+	case project.EdgeComments:
+		m.ResetComments()
+		return nil
 	case project.EdgePreferredByUsers:
 		m.ResetPreferredByUsers()
 		return nil
 	}
 	return fmt.Errorf("unknown Project edge %s", name)
+}
+
+// ProjectCommentMutation represents an operation that mutates the ProjectComment nodes in the graph.
+type ProjectCommentMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	text           *string
+	created_at     *time.Time
+	clearedFields  map[string]struct{}
+	project        *uuid.UUID
+	clearedproject bool
+	user           *uuid.UUID
+	cleareduser    bool
+	done           bool
+	oldValue       func(context.Context) (*ProjectComment, error)
+	predicates     []predicate.ProjectComment
+}
+
+var _ ent.Mutation = (*ProjectCommentMutation)(nil)
+
+// projectcommentOption allows management of the mutation configuration using functional options.
+type projectcommentOption func(*ProjectCommentMutation)
+
+// newProjectCommentMutation creates new mutation for the ProjectComment entity.
+func newProjectCommentMutation(c config, op Op, opts ...projectcommentOption) *ProjectCommentMutation {
+	m := &ProjectCommentMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProjectComment,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProjectCommentID sets the ID field of the mutation.
+func withProjectCommentID(id uuid.UUID) projectcommentOption {
+	return func(m *ProjectCommentMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProjectComment
+		)
+		m.oldValue = func(ctx context.Context) (*ProjectComment, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProjectComment.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProjectComment sets the old ProjectComment of the mutation.
+func withProjectComment(node *ProjectComment) projectcommentOption {
+	return func(m *ProjectCommentMutation) {
+		m.oldValue = func(context.Context) (*ProjectComment, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProjectCommentMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProjectCommentMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProjectComment entities.
+func (m *ProjectCommentMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProjectCommentMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProjectCommentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProjectComment.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetText sets the "text" field.
+func (m *ProjectCommentMutation) SetText(s string) {
+	m.text = &s
+}
+
+// Text returns the value of the "text" field in the mutation.
+func (m *ProjectCommentMutation) Text() (r string, exists bool) {
+	v := m.text
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldText returns the old "text" field's value of the ProjectComment entity.
+// If the ProjectComment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectCommentMutation) OldText(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldText is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldText requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldText: %w", err)
+	}
+	return oldValue.Text, nil
+}
+
+// ResetText resets all changes to the "text" field.
+func (m *ProjectCommentMutation) ResetText() {
+	m.text = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ProjectCommentMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ProjectCommentMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ProjectComment entity.
+// If the ProjectComment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProjectCommentMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ProjectCommentMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetProjectID sets the "project" edge to the Project entity by id.
+func (m *ProjectCommentMutation) SetProjectID(id uuid.UUID) {
+	m.project = &id
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (m *ProjectCommentMutation) ClearProject() {
+	m.clearedproject = true
+}
+
+// ProjectCleared reports if the "project" edge to the Project entity was cleared.
+func (m *ProjectCommentMutation) ProjectCleared() bool {
+	return m.clearedproject
+}
+
+// ProjectID returns the "project" edge ID in the mutation.
+func (m *ProjectCommentMutation) ProjectID() (id uuid.UUID, exists bool) {
+	if m.project != nil {
+		return *m.project, true
+	}
+	return
+}
+
+// ProjectIDs returns the "project" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProjectID instead. It exists only for internal usage by the builders.
+func (m *ProjectCommentMutation) ProjectIDs() (ids []uuid.UUID) {
+	if id := m.project; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProject resets all changes to the "project" edge.
+func (m *ProjectCommentMutation) ResetProject() {
+	m.project = nil
+	m.clearedproject = false
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *ProjectCommentMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *ProjectCommentMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *ProjectCommentMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *ProjectCommentMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *ProjectCommentMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *ProjectCommentMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// Where appends a list predicates to the ProjectCommentMutation builder.
+func (m *ProjectCommentMutation) Where(ps ...predicate.ProjectComment) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProjectCommentMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProjectCommentMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProjectComment, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProjectCommentMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProjectCommentMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProjectComment).
+func (m *ProjectCommentMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProjectCommentMutation) Fields() []string {
+	fields := make([]string, 0, 2)
+	if m.text != nil {
+		fields = append(fields, projectcomment.FieldText)
+	}
+	if m.created_at != nil {
+		fields = append(fields, projectcomment.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProjectCommentMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case projectcomment.FieldText:
+		return m.Text()
+	case projectcomment.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProjectCommentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case projectcomment.FieldText:
+		return m.OldText(ctx)
+	case projectcomment.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProjectComment field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProjectCommentMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case projectcomment.FieldText:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetText(v)
+		return nil
+	case projectcomment.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProjectComment field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProjectCommentMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProjectCommentMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProjectCommentMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ProjectComment numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProjectCommentMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProjectCommentMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProjectCommentMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ProjectComment nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProjectCommentMutation) ResetField(name string) error {
+	switch name {
+	case projectcomment.FieldText:
+		m.ResetText()
+		return nil
+	case projectcomment.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ProjectComment field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProjectCommentMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.project != nil {
+		edges = append(edges, projectcomment.EdgeProject)
+	}
+	if m.user != nil {
+		edges = append(edges, projectcomment.EdgeUser)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProjectCommentMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case projectcomment.EdgeProject:
+		if id := m.project; id != nil {
+			return []ent.Value{*id}
+		}
+	case projectcomment.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProjectCommentMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProjectCommentMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProjectCommentMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedproject {
+		edges = append(edges, projectcomment.EdgeProject)
+	}
+	if m.cleareduser {
+		edges = append(edges, projectcomment.EdgeUser)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProjectCommentMutation) EdgeCleared(name string) bool {
+	switch name {
+	case projectcomment.EdgeProject:
+		return m.clearedproject
+	case projectcomment.EdgeUser:
+		return m.cleareduser
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProjectCommentMutation) ClearEdge(name string) error {
+	switch name {
+	case projectcomment.EdgeProject:
+		m.ClearProject()
+		return nil
+	case projectcomment.EdgeUser:
+		m.ClearUser()
+		return nil
+	}
+	return fmt.Errorf("unknown ProjectComment unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProjectCommentMutation) ResetEdge(name string) error {
+	switch name {
+	case projectcomment.EdgeProject:
+		m.ResetProject()
+		return nil
+	case projectcomment.EdgeUser:
+		m.ResetUser()
+		return nil
+	}
+	return fmt.Errorf("unknown ProjectComment edge %s", name)
 }
 
 // QuestionMutation represents an operation that mutates the Question nodes in the graph.
@@ -11847,6 +12444,9 @@ type UserMutation struct {
 	preferred_projects                map[uuid.UUID]struct{}
 	removedpreferred_projects         map[uuid.UUID]struct{}
 	clearedpreferred_projects         bool
+	project_comments                  map[uuid.UUID]struct{}
+	removedproject_comments           map[uuid.UUID]struct{}
+	clearedproject_comments           bool
 	votes                             map[uuid.UUID]struct{}
 	removedvotes                      map[uuid.UUID]struct{}
 	clearedvotes                      bool
@@ -13395,6 +13995,60 @@ func (m *UserMutation) ResetPreferredProjects() {
 	m.removedpreferred_projects = nil
 }
 
+// AddProjectCommentIDs adds the "project_comments" edge to the ProjectComment entity by ids.
+func (m *UserMutation) AddProjectCommentIDs(ids ...uuid.UUID) {
+	if m.project_comments == nil {
+		m.project_comments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.project_comments[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProjectComments clears the "project_comments" edge to the ProjectComment entity.
+func (m *UserMutation) ClearProjectComments() {
+	m.clearedproject_comments = true
+}
+
+// ProjectCommentsCleared reports if the "project_comments" edge to the ProjectComment entity was cleared.
+func (m *UserMutation) ProjectCommentsCleared() bool {
+	return m.clearedproject_comments
+}
+
+// RemoveProjectCommentIDs removes the "project_comments" edge to the ProjectComment entity by IDs.
+func (m *UserMutation) RemoveProjectCommentIDs(ids ...uuid.UUID) {
+	if m.removedproject_comments == nil {
+		m.removedproject_comments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.project_comments, ids[i])
+		m.removedproject_comments[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProjectComments returns the removed IDs of the "project_comments" edge to the ProjectComment entity.
+func (m *UserMutation) RemovedProjectCommentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedproject_comments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProjectCommentsIDs returns the "project_comments" edge IDs in the mutation.
+func (m *UserMutation) ProjectCommentsIDs() (ids []uuid.UUID) {
+	for id := range m.project_comments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProjectComments resets all changes to the "project_comments" edge.
+func (m *UserMutation) ResetProjectComments() {
+	m.project_comments = nil
+	m.clearedproject_comments = false
+	m.removedproject_comments = nil
+}
+
 // AddVoteIDs adds the "votes" edge to the Vote entity by ids.
 func (m *UserMutation) AddVoteIDs(ids ...uuid.UUID) {
 	if m.votes == nil {
@@ -13790,7 +14444,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 25)
+	edges := make([]string, 0, 26)
 	if m.created_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -13856,6 +14510,9 @@ func (m *UserMutation) AddedEdges() []string {
 	}
 	if m.preferred_projects != nil {
 		edges = append(edges, user.EdgePreferredProjects)
+	}
+	if m.project_comments != nil {
+		edges = append(edges, user.EdgeProjectComments)
 	}
 	if m.votes != nil {
 		edges = append(edges, user.EdgeVotes)
@@ -14005,6 +14662,12 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeProjectComments:
+		ids := make([]ent.Value, 0, len(m.project_comments))
+		for id := range m.project_comments {
+			ids = append(ids, id)
+		}
+		return ids
 	case user.EdgeVotes:
 		ids := make([]ent.Value, 0, len(m.votes))
 		for id := range m.votes {
@@ -14029,7 +14692,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 25)
+	edges := make([]string, 0, 26)
 	if m.removedcreated_hackathons != nil {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -14095,6 +14758,9 @@ func (m *UserMutation) RemovedEdges() []string {
 	}
 	if m.removedpreferred_projects != nil {
 		edges = append(edges, user.EdgePreferredProjects)
+	}
+	if m.removedproject_comments != nil {
+		edges = append(edges, user.EdgeProjectComments)
 	}
 	if m.removedvotes != nil {
 		edges = append(edges, user.EdgeVotes)
@@ -14244,6 +14910,12 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeProjectComments:
+		ids := make([]ent.Value, 0, len(m.removedproject_comments))
+		for id := range m.removedproject_comments {
+			ids = append(ids, id)
+		}
+		return ids
 	case user.EdgeVotes:
 		ids := make([]ent.Value, 0, len(m.removedvotes))
 		for id := range m.removedvotes {
@@ -14268,7 +14940,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 25)
+	edges := make([]string, 0, 26)
 	if m.clearedcreated_hackathons {
 		edges = append(edges, user.EdgeCreatedHackathons)
 	}
@@ -14335,6 +15007,9 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedpreferred_projects {
 		edges = append(edges, user.EdgePreferredProjects)
 	}
+	if m.clearedproject_comments {
+		edges = append(edges, user.EdgeProjectComments)
+	}
 	if m.clearedvotes {
 		edges = append(edges, user.EdgeVotes)
 	}
@@ -14395,6 +15070,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedmodified_states
 	case user.EdgePreferredProjects:
 		return m.clearedpreferred_projects
+	case user.EdgeProjectComments:
+		return m.clearedproject_comments
 	case user.EdgeVotes:
 		return m.clearedvotes
 	case user.EdgeJuryCategories:
@@ -14482,6 +15159,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgePreferredProjects:
 		m.ResetPreferredProjects()
+		return nil
+	case user.EdgeProjectComments:
+		m.ResetProjectComments()
 		return nil
 	case user.EdgeVotes:
 		m.ResetVotes()
