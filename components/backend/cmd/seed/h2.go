@@ -131,18 +131,20 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 	// one.
 	questions, err := h.createQuestions(admin, id, []questionSpec{
 		{
-			key:       "affiliation",
-			label:     "Which university or company are you with?",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_TEXT,
-			mandatory: true,
-			options:   nil,
+			key:           "affiliation",
+			label:         "Which university or company are you with?",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_TEXT,
+			mandatory:     true,
+			options:       nil,
+			publicAnswers: true,
 		},
 		{
-			key:       "experience_level",
-			label:     "How much hackathon experience do you have?",
-			qType:     hackEnts.QuestionType_QUESTION_TYPE_ENUM,
-			mandatory: true,
-			options:   []string{"First time", "A few", "Many"},
+			key:           "experience_level",
+			label:         "How much hackathon experience do you have?",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_ENUM,
+			mandatory:     true,
+			options:       []string{"First time", "A few", "Many"},
+			publicAnswers: false,
 		},
 	})
 	if err != nil {

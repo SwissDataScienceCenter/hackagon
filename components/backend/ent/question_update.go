@@ -103,6 +103,20 @@ func (_u *QuestionUpdate) SetNillableMandatory(v *bool) *QuestionUpdate {
 	return _u
 }
 
+// SetPublicAnswers sets the "public_answers" field.
+func (_u *QuestionUpdate) SetPublicAnswers(v bool) *QuestionUpdate {
+	_u.mutation.SetPublicAnswers(v)
+	return _u
+}
+
+// SetNillablePublicAnswers sets the "public_answers" field if the given value is not nil.
+func (_u *QuestionUpdate) SetNillablePublicAnswers(v *bool) *QuestionUpdate {
+	if v != nil {
+		_u.SetPublicAnswers(*v)
+	}
+	return _u
+}
+
 // SetOrder sets the "order" field.
 func (_u *QuestionUpdate) SetOrder(v int) *QuestionUpdate {
 	_u.mutation.ResetOrder()
@@ -294,6 +308,9 @@ func (_u *QuestionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Mandatory(); ok {
 		_spec.SetField(question.FieldMandatory, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.PublicAnswers(); ok {
+		_spec.SetField(question.FieldPublicAnswers, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Order(); ok {
 		_spec.SetField(question.FieldOrder, field.TypeInt, value)
@@ -501,6 +518,20 @@ func (_u *QuestionUpdateOne) SetMandatory(v bool) *QuestionUpdateOne {
 func (_u *QuestionUpdateOne) SetNillableMandatory(v *bool) *QuestionUpdateOne {
 	if v != nil {
 		_u.SetMandatory(*v)
+	}
+	return _u
+}
+
+// SetPublicAnswers sets the "public_answers" field.
+func (_u *QuestionUpdateOne) SetPublicAnswers(v bool) *QuestionUpdateOne {
+	_u.mutation.SetPublicAnswers(v)
+	return _u
+}
+
+// SetNillablePublicAnswers sets the "public_answers" field if the given value is not nil.
+func (_u *QuestionUpdateOne) SetNillablePublicAnswers(v *bool) *QuestionUpdateOne {
+	if v != nil {
+		_u.SetPublicAnswers(*v)
 	}
 	return _u
 }
@@ -726,6 +757,9 @@ func (_u *QuestionUpdateOne) sqlSave(ctx context.Context) (_node *Question, err 
 	}
 	if value, ok := _u.mutation.Mandatory(); ok {
 		_spec.SetField(question.FieldMandatory, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.PublicAnswers(); ok {
+		_spec.SetField(question.FieldPublicAnswers, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Order(); ok {
 		_spec.SetField(question.FieldOrder, field.TypeInt, value)

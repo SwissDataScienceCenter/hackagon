@@ -26,6 +26,8 @@ const (
 	FieldDataType = "data_type"
 	// FieldMandatory holds the string denoting the mandatory field in the database.
 	FieldMandatory = "mandatory"
+	// FieldPublicAnswers holds the string denoting the public_answers field in the database.
+	FieldPublicAnswers = "public_answers"
 	// FieldOrder holds the string denoting the order field in the database.
 	FieldOrder = "order"
 	// FieldOptions holds the string denoting the options field in the database.
@@ -82,6 +84,7 @@ var Columns = []string{
 	FieldLabel,
 	FieldDataType,
 	FieldMandatory,
+	FieldPublicAnswers,
 	FieldOrder,
 	FieldOptions,
 	FieldCreatedAt,
@@ -115,6 +118,8 @@ var (
 	KeyValidator func(string) error
 	// DefaultMandatory holds the default value on creation for the "mandatory" field.
 	DefaultMandatory bool
+	// DefaultPublicAnswers holds the default value on creation for the "public_answers" field.
+	DefaultPublicAnswers bool
 	// DefaultOrder holds the default value on creation for the "order" field.
 	DefaultOrder int
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -182,6 +187,11 @@ func ByDataType(opts ...sql.OrderTermOption) OrderOption {
 // ByMandatory orders the results by the mandatory field.
 func ByMandatory(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMandatory, opts...).ToFunc()
+}
+
+// ByPublicAnswers orders the results by the public_answers field.
+func ByPublicAnswers(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPublicAnswers, opts...).ToFunc()
 }
 
 // ByOrder orders the results by the order field.

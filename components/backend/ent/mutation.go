@@ -8237,6 +8237,7 @@ type QuestionMutation struct {
 	label            *string
 	data_type        *question.DataType
 	mandatory        *bool
+	public_answers   *bool
 	_order           *int
 	add_order        *int
 	options          *[]string
@@ -8540,6 +8541,42 @@ func (m *QuestionMutation) OldMandatory(ctx context.Context) (v bool, err error)
 // ResetMandatory resets all changes to the "mandatory" field.
 func (m *QuestionMutation) ResetMandatory() {
 	m.mandatory = nil
+}
+
+// SetPublicAnswers sets the "public_answers" field.
+func (m *QuestionMutation) SetPublicAnswers(b bool) {
+	m.public_answers = &b
+}
+
+// PublicAnswers returns the value of the "public_answers" field in the mutation.
+func (m *QuestionMutation) PublicAnswers() (r bool, exists bool) {
+	v := m.public_answers
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublicAnswers returns the old "public_answers" field's value of the Question entity.
+// If the Question object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *QuestionMutation) OldPublicAnswers(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublicAnswers is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublicAnswers requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublicAnswers: %w", err)
+	}
+	return oldValue.PublicAnswers, nil
+}
+
+// ResetPublicAnswers resets all changes to the "public_answers" field.
+func (m *QuestionMutation) ResetPublicAnswers() {
+	m.public_answers = nil
 }
 
 // SetOrder sets the "order" field.
@@ -8914,7 +8951,7 @@ func (m *QuestionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *QuestionMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.hackathon != nil {
 		fields = append(fields, question.FieldHackathonID)
 	}
@@ -8929,6 +8966,9 @@ func (m *QuestionMutation) Fields() []string {
 	}
 	if m.mandatory != nil {
 		fields = append(fields, question.FieldMandatory)
+	}
+	if m.public_answers != nil {
+		fields = append(fields, question.FieldPublicAnswers)
 	}
 	if m._order != nil {
 		fields = append(fields, question.FieldOrder)
@@ -8960,6 +9000,8 @@ func (m *QuestionMutation) Field(name string) (ent.Value, bool) {
 		return m.DataType()
 	case question.FieldMandatory:
 		return m.Mandatory()
+	case question.FieldPublicAnswers:
+		return m.PublicAnswers()
 	case question.FieldOrder:
 		return m.Order()
 	case question.FieldOptions:
@@ -8987,6 +9029,8 @@ func (m *QuestionMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldDataType(ctx)
 	case question.FieldMandatory:
 		return m.OldMandatory(ctx)
+	case question.FieldPublicAnswers:
+		return m.OldPublicAnswers(ctx)
 	case question.FieldOrder:
 		return m.OldOrder(ctx)
 	case question.FieldOptions:
@@ -9038,6 +9082,13 @@ func (m *QuestionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMandatory(v)
+		return nil
+	case question.FieldPublicAnswers:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublicAnswers(v)
 		return nil
 	case question.FieldOrder:
 		v, ok := value.(int)
@@ -9145,6 +9196,9 @@ func (m *QuestionMutation) ResetField(name string) error {
 		return nil
 	case question.FieldMandatory:
 		m.ResetMandatory()
+		return nil
+	case question.FieldPublicAnswers:
+		m.ResetPublicAnswers()
 		return nil
 	case question.FieldOrder:
 		m.ResetOrder()

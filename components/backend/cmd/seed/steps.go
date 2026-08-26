@@ -217,11 +217,12 @@ func (h *harness) joinAndApproveWithInvite(
 
 // questionSpec is one field of a registration form.
 type questionSpec struct {
-	key       string
-	label     string
-	qType     hackEnts.QuestionType
-	mandatory bool
-	options   []string
+	key           string
+	label         string
+	qType         hackEnts.QuestionType
+	mandatory     bool
+	options       []string
+	publicAnswers bool
 }
 
 // createQuestions writes a hackathon's registration form and returns the
@@ -237,13 +238,14 @@ func (h *harness) createQuestions(
 	out := make(map[string]string, len(specs))
 	for i, spec := range specs {
 		resp, err := h.hackathon.CreateQuestion(owner.ctx, &hackMsgs.CreateQuestionRequest{
-			HackathonId: hackathonID,
-			Key:         spec.key,
-			Label:       spec.label,
-			Type:        spec.qType,
-			Mandatory:   spec.mandatory,
-			Order:       int32(i + 1), //nolint:gosec // a form has a handful of fields
-			Options:     spec.options,
+			HackathonId:   hackathonID,
+			Key:           spec.key,
+			Label:         spec.label,
+			Type:          spec.qType,
+			Mandatory:     spec.mandatory,
+			Order:         int32(i + 1), //nolint:gosec // a form has a handful of fields
+			Options:       spec.options,
+			PublicAnswers: spec.publicAnswers,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("question %s: %w", spec.key, err)

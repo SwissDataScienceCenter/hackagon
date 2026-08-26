@@ -21,4 +21,5 @@ message Question {
   bool mandatory = 5;
   int32 order = 6;
   repeated string options = 7;
+  bool public_answers = 8;
 }

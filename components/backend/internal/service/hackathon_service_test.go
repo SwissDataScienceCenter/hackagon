@@ -2442,6 +2442,7 @@ var _ = Describe("HackathonService", func() {
 				Expect(q.DataType).To(Equal(entquestion.DataTypeText))
 				Expect(q.Mandatory).To(BeTrue())
 				Expect(q.Order).To(Equal(1))
+				Expect(q.PublicAnswers).To(BeFalse())
 			})
 
 			It("creates a bool question", func() {
@@ -2889,6 +2890,7 @@ var _ = Describe("HackathonService", func() {
 				Expect(q.Label).To(Equal("New label only"))
 				Expect(q.Mandatory).To(BeFalse()) // unchanged
 				Expect(q.Order).To(Equal(1))      // unchanged
+				Expect(q.PublicAnswers).To(BeFalse())
 			})
 
 			It("returns NOT_FOUND for invalid question ID", func() {
@@ -3031,6 +3033,64 @@ var _ = Describe("HackathonService", func() {
 					Expect(st.Code()).To(Equal(codes.FailedPrecondition))
 				},
 			)
+
+			It("updates public_answers flag", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				p := true
+				_, err := client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId:   hackathonID,
+					QuestionId:    questionID,
+					PublicAnswers: &p,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				q, err := dbClient.Question.Query().
+					Where(entquestion.IDEQ(uuid.MustParse(questionID))).
+					Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(q.PublicAnswers).To(BeTrue())
+			})
+
+			It("allows setting public_answers even when answers exist", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				user, err := dbClient.User.Create().
+					SetKeycloakID("pa-edit-user").
+					SetUsername("pa-edit-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				participant, err := dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(hackathonID)).
+					SetUserID(user.ID).
+					SetIsWaiting(false).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.Answer.Create().
+					SetQuestionID(uuid.MustParse(questionID)).
+					SetUserID(participant.UserID).
+					SetValue("test").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				p := true
+				_, err = client.EditQuestion(ctx, &msgs.EditQuestionRequest{
+					HackathonId:   hackathonID,
+					QuestionId:    questionID,
+					PublicAnswers: &p,
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
 
 			It("allows setting mandatory=false when answers exist", func() {
 				// Create an answer for this question first
@@ -3669,6 +3729,83 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetAnswers()[0].GetQuestionId()).To(Equal(questionID))
 				Expect(resp.GetAnswers()[0].GetTextValue()).To(Equal("Acme Corp"))
 			})
+
+			It(
+				"returns answers to public questions from other participants (no write access)",
+				func() {
+					// Create a second participant with an answer to a public question
+					otherUser, err := dbClient.User.Create().
+						SetKeycloakID("lpa-other-user").
+						SetUsername("lpa-other-username").
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = dbClient.Participant.Create().
+						SetHackathonID(uuid.MustParse(hackathonID)).
+						SetUserID(otherUser.ID).
+						SetIsWaiting(false).
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					// The existing question has public_answers=false, so this answer
+					// should NOT be visible to the requester.
+					_, err = dbClient.Answer.Create().
+						SetQuestionID(uuid.MustParse(questionID)).
+						SetUserID(otherUser.ID).
+						SetValue("Other Corp").
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					// Create a public question and an answer to it
+					adminCtx := metadata.NewOutgoingContext(
+						context.Background(),
+						metadata.Pairs(
+							"authorization",
+							"Bearer "+testutils.CreateTestJWTToken(testAdmin),
+						),
+					)
+					publicQ, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+						HackathonId:   hackathonID,
+						Key:           "public_q",
+						Label:         "Public question",
+						Type:          entities.QuestionType_QUESTION_TYPE_TEXT,
+						Order:         2,
+						PublicAnswers: true,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = dbClient.Answer.Create().
+						SetQuestionID(uuid.MustParse(publicQ.GetQuestionId())).
+						SetUserID(otherUser.ID).
+						SetValue("Public answer").
+						Save(context.Background())
+					Expect(err).NotTo(HaveOccurred())
+
+					// Requester sees: own answer + public answer from other user
+					// but NOT the non-public answer from other user
+					token := testutils.CreateTestJWTToken("list-answers-user")
+					ctx := metadata.NewOutgoingContext(
+						context.Background(),
+						metadata.Pairs("authorization", "Bearer "+token),
+					)
+
+					resp, err := client.ListParticipantAnswers(
+						ctx,
+						&msgs.ListParticipantAnswersRequest{
+							HackathonId: hackathonID,
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resp.GetAnswers()).To(HaveLen(2))
+					// Collect question IDs to verify which answers are returned
+					questionIDs := map[string]bool{}
+					for _, a := range resp.GetAnswers() {
+						questionIDs[a.GetQuestionId()] = true
+					}
+					Expect(questionIDs).To(HaveKey(questionID))
+					Expect(questionIDs).To(HaveKey(publicQ.GetQuestionId()))
+				},
+			)
 
 			It("returns answers for specified user (write access)", func() {
 				token := testutils.CreateTestJWTToken(testAdmin)

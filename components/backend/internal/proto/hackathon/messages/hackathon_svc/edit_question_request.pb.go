@@ -32,6 +32,7 @@ type EditQuestionRequest struct {
 	Mandatory     *bool                  `protobuf:"varint,5,opt,name=mandatory,proto3,oneof" json:"mandatory,omitempty"`
 	Order         *int32                 `protobuf:"varint,6,opt,name=order,proto3,oneof" json:"order,omitempty"`
 	Options       []string               `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
+	PublicAnswers *bool                  `protobuf:"varint,8,opt,name=public_answers,json=publicAnswers,proto3,oneof" json:"public_answers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,11 +116,18 @@ func (x *EditQuestionRequest) GetOptions() []string {
 	return nil
 }
 
+func (x *EditQuestionRequest) GetPublicAnswers() bool {
+	if x != nil && x.PublicAnswers != nil {
+		return *x.PublicAnswers
+	}
+	return false
+}
+
 var File_hackathon_messages_hackathon_svc_edit_question_request_proto protoreflect.FileDescriptor
 
 const file_hackathon_messages_hackathon_svc_edit_question_request_proto_rawDesc = "" +
 	"\n" +
-	"<hackathon/messages/hackathon_svc/edit_question_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\xd2\x02\n" +
+	"<hackathon/messages/hackathon_svc/edit_question_request.proto\x12 hackathon.messages.hackathon_svc\x1a\x1bbuf/validate/validate.proto\x1a!hackathon/entities/question.proto\"\x91\x03\n" +
 	"\x13EditQuestionRequest\x12+\n" +
 	"\fhackathon_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vhackathonId\x12)\n" +
 	"\vquestion_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
@@ -129,12 +137,14 @@ const file_hackathon_messages_hackathon_svc_edit_question_request_proto_rawDesc 
 	"\x04type\x18\x04 \x01(\x0e2 .hackathon.entities.QuestionTypeH\x01R\x04type\x88\x01\x01\x12!\n" +
 	"\tmandatory\x18\x05 \x01(\bH\x02R\tmandatory\x88\x01\x01\x12\x19\n" +
 	"\x05order\x18\x06 \x01(\x05H\x03R\x05order\x88\x01\x01\x12\x18\n" +
-	"\aoptions\x18\a \x03(\tR\aoptionsB\b\n" +
+	"\aoptions\x18\a \x03(\tR\aoptions\x12*\n" +
+	"\x0epublic_answers\x18\b \x01(\bH\x04R\rpublicAnswers\x88\x01\x01B\b\n" +
 	"\x06_labelB\a\n" +
 	"\x05_typeB\f\n" +
 	"\n" +
 	"_mandatoryB\b\n" +
-	"\x06_orderBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
+	"\x06_orderB\x11\n" +
+	"\x0f_public_answersBoZmgithub.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/hackathon_svcb\x06proto3"
 
 var (
 	file_hackathon_messages_hackathon_svc_edit_question_request_proto_rawDescOnce sync.Once
