@@ -14,13 +14,7 @@ frontend:
     pullPolicy: IfNotPresent
 
   replicaCount: 1
-  annotations:
-    nginx.ingress.kubernetes.io/client-header-buffer-size: 16k
-    nginx.ingress.kubernetes.io/large-client-header-buffers: 4 16k
-    nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
-    nginx.ingress.kubernetes.io/proxy-buffers: 8 16k
-    nginx.ingress.kubernetes.io/proxy_busy_buffers_size: 32k
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  annotations: {}
   resources:
     requests:
       cpu: 100m
@@ -52,6 +46,12 @@ frontend:
     ingressClass: "webapprouting.kubernetes.azure.com"
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-production
+      nginx.ingress.kubernetes.io/client-header-buffer-size: 16k
+      nginx.ingress.kubernetes.io/large-client-header-buffers: 4 16k
+      nginx.ingress.kubernetes.io/proxy-buffer-size: 16k
+      nginx.ingress.kubernetes.io/proxy-buffers: 8 16k
+      nginx.ingress.kubernetes.io/proxy_busy_buffers_size: 32k
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
     hosts:
       - host: "app.{baseDomain}"
         paths:
