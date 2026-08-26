@@ -11,7 +11,7 @@ data:
   hackagon.json: |
     {{- $frontendHost := include "hackagon.frontendHost" . }}
     {{- $raw := .Values.realmJson | default "" }}
-    {{- $processed := $raw | replace "http://localhost:8081/*##http://localhost:8081/auth/callback/keycloak" (printf "%s/*##%s/auth/callback/keycloak" $frontendHost $frontendHost) }}
-    {{- $processed = $processed | replace "http://localhost:8081/*" (printf "%s/*" $frontendHost) }}
-    {{- $processed = $processed | replace "http://localhost:8081" $frontendHost }}
+    {{- $processed := $raw | replace "http://localhost:8081/*##http://localhost:8081/auth/callback/keycloak" (printf "https://%s/*##https://%s/auth/callback/keycloak" $frontendHost $frontendHost) }}
+    {{- $processed = $processed | replace "http://localhost:8081/*" (printf "https://%s/*" $frontendHost) }}
+    {{- $processed = $processed | replace "http://localhost:8081" (printf "https://%s" $frontendHost) }}
     {{- $processed | nindent 4 }}

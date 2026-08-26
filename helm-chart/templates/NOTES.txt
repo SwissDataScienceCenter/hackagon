@@ -1,6 +1,6 @@
 Hackagon has been deployed!
 
-Frontend:  https://{{ .Values.baseDomain }}
+Frontend:  https://app.{{ .Values.baseDomain }}
 Keycloak:  https://auth.{{ .Values.baseDomain }}
 
 To get the generated frontend OIDC secrets, run:
