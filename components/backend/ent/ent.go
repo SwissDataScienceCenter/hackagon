@@ -20,6 +20,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -97,6 +98,7 @@ func checkColumn(t, c string) error {
 			participant.Table:     participant.ValidColumn,
 			phase.Table:           phase.ValidColumn,
 			project.Table:         project.ValidColumn,
+			projectcomment.Table:  projectcomment.ValidColumn,
 			question.Table:        question.ValidColumn,
 			submission.Table:      submission.ValidColumn,
 			team.Table:            team.ValidColumn,

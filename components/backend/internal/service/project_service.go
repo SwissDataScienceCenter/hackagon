@@ -98,6 +98,7 @@ func (s *ProjectService) Get(
 		WithModifier().
 		WithTrack().
 		WithHackathon().
+		WithComments(func(q *ent.ProjectCommentQuery) { q.WithUser() }).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -243,6 +244,80 @@ func (s *ProjectService) Disapprove(
 		return nil, err
 	}
 	return &msgs.DisapproveResponse{}, nil
+}
+
+func (s *ProjectService) Reject(
+	ctx context.Context,
+	req *msgs.RejectRequest,
+) (*msgs.RejectResponse, error) {
+	projectID, err := uuid.Parse(req.GetProjectId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid project_id: %v", err)
+	}
+
+	// Get the project to find its hackathon_id
+	project, err := s.dbClient.Project.Query().
+		Where(entproject.IDEQ(projectID)).
+		WithHackathon().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "project %s not found", req.GetProjectId())
+		}
+		slog.Error("query project", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	hackathonID := project.Edges.Hackathon.ID
+
+	// Check Project.Write permission
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write); err != nil {
+		return nil, err
+	}
+
+	// Update the project status to rejected
+	_, err = s.dbClient.Project.Update().
+		Where(entproject.IDEQ(projectID)).
+		SetStatus(entproject.StatusRejected).
+		Save(ctx)
+	if err != nil {
+		slog.Error("update project status", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't update project status")
+	}
+
+	uid, _, err := mw.RequireSubject(ctx)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.dbClient.User.Query().
+		Where(entuser.KeycloakIDEQ(uid)).
+		Only(ctx)
+	if err != nil {
+		slog.Error("query user", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query user")
+	}
+	_, err = s.dbClient.ProjectComment.Create().
+		SetProject(project).
+		SetUserID(user.ID).
+		SetText("Project rejected").
+		Save(ctx)
+	if err != nil {
+		slog.Error("create reject comment", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't create comment")
+	}
+	if req.GetReviewComment() != "" {
+		_, err = s.dbClient.ProjectComment.Create().
+			SetProject(project).
+			SetUserID(user.ID).
+			SetText(req.GetReviewComment()).
+			Save(ctx)
+		if err != nil {
+			slog.Error("create review comment", "err", err)
+			return nil, status.Errorf(codes.Internal, "couldn't create comment")
+		}
+	}
+
+	return &msgs.RejectResponse{}, nil
 }
 
 func (s *ProjectService) setApproval(

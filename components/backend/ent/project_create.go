@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/track"
@@ -183,6 +184,21 @@ func (_c *ProjectCreate) AddSubmissions(v ...*Submission) *ProjectCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddSubmissionIDs(ids...)
+}
+
+// AddCommentIDs adds the "comments" edge to the ProjectComment entity by IDs.
+func (_c *ProjectCreate) AddCommentIDs(ids ...uuid.UUID) *ProjectCreate {
+	_c.mutation.AddCommentIDs(ids...)
+	return _c
+}
+
+// AddComments adds the "comments" edges to the ProjectComment entity.
+func (_c *ProjectCreate) AddComments(v ...*ProjectComment) *ProjectCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCommentIDs(ids...)
 }
 
 // AddPreferredByUserIDs adds the "preferred_by_users" edge to the User entity by IDs.
@@ -438,6 +454,22 @@ func (_c *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(submission.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.CommentsTable,
+			Columns: []string{project.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

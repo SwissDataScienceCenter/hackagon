@@ -349,6 +349,7 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 			description: s.desc,
 			track:       "",
 			approvedBy:  alice,
+			rejectedBy:  nil,
 		})
 		weights = append(weights, s.weight)
 	}

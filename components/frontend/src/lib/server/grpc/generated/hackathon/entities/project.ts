@@ -7,6 +7,7 @@
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import { Timestamp } from "../../google/protobuf/timestamp";
+import { ProjectComment } from "./project_comment";
 import { ProjectStatus, projectStatusFromJSON, projectStatusToJSON } from "./project_status";
 
 export const protobufPackage = "hackathon.entities";
@@ -23,6 +24,7 @@ export interface Project {
   hackathonId: string;
   creatorId: string;
   modifierId: string;
+  comments: ProjectComment[];
 }
 
 function createBaseProject(): Project {
@@ -38,6 +40,7 @@ function createBaseProject(): Project {
     hackathonId: "",
     creatorId: "",
     modifierId: "",
+    comments: [],
   };
 }
 
@@ -75,6 +78,9 @@ export const Project: MessageFns<Project> = {
     }
     if (message.modifierId !== "") {
       writer.uint32(90).string(message.modifierId);
+    }
+    for (const v of message.comments) {
+      ProjectComment.encode(v!, writer.uint32(98).fork()).join();
     }
     return writer;
   },
@@ -174,6 +180,14 @@ export const Project: MessageFns<Project> = {
           message.modifierId = reader.string();
           continue;
         }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.comments.push(ProjectComment.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -220,6 +234,9 @@ export const Project: MessageFns<Project> = {
         : isSet(object.modifier_id)
         ? globalThis.String(object.modifier_id)
         : "",
+      comments: globalThis.Array.isArray(object?.comments)
+        ? object.comments.map((e: any) => ProjectComment.fromJSON(e))
+        : [],
     };
   },
 
@@ -258,6 +275,9 @@ export const Project: MessageFns<Project> = {
     if (message.modifierId !== "") {
       obj.modifierId = message.modifierId;
     }
+    if (message.comments?.length) {
+      obj.comments = message.comments.map((e) => ProjectComment.toJSON(e));
+    }
     return obj;
   },
 
@@ -277,6 +297,7 @@ export const Project: MessageFns<Project> = {
     message.hackathonId = object.hackathonId ?? "";
     message.creatorId = object.creatorId ?? "";
     message.modifierId = object.modifierId ?? "";
+    message.comments = object.comments?.map((e) => ProjectComment.fromPartial(e)) || [];
     return message;
   },
 };

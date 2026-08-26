@@ -15,6 +15,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/participant"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -215,6 +216,19 @@ func init() {
 	projectDescID := projectMixinFields0[0].Descriptor()
 	// project.DefaultID holds the default value on creation for the id field.
 	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
+	projectcommentMixin := schema.ProjectComment{}.Mixin()
+	projectcommentMixinFields0 := projectcommentMixin[0].Fields()
+	_ = projectcommentMixinFields0
+	projectcommentFields := schema.ProjectComment{}.Fields()
+	_ = projectcommentFields
+	// projectcommentDescCreatedAt is the schema descriptor for created_at field.
+	projectcommentDescCreatedAt := projectcommentFields[1].Descriptor()
+	// projectcomment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	projectcomment.DefaultCreatedAt = projectcommentDescCreatedAt.Default.(func() time.Time)
+	// projectcommentDescID is the schema descriptor for id field.
+	projectcommentDescID := projectcommentMixinFields0[0].Descriptor()
+	// projectcomment.DefaultID holds the default value on creation for the id field.
+	projectcomment.DefaultID = projectcommentDescID.Default.(func() uuid.UUID)
 	questionMixin := schema.Question{}.Mixin()
 	questionMixinFields0 := questionMixin[0].Fields()
 	_ = questionMixinFields0

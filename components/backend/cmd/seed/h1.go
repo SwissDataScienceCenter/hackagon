@@ -209,6 +209,7 @@ func (h *harness) seedH1(now time.Time, admin, alice, bob, charles, dana *actor)
 			description: "A no-code platform that automatically selects and trains the best ML model for a given dataset, with one-click deployment.",
 			track:       "Machine Learning",
 			approvedBy:  alice,
+			rejectedBy:  nil,
 		},
 		{
 			by:          bob,
@@ -216,6 +217,7 @@ func (h *harness) seedH1(now time.Time, admin, alice, bob, charles, dana *actor)
 			description: "Privacy-preserving ML training across distributed data sources without ever sharing raw data with a central server.",
 			track:       "Machine Learning",
 			approvedBy:  nil,
+			rejectedBy:  nil,
 		},
 		{
 			by:          alice,
@@ -223,6 +225,7 @@ func (h *harness) seedH1(now time.Time, admin, alice, bob, charles, dana *actor)
 			description: "A customer support chatbot that handles queries in 12 languages using a fine-tuned LLM, with automatic language detection.",
 			track:       "Natural Language Processing",
 			approvedBy:  alice,
+			rejectedBy:  nil,
 		},
 		{
 			by:          bob,
@@ -230,6 +233,7 @@ func (h *harness) seedH1(now time.Time, admin, alice, bob, charles, dana *actor)
 			description: "Automatic abstractive summarization of legal and scientific documents using transformer models, with citation tracking.",
 			track:       "Natural Language Processing",
 			approvedBy:  nil,
+			rejectedBy:  nil,
 		},
 		{
 			by:          bob,
@@ -237,6 +241,7 @@ func (h *harness) seedH1(now time.Time, admin, alice, bob, charles, dana *actor)
 			description: "Edge-deployed object detection for retail shelf monitoring, running on low-power ARM hardware with under 50 ms latency.",
 			track:       "Computer Vision",
 			approvedBy:  admin,
+			rejectedBy:  nil,
 		},
 	})
 	if err != nil {

@@ -30,6 +30,9 @@ type Phase func(*sql.Selector)
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 
+// ProjectComment is the predicate function for projectcomment builders.
+type ProjectComment func(*sql.Selector)
+
 // Question is the predicate function for question builders.
 type Question func(*sql.Selector)
 

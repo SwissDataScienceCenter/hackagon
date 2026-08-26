@@ -952,6 +952,29 @@ func HasPreferredProjectsWith(preds ...predicate.Project) predicate.User {
 	})
 }
 
+// HasProjectComments applies the HasEdge predicate on the "project_comments" edge.
+func HasProjectComments() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProjectCommentsTable, ProjectCommentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProjectCommentsWith applies the HasEdge predicate on the "project_comments" edge with a given conditions (other predicates).
+func HasProjectCommentsWith(preds ...predicate.ProjectComment) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newProjectCommentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasVotes applies the HasEdge predicate on the "votes" edge.
 func HasVotes() predicate.User {
 	return predicate.User(func(s *sql.Selector) {

@@ -25,14 +25,16 @@ var File_hackathon_project_service_proto protoreflect.FileDescriptor
 
 const file_hackathon_project_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1fhackathon/project_service.proto\x12\thackathon\x1a4hackathon/messages/project_svc/approve_request.proto\x1a5hackathon/messages/project_svc/approve_response.proto\x1a3hackathon/messages/project_svc/delete_request.proto\x1a4hackathon/messages/project_svc/delete_response.proto\x1a7hackathon/messages/project_svc/disapprove_request.proto\x1a8hackathon/messages/project_svc/disapprove_response.proto\x1a1hackathon/messages/project_svc/edit_request.proto\x1a2hackathon/messages/project_svc/edit_response.proto\x1a?hackathon/messages/project_svc/export_preferences_request.proto\x1a@hackathon/messages/project_svc/export_preferences_response.proto\x1a;hackathon/messages/project_svc/get_preference_request.proto\x1a<hackathon/messages/project_svc/get_preference_response.proto\x1a0hackathon/messages/project_svc/get_request.proto\x1a1hackathon/messages/project_svc/get_response.proto\x1a1hackathon/messages/project_svc/list_request.proto\x1a2hackathon/messages/project_svc/list_response.proto\x1a4hackathon/messages/project_svc/propose_request.proto\x1a5hackathon/messages/project_svc/propose_response.proto\x1a>hackathon/messages/project_svc/remove_preference_request.proto\x1a?hackathon/messages/project_svc/remove_preference_response.proto\x1a;hackathon/messages/project_svc/set_preference_request.proto\x1a<hackathon/messages/project_svc/set_preference_response.proto2\xfb\t\n" +
+	"\x1fhackathon/project_service.proto\x12\thackathon\x1a4hackathon/messages/project_svc/approve_request.proto\x1a5hackathon/messages/project_svc/approve_response.proto\x1a3hackathon/messages/project_svc/delete_request.proto\x1a4hackathon/messages/project_svc/delete_response.proto\x1a7hackathon/messages/project_svc/disapprove_request.proto\x1a8hackathon/messages/project_svc/disapprove_response.proto\x1a1hackathon/messages/project_svc/edit_request.proto\x1a2hackathon/messages/project_svc/edit_response.proto\x1a?hackathon/messages/project_svc/export_preferences_request.proto\x1a@hackathon/messages/project_svc/export_preferences_response.proto\x1a;hackathon/messages/project_svc/get_preference_request.proto\x1a<hackathon/messages/project_svc/get_preference_response.proto\x1a0hackathon/messages/project_svc/get_request.proto\x1a1hackathon/messages/project_svc/get_response.proto\x1a1hackathon/messages/project_svc/list_request.proto\x1a2hackathon/messages/project_svc/list_response.proto\x1a4hackathon/messages/project_svc/propose_request.proto\x1a5hackathon/messages/project_svc/propose_response.proto\x1a3hackathon/messages/project_svc/reject_request.proto\x1a4hackathon/messages/project_svc/reject_response.proto\x1a>hackathon/messages/project_svc/remove_preference_request.proto\x1a?hackathon/messages/project_svc/remove_preference_response.proto\x1a;hackathon/messages/project_svc/set_preference_request.proto\x1a<hackathon/messages/project_svc/set_preference_response.proto2\xe4\n" +
+	"\n" +
 	"\x0eProjectService\x12a\n" +
 	"\x04List\x12+.hackathon.messages.project_svc.ListRequest\x1a,.hackathon.messages.project_svc.ListResponse\x12^\n" +
 	"\x03Get\x12*.hackathon.messages.project_svc.GetRequest\x1a+.hackathon.messages.project_svc.GetResponse\x12j\n" +
 	"\aPropose\x12..hackathon.messages.project_svc.ProposeRequest\x1a/.hackathon.messages.project_svc.ProposeResponse\x12j\n" +
 	"\aApprove\x12..hackathon.messages.project_svc.ApproveRequest\x1a/.hackathon.messages.project_svc.ApproveResponse\x12s\n" +
 	"\n" +
-	"Disapprove\x121.hackathon.messages.project_svc.DisapproveRequest\x1a2.hackathon.messages.project_svc.DisapproveResponse\x12|\n" +
+	"Disapprove\x121.hackathon.messages.project_svc.DisapproveRequest\x1a2.hackathon.messages.project_svc.DisapproveResponse\x12g\n" +
+	"\x06Reject\x12-.hackathon.messages.project_svc.RejectRequest\x1a..hackathon.messages.project_svc.RejectResponse\x12|\n" +
 	"\rSetPreference\x124.hackathon.messages.project_svc.SetPreferenceRequest\x1a5.hackathon.messages.project_svc.SetPreferenceResponse\x12|\n" +
 	"\rGetPreference\x124.hackathon.messages.project_svc.GetPreferenceRequest\x1a5.hackathon.messages.project_svc.GetPreferenceResponse\x12\x85\x01\n" +
 	"\x10RemovePreference\x127.hackathon.messages.project_svc.RemovePreferenceRequest\x1a8.hackathon.messages.project_svc.RemovePreferenceResponse\x12\x88\x01\n" +
@@ -46,23 +48,25 @@ var file_hackathon_project_service_proto_goTypes = []any{
 	(*project_svc.ProposeRequest)(nil),            // 2: hackathon.messages.project_svc.ProposeRequest
 	(*project_svc.ApproveRequest)(nil),            // 3: hackathon.messages.project_svc.ApproveRequest
 	(*project_svc.DisapproveRequest)(nil),         // 4: hackathon.messages.project_svc.DisapproveRequest
-	(*project_svc.SetPreferenceRequest)(nil),      // 5: hackathon.messages.project_svc.SetPreferenceRequest
-	(*project_svc.GetPreferenceRequest)(nil),      // 6: hackathon.messages.project_svc.GetPreferenceRequest
-	(*project_svc.RemovePreferenceRequest)(nil),   // 7: hackathon.messages.project_svc.RemovePreferenceRequest
-	(*project_svc.ExportPreferencesRequest)(nil),  // 8: hackathon.messages.project_svc.ExportPreferencesRequest
-	(*project_svc.EditRequest)(nil),               // 9: hackathon.messages.project_svc.EditRequest
-	(*project_svc.DeleteRequest)(nil),             // 10: hackathon.messages.project_svc.DeleteRequest
-	(*project_svc.ListResponse)(nil),              // 11: hackathon.messages.project_svc.ListResponse
-	(*project_svc.GetResponse)(nil),               // 12: hackathon.messages.project_svc.GetResponse
-	(*project_svc.ProposeResponse)(nil),           // 13: hackathon.messages.project_svc.ProposeResponse
-	(*project_svc.ApproveResponse)(nil),           // 14: hackathon.messages.project_svc.ApproveResponse
-	(*project_svc.DisapproveResponse)(nil),        // 15: hackathon.messages.project_svc.DisapproveResponse
-	(*project_svc.SetPreferenceResponse)(nil),     // 16: hackathon.messages.project_svc.SetPreferenceResponse
-	(*project_svc.GetPreferenceResponse)(nil),     // 17: hackathon.messages.project_svc.GetPreferenceResponse
-	(*project_svc.RemovePreferenceResponse)(nil),  // 18: hackathon.messages.project_svc.RemovePreferenceResponse
-	(*project_svc.ExportPreferencesResponse)(nil), // 19: hackathon.messages.project_svc.ExportPreferencesResponse
-	(*project_svc.EditResponse)(nil),              // 20: hackathon.messages.project_svc.EditResponse
-	(*project_svc.DeleteResponse)(nil),            // 21: hackathon.messages.project_svc.DeleteResponse
+	(*project_svc.RejectRequest)(nil),             // 5: hackathon.messages.project_svc.RejectRequest
+	(*project_svc.SetPreferenceRequest)(nil),      // 6: hackathon.messages.project_svc.SetPreferenceRequest
+	(*project_svc.GetPreferenceRequest)(nil),      // 7: hackathon.messages.project_svc.GetPreferenceRequest
+	(*project_svc.RemovePreferenceRequest)(nil),   // 8: hackathon.messages.project_svc.RemovePreferenceRequest
+	(*project_svc.ExportPreferencesRequest)(nil),  // 9: hackathon.messages.project_svc.ExportPreferencesRequest
+	(*project_svc.EditRequest)(nil),               // 10: hackathon.messages.project_svc.EditRequest
+	(*project_svc.DeleteRequest)(nil),             // 11: hackathon.messages.project_svc.DeleteRequest
+	(*project_svc.ListResponse)(nil),              // 12: hackathon.messages.project_svc.ListResponse
+	(*project_svc.GetResponse)(nil),               // 13: hackathon.messages.project_svc.GetResponse
+	(*project_svc.ProposeResponse)(nil),           // 14: hackathon.messages.project_svc.ProposeResponse
+	(*project_svc.ApproveResponse)(nil),           // 15: hackathon.messages.project_svc.ApproveResponse
+	(*project_svc.DisapproveResponse)(nil),        // 16: hackathon.messages.project_svc.DisapproveResponse
+	(*project_svc.RejectResponse)(nil),            // 17: hackathon.messages.project_svc.RejectResponse
+	(*project_svc.SetPreferenceResponse)(nil),     // 18: hackathon.messages.project_svc.SetPreferenceResponse
+	(*project_svc.GetPreferenceResponse)(nil),     // 19: hackathon.messages.project_svc.GetPreferenceResponse
+	(*project_svc.RemovePreferenceResponse)(nil),  // 20: hackathon.messages.project_svc.RemovePreferenceResponse
+	(*project_svc.ExportPreferencesResponse)(nil), // 21: hackathon.messages.project_svc.ExportPreferencesResponse
+	(*project_svc.EditResponse)(nil),              // 22: hackathon.messages.project_svc.EditResponse
+	(*project_svc.DeleteResponse)(nil),            // 23: hackathon.messages.project_svc.DeleteResponse
 }
 var file_hackathon_project_service_proto_depIdxs = []int32{
 	0,  // 0: hackathon.ProjectService.List:input_type -> hackathon.messages.project_svc.ListRequest
@@ -70,25 +74,27 @@ var file_hackathon_project_service_proto_depIdxs = []int32{
 	2,  // 2: hackathon.ProjectService.Propose:input_type -> hackathon.messages.project_svc.ProposeRequest
 	3,  // 3: hackathon.ProjectService.Approve:input_type -> hackathon.messages.project_svc.ApproveRequest
 	4,  // 4: hackathon.ProjectService.Disapprove:input_type -> hackathon.messages.project_svc.DisapproveRequest
-	5,  // 5: hackathon.ProjectService.SetPreference:input_type -> hackathon.messages.project_svc.SetPreferenceRequest
-	6,  // 6: hackathon.ProjectService.GetPreference:input_type -> hackathon.messages.project_svc.GetPreferenceRequest
-	7,  // 7: hackathon.ProjectService.RemovePreference:input_type -> hackathon.messages.project_svc.RemovePreferenceRequest
-	8,  // 8: hackathon.ProjectService.ExportPreferences:input_type -> hackathon.messages.project_svc.ExportPreferencesRequest
-	9,  // 9: hackathon.ProjectService.Edit:input_type -> hackathon.messages.project_svc.EditRequest
-	10, // 10: hackathon.ProjectService.Delete:input_type -> hackathon.messages.project_svc.DeleteRequest
-	11, // 11: hackathon.ProjectService.List:output_type -> hackathon.messages.project_svc.ListResponse
-	12, // 12: hackathon.ProjectService.Get:output_type -> hackathon.messages.project_svc.GetResponse
-	13, // 13: hackathon.ProjectService.Propose:output_type -> hackathon.messages.project_svc.ProposeResponse
-	14, // 14: hackathon.ProjectService.Approve:output_type -> hackathon.messages.project_svc.ApproveResponse
-	15, // 15: hackathon.ProjectService.Disapprove:output_type -> hackathon.messages.project_svc.DisapproveResponse
-	16, // 16: hackathon.ProjectService.SetPreference:output_type -> hackathon.messages.project_svc.SetPreferenceResponse
-	17, // 17: hackathon.ProjectService.GetPreference:output_type -> hackathon.messages.project_svc.GetPreferenceResponse
-	18, // 18: hackathon.ProjectService.RemovePreference:output_type -> hackathon.messages.project_svc.RemovePreferenceResponse
-	19, // 19: hackathon.ProjectService.ExportPreferences:output_type -> hackathon.messages.project_svc.ExportPreferencesResponse
-	20, // 20: hackathon.ProjectService.Edit:output_type -> hackathon.messages.project_svc.EditResponse
-	21, // 21: hackathon.ProjectService.Delete:output_type -> hackathon.messages.project_svc.DeleteResponse
-	11, // [11:22] is the sub-list for method output_type
-	0,  // [0:11] is the sub-list for method input_type
+	5,  // 5: hackathon.ProjectService.Reject:input_type -> hackathon.messages.project_svc.RejectRequest
+	6,  // 6: hackathon.ProjectService.SetPreference:input_type -> hackathon.messages.project_svc.SetPreferenceRequest
+	7,  // 7: hackathon.ProjectService.GetPreference:input_type -> hackathon.messages.project_svc.GetPreferenceRequest
+	8,  // 8: hackathon.ProjectService.RemovePreference:input_type -> hackathon.messages.project_svc.RemovePreferenceRequest
+	9,  // 9: hackathon.ProjectService.ExportPreferences:input_type -> hackathon.messages.project_svc.ExportPreferencesRequest
+	10, // 10: hackathon.ProjectService.Edit:input_type -> hackathon.messages.project_svc.EditRequest
+	11, // 11: hackathon.ProjectService.Delete:input_type -> hackathon.messages.project_svc.DeleteRequest
+	12, // 12: hackathon.ProjectService.List:output_type -> hackathon.messages.project_svc.ListResponse
+	13, // 13: hackathon.ProjectService.Get:output_type -> hackathon.messages.project_svc.GetResponse
+	14, // 14: hackathon.ProjectService.Propose:output_type -> hackathon.messages.project_svc.ProposeResponse
+	15, // 15: hackathon.ProjectService.Approve:output_type -> hackathon.messages.project_svc.ApproveResponse
+	16, // 16: hackathon.ProjectService.Disapprove:output_type -> hackathon.messages.project_svc.DisapproveResponse
+	17, // 17: hackathon.ProjectService.Reject:output_type -> hackathon.messages.project_svc.RejectResponse
+	18, // 18: hackathon.ProjectService.SetPreference:output_type -> hackathon.messages.project_svc.SetPreferenceResponse
+	19, // 19: hackathon.ProjectService.GetPreference:output_type -> hackathon.messages.project_svc.GetPreferenceResponse
+	20, // 20: hackathon.ProjectService.RemovePreference:output_type -> hackathon.messages.project_svc.RemovePreferenceResponse
+	21, // 21: hackathon.ProjectService.ExportPreferences:output_type -> hackathon.messages.project_svc.ExportPreferencesResponse
+	22, // 22: hackathon.ProjectService.Edit:output_type -> hackathon.messages.project_svc.EditResponse
+	23, // 23: hackathon.ProjectService.Delete:output_type -> hackathon.messages.project_svc.DeleteResponse
+	12, // [12:24] is the sub-list for method output_type
+	0,  // [0:12] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

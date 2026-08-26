@@ -12,6 +12,7 @@ export enum ProjectStatus {
   PROJECT_STATUS_UNSPECIFIED = 0,
   PROJECT_STATUS_PROPOSED = 1,
   PROJECT_STATUS_APPROVED = 2,
+  PROJECT_STATUS_REJECTED = 3,
   UNRECOGNIZED = -1,
 }
 
@@ -26,6 +27,9 @@ export function projectStatusFromJSON(object: any): ProjectStatus {
     case 2:
     case "PROJECT_STATUS_APPROVED":
       return ProjectStatus.PROJECT_STATUS_APPROVED;
+    case 3:
+    case "PROJECT_STATUS_REJECTED":
+      return ProjectStatus.PROJECT_STATUS_REJECTED;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -41,6 +45,8 @@ export function projectStatusToJSON(object: ProjectStatus): string {
       return "PROJECT_STATUS_PROPOSED";
     case ProjectStatus.PROJECT_STATUS_APPROVED:
       return "PROJECT_STATUS_APPROVED";
+    case ProjectStatus.PROJECT_STATUS_REJECTED:
+      return "PROJECT_STATUS_REJECTED";
     case ProjectStatus.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

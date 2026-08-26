@@ -20,6 +20,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/page"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -447,6 +448,21 @@ func (_c *UserCreate) AddPreferredProjects(v ...*Project) *UserCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddPreferredProjectIDs(ids...)
+}
+
+// AddProjectCommentIDs adds the "project_comments" edge to the ProjectComment entity by IDs.
+func (_c *UserCreate) AddProjectCommentIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddProjectCommentIDs(ids...)
+	return _c
+}
+
+// AddProjectComments adds the "project_comments" edges to the ProjectComment entity.
+func (_c *UserCreate) AddProjectComments(v ...*ProjectComment) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddProjectCommentIDs(ids...)
 }
 
 // AddVoteIDs adds the "votes" edge to the Vote entity by IDs.
@@ -983,6 +999,22 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProjectCommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ProjectCommentsTable,
+			Columns: []string{user.ProjectCommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(projectcomment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

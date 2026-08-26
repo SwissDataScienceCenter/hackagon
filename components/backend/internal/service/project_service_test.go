@@ -625,6 +625,37 @@ var _ = Describe("ProjectService", func() {
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.PermissionDenied))
 		})
+
+		It("returns project with comments", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Create a comment directly in the DB
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(createdProjectID))).
+				WithCreator().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = dbClient.ProjectComment.Create().
+				SetProject(p).
+				SetUserID(p.Edges.Creator.ID).
+				SetText("Test comment").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			getReq := &projectMsgs.GetRequest{ProjectId: createdProjectID}
+			getResp, err := projectClient.Get(ctx, getReq)
+			Expect(err).NotTo(HaveOccurred())
+
+			protoP := getResp.GetProject()
+			Expect(protoP.Comments).To(HaveLen(1))
+			Expect(protoP.Comments[0].Text).To(Equal("Test comment"))
+			Expect(protoP.Comments[0].UserId).To(Equal(p.Edges.Creator.ID.String()))
+		})
 	})
 
 	Describe("Approve", func() {
@@ -1413,6 +1444,128 @@ var _ = Describe("ProjectService", func() {
 			)
 
 			_, err = projectClient.Disapprove(ctx, &projectMsgs.DisapproveRequest{
+				ProjectId: createdProjectID,
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("Reject", func() {
+		var createdProjectID string
+		var hackathonID string
+
+		BeforeEach(func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			createResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:        "Reject Test Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = createResp.GetHackathonId()
+
+			projectResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hackathonID,
+				Title:       "Reject Test Project",
+				Description: "Project to be rejected",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			createdProjectID = projectResp.GetProjectId()
+		})
+
+		It("rejects project with admin token", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := projectClient.Reject(ctx, &projectMsgs.RejectRequest{
+				ProjectId: createdProjectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(createdProjectID))).
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Status).To(Equal(entproject.StatusRejected))
+
+			// Auto-comment created
+			comments, err := p.QueryComments().All(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(comments).To(HaveLen(1))
+			Expect(comments[0].Text).To(Equal("Project rejected"))
+		})
+
+		It("rejects with review comment creates two comments", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := projectClient.Reject(ctx, &projectMsgs.RejectRequest{
+				ProjectId:     createdProjectID,
+				ReviewComment: testutils.StringPtr("Does not fit the hackathon theme"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := dbClient.Project.Query().
+				Where(entproject.IDEQ(uuid.MustParse(createdProjectID))).
+				WithComments().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Status).To(Equal(entproject.StatusRejected))
+
+			comments := p.Edges.Comments
+			Expect(comments).To(HaveLen(2))
+			Expect(comments[0].Text).To(Equal("Project rejected"))
+			Expect(comments[1].Text).To(Equal("Does not fit the hackathon theme"))
+		})
+
+		It("returns NOT_FOUND for invalid project ID", func() {
+			token := testutils.CreateTestJWTToken(testAdmin)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := projectClient.Reject(ctx, &projectMsgs.RejectRequest{
+				ProjectId: uuid.NewString(),
+			})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.NotFound))
+		})
+
+		It("requires Write permission to reject", func() {
+			nonOwnerKeycloakID := "non-owner-reject"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(nonOwnerKeycloakID).
+				SetUsername("non-owner-reject-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(nonOwnerKeycloakID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = projectClient.Reject(ctx, &projectMsgs.RejectRequest{
 				ProjectId: createdProjectID,
 			})
 			Expect(err).To(HaveOccurred())

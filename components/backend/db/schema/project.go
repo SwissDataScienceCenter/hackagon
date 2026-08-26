@@ -35,7 +35,7 @@ func (Project) Fields() []ent.Field {
 			Default(time.Now).UpdateDefault(time.Now).
 			Comment("Timestamp of the last modification."),
 		field.Enum("status").
-			Values("proposed", "approved").
+			Values("proposed", "approved", "rejected").
 			Comment("Approval status of the project."),
 		field.String("image").
 			Optional().
@@ -64,6 +64,8 @@ func (Project) Edges() []ent.Edge {
 			Comment("Teams working on this project."),
 		edge.To("submissions", Submission.Type).
 			Comment("Submissions made for this project."),
+		edge.To("comments", ProjectComment.Type).
+			Comment("Review comments on this project."),
 		edge.From("preferred_by_users", User.Type).Ref("preferred_projects").
 			Comment("Users who marked this project as preferred."),
 	}

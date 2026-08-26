@@ -334,7 +334,7 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "modified_at", Type: field.TypeTime},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"proposed", "approved"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"proposed", "approved", "rejected"}},
 		{Name: "image", Type: field.TypeString, Nullable: true},
 		{Name: "description", Type: field.TypeString, Size: 2147483647},
 		{Name: "hackathon_projects", Type: field.TypeUUID},
@@ -383,6 +383,34 @@ var (
 				Name:    "project_status",
 				Unique:  false,
 				Columns: []*schema.Column{ProjectsColumns[4]},
+			},
+		},
+	}
+	// ProjectCommentsColumns holds the columns for the "project_comments" table.
+	ProjectCommentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "text", Type: field.TypeString, Size: 2147483647},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "project_comments", Type: field.TypeUUID},
+		{Name: "user_project_comments", Type: field.TypeUUID},
+	}
+	// ProjectCommentsTable holds the schema information for the "project_comments" table.
+	ProjectCommentsTable = &schema.Table{
+		Name:       "project_comments",
+		Columns:    ProjectCommentsColumns,
+		PrimaryKey: []*schema.Column{ProjectCommentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "project_comments_projects_comments",
+				Columns:    []*schema.Column{ProjectCommentsColumns[3]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "project_comments_users_project_comments",
+				Columns:    []*schema.Column{ProjectCommentsColumns[4]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Restrict,
 			},
 		},
 	}
@@ -799,6 +827,7 @@ var (
 		ParticipantsTable,
 		PhasesTable,
 		ProjectsTable,
+		ProjectCommentsTable,
 		QuestionsTable,
 		SubmissionsTable,
 		TeamsTable,
@@ -838,6 +867,8 @@ func init() {
 	ProjectsTable.ForeignKeys[1].RefTable = TracksTable
 	ProjectsTable.ForeignKeys[2].RefTable = UsersTable
 	ProjectsTable.ForeignKeys[3].RefTable = UsersTable
+	ProjectCommentsTable.ForeignKeys[0].RefTable = ProjectsTable
+	ProjectCommentsTable.ForeignKeys[1].RefTable = UsersTable
 	QuestionsTable.ForeignKeys[0].RefTable = HackathonsTable
 	QuestionsTable.ForeignKeys[1].RefTable = UsersTable
 	QuestionsTable.ForeignKeys[2].RefTable = UsersTable

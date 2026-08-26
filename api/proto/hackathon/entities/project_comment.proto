@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+message ProjectComment {
+  string id = 1;
+  string user_id = 2;
+  string user_name = 3;
+  string text = 4 [(buf.validate.field).string.max_len = 2000];
+  google.protobuf.Timestamp created_at = 5;
+}

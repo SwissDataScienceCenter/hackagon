@@ -22,6 +22,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/phase"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/predicate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/project"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/projectcomment"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/question"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/submission"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/team"
@@ -61,6 +62,7 @@ type UserQuery struct {
 	withRegistrationAnswers      *AnswerQuery
 	withModifiedStates           *HackathonStateQuery
 	withPreferredProjects        *ProjectQuery
+	withProjectComments          *ProjectCommentQuery
 	withVotes                    *VoteQuery
 	withJuryCategories           *VoteCategoryQuery
 	withOwns                     *HackathonQuery
@@ -586,6 +588,28 @@ func (_q *UserQuery) QueryPreferredProjects() *ProjectQuery {
 	return query
 }
 
+// QueryProjectComments chains the current query on the "project_comments" edge.
+func (_q *UserQuery) QueryProjectComments() *ProjectCommentQuery {
+	query := (&ProjectCommentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(projectcomment.Table, projectcomment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ProjectCommentsTable, user.ProjectCommentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryVotes chains the current query on the "votes" edge.
 func (_q *UserQuery) QueryVotes() *VoteQuery {
 	query := (&VoteClient{config: _q.config}).Query()
@@ -910,6 +934,7 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withRegistrationAnswers:      _q.withRegistrationAnswers.Clone(),
 		withModifiedStates:           _q.withModifiedStates.Clone(),
 		withPreferredProjects:        _q.withPreferredProjects.Clone(),
+		withProjectComments:          _q.withProjectComments.Clone(),
 		withVotes:                    _q.withVotes.Clone(),
 		withJuryCategories:           _q.withJuryCategories.Clone(),
 		withOwns:                     _q.withOwns.Clone(),
@@ -1163,6 +1188,17 @@ func (_q *UserQuery) WithPreferredProjects(opts ...func(*ProjectQuery)) *UserQue
 	return _q
 }
 
+// WithProjectComments tells the query-builder to eager-load the nodes that are connected to
+// the "project_comments" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithProjectComments(opts ...func(*ProjectCommentQuery)) *UserQuery {
+	query := (&ProjectCommentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withProjectComments = query
+	return _q
+}
+
 // WithVotes tells the query-builder to eager-load the nodes that are connected to
 // the "votes" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *UserQuery) WithVotes(opts ...func(*VoteQuery)) *UserQuery {
@@ -1296,7 +1332,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [27]bool{
+		loadedTypes = [28]bool{
 			_q.withCreatedHackathons != nil,
 			_q.withCreatedHackathonInvites != nil,
 			_q.withModifiedHackathons != nil,
@@ -1319,6 +1355,7 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			_q.withRegistrationAnswers != nil,
 			_q.withModifiedStates != nil,
 			_q.withPreferredProjects != nil,
+			_q.withProjectComments != nil,
 			_q.withVotes != nil,
 			_q.withJuryCategories != nil,
 			_q.withOwns != nil,
@@ -1499,6 +1536,13 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadPreferredProjects(ctx, query, nodes,
 			func(n *User) { n.Edges.PreferredProjects = []*Project{} },
 			func(n *User, e *Project) { n.Edges.PreferredProjects = append(n.Edges.PreferredProjects, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withProjectComments; query != nil {
+		if err := _q.loadProjectComments(ctx, query, nodes,
+			func(n *User) { n.Edges.ProjectComments = []*ProjectComment{} },
+			func(n *User, e *ProjectComment) { n.Edges.ProjectComments = append(n.Edges.ProjectComments, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -2308,6 +2352,37 @@ func (_q *UserQuery) loadPreferredProjects(ctx context.Context, query *ProjectQu
 		for kn := range nodes {
 			assign(kn, n)
 		}
+	}
+	return nil
+}
+func (_q *UserQuery) loadProjectComments(ctx context.Context, query *ProjectCommentQuery, nodes []*User, init func(*User), assign func(*User, *ProjectComment)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProjectComment(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ProjectCommentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_project_comments
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_project_comments" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_project_comments" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

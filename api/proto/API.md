@@ -34,6 +34,9 @@
 - [hackathon/entities/phase.proto](#hackathon_entities_phase-proto)
     - [Phase](#hackathon-entities-Phase)
   
+- [hackathon/entities/project_comment.proto](#hackathon_entities_project_comment-proto)
+    - [ProjectComment](#hackathon-entities-ProjectComment)
+  
 - [hackathon/entities/project_status.proto](#hackathon_entities_project_status-proto)
     - [ProjectStatus](#hackathon-entities-ProjectStatus)
   
@@ -331,6 +334,12 @@
   
 - [hackathon/messages/project_svc/propose_response.proto](#hackathon_messages_project_svc_propose_response-proto)
     - [ProposeResponse](#hackathon-messages-project_svc-ProposeResponse)
+  
+- [hackathon/messages/project_svc/reject_request.proto](#hackathon_messages_project_svc_reject_request-proto)
+    - [RejectRequest](#hackathon-messages-project_svc-RejectRequest)
+  
+- [hackathon/messages/project_svc/reject_response.proto](#hackathon_messages_project_svc_reject_response-proto)
+    - [RejectResponse](#hackathon-messages-project_svc-RejectResponse)
   
 - [hackathon/messages/project_svc/remove_preference_request.proto](#hackathon_messages_project_svc_remove_preference_request-proto)
     - [RemovePreferenceRequest](#hackathon-messages-project_svc-RemovePreferenceRequest)
@@ -981,6 +990,41 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_entities_project_comment-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/project_comment.proto
+
+
+
+<a name="hackathon-entities-ProjectComment"></a>
+
+### ProjectComment
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| user_id | [string](#string) |  |  |
+| user_name | [string](#string) |  |  |
+| text | [string](#string) |  |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_entities_project_status-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1000,6 +1044,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | PROJECT_STATUS_UNSPECIFIED | 0 |  |
 | PROJECT_STATUS_PROPOSED | 1 |  |
 | PROJECT_STATUS_APPROVED | 2 |  |
+| PROJECT_STATUS_REJECTED | 3 |  |
 
 
  
@@ -1036,6 +1081,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | hackathon_id | [string](#string) |  |  |
 | creator_id | [string](#string) |  |  |
 | modifier_id | [string](#string) |  |  |
+| comments | [ProjectComment](#hackathon-entities-ProjectComment) | repeated |  |
 
 
 
@@ -4152,6 +4198,64 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_project_svc_reject_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/reject_request.proto
+
+
+
+<a name="hackathon-messages-project_svc-RejectRequest"></a>
+
+### RejectRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| project_id | [string](#string) |  |  |
+| review_comment | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_project_svc_reject_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/project_svc/reject_response.proto
+
+
+
+<a name="hackathon-messages-project_svc-RejectResponse"></a>
+
+### RejectResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_project_svc_remove_preference_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -5349,6 +5453,7 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Propose | [messages.project_svc.ProposeRequest](#hackathon-messages-project_svc-ProposeRequest) | [messages.project_svc.ProposeResponse](#hackathon-messages-project_svc-ProposeResponse) |  |
 | Approve | [messages.project_svc.ApproveRequest](#hackathon-messages-project_svc-ApproveRequest) | [messages.project_svc.ApproveResponse](#hackathon-messages-project_svc-ApproveResponse) |  |
 | Disapprove | [messages.project_svc.DisapproveRequest](#hackathon-messages-project_svc-DisapproveRequest) | [messages.project_svc.DisapproveResponse](#hackathon-messages-project_svc-DisapproveResponse) |  |
+| Reject | [messages.project_svc.RejectRequest](#hackathon-messages-project_svc-RejectRequest) | [messages.project_svc.RejectResponse](#hackathon-messages-project_svc-RejectResponse) |  |
 | SetPreference | [messages.project_svc.SetPreferenceRequest](#hackathon-messages-project_svc-SetPreferenceRequest) | [messages.project_svc.SetPreferenceResponse](#hackathon-messages-project_svc-SetPreferenceResponse) |  |
 | GetPreference | [messages.project_svc.GetPreferenceRequest](#hackathon-messages-project_svc-GetPreferenceRequest) | [messages.project_svc.GetPreferenceResponse](#hackathon-messages-project_svc-GetPreferenceResponse) |  |
 | RemovePreference | [messages.project_svc.RemovePreferenceRequest](#hackathon-messages-project_svc-RemovePreferenceRequest) | [messages.project_svc.RemovePreferenceResponse](#hackathon-messages-project_svc-RemovePreferenceResponse) |  |

@@ -156,6 +156,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 			description: "A command-line tool that scaffolds new microservices from a YAML spec, generating proto definitions, ent schemas, and CI configuration automatically.",
 			track:       "Developer Tools",
 			approvedBy:  admin,
+			rejectedBy:  nil,
 		},
 		{
 			by:          alice,
@@ -163,6 +164,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 			description: "A web dashboard that tracks test coverage trends across all repositories over time and surfaces regressions directly in CI checks.",
 			track:       "Developer Tools",
 			approvedBy:  nil,
+			rejectedBy:  nil,
 		},
 		{
 			by:          alice,
@@ -170,6 +172,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 			description: "Interactive graph visualization of data pipeline dependencies with live execution status, SLA tracking, and error highlighting.",
 			track:       "Data Platform",
 			approvedBy:  admin,
+			rejectedBy:  nil,
 		},
 	})
 	if err != nil {
