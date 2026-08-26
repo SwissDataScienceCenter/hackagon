@@ -23,6 +23,7 @@ import ClipboardList from "lucide-svelte/icons/clipboard-list"
 import UserRoundCheck from "lucide-svelte/icons/user-round-check"
 import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
+import Ticket from "lucide-svelte/icons/ticket"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
@@ -324,6 +325,15 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * count: the alerts are problems, the capabilities inside one are not, and a
  * number would silently mean whichever of the two the reader assumed. The banner
  * alongside it carries the detail.
+ *
+ * `isPrivate` decides whether Invitations is offered. Unlike `trackCount` this
+ * is not "has it got any yet" but "can it ever want one": a public hackathon is
+ * listed and joinable by anybody, so `Join` never looks at a token there
+ * (`hackathon_service.go:511`) and a link minted for one grants nothing it did
+ * not already have. The RPCs would succeed — `CreateInvite` never checks
+ * visibility — which is exactly why the entry has to be gated here rather than
+ * left for the backend to refuse. False by default, the same honest default the
+ * counts use.
  */
 export function manageNav(
   hackathonId: string,
@@ -331,6 +341,7 @@ export function manageNav(
   isGlobalAdmin: boolean,
   needsAttention = false,
   trackCount = 0,
+  isPrivate = false,
 ): NavItem[] {
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
@@ -381,6 +392,25 @@ export function manageNav(
         `/my/hackathon/${hackathonId}/participants/manage/waitlist`,
       ),
     },
+    // Only on a private hackathon, and immediately before the form, because the
+    // two are the sign-up path in order: a link is how somebody arrives, the
+    // form is what they are asked on the way, and the Waitlist above is where
+    // they are let through. A public hackathon needs no link — it is listed, and
+    // anybody can ask to join — so the entry would lead to a page whose every
+    // link grants nothing.
+    ...(isPrivate
+      ? [
+          {
+            id: "manage:invites",
+            label: "Invitations",
+            icon: Ticket,
+            href: resolve(`/my/hackathon/${hackathonId}/manage/invites`),
+            description:
+              "The links that let invited people see this event and ask to " +
+              "join. Copy one into a mailing; revoke it if it spreads.",
+          },
+        ]
+      : []),
     // Straight after Participants, because it is the other half of getting
     // people in: this decides what they are asked on the way, that page decides
     // who is let through. Always shown — a form with no questions is a legitimate

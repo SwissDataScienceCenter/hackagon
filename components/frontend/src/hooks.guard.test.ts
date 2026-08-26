@@ -15,6 +15,24 @@ describe("isProtectedRoute", () => {
     expect(isProtectedRoute("/hackathon/abc/")).toBe(false)
   })
 
+  it("should leave an invitation link public", () => {
+    // The token in the URL is the credential, and the whole point of the page is
+    // that an invitee sees what they were invited to before signing in. Protect
+    // this and every invitation bounces to a login wall — and then to `/`, since
+    // nothing in the app reads the `returnTo` the bounce writes.
+    expect(
+      isProtectedRoute("/invite/01a03d5c-7e20-75c4-ba9c-01be44e94c70"),
+    ).toBe(false)
+    expect(isProtectedRoute("/invite")).toBe(false)
+    expect(isProtectedRoute("/invite/")).toBe(false)
+  })
+
+  it("should not treat a route merely starting with 'invite' as public", () => {
+    // `/^\/invite(\/|$)/`, not `/^\/invite/` — otherwise a future
+    // `/invitees` admin page would be silently anonymous.
+    expect(isProtectedRoute("/invitees")).toBe(true)
+  })
+
   it("should protect /welcome", () => {
     expect(isProtectedRoute("/welcome")).toBe(true)
     expect(isProtectedRoute("/welcome/")).toBe(true)

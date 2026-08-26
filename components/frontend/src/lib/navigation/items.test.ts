@@ -356,6 +356,65 @@ describe("manageNav", () => {
     ])
   })
 
+  // On a private hackathon the sign-up path reads in order: the link somebody
+  // arrives on, then the form they fill in, then the queue they wait in.
+  it("puts Invitations between the waitlist and the form when private", () => {
+    expectOrder(manageNav("hack-1", owner, false, false, 0, true), [
+      "manage:participants",
+      "manage:waitlist",
+      "manage:invites",
+      "manage:forms",
+    ])
+  })
+
+  // A public hackathon is listed and joinable by anybody, so `Join` never looks
+  // at a token there and a link would grant nothing. The RPCs would still
+  // succeed — CreateInvite does not check visibility — which is exactly why this
+  // is gated here rather than left to the backend to refuse.
+  describe("isPrivate", () => {
+    const hasInvitesEntry = (isPrivate?: boolean) =>
+      idsOf(manageNav("hack-1", owner, false, false, 0, isPrivate)).includes(
+        "manage:invites",
+      )
+
+    it("omits Invitations on a public hackathon", () => {
+      expect(hasInvitesEntry(false)).toBe(false)
+    })
+
+    // Same honest default as the counts: a caller that has not looked cannot
+    // claim the hackathon is private.
+    it("omits it when the caller says nothing", () => {
+      expect(hasInvitesEntry()).toBe(false)
+    })
+
+    it("offers it on a private one", () => {
+      expect(hasInvitesEntry(true)).toBe(true)
+    })
+
+    it("changes nothing else about the section", () => {
+      expect(
+        idsOf(manageNav("hack-1", owner, false, false, 0, true)).filter(
+          (id) => id !== "manage:invites",
+        ),
+      ).toEqual(idsOf(manageNav("hack-1", owner, false, false, 0, false)))
+    })
+
+    // Visibility is not a permission: a private hackathon does not hand the
+    // section to somebody who was never going to get it.
+    it("does not give a participant the section on a private hackathon", () => {
+      expect(
+        manageNav(
+          "hack-1",
+          { role: ROLE_MEMBER, isWaiting: false },
+          false,
+          false,
+          0,
+          true,
+        ),
+      ).toEqual([])
+    })
+  })
+
   // Tracks are optional, and the entry says so by not being there. An organiser
   // who wants the first one goes through the Tracks card on Settings, which is
   // always drawn — so nothing is unreachable, and a hackathon running without

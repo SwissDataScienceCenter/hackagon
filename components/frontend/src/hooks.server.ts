@@ -30,6 +30,12 @@ let configLoader: ConfigLoader
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/hackathon(\/|$)/,
+  // An invitation link is the credential. The whole point of the page is that
+  // somebody opening it from their mail sees what they were invited to *before*
+  // being asked to sign in, so demanding a session first would defeat it — and
+  // the token, not the session, is what the backend checks (`PreviewInvite`
+  // performs no casbin check at all and serves anonymous callers).
+  /^\/invite(\/|$)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,
