@@ -89,11 +89,18 @@ export const load: PageServerLoad = async (event) => {
   // Answers already on file, so the form opens filled in and can be corrected
   // rather than retyped. Its own call, not part of `get`, for the same reason
   // this route is not under `[id]`: a waitlisted caller has to reach it.
+  //
+  // Asked for this caller by name, which matters now that questions can be
+  // marked `publicAnswers`: left unnamed, the RPC returns the caller's answers
+  // *plus* everybody's answers to the public questions, and `answerValues` keys
+  // by question — so someone else's affiliation would prefill this form as
+  // though the caller had typed it. Naming yourself is always permitted
+  // (`hackathon_service.go:1912`), write access or not.
   let values: Record<string, string | boolean> = {}
   try {
     const res = await client.listParticipantAnswers({
       hackathonId,
-      userId: undefined,
+      userId: event.locals.platformUser?.id,
     })
     values = answerValues(res.answers)
   } catch {

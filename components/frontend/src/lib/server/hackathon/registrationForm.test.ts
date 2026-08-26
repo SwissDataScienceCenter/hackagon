@@ -53,6 +53,7 @@ describe("parseQuestionForm", () => {
       mandatory: false,
       order: 0,
       options: [],
+      publicAnswers: false,
     })
   })
 
@@ -68,6 +69,24 @@ describe("parseQuestionForm", () => {
     // relaxed back to optional.
     expect(values(form()).mandatory).toBe(false)
     expect(values(form({ mandatory: "true" })).mandatory).toBe(true)
+  })
+
+  describe("showing the answers to participants", () => {
+    it("is off when the box is unticked, which submits nothing", () => {
+      expect(values(form()).publicAnswers).toBe(false)
+    })
+
+    it("is on when the box is ticked", () => {
+      expect(values(form({ publicAnswers: "true" })).publicAnswers).toBe(true)
+    })
+
+    // Absence is a retraction here, not "leave it alone": the edit action sends
+    // the parsed value unconditionally, because `EditQuestion` accepts this
+    // field on an already-answered question and taking a question back is the
+    // reason it does.
+    it("is off for any value other than the box's own", () => {
+      expect(values(form({ publicAnswers: "on" })).publicAnswers).toBe(false)
+    })
   })
 
   describe("keys", () => {
@@ -199,6 +218,7 @@ describe("questionRows", () => {
     mandatory: false,
     order: 1,
     options: [],
+    publicAnswers: false,
     ...over,
   })
 
@@ -226,6 +246,14 @@ describe("questionRows", () => {
   it("reports zero when no answers were passed at all", () => {
     expect(questionRows([q()])[0]?.answerCount).toBe(0)
   })
+
+  it("carries whether the answers are shown to the whole cohort", () => {
+    const rows = questionRows([
+      q({ id: "q1", key: "a", publicAnswers: true }),
+      q({ id: "q2", key: "b", publicAnswers: false }),
+    ])
+    expect(rows.map((r) => r.publicAnswers)).toEqual([true, false])
+  })
 })
 
 describe("parseAnswers", () => {
@@ -241,6 +269,7 @@ describe("parseAnswers", () => {
     mandatory,
     order: 1,
     options: [] as string[],
+    publicAnswers: false,
     answerCount: 0,
   })
 
@@ -351,6 +380,7 @@ describe("missingMandatory", () => {
     mandatory,
     order: 1,
     options: [] as string[],
+    publicAnswers: false,
     answerCount: 0,
   })
 
@@ -383,6 +413,7 @@ describe("answersByParticipant", () => {
       mandatory: true,
       order: 1,
       options: [],
+      publicAnswers: true,
     },
     {
       id: "q2",
@@ -392,6 +423,7 @@ describe("answersByParticipant", () => {
       mandatory: true,
       order: 2,
       options: [],
+      publicAnswers: false,
     },
   ])
 
@@ -404,6 +436,17 @@ describe("answersByParticipant", () => {
     expect(Object.keys(grouped).sort()).toEqual(["u1", "u2"])
     expect(grouped.u1?.map((a) => a.key)).toEqual(["affiliation", "conduct"])
     expect(grouped.u1?.[1]?.value).toBe(true)
+  })
+
+  it("marks each answer with whether the cohort can read it", () => {
+    // So a profile can chip the shared ones without carrying the question list
+    // as well. On a peer's profile every entry is true, because the backend
+    // sends nothing else.
+    const grouped = answersByParticipant(rows, [
+      { questionId: "q1", participantId: "u1", textValue: "ETH" },
+      { questionId: "q2", participantId: "u1", boolValue: true },
+    ])
+    expect(grouped.u1?.map((a) => a.publicAnswers)).toEqual([true, false])
   })
 
   it("leaves out a participant who answered nothing", () => {
