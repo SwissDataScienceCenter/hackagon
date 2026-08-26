@@ -95,7 +95,15 @@ backend:
       user: hackagon
       postgresPassword: ""
     oidc:
-      jwksurl: "https://auth.{baseDomain}/realms/hackagon/protocol/openid-connect/certs"
+      # -- Where the backend fetches Keycloak's signing keys. Uses the in-cluster
+      # service ({keycloakService} is substituted in the template) so key fetching
+      # does not depend on public DNS, the ingress, or a valid TLS certificate.
+      # Only valid while keycloak.enabled is true, which puts the service in this
+      # release's namespace. With an external Keycloak (keycloak.enabled: false),
+      # override this with a url the backend pod can actually reach.
+      jwksurl: "http://{keycloakService}:8080/realms/hackagon/protocol/openid-connect/certs"
+      # -- Must stay the PUBLIC url: this is the `iss` claim Keycloak stamps into
+      # tokens, and the backend rejects any token whose issuer does not match.
       issuerurl: "https://auth.{baseDomain}/realms/hackagon"
       algorithm: RS256
     logging:
