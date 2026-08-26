@@ -8,7 +8,7 @@
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
-    import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant, isPrivate } from '$lib/utils/hackathonStatus';
     import { membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import { resolvePhaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
@@ -95,6 +95,7 @@
         trackCount={hackathon.tracks.length}
         hasDescription={Boolean(hackathon.description)}
         stateNeedsAttention={alerts.length > 0}
+        isPrivate={isPrivate(hackathon.visibility)}
     />
 
     <!-- min-w-0 so a wide child (a table, a code block) shrinks inside the column

@@ -34,6 +34,7 @@
         trackCount = 0,
         hasDescription = false,
         stateNeedsAttention = false,
+        isPrivate = false,
     }: {
         hackathonId: string;
         hackathonName: string;
@@ -83,6 +84,12 @@
          * on it anyway.
          */
         stateNeedsAttention?: boolean;
+        /**
+         * Whether this hackathon is private. Gates the Invitations entry — see
+         * `manageNav`: a public hackathon is listed and joinable by anybody, so
+         * an invitation link there grants nothing.
+         */
+        isPrivate?: boolean;
     } = $props();
 
     let collapsed = $state(false);
@@ -108,6 +115,7 @@
             isGlobalAdmin,
             stateNeedsAttention,
             trackCount,
+            isPrivate,
         ),
     );
 

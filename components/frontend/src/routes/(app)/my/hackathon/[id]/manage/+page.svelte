@@ -4,6 +4,7 @@
     import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
     import { manageNav } from '$lib/navigation/items';
     import { canEditHackathon } from '$lib/utils/hackathonRole';
+    import { isPrivate } from '$lib/utils/hackathonStatus';
     import { formatPhaseRange } from '$lib/utils/phase';
     import type { ActionData, PageData } from './$types';
 
@@ -49,6 +50,7 @@
             data.isGlobalAdmin,
             false,
             data.tracks.length,
+            isPrivate(data.visibility),
         )
             .filter((i) => i.id !== 'manage:settings')
             .map((i) =>

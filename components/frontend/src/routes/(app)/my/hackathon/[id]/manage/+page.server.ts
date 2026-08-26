@@ -40,6 +40,10 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: hackathon.id,
     hackathonName: hackathon.name,
+    // Gates the Invitations tile, the same way it gates the sidebar entry — see
+    // `manageNav`. A raw number rather than the generated enum, which is
+    // server-only and cannot cross into the page.
+    visibility: hackathon.visibility as number,
     // Tracks are optional, and this is the page that says whether this hackathon
     // has any — the sidebar offers Manage Tracks only once one exists, so with
     // none the card below is the only way to the first. Nested in the layout's

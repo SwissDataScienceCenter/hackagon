@@ -48,6 +48,19 @@ export function visibilityBadgeVariant(v: number): string | undefined {
   return VISIBILITY_VARIANT[v]
 }
 
+/**
+ * Whether a hackathon is private — the one visibility question anything other
+ * than a badge asks.
+ *
+ * Here rather than as a `const PRIVATE = 2` beside each caller, which is what
+ * the edit form used to carry: the number is generated (`Visibility` in
+ * `$lib/server/grpc/generated`), and a `.svelte` file cannot import it, so the
+ * literal has to live somewhere client-safe. Somewhere, not everywhere.
+ */
+export function isPrivate(v: number): boolean {
+  return v === 2
+}
+
 // The membership chip helpers that used to sit here live in hackathonRole.ts,
 // beside the other rules that read a viewer's role in a hackathon. This file is
 // about the hackathon's own status and visibility.
