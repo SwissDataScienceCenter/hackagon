@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   answerValues,
+  answeredParticipantIds,
   answersByParticipant,
   missingMandatory,
   parseAnswers,
@@ -431,5 +432,34 @@ describe("answersByParticipant", () => {
     expect(
       answersByParticipant(rows, [{ questionId: "q1", participantId: "u1" }]),
     ).toEqual({})
+  })
+})
+
+describe("answeredParticipantIds", () => {
+  it("names each person once, however many answers they filed", () => {
+    expect(
+      answeredParticipantIds([
+        { questionId: "q1", participantId: "u1", textValue: "ETH" },
+        { questionId: "q2", participantId: "u1", boolValue: true },
+        { questionId: "q1", participantId: "u2", textValue: "EPFL" },
+      ]),
+    ).toEqual(new Set(["u1", "u2"]))
+  })
+
+  it("is empty when nobody has answered", () => {
+    // What the roster's "No answers" marker reads: every row marked, rather than
+    // a page that cannot tell an unanswered form from a failed load.
+    expect(answeredParticipantIds([])).toEqual(new Set())
+  })
+
+  it("counts an answer to a since-deleted question", () => {
+    // Unlike `answersByParticipant`, which drops it: there is nothing to label,
+    // but the person did fill the form in, and marking them as missing would
+    // send an organizer chasing someone who already answered.
+    expect(
+      answeredParticipantIds([
+        { questionId: "gone", participantId: "u1", textValue: "x" },
+      ]),
+    ).toEqual(new Set(["u1"]))
   })
 })

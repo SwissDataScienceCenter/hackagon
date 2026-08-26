@@ -343,6 +343,9 @@ describe("manageNav", () => {
     expectOrder(manageNav("hack-1", owner, false, false, 3), [
       "manage:settings",
       "manage:participants",
+      // Straight after the roster it was split out of, and before the form that
+      // decides what those people were asked on the way in.
+      "manage:waitlist",
       "manage:forms",
       "manage:projects",
       "manage:tracks",
@@ -442,6 +445,10 @@ describe("manageNav", () => {
     const cases = [
       ["/my/hackathon/hack-1/participants", "member:participants"],
       ["/my/hackathon/hack-1/participants/manage", "manage:participants"],
+      // The Waitlist tab nests under the roster it was split out of, so longest
+      // match is what keeps Manage Participants from swallowing it — the same
+      // relationship Manage Forms has with Settings.
+      ["/my/hackathon/hack-1/participants/manage/waitlist", "manage:waitlist"],
       ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
       // The hackathon's own edit form, for the same reason as the phase forms
       // below: it is reached from Settings and nests under it, so that entry
