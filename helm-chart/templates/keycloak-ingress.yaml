@@ -1,3 +1,4 @@
+{{- if .Values.keycloakIngress.enabled }}
 {{- $keycloakHost := include "hackagon.keycloakHost" . }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -7,10 +8,12 @@ metadata:
   labels:
     {{- include "hackagon.labels" . | nindent 4 }}
     app.kubernetes.io/component: keycloak
+  {{- with .Values.keycloakIngress.annotations }}
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-production
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  ingressClassName: webapprouting.kubernetes.azure.com
+  ingressClassName: {{ .Values.keycloakIngress.ingressClass }}
   rules:
     - host: {{ $keycloakHost }}
       http:
@@ -26,3 +29,4 @@ spec:
     - hosts:
         - {{ $keycloakHost }}
       secretName: {{ include "hackagon.fullname" . }}-keycloak-tls
+{{- end }}
