@@ -3,13 +3,21 @@
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import RoundMedia from '$lib/components/hackathon/RoundMedia.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
+    import type { Snippet } from 'svelte';
 
     /**
-     * One project, read in full. Presentation only: there is deliberately no
-     * action here, not even a snippet for one — approving, revoking, preferring
-     * and editing all live on the list pages, so a project has exactly one place
-     * each of those can be done from. This page is what you open to read the
-     * proposal before going back and deciding.
+     * One project, read in full. Presentation only: this component renders no
+     * action of its own — approving, revoking, reconsidering, preferring and
+     * editing all live on the list pages, so a project has exactly one place
+     * each of those can be done from.
+     *
+     * It does own the page shell, though, so anything a route wants to put
+     * *inside* that shell has to come through it. That is what `children` is
+     * for, and it is how the two callers add what only they have: the review
+     * notes on a rejected project, and — on the organiser's route alone — the
+     * one action that could not live on a list, rejecting with a reason. A
+     * textarea does not fit a card's action strip, and a reason is written after
+     * reading the proposal, which is here.
      *
      * Shared by the participant detail route and the organiser's under
      * `projects/manage`, which differ only in what they let you reach and where
@@ -19,7 +27,8 @@
         project,
         backHref,
         backQuery = '',
-        backLabel
+        backLabel,
+        children
     }: {
         project: {
             title: string;
@@ -43,6 +52,9 @@
             the origin it was opened with; the organiser's route needs none. */
         backQuery?: string;
         backLabel: string;
+        /** Extra sections, rendered last inside this component's page shell so
+            they pick up its padding instead of hanging off the bottom of it. */
+        children?: Snippet;
     } = $props();
 
     const statusText = $derived(projectStatusLabel(project.status));
@@ -151,4 +163,6 @@
             <p class="m-0 text-xs text-ink-3">No description was given.</p>
         {/if}
     </div>
+
+    {@render children?.()}
 </div>

@@ -175,29 +175,35 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 
 	projects, err := h.proposeProjects(id, tracks, []projectSpec{
 		{
-			by:          bob,
-			title:       "Solar Panel Optimizer",
-			description: "ML-based system that maximises solar panel output by predicting optimal tilt angles based on hyperlocal weather forecasts.",
-			track:       "Energy",
-			approvedBy:  admin,
-			rejectedBy:  nil,
+			by:           bob,
+			title:        "Solar Panel Optimizer",
+			description:  "ML-based system that maximises solar panel output by predicting optimal tilt angles based on hyperlocal weather forecasts.",
+			track:        "Energy",
+			approvedBy:   admin,
+			rejectedBy:   nil,
+			rejectReason: "",
 		},
 		{
-			by:          alice,
-			title:       "Smart Grid Monitor",
-			description: "Real-time dashboard for detecting grid imbalances and automating load shedding decisions using time-series anomaly detection.",
-			track:       "Energy",
-			approvedBy:  nil,
-			rejectedBy:  nil,
+			by:           alice,
+			title:        "Smart Grid Monitor",
+			description:  "Real-time dashboard for detecting grid imbalances and automating load shedding decisions using time-series anomaly detection.",
+			track:        "Energy",
+			approvedBy:   nil,
+			rejectedBy:   nil,
+			rejectReason: "",
 		},
 		{
-			by:          alice,
-			title:       "Crop Disease Detector",
-			description: "Mobile app using computer vision to identify crop diseases from field photos, providing treatment recommendations and outbreak tracking.",
-			track:       "Agriculture & Food",
-			approvedBy:  admin,
-			rejectedBy:  nil,
+			by:           alice,
+			title:        "Crop Disease Detector",
+			description:  "Mobile app using computer vision to identify crop diseases from field photos, providing treatment recommendations and outbreak tracking.",
+			track:        "Agriculture & Food",
+			approvedBy:   admin,
+			rejectedBy:   nil,
+			rejectReason: "",
 		},
+		// The rejected one, and the only project in the seed carrying a review
+		// note. bob proposed it, so signing in as bob lands on a rejection an
+		// author can actually read the reason for.
 		{
 			by:          bob,
 			title:       "Carbon Offset Marketplace",
@@ -205,6 +211,10 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 			track:       "Energy",
 			approvedBy:  nil,
 			rejectedBy:  admin,
+			rejectReason: "Carbon credit trading sits outside this hackathon's " +
+				"scope — we're after tools that cut emissions directly rather " +
+				"than markets for offsetting them. Worth proposing again if you " +
+				"can angle it at measurement.",
 		},
 	})
 	if err != nil {

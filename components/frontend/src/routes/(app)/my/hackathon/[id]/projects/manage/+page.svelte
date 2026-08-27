@@ -32,9 +32,13 @@
   $lib/navigation's manageNav).
 
   The one list that mixes statuses, so the one that badges them — and only the
-  rows awaiting review carry a badge (see $lib/utils/projectStatus). Clear the
-  queue and the badges go with it, which is the honest reading: every row left
-  is approved.
+  rows awaiting review or turned down carry a badge (see
+  $lib/utils/projectStatus). Clear the queue with nothing rejected and the badges
+  go with it, which is the honest reading: every row left is approved.
+
+  Approving, revoking and reconsidering are one click each and happen here.
+  Rejecting does not: it takes a reason, so it lives on the project's own page,
+  which is where "Review" leads.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
@@ -82,6 +86,7 @@
                     badgeVariant={projectStatusBadgeVariant(project.status) ??
                         'badge-neutral'}
                     moreInfoHref="/my/hackathon/{data.hackathonId}/projects/manage/{project.id}"
+                    moreInfoLabel={project.isPending ? 'Review' : 'More Info'}
                 >
                     {#snippet actions()}
                         <!-- The organiser's edit route for any project, theirs or
@@ -99,6 +104,11 @@
                             Edit
                         </a>
                         {#if project.isPending}
+                            <!-- Approve is the whole decision in one click and
+                                 needs nothing typed, so it stays on the row. Its
+                                 opposite is the "Review" link beside it: reading
+                                 the proposal and writing a reason are the same
+                                 act, and both happen on the project's page. -->
                             <form method="POST" action="?/approve">
                                 <input type="hidden" name="projectId" value={project.id} />
                                 <button type="submit" class="btn btn-sm btn-solid">
@@ -106,13 +116,14 @@
                                 </button>
                             </form>
                         {:else}
-                            <!-- Not "Reject": Disapprove returns a project to the
-                                 queue rather than turning it down. See the TODO in
-                                 +page.server.ts. -->
+                            <!-- One RPC, two labels. Disapprove sets the status
+                                 back to Proposed, which from an approved project
+                                 is taking an approval back and from a rejected
+                                 one is agreeing to look again. -->
                             <form method="POST" action="?/disapprove">
                                 <input type="hidden" name="projectId" value={project.id} />
                                 <button type="submit" class="btn btn-sm btn-warning">
-                                    Revoke approval
+                                    {project.isRejected ? 'Reconsider' : 'Revoke approval'}
                                 </button>
                             </form>
                         {/if}

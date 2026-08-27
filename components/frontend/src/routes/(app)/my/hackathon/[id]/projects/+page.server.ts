@@ -12,8 +12,9 @@ import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 // No owner/admin check here: reviewing proposals is an organiser action and
-// lives on Manage Projects, which gates itself (see $lib/navigation's manageNav)
-// and owns the Approve/Revoke actions. This page is the participant view and
+// lives under Manage Projects, which gates itself (see $lib/navigation's
+// manageNav) and owns every decision — Approve, Revoke and Reconsider on the
+// queue, Reject on a project's own page. This page is the participant view and
 // reads the same for everyone — save for the proposals group, which is each
 // viewer's own and empty for most of them.
 export const load: PageServerLoad = async (event) => {
@@ -78,27 +79,35 @@ export const load: PageServerLoad = async (event) => {
     ),
   )
 
-  // The viewer's own proposals still awaiting a decision, which used to be a
+  // The viewer's own proposals that have not become projects, which used to be a
   // page of their own. Theirs alone rather than every pending one: a reviewer
   // reads the queue on Manage Projects, and this group exists so an author can
-  // follow and correct what they put forward, not to preview the queue.
+  // follow what they put forward, not to preview the queue.
+  //
+  // **Rejected ones belong here as much as pending ones.** Filtering to PROPOSED
+  // alone made a rejected proposal vanish from its author's view entirely — not
+  // in the approved list, not here, no badge and no explanation, as though it had
+  // never been sent. Keeping it is the whole reason a rejection carries a reason:
+  // the row is how its author finds out, and its page is where the note is read.
   //
   // Empty once proposals are off, which costs one narrow case: a member who
-  // proposed while they were open stops seeing their own pending row. It is
+  // proposed while they were open stops seeing their own decided row. It is
   // still in the organiser's queue and it reappears here, as a project, when
   // approved — and the alternative was a proposals section that outlives the
-  // feature it describes.
+  // feature it describes. Deliberately the same rule for a rejection as for a
+  // pending one, rather than a second branch that treats them differently.
   //
   // Not paginated with the projects below, and deliberately not sharing their
   // numbering either — see the ordinals TODO.
+  const isMine = (p: { creatorId: string }) =>
+    myId !== undefined && p.creatorId === myId
+  const isUndecidedOrRefused = (s: number) =>
+    s === ProjectStatus.PROJECT_STATUS_PROPOSED ||
+    s === ProjectStatus.PROJECT_STATUS_REJECTED
+
   const myProposals = takesProposals
     ? hackathon.projects
-        .filter(
-          (p) =>
-            myId !== undefined &&
-            p.creatorId === myId &&
-            p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
-        )
+        .filter((p) => isMine(p) && isUndecidedOrRefused(p.status))
         .sort(
           (a, b) =>
             (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
@@ -135,10 +144,17 @@ export const load: PageServerLoad = async (event) => {
     isPreferred: preferredIds.has(p.id),
   }))
 
-  // No `mayEdit` on the rows above, and none needed here: editing is offered on
-  // a proposal awaiting review and nowhere else, so it belongs to this group by
-  // construction. Once a project is approved it is the hackathon's, and the
-  // owner edits it from Manage Projects — the proposer no longer does.
+  // No `mayEdit` on the rows above, and it is per-row here: editing is offered on
+  // a proposal awaiting review and nowhere else. That used to be true of this
+  // whole group by construction; now that it also holds rejected rows it has to
+  // be said per row, because `projectEditData` refuses a rejected project to its
+  // proposer ("This project has been reviewed — only an organizer can edit it
+  // now"), and a row must not offer a link that answers 403. A rejected proposal
+  // becomes editable again if the organiser reconsiders it, which returns it to
+  // PROPOSED.
+  //
+  // Once a project is approved it is the hackathon's, and the owner edits it from
+  // Manage Projects — the proposer no longer does.
   const proposals = myProposals.map((p, i) => ({
     id: p.id,
     num: myProposals.length - i,
@@ -148,6 +164,7 @@ export const load: PageServerLoad = async (event) => {
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
+    mayEdit: p.status === ProjectStatus.PROJECT_STATUS_PROPOSED,
   }))
 
   // `hackathonId` so the page can build the link to a project —

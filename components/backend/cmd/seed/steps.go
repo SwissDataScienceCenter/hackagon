@@ -500,6 +500,10 @@ type projectSpec struct {
 	track       string
 	approvedBy  *actor
 	rejectedBy  *actor
+	// Why it was turned down, shown to the proposer as a review note. Only
+	// meaningful alongside rejectedBy; empty sends no comment, which is the
+	// no-reason-given case the UI also has to render.
+	rejectReason string
 }
 
 // proposeProjects proposes and optionally approves a hackathon's projects,
@@ -540,10 +544,14 @@ func (h *harness) proposeProjects(
 			}
 		}
 		if spec.rejectedBy != nil {
-			if _, err := h.project.Reject(spec.rejectedBy.ctx, &projectMsgs.RejectRequest{
+			req := &projectMsgs.RejectRequest{
 				ProjectId:     resp.GetProjectId(),
 				ReviewComment: nil,
-			}); err != nil {
+			}
+			if spec.rejectReason != "" {
+				req.ReviewComment = &spec.rejectReason
+			}
+			if _, err := h.project.Reject(spec.rejectedBy.ctx, req); err != nil {
 				return nil, fmt.Errorf("reject %q: %w", spec.title, err)
 			}
 		}

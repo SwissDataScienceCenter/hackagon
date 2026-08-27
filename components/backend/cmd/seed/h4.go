@@ -344,12 +344,13 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 			author = bob
 		}
 		projectSpecs = append(projectSpecs, projectSpec{
-			by:          author,
-			title:       s.title,
-			description: s.desc,
-			track:       "",
-			approvedBy:  alice,
-			rejectedBy:  nil,
+			by:           author,
+			title:        s.title,
+			description:  s.desc,
+			track:        "",
+			approvedBy:   alice,
+			rejectedBy:   nil,
+			rejectReason: "",
 		})
 		weights = append(weights, s.weight)
 	}

@@ -21,14 +21,21 @@ export const load: PageServerLoad = async (event) => {
   }
 
   const isPending = (s: number) => s === ProjectStatus.PROJECT_STATUS_PROPOSED
+  const isRejected = (s: number) => s === ProjectStatus.PROJECT_STATUS_REJECTED
 
-  // Every project at every status — this is the review queue, and an approved
-  // one still needs to be reachable to have its approval revoked. Awaiting
-  // review first, since those are the rows asking for an action; newest first
-  // within each group.
+  // Where a status sits in the queue. Awaiting review first, since those are the
+  // rows asking for an action; then approved, which is the hackathon's actual
+  // line-up; rejected last, kept reachable only so a decision can be taken back.
+  // An unspecified status sorts with the pending rows rather than vanishing
+  // among the rejected ones — it is an anomaly someone should look at.
+  const rank = (s: number) => (isRejected(s) ? 2 : isPending(s) ? 0 : 1)
+
+  // Every project at every status — this is the review queue, and an approved or
+  // rejected one still needs to be reachable to have that decision undone.
+  // Newest first within each group.
   const ordered = [...hackathon.projects].sort((a, b) => {
-    if (isPending(a.status) !== isPending(b.status)) {
-      return isPending(a.status) ? -1 : 1
+    if (rank(a.status) !== rank(b.status)) {
+      return rank(a.status) - rank(b.status)
     }
     return (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
   })
@@ -59,8 +66,11 @@ export const load: PageServerLoad = async (event) => {
     imageUrl: p.image,
     status: p.status,
     // Derived here rather than in the component, so no page has to import the
-    // generated enum across the server-only boundary to compare a status.
+    // generated enum across the server-only boundary to compare a status. The
+    // two flags are exhaustive between them for the page's purposes: neither set
+    // means approved, which is the only status offering "revoke".
     isPending: isPending(p.status),
+    isRejected: isRejected(p.status),
   }))
 
   return {
@@ -108,15 +118,16 @@ export const actions: Actions = {
     return { approvedId: projectId }
   },
 
-  // Revoking an approval, not rejecting. `ProjectService.Disapprove` sets the
-  // status back to PROPOSED (`project_service.go:242`) — the state a project was
-  // in before anyone looked at it — so this returns a project to the queue.
+  // Undoing a decision, whichever way it went. `ProjectService.Disapprove` sets
+  // the status back to PROPOSED (`project_service.go:322`) — the state a project
+  // was in before anyone looked at it — so this returns a project to the queue
+  // from either side of it. The page labels the same action "Revoke approval" on
+  // an approved project and "Reconsider" on a rejected one, because those are
+  // two different things to want and one thing to do.
   //
-  // TODO(backend: project-rejected-status): there is no reject, so this page
-  // offers none. `ProjectStatus` has only PROPOSED and APPROVED, and a rejected
-  // proposal would be indistinguishable from an unreviewed one. Once a REJECTED
-  // status (ideally with a reason) exists, add that as a separate action and
-  // leave this one meaning what its name says.
+  // Rejecting is not here: it takes a reason, and a textarea does not fit a card
+  // row. It lives on `manage/<id>`, where the proposal is read in full — see
+  // that route's own `reject` action.
   disapprove: async (event) => {
     const { project } = requireGrpc(event.locals.grpc)
 

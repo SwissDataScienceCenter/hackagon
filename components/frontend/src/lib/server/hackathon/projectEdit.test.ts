@@ -6,11 +6,13 @@ import type { User } from "$lib/server/grpc/generated/user/entities/user"
 import { projectEditData } from "./projectEdit"
 
 // Numeric enum values, spelled out so a fixture reads as the case it stands for.
-// HackathonRole: OWNER=1, MEMBER=2. ProjectStatus: PROPOSED=1, APPROVED=2.
+// HackathonRole: OWNER=1, MEMBER=2. ProjectStatus: PROPOSED=1, APPROVED=2,
+// REJECTED=3.
 const OWNER = 1
 const MEMBER = 2
 const PROPOSED = 1
 const APPROVED = 2
+const REJECTED = 3
 const GLOBAL_ADMIN = 1
 
 const ALICE = "user-alice"
@@ -68,6 +70,34 @@ describe("projectEditData", () => {
     expect(e.status).toBe(403)
     // Names the status rather than their standing — they did propose it.
     expect(e.body.message).toMatch(/reviewed/)
+  })
+
+  // Relied on by the projects page: a rejected proposal stays in its author's
+  // proposals group, so that row must offer "More Info" rather than an Edit link
+  // that answers 403. Reconsidering it returns it to PROPOSED and editable.
+  it("refuses the proposer once the project is rejected", () => {
+    const e = refusal(() =>
+      projectEditData(
+        hackathon({ status: REJECTED }),
+        "p1",
+        member(MEMBER),
+        user(ALICE),
+      ),
+    )
+
+    expect(e.status).toBe(403)
+    expect(e.body.message).toMatch(/reviewed/)
+  })
+
+  it("still lets the organiser edit a rejected project", () => {
+    const data = projectEditData(
+      hackathon({ status: REJECTED }),
+      "p1",
+      member(OWNER),
+      user(BOB),
+    )
+
+    expect(data.project.id).toBe("p1")
   })
 
   it("refuses a member who did not propose it", () => {
