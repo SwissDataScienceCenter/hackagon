@@ -2,6 +2,7 @@
     import { Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
+    import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -30,18 +31,20 @@
 <!--
   Every project surface a participant has, on one page: the approved projects
   with the one action a participant has on them — marking a preference — and,
-  above them, the proposals this viewer is still waiting on a decision for.
+  above them, this viewer's own proposals that have not become projects.
   Proposals had a page of its own and a sidebar entry; it is a stage of a
   project's life rather than a place, and a hackathon that does not use proposals
   now shows a plain list instead of an entry leading to an empty page.
 
-  Approving and revoking live on Manage Projects (see $lib/navigation's
-  manageNav), so the projects list reads the same whatever the viewer's role.
+  Deciding lives under Manage Projects (see $lib/navigation's manageNav), so the
+  projects list reads the same whatever the viewer's role.
 
-  No status badges on either group: each one holds a single status by
-  construction and its heading says which, so a badge on every row would only
-  repeat the heading. Manage Projects is the one list that mixes the two, and
-  that is where a Proposed badge earns its place.
+  No status badges on the projects below: they are approved by construction, and
+  a badge repeated on every row would only repeat the heading. The proposals
+  group does badge them, because it is the one place a participant sees two
+  statuses side by side — a proposal still waiting, and one that was turned down.
+  A rejected row is how its author learns the decision, and its page is where the
+  organiser's reason is read.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
@@ -76,8 +79,11 @@
          it exists. -->
     {#if data.proposals.length > 0}
         <section class="flex w-full flex-col gap-2 self-start">
+            <!-- "Your proposals", not "awaiting review": the group holds decided
+                 rows now too, and a heading claiming they are all still pending
+                 would contradict the Rejected badge on one of them. -->
             <h3 class="m-0 text-meta text-ink-3">
-                {proposalsLabel} awaiting review
+                Your proposals &middot; {proposalsLabel}
             </h3>
             {#each data.proposals as proposal (proposal.id)}
                 <ProjectCard
@@ -87,8 +93,13 @@
                     creator={proposal.creator}
                     track={proposal.track}
                     imageUrl={proposal.imageUrl}
-                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/{proposal.id}/edit"
-                    moreInfoLabel="Edit"
+                    badge={projectStatusLabel(proposal.status)}
+                    badgeVariant={projectStatusBadgeVariant(proposal.status) ??
+                        'badge-neutral'}
+                    moreInfoHref={proposal.mayEdit
+                        ? `/my/hackathon/${data.hackathonId}/projects/${proposal.id}/edit`
+                        : `/my/hackathon/${data.hackathonId}/projects/${proposal.id}`}
+                    moreInfoLabel={proposal.mayEdit ? 'Edit' : 'More Info'}
                 />
             {/each}
         </section>

@@ -198,6 +198,9 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 			approvedBy:  admin,
 			rejectedBy:  nil,
 		},
+		// The rejected one, and the only project in the seed carrying a review
+		// note. bob proposed it, so signing in as bob lands on a rejection an
+		// author can actually read the reason for.
 		{
 			by:          bob,
 			title:       "Carbon Offset Marketplace",
@@ -205,6 +208,10 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 			track:       "Energy",
 			approvedBy:  nil,
 			rejectedBy:  admin,
+			rejectReason: "Carbon credit trading sits outside this hackathon's " +
+				"scope — we're after tools that cut emissions directly rather " +
+				"than markets for offsetting them. Worth proposing again if you " +
+				"can angle it at measurement.",
 		},
 	})
 	if err != nil {
