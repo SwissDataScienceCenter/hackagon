@@ -596,6 +596,30 @@
     color: var(--color-accent-ink);
   }
 
+  /* One bucket of a distribution: a value, and how often it was chosen. A
+   * tick-box's Yes/No, a fixed list's options.
+   *
+   * Deliberately not a `.badge`, which is the closest-looking class: badges
+   * uppercase their text, and these labels are whatever the organizer typed as
+   * an option — "Zurich, Switzerland" is legitimate and should not be shouted
+   * back at them. Mono all the same, since a tally is scanned rather than read,
+   * and the caller puts `.tnum` on the count so a column of them lines up.
+   *
+   * `bg-raised` rather than a hairline: these sit inside a `.card-raised` row in
+   * groups, and a border each would read as a row of tiny frames. */
+  .tally {
+    display: inline-flex;
+    align-items: center;
+    gap: --spacing(1.5);
+    padding: --spacing(1) --spacing(2.5);
+    border-radius: var(--radius-field);
+    background-color: var(--color-raised);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    color: var(--color-ink-2);
+    white-space: nowrap;
+  }
+
   /* ---------------------------------------------------------------
    * Rendered markdown.
    *

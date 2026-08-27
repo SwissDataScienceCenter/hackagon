@@ -9,6 +9,9 @@ import {
   questionKind,
   questionRows,
   questionType,
+  readQuestionEcho,
+  answerDistribution,
+  answersByQuestion,
 } from "./registrationForm"
 
 // QuestionType numeric values, stated rather than imported so a renumbering in
@@ -194,6 +197,60 @@ describe("parseQuestionForm", () => {
   })
 })
 
+describe("readQuestionEcho", () => {
+  it("carries every field back as typed", () => {
+    expect(
+      readQuestionEcho(
+        form({
+          kind: "enum",
+          order: "3",
+          mandatory: "true",
+          publicAnswers: "true",
+          options: "S\nM\nL",
+        }),
+      ),
+    ).toEqual({
+      key: "affiliation",
+      label: "Which university or company are you with?",
+      kind: "enum",
+      mandatory: true,
+      order: 3,
+      options: ["S", "M", "L"],
+      publicAnswers: true,
+    })
+  })
+
+  it("never refuses a submission the parser would", () => {
+    // The whole point: this runs *because* the parser said no, so anything it
+    // rejected in turn would drop the values it exists to preserve.
+    const echo = readQuestionEcho(
+      form({ key: "Not A Key", kind: "wat", order: "-1" }),
+    )
+
+    expect(echo.key).toBe("Not A Key")
+    expect(echo.kind).toBe("text")
+    expect(echo.order).toBe(0)
+  })
+
+  it("keeps a position of 0, which is legitimate", () => {
+    expect(readQuestionEcho(form({ order: "0" })).order).toBe(0)
+  })
+
+  it("keeps options typed against a kind that has no use for them", () => {
+    // Unlike the parser, which drops them: the organizer may have typed a list
+    // and then mis-set the type, and the list is the part that was fine.
+    expect(
+      readQuestionEcho(form({ kind: "text", options: "S\nM" })).options,
+    ).toEqual(["S", "M"])
+  })
+
+  it("reads an absent checkbox as false", () => {
+    const echo = readQuestionEcho(form())
+    expect(echo.mandatory).toBe(false)
+    expect(echo.publicAnswers).toBe(false)
+  })
+})
+
 describe("questionKind / questionType", () => {
   it("round-trips each kind", () => {
     for (const kind of ["text", "bool", "enum"] as const) {
@@ -253,6 +310,210 @@ describe("questionRows", () => {
       q({ id: "q2", key: "b", publicAnswers: false }),
     ])
     expect(rows.map((r) => r.publicAnswers)).toEqual([true, false])
+  })
+})
+
+describe("answerDistribution", () => {
+  const row = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: "q1",
+    key: "tshirt_size",
+    label: "T-shirt size",
+    kind: "enum" as const,
+    mandatory: false,
+    order: 1,
+    options: ["S", "M", "L"],
+    publicAnswers: false,
+    answerCount: 0,
+    ...over,
+  })
+
+  const said = (
+    questionId: string,
+    participantId: string,
+    textValue: string,
+  ) => ({ questionId, participantId, textValue })
+
+  it("counts a fixed list in the question's own order", () => {
+    expect(
+      answerDistribution(
+        [row()],
+        [said("q1", "u1", "M"), said("q1", "u2", "S"), said("q1", "u3", "M")],
+      ).q1,
+    ).toEqual([
+      { label: "S", count: 1 },
+      { label: "M", count: 2 },
+      { label: "L", count: 0 },
+    ])
+  })
+
+  it("keeps an option nobody chose", () => {
+    // "Nobody picked Large" is the fact an organizer ordering t-shirts came for,
+    // so an empty bucket is a result and not a row to drop.
+    const tally = answerDistribution([row()], [said("q1", "u1", "S")]).q1
+    expect(tally?.map((t) => t.label)).toEqual(["S", "M", "L"])
+  })
+
+  it("appends an answer that is no longer an option rather than losing it", () => {
+    // Should not arise — the backend refuses an options change once anyone has
+    // answered — but a tally that silently drops answers is worse than one
+    // showing a value that surprises.
+    expect(answerDistribution([row()], [said("q1", "u1", "XXL")]).q1).toEqual([
+      { label: "S", count: 0 },
+      { label: "M", count: 0 },
+      { label: "L", count: 0 },
+      { label: "XXL", count: 1 },
+    ])
+  })
+
+  it("counts a tick-box as yes and no, both always present", () => {
+    const q = row({ id: "coc", kind: "bool", options: [] })
+    expect(
+      answerDistribution(
+        [q],
+        [
+          { questionId: "coc", participantId: "u1", boolValue: true },
+          { questionId: "coc", participantId: "u2", boolValue: false },
+          { questionId: "coc", participantId: "u3", boolValue: true },
+        ],
+      ).coc,
+    ).toEqual([
+      { label: "Yes", count: 2 },
+      { label: "No", count: 1 },
+    ])
+
+    expect(answerDistribution([q], []).coc).toEqual([
+      { label: "Yes", count: 0 },
+      { label: "No", count: 0 },
+    ])
+  })
+
+  it("leaves free text out entirely", () => {
+    // Absent rather than empty: a hundred different sentences counted once each
+    // is a list of answers, not a summary of them, and the page reads the
+    // absence as "nothing to show here".
+    const tally = answerDistribution(
+      [row({ id: "aff", kind: "text", options: [] })],
+      [said("aff", "u1", "ETH")],
+    )
+    expect(tally.aff).toBeUndefined()
+  })
+
+  it("does not let one question's answers reach another", () => {
+    const tally = answerDistribution(
+      [row(), row({ id: "q2", key: "meal", options: ["Meat", "Veg"] })],
+      [said("q1", "u1", "M"), said("q2", "u1", "Veg")],
+    )
+    expect(tally.q1?.find((t) => t.label === "M")?.count).toBe(1)
+    expect(tally.q2?.find((t) => t.label === "Veg")?.count).toBe(1)
+    expect(tally.q2?.find((t) => t.label === "Meat")?.count).toBe(0)
+  })
+})
+
+describe("answersByQuestion", () => {
+  const row = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: "q1",
+    key: "affiliation",
+    label: "Affiliation",
+    kind: "text" as const,
+    mandatory: false,
+    order: 1,
+    options: [] as string[],
+    publicAnswers: false,
+    answerCount: 0,
+    ...over,
+  })
+
+  const roster = new Map([
+    ["u1", "Alice"],
+    ["u2", "Bob"],
+    ["u3", "Charles"],
+  ])
+
+  it("names each answer and orders them by name", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [
+        { questionId: "q1", participantId: "u2", textValue: "EPFL" },
+        { questionId: "q1", participantId: "u1", textValue: "ETH" },
+      ],
+      roster,
+    )
+
+    expect(byQuestion.q1?.answers).toEqual([
+      { participantId: "u1", name: "Alice", value: "ETH", departed: false },
+      { participantId: "u2", name: "Bob", value: "EPFL", departed: false },
+    ])
+  })
+
+  it("counts the roster members with nothing on file", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [{ questionId: "q1", participantId: "u1", textValue: "ETH" }],
+      roster,
+    )
+    expect(byQuestion.q1?.missing).toBe(2)
+  })
+
+  it("keeps an answer from someone who has left, and marks it", () => {
+    // RemoveParticipant deletes the participant row and nothing deletes their
+    // answers, so this outlives them. Dropping it would leave the list holding
+    // fewer answers than the tally beside it.
+    const byQuestion = answersByQuestion(
+      [row()],
+      [{ questionId: "q1", participantId: "gone", textValue: "ETH" }],
+      roster,
+    )
+
+    expect(byQuestion.q1?.answers).toEqual([
+      {
+        participantId: "gone",
+        name: "No longer in this hackathon",
+        value: "ETH",
+        departed: true,
+      },
+    ])
+    // Three roster members still owe an answer; the departed one is not a
+    // fourth, and never pushes this below zero.
+    expect(byQuestion.q1?.missing).toBe(3)
+  })
+
+  it("puts people who have left after everyone still here", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [
+        { questionId: "q1", participantId: "gone", textValue: "Elsewhere" },
+        { questionId: "q1", participantId: "u3", textValue: "USI" },
+      ],
+      roster,
+    )
+    expect(byQuestion.q1?.answers.map((a) => a.name)).toEqual([
+      "Charles",
+      "No longer in this hackathon",
+    ])
+  })
+
+  it("carries a tick-box answer as a boolean", () => {
+    const byQuestion = answersByQuestion(
+      [row({ id: "coc", kind: "bool" })],
+      [{ questionId: "coc", participantId: "u1", boolValue: false }],
+      roster,
+    )
+    expect(byQuestion.coc?.answers[0]?.value).toBe(false)
+  })
+
+  it("gives a question nobody answered an empty list and the whole roster", () => {
+    const byQuestion = answersByQuestion([row()], [], roster)
+    expect(byQuestion.q1).toEqual({ answers: [], missing: 3 })
+  })
+
+  it("drops an answer to a question that no longer exists", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [{ questionId: "deleted", participantId: "u1", textValue: "ETH" }],
+      roster,
+    )
+    expect(Object.keys(byQuestion)).toEqual(["q1"])
+    expect(byQuestion.q1?.answers).toEqual([])
   })
 })
 

@@ -244,6 +244,130 @@ export function parseQuestionForm(form: FormData): QuestionFormResult {
   }
 }
 
+/** One bucket of a question's answers: what was chosen, and how often. */
+export interface AnswerTally {
+  label: string
+  count: number
+}
+
+/**
+ * How a tick-box or fixed-list question's answers fall out, keyed by question id.
+ *
+ * Only those two kinds are in it. Free text has no distribution — a hundred
+ * different sentences counted once each is a list of answers, not a summary of
+ * them — so a text question is absent from the record rather than present and
+ * empty, and the page reads the absence as "nothing to show here".
+ *
+ * Buckets are the question's own, in the question's own order, and a bucket
+ * nobody chose is kept at zero: "nobody picked Large" is the fact an organizer
+ * ordering t-shirts came for, and dropping empty buckets would hide it.
+ *
+ * Anything answered that is no longer one of the options is appended after them
+ * rather than dropped, so the buckets always add up to the answers on file. It
+ * should not arise — the backend refuses an options change once anyone has
+ * answered — but a tally that silently loses answers is worse than one showing a
+ * value that surprises.
+ */
+export function answerDistribution(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+): Record<string, AnswerTally[]> {
+  const byQuestion = new Map<string, Answer[]>()
+  for (const a of answers) {
+    const list = byQuestion.get(a.questionId)
+    if (list) list.push(a)
+    else byQuestion.set(a.questionId, [a])
+  }
+
+  const distribution: Record<string, AnswerTally[]> = {}
+
+  for (const q of questions) {
+    if (q.kind !== "bool" && q.kind !== "enum") continue
+    const filed = byQuestion.get(q.id) ?? []
+
+    if (q.kind === "bool") {
+      // `boolValue` only: the backend reads the arm from the question's type, so
+      // a tick-box answer arrives as a bool. Counting a stray text arm as well
+      // would be guessing at what "no" was spelled as.
+      distribution[q.id] = [
+        {
+          label: "Yes",
+          count: filed.filter((a) => a.boolValue === true).length,
+        },
+        {
+          label: "No",
+          count: filed.filter((a) => a.boolValue === false).length,
+        },
+      ]
+      continue
+    }
+
+    const counts = new Map<string, number>()
+    for (const option of q.options) counts.set(option, 0)
+    for (const a of filed) {
+      const value = a.textValue
+      if (value === undefined || value === "") continue
+      counts.set(value, (counts.get(value) ?? 0) + 1)
+    }
+
+    distribution[q.id] = [...counts].map(([label, count]) => ({ label, count }))
+  }
+
+  return distribution
+}
+
+/**
+ * A question form's fields exactly as they were typed, valid or not.
+ *
+ * Sent back with a `fail()` so the create and edit pages can re-render what the
+ * organizer had rather than resetting to blank — these are plain POSTs, so
+ * without this a rejected key takes the whole row with it and the label, the
+ * options and the type all have to be typed again.
+ *
+ * Deliberately lenient where `parseQuestionForm` is strict: this is not a second
+ * validator and must never refuse anything, or the values it exists to preserve
+ * are the ones it drops. An unreadable kind or position falls back rather than
+ * failing, and the message beside the form is what says what was wrong.
+ *
+ * Shaped like a `QuestionRow` minus `id` and `answerCount`, so a page can spread
+ * it over the row it already has: the answer count is a fact about the server and
+ * never something a form gets to claim.
+ */
+export interface QuestionEcho {
+  key: string
+  label: string
+  kind: QuestionKind
+  mandatory: boolean
+  order: number
+  options: string[]
+  publicAnswers: boolean
+}
+
+export function readQuestionEcho(form: FormData): QuestionEcho {
+  const raw = (name: string): string => {
+    const value = form.get(name)
+    return typeof value === "string" ? value : ""
+  }
+
+  const kind = raw("kind")
+  const order = Number(raw("order"))
+
+  return {
+    key: raw("key").trim(),
+    label: raw("label").trim(),
+    kind: kind === "bool" || kind === "enum" ? kind : "text",
+    mandatory: form.get("mandatory") === "true",
+    // Not `|| 0`: a position of 0 is legitimate, so only an unparseable one
+    // falls back.
+    order: Number.isInteger(order) && order >= 0 ? order : 0,
+    // Kept even for a kind that has no use for them, unlike the parser, which
+    // drops them: the organizer may have typed a list and then mis-set the type,
+    // and clearing it on the way back would lose the part that was fine.
+    options: parseOptions(form.get("options")),
+    publicAnswers: form.get("publicAnswers") === "true",
+  }
+}
+
 /**
  * One answer in the shape `SubmitAnswers` and `Join` both take.
  *
@@ -412,6 +536,96 @@ export function answersByParticipant(
   }
 
   return grouped
+}
+
+/** One person's answer to one question, for the organizer's answers view. */
+export interface QuestionAnswer {
+  participantId: string
+  name: string
+  /** A bool arrives as a bool; text and enum as strings. */
+  value: string | boolean
+  /**
+   * Whether this answerer is still on the roster.
+   *
+   * `RemoveParticipant` deletes the participant row and nothing deletes their
+   * answers, so an answer can outlive the person who gave it. Marked rather than
+   * dropped: the tally above the list counts it either way, and a list quietly
+   * holding fewer answers than the tally would read as a bug.
+   */
+  departed: boolean
+}
+
+/** Every answer to one question, and how much of the roster is missing from it. */
+export interface QuestionAnswers {
+  answers: QuestionAnswer[]
+  /** Roster members with nothing on file for this question. */
+  missing: number
+}
+
+/**
+ * The cohort's answers grouped by question rather than by person, named.
+ *
+ * The counterpart to `answersByParticipant`, and the shape a results page wants:
+ * that one reads down one person's form, this one reads across everybody's
+ * answer to one question.
+ *
+ * `roster` maps a user id to a display name — `Answer.participantId` is the
+ * *user* id, which is how the participant list decides who has answered. It also
+ * supplies the denominator: `missing` counts roster members with nothing on
+ * file, so somebody who has since left is never counted as missing and can never
+ * push it below zero.
+ *
+ * Ordered by name so every question reads the same way down the page, with
+ * people who have left last — they are footnotes to a roster, not part of one.
+ */
+export function answersByQuestion(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+  roster: ReadonlyMap<string, string>,
+): Record<string, QuestionAnswers> {
+  // Keyed by answerer within each question, so one person contributes one entry
+  // however many rows arrive for them — which is also what the wire promises,
+  // since answers are upserted per person and question. Belt and braces, because
+  // the page renders this as a keyed list and a repeated key is a crash rather
+  // than a duplicate row.
+  const collected = new Map<string, Map<string, QuestionAnswer>>()
+  for (const q of questions) collected.set(q.id, new Map())
+
+  for (const a of answers) {
+    const bucket = collected.get(a.questionId)
+    // A question deleted since the answer was filed. Dropped rather than shown
+    // as an unlabelled value, the same way `answersByParticipant` drops it.
+    if (!bucket) continue
+
+    const value = a.boolValue !== undefined ? a.boolValue : a.textValue
+    if (value === undefined) continue
+
+    const name = roster.get(a.participantId)
+    bucket.set(a.participantId, {
+      participantId: a.participantId,
+      name: name ?? "No longer in this hackathon",
+      value,
+      departed: name === undefined,
+    })
+  }
+
+  const byQuestion: Record<string, QuestionAnswers> = {}
+
+  for (const [questionId, bucket] of collected) {
+    let answered = 0
+    for (const id of roster.keys()) if (bucket.has(id)) answered += 1
+
+    byQuestion[questionId] = {
+      answers: [...bucket.values()].sort(
+        (x, y) =>
+          Number(x.departed) - Number(y.departed) ||
+          x.name.localeCompare(y.name),
+      ),
+      missing: roster.size - answered,
+    }
+  }
+
+  return byQuestion
 }
 
 /**

@@ -398,12 +398,19 @@ export function manageNav(
         ]
       : []),
     // Straight after Participants, because it is the other half of getting
-    // people in: this decides what they are asked on the way, that page decides
+    // people in: these decide what people are asked on the way, that page decides
     // who is let through. Always shown — a form with no questions is a legitimate
     // state, and this is the only way to add the first one.
+    //
+    // Named for the section rather than for the registration form, which is only
+    // the first of its tabs: more custom forms are coming, and an entry named
+    // after one of them would have to be renamed the day the second arrives.
+    // Points at `/manage/forms`, which redirects to that first tab — the entry
+    // has to sit at the section's root for `activeNavId`'s longest-prefix match
+    // to keep it lit across every form nested under it.
     {
       id: "manage:forms",
-      label: "Registration Form",
+      label: "Manage Forms",
       icon: ClipboardList,
       href: resolve(`/my/hackathon/${hackathonId}/manage/forms`),
     },

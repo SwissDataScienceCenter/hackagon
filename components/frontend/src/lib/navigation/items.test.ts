@@ -523,6 +523,16 @@ describe("manageNav", () => {
       // Nested under Settings too, but with an entry of its own — longest match
       // is what keeps Settings from swallowing it.
       ["/my/hackathon/hack-1/manage/forms", "manage:forms"],
+      // Every form is a tab of that one entry, and each tab's route nests under
+      // it — so does each tab's own create and edit form. The entry sits at the
+      // section's root precisely so the longest match lands on it rather than on
+      // Settings, whichever form is open.
+      ["/my/hackathon/hack-1/manage/forms/registration", "manage:forms"],
+      ["/my/hackathon/hack-1/manage/forms/registration/new", "manage:forms"],
+      [
+        "/my/hackathon/hack-1/manage/forms/registration/q1/edit",
+        "manage:forms",
+      ],
       ["/my/hackathon/hack-1/timeline", "member:timeline"],
       ["/my/hackathon/hack-1/timeline/manage", "manage:timeline"],
       // The create and edit forms live under the manage route precisely so they

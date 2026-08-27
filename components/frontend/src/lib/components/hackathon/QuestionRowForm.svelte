@@ -5,7 +5,8 @@
         question,
         action,
         submitLabel,
-        keyEditable = false
+        keyEditable = false,
+        cancelHref
     }: {
         question: {
             /** Absent on the new-question row. */
@@ -24,6 +25,14 @@
         submitLabel: string;
         /** Only the new-question row may set a key; `EditQuestion` has no such field. */
         keyEditable?: boolean;
+        /**
+         * Where "Cancel" goes, when this form is the whole point of a page.
+         *
+         * Already resolved by the caller, since `resolve()` wants a route literal
+         * and a prop cannot be one. Omit it where leaving the form is not a
+         * decision the reader has to make.
+         */
+        cancelHref?: string;
     } = $props();
 
     // Local, so the options box appears the moment the type changes rather than
@@ -174,6 +183,13 @@
 
     <div class="flex flex-wrap items-center gap-2">
         <button type="submit" class="btn btn-sm btn-solid">{submitLabel}</button>
+        {#if cancelHref}
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- resolved by
+                 the caller; the rule only recognizes a literal resolve() call in the
+                 attribute itself. -->
+            <a href={cancelHref} class="btn btn-sm btn-ghost no-underline">Cancel</a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+        {/if}
         {#if locked}
             <span class="text-xs text-ink-3">
                 {question.answerCount}
