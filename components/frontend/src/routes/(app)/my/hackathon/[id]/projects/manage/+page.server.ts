@@ -1,11 +1,23 @@
-import type { Actions, PageServerLoad } from "./$types"
-import { requireGrpc } from "$lib/server/grpc/client"
+import type { PageServerLoad } from "./$types"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayReviewProjects } from "$lib/server/hackathon/capabilities"
-import { error, fail } from "@sveltejs/kit"
-import { ClientError, Status } from "nice-grpc-common"
+import {
+  DEFAULT_PROJECT_FILTER,
+  PROJECT_FILTERS,
+  projectFilterFrom,
+  projectFilterQuery,
+  type ProjectFilter,
+} from "$lib/utils/projectFilter"
+import { error } from "@sveltejs/kit"
 
+// The review queue: every project in the hackathon, one status at a time.
+//
+// **No actions of its own any more.** Approving, rejecting and returning a
+// project to the queue all live on `manage/<id>`, under the description they are
+// a judgement of — a decision is made in a review, not from a row you have not
+// opened. Each row offers "Review", which is the link to that page, and "Edit",
+// which is not a decision.
 export const load: PageServerLoad = async (event) => {
   // No RPC of its own: the layout's `hackathon.get` already returns every
   // project at every status.
@@ -14,31 +26,55 @@ export const load: PageServerLoad = async (event) => {
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
   )
-  // Frontend-only gate, same shape as the other manage routes: the two RPCs
-  // below enforce it for real, this only decides whether the page renders.
+  // Frontend-only gate, same shape as the other manage routes, via the same
+  // helper the detail route uses so the two cannot disagree about who is let in.
+  // The RPCs that page calls enforce it for real.
   if (!mayReviewProjects(myMembership ?? undefined, isAdmin)) {
     error(403, "Only the hackathon organizer can review projects")
   }
 
   const isPending = (s: number) => s === ProjectStatus.PROJECT_STATUS_PROPOSED
   const isRejected = (s: number) => s === ProjectStatus.PROJECT_STATUS_REJECTED
+  // Approved is "neither of the above" rather than an equality check, so a
+  // project carrying an unspecified status lands in exactly one tab instead of
+  // disappearing from all of them.
+  const isApproved = (s: number) => !isPending(s) && !isRejected(s)
+
+  const matches: Record<ProjectFilter, (s: number) => boolean> = {
+    approved: isApproved,
+    proposed: isPending,
+    rejected: isRejected,
+  }
 
   // Where a status sits in the queue. Awaiting review first, since those are the
   // rows asking for an action; then approved, which is the hackathon's actual
   // line-up; rejected last, kept reachable only so a decision can be taken back.
-  // An unspecified status sorts with the pending rows rather than vanishing
-  // among the rejected ones — it is an anomaly someone should look at.
   const rank = (s: number) => (isRejected(s) ? 2 : isPending(s) ? 0 : 1)
 
-  // Every project at every status — this is the review queue, and an approved or
-  // rejected one still needs to be reachable to have that decision undone.
-  // Newest first within each group.
   const ordered = [...hackathon.projects].sort((a, b) => {
     if (rank(a.status) !== rank(b.status)) {
       return rank(a.status) - rank(b.status)
     }
     return (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
   })
+
+  // Counted over every project, never over the rows on screen: the number an
+  // organiser wants is usually the one on the tab they are not on.
+  const counts = Object.fromEntries(
+    PROJECT_FILTERS.map((f) => [
+      f,
+      hackathon.projects.filter((p) => matches[f](p.status)).length,
+    ]),
+  ) as Record<ProjectFilter, number>
+
+  // From the address bar, so a view can be bookmarked and the back button works.
+  // An absent or unrecognized value lands on the approved line-up, always — a
+  // default that moved with the counts made a hackathon's projects look gone the
+  // moment one proposal arrived.
+  const filter =
+    projectFilterFrom(event.url.searchParams.get("status")) ??
+    DEFAULT_PROJECT_FILTER
+  const shown = ordered.filter((p) => matches[filter](p.status))
 
   // `Project` carries only `creatorId`, so the name comes from the membership
   // list that arrived in the same response. A creator who has since left the
@@ -54,92 +90,28 @@ export const load: PageServerLoad = async (event) => {
 
   // TODO(backend: display-ordinals): `num` is a position in this list, not an
   // identifier. Project has no display number, so two viewers sorting the same
-  // set agree, but the number a project shows changes as approvals land. Swap
-  // in the real field once it exists.
-  const projects = ordered.map((p, i) => ({
+  // set agree, but the number a project shows changes as approvals land — and
+  // now also as the filter changes, since it numbers the rows on screen rather
+  // than the whole set. Swap in the real field once it exists.
+  const projects = shown.map((p, i) => ({
     id: p.id,
-    num: ordered.length - i,
+    num: shown.length - i,
     title: p.title,
     description: p.description,
     creator: memberNames.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,
-    // Derived here rather than in the component, so no page has to import the
-    // generated enum across the server-only boundary to compare a status. The
-    // two flags are exhaustive between them for the page's purposes: neither set
-    // means approved, which is the only status offering "revoke".
     isPending: isPending(p.status),
-    isRejected: isRejected(p.status),
   }))
 
   return {
     projects,
+    counts,
+    filter,
+    // Carried onto each row's Review link so deciding on a project returns to
+    // the tab it was opened from, rather than to the default.
+    filterQuery: projectFilterQuery(filter),
     hackathonId: hackathon.id,
-    pendingCount: projects.filter((p) => p.isPending).length,
   }
-}
-
-/** Shared by both actions here: they act on one project id from the form. */
-function projectIdFrom(form: FormData): string | undefined {
-  const id = form.get("projectId")
-  return typeof id === "string" && id !== "" ? id : undefined
-}
-
-/** The gRPC errors both write paths can return, as SvelteKit failures. */
-function failFor(e: unknown, denied: string) {
-  if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-    return fail(403, { message: denied })
-  }
-  if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
-    return fail(404, { message: "That project no longer exists" })
-  }
-  if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
-    return fail(400, { message: e.details })
-  }
-  throw e
-}
-
-export const actions: Actions = {
-  approve: async (event) => {
-    const { project } = requireGrpc(event.locals.grpc)
-
-    const projectId = projectIdFrom(await event.request.formData())
-    if (!projectId) return fail(400, { message: "No project was given" })
-
-    try {
-      await project.approve({ projectId })
-    } catch (e) {
-      return failFor(e, "You don't have permission to approve projects here")
-    }
-
-    // No redirect: SvelteKit re-runs `load` after an action, so the badge turns
-    // Approved and the card moves out of the awaiting-review group on its own.
-    return { approvedId: projectId }
-  },
-
-  // Undoing a decision, whichever way it went. `ProjectService.Disapprove` sets
-  // the status back to PROPOSED (`project_service.go:322`) — the state a project
-  // was in before anyone looked at it — so this returns a project to the queue
-  // from either side of it. The page labels the same action "Revoke approval" on
-  // an approved project and "Reconsider" on a rejected one, because those are
-  // two different things to want and one thing to do.
-  //
-  // Rejecting is not here: it takes a reason, and a textarea does not fit a card
-  // row. It lives on `manage/<id>`, where the proposal is read in full — see
-  // that route's own `reject` action.
-  disapprove: async (event) => {
-    const { project } = requireGrpc(event.locals.grpc)
-
-    const projectId = projectIdFrom(await event.request.formData())
-    if (!projectId) return fail(400, { message: "No project was given" })
-
-    try {
-      await project.disapprove({ projectId })
-    } catch (e) {
-      return failFor(e, "You don't have permission to review projects here")
-    }
-
-    return { disapprovedId: projectId }
-  },
 }
