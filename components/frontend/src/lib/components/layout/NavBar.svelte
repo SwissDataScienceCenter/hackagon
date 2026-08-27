@@ -17,6 +17,7 @@
     let {
         session,
         showNav = true,
+        sessionExpired = false,
     }: {
         session: Omit<Session, 'accessToken'> | null;
         /**
@@ -26,6 +27,13 @@
          * and nothing that competes with its own CTA.
          */
         showNav?: boolean;
+        /**
+         * A session was there and its token is dead — the server says so via
+         * `locals.sessionExpired`. `session` is already null in that case, so the
+         * bar is the signed-out bar; this only adds the reason, because a name
+         * that turns into "Log in" with no explanation reads as a fault.
+         */
+        sessionExpired?: boolean;
     } = $props();
 
     let mobileOpen = $state(false);
@@ -156,6 +164,11 @@
                     Log out
                 </button>
             {:else}
+                <!-- Quiet, and dropped below sm: it is a reason, not an action, and
+                     the bar has to survive 320px where the button is what matters. -->
+                {#if sessionExpired}
+                    <span class="hidden text-sm text-ink-3 sm:inline">Session expired</span>
+                {/if}
                 <!-- Outline, not solid: the bar sits over public pages that carry
                      their own CTA, and shell chrome does not outrank the thing the
                      page is for. Kept in the bar at every width — signing in is why

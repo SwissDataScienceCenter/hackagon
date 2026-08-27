@@ -6,8 +6,12 @@ import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibi
 export const load: PageServerLoad = async (event) => {
   // Signed-in visitors get the member view of the same hackathon instead of the
   // public page. Only the signed-out view is built for now.
-  const session = await event.locals.auth()
-  if (session?.user) {
+  //
+  // `locals.session`, not a second `auth()` call: the hook has already decided
+  // this, and it decides it correctly. Asking again for `session?.user` sent a
+  // visitor holding an expired session to the member view, whose guard sent
+  // them back — leaving them unable to read even the public page.
+  if (event.locals.session?.user) {
     redirect(302, `/my/hackathon/${event.params.id}/overview`)
   }
 

@@ -6,7 +6,11 @@
 </script>
 
 <div class="flex min-h-screen flex-col">
-    <NavBar session={data.session ?? null} showNav={false} />
+    <NavBar
+        session={data.session ?? null}
+        sessionExpired={data.sessionExpired ?? false}
+        showNav={false}
+    />
     <main class="flex-1">
         {@render children()}
     </main>
