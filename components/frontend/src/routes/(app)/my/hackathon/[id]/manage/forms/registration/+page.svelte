@@ -1,5 +1,7 @@
 <script lang="ts">
     import Trash2 from 'lucide-svelte/icons/trash-2';
+    import FormsManageTabs from '$lib/components/hackathon/FormsManageTabs.svelte';
+    import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import QuestionRowForm from '$lib/components/hackathon/QuestionRowForm.svelte';
     import type { QuestionKind } from '$lib/utils/question';
     import type { ActionData, PageData } from './$types';
@@ -25,13 +27,20 @@
 
 <div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-1">
-        <h1 class="m-0 text-title text-ink">Registration Form</h1>
+        <ManageHubBackLink hackathonId={data.hackathonId} />
+        <h2 class="m-0 text-title text-ink">Registration Form</h2>
         <p class="m-0 text-xs text-ink-3">
             What this event asks people when they sign up. Questions marked required have
             to be answered before someone can join, and answers are for organizers only
             unless you choose to show them to participants.
         </p>
     </div>
+
+    <FormsManageTabs
+        hackathonId={data.hackathonId}
+        current="registration"
+        questionCount={data.questions.length}
+    />
 
     {#if form?.message}
         <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
