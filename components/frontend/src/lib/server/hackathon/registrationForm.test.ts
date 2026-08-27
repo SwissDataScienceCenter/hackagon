@@ -10,6 +10,7 @@ import {
   questionRows,
   questionType,
   readQuestionEcho,
+  answerDistribution,
 } from "./registrationForm"
 
 // QuestionType numeric values, stated rather than imported so a renumbering in
@@ -308,6 +309,102 @@ describe("questionRows", () => {
       q({ id: "q2", key: "b", publicAnswers: false }),
     ])
     expect(rows.map((r) => r.publicAnswers)).toEqual([true, false])
+  })
+})
+
+describe("answerDistribution", () => {
+  const row = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: "q1",
+    key: "tshirt_size",
+    label: "T-shirt size",
+    kind: "enum" as const,
+    mandatory: false,
+    order: 1,
+    options: ["S", "M", "L"],
+    publicAnswers: false,
+    answerCount: 0,
+    ...over,
+  })
+
+  const said = (
+    questionId: string,
+    participantId: string,
+    textValue: string,
+  ) => ({ questionId, participantId, textValue })
+
+  it("counts a fixed list in the question's own order", () => {
+    expect(
+      answerDistribution(
+        [row()],
+        [said("q1", "u1", "M"), said("q1", "u2", "S"), said("q1", "u3", "M")],
+      ).q1,
+    ).toEqual([
+      { label: "S", count: 1 },
+      { label: "M", count: 2 },
+      { label: "L", count: 0 },
+    ])
+  })
+
+  it("keeps an option nobody chose", () => {
+    // "Nobody picked Large" is the fact an organizer ordering t-shirts came for,
+    // so an empty bucket is a result and not a row to drop.
+    const tally = answerDistribution([row()], [said("q1", "u1", "S")]).q1
+    expect(tally?.map((t) => t.label)).toEqual(["S", "M", "L"])
+  })
+
+  it("appends an answer that is no longer an option rather than losing it", () => {
+    // Should not arise — the backend refuses an options change once anyone has
+    // answered — but a tally that silently drops answers is worse than one
+    // showing a value that surprises.
+    expect(answerDistribution([row()], [said("q1", "u1", "XXL")]).q1).toEqual([
+      { label: "S", count: 0 },
+      { label: "M", count: 0 },
+      { label: "L", count: 0 },
+      { label: "XXL", count: 1 },
+    ])
+  })
+
+  it("counts a tick-box as yes and no, both always present", () => {
+    const q = row({ id: "coc", kind: "bool", options: [] })
+    expect(
+      answerDistribution(
+        [q],
+        [
+          { questionId: "coc", participantId: "u1", boolValue: true },
+          { questionId: "coc", participantId: "u2", boolValue: false },
+          { questionId: "coc", participantId: "u3", boolValue: true },
+        ],
+      ).coc,
+    ).toEqual([
+      { label: "Yes", count: 2 },
+      { label: "No", count: 1 },
+    ])
+
+    expect(answerDistribution([q], []).coc).toEqual([
+      { label: "Yes", count: 0 },
+      { label: "No", count: 0 },
+    ])
+  })
+
+  it("leaves free text out entirely", () => {
+    // Absent rather than empty: a hundred different sentences counted once each
+    // is a list of answers, not a summary of them, and the page reads the
+    // absence as "nothing to show here".
+    const tally = answerDistribution(
+      [row({ id: "aff", kind: "text", options: [] })],
+      [said("aff", "u1", "ETH")],
+    )
+    expect(tally.aff).toBeUndefined()
+  })
+
+  it("does not let one question's answers reach another", () => {
+    const tally = answerDistribution(
+      [row(), row({ id: "q2", key: "meal", options: ["Meat", "Veg"] })],
+      [said("q1", "u1", "M"), said("q2", "u1", "Veg")],
+    )
+    expect(tally.q1?.find((t) => t.label === "M")?.count).toBe(1)
+    expect(tally.q2?.find((t) => t.label === "Veg")?.count).toBe(1)
+    expect(tally.q2?.find((t) => t.label === "Meat")?.count).toBe(0)
   })
 })
 

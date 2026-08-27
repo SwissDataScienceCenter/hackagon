@@ -1,11 +1,12 @@
 import type { requireGrpc } from "$lib/server/grpc/client"
+import type { Answer } from "$lib/server/grpc/generated/hackathon/entities/answer"
 import type { QuestionEcho } from "$lib/server/hackathon/registrationForm"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 /**
- * The plumbing the three registration-form routes share: how many answers a
- * question already has, and how a refused question RPC reads as an HTTP failure.
+ * The plumbing the three registration-form routes share: the answers already on
+ * file, and how a refused question RPC reads as an HTTP failure.
  *
  * Server-only, and split from `registrationForm.ts` on purpose: that module is
  * pure form reading and is unit-tested as such, while this one holds the gRPC
@@ -17,35 +18,39 @@ import { ClientError, Status } from "nice-grpc-common"
 type HackathonClient = ReturnType<typeof requireGrpc>["hackathon"]
 
 /**
- * How many answers each question already has, keyed by question id.
+ * Every answer filed against this hackathon's questions.
  *
- * Read server-side rather than trusted from the form, because it decides which
- * fields an edit may carry: the backend refuses a type change, a promotion to
- * mandatory, and *any* options list once a question has been answered. Sending
- * a field the organizer did not touch would turn a label fix into a refusal.
+ * One call, because three things are read off it: how many answers a question
+ * has, whether it has any at all, and how a tick-box or fixed-list question's
+ * answers fall out. `questionRows` and `answerDistribution` both take the raw
+ * list, so fetching it once and deriving is cheaper and cannot disagree with
+ * itself.
+ *
+ * The count is what decides which fields an edit may carry: the backend refuses
+ * a type change, a promotion to mandatory, and *any* options list once a question
+ * has been answered. Sending a field the organizer did not touch would turn a
+ * label fix into a refusal — so this is read server-side rather than trusted from
+ * the form.
  */
-export async function answerCounts(
+export async function listAnswers(
   client: HackathonClient,
   hackathonId: string,
-): Promise<Map<string, number>> {
-  const counts = new Map<string, number>()
+): Promise<Answer[]> {
   try {
     const res = await client.listParticipantAnswers({
       hackathonId,
       userId: undefined,
     })
-    for (const a of res.answers) {
-      counts.set(a.questionId, (counts.get(a.questionId) ?? 0) + 1)
-    }
-  } catch {
-    // Answers are decoration on these pages — they lock controls, they are not
-    // the point of them. A hackathon nobody has answered yet is the common case
-    // and returns an empty list anyway, so a failure here reads the same way and
-    // leaves the backend to refuse anything it should.
-    return counts
-  }
 
-  return counts
+    return res.answers
+  } catch {
+    // Answers are decoration on these pages — they lock controls and summarise
+    // what has come in, they are not the point of them. A hackathon nobody has
+    // answered yet is the common case and returns an empty list anyway, so a
+    // failure here reads the same way and leaves the backend to refuse anything
+    // it should.
+    return []
+  }
 }
 
 /**

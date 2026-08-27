@@ -2,7 +2,7 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
-import { answerCounts, questionFail } from "$lib/server/hackathon/questions"
+import { listAnswers, questionFail } from "$lib/server/hackathon/questions"
 import {
   parseQuestionForm,
   questionRows,
@@ -26,23 +26,21 @@ export const load: PageServerLoad = async (event) => {
   }
 
   const { hackathon: client } = requireGrpc(event.locals.grpc)
-  const [questions, counts] = await Promise.all([
+  const [questions, answers] = await Promise.all([
     client.listQuestions({ hackathonId: hackathon.id }),
-    answerCounts(client, hackathon.id),
+    listAnswers(client, hackathon.id),
   ])
 
-  const question = questionRows(questions.questions).find(
+  // `questionRows` counts the answers onto each row, and that count is what locks
+  // the type, the options and the promotion to mandatory — the backend refuses
+  // each of the three once anyone has answered, so the form needs it to avoid
+  // offering a refusal.
+  const question = questionRows(questions.questions, answers).find(
     (q) => q.id === event.params.questionId,
   )
   if (!question) error(404, "That question no longer exists")
 
-  return {
-    hackathonId: hackathon.id,
-    // The count is what locks the type, the options and the promotion to
-    // mandatory — the backend refuses each of the three once anyone has answered,
-    // so the form needs it to avoid offering a refusal.
-    question: { ...question, answerCount: counts.get(question.id) ?? 0 },
-  }
+  return { hackathonId: hackathon.id, question }
 }
 
 export const actions: Actions = {
@@ -63,8 +61,8 @@ export const actions: Actions = {
     // The backend refuses each of the three below on an answered question, so
     // sending one the organizer never changed would turn a label fix into a
     // refusal. Absent fields are left alone rather than cleared.
-    const locked = (await answerCounts(client, event.params.id)).has(
-      event.params.questionId,
+    const locked = (await listAnswers(client, event.params.id)).some(
+      (a) => a.questionId === event.params.questionId,
     )
 
     try {

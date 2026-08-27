@@ -2,8 +2,11 @@ import type { Actions, PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
-import { answerCounts, questionFail } from "$lib/server/hackathon/questions"
-import { questionRows } from "$lib/server/hackathon/registrationForm"
+import { listAnswers, questionFail } from "$lib/server/hackathon/questions"
+import {
+  answerDistribution,
+  questionRows,
+} from "$lib/server/hackathon/registrationForm"
 import { error, fail } from "@sveltejs/kit"
 
 // What this event asks people when they register, and which of the answers the
@@ -32,17 +35,21 @@ export const load: PageServerLoad = async (event) => {
 
   // `listQuestions` needs its own call: the questions do not ride on
   // `hackathon.get` the way tracks and phases do.
-  const [questions, counts] = await Promise.all([
+  const [questions, answers] = await Promise.all([
     client.listQuestions({ hackathonId: hackathon.id }),
-    answerCounts(client, hackathon.id),
+    listAnswers(client, hackathon.id),
   ])
+
+  const rows = questionRows(questions.questions, answers)
 
   return {
     hackathonId: hackathon.id,
-    questions: questionRows(questions.questions).map((q) => ({
-      ...q,
-      answerCount: counts.get(q.id) ?? 0,
-    })),
+    questions: rows,
+    // What people actually chose, for the two kinds where that is a summary
+    // rather than a list. Keyed by question id and computed here rather than in
+    // the page, because it reads the answers — which are server-only, and which
+    // the page has no other reason to hold.
+    distribution: answerDistribution(rows, answers),
   }
 }
 

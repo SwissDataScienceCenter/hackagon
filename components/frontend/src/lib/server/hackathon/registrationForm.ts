@@ -244,6 +244,78 @@ export function parseQuestionForm(form: FormData): QuestionFormResult {
   }
 }
 
+/** One bucket of a question's answers: what was chosen, and how often. */
+export interface AnswerTally {
+  label: string
+  count: number
+}
+
+/**
+ * How a tick-box or fixed-list question's answers fall out, keyed by question id.
+ *
+ * Only those two kinds are in it. Free text has no distribution — a hundred
+ * different sentences counted once each is a list of answers, not a summary of
+ * them — so a text question is absent from the record rather than present and
+ * empty, and the page reads the absence as "nothing to show here".
+ *
+ * Buckets are the question's own, in the question's own order, and a bucket
+ * nobody chose is kept at zero: "nobody picked Large" is the fact an organizer
+ * ordering t-shirts came for, and dropping empty buckets would hide it.
+ *
+ * Anything answered that is no longer one of the options is appended after them
+ * rather than dropped, so the buckets always add up to the answers on file. It
+ * should not arise — the backend refuses an options change once anyone has
+ * answered — but a tally that silently loses answers is worse than one showing a
+ * value that surprises.
+ */
+export function answerDistribution(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+): Record<string, AnswerTally[]> {
+  const byQuestion = new Map<string, Answer[]>()
+  for (const a of answers) {
+    const list = byQuestion.get(a.questionId)
+    if (list) list.push(a)
+    else byQuestion.set(a.questionId, [a])
+  }
+
+  const distribution: Record<string, AnswerTally[]> = {}
+
+  for (const q of questions) {
+    if (q.kind !== "bool" && q.kind !== "enum") continue
+    const filed = byQuestion.get(q.id) ?? []
+
+    if (q.kind === "bool") {
+      // `boolValue` only: the backend reads the arm from the question's type, so
+      // a tick-box answer arrives as a bool. Counting a stray text arm as well
+      // would be guessing at what "no" was spelled as.
+      distribution[q.id] = [
+        {
+          label: "Yes",
+          count: filed.filter((a) => a.boolValue === true).length,
+        },
+        {
+          label: "No",
+          count: filed.filter((a) => a.boolValue === false).length,
+        },
+      ]
+      continue
+    }
+
+    const counts = new Map<string, number>()
+    for (const option of q.options) counts.set(option, 0)
+    for (const a of filed) {
+      const value = a.textValue
+      if (value === undefined || value === "") continue
+      counts.set(value, (counts.get(value) ?? 0) + 1)
+    }
+
+    distribution[q.id] = [...counts].map(([label, count]) => ({ label, count }))
+  }
+
+  return distribution
+}
+
 /**
  * A question form's fields exactly as they were typed, valid or not.
  *

@@ -130,6 +130,27 @@
                              are uppercased by the theme, and a key is lowercase. -->
                         <span class="font-mono text-xs text-ink-3">{question.key}</span>
 
+                        <!-- What people actually chose. Only for a tick-box or a
+                             fixed list, where the answers are a summary rather
+                             than a list — a hundred different sentences counted
+                             once each says nothing — and only once somebody has
+                             answered, so an untouched form is not a wall of
+                             zeros. An option nobody picked stays on show at zero,
+                             dimmed: "nobody chose Large" is the fact an organizer
+                             ordering t-shirts came for. -->
+                        {#if question.answerCount > 0 && data.distribution[question.id]}
+                            <div class="flex flex-wrap items-center gap-1 pt-0.5">
+                                {#each data.distribution[question.id] as tally (tally.label)}
+                                    <span class="tally {tally.count === 0 ? 'opacity-60' : ''}">
+                                        {tally.label}
+                                        <span class="tnum font-semibold text-ink">
+                                            {tally.count}
+                                        </span>
+                                    </span>
+                                {/each}
+                            </div>
+                        {/if}
+
                         {#if question.answerCount > 0}
                             <p class="m-0 text-xs text-ink-3">
                                 {question.answerCount}
