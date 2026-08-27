@@ -1,3 +1,6 @@
+{{- if and (contains "{keycloakService}" .Values.backend.config.oidc.jwksurl) (not .Values.keycloak.enabled) -}}
+{{- fail "backend.config.oidc.jwksurl uses {keycloakService}, but keycloak.enabled is false: set jwksurl to the external Keycloak's certs endpoint" -}}
+{{- end -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -19,7 +22,7 @@ data:
       user: {{ .Values.backend.config.database.user | quote }}
       password: {{ .Values.backend.config.database.postgresPassword | required "postgresql.auth.postgresPassword is required" | quote }}
     oidc:
-      jwksurl: {{ .Values.backend.config.oidc.jwksurl | replace "{baseDomain}" .Values.baseDomain | quote }}
+      jwksurl: {{ .Values.backend.config.oidc.jwksurl | replace "{baseDomain}" .Values.baseDomain | replace "{keycloakService}" (include "hackagon.keycloakServiceName" .) | quote }}
       issuerurl: {{ .Values.backend.config.oidc.issuerurl | replace "{baseDomain}" .Values.baseDomain | quote }}
       algorithm: {{ .Values.backend.config.oidc.algorithm | quote }}
     logging:
