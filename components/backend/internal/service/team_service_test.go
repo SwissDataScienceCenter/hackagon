@@ -1726,4 +1726,555 @@ var _ = Describe("TeamService", func() {
 			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 		})
 	})
+
+	Describe("BulkAssignUsers", func() {
+		var hackathonID, projectID, teamAID, teamBID string
+		var ownerID, user1ID, user2ID, user3ID string
+		var user1KC string
+
+		BeforeEach(func() {
+			ownerID = "bulk-assign-owner"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(ownerID).
+				SetUsername("bulk-assign-owner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			now := time.Now()
+			hResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "Bulk Assign Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
+
+			// Enable registrations (required for Join RPC).
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Title:       "Bulk Assign Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			projectID = pResp.GetProjectId()
+
+			// Create two teams.
+			tAResp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Team A",
+				ProjectId: projectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			teamAID = tAResp.GetTeamId()
+
+			tBResp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Team B",
+				ProjectId: projectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			teamBID = tBResp.GetTeamId()
+
+			// Create and enroll participants via RPC.
+			for _, uid := range []string{"bulk-user-1", "bulk-user-2", "bulk-user-3"} {
+				u, err := dbClient.User.Create().
+					SetKeycloakID(uid).
+					SetUsername(uid + "-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				switch uid {
+				case "bulk-user-1":
+					user1ID = u.ID.String()
+					user1KC = uid
+				case "bulk-user-2":
+					user2ID = u.ID.String()
+				case "bulk-user-3":
+					user3ID = u.ID.String()
+				}
+
+				// Join hackathon.
+				userToken := testutils.CreateTestJWTToken(uid)
+				userCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+userToken),
+				)
+				_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Approve as participant (grants Member role).
+				_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+					HackathonId: hackathonID,
+					UserId:      u.ID.String(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// Assign user1 to Team A already.
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamAID,
+				UserId: user1ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("assigns multiple users to multiple teams", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.BulkAssignUsers(ctx, &teamMsgs.BulkAssignUsersRequest{
+				HackathonId: hackathonID,
+				Assignments: []*teamMsgs.BulkAssignUsersRequest_Assignment{
+					{UserId: user1ID, TeamId: teamBID},
+					{UserId: user2ID, TeamId: teamBID},
+					{UserId: user3ID, TeamId: teamAID},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp).NotTo(BeNil())
+
+			// Verify user1 moved from A to B.
+			tA, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamAID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tA.Edges.Members).To(HaveLen(1)) // user3
+
+			tB, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamBID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tB.Edges.Members).To(HaveLen(2)) // user1, user2
+
+			// Verify casbin roles.
+			role, err := enf.GetHackathonRole(user1KC, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(role).To(Equal(ents.HackathonRole_HACKATHON_ROLE_MEMBER))
+		})
+
+		It("skips users already on target team", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// user1 is already on teamA, assign them again to teamA.
+			resp, err := teamClient.BulkAssignUsers(ctx, &teamMsgs.BulkAssignUsersRequest{
+				HackathonId: hackathonID,
+				Assignments: []*teamMsgs.BulkAssignUsersRequest_Assignment{
+					{UserId: user1ID, TeamId: teamAID},
+					{UserId: user2ID, TeamId: teamAID},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp).NotTo(BeNil())
+
+			tA, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamAID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tA.Edges.Members).To(HaveLen(2))
+		})
+
+		It("denies for non-participant user", func() {
+			// Create a user who is not a participant.
+			nonParticipant, err := dbClient.User.Create().
+				SetKeycloakID("non-participant-bulk-assign").
+				SetUsername("non-participant-bulk-assign").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.BulkAssignUsers(ctx, &teamMsgs.BulkAssignUsersRequest{
+				HackathonId: hackathonID,
+				Assignments: []*teamMsgs.BulkAssignUsersRequest_Assignment{
+					{UserId: nonParticipant.ID.String(), TeamId: teamAID},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("denies for team not in hackathon", func() {
+			// Create a team in a different hackathon.
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			now := time.Now()
+			h2Resp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "Other Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			p2Resp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: h2Resp.GetHackathonId(),
+				Title:       "Other Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			t2Resp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Other Team",
+				ProjectId: p2Resp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.BulkAssignUsers(ctx, &teamMsgs.BulkAssignUsersRequest{
+				HackathonId: hackathonID,
+				Assignments: []*teamMsgs.BulkAssignUsersRequest_Assignment{
+					{UserId: user2ID, TeamId: t2Resp.GetTeamId()},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("denies for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := teamClient.BulkAssignUsers(ctx, &teamMsgs.BulkAssignUsersRequest{
+				HackathonId: "not-a-uuid",
+				Assignments: []*teamMsgs.BulkAssignUsersRequest_Assignment{
+					{UserId: user2ID, TeamId: teamAID},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("denies for unauthorized user", func() {
+			unauthID := "unauth-bulk-assign"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(unauthID).
+				SetUsername(unauthID).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(unauthID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.BulkAssignUsers(ctx, &teamMsgs.BulkAssignUsersRequest{
+				HackathonId: hackathonID,
+				Assignments: []*teamMsgs.BulkAssignUsersRequest_Assignment{
+					{UserId: user2ID, TeamId: teamAID},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+	})
+
+	Describe("BulkRemoveUsers", func() {
+		var hackathonID, projectID, teamAID, teamBID string
+		var ownerID, user1ID, user2ID, user3ID string
+
+		BeforeEach(func() {
+			ownerID = "bulk-remove-owner"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(ownerID).
+				SetUsername("bulk-remove-owner").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			now := time.Now()
+			hResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:       "Bulk Remove Hackathon",
+				Visibility: ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hackathonID = hResp.GetHackathonId()
+
+			// Enable registrations (required for Join RPC).
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hResp.GetHackathonId(),
+				Title:       "Bulk Remove Project",
+				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			projectID = pResp.GetProjectId()
+
+			// Create two teams.
+			tAResp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Team A",
+				ProjectId: projectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			teamAID = tAResp.GetTeamId()
+
+			tBResp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
+				Name:      "Team B",
+				ProjectId: projectID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			teamBID = tBResp.GetTeamId()
+
+			// Create and enroll participants.
+			for _, uid := range []string{"bulk-rm-user-1", "bulk-rm-user-2", "bulk-rm-user-3"} {
+				u, err := dbClient.User.Create().
+					SetKeycloakID(uid).
+					SetUsername(uid + "-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				switch uid {
+				case "bulk-rm-user-1":
+					user1ID = u.ID.String()
+				case "bulk-rm-user-2":
+					user2ID = u.ID.String()
+				case "bulk-rm-user-3":
+					user3ID = u.ID.String()
+				}
+
+				// Join hackathon.
+				userToken := testutils.CreateTestJWTToken(uid)
+				userCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+userToken),
+				)
+				_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+					HackathonId: hackathonID,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Approve as participant (grants Member role).
+				_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+					HackathonId: hackathonID,
+					UserId:      u.ID.String(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// Assign user1 and user2 to Team A, user3 to Team B.
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamAID,
+				UserId: user1ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamAID,
+				UserId: user2ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.AssignUser(ctx, &teamMsgs.AssignUserRequest{
+				TeamId: teamBID,
+				UserId: user3ID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("removes multiple users from their teams", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.BulkRemoveUsers(ctx, &teamMsgs.BulkRemoveUsersRequest{
+				HackathonId: hackathonID,
+				UserIds:     []string{user1ID, user2ID, user3ID},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp).NotTo(BeNil())
+
+			// Verify all users removed from their teams.
+			tA, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamAID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tA.Edges.Members).To(HaveLen(0))
+
+			tB, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamBID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tB.Edges.Members).To(HaveLen(0))
+		})
+
+		It("silently skips users not on any team", func() {
+			// user3 is on teamB, user1 and user2 on teamA.
+			// Create a participant not on any team.
+			unassignedUser, err := dbClient.User.Create().
+				SetKeycloakID("unassigned-bulk-rm").
+				SetUsername("unassigned-bulk-rm").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create owner context for approval.
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			// Join hackathon.
+			userToken := testutils.CreateTestJWTToken("unassigned-bulk-rm")
+			userCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+userToken),
+			)
+			_, err = hackathonClient.Join(userCtx, &msgs.JoinRequest{
+				HackathonId: hackathonID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Approve as participant (grants Member role).
+			_, err = hackathonClient.ApproveParticipant(ctx, &msgs.ApproveParticipantRequest{
+				HackathonId: hackathonID,
+				UserId:      unassignedUser.ID.String(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Remove user1, user3 (on teams) and unassignedUser (not on team).
+			resp, err := teamClient.BulkRemoveUsers(ctx, &teamMsgs.BulkRemoveUsersRequest{
+				HackathonId: hackathonID,
+				UserIds:     []string{user1ID, user3ID, unassignedUser.ID.String()},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp).NotTo(BeNil())
+
+			// user1 and user3 should be removed.
+			tA, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamAID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tA.Edges.Members).To(HaveLen(1)) // user2 remains
+
+			tB, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamBID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tB.Edges.Members).To(HaveLen(0))
+		})
+
+		It("denies for non-participant user", func() {
+			nonParticipant, err := dbClient.User.Create().
+				SetKeycloakID("non-participant-bulk-rm").
+				SetUsername("non-participant-bulk-rm").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.BulkRemoveUsers(ctx, &teamMsgs.BulkRemoveUsersRequest{
+				HackathonId: hackathonID,
+				UserIds:     []string{user1ID, nonParticipant.ID.String()},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+
+			// Nothing should have changed.
+			tA, err := dbClient.Team.Query().
+				Where(entteam.IDEQ(uuid.MustParse(teamAID))).
+				WithMembers().
+				Only(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tA.Edges.Members).To(HaveLen(2))
+		})
+
+		It("denies for invalid hackathon ID", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := teamClient.BulkRemoveUsers(ctx, &teamMsgs.BulkRemoveUsersRequest{
+				HackathonId: "not-a-uuid",
+				UserIds:     []string{user1ID},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		})
+
+		It("denies for unauthorized user", func() {
+			unauthID := "unauth-bulk-rm"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(unauthID).
+				SetUsername(unauthID).
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(unauthID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err = teamClient.BulkRemoveUsers(ctx, &teamMsgs.BulkRemoveUsersRequest{
+				HackathonId: hackathonID,
+				UserIds:     []string{user1ID},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
+	})
 })

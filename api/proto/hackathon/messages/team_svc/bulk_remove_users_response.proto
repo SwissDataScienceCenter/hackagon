@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package hackathon.messages.team_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/team_svc";
+
+message BulkRemoveUsersResponse {}

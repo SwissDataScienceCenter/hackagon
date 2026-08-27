@@ -295,6 +295,36 @@ func (e *Enforcer) RemoveRole(
 	return e.enforcer.RemoveGroupingPolicy(user, role.String(), domain)
 }
 
+func (e *Enforcer) AddRoleBatch(
+	users []string,
+	role Role,
+	hackathonId string,
+	opts ...EnforceOption,
+) (bool, error) {
+	domain := enforceOptsToPath(hackathonId, opts...)
+	policies := make([][]string, 0, len(users))
+	for _, user := range users {
+		policies = append(policies, []string{user, role.String(), domain})
+	}
+
+	return e.enforcer.AddGroupingPolicies(policies)
+}
+
+func (e *Enforcer) RemoveRoleBatch(
+	users []string,
+	role Role,
+	hackathonId string,
+	opts ...EnforceOption,
+) (bool, error) {
+	domain := enforceOptsToPath(hackathonId, opts...)
+	policies := make([][]string, 0, len(users))
+	for _, user := range users {
+		policies = append(policies, []string{user, role.String(), domain})
+	}
+
+	return e.enforcer.RemoveGroupingPolicies(policies)
+}
+
 func (e *Enforcer) AddGlobalRole(user string, role Role) (bool, error) {
 	return e.enforcer.AddNamedGroupingPolicy("g2", user, role.String())
 }

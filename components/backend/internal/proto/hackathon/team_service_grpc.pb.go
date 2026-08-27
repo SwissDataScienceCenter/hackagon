@@ -27,6 +27,8 @@ const (
 	TeamService_Delete_FullMethodName             = "/hackathon.TeamService/Delete"
 	TeamService_AssignUser_FullMethodName         = "/hackathon.TeamService/AssignUser"
 	TeamService_RemoveUser_FullMethodName         = "/hackathon.TeamService/RemoveUser"
+	TeamService_BulkAssignUsers_FullMethodName    = "/hackathon.TeamService/BulkAssignUsers"
+	TeamService_BulkRemoveUsers_FullMethodName    = "/hackathon.TeamService/BulkRemoveUsers"
 	TeamService_CreateSubmission_FullMethodName   = "/hackathon.TeamService/CreateSubmission"
 	TeamService_GetSubmission_FullMethodName      = "/hackathon.TeamService/GetSubmission"
 	TeamService_ListSubmissions_FullMethodName    = "/hackathon.TeamService/ListSubmissions"
@@ -44,6 +46,8 @@ type TeamServiceClient interface {
 	Delete(ctx context.Context, in *team_svc.DeleteRequest, opts ...grpc.CallOption) (*team_svc.DeleteResponse, error)
 	AssignUser(ctx context.Context, in *team_svc.AssignUserRequest, opts ...grpc.CallOption) (*team_svc.AssignUserResponse, error)
 	RemoveUser(ctx context.Context, in *team_svc.RemoveUserRequest, opts ...grpc.CallOption) (*team_svc.RemoveUserResponse, error)
+	BulkAssignUsers(ctx context.Context, in *team_svc.BulkAssignUsersRequest, opts ...grpc.CallOption) (*team_svc.BulkAssignUsersResponse, error)
+	BulkRemoveUsers(ctx context.Context, in *team_svc.BulkRemoveUsersRequest, opts ...grpc.CallOption) (*team_svc.BulkRemoveUsersResponse, error)
 	CreateSubmission(ctx context.Context, in *team_svc.CreateSubmissionRequest, opts ...grpc.CallOption) (*team_svc.CreateSubmissionResponse, error)
 	GetSubmission(ctx context.Context, in *team_svc.GetSubmissionRequest, opts ...grpc.CallOption) (*team_svc.GetSubmissionResponse, error)
 	ListSubmissions(ctx context.Context, in *team_svc.ListSubmissionsRequest, opts ...grpc.CallOption) (*team_svc.ListSubmissionsResponse, error)
@@ -128,6 +132,26 @@ func (c *teamServiceClient) RemoveUser(ctx context.Context, in *team_svc.RemoveU
 	return out, nil
 }
 
+func (c *teamServiceClient) BulkAssignUsers(ctx context.Context, in *team_svc.BulkAssignUsersRequest, opts ...grpc.CallOption) (*team_svc.BulkAssignUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(team_svc.BulkAssignUsersResponse)
+	err := c.cc.Invoke(ctx, TeamService_BulkAssignUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *teamServiceClient) BulkRemoveUsers(ctx context.Context, in *team_svc.BulkRemoveUsersRequest, opts ...grpc.CallOption) (*team_svc.BulkRemoveUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(team_svc.BulkRemoveUsersResponse)
+	err := c.cc.Invoke(ctx, TeamService_BulkRemoveUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *teamServiceClient) CreateSubmission(ctx context.Context, in *team_svc.CreateSubmissionRequest, opts ...grpc.CallOption) (*team_svc.CreateSubmissionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(team_svc.CreateSubmissionResponse)
@@ -179,6 +203,8 @@ type TeamServiceServer interface {
 	Delete(context.Context, *team_svc.DeleteRequest) (*team_svc.DeleteResponse, error)
 	AssignUser(context.Context, *team_svc.AssignUserRequest) (*team_svc.AssignUserResponse, error)
 	RemoveUser(context.Context, *team_svc.RemoveUserRequest) (*team_svc.RemoveUserResponse, error)
+	BulkAssignUsers(context.Context, *team_svc.BulkAssignUsersRequest) (*team_svc.BulkAssignUsersResponse, error)
+	BulkRemoveUsers(context.Context, *team_svc.BulkRemoveUsersRequest) (*team_svc.BulkRemoveUsersResponse, error)
 	CreateSubmission(context.Context, *team_svc.CreateSubmissionRequest) (*team_svc.CreateSubmissionResponse, error)
 	GetSubmission(context.Context, *team_svc.GetSubmissionRequest) (*team_svc.GetSubmissionResponse, error)
 	ListSubmissions(context.Context, *team_svc.ListSubmissionsRequest) (*team_svc.ListSubmissionsResponse, error)
@@ -213,6 +239,12 @@ func (UnimplementedTeamServiceServer) AssignUser(context.Context, *team_svc.Assi
 }
 func (UnimplementedTeamServiceServer) RemoveUser(context.Context, *team_svc.RemoveUserRequest) (*team_svc.RemoveUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveUser not implemented")
+}
+func (UnimplementedTeamServiceServer) BulkAssignUsers(context.Context, *team_svc.BulkAssignUsersRequest) (*team_svc.BulkAssignUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkAssignUsers not implemented")
+}
+func (UnimplementedTeamServiceServer) BulkRemoveUsers(context.Context, *team_svc.BulkRemoveUsersRequest) (*team_svc.BulkRemoveUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkRemoveUsers not implemented")
 }
 func (UnimplementedTeamServiceServer) CreateSubmission(context.Context, *team_svc.CreateSubmissionRequest) (*team_svc.CreateSubmissionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateSubmission not implemented")
@@ -373,6 +405,42 @@ func _TeamService_RemoveUser_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TeamService_BulkAssignUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(team_svc.BulkAssignUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeamServiceServer).BulkAssignUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeamService_BulkAssignUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeamServiceServer).BulkAssignUsers(ctx, req.(*team_svc.BulkAssignUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TeamService_BulkRemoveUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(team_svc.BulkRemoveUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeamServiceServer).BulkRemoveUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeamService_BulkRemoveUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeamServiceServer).BulkRemoveUsers(ctx, req.(*team_svc.BulkRemoveUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TeamService_CreateSubmission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(team_svc.CreateSubmissionRequest)
 	if err := dec(in); err != nil {
@@ -479,6 +547,14 @@ var TeamService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveUser",
 			Handler:    _TeamService_RemoveUser_Handler,
+		},
+		{
+			MethodName: "BulkAssignUsers",
+			Handler:    _TeamService_BulkAssignUsers_Handler,
+		},
+		{
+			MethodName: "BulkRemoveUsers",
+			Handler:    _TeamService_BulkRemoveUsers_Handler,
 		},
 		{
 			MethodName: "CreateSubmission",

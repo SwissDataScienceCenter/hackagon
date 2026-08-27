@@ -419,6 +419,525 @@ func (s *TeamService) RemoveUser(
 	return &msgs.RemoveUserResponse{Team: teamEntryFromEnt(updatedT)}, nil
 }
 
+// hackathonContext holds the hackathon with all its teams, members, and participants loaded.
+type hackathonContext struct {
+	hackathon    *ent.Hackathon
+	teamsByID    map[uuid.UUID]*ent.Team
+	userTeamMap  map[uuid.UUID]uuid.UUID // userID -> teamID (for users on a team)
+	participants map[uuid.UUID]bool
+}
+
+// loadHackathonContext loads a hackathon with all its teams (and their members)
+// and participating users in a single query.
+func (s *TeamService) loadHackathonContext(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+) (*hackathonContext, error) {
+	h, err := s.dbClient.Hackathon.Query().
+		Where(enthackathon.IDEQ(hackathonID)).
+		WithProjects(func(pq *ent.ProjectQuery) {
+			pq.WithTeams(func(tq *ent.TeamQuery) {
+				tq.WithMembers()
+			})
+		}).
+		WithParticipatingUsers().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, status.Errorf(codes.NotFound, "hackathon %s not found", hackathonID)
+		}
+		slog.Error("query hackathon", "err", err)
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	teamsByID := make(map[uuid.UUID]*ent.Team)
+	for _, p := range h.Edges.Projects {
+		for _, t := range p.Edges.Teams {
+			teamsByID[t.ID] = t
+		}
+	}
+
+	userTeamMap := make(map[uuid.UUID]uuid.UUID)
+	for _, t := range teamsByID {
+		for _, u := range t.Edges.Members {
+			userTeamMap[u.ID] = t.ID
+		}
+	}
+
+	participants := make(map[uuid.UUID]bool)
+	for _, u := range h.Edges.ParticipatingUsers {
+		participants[u.ID] = true
+	}
+
+	return &hackathonContext{
+		hackathon:    h,
+		teamsByID:    teamsByID,
+		userTeamMap:  userTeamMap,
+		participants: participants,
+	}, nil
+}
+
+// validateUsersAreParticipants checks that all requested user IDs are participants.
+func (hc *hackathonContext) validateUsersAreParticipants(userIDs []uuid.UUID) error {
+	for _, uid := range userIDs {
+		if !hc.participants[uid] {
+			return status.Errorf(
+				codes.InvalidArgument,
+				"user %s is not a participant in hackathon %s",
+				uid,
+				hc.hackathon.ID,
+			)
+		}
+	}
+	return nil
+}
+
+// validateTeamsExist checks that all requested team IDs exist in this hackathon.
+func (hc *hackathonContext) validateTeamsExist(teamIDs []uuid.UUID) error {
+	for _, tid := range teamIDs {
+		if _, ok := hc.teamsByID[tid]; !ok {
+			return status.Errorf(codes.InvalidArgument, "team %s not found in hackathon", tid)
+		}
+	}
+	return nil
+}
+
+// parseAssignments parses assignment pairs and returns validated team/user IDs and the assignment map.
+func (s *TeamService) parseAssignments(
+	assignments []*msgs.BulkAssignUsersRequest_Assignment,
+) ([]uuid.UUID, []uuid.UUID, map[uuid.UUID]uuid.UUID, error) {
+	teamIDs := make([]uuid.UUID, 0, len(assignments))
+	userIDs := make([]uuid.UUID, 0, len(assignments))
+	assignmentMap := make(map[uuid.UUID]uuid.UUID)
+
+	for _, a := range assignments {
+		teamID, err := uuid.Parse(a.GetTeamId())
+		if err != nil {
+			return nil, nil, nil, status.Errorf(
+				codes.InvalidArgument,
+				"invalid team_id in assignment: %v",
+				err,
+			)
+		}
+		teamIDs = append(teamIDs, teamID)
+
+		userID, err := uuid.Parse(a.GetUserId())
+		if err != nil {
+			return nil, nil, nil, status.Errorf(
+				codes.InvalidArgument,
+				"invalid user_id in assignment: %v",
+				err,
+			)
+		}
+		userIDs = append(userIDs, userID)
+		assignmentMap[userID] = teamID
+	}
+	return teamIDs, userIDs, assignmentMap, nil
+}
+
+// parseUserIDs parses a list of user ID strings into UUIDs.
+func (s *TeamService) parseUserIDs(userIDs []string) ([]uuid.UUID, error) {
+	result := make([]uuid.UUID, 0, len(userIDs))
+	for _, uid := range userIDs {
+		userUUID, err := uuid.Parse(uid)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid user_id: %v", err)
+		}
+		result = append(result, userUUID)
+	}
+	return result, nil
+}
+
+// determineTeamMoves determines which users need to move between teams.
+func determineTeamMoves(
+	assignments map[uuid.UUID]uuid.UUID,
+	userTeamMap map[uuid.UUID]uuid.UUID,
+) (map[uuid.UUID]uuid.UUID, map[uuid.UUID][]string, map[uuid.UUID][]string) {
+	usersOnTeam := make(map[uuid.UUID]uuid.UUID)
+	usersByOldTeam := make(map[uuid.UUID][]string)
+	usersByNewTeam := make(map[uuid.UUID][]string)
+
+	for userID, targetTeam := range assignments {
+		currentTeam := userTeamMap[userID]
+		if currentTeam == targetTeam {
+			// Already on target team — skip.
+			delete(assignments, userID)
+			continue
+		}
+		if currentTeam != uuid.Nil {
+			// On a different team — needs to move.
+			usersOnTeam[userID] = currentTeam
+			usersByOldTeam[currentTeam] = append(usersByOldTeam[currentTeam], userID.String())
+		}
+		usersByNewTeam[targetTeam] = append(usersByNewTeam[targetTeam], userID.String())
+	}
+	return usersOnTeam, usersByOldTeam, usersByNewTeam
+}
+
+// findUsersOnTeams finds which users are currently on teams.
+func findUsersOnTeams(
+	userIDs []uuid.UUID,
+	userTeamMap map[uuid.UUID]uuid.UUID,
+) []struct {
+	userID uuid.UUID
+	teamID uuid.UUID
+} {
+	var result []struct {
+		userID uuid.UUID
+		teamID uuid.UUID
+	}
+	for _, userID := range userIDs {
+		if teamID, ok := userTeamMap[userID]; ok {
+			result = append(result, struct {
+				userID uuid.UUID
+				teamID uuid.UUID
+			}{userID: userID, teamID: teamID})
+		}
+	}
+	return result
+}
+
+// bulkAssignCasbin handles casbin role changes for bulk assign.
+func (s *TeamService) bulkAssignCasbin(
+	_ context.Context,
+	hackathonID uuid.UUID,
+	usersByOldTeam, usersByNewTeam map[uuid.UUID][]string,
+) error {
+	var casbinRemovedOld bool
+
+	// Remove old roles.
+	for teamID, uids := range usersByOldTeam {
+		_, err := s.enforcer.RemoveRoleBatch(
+			uids,
+			m.Member,
+			hackathonID.String(),
+			m.WithTeam(teamID.String()),
+		)
+		if err != nil {
+			if casbinRemovedOld {
+				for tID, uIDs := range usersByOldTeam {
+					_, _ = s.enforcer.AddRoleBatch(
+						uIDs,
+						m.Member,
+						hackathonID.String(),
+						m.WithTeam(tID.String()),
+					)
+				}
+			}
+			slog.Error("bulk remove old team roles", "err", err)
+			return status.Errorf(codes.Internal, "couldn't remove old casbin roles: %v", err)
+		}
+		casbinRemovedOld = true
+	}
+
+	// Add new roles.
+	for teamID, uids := range usersByNewTeam {
+		_, err := s.enforcer.AddRoleBatch(
+			uids,
+			m.Member,
+			hackathonID.String(),
+			m.WithTeam(teamID.String()),
+		)
+		if err != nil {
+			if casbinRemovedOld {
+				for tID, uIDs := range usersByOldTeam {
+					_, _ = s.enforcer.AddRoleBatch(
+						uIDs,
+						m.Member,
+						hackathonID.String(),
+						m.WithTeam(tID.String()),
+					)
+				}
+			}
+			slog.Error("bulk add new team roles", "err", err)
+			return status.Errorf(codes.Internal, "couldn't add new casbin roles: %v", err)
+		}
+	}
+	return nil
+}
+
+// bulkAssignTx handles the ent transaction for bulk assign.
+func (s *TeamService) bulkAssignTx(
+	ctx context.Context,
+	tx *ent.Tx,
+	usersOnTeam map[uuid.UUID]uuid.UUID,
+	assignments map[uuid.UUID]uuid.UUID,
+) error {
+	// Remove from old teams.
+	for userID, teamID := range usersOnTeam {
+		u, err := tx.User.Get(ctx, userID)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("get user for remove", "err", err)
+			return status.Errorf(codes.Internal, "couldn't get user: %v", err)
+		}
+		t, err := tx.Team.Get(ctx, teamID)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("get team for remove", "err", err)
+			return status.Errorf(codes.Internal, "couldn't get team: %v", err)
+		}
+		if _, err := tx.Team.UpdateOne(t).RemoveMembers(u).Save(ctx); err != nil {
+			_ = tx.Rollback()
+			slog.Error("remove user from old team", "err", err)
+			return status.Errorf(codes.Internal, "couldn't remove user from team: %v", err)
+		}
+	}
+
+	// Add to new teams.
+	for userID, teamID := range assignments {
+		u, err := tx.User.Get(ctx, userID)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("get user for add", "err", err)
+			return status.Errorf(codes.Internal, "couldn't get user: %v", err)
+		}
+		t, err := tx.Team.Get(ctx, teamID)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("get team for add", "err", err)
+			return status.Errorf(codes.Internal, "couldn't get team: %v", err)
+		}
+		if _, err := tx.Team.UpdateOne(t).AddMembers(u).Save(ctx); err != nil {
+			_ = tx.Rollback()
+			slog.Error("add user to new team", "err", err)
+			return status.Errorf(codes.Internal, "couldn't add user to team: %v", err)
+		}
+	}
+	return nil
+}
+
+// bulkRemoveCasbin handles casbin role removal for bulk remove.
+func (s *TeamService) bulkRemoveCasbin(
+	_ context.Context,
+	hackathonID uuid.UUID,
+	usersByTeam map[uuid.UUID][]string,
+) error {
+	var casbinRemoved bool
+	for teamID, uids := range usersByTeam {
+		_, err := s.enforcer.RemoveRoleBatch(
+			uids,
+			m.Member,
+			hackathonID.String(),
+			m.WithTeam(teamID.String()),
+		)
+		if err != nil {
+			if casbinRemoved {
+				for teamID, uids := range usersByTeam {
+					_, _ = s.enforcer.AddRoleBatch(
+						uids,
+						m.Member,
+						hackathonID.String(),
+						m.WithTeam(teamID.String()),
+					)
+				}
+			}
+			slog.Error("bulk remove team roles", "err", err)
+			return status.Errorf(codes.Internal, "couldn't remove casbin roles: %v", err)
+		}
+		casbinRemoved = true
+	}
+	return nil
+}
+
+// bulkRemoveTx handles the ent transaction for bulk remove.
+func (s *TeamService) bulkRemoveTx(
+	ctx context.Context,
+	tx *ent.Tx,
+	userTeams []struct {
+		userID uuid.UUID
+		teamID uuid.UUID
+	},
+) error {
+	for _, ut := range userTeams {
+		t, err := tx.Team.Get(ctx, ut.teamID)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("get team", "err", err)
+			return status.Errorf(codes.Internal, "couldn't get team: %v", err)
+		}
+		u, err := tx.User.Get(ctx, ut.userID)
+		if err != nil {
+			_ = tx.Rollback()
+			slog.Error("get user", "err", err)
+			return status.Errorf(codes.Internal, "couldn't get user: %v", err)
+		}
+		if _, err := tx.Team.UpdateOne(t).RemoveMembers(u).Save(ctx); err != nil {
+			_ = tx.Rollback()
+			slog.Error("remove user from team", "err", err)
+			return status.Errorf(codes.Internal, "couldn't remove user from team: %v", err)
+		}
+	}
+	return nil
+}
+
+func (s *TeamService) BulkAssignUsers(
+	ctx context.Context,
+	req *msgs.BulkAssignUsersRequest,
+) (*msgs.BulkAssignUsersResponse, error) {
+	if _, _, err := m.RequireSubject(ctx); err != nil {
+		return nil, err
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Team, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Load hackathon with all teams (and their members) and participants in one query.
+	hc, err := s.loadHackathonContext(ctx, hackathonID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse and collect all team IDs and user IDs from assignments.
+	teamIDs, userIDs, assignments, err := s.parseAssignments(req.GetAssignments())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := hc.validateTeamsExist(teamIDs); err != nil {
+		return nil, err
+	}
+
+	if err := hc.validateUsersAreParticipants(userIDs); err != nil {
+		return nil, err
+	}
+
+	usersOnTeam, usersByOldTeam, usersByNewTeam := determineTeamMoves(assignments, hc.userTeamMap)
+
+	// Casbin — batch remove old roles, batch add new roles.
+	if err := s.bulkAssignCasbin(ctx, hackathonID, usersByOldTeam, usersByNewTeam); err != nil {
+		return nil, err
+	}
+
+	// Ent transaction — remove from old teams, add to new teams.
+	tx, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		// Rollback casbin.
+		for teamID, uids := range usersByNewTeam {
+			_, _ = s.enforcer.RemoveRoleBatch(
+				uids,
+				m.Member,
+				hackathonID.String(),
+				m.WithTeam(teamID.String()),
+			)
+		}
+		slog.Error("start tx", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't start transaction: %v", err)
+	}
+
+	if err := s.bulkAssignTx(ctx, tx, usersOnTeam, assignments); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		// Rollback casbin.
+		for teamID, uids := range usersByNewTeam {
+			_, _ = s.enforcer.RemoveRoleBatch(
+				uids,
+				m.Member,
+				hackathonID.String(),
+				m.WithTeam(teamID.String()),
+			)
+		}
+		slog.Error("commit tx", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't commit transaction: %v", err)
+	}
+
+	return &msgs.BulkAssignUsersResponse{}, nil
+}
+
+func (s *TeamService) BulkRemoveUsers(
+	ctx context.Context,
+	req *msgs.BulkRemoveUsersRequest,
+) (*msgs.BulkRemoveUsersResponse, error) {
+	if _, _, err := m.RequireSubject(ctx); err != nil {
+		return nil, err
+	}
+
+	hackathonID, err := uuid.Parse(req.GetHackathonId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
+	}
+
+	// Check RBAC permission.
+	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Team, m.Write); err != nil {
+		return nil, err
+	}
+
+	// Load hackathon with all teams (and their members) and participants in one query.
+	hc, err := s.loadHackathonContext(ctx, hackathonID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse user IDs.
+	userIDs, err := s.parseUserIDs(req.GetUserIds())
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate all users are participants.
+	if err := hc.validateUsersAreParticipants(userIDs); err != nil {
+		return nil, err
+	}
+
+	// Build user -> team mapping for users who are on a team.
+	userTeams := findUsersOnTeams(userIDs, hc.userTeamMap)
+
+	// Group users by their current team for casbin removal.
+	usersByTeam := make(map[uuid.UUID][]string)
+	for _, ut := range userTeams {
+		usersByTeam[ut.teamID] = append(usersByTeam[ut.teamID], ut.userID.String())
+	}
+
+	// Casbin — batch remove roles per team.
+	if err := s.bulkRemoveCasbin(ctx, hackathonID, usersByTeam); err != nil {
+		return nil, err
+	}
+
+	// Ent transaction — remove users from teams.
+	tx, err := s.dbClient.Tx(ctx)
+	if err != nil {
+		// Rollback: re-add roles per team.
+		for teamID, uids := range usersByTeam {
+			_, _ = s.enforcer.AddRoleBatch(
+				uids,
+				m.Member,
+				hackathonID.String(),
+				m.WithTeam(teamID.String()),
+			)
+		}
+		slog.Error("start tx", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't start transaction: %v", err)
+	}
+
+	if err := s.bulkRemoveTx(ctx, tx, userTeams); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		// Rollback: re-add roles per team.
+		for teamID, uids := range usersByTeam {
+			_, _ = s.enforcer.AddRoleBatch(
+				uids,
+				m.Member,
+				hackathonID.String(),
+				m.WithTeam(teamID.String()),
+			)
+		}
+		slog.Error("commit tx", "err", err)
+		return nil, status.Errorf(codes.Internal, "couldn't commit transaction: %v", err)
+	}
+
+	return &msgs.BulkRemoveUsersResponse{}, nil
+}
+
 func (s *TeamService) CreateSubmission(
 	ctx context.Context,
 	req *msgs.CreateSubmissionRequest,

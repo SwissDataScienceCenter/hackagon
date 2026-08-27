@@ -4,6 +4,10 @@ package hackathon;
 
 import "hackathon/messages/team_svc/assign_user_request.proto";
 import "hackathon/messages/team_svc/assign_user_response.proto";
+import "hackathon/messages/team_svc/bulk_assign_users_request.proto";
+import "hackathon/messages/team_svc/bulk_assign_users_response.proto";
+import "hackathon/messages/team_svc/bulk_remove_users_request.proto";
+import "hackathon/messages/team_svc/bulk_remove_users_response.proto";
 import "hackathon/messages/team_svc/create_request.proto";
 import "hackathon/messages/team_svc/create_response.proto";
 import "hackathon/messages/team_svc/create_submission_request.proto";
@@ -35,6 +39,8 @@ service TeamService {
   rpc Delete(hackathon.messages.team_svc.DeleteRequest) returns (hackathon.messages.team_svc.DeleteResponse);
   rpc AssignUser(hackathon.messages.team_svc.AssignUserRequest) returns (hackathon.messages.team_svc.AssignUserResponse);
   rpc RemoveUser(hackathon.messages.team_svc.RemoveUserRequest) returns (hackathon.messages.team_svc.RemoveUserResponse);
+  rpc BulkAssignUsers(hackathon.messages.team_svc.BulkAssignUsersRequest) returns (hackathon.messages.team_svc.BulkAssignUsersResponse);
+  rpc BulkRemoveUsers(hackathon.messages.team_svc.BulkRemoveUsersRequest) returns (hackathon.messages.team_svc.BulkRemoveUsersResponse);
   rpc CreateSubmission(hackathon.messages.team_svc.CreateSubmissionRequest) returns (hackathon.messages.team_svc.CreateSubmissionResponse);
   rpc GetSubmission(hackathon.messages.team_svc.GetSubmissionRequest) returns (hackathon.messages.team_svc.GetSubmissionResponse);
   rpc ListSubmissions(hackathon.messages.team_svc.ListSubmissionsRequest) returns (hackathon.messages.team_svc.ListSubmissionsResponse);
