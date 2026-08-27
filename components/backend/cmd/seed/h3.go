@@ -54,6 +54,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 		hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
 		hackEnts.Capability_CAPABILITY_VOTE,
 		hackEnts.Capability_CAPABILITY_VIEW_RESULTS,
+		hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
 	); err != nil {
 		return err
 	}
@@ -281,6 +282,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 	if err := h.setCaps(admin, id,
 		hackEnts.Capability_CAPABILITY_VOTE,
 		hackEnts.Capability_CAPABILITY_VIEW_RESULTS,
+		hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
 	); err != nil {
 		return err
 	}

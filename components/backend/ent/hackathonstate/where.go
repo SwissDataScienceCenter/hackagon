@@ -86,6 +86,11 @@ func ViewResultsEnabled(v bool) predicate.HackathonState {
 	return predicate.HackathonState(sql.FieldEQ(FieldViewResultsEnabled, v))
 }
 
+// ViewTeamsEnabled applies equality check predicate on the "view_teams_enabled" field. It's identical to ViewTeamsEnabledEQ.
+func ViewTeamsEnabled(v bool) predicate.HackathonState {
+	return predicate.HackathonState(sql.FieldEQ(FieldViewTeamsEnabled, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.HackathonState {
 	return predicate.HackathonState(sql.FieldEQ(FieldCreatedAt, v))
@@ -159,6 +164,16 @@ func ViewResultsEnabledEQ(v bool) predicate.HackathonState {
 // ViewResultsEnabledNEQ applies the NEQ predicate on the "view_results_enabled" field.
 func ViewResultsEnabledNEQ(v bool) predicate.HackathonState {
 	return predicate.HackathonState(sql.FieldNEQ(FieldViewResultsEnabled, v))
+}
+
+// ViewTeamsEnabledEQ applies the EQ predicate on the "view_teams_enabled" field.
+func ViewTeamsEnabledEQ(v bool) predicate.HackathonState {
+	return predicate.HackathonState(sql.FieldEQ(FieldViewTeamsEnabled, v))
+}
+
+// ViewTeamsEnabledNEQ applies the NEQ predicate on the "view_teams_enabled" field.
+func ViewTeamsEnabledNEQ(v bool) predicate.HackathonState {
+	return predicate.HackathonState(sql.FieldNEQ(FieldViewTeamsEnabled, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

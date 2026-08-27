@@ -119,12 +119,16 @@ func init() {
 	hackathonstateDescViewResultsEnabled := hackathonstateFields[5].Descriptor()
 	// hackathonstate.DefaultViewResultsEnabled holds the default value on creation for the view_results_enabled field.
 	hackathonstate.DefaultViewResultsEnabled = hackathonstateDescViewResultsEnabled.Default.(bool)
+	// hackathonstateDescViewTeamsEnabled is the schema descriptor for view_teams_enabled field.
+	hackathonstateDescViewTeamsEnabled := hackathonstateFields[6].Descriptor()
+	// hackathonstate.DefaultViewTeamsEnabled holds the default value on creation for the view_teams_enabled field.
+	hackathonstate.DefaultViewTeamsEnabled = hackathonstateDescViewTeamsEnabled.Default.(bool)
 	// hackathonstateDescCreatedAt is the schema descriptor for created_at field.
-	hackathonstateDescCreatedAt := hackathonstateFields[6].Descriptor()
+	hackathonstateDescCreatedAt := hackathonstateFields[7].Descriptor()
 	// hackathonstate.DefaultCreatedAt holds the default value on creation for the created_at field.
 	hackathonstate.DefaultCreatedAt = hackathonstateDescCreatedAt.Default.(func() time.Time)
 	// hackathonstateDescModifiedAt is the schema descriptor for modified_at field.
-	hackathonstateDescModifiedAt := hackathonstateFields[7].Descriptor()
+	hackathonstateDescModifiedAt := hackathonstateFields[8].Descriptor()
 	// hackathonstate.DefaultModifiedAt holds the default value on creation for the modified_at field.
 	hackathonstate.DefaultModifiedAt = hackathonstateDescModifiedAt.Default.(func() time.Time)
 	// hackathonstate.UpdateDefaultModifiedAt holds the default value on update for the modified_at field.

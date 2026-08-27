@@ -43,6 +43,7 @@ func allCapabilities() []hackEnts.Capability {
 		hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
 		hackEnts.Capability_CAPABILITY_VOTE,
 		hackEnts.Capability_CAPABILITY_VIEW_RESULTS,
+		hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
 	}
 }
 

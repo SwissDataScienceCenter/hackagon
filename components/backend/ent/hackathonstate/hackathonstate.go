@@ -27,6 +27,8 @@ const (
 	FieldCreateProjectSubmissionsEnabled = "create_project_submissions_enabled"
 	// FieldViewResultsEnabled holds the string denoting the view_results_enabled field in the database.
 	FieldViewResultsEnabled = "view_results_enabled"
+	// FieldViewTeamsEnabled holds the string denoting the view_teams_enabled field in the database.
+	FieldViewTeamsEnabled = "view_teams_enabled"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldModifiedAt holds the string denoting the modified_at field in the database.
@@ -73,6 +75,7 @@ var Columns = []string{
 	FieldSetTeamPreferencesEnabled,
 	FieldCreateProjectSubmissionsEnabled,
 	FieldViewResultsEnabled,
+	FieldViewTeamsEnabled,
 	FieldCreatedAt,
 	FieldModifiedAt,
 	FieldCurrentPhaseID,
@@ -113,6 +116,8 @@ var (
 	DefaultCreateProjectSubmissionsEnabled bool
 	// DefaultViewResultsEnabled holds the default value on creation for the "view_results_enabled" field.
 	DefaultViewResultsEnabled bool
+	// DefaultViewTeamsEnabled holds the default value on creation for the "view_teams_enabled" field.
+	DefaultViewTeamsEnabled bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultModifiedAt holds the default value on creation for the "modified_at" field.
@@ -159,6 +164,11 @@ func ByCreateProjectSubmissionsEnabled(opts ...sql.OrderTermOption) OrderOption 
 // ByViewResultsEnabled orders the results by the view_results_enabled field.
 func ByViewResultsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldViewResultsEnabled, opts...).ToFunc()
+}
+
+// ByViewTeamsEnabled orders the results by the view_teams_enabled field.
+func ByViewTeamsEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldViewTeamsEnabled, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.
