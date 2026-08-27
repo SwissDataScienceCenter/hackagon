@@ -181,9 +181,9 @@ export function currentAndNextPhase<
 }
 
 /**
- * The six capabilities a phase can be tagged with — Capability: REGISTER=1,
+ * The seven capabilities a hackathon can switch on — Capability: REGISTER=1,
  * PROPOSE_PROJECTS=2, SET_TEAM_PREFERENCES=3, CREATE_PROJECT_SUBMISSIONS=4,
- * VOTE=5, VIEW_RESULTS=6.
+ * VOTE=5, VIEW_RESULTS=6, VIEW_TEAMS=7.
  *
  * Raw numbers, like the other status helpers here, so the form component can
  * render the checkboxes without importing the generated `Capability` enum — it
@@ -246,9 +246,20 @@ const CAPABILITIES: {
     label: "View results",
     description: "See the results that have been published.",
   },
+  // Last because it arrived last, not because it happens last: a hackathon
+  // publishes its team assignments long before it publishes results. Appended
+  // rather than slotted in beside "Set team preferences", where it reads
+  // better, so that this list and `CAPABILITY_ORDER` stay in the same order —
+  // one of them is the switch panel and the other is what participants read,
+  // and two orders for one set of seven labels is worse than one odd position.
+  {
+    value: 7,
+    label: "See team assignments",
+    description: "See which teams have formed and who is on them.",
+  },
 ]
 
-/** The six in enum order, for rendering a checkbox per capability. */
+/** The seven in enum order, for rendering a row per capability. */
 export const PHASE_CAPABILITIES: { value: number; label: string }[] =
   CAPABILITIES
 

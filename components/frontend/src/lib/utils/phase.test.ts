@@ -199,9 +199,10 @@ describe("withPhaseCapabilitiesEnabled", () => {
 })
 
 describe("capabilityLabel", () => {
-  it("labels each of the six capabilities", () => {
+  it("labels each of the seven capabilities", () => {
     expect(capabilityLabel(1)).toBe("Register")
     expect(capabilityLabel(6)).toBe("View results")
+    expect(capabilityLabel(7)).toBe("See team assignments")
   })
 
   // Typed `string | undefined` on purpose, so callers are made to supply a
@@ -213,8 +214,10 @@ describe("capabilityLabel", () => {
 })
 
 describe("PHASE_CAPABILITIES", () => {
-  it("lists the six in enum order, each with a label", () => {
-    expect(PHASE_CAPABILITIES.map((c) => c.value)).toEqual([1, 2, 3, 4, 5, 6])
+  it("lists the seven in enum order, each with a label", () => {
+    expect(PHASE_CAPABILITIES.map((c) => c.value)).toEqual([
+      1, 2, 3, 4, 5, 6, 7,
+    ])
     expect(PHASE_CAPABILITIES.every((c) => c.label.length > 0)).toBe(true)
   })
 })

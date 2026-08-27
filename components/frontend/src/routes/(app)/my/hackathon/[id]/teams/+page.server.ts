@@ -6,10 +6,20 @@ import { ClientError, Status } from "nice-grpc-common"
 /**
  * Every team in this hackathon and who is on it — the browse surface.
  *
- * Reads for everyone: `TeamService.List` asks only for hackathon-scoped
- * `hackathon:read` (`team_service.go:59`), which every confirmed member holds, so
- * there is no role gate here. An organiser sees exactly what a participant sees;
- * renaming, deleting and assigning people live on `teams/manage`.
+ * Gated by a capability rather than a role: `TeamService.List` asks for
+ * hackathon-scoped `team:read` (`team_service.go:59`), which a member holds only
+ * while `CAPABILITY_VIEW_TEAMS` is on and an owner holds unconditionally
+ * (`rbac.go:209`). It asked only for `hackathon:read` until that capability
+ * landed. An organiser therefore sees this before participants do; renaming,
+ * deleting and assigning people still live on `teams/manage`.
+ *
+ * The refusal below stays a 403 for now, which is the weaker answer: unpublished
+ * assignments are a normal state of a hackathon rather than a permission the
+ * reader got wrong, and the voting page renders an explanation in the same
+ * situation instead. Nothing links here while the capability is off — the nav
+ * entry needs a team count it cannot get, and `capabilityHref` only lists what is
+ * open — so this is reachable by typed URL alone, and an explanatory empty state
+ * can wait for someone to hit it.
  *
  * Its own `team.list` rather than the count the layout already fetched: the
  * layout returns a number and nothing more, so no page but this one carries a
@@ -32,7 +42,7 @@ export const load: PageServerLoad = async (event) => {
     ;({ teams } = await team.list({ hackathonId: event.params.id }))
   } catch (e) {
     if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
-      error(403, "You cannot view teams in this hackathon.")
+      error(403, "Team assignments have not been published in this hackathon.")
     }
     if (e instanceof ClientError && e.code === Status.NOT_FOUND) {
       error(404, "Hackathon not found")

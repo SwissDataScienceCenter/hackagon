@@ -91,7 +91,18 @@
         </p>
     {/if}
 
-    {#if data.groups.length === 0}
+    <!-- Ahead of the empty state, because the two say opposite things about the
+         same blank page: "not on a team" is a fact about the reader, and this is
+         an admission that we have not been told. Submissions hang off a team, so
+         with assignments unpublished there is nothing to hang them on — see the
+         TODO in the load. -->
+    {#if !data.teamsPublished}
+        <p class="m-0 py-6 text-center text-sm text-ink-3">
+            Team assignments have not been published for this hackathon yet, so there is
+            nothing here to submit against. This opens with "See team assignments" in the
+            hackathon's settings.
+        </p>
+    {:else if data.groups.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">
             You are not on a team yet, so there is nothing to submit.
         </p>

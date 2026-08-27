@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { parsePhaseForm } from "./phaseForm"
+import { CAPABILITY_ORDER, capabilityStates, parsePhaseForm } from "./phaseForm"
+import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 
 // Capability numeric values.
 const REGISTER = 1
@@ -149,5 +150,50 @@ describe("parsePhaseForm", () => {
   it("passes a pageId through for the backend to validate", () => {
     const id = "019fce51-2334-740f-b243-b1ee1e92e501"
     expect(values(form({ pageId: id })).pageId).toBe(id)
+  })
+})
+
+// The switch panel is the only way to turn a capability on, and `SetCapabilities`
+// takes a full list of states rather than a delta — so a capability missing from
+// `CAPABILITY_ORDER` is sent as nothing, stays off forever, and has no switch to
+// turn it on with. That is exactly what happened to `CAPABILITY_VIEW_TEAMS`
+// between the backend adding it and the frontend listing it, and nothing failed.
+//
+// Derived from the generated enum rather than a literal count, so this fails on
+// the day the backend adds the next one instead of on the day someone notices.
+describe("CAPABILITY_ORDER", () => {
+  const fromEnum = Object.values(Capability).filter(
+    (v): v is Capability =>
+      typeof v === "number" &&
+      v !== Capability.CAPABILITY_UNSPECIFIED &&
+      v !== Capability.UNRECOGNIZED,
+  )
+
+  it("covers every capability the proto defines", () => {
+    expect([...CAPABILITY_ORDER].sort((a, b) => a - b)).toEqual(
+      [...fromEnum].sort((a, b) => a - b),
+    )
+  })
+
+  it("names each one exactly once", () => {
+    expect(new Set(CAPABILITY_ORDER).size).toBe(CAPABILITY_ORDER.length)
+  })
+})
+
+describe("capabilityStates", () => {
+  it("writes a state for every capability, not just the enabled ones", () => {
+    const states = capabilityStates([VOTE])
+    expect(states).toHaveLength(CAPABILITY_ORDER.length)
+    expect(states.filter((s) => s.enabled).map((s) => s.capability)).toEqual([
+      VOTE,
+    ])
+  })
+
+  it("turns everything off when nothing is enabled", () => {
+    expect(capabilityStates([]).every((s) => !s.enabled)).toBe(true)
+  })
+
+  it("ignores a value it has no switch for", () => {
+    expect(capabilityStates([99]).every((s) => !s.enabled)).toBe(true)
   })
 })

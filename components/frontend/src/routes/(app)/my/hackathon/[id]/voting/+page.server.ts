@@ -16,10 +16,22 @@ export const load: PageServerLoad = async (event) => {
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
   )
-  const votingEnabled = enabledCapabilities(hackathon.state).includes(
-    Capability.CAPABILITY_VOTE,
-  )
+  const caps = enabledCapabilities(hackathon.state)
+  const votingEnabled = caps.includes(Capability.CAPABILITY_VOTE)
   const canVote = mayVote(myMembership ?? undefined, votingEnabled, isAdmin)
+
+  // TODO(backend: voting-needs-view-teams): a ballot is built from the
+  // hackathon's teams, and `TeamService.List`/`Get` need `team:read`, which a
+  // member holds only under `CAPABILITY_VIEW_TEAMS`. So an organiser can open
+  // voting with assignments unpublished and hand every participant an empty
+  // booth. Nothing in the backend couples the two — `CAPABILITY_VOTE` grants
+  // `vote:create` and `vote_category:read` and no more
+  // (`hackathon_service.go:1019`).
+  //
+  // Read here rather than inferred from an empty `submissions`, which is also
+  // what a hackathon with no final entries looks like: the page has to tell
+  // those two apart to say anything true about why the ballot is bare.
+  const teamsPublished = caps.includes(Capability.CAPABILITY_VIEW_TEAMS)
 
   // Not a 403. Voting being closed is a normal state of a hackathon, not a
   // permission problem the viewer got wrong, and the nav can link here before
@@ -28,6 +40,7 @@ export const load: PageServerLoad = async (event) => {
     return {
       hackathonId: hackathon.id,
       votingEnabled,
+      teamsPublished,
       canVote: false,
       categories: [],
       submissions: [],
@@ -103,6 +116,7 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: hackathon.id,
     votingEnabled,
+    teamsPublished,
     canVote: true,
     categories,
     submissions,

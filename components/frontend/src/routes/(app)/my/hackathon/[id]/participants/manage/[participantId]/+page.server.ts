@@ -2,6 +2,7 @@ import type { Actions, PageServerLoad } from "./$types"
 import { resolve } from "$app/paths"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
+import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import {
   approveParticipant,
   demoteParticipant,
@@ -120,6 +121,7 @@ async function profileSections(
   answers: ParticipantAnswer[]
   answersFailed: boolean
   teams: { id: string; name: string; projectTitle: string | null }[]
+  teamsPublished: boolean
   teamsFailed: boolean
 }> {
   const { hackathon: client, team } = requireGrpc(event.locals.grpc)
@@ -144,14 +146,21 @@ async function profileSections(
     answersFailed = true
   }
 
-  // `TeamService.List` gates on hackathon-scoped `hackathon:read`
-  // (`team_service.go:59`), which the layout already passed.
+  // `TeamService.List` gates on hackathon-scoped `team:read`
+  // (`team_service.go:59`). An owner holds that from a default policy
+  // (`rbac.go:209`) rather than from `CAPABILITY_VIEW_TEAMS`, so this page keeps
+  // working with assignments unpublished — which is the point, since an organiser
+  // deciding about a person wants to know what team they are on before everyone
+  // else does. A global admin who is not the owner is the untested case; the same
+  // three-outcome handling covers it either way.
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
   let teams: { id: string; name: string; projectTitle: string | null }[] = []
+  let teamsPublished = true
   let teamsFailed = false
   try {
-    const { teams: all } = await team.list({ hackathonId: hackathon.id })
-    teams = all
+    const all = await listVisibleTeams(team, hackathon.id)
+    teamsPublished = all !== undefined
+    teams = (all ?? [])
       .filter((t) => t.members.some((m) => m.id === userId))
       .map((t) => ({
         id: t.id,
@@ -166,7 +175,14 @@ async function profileSections(
     teamsFailed = true
   }
 
-  return { questionCount, answers, answersFailed, teams, teamsFailed }
+  return {
+    questionCount,
+    answers,
+    answersFailed,
+    teams,
+    teamsPublished,
+    teamsFailed,
+  }
 }
 
 /**

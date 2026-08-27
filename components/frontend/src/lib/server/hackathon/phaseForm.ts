@@ -13,7 +13,7 @@ import type { HackathonState } from "$lib/server/grpc/generated/hackathon/entiti
 /**
  * The capabilities a hackathon actually has switched on, as raw enum numbers.
  *
- * `HackathonState.capabilities` always carries all six with an `enabled` flag
+ * `HackathonState.capabilities` always carries all seven with an `enabled` flag
  * rather than listing only the live ones (`stateEntryFromEnt`,
  * `mappers.go:319`), so this filters. A hackathon with no state row has no
  * `state` at all, which reads as nothing enabled — correct, since without the
@@ -28,11 +28,18 @@ export function enabledCapabilities(
 }
 
 /**
- * The six capabilities in the order the switches render.
+ * The seven capabilities in the order the switches render.
  *
- * Registration first because it gates getting in at all, results last because it
- * only matters once everything else is over. `SetCapabilities` takes a full list
- * of states rather than a delta, so this is also the list every write walks.
+ * Registration first because it gates getting in at all. Enum order otherwise,
+ * which is the same order `CAPABILITIES` in `$lib/utils/phase` uses — the two
+ * lists render the same seven labels to the same person, so they share one
+ * order rather than each arguing for its own.
+ *
+ * **A capability missing from this list can never be switched on.**
+ * `SetCapabilities` takes a full list of states rather than a delta, so this is
+ * the list every write walks: an omitted one is sent as nothing, stays off
+ * forever, and has no switch to turn it on with. That is what happened to
+ * `CAPABILITY_VIEW_TEAMS` between the backend adding it and this line.
  */
 export const CAPABILITY_ORDER: Capability[] = [
   Capability.CAPABILITY_REGISTER,
@@ -41,6 +48,7 @@ export const CAPABILITY_ORDER: Capability[] = [
   Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
   Capability.CAPABILITY_VOTE,
   Capability.CAPABILITY_VIEW_RESULTS,
+  Capability.CAPABILITY_VIEW_TEAMS,
 ]
 
 /** `SetCapabilities` input turning exactly `enabled` on and the rest off. */

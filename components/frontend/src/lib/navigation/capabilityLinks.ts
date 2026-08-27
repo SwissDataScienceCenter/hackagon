@@ -13,6 +13,7 @@ const SET_TEAM_PREFERENCES = 3
 const CREATE_PROJECT_SUBMISSIONS = 4
 const VOTE = 5
 const VIEW_RESULTS = 6
+const VIEW_TEAMS = 7
 
 /**
  * The route that lets a participant do this, or undefined where there is none.
@@ -47,6 +48,12 @@ export function capabilityHref(
       return resolve(`/my/hackathon/${hackathonId}/voting`)
     case VIEW_RESULTS:
       return resolve(`/my/hackathon/${hackathonId}/results`)
+    // The teams list itself. Unlike the five above, this capability does not
+    // unlock an *action* — it decides whether the page can be read at all, since
+    // `TeamService.List` requires `team:read` (`team_service.go:59`). So the
+    // destination is the page rather than a control on it.
+    case VIEW_TEAMS:
+      return resolve(`/my/hackathon/${hackathonId}/teams`)
     default:
       return undefined
   }

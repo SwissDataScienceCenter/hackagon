@@ -5,6 +5,7 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { viewerMembership } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
+import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { currentAndNextPhase, unmetPhaseCapabilities } from "$lib/utils/phase"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -83,14 +84,17 @@ export const load: LayoutServerLoad = async (event) => {
   // count, and there is no cheaper existence check. Drop this call and read the
   // count off `hackathon.get` once it is there.
   //
-  // A failure degrades the same way the page list above does — no entry rather
-  // than no hackathon. It hides the Teams tab on a hackathon that has teams,
-  // which is the safer of the two wrong answers: the alternative offers a link
-  // whose page would fail the same way.
+  // Two ways to end up with no entry, and only one of them is a problem.
+  // `listVisibleTeams` answers `undefined` when the viewer may not see team
+  // assignments — a member with `CAPABILITY_VIEW_TEAMS` off, which is every
+  // hackathon until an organiser publishes — and that is the entry being
+  // correctly withheld rather than a failure to log about on every request in
+  // the subtree. A genuine failure still degrades to no entry rather than no
+  // hackathon, and still says so: the alternative offers a link whose page would
+  // fail the same way.
   let teamCount = 0
   try {
-    const { teams } = await team.list({ hackathonId: event.params.id })
-    teamCount = teams.length
+    teamCount = (await listVisibleTeams(team, event.params.id))?.length ?? 0
   } catch (err) {
     event.locals.logger.warn(
       { err },

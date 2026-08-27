@@ -65,6 +65,17 @@
                 ? 'You need to be a confirmed participant of this hackathon to vote.'
                 : 'Voting is not open yet. The organizers will open it when judging starts.'}
         </p>
+    <!-- Before the two emptier explanations below, both of which would be a
+         guess here: a ballot is built from the hackathon's teams, so with
+         assignments unpublished it cannot be built at all and "nothing to vote
+         on yet" would blame the entrants for a switch nobody flipped. See the
+         TODO in the load. -->
+    {:else if !data.teamsPublished}
+        <p class="m-0 py-6 text-center text-sm text-ink-3">
+            Voting is open, but team assignments have not been published, so the ballot
+            cannot be built. This opens with "See team assignments" in the hackathon's
+            settings.
+        </p>
     {:else if data.categories.length === 0}
         <p class="m-0 py-6 text-center text-sm text-ink-3">
             Voting is open, but there is nothing to vote on yet.

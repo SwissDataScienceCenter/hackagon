@@ -8,6 +8,7 @@ import {
 } from "$lib/server/hackathon/capabilities"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { submissionVersions } from "$lib/server/hackathon/submissions"
+import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -24,12 +25,18 @@ export const load: PageServerLoad = async (event) => {
     Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
   )
 
-  const { teams } = await team.list({ hackathonId: event.params.id })
+  // Undefined when team assignments are not published, which takes this page
+  // with it: submissions hang off a team, and `TeamService.List` needs
+  // `team:read`. A participant cannot reach their *own* team's work without it —
+  // see `TODO(backend: submissions-need-view-teams)` below. Refusing loudly
+  // would be a 500 on a core participant page, so the page renders and says
+  // what is missing.
+  const visibleTeams = await listVisibleTeams(team, event.params.id)
 
   // Every team the viewer is on, not just the first — nothing stops a
   // participant from being assigned to more than one team in one hackathon, and
   // each carries its own submissions.
-  const myTeams = teams.filter((t) =>
+  const myTeams = (visibleTeams ?? []).filter((t) =>
     t.members.some((m) => m.id === platformUserId),
   )
 
@@ -64,6 +71,15 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     groups,
+    // TODO(backend: submissions-need-view-teams): false hides the whole page
+    // behind an explanation. `CAPABILITY_CREATE_PROJECT_SUBMISSIONS` grants
+    // `submission:create` and nothing else (`hackathon_service.go:1019`), so an
+    // organiser who opens submissions without publishing team assignments leaves
+    // every participant unable to see or file any — the capability that is
+    // supposed to open this page cannot open it alone. Either that capability
+    // should carry a team read, or `ListSubmissions` should take a team id the
+    // caller already knows.
+    teamsPublished: visibleTeams !== undefined,
     // Both are viewer-wide, not per-team: neither RPC's permission depends on
     // which of the viewer's teams it is.
     maySubmit: mayCreateSubmissions(
