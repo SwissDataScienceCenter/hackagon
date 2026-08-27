@@ -342,10 +342,9 @@ describe("manageNav", () => {
   it("follows the order of the participant entries it extends", () => {
     expectOrder(manageNav("hack-1", owner, false, false, 3), [
       "manage:settings",
+      // One entry for both halves of the roster: the waitlist is its second tab,
+      // not a row of its own.
       "manage:participants",
-      // Straight after the roster it was split out of, and before the form that
-      // decides what those people were asked on the way in.
-      "manage:waitlist",
       "manage:forms",
       "manage:projects",
       "manage:tracks",
@@ -356,12 +355,11 @@ describe("manageNav", () => {
     ])
   })
 
-  // On a private hackathon the sign-up path reads in order: the link somebody
-  // arrives on, then the form they fill in, then the queue they wait in.
-  it("puts Invitations between the waitlist and the form when private", () => {
+  // On a private hackathon the sign-up path reads in order: the roster somebody
+  // ends up on, the link they arrive by, then the form they fill in.
+  it("puts Invitations between the roster and the form when private", () => {
     expectOrder(manageNav("hack-1", owner, false, false, 0, true), [
       "manage:participants",
-      "manage:waitlist",
       "manage:invites",
       "manage:forms",
     ])
@@ -504,10 +502,18 @@ describe("manageNav", () => {
     const cases = [
       ["/my/hackathon/hack-1/participants", "member:participants"],
       ["/my/hackathon/hack-1/participants/manage", "manage:participants"],
-      // The Waitlist tab nests under the roster it was split out of, so longest
-      // match is what keeps Manage Participants from swallowing it — the same
-      // relationship Manage Forms has with Settings.
-      ["/my/hackathon/hack-1/participants/manage/waitlist", "manage:waitlist"],
+      // The waitlist has no entry of its own — it is a tab of the page above,
+      // and its route nests under that entry's, so opening it keeps Manage
+      // Participants lit rather than nothing at all.
+      [
+        "/my/hackathon/hack-1/participants/manage/waitlist",
+        "manage:participants",
+      ],
+      // Same for one person's page, whichever tab it was opened from.
+      [
+        "/my/hackathon/hack-1/participants/manage/user-1",
+        "manage:participants",
+      ],
       ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
       // The hackathon's own edit form, for the same reason as the phase forms
       // below: it is reached from Settings and nests under it, so that entry

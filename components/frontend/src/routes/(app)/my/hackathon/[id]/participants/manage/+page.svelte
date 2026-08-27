@@ -1,27 +1,14 @@
 <script lang="ts">
     import { Download, Search } from 'lucide-svelte';
-    import { enhance } from '$app/forms';
     import { resolve } from '$app/paths';
-    import { SvelteSet } from 'svelte/reactivity';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ParticipantCard from '$lib/components/hackathon/ParticipantCard.svelte';
     import ParticipantsManageTabs from '$lib/components/hackathon/ParticipantsManageTabs.svelte';
-    import type { ActionData, PageData } from './$types';
+    import type { PageData } from './$types';
 
-    let { data, form }: { data: PageData; form: ActionData } = $props();
+    let { data }: { data: PageData } = $props();
 
     let search = $state('');
-    const pendingIds = new SvelteSet<string>();
-
-    // Every action on a row disables that row's whole button group while it is
-    // in flight, so the same submit handler serves all three.
-    const submitting = (id: string) => () => {
-        pendingIds.add(id);
-        return async ({ update }: { update: () => Promise<void> }) => {
-            await update();
-            pendingIds.delete(id);
-        };
-    };
 
     // TODO(backend: user-profile-fields): search covers name and role only.
     // Affiliation and skills were the other two axes, and User carries neither,
@@ -52,14 +39,18 @@
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline).
 
   The organiser's half of Participants: the same confirmed roster the participant
-  page lists, and the only place Remove and the owner controls are offered.
-  Reached from the sidebar's Manage section (see $lib/navigation's manageNav).
+  page lists, and the way to every decision about one of them. Reached from the
+  sidebar's Manage section (see $lib/navigation's manageNav); the waitlist is the
+  tab beside it rather than an entry of its own.
 
-  What a participant answered on the registration form is *not* here. It used to
-  be, as a fold-out under every row, which put a hundred collapsed tables on a
-  page whose job is approving and removing people. Each row links to that
-  participant's page instead, which is where the answers are read — one click
-  further, in the one place that also has their teams and their role.
+  **Nothing is decided here.** Remove, Make owner and Remove owner all live on the
+  participant's own page under Manage, the same way a project's decisions live on
+  the project — the row offers "Manage", which is the way there. What that costs
+  is the one-click sweep down the roster; what it buys is that nobody is removed
+  from a row without their answers, their teams and their role on screen.
+
+  What a participant answered is not here either, and never was as more than a
+  marker: a hundred collapsed tables is not a list.
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -115,10 +106,6 @@
         waitingCount={data.waitingCount}
     />
 
-    {#if form?.message}
-        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
-    {/if}
-
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.participants.length === 0}
             <p class="m-0 py-6 text-center text-sm text-ink-3">
@@ -139,75 +126,17 @@
                         {#if data.questionCount > 0 && !participant.answered}
                             <span class="badge badge-neutral">No answers</span>
                         {/if}
-                        <!-- Promotion is offered to everyone but an existing
-                             owner. Every row here is confirmed, so the old
-                             "not waitlisted" half of this condition is gone. -->
-                        {#if !participant.isOwner}
-                            <form
-                                method="POST"
-                                action="?/promote"
-                                use:enhance={submitting(participant.id)}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-outline"
-                                >
-                                    Make owner
-                                </button>
-                            </form>
-                        {/if}
-                        <!-- Never on your own row: demoting yourself would take
-                             away the hackathon:write this page runs on. The
-                             backend separately refuses the last owner. -->
-                        {#if participant.isOwner && !participant.isMe}
-                            <form
-                                method="POST"
-                                action="?/demote"
-                                use:enhance={submitting(participant.id)}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-quiet"
-                                >
-                                    Remove owner
-                                </button>
-                            </form>
-                        {/if}
-                        <!-- The hackathon's owner is deliberately not removable
-                             here: RemoveParticipant would leave the hackathon
-                             with nobody holding hackathon:write. -->
-                        {#if !participant.isOwner}
-                            <form
-                                method="POST"
-                                action="?/remove"
-                                use:enhance={submitting(participant.id)}
-                            >
-                                <input type="hidden" name="userId" value={participant.id} />
-                                <button
-                                    type="submit"
-                                    disabled={pendingIds.has(participant.id)}
-                                    class="btn btn-sm btn-danger"
-                                >
-                                    Remove
-                                </button>
-                            </form>
-                        {/if}
-                        <!-- Last in the group and quiet, because it is the one
-                             control that does not change anything: the way to
-                             what this row used to unfold, plus their teams and
-                             their join date. Same link the participant list
-                             offers, so both halves lead to one profile. -->
+                        <!-- The only control on the row, and it decides nothing:
+                             their answers, their teams, their role, and the
+                             actions that change any of it. No `from`, so the page
+                             sends every decision back to this tab. -->
                         <a
                             href={resolve(
-                                `/my/hackathon/${data.hackathonId}/participants/${participant.id}`
+                                `/my/hackathon/${data.hackathonId}/participants/manage/${participant.id}`
                             )}
                             class="btn btn-sm btn-ghost no-underline"
                         >
-                            View
+                            Manage
                         </a>
                     {/snippet}
                 </ParticipantCard>

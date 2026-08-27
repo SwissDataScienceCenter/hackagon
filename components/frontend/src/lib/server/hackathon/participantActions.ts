@@ -22,9 +22,23 @@ import { ClientError, Status } from "nice-grpc-common"
  * way — leaving the page with a `form` prop that has no `message` on it. Naming
  * the union here is what keeps `{form?.message}` type-checking on both pages.
  */
-type ParticipantActionResult =
+export type ParticipantActionResult =
   | ActionFailure<{ message: string }>
   | Record<string, never>
+
+/**
+ * Whether one of these actions refused.
+ *
+ * The success value is `{}`, so "did it fail" is not a property a caller can
+ * read off the result without this. It exists for the participant page, whose
+ * actions redirect on success and must return the failure untouched otherwise —
+ * a redirect thrown over a `fail()` would swallow the message the page renders.
+ */
+export function participantActionFailed(
+  result: ParticipantActionResult,
+): result is ActionFailure<{ message: string }> {
+  return "status" in result
+}
 
 /** The gRPC errors every write on this path can return, as SvelteKit failures. */
 function failFor(e: unknown, denied: string) {

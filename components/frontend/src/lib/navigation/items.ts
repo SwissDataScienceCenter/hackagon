@@ -27,7 +27,6 @@ import Ticket from "lucide-svelte/icons/ticket"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
-import Hourglass from "lucide-svelte/icons/hourglass"
 import Info from "lucide-svelte/icons/info"
 import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
@@ -309,9 +308,12 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * is the *parent* of the individual `/pages/<id>` routes, so opening a page
  * lights that page rather than it.
  *
- * Waitlist has no participant counterpart either, and nests one level deeper
- * still: under Manage Participants, the entry it was split out of. The longest
- * match is what keeps that entry from swallowing it.
+ * The waitlist is deliberately *not* an entry. It is the second tab of Manage
+ * Participants, and its route nests under that entry's, so opening it keeps
+ * Manage Participants lit. It had a row of its own and lost it: two rows leading
+ * to two halves of one page made the roster read as a place the waiting people
+ * were not, when they are one tab away from it. The count that used to justify
+ * the row now rides the Manage Participants tile on Settings.
  *
  * `trackCount` decides whether Manage Tracks is offered at all: tracks are
  * optional, and a hackathon running without them should not carry a permanent
@@ -366,38 +368,22 @@ export function manageNav(
         ? { badge: "!", badgeVariant: "badge-warning" as const }
         : {}),
     },
-    // The participant page lists the same people and offers nothing to act on;
-    // Remove and the owner controls exist only here.
+    // Both halves of the roster: the confirmed people, and the queue waiting to
+    // be let in, as two tabs of the one destination. The participant page lists
+    // the same confirmed people and offers nothing to act on — every decision
+    // about a person is reached from here.
     {
       id: "manage:participants",
       label: "Manage Participants",
       icon: UserRoundCheck,
       href: resolve(`/my/hackathon/${hackathonId}/participants/manage`),
     },
-    // The other half of that page, split off: people who have asked to join and
-    // not been let in. Its own entry rather than a tab you have to know about,
-    // because approving is the organiser action most easily forgotten — nothing
-    // about a waiting applicant is visible from anywhere else, and Settings
-    // badges this entry with the count.
-    //
-    // Always offered, unlike Manage Tracks: an empty waitlist is a fact worth
-    // being able to check, where a hackathon with no tracks has decided not to
-    // have any. Nested under the roster route, so `activeNavId`'s longest match
-    // lights this entry here and Manage Participants on the tab beside it.
-    {
-      id: "manage:waitlist",
-      label: "Waitlist",
-      icon: Hourglass,
-      href: resolve(
-        `/my/hackathon/${hackathonId}/participants/manage/waitlist`,
-      ),
-    },
     // Only on a private hackathon, and immediately before the form, because the
     // two are the sign-up path in order: a link is how somebody arrives, the
-    // form is what they are asked on the way, and the Waitlist above is where
-    // they are let through. A public hackathon needs no link — it is listed, and
-    // anybody can ask to join — so the entry would lead to a page whose every
-    // link grants nothing.
+    // form is what they are asked on the way, and the Waitlist tab above is
+    // where they are let through. A public hackathon needs no link — it is
+    // listed, and anybody can ask to join — so the entry would lead to a page
+    // whose every link grants nothing.
     ...(isPrivate
       ? [
           {
