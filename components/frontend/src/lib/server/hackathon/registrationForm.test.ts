@@ -11,6 +11,7 @@ import {
   questionType,
   readQuestionEcho,
   answerDistribution,
+  answersByQuestion,
 } from "./registrationForm"
 
 // QuestionType numeric values, stated rather than imported so a renumbering in
@@ -405,6 +406,114 @@ describe("answerDistribution", () => {
     expect(tally.q1?.find((t) => t.label === "M")?.count).toBe(1)
     expect(tally.q2?.find((t) => t.label === "Veg")?.count).toBe(1)
     expect(tally.q2?.find((t) => t.label === "Meat")?.count).toBe(0)
+  })
+})
+
+describe("answersByQuestion", () => {
+  const row = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: "q1",
+    key: "affiliation",
+    label: "Affiliation",
+    kind: "text" as const,
+    mandatory: false,
+    order: 1,
+    options: [] as string[],
+    publicAnswers: false,
+    answerCount: 0,
+    ...over,
+  })
+
+  const roster = new Map([
+    ["u1", "Alice"],
+    ["u2", "Bob"],
+    ["u3", "Charles"],
+  ])
+
+  it("names each answer and orders them by name", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [
+        { questionId: "q1", participantId: "u2", textValue: "EPFL" },
+        { questionId: "q1", participantId: "u1", textValue: "ETH" },
+      ],
+      roster,
+    )
+
+    expect(byQuestion.q1?.answers).toEqual([
+      { participantId: "u1", name: "Alice", value: "ETH", departed: false },
+      { participantId: "u2", name: "Bob", value: "EPFL", departed: false },
+    ])
+  })
+
+  it("counts the roster members with nothing on file", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [{ questionId: "q1", participantId: "u1", textValue: "ETH" }],
+      roster,
+    )
+    expect(byQuestion.q1?.missing).toBe(2)
+  })
+
+  it("keeps an answer from someone who has left, and marks it", () => {
+    // RemoveParticipant deletes the participant row and nothing deletes their
+    // answers, so this outlives them. Dropping it would leave the list holding
+    // fewer answers than the tally beside it.
+    const byQuestion = answersByQuestion(
+      [row()],
+      [{ questionId: "q1", participantId: "gone", textValue: "ETH" }],
+      roster,
+    )
+
+    expect(byQuestion.q1?.answers).toEqual([
+      {
+        participantId: "gone",
+        name: "No longer in this hackathon",
+        value: "ETH",
+        departed: true,
+      },
+    ])
+    // Three roster members still owe an answer; the departed one is not a
+    // fourth, and never pushes this below zero.
+    expect(byQuestion.q1?.missing).toBe(3)
+  })
+
+  it("puts people who have left after everyone still here", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [
+        { questionId: "q1", participantId: "gone", textValue: "Elsewhere" },
+        { questionId: "q1", participantId: "u3", textValue: "USI" },
+      ],
+      roster,
+    )
+    expect(byQuestion.q1?.answers.map((a) => a.name)).toEqual([
+      "Charles",
+      "No longer in this hackathon",
+    ])
+  })
+
+  it("carries a tick-box answer as a boolean", () => {
+    const byQuestion = answersByQuestion(
+      [row({ id: "coc", kind: "bool" })],
+      [{ questionId: "coc", participantId: "u1", boolValue: false }],
+      roster,
+    )
+    expect(byQuestion.coc?.answers[0]?.value).toBe(false)
+  })
+
+  it("gives a question nobody answered an empty list and the whole roster", () => {
+    const byQuestion = answersByQuestion([row()], [], roster)
+    expect(byQuestion.q1).toEqual({ answers: [], missing: 3 })
+  })
+
+  it("drops an answer to a question that no longer exists", () => {
+    const byQuestion = answersByQuestion(
+      [row()],
+      [{ questionId: "deleted", participantId: "u1", textValue: "ETH" }],
+      roster,
+    )
+    expect(Object.keys(byQuestion)).toEqual(["q1"])
+    expect(byQuestion.q1?.answers).toEqual([])
   })
 })
 

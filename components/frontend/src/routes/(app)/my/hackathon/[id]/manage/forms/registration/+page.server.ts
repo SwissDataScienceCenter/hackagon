@@ -4,7 +4,7 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { listAnswers, questionFail } from "$lib/server/hackathon/questions"
 import {
-  answerDistribution,
+  answeredParticipantIds,
   questionRows,
 } from "$lib/server/hackathon/registrationForm"
 import { error, fail } from "@sveltejs/kit"
@@ -45,11 +45,11 @@ export const load: PageServerLoad = async (event) => {
   return {
     hackathonId: hackathon.id,
     questions: rows,
-    // What people actually chose, for the two kinds where that is a summary
-    // rather than a list. Keyed by question id and computed here rather than in
-    // the page, because it reads the answers — which are server-only, and which
-    // the page has no other reason to hold.
-    distribution: answerDistribution(rows, answers),
+    // Only whether there is anything to read, which is what decides if the way
+    // to the answers page is offered at all. What people actually said is that
+    // page's business: this one is a builder, and a tally on every row answered
+    // nothing about the free-text questions, where the answers are the point.
+    answeredCount: answeredParticipantIds(answers).size,
   }
 }
 

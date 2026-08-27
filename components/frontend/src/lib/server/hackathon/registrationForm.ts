@@ -538,6 +538,96 @@ export function answersByParticipant(
   return grouped
 }
 
+/** One person's answer to one question, for the organizer's answers view. */
+export interface QuestionAnswer {
+  participantId: string
+  name: string
+  /** A bool arrives as a bool; text and enum as strings. */
+  value: string | boolean
+  /**
+   * Whether this answerer is still on the roster.
+   *
+   * `RemoveParticipant` deletes the participant row and nothing deletes their
+   * answers, so an answer can outlive the person who gave it. Marked rather than
+   * dropped: the tally above the list counts it either way, and a list quietly
+   * holding fewer answers than the tally would read as a bug.
+   */
+  departed: boolean
+}
+
+/** Every answer to one question, and how much of the roster is missing from it. */
+export interface QuestionAnswers {
+  answers: QuestionAnswer[]
+  /** Roster members with nothing on file for this question. */
+  missing: number
+}
+
+/**
+ * The cohort's answers grouped by question rather than by person, named.
+ *
+ * The counterpart to `answersByParticipant`, and the shape a results page wants:
+ * that one reads down one person's form, this one reads across everybody's
+ * answer to one question.
+ *
+ * `roster` maps a user id to a display name — `Answer.participantId` is the
+ * *user* id, which is how the participant list decides who has answered. It also
+ * supplies the denominator: `missing` counts roster members with nothing on
+ * file, so somebody who has since left is never counted as missing and can never
+ * push it below zero.
+ *
+ * Ordered by name so every question reads the same way down the page, with
+ * people who have left last — they are footnotes to a roster, not part of one.
+ */
+export function answersByQuestion(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+  roster: ReadonlyMap<string, string>,
+): Record<string, QuestionAnswers> {
+  // Keyed by answerer within each question, so one person contributes one entry
+  // however many rows arrive for them — which is also what the wire promises,
+  // since answers are upserted per person and question. Belt and braces, because
+  // the page renders this as a keyed list and a repeated key is a crash rather
+  // than a duplicate row.
+  const collected = new Map<string, Map<string, QuestionAnswer>>()
+  for (const q of questions) collected.set(q.id, new Map())
+
+  for (const a of answers) {
+    const bucket = collected.get(a.questionId)
+    // A question deleted since the answer was filed. Dropped rather than shown
+    // as an unlabelled value, the same way `answersByParticipant` drops it.
+    if (!bucket) continue
+
+    const value = a.boolValue !== undefined ? a.boolValue : a.textValue
+    if (value === undefined) continue
+
+    const name = roster.get(a.participantId)
+    bucket.set(a.participantId, {
+      participantId: a.participantId,
+      name: name ?? "No longer in this hackathon",
+      value,
+      departed: name === undefined,
+    })
+  }
+
+  const byQuestion: Record<string, QuestionAnswers> = {}
+
+  for (const [questionId, bucket] of collected) {
+    let answered = 0
+    for (const id of roster.keys()) if (bucket.has(id)) answered += 1
+
+    byQuestion[questionId] = {
+      answers: [...bucket.values()].sort(
+        (x, y) =>
+          Number(x.departed) - Number(y.departed) ||
+          x.name.localeCompare(y.name),
+      ),
+      missing: roster.size - answered,
+    }
+  }
+
+  return byQuestion
+}
+
 /**
  * The ids of the people who have filed at least one answer.
  *
