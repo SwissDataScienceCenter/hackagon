@@ -3,14 +3,11 @@
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
+    import ProjectStatusTabs from '$lib/components/hackathon/ProjectStatusTabs.svelte';
     import { projectStatusLabel, projectStatusBadgeVariant } from '$lib/utils/projectStatus';
-    import type { ActionData, PageData } from './$types';
+    import type { PageData } from './$types';
 
-    let { data, form }: { data: PageData; form: ActionData } = $props();
-
-    const countLabel = $derived(
-        data.projects.length === 1 ? '1 project' : `${data.projects.length} projects`
-    );
+    let { data }: { data: PageData } = $props();
 
     const pageSize = 8;
     let page = $state(1);
@@ -20,25 +17,46 @@
         data.projects.slice((page - 1) * pageSize, page * pageSize)
     );
 
+    // Back to the first page whenever the tab changes. Clicking a tab is a
+    // navigation, but this component stays mounted across it, so page 3 of the
+    // approved list would otherwise carry over to a rejected list with one row
+    // and show nothing at all.
+    //
+    // Compared against the previous value rather than just reading it: the
+    // comparison is what subscribes this to a tab change, and a plain `let` holds
+    // it because nothing renders it.
+    let shownFilter = data.filter;
+    $effect(() => {
+        if (data.filter !== shownFilter) {
+            shownFilter = data.filter;
+            page = 1;
+        }
+    });
+
     $effect(() => {
         if (page > pageCount) page = pageCount;
     });
 </script>
 
 <!--
-  The review queue: every project at every status, proposals first. The
-  participant page lists the approved ones and offers a preference; deciding
-  happens only here. Reached from the sidebar's Manage section (see
-  $lib/navigation's manageNav).
+  Every project in the hackathon, one status at a time. The participant page lists
+  the approved ones and offers a preference; deciding happens under Manage.
+  Reached from the sidebar's Manage section (see $lib/navigation's manageNav).
 
-  The one list that mixes statuses, so the one that badges them — and only the
-  rows awaiting review or turned down carry a badge (see
-  $lib/utils/projectStatus). Clear the queue with nothing rejected and the badges
-  go with it, which is the honest reading: every row left is approved.
+  Always opens on Approved — the hackathon's line-up. The Awaiting review tab
+  carries the count as a warning badge, which is how the queue asks to be looked
+  at without deciding where anyone arrives.
 
-  Approving, revoking and reconsidering are one click each and happen here.
-  Rejecting does not: it takes a reason, so it lives on the project's own page,
-  which is where "Review" leads.
+  **Nothing is decided here.** Approve, Reject and returning a project to the
+  queue all live on the project's own page, under the description they are a
+  judgement of — the row offers "Review", which is the way there. What that costs
+  is the one-click sweep down a long queue; what it buys is that nobody approves
+  a proposal they have not opened.
+
+  Rows still badge their status even inside a single-status tab: dropping the
+  badge per tab would make the same row read differently depending on how you
+  arrived. Approved carries no badge, as everywhere (see
+  $lib/utils/projectStatus).
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams).
 -->
@@ -47,10 +65,6 @@
         <div class="flex min-w-0 flex-col gap-1">
             <ManageHubBackLink hackathonId={data.hackathonId} />
             <h2 class="m-0 text-title text-ink">Manage Projects</h2>
-            <span class="text-xs text-ink-3">
-                {countLabel}{#if data.pendingCount > 0}
-                    &middot; {data.pendingCount} awaiting review{/if}
-            </span>
         </div>
         <!-- Unconditional, unlike the participant page's CTA: this is the
              organiser's create path, and it does not depend on whether
@@ -64,14 +78,25 @@
         </a>
     </div>
 
-    {#if form?.message}
-        <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
-    {/if}
+    <ProjectStatusTabs
+        hackathonId={data.hackathonId}
+        current={data.filter}
+        counts={data.counts}
+    />
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.projects.length === 0}
+            <!-- Says which list is empty. On a filtered tab "no projects have
+                 been proposed yet" would be false as often as not — there may be
+                 plenty, just none of this status. -->
             <p class="m-0 py-6 text-center text-sm text-ink-3">
-                No projects have been proposed yet.
+                {#if data.filter === 'proposed'}
+                    Nothing is awaiting review.
+                {:else if data.filter === 'approved'}
+                    No projects have been approved yet.
+                {:else}
+                    No projects have been rejected.
+                {/if}
             </p>
         {:else}
             {#each pagedProjects as project (project.id)}
@@ -85,16 +110,16 @@
                     badge={projectStatusLabel(project.status)}
                     badgeVariant={projectStatusBadgeVariant(project.status) ??
                         'badge-neutral'}
-                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/manage/{project.id}"
-                    moreInfoLabel={project.isPending ? 'Review' : 'More Info'}
+                    moreInfoHref="/my/hackathon/{data.hackathonId}/projects/manage/{project.id}{data.filterQuery}"
+                    moreInfoLabel="Review"
                 >
                     {#snippet actions()}
                         <!-- The organiser's edit route for any project, theirs or
                              not: `ProjectService.Edit` falls back to a
                              hackathon-wide project:write check
                              (`project_service.go:479-484`), so this offers what
-                             the backend already allows. Saving returns to the
-                             project. -->
+                             the backend already allows. Not a decision, which is
+                             why it is still here and Approve is not. -->
                         <a
                             href={resolve(
                                 `/my/hackathon/${data.hackathonId}/projects/${project.id}/edit`
@@ -103,30 +128,6 @@
                         >
                             Edit
                         </a>
-                        {#if project.isPending}
-                            <!-- Approve is the whole decision in one click and
-                                 needs nothing typed, so it stays on the row. Its
-                                 opposite is the "Review" link beside it: reading
-                                 the proposal and writing a reason are the same
-                                 act, and both happen on the project's page. -->
-                            <form method="POST" action="?/approve">
-                                <input type="hidden" name="projectId" value={project.id} />
-                                <button type="submit" class="btn btn-sm btn-solid">
-                                    Approve
-                                </button>
-                            </form>
-                        {:else}
-                            <!-- One RPC, two labels. Disapprove sets the status
-                                 back to Proposed, which from an approved project
-                                 is taking an approval back and from a rejected
-                                 one is agreeing to look again. -->
-                            <form method="POST" action="?/disapprove">
-                                <input type="hidden" name="projectId" value={project.id} />
-                                <button type="submit" class="btn btn-sm btn-warning">
-                                    {project.isRejected ? 'Reconsider' : 'Revoke approval'}
-                                </button>
-                            </form>
-                        {/if}
                     {/snippet}
                 </ProjectCard>
             {/each}
