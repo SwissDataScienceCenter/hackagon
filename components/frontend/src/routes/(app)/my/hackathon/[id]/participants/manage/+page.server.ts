@@ -1,12 +1,6 @@
-import type { Actions, PageServerLoad } from "./$types"
+import type { PageServerLoad } from "./$types"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
-import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
-import {
-  demoteParticipant,
-  promoteParticipant,
-  removeParticipant,
-} from "$lib/server/hackathon/participantActions"
 import { answeredParticipantIds } from "$lib/server/hackathon/registrationForm"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { error } from "@sveltejs/kit"
@@ -21,8 +15,9 @@ import { error } from "@sveltejs/kit"
  *
  * Two RPCs of their own — the questions do not ride on `hackathon.get`, and the
  * answers have no home on it at all. Both are swallowed on failure: this page
- * exists to approve and remove people, and the marker decorates that. A
- * hackathon asking nothing returns two empty lists, which renders identically.
+ * exists to lead an organizer to the people they act on, and the marker
+ * decorates that. A hackathon asking nothing returns two empty lists, which
+ * renders identically.
  *
  * `ListParticipantAnswers` returns the whole cohort to a caller holding
  * hackathon write and **silently narrows to the caller's own answers** without
@@ -54,7 +49,6 @@ export const load: PageServerLoad = async (event) => {
   // No RPC of its own for the roster: the layout's `hackathon.get` already
   // returns every participant with their casbin role and waitlist flag.
   const { hackathon, myMembership, isGlobalAdmin } = await event.parent()
-  const myUserId = myMembership?.user?.id
 
   // Frontend-only gate, same shape as the tracks and teams manage routes: the
   // RPCs below enforce it for real, this only decides whether the page
@@ -76,14 +70,13 @@ export const load: PageServerLoad = async (event) => {
   const { hackathon: client } = requireGrpc(event.locals.grpc)
   const { questionCount, answered } = await answerStatus(client, hackathon.id)
 
+  // No role or viewer flags on a row any more: nothing here acts on a person, so
+  // which of them is the owner and which of them is you are questions only the
+  // participant's own page has to answer.
   const participants = members.map((m) => ({
     id: m.user!.id,
     name: m.user!.displayName || m.user!.username,
     roleLabel: membershipBadgeLabel(m.isWaiting, m.role),
-    isOwner: m.role === HackathonRole.HACKATHON_ROLE_OWNER,
-    // Demoting yourself would take away the `hackathon:write` this very page
-    // needs, so the row for the viewer never offers it.
-    isMe: myUserId !== undefined && m.user!.id === myUserId,
     // Read through the roster rather than off the answer list, which can hold
     // answers from people since removed — `RemoveParticipant` drops the
     // participant row and nothing drops their answers, so counting it directly
@@ -112,12 +105,4 @@ export const load: PageServerLoad = async (event) => {
       (m) => m.user !== undefined && m.isWaiting,
     ).length,
   }
-}
-
-// Approve is deliberately absent: no row here is waitlisted, so it had nothing
-// to act on. It lives on `./waitlist` with the rows it applies to.
-export const actions: Actions = {
-  remove: (event) => removeParticipant(event, event.params.id),
-  promote: (event) => promoteParticipant(event, event.params.id),
-  demote: (event) => demoteParticipant(event, event.params.id),
 }

@@ -37,10 +37,10 @@
 <!--
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/projects).
 
-  A read-only profile: nothing here acts on the person. Approve, Remove and
-  Promote live on Manage Participants (see $lib/navigation's manageNav), which is
-  the one place an owner's extra capabilities are collected, and duplicating them
-  here would mean two surfaces to keep in step with the same casbin rules.
+  A read-only profile: nothing here acts on the person. Approve, Remove and the
+  owner controls live on the organizer's own view of this participant,
+  `participants/manage/<id>` (see $lib/navigation's manageNav), and duplicating
+  them here would mean two surfaces to keep in step with the same casbin rules.
 
   Email is deliberately absent. `User` carries one, but today it is shown only on
   the platform admin page (/manage/users) — never to a peer — and this page is
@@ -52,10 +52,9 @@
   Manage Participants is reaching it to see what a participant sees, and their
   hackathon write is deliberately not spent here.
 
-  TODO(participants: organizer answer read): which leaves nowhere on screen for
-  an organizer to read the unshared answers they collect — this page used to be
-  it. The roster's CSV export carries name, email and role only. A full read
-  belongs under Manage Participants, not here.
+  The unshared answers an organizer collects are read on that page instead, which
+  asks for them by name and gets the whole form. This one stays the participant
+  view whoever opens it.
 
   TODO(backend: user-profile-fields): name, role, join date and teams are all
   there is to show. `User` carries only username, displayName, email and
