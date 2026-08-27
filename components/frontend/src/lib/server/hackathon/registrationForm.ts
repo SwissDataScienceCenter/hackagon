@@ -245,6 +245,58 @@ export function parseQuestionForm(form: FormData): QuestionFormResult {
 }
 
 /**
+ * A question form's fields exactly as they were typed, valid or not.
+ *
+ * Sent back with a `fail()` so the create and edit pages can re-render what the
+ * organizer had rather than resetting to blank — these are plain POSTs, so
+ * without this a rejected key takes the whole row with it and the label, the
+ * options and the type all have to be typed again.
+ *
+ * Deliberately lenient where `parseQuestionForm` is strict: this is not a second
+ * validator and must never refuse anything, or the values it exists to preserve
+ * are the ones it drops. An unreadable kind or position falls back rather than
+ * failing, and the message beside the form is what says what was wrong.
+ *
+ * Shaped like a `QuestionRow` minus `id` and `answerCount`, so a page can spread
+ * it over the row it already has: the answer count is a fact about the server and
+ * never something a form gets to claim.
+ */
+export interface QuestionEcho {
+  key: string
+  label: string
+  kind: QuestionKind
+  mandatory: boolean
+  order: number
+  options: string[]
+  publicAnswers: boolean
+}
+
+export function readQuestionEcho(form: FormData): QuestionEcho {
+  const raw = (name: string): string => {
+    const value = form.get(name)
+    return typeof value === "string" ? value : ""
+  }
+
+  const kind = raw("kind")
+  const order = Number(raw("order"))
+
+  return {
+    key: raw("key").trim(),
+    label: raw("label").trim(),
+    kind: kind === "bool" || kind === "enum" ? kind : "text",
+    mandatory: form.get("mandatory") === "true",
+    // Not `|| 0`: a position of 0 is legitimate, so only an unparseable one
+    // falls back.
+    order: Number.isInteger(order) && order >= 0 ? order : 0,
+    // Kept even for a kind that has no use for them, unlike the parser, which
+    // drops them: the organizer may have typed a list and then mis-set the type,
+    // and clearing it on the way back would lose the part that was fine.
+    options: parseOptions(form.get("options")),
+    publicAnswers: form.get("publicAnswers") === "true",
+  }
+}
+
+/**
  * One answer in the shape `SubmitAnswers` and `Join` both take.
  *
  * `participantId` is required by the generated type but ignored by the server,

@@ -9,6 +9,7 @@ import {
   questionKind,
   questionRows,
   questionType,
+  readQuestionEcho,
 } from "./registrationForm"
 
 // QuestionType numeric values, stated rather than imported so a renumbering in
@@ -191,6 +192,60 @@ describe("parseQuestionForm", () => {
     it.each(["-1", "2.5", "many"])("rejects %s", (order) => {
       expect(message(form({ order }))).toMatch(/whole number/i)
     })
+  })
+})
+
+describe("readQuestionEcho", () => {
+  it("carries every field back as typed", () => {
+    expect(
+      readQuestionEcho(
+        form({
+          kind: "enum",
+          order: "3",
+          mandatory: "true",
+          publicAnswers: "true",
+          options: "S\nM\nL",
+        }),
+      ),
+    ).toEqual({
+      key: "affiliation",
+      label: "Which university or company are you with?",
+      kind: "enum",
+      mandatory: true,
+      order: 3,
+      options: ["S", "M", "L"],
+      publicAnswers: true,
+    })
+  })
+
+  it("never refuses a submission the parser would", () => {
+    // The whole point: this runs *because* the parser said no, so anything it
+    // rejected in turn would drop the values it exists to preserve.
+    const echo = readQuestionEcho(
+      form({ key: "Not A Key", kind: "wat", order: "-1" }),
+    )
+
+    expect(echo.key).toBe("Not A Key")
+    expect(echo.kind).toBe("text")
+    expect(echo.order).toBe(0)
+  })
+
+  it("keeps a position of 0, which is legitimate", () => {
+    expect(readQuestionEcho(form({ order: "0" })).order).toBe(0)
+  })
+
+  it("keeps options typed against a kind that has no use for them", () => {
+    // Unlike the parser, which drops them: the organizer may have typed a list
+    // and then mis-set the type, and the list is the part that was fine.
+    expect(
+      readQuestionEcho(form({ kind: "text", options: "S\nM" })).options,
+    ).toEqual(["S", "M"])
+  })
+
+  it("reads an absent checkbox as false", () => {
+    const echo = readQuestionEcho(form())
+    expect(echo.mandatory).toBe(false)
+    expect(echo.publicAnswers).toBe(false)
   })
 })
 
