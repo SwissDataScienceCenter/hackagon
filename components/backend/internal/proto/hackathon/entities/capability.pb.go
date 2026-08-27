@@ -31,6 +31,7 @@ const (
 	Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS Capability = 4
 	Capability_CAPABILITY_VOTE                       Capability = 5
 	Capability_CAPABILITY_VIEW_RESULTS               Capability = 6
+	Capability_CAPABILITY_VIEW_TEAMS                 Capability = 7
 )
 
 // Enum value maps for Capability.
@@ -43,6 +44,7 @@ var (
 		4: "CAPABILITY_CREATE_PROJECT_SUBMISSIONS",
 		5: "CAPABILITY_VOTE",
 		6: "CAPABILITY_VIEW_RESULTS",
+		7: "CAPABILITY_VIEW_TEAMS",
 	}
 	Capability_value = map[string]int32{
 		"CAPABILITY_UNSPECIFIED":                0,
@@ -52,6 +54,7 @@ var (
 		"CAPABILITY_CREATE_PROJECT_SUBMISSIONS": 4,
 		"CAPABILITY_VOTE":                       5,
 		"CAPABILITY_VIEW_RESULTS":               6,
+		"CAPABILITY_VIEW_TEAMS":                 7,
 	}
 )
 
@@ -86,7 +89,7 @@ var File_hackathon_entities_capability_proto protoreflect.FileDescriptor
 
 const file_hackathon_entities_capability_proto_rawDesc = "" +
 	"\n" +
-	"#hackathon/entities/capability.proto\x12\x12hackathon.entities*\xe4\x01\n" +
+	"#hackathon/entities/capability.proto\x12\x12hackathon.entities*\xff\x01\n" +
 	"\n" +
 	"Capability\x12\x1a\n" +
 	"\x16CAPABILITY_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -95,7 +98,8 @@ const file_hackathon_entities_capability_proto_rawDesc = "" +
 	"\x1fCAPABILITY_SET_TEAM_PREFERENCES\x10\x03\x12)\n" +
 	"%CAPABILITY_CREATE_PROJECT_SUBMISSIONS\x10\x04\x12\x13\n" +
 	"\x0fCAPABILITY_VOTE\x10\x05\x12\x1b\n" +
-	"\x17CAPABILITY_VIEW_RESULTS\x10\x06BaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
+	"\x17CAPABILITY_VIEW_RESULTS\x10\x06\x12\x19\n" +
+	"\x15CAPABILITY_VIEW_TEAMS\x10\aBaZ_github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entitiesb\x06proto3"
 
 var (
 	file_hackathon_entities_capability_proto_rawDescOnce sync.Once

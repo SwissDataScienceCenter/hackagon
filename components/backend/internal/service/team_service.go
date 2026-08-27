@@ -56,8 +56,8 @@ func (s *TeamService) List(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	if err = s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Hackathon, m.Read); err != nil {
-		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
+	if err = s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Team, m.Read); err != nil {
+		return nil, status.Error(codes.PermissionDenied, "can't get teams")
 	}
 
 	teams, err := s.dbClient.Team.Query().
@@ -114,10 +114,10 @@ func (s *TeamService) Get(
 	if err = s.enforcer.RequirePermission(
 		ctx,
 		t.Edges.Project.Edges.Hackathon.ID.String(),
-		m.Hackathon,
+		m.Team,
 		m.Read,
 	); err != nil {
-		return nil, status.Error(codes.PermissionDenied, "cann't get teams")
+		return nil, status.Error(codes.PermissionDenied, "can't get teams")
 	}
 
 	return &msgs.GetResponse{Team: teamEntryFromEnt(t)}, nil

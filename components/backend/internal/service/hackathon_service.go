@@ -1019,7 +1019,6 @@ func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long
 			)
 		case ents.Capability_CAPABILITY_VOTE:
 			update = update.SetVotingEnabled(enabled)
-			// Add both Vote Create and VoteCategory Read for Members
 			policyChanges = append(
 				policyChanges,
 				policyChange{
@@ -1094,6 +1093,18 @@ func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long
 					enable: enabled,
 					role:   &member,
 					obj:    mw.VoteResult,
+					perm:   mw.Read,
+					opts:   nil,
+				},
+			)
+		case ents.Capability_CAPABILITY_VIEW_TEAMS:
+			update = update.SetViewTeamsEnabled(enabled)
+			policyChanges = append(
+				policyChanges,
+				policyChange{
+					enable: enabled,
+					role:   &member,
+					obj:    mw.Team,
 					perm:   mw.Read,
 					opts:   nil,
 				},

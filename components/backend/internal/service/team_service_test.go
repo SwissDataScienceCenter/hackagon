@@ -59,7 +59,7 @@ var _ = Describe("TeamService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Grant hackathon creation permission.
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -177,7 +177,7 @@ var _ = Describe("TeamService", func() {
 				SetUsername("team-get-owner").
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -195,6 +195,13 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = hResp.GetHackathonId()
+			// Enable VIEW_TEAMS
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_VIEW_TEAMS, Enabled: true},
+				},
+			})
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hackathonID,
@@ -237,6 +244,46 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.NotFound))
 		})
+
+		It("denies team get when view_teams capability is disabled", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			memberID := "team-get-member"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(memberID).
+				SetUsername("team-get-member-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole(memberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token = testutils.CreateTestJWTToken(memberID)
+			memberctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.Get(memberctx, &teamMsgs.GetRequest{TeamId: teamID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetTeam().GetId()).To(Equal(teamID))
+
+			// disable VIEW_TEAMS
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_VIEW_TEAMS, Enabled: false},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.Get(memberctx, &teamMsgs.GetRequest{TeamId: teamID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
 	})
 
 	Describe("List", func() {
@@ -251,7 +298,7 @@ var _ = Describe("TeamService", func() {
 				Save(context.Background())
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			token := testutils.CreateTestJWTToken(ownerID)
@@ -269,6 +316,13 @@ var _ = Describe("TeamService", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			hackathonID = hResp.GetHackathonId()
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_VIEW_TEAMS, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			pResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
 				HackathonId: hackathonID,
@@ -319,6 +373,53 @@ var _ = Describe("TeamService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
 		})
+
+		It("denies team list when view_teams capability is disabled", func() {
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+			// Create a member (not owner) of the hackathon
+			memberID := "team-list-member"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(memberID).
+				SetUsername("team-list-member-username").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddRole(memberID, middleware.Member, hackathonID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token = testutils.CreateTestJWTToken(memberID)
+			memberctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := teamClient.List(
+				memberctx,
+				&teamMsgs.ListRequest{HackathonId: testutils.StringPtr(hackathonID)},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetTeams()).To(HaveLen(2))
+
+			// Enable VIEW_TEAMS via SetCapabilities
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_VIEW_TEAMS, Enabled: false},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = teamClient.List(
+				memberctx,
+				&teamMsgs.ListRequest{HackathonId: testutils.StringPtr(hackathonID)},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
+		})
 	})
 
 	Describe("Edit", func() {
@@ -340,7 +441,7 @@ var _ = Describe("TeamService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -474,7 +575,7 @@ var _ = Describe("TeamService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -604,7 +705,7 @@ var _ = Describe("TeamService", func() {
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
 
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -750,7 +851,7 @@ var _ = Describe("TeamService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -895,7 +996,7 @@ var _ = Describe("TeamService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -1046,7 +1147,7 @@ var _ = Describe("TeamService", func() {
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
 
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -1182,7 +1283,7 @@ var _ = Describe("TeamService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()
@@ -1412,7 +1513,7 @@ var _ = Describe("TeamService", func() {
 				context.Background(),
 				metadata.Pairs("authorization", "Bearer "+token),
 			)
-			_, err = enf.AddRole(ownerID, middleware.HackathonOrganizer, "*")
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
 			Expect(err).NotTo(HaveOccurred())
 
 			now := time.Now()

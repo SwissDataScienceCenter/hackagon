@@ -457,6 +457,8 @@ func capabilityToString(c ents.Capability) (string, error) {
 		return "propose_projects", nil
 	case ents.Capability_CAPABILITY_SET_TEAM_PREFERENCES:
 		return "set_team_preferences", nil
+	case ents.Capability_CAPABILITY_VIEW_TEAMS:
+		return "view_teams", nil
 	case ents.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS:
 		return "create_project_submissions", nil
 	case ents.Capability_CAPABILITY_VOTE:

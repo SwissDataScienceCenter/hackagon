@@ -47,6 +47,7 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 		hackEnts.Capability_CAPABILITY_REGISTER,
 		hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS,
 		hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+		hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
 	); err != nil {
 		return err
 	}
@@ -261,5 +262,6 @@ func (h *harness) seedH2(now time.Time, admin, alice, bob, yuki *actor) error {
 		hackEnts.Capability_CAPABILITY_PROPOSE_PROJECTS,
 		hackEnts.Capability_CAPABILITY_SET_TEAM_PREFERENCES,
 		hackEnts.Capability_CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
+		hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
 	)
 }

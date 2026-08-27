@@ -16,6 +16,7 @@ export enum Capability {
   CAPABILITY_CREATE_PROJECT_SUBMISSIONS = 4,
   CAPABILITY_VOTE = 5,
   CAPABILITY_VIEW_RESULTS = 6,
+  CAPABILITY_VIEW_TEAMS = 7,
   UNRECOGNIZED = -1,
 }
 
@@ -42,6 +43,9 @@ export function capabilityFromJSON(object: any): Capability {
     case 6:
     case "CAPABILITY_VIEW_RESULTS":
       return Capability.CAPABILITY_VIEW_RESULTS;
+    case 7:
+    case "CAPABILITY_VIEW_TEAMS":
+      return Capability.CAPABILITY_VIEW_TEAMS;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -65,6 +69,8 @@ export function capabilityToJSON(object: Capability): string {
       return "CAPABILITY_VOTE";
     case Capability.CAPABILITY_VIEW_RESULTS:
       return "CAPABILITY_VIEW_RESULTS";
+    case Capability.CAPABILITY_VIEW_TEAMS:
+      return "CAPABILITY_VIEW_TEAMS";
     case Capability.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

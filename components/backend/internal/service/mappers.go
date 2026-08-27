@@ -323,6 +323,8 @@ func dbCapabilityToProto(s string) hackEnts.Capability {
 		return hackEnts.Capability_CAPABILITY_VOTE
 	case "view_results":
 		return hackEnts.Capability_CAPABILITY_VIEW_RESULTS
+	case "view_teams":
+		return hackEnts.Capability_CAPABILITY_VIEW_TEAMS
 	default:
 		return hackEnts.Capability_CAPABILITY_UNSPECIFIED
 	}
@@ -357,6 +359,10 @@ func stateEntryFromEnt(s *ent.HackathonState) *hackEnts.HackathonState {
 			{
 				Capability: hackEnts.Capability_CAPABILITY_VIEW_RESULTS,
 				Enabled:    s.ViewResultsEnabled,
+			},
+			{
+				Capability: hackEnts.Capability_CAPABILITY_VIEW_TEAMS,
+				Enabled:    s.ViewTeamsEnabled,
 			},
 		},
 	}

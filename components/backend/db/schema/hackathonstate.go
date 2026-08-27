@@ -46,6 +46,9 @@ func (HackathonState) Fields() []ent.Field {
 		field.Bool("view_results_enabled").
 			Default(false).
 			Comment("Whether results can be viewed for this hackathon."),
+		field.Bool("view_teams_enabled").
+			Default(false).
+			Comment("Whether team assignments are visible to all participants."),
 		field.Time("created_at").
 			Immutable().
 			Default(time.Now).
