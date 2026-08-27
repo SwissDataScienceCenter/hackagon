@@ -15,6 +15,7 @@ import type { Logger } from "pino"
 import { createAuthorizedGrpc, healthClient } from "$lib/server/grpc/client"
 import { initBackendChannel } from "$lib/server/grpc/channel"
 import { ClientError, Status } from "nice-grpc-common"
+import { clientView } from "$lib/server/session"
 import type { CustomSession } from "./auth.d"
 
 // Global config state for the application.
@@ -138,12 +139,15 @@ const loggerHandle: Handle = async ({ event, resolve }) => {
 const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   const session = (await event.locals.auth()) as CustomSession | null
 
-  // Always store sanitized session (strip accessToken for client safety)
-  if (session) {
-    const { accessToken, ...clientSession } = session
-    void accessToken
-    event.locals.session = clientSession
-  }
+  // `locals.session` means one thing from here on: a session that can call the
+  // backend as its user. A session whose refresh Keycloak refused keeps its
+  // identity and a dead accessToken (`auth.ts:153`), and storing that put a
+  // name and a "Log out" in the header of every public page for a visitor who
+  // was, in every way that counts, signed out. `clientView` also strips the
+  // access token, which must not cross to the client.
+  const view = clientView(session)
+  event.locals.session = view.session
+  event.locals.sessionExpired = view.expired
 
   if (isProtectedRoute(event.url.pathname)) {
     if (!hasLoggedInUserContext(session)) {
@@ -212,7 +216,10 @@ const sessionSetupHandle: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-// If a logged-in user visits the root page (without returnTo), send them to the dashboard.
+// If a logged-in user visits the root page (without returnTo), send them to the
+// dashboard. It reads `locals.session`, so an expired session is not sent — it
+// used to be, and the dashboard's own guard bounced it straight back to `/`,
+// which is how a dead session ended up parked on a page claiming it was signed in.
 const redirectHandle: Handle = async ({ event, resolve }) => {
   const isRootPath = event.url.pathname === "/"
   const hasReturnTo = event.url.searchParams.has("returnTo")

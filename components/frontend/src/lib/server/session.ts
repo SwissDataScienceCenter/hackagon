@@ -35,3 +35,32 @@ import type { CustomSession } from "../../auth.d"
 export function usableSession(session: CustomSession | null): boolean {
   return Boolean(session?.user && session.accessToken && !session.error)
 }
+
+/**
+ * What the UI is allowed to know about a session.
+ *
+ * Two questions, not one, which is why this returns a pair:
+ *
+ *   - `session` — render the signed-in shell? Only a usable session qualifies,
+ *     so a dead one reaches the UI as no session at all. That is the whole fix
+ *     for a header that offered "Log out" to somebody whose token Keycloak had
+ *     already refused.
+ *   - `expired` — explain why not? True when the cookie still carries an
+ *     identity but nothing that can call the backend. Without it a silently
+ *     signed-out visitor reads the sudden "Log in" as a second bug.
+ *
+ * `accessToken` is dropped here rather than at the caller: this is the value
+ * that crosses to the client, and the token has no business in it.
+ */
+export function clientView(session: CustomSession | null): {
+  session?: Omit<CustomSession, "accessToken">
+  expired: boolean
+} {
+  if (usableSession(session)) {
+    const { accessToken, ...rest } = session!
+    void accessToken
+    return { session: rest, expired: false }
+  }
+
+  return { expired: Boolean(session?.user) }
+}

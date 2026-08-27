@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { usableSession } from "./session"
+import { clientView, usableSession } from "./session"
 import type { CustomSession } from "../../auth.d"
 
 // `expires` is required on Session and irrelevant here, so it is filled in once.
@@ -40,5 +40,45 @@ describe("usableSession", () => {
 
   it("rejects a session with no user", () => {
     expect(usableSession(session({ user: undefined }))).toBe(false)
+  })
+})
+
+describe("clientView", () => {
+  it("passes a usable session through without its access token", () => {
+    const view = clientView(session())
+
+    expect(view.session?.user?.id).toBe("u1")
+    expect(view.expired).toBe(false)
+    // The value crosses to the client, so this is the assertion that matters.
+    expect("accessToken" in (view.session ?? {})).toBe(false)
+  })
+
+  it("reports an anonymous visitor as neither signed in nor expired", () => {
+    expect(clientView(null)).toEqual({ expired: false })
+  })
+
+  // The bug this exists for: the header read `session.user` and so showed a
+  // name and a Log out button on every public page for a session Keycloak had
+  // already refused to refresh.
+  it("hides a session whose token refresh failed, and says it expired", () => {
+    const view = clientView(session({ error: "RefreshTokenError" }))
+
+    expect(view.session).toBeUndefined()
+    expect(view.expired).toBe(true)
+  })
+
+  it("treats a session caught mid-refresh as expired too", () => {
+    // No access token: nothing to send, so it is not signed in — and there is
+    // an identity behind it, so "expired" is the honest thing to tell the user.
+    const view = clientView(session({ accessToken: undefined }))
+
+    expect(view.session).toBeUndefined()
+    expect(view.expired).toBe(true)
+  })
+
+  it("does not call a session with no user expired", () => {
+    // Nobody to have expired. Anything else would put "Session expired" in
+    // front of a visitor who never signed in.
+    expect(clientView(session({ user: undefined }))).toEqual({ expired: false })
   })
 })

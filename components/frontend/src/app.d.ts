@@ -18,6 +18,12 @@ declare global {
     export interface Locals {
       config: AppConfig
       session?: Omit<Session, "accessToken">
+      /**
+       * Somebody is in the cookie, but their token is dead — see
+       * `$lib/server/session`. Distinguishes "signed out" from "never signed
+       * in", which is the only way the UI can say why it stopped knowing them.
+       */
+      sessionExpired?: boolean
       logger: Logger
       grpc?: AuthorizedGrpc
       platformUser?: User
