@@ -160,6 +160,13 @@ keycloak:
   ingress:
     enabled: false
 
+# -- Ingress for the Keycloak service. Not under `keycloak`, whose keys are
+# passed to the keycloak subchart.
+keycloakIngress:
+  enabled: true
+  ingressClass: webapprouting.kubernetes.azure.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
 # ============================================================
 # PostgreSQL (bitnami) — two databases, two users
 # ============================================================
