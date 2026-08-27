@@ -34,10 +34,13 @@
     // Proposals behave the same way and for the same reason: a proposed project is
     // invisible from everywhere else, so its count rides the tile that reviews it.
     const queueBadges: Record<string, string> = $derived({
-        // On the Waitlist tile rather than Manage Participants: those people are
-        // no longer on that page at all, so the count now rides the tile that
-        // actually lists them and offers Approve.
-        ...(data.waitingCount > 0 ? { 'manage:waitlist': `${data.waitingCount} waiting` } : {}),
+        // On Manage Participants, which is where the waiting people are: they
+        // are the second tab of that page, and it no longer has a nav row of its
+        // own for this count to ride. "waiting" rather than a bare number, so the
+        // count cannot be misread as the size of the roster it sits on.
+        ...(data.waitingCount > 0
+            ? { 'manage:participants': `${data.waitingCount} waiting` }
+            : {}),
         ...(data.proposedCount > 0
             ? { 'manage:projects': `${data.proposedCount} to review` }
             : {}),
