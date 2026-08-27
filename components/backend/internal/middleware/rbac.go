@@ -206,6 +206,8 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Member.String(), "/hackathon/*", Project.String(), Read.String()},
 		// Owner can create teams
 		{Owner.String(), "/hackathon/*", Team.String(), Create.String()},
+		// Owner can read teams
+		{Owner.String(), "/hackathon/*", Team.String(), Read.String()},
 		// Owner can edit teams
 		{Owner.String(), "/hackathon/*", Team.String(), Write.String()},
 		// Team member can edit team

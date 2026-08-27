@@ -33,6 +33,8 @@ type HackathonState struct {
 	CreateProjectSubmissionsEnabled bool `json:"create_project_submissions_enabled,omitempty"`
 	// Whether results can be viewed for this hackathon.
 	ViewResultsEnabled bool `json:"view_results_enabled,omitempty"`
+	// Whether team assignments are visible to all participants.
+	ViewTeamsEnabled bool `json:"view_teams_enabled,omitempty"`
 	// Timestamp when the state was created.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Timestamp of the last modification.
@@ -98,7 +100,7 @@ func (*HackathonState) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case hackathonstate.FieldRegistrationsEnabled, hackathonstate.FieldVotingEnabled, hackathonstate.FieldProposeProjectsEnabled, hackathonstate.FieldSetTeamPreferencesEnabled, hackathonstate.FieldCreateProjectSubmissionsEnabled, hackathonstate.FieldViewResultsEnabled:
+		case hackathonstate.FieldRegistrationsEnabled, hackathonstate.FieldVotingEnabled, hackathonstate.FieldProposeProjectsEnabled, hackathonstate.FieldSetTeamPreferencesEnabled, hackathonstate.FieldCreateProjectSubmissionsEnabled, hackathonstate.FieldViewResultsEnabled, hackathonstate.FieldViewTeamsEnabled:
 			values[i] = new(sql.NullBool)
 		case hackathonstate.FieldCreatedAt, hackathonstate.FieldModifiedAt:
 			values[i] = new(sql.NullTime)
@@ -164,6 +166,12 @@ func (_m *HackathonState) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field view_results_enabled", values[i])
 			} else if value.Valid {
 				_m.ViewResultsEnabled = value.Bool
+			}
+		case hackathonstate.FieldViewTeamsEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field view_teams_enabled", values[i])
+			} else if value.Valid {
+				_m.ViewTeamsEnabled = value.Bool
 			}
 		case hackathonstate.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -265,6 +273,9 @@ func (_m *HackathonState) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("view_results_enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ViewResultsEnabled))
+	builder.WriteString(", ")
+	builder.WriteString("view_teams_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ViewTeamsEnabled))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

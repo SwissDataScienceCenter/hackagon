@@ -116,6 +116,20 @@ func (_u *HackathonStateUpdate) SetNillableViewResultsEnabled(v *bool) *Hackatho
 	return _u
 }
 
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (_u *HackathonStateUpdate) SetViewTeamsEnabled(v bool) *HackathonStateUpdate {
+	_u.mutation.SetViewTeamsEnabled(v)
+	return _u
+}
+
+// SetNillableViewTeamsEnabled sets the "view_teams_enabled" field if the given value is not nil.
+func (_u *HackathonStateUpdate) SetNillableViewTeamsEnabled(v *bool) *HackathonStateUpdate {
+	if v != nil {
+		_u.SetViewTeamsEnabled(*v)
+	}
+	return _u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (_u *HackathonStateUpdate) SetModifiedAt(v time.Time) *HackathonStateUpdate {
 	_u.mutation.SetModifiedAt(v)
@@ -273,6 +287,9 @@ func (_u *HackathonStateUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if value, ok := _u.mutation.ViewResultsEnabled(); ok {
 		_spec.SetField(hackathonstate.FieldViewResultsEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ViewTeamsEnabled(); ok {
+		_spec.SetField(hackathonstate.FieldViewTeamsEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(hackathonstate.FieldModifiedAt, field.TypeTime, value)
@@ -468,6 +485,20 @@ func (_u *HackathonStateUpdateOne) SetNillableViewResultsEnabled(v *bool) *Hacka
 	return _u
 }
 
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (_u *HackathonStateUpdateOne) SetViewTeamsEnabled(v bool) *HackathonStateUpdateOne {
+	_u.mutation.SetViewTeamsEnabled(v)
+	return _u
+}
+
+// SetNillableViewTeamsEnabled sets the "view_teams_enabled" field if the given value is not nil.
+func (_u *HackathonStateUpdateOne) SetNillableViewTeamsEnabled(v *bool) *HackathonStateUpdateOne {
+	if v != nil {
+		_u.SetViewTeamsEnabled(*v)
+	}
+	return _u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (_u *HackathonStateUpdateOne) SetModifiedAt(v time.Time) *HackathonStateUpdateOne {
 	_u.mutation.SetModifiedAt(v)
@@ -655,6 +686,9 @@ func (_u *HackathonStateUpdateOne) sqlSave(ctx context.Context) (_node *Hackatho
 	}
 	if value, ok := _u.mutation.ViewResultsEnabled(); ok {
 		_spec.SetField(hackathonstate.FieldViewResultsEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ViewTeamsEnabled(); ok {
+		_spec.SetField(hackathonstate.FieldViewTeamsEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ModifiedAt(); ok {
 		_spec.SetField(hackathonstate.FieldModifiedAt, field.TypeTime, value)

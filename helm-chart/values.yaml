@@ -95,7 +95,12 @@ backend:
       user: hackagon
       postgresPassword: ""
     oidc:
-      jwksurl: "https://auth.{baseDomain}/realms/hackagon/protocol/openid-connect/certs"
+      # -- Where the backend fetches Keycloak's signing keys.
+      # With an external Keycloak (keycloak.enabled: false),
+      # override this with a url the backend pod can actually reach.
+      jwksurl: "http://{keycloakService}:8080/realms/hackagon/protocol/openid-connect/certs"
+      # -- Must stay the PUBLIC url: this is the `iss` claim Keycloak stamps into
+      # tokens, and the backend rejects any token whose issuer does not match.
       issuerurl: "https://auth.{baseDomain}/realms/hackagon"
       algorithm: RS256
     logging:
@@ -160,6 +165,13 @@ keycloak:
   ingress:
     enabled: false
 
+# -- Ingress for the Keycloak service. Not under `keycloak`, whose keys are
+# passed to the keycloak subchart.
+keycloakIngress:
+  enabled: true
+  ingressClass: webapprouting.kubernetes.azure.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
 # ============================================================
 # PostgreSQL (bitnami) — two databases, two users
 # ============================================================

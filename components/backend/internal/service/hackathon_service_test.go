@@ -1247,6 +1247,7 @@ var _ = Describe("HackathonService", func() {
 				Expect(state.SetTeamPreferencesEnabled).To(BeFalse())
 				Expect(state.CreateProjectSubmissionsEnabled).To(BeFalse())
 				Expect(state.ViewResultsEnabled).To(BeFalse())
+				Expect(state.ViewTeamsEnabled).To(BeFalse())
 			})
 		})
 
@@ -1303,6 +1304,12 @@ var _ = Describe("HackathonService", func() {
 					getCapabilityEnabled(
 						state.GetCapabilities(),
 						entities.Capability_CAPABILITY_VIEW_RESULTS,
+					),
+				).To(BeFalse())
+				Expect(
+					getCapabilityEnabled(
+						state.GetCapabilities(),
+						entities.Capability_CAPABILITY_VIEW_TEAMS,
 					),
 				).To(BeFalse())
 			})
@@ -1514,6 +1521,78 @@ var _ = Describe("HackathonService", func() {
 				resp, err := client.SetCapabilities(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.GetState().GetModifiedAt()).NotTo(BeNil())
+			})
+
+			It("enables view_teams and grants Team:read to members", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				req := &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_VIEW_TEAMS, Enabled: true},
+					},
+				}
+
+				resp, err := client.SetCapabilities(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_VIEW_TEAMS,
+					),
+				).To(BeTrue())
+
+				// Verify in database
+				state, err := dbClient.HackathonState.Query().
+					Where(enthackathonstate.HasHackathonWith(
+						enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+					)).Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(state.ViewTeamsEnabled).To(BeTrue())
+			})
+
+			It("disables view_teams and revokes Team:read from members", func() {
+				token := testutils.CreateTestJWTToken(testAdmin)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				// First enable
+				_, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_VIEW_TEAMS, Enabled: true},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Now disable
+				resp, err := client.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+					HackathonId: createdHackathonID,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_VIEW_TEAMS, Enabled: false},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					getCapabilityEnabled(
+						resp.GetState().GetCapabilities(),
+						entities.Capability_CAPABILITY_VIEW_TEAMS,
+					),
+				).To(BeFalse())
+
+				// Verify in database
+				state, err := dbClient.HackathonState.Query().
+					Where(enthackathonstate.HasHackathonWith(
+						enthackathon.IDEQ(uuid.MustParse(createdHackathonID)),
+					)).Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(state.ViewTeamsEnabled).To(BeFalse())
 			})
 		})
 	})

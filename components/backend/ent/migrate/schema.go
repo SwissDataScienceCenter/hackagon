@@ -147,6 +147,7 @@ var (
 		{Name: "set_team_preferences_enabled", Type: field.TypeBool, Default: false},
 		{Name: "create_project_submissions_enabled", Type: field.TypeBool, Default: false},
 		{Name: "view_results_enabled", Type: field.TypeBool, Default: false},
+		{Name: "view_teams_enabled", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "modified_at", Type: field.TypeTime},
 		{Name: "hackathon_state", Type: field.TypeUUID, Unique: true},
@@ -161,19 +162,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "hackathon_states_hackathons_state",
-				Columns:    []*schema.Column{HackathonStatesColumns[9]},
+				Columns:    []*schema.Column{HackathonStatesColumns[10]},
 				RefColumns: []*schema.Column{HackathonsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "hackathon_states_phases_current_state",
-				Columns:    []*schema.Column{HackathonStatesColumns[10]},
+				Columns:    []*schema.Column{HackathonStatesColumns[11]},
 				RefColumns: []*schema.Column{PhasesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "hackathon_states_users_modified_states",
-				Columns:    []*schema.Column{HackathonStatesColumns[11]},
+				Columns:    []*schema.Column{HackathonStatesColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
@@ -182,7 +183,7 @@ var (
 			{
 				Name:    "current_phase_id",
 				Unique:  true,
-				Columns: []*schema.Column{HackathonStatesColumns[10]},
+				Columns: []*schema.Column{HackathonStatesColumns[11]},
 			},
 		},
 	}

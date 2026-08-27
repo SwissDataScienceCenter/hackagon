@@ -101,6 +101,7 @@ Configuration state for a hackathon. One row per hackathon, pre-created on hacka
 | `set_team_preferences_enabled` | bool | yes | no | no | yes | Whether teams can set preferences for this hackathon. |
 | `create_project_submissions_enabled` | bool | yes | no | no | yes | Whether teams can create project submissions for this hackathon. |
 | `view_results_enabled` | bool | yes | no | no | yes | Whether results can be viewed for this hackathon. |
+| `view_teams_enabled` | bool | yes | no | no | yes | Whether team assignments are visible to all participants. |
 | `created_at` | time.Time | yes | no | yes | yes | Timestamp when the state was created. |
 | `modified_at` | time.Time | yes | no | no | yes | Timestamp of the last modification. |
 | `current_phase_id` | uuid.UUID | no | no | no | no | The phase an organizer has declared current. Nil means no current phase is set; purely for UI display. |

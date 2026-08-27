@@ -111,6 +111,20 @@ func (_c *HackathonStateCreate) SetNillableViewResultsEnabled(v *bool) *Hackatho
 	return _c
 }
 
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (_c *HackathonStateCreate) SetViewTeamsEnabled(v bool) *HackathonStateCreate {
+	_c.mutation.SetViewTeamsEnabled(v)
+	return _c
+}
+
+// SetNillableViewTeamsEnabled sets the "view_teams_enabled" field if the given value is not nil.
+func (_c *HackathonStateCreate) SetNillableViewTeamsEnabled(v *bool) *HackathonStateCreate {
+	if v != nil {
+		_c.SetViewTeamsEnabled(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *HackathonStateCreate) SetCreatedAt(v time.Time) *HackathonStateCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -261,6 +275,10 @@ func (_c *HackathonStateCreate) defaults() {
 		v := hackathonstate.DefaultViewResultsEnabled
 		_c.mutation.SetViewResultsEnabled(v)
 	}
+	if _, ok := _c.mutation.ViewTeamsEnabled(); !ok {
+		v := hackathonstate.DefaultViewTeamsEnabled
+		_c.mutation.SetViewTeamsEnabled(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := hackathonstate.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
@@ -294,6 +312,9 @@ func (_c *HackathonStateCreate) check() error {
 	}
 	if _, ok := _c.mutation.ViewResultsEnabled(); !ok {
 		return &ValidationError{Name: "view_results_enabled", err: errors.New(`ent: missing required field "HackathonState.view_results_enabled"`)}
+	}
+	if _, ok := _c.mutation.ViewTeamsEnabled(); !ok {
+		return &ValidationError{Name: "view_teams_enabled", err: errors.New(`ent: missing required field "HackathonState.view_teams_enabled"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "HackathonState.created_at"`)}
@@ -363,6 +384,10 @@ func (_c *HackathonStateCreate) createSpec() (*HackathonState, *sqlgraph.CreateS
 	if value, ok := _c.mutation.ViewResultsEnabled(); ok {
 		_spec.SetField(hackathonstate.FieldViewResultsEnabled, field.TypeBool, value)
 		_node.ViewResultsEnabled = value
+	}
+	if value, ok := _c.mutation.ViewTeamsEnabled(); ok {
+		_spec.SetField(hackathonstate.FieldViewTeamsEnabled, field.TypeBool, value)
+		_node.ViewTeamsEnabled = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(hackathonstate.FieldCreatedAt, field.TypeTime, value)
@@ -547,6 +572,18 @@ func (u *HackathonStateUpsert) UpdateViewResultsEnabled() *HackathonStateUpsert 
 	return u
 }
 
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (u *HackathonStateUpsert) SetViewTeamsEnabled(v bool) *HackathonStateUpsert {
+	u.Set(hackathonstate.FieldViewTeamsEnabled, v)
+	return u
+}
+
+// UpdateViewTeamsEnabled sets the "view_teams_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsert) UpdateViewTeamsEnabled() *HackathonStateUpsert {
+	u.SetExcluded(hackathonstate.FieldViewTeamsEnabled)
+	return u
+}
+
 // SetModifiedAt sets the "modified_at" field.
 func (u *HackathonStateUpsert) SetModifiedAt(v time.Time) *HackathonStateUpsert {
 	u.Set(hackathonstate.FieldModifiedAt, v)
@@ -709,6 +746,20 @@ func (u *HackathonStateUpsertOne) SetViewResultsEnabled(v bool) *HackathonStateU
 func (u *HackathonStateUpsertOne) UpdateViewResultsEnabled() *HackathonStateUpsertOne {
 	return u.Update(func(s *HackathonStateUpsert) {
 		s.UpdateViewResultsEnabled()
+	})
+}
+
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (u *HackathonStateUpsertOne) SetViewTeamsEnabled(v bool) *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetViewTeamsEnabled(v)
+	})
+}
+
+// UpdateViewTeamsEnabled sets the "view_teams_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertOne) UpdateViewTeamsEnabled() *HackathonStateUpsertOne {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateViewTeamsEnabled()
 	})
 }
 
@@ -1046,6 +1097,20 @@ func (u *HackathonStateUpsertBulk) SetViewResultsEnabled(v bool) *HackathonState
 func (u *HackathonStateUpsertBulk) UpdateViewResultsEnabled() *HackathonStateUpsertBulk {
 	return u.Update(func(s *HackathonStateUpsert) {
 		s.UpdateViewResultsEnabled()
+	})
+}
+
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (u *HackathonStateUpsertBulk) SetViewTeamsEnabled(v bool) *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.SetViewTeamsEnabled(v)
+	})
+}
+
+// UpdateViewTeamsEnabled sets the "view_teams_enabled" field to the value that was provided on create.
+func (u *HackathonStateUpsertBulk) UpdateViewTeamsEnabled() *HackathonStateUpsertBulk {
+	return u.Update(func(s *HackathonStateUpsert) {
+		s.UpdateViewTeamsEnabled()
 	})
 }
 

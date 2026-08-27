@@ -3096,6 +3096,7 @@ type HackathonStateMutation struct {
 	set_team_preferences_enabled       *bool
 	create_project_submissions_enabled *bool
 	view_results_enabled               *bool
+	view_teams_enabled                 *bool
 	created_at                         *time.Time
 	modified_at                        *time.Time
 	clearedFields                      map[string]struct{}
@@ -3430,6 +3431,42 @@ func (m *HackathonStateMutation) ResetViewResultsEnabled() {
 	m.view_results_enabled = nil
 }
 
+// SetViewTeamsEnabled sets the "view_teams_enabled" field.
+func (m *HackathonStateMutation) SetViewTeamsEnabled(b bool) {
+	m.view_teams_enabled = &b
+}
+
+// ViewTeamsEnabled returns the value of the "view_teams_enabled" field in the mutation.
+func (m *HackathonStateMutation) ViewTeamsEnabled() (r bool, exists bool) {
+	v := m.view_teams_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldViewTeamsEnabled returns the old "view_teams_enabled" field's value of the HackathonState entity.
+// If the HackathonState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HackathonStateMutation) OldViewTeamsEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldViewTeamsEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldViewTeamsEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldViewTeamsEnabled: %w", err)
+	}
+	return oldValue.ViewTeamsEnabled, nil
+}
+
+// ResetViewTeamsEnabled resets all changes to the "view_teams_enabled" field.
+func (m *HackathonStateMutation) ResetViewTeamsEnabled() {
+	m.view_teams_enabled = nil
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (m *HackathonStateMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -3690,7 +3727,7 @@ func (m *HackathonStateMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *HackathonStateMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.registrations_enabled != nil {
 		fields = append(fields, hackathonstate.FieldRegistrationsEnabled)
 	}
@@ -3708,6 +3745,9 @@ func (m *HackathonStateMutation) Fields() []string {
 	}
 	if m.view_results_enabled != nil {
 		fields = append(fields, hackathonstate.FieldViewResultsEnabled)
+	}
+	if m.view_teams_enabled != nil {
+		fields = append(fields, hackathonstate.FieldViewTeamsEnabled)
 	}
 	if m.created_at != nil {
 		fields = append(fields, hackathonstate.FieldCreatedAt)
@@ -3738,6 +3778,8 @@ func (m *HackathonStateMutation) Field(name string) (ent.Value, bool) {
 		return m.CreateProjectSubmissionsEnabled()
 	case hackathonstate.FieldViewResultsEnabled:
 		return m.ViewResultsEnabled()
+	case hackathonstate.FieldViewTeamsEnabled:
+		return m.ViewTeamsEnabled()
 	case hackathonstate.FieldCreatedAt:
 		return m.CreatedAt()
 	case hackathonstate.FieldModifiedAt:
@@ -3765,6 +3807,8 @@ func (m *HackathonStateMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldCreateProjectSubmissionsEnabled(ctx)
 	case hackathonstate.FieldViewResultsEnabled:
 		return m.OldViewResultsEnabled(ctx)
+	case hackathonstate.FieldViewTeamsEnabled:
+		return m.OldViewTeamsEnabled(ctx)
 	case hackathonstate.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case hackathonstate.FieldModifiedAt:
@@ -3821,6 +3865,13 @@ func (m *HackathonStateMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetViewResultsEnabled(v)
+		return nil
+	case hackathonstate.FieldViewTeamsEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetViewTeamsEnabled(v)
 		return nil
 	case hackathonstate.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -3918,6 +3969,9 @@ func (m *HackathonStateMutation) ResetField(name string) error {
 		return nil
 	case hackathonstate.FieldViewResultsEnabled:
 		m.ResetViewResultsEnabled()
+		return nil
+	case hackathonstate.FieldViewTeamsEnabled:
+		m.ResetViewTeamsEnabled()
 		return nil
 	case hackathonstate.FieldCreatedAt:
 		m.ResetCreatedAt()
