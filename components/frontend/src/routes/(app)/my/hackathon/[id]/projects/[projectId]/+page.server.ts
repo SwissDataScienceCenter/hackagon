@@ -3,21 +3,20 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { mayReviewProjects } from "$lib/server/hackathon/capabilities"
-import { reviewNotesFor } from "$lib/server/hackathon/projectReview"
+import { projectReviewFor } from "$lib/server/hackathon/projectReview"
 import { error } from "@sveltejs/kit"
 
 // Read-only: every action a participant has on a project — prefer, edit — lives
 // on a list page, and the organiser's decisions live under Manage Projects (see
 // $lib/navigation's manageNav), so this route only has to decide who may read it.
 //
-// For its proposer, this is where a rejection is explained: the reason an
-// organiser typed comes back as a review note, which is why the load fetches
-// them.
+// For its proposer, this is where a rejection is explained: who turned it down
+// and the reason they typed, which is why the load fetches the review record.
 export const load: PageServerLoad = async (event) => {
   // No RPC for the project itself: the layout's `hackathon.get` already returns
   // every project at every status, plus the tracks and the members that name the
-  // proposer. Same source the Projects page reads. Only the review notes need a
-  // call of their own — see `reviewNotesFor`.
+  // proposer. Same source the Projects page reads. Only the review record needs
+  // a call of its own — see `projectReviewFor`.
   const { hackathon, myMembership } = await event.parent()
 
   const project = hackathon.projects.find(
@@ -115,10 +114,10 @@ export const load: PageServerLoad = async (event) => {
       createdAt: project.createdAt,
       modifiedAt: project.modifiedAt,
     },
-    // Only ever non-empty for a rejected project, and by then only its proposer
-    // and an organiser have got past the gate above — so no separate visibility
-    // rule is needed for the notes themselves.
-    reviewNotes: await reviewNotesFor(
+    // Only ever set for a rejected project, and by then only its proposer and an
+    // organiser have got past the gate above — so no separate visibility rule is
+    // needed for the review record itself.
+    review: await projectReviewFor(
       requireGrpc(event.locals.grpc),
       project.id,
       project.status,

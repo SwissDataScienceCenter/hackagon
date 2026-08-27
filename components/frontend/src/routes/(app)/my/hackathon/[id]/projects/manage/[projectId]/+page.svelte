@@ -1,6 +1,6 @@
 <script lang="ts">
     import ProjectDetail from '$lib/components/hackathon/ProjectDetail.svelte';
-    import ProjectReviewNotes from '$lib/components/hackathon/ProjectReviewNotes.svelte';
+    import ProjectReview from '$lib/components/hackathon/ProjectReview.svelte';
     import type { ActionData, PageData } from './$types';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -20,8 +20,8 @@
     backHref={`/my/hackathon/${data.hackathonId}/projects/manage`}
     backLabel="Back to Manage Projects"
 >
-    {#if data.reviewNotes.length > 0}
-        <ProjectReviewNotes notes={data.reviewNotes} />
+    {#if data.review}
+        <ProjectReview review={data.review} />
     {/if}
 
     {#if data.mayReject}
@@ -38,7 +38,7 @@
                          box reading as a blocked form.
 
                          A plain textarea rather than the MarkdownEditor the
-                         description uses: `ProjectReviewNotes` renders a note as
+                         description uses: `ProjectReview` renders a reason as
                          plain text, so offering markdown here would promise
                          formatting that never arrives. -->
                     <label class="field-label max-w-[52ch]">

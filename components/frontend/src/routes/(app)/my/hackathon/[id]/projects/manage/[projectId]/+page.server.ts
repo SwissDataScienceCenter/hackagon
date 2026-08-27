@@ -3,7 +3,7 @@ import { requireGrpc } from "$lib/server/grpc/client"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayReviewProjects } from "$lib/server/hackathon/capabilities"
-import { reviewNotesFor } from "$lib/server/hackathon/projectReview"
+import { projectReviewFor } from "$lib/server/hackathon/projectReview"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -18,8 +18,8 @@ import { ClientError, Status } from "nice-grpc-common"
 export const load: PageServerLoad = async (event) => {
   // No RPC for the project itself: the layout's `hackathon.get` already returns
   // every project at every status, plus the tracks and the members that name the
-  // proposer. Only the review notes need a call of their own — see
-  // `reviewNotesFor`.
+  // proposer. Only the review record needs a call of its own — see
+  // `projectReviewFor`.
   const { hackathon, myMembership } = await event.parent()
 
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
@@ -64,7 +64,9 @@ export const load: PageServerLoad = async (event) => {
       createdAt: project.createdAt,
       modifiedAt: project.modifiedAt,
     },
-    reviewNotes: await reviewNotesFor(
+    // Undefined for anything but a rejected project, so the page renders the
+    // whole section on its presence.
+    review: await projectReviewFor(
       requireGrpc(event.locals.grpc),
       project.id,
       project.status,
@@ -85,7 +87,8 @@ export const actions: Actions = {
   // The note is not stored on the project: `Reject` writes it as a
   // `ProjectComment` — one reading "Project rejected" whatever happens, plus a
   // second carrying this text when it is non-empty (`project_service.go:295-321`).
-  // Both come back through `reviewNotesFor` and are shown to the proposer.
+  // `projectReviewFor` turns the first into the attribution line and this one
+  // into the reason under it, both shown to the proposer.
   //
   // Empty is a legitimate answer and is sent as no comment at all rather than as
   // an empty one, so a rejection without a reason leaves one note instead of two.
@@ -125,8 +128,9 @@ export const actions: Actions = {
 
     // No redirect, deliberately — unlike Approve on the queue, which moves a row
     // and is done. SvelteKit re-runs `load`, so this page comes back badged
-    // Rejected with the note the organiser just wrote showing under it: they see
-    // what the proposer will see. Reconsidering is one click away on the queue.
+    // Rejected with the reason the organiser just wrote showing under it: they
+    // see what the proposer will see. Reconsidering is one click away on the
+    // queue.
     return { rejected: true }
   },
 }
