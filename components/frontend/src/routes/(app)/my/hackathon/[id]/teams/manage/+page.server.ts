@@ -4,12 +4,22 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { participantRowFor } from "$lib/server/hackathon/membership"
+import { listAnswers } from "$lib/server/hackathon/questions"
+import {
+  answerLegend,
+  questionRows,
+  type AnswerLegend,
+} from "$lib/server/hackathon/registrationForm"
 import { error, fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
 export const load: PageServerLoad = async (event) => {
   const { hackathon, myMembership } = await event.parent()
-  const { team, project } = requireGrpc(event.locals.grpc)
+  const {
+    team,
+    project,
+    hackathon: hackathonClient,
+  } = requireGrpc(event.locals.grpc)
 
   const isAdmin = (event.locals.platformUser?.roles ?? []).includes(
     GlobalRole.GLOBAL_ROLE_ADMIN,
@@ -54,6 +64,24 @@ export const load: PageServerLoad = async (event) => {
   )
   const numberByProjectId = new Map(rowProjects.map((p, i) => [p.id, i + 1]))
 
+  // What people said about themselves on the way in, as codes short enough to
+  // sit beside a name. Fixed-list questions only — see `answerLegend`.
+  //
+  // Decoration, and fetched as such: the page assigns teams with or without it,
+  // so a refusal leaves an empty legend and no ticks rather than a failed page.
+  // That is reachable — a global admin passes the gate above while holding no
+  // membership, which is what `ListQuestions` answers on.
+  let legend: AnswerLegend = { questions: [], codesByParticipant: {} }
+  try {
+    const [questions, answers] = await Promise.all([
+      hackathonClient.listQuestions({ hackathonId: event.params.id }),
+      listAnswers(hackathonClient, event.params.id),
+    ])
+    legend = answerLegend(questionRows(questions.questions), answers)
+  } catch {
+    // Left empty on purpose.
+  }
+
   // Inverted: which project(s) a given user prefers, shown on their row
   // rather than on the project row.
   const preferredByUser = new Map<string, { id: string; title: string }[]>()
@@ -78,6 +106,9 @@ export const load: PageServerLoad = async (event) => {
     return {
       id,
       name,
+      // Keyed by question so the page can show the ticked ones and nothing
+      // else. Empty for anyone who answered no fixed-list question.
+      codes: legend.codesByParticipant[id] ?? {},
       preferredTitles: preferred.map((p) => p.title),
       preferredProjectIds: preferred.map((p) => p.id),
       preferredNumbers: preferred
@@ -120,6 +151,10 @@ export const load: PageServerLoad = async (event) => {
     hackathonId: event.params.id,
     unassigned,
     projectRows,
+    // Every fixed-list question, lettered — not only the ones an organizer has
+    // chosen to show. Which of them to show is a preference of one person at
+    // one screen, so it is kept in their browser and never reaches here.
+    answerQuestions: legend.questions,
     // Whether to explain the organiser's own absence from the pool. They hold no
     // participant row unless they joined the hackathon the ordinary way, and
     // `unassigned` is built from participant rows — so an organiser looking for

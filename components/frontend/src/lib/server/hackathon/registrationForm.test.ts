@@ -12,6 +12,7 @@ import {
   readQuestionEcho,
   answerDistribution,
   answersByQuestion,
+  answerLegend,
 } from "./registrationForm"
 
 // QuestionType numeric values, stated rather than imported so a renumbering in
@@ -765,5 +766,137 @@ describe("answeredParticipantIds", () => {
         { questionId: "gone", participantId: "u1", textValue: "x" },
       ]),
     ).toEqual(new Set(["u1"]))
+  })
+})
+
+describe("answerLegend", () => {
+  const row = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: "q1",
+    key: "experience",
+    label: "Experience level",
+    kind: "enum" as const,
+    mandatory: false,
+    order: 1,
+    options: ["Beginner", "Intermediate", "Advanced"],
+    publicAnswers: false,
+    answerCount: 0,
+    ...over,
+  })
+
+  it("letters the questions in order and numbers each one's options", () => {
+    const { questions } = answerLegend(
+      [
+        row(),
+        row({
+          id: "q2",
+          key: "track",
+          label: "Track",
+          options: ["Data", "Web"],
+        }),
+      ],
+      [],
+    )
+
+    expect(questions).toEqual([
+      {
+        id: "q1",
+        label: "Experience level",
+        letter: "A",
+        options: [
+          { code: "A1", label: "Beginner" },
+          { code: "A2", label: "Intermediate" },
+          { code: "A3", label: "Advanced" },
+        ],
+      },
+      {
+        id: "q2",
+        label: "Track",
+        letter: "B",
+        options: [
+          { code: "B1", label: "Data" },
+          { code: "B2", label: "Web" },
+        ],
+      },
+    ])
+  })
+
+  it("leaves out anything that cannot be coded", () => {
+    const { questions } = answerLegend(
+      [
+        row({ id: "text", kind: "text", options: [] }),
+        row({ id: "coc", kind: "bool", options: [] }),
+        row({ id: "empty", options: [] }),
+        row({ id: "q1" }),
+      ],
+      [],
+    )
+
+    expect(questions.map((q) => q.id)).toEqual(["q1"])
+    expect(questions.map((q) => q.letter)).toEqual(["A"])
+  })
+
+  it("keeps a letter with its question when an earlier one is not shown", () => {
+    // The point of lettering every enum question rather than only the shown
+    // ones: `q2` is B whichever of the two an organizer decides to display.
+    const { questions } = answerLegend([row(), row({ id: "q2" })], [])
+
+    expect(questions.find((q) => q.id === "q2")?.letter).toBe("B")
+  })
+
+  it("codes each person's answer, grouped by answerer", () => {
+    const { codesByParticipant } = answerLegend(
+      [row(), row({ id: "q2", options: ["Data", "Web"] })],
+      [
+        { questionId: "q1", participantId: "alice", textValue: "Advanced" },
+        { questionId: "q2", participantId: "alice", textValue: "Web" },
+        { questionId: "q1", participantId: "bob", textValue: "Beginner" },
+      ],
+    )
+
+    expect(codesByParticipant).toEqual({
+      alice: {
+        q1: { code: "A3", label: "Advanced" },
+        q2: { code: "B2", label: "Web" },
+      },
+      bob: { q1: { code: "A1", label: "Beginner" } },
+    })
+  })
+
+  it("has nothing for someone who did not answer", () => {
+    const { codesByParticipant } = answerLegend([row()], [])
+
+    expect(codesByParticipant).toEqual({})
+  })
+
+  it("ignores answers to questions that carry no code", () => {
+    const { codesByParticipant } = answerLegend(
+      [row(), row({ id: "coc", kind: "bool", options: [] })],
+      [
+        { questionId: "coc", participantId: "alice", boolValue: true },
+        { questionId: "gone", participantId: "alice", textValue: "whatever" },
+      ],
+    )
+
+    expect(codesByParticipant).toEqual({})
+  })
+
+  it("marks an answer that is no longer one of the options", () => {
+    const { codesByParticipant } = answerLegend(
+      [row()],
+      [{ questionId: "q1", participantId: "alice", textValue: "Wizard" }],
+    )
+
+    expect(codesByParticipant.alice?.q1).toEqual({
+      code: "A?",
+      label: "Wizard",
+    })
+  })
+
+  it("keeps lettering past Z", () => {
+    const questions = Array.from({ length: 27 }, (_, i) =>
+      row({ id: `q${i}`, options: ["Yes"] }),
+    )
+
+    expect(answerLegend(questions, []).questions.at(-1)?.letter).toBe("AA")
   })
 })
