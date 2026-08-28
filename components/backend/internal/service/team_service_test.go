@@ -106,6 +106,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Test project description",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: projectResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			req := &teamMsgs.CreateRequest{
 				Name:        "Dream Team",
@@ -162,7 +166,62 @@ var _ = Describe("TeamService", func() {
 
 			_, err = teamClient.Create(ctx, req)
 			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.NotFound))
+		})
 
+		It("returns INVALID_ARGUMENT for proposed project", func() {
+			ownerID := "team-create-proposed"
+			_, err := dbClient.User.Create().
+				SetKeycloakID(ownerID).
+				SetUsername("team-create-proposed").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = enf.AddGlobalRole(ownerID, middleware.HackathonOrganizer)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken(ownerID)
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			now := time.Now()
+			hackathonResp, err := hackathonClient.Create(ctx, &msgs.CreateRequest{
+				Name:        "Team Proposed Hackathon",
+				Description: testutils.StringPtr("A test hackathon"),
+				Visibility:  ents.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:    timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:      timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Enable propose_projects capability (disabled by default)
+			_, err = hackathonClient.SetCapabilities(ctx, &msgs.SetCapabilitiesRequest{
+				HackathonId: hackathonResp.GetHackathonId(),
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: ents.Capability_CAPABILITY_PROPOSE_PROJECTS, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Propose a project — it is proposed, not approved.
+			projectResp, err := projectClient.Propose(ctx, &projectMsgs.ProposeRequest{
+				HackathonId: hackathonResp.GetHackathonId(),
+				Title:       "Proposed Project",
+				Description: "Not yet approved",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Attempt to create a team for the proposed project.
+			req := &teamMsgs.CreateRequest{
+				Name:      "Dream Team",
+				ProjectId: projectResp.GetProjectId(),
+			}
+
+			_, err = teamClient.Create(ctx, req)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
 		})
 	})
 	Describe("Get", func() {
@@ -207,6 +266,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hackathonID,
 				Title:       "Get Test Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -328,6 +391,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hackathonID,
 				Title:       "List Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -458,6 +525,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Edit Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -594,6 +665,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			teamID = uuid.NewString()
 			resp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
@@ -722,6 +797,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Assign Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -868,6 +947,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Remove Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1026,6 +1109,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 			projectID = pResp.GetProjectId()
 
 			teamID = uuid.NewString()
@@ -1177,6 +1264,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 			projectID := pResp.GetProjectId()
 
 			teamID := uuid.NewString()
@@ -1314,6 +1405,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 			projectID = pResp.GetProjectId()
 
 			teamID = uuid.NewString()
@@ -1401,6 +1496,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Empty Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1544,6 +1643,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 			projectID = pResp.GetProjectId()
 
 			teamID = uuid.NewString()
@@ -1636,6 +1739,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Empty List Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1772,6 +1879,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Bulk Assign Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			projectID = pResp.GetProjectId()
@@ -1946,6 +2057,10 @@ var _ = Describe("TeamService", func() {
 				Description: "Desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: p2Resp.GetProjectId(),
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			t2Resp, err := teamClient.Create(ctx, &teamMsgs.CreateRequest{
 				Name:      "Other Team",
@@ -2049,6 +2164,10 @@ var _ = Describe("TeamService", func() {
 				HackathonId: hResp.GetHackathonId(),
 				Title:       "Bulk Remove Project",
 				Description: "Desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = projectClient.Approve(ctx, &projectMsgs.ApproveRequest{
+				ProjectId: pResp.GetProjectId(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			projectID = pResp.GetProjectId()
