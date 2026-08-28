@@ -13,6 +13,20 @@ describe("AppFooter", () => {
     expect(screen.getByText(APP_VERSION)).toBeInTheDocument()
   })
 
+  it("never reports the placeholder version", () => {
+    render(AppFooter)
+
+    // `v0.0.0` is what `$lib/version` falls back to when Vite's `define` is
+    // absent, and what the old `declaredVersion()` produced when the Nix
+    // fileset omitted `VERSION` — every deployed image read `v0.0.0-dirty` and
+    // the assertion above passed anyway. Pin the fallback out so a build that
+    // cannot read `VERSION` fails here instead of shipping.
+    //
+    // Only the placeholder is forbidden, not the `-dirty` suffix: a working
+    // tree with edits in it is genuinely dirty, and saying so is the point.
+    expect(APP_VERSION).not.toMatch(/^v0\.0\.0(\D|$)/)
+  })
+
   it("links every off-site destination absolutely, and safely", () => {
     const { container } = render(AppFooter)
 
