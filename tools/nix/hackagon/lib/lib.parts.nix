@@ -27,6 +27,8 @@ let
       rootDir,
       rootFileset,
       buildSystem,
+      # The git revision the flake was evaluated from, or null when unknown.
+      rev ? null,
     }:
     let
       commonEx = common // {
@@ -63,6 +65,12 @@ let
       common = commonEx;
 
       inherit component fileset;
+
+      # The full revision, and the short form the UI shows. Consumers must cope
+      # with null: an image built from an unknown revision should say nothing
+      # rather than claim a wrong one.
+      inherit rev;
+      shortRev = if rev == null then null else builtins.substring 0 7 rev;
     };
 
 in
