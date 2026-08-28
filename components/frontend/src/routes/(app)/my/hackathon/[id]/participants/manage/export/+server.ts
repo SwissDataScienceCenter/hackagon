@@ -3,6 +3,7 @@ import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hac
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { requireGrpc } from "$lib/server/grpc/client"
+import { csvFilename, csvRow } from "$lib/utils/csv"
 import { viewerMembership } from "$lib/server/hackathon/membership"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
@@ -21,33 +22,6 @@ import { ClientError, Status } from "nice-grpc-common"
  * hackathon's, and a hackathon-dependent name cannot sit in a static route
  * segment. The anchor carries a bare `download` and lets this header name it.
  */
-
-/** RFC 4180: quote anything holding a delimiter, a quote or a newline. */
-function csvField(value: string): string {
-  if (!/[",\r\n]/.test(value)) return value
-
-  return `"${value.replaceAll('"', '""')}"`
-}
-
-/**
- * Values go out exactly as stored — no apostrophe in front of a name starting
- * `=`, `+`, `-` or `@`. That would defuse a spreadsheet's formula evaluation at
- * the cost of corrupting the actual name, and the consumer here is a mailing
- * tool, which evaluates nothing. UTF-8, and no BOM for the same reason.
- */
-function csvRow(fields: string[]): string {
-  return fields.map(csvField).join(",") + "\r\n"
-}
-
-/** `AI Hack 2026` -> `ai-hack-2026`, so downloads from two hackathons differ. */
-function slugify(name: string): string {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-
-  return slug === "" ? "hackathon" : slug
-}
 
 export const GET: RequestHandler = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
@@ -116,7 +90,7 @@ export const GET: RequestHandler = async (event) => {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${slugify(h.name)}-participants.csv"`,
+      "Content-Disposition": `attachment; filename="${csvFilename(h.name, "participants")}"`,
       // The roster changes with every approval and removal; a cached copy of the
       // one from before them is worse than a second round trip.
       "Cache-Control": "no-store",

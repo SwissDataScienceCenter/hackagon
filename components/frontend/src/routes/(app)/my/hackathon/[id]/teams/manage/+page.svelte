@@ -1,7 +1,19 @@
 <script lang="ts">
     import { enhance } from '$app/forms';
-    import { Check, Eraser, GripVertical, Pencil, Sparkles, Trash2, X } from 'lucide-svelte';
+    import { resolve } from '$app/paths';
+    import {
+        Check,
+        Download,
+        Eraser,
+        GripVertical,
+        Pencil,
+        Sparkles,
+        Trash2,
+        Upload,
+        X
+    } from 'lucide-svelte';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
+    import { applyAssignmentCsv, type ImportResult } from '$lib/utils/teamAssignmentCsv';
     import { initialsOf, suggestDistribution } from '$lib/utils/teamDistribution';
     import type { ActionData, PageData } from './$types';
 
@@ -111,6 +123,8 @@
         teams = fromServer(data.projectRows);
         invented = 0;
         editingKey = null;
+        // The summary describes a workspace that no longer exists.
+        importResult = null;
     });
 
     let draggedId: string | null = $state(null);
@@ -120,6 +134,9 @@
 
     let saveForm: HTMLFormElement;
     let savePayload: HTMLInputElement;
+
+    /** What the last uploaded file did, until it is dismissed or superseded. */
+    let importResult: ImportResult | null = $state(null);
 
     // Only one team's name is editable at a time.
     let editingKey: string | null = $state(null);
@@ -299,7 +316,77 @@
     function discard() {
         teams = fromServer(data.projectRows);
         editingKey = null;
+        importResult = null;
     }
+
+    /**
+     * Read an edited assignment back in.
+     *
+     * It lands on the workspace like any other edit — nothing is written until
+     * Save, so the change summary and Discard both still apply to it. The file
+     * is applied to the workspace **as it stands**, not to the state it was
+     * downloaded from, which is what the confirmation is about.
+     */
+    async function importFile(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        // Cleared so that picking the same file again still fires a change.
+        input.value = '';
+        if (file === undefined || pending) return;
+
+        if (
+            changes.total > 0 &&
+            !confirm('Apply this file on top of your unsaved changes?')
+        ) {
+            return;
+        }
+
+        const result = applyAssignmentCsv(
+            await file.text(),
+            {
+                people: [...peopleById.values()],
+                projects: projectRows.map((p) => ({ id: p.id, title: p.title })),
+                teams
+            },
+            { max: TEAM_MAX }
+        );
+
+        importResult = result;
+        if (result.read > 0 || result.created.length > 0) {
+            teams = result.teams;
+            editingKey = null;
+        }
+    }
+
+    /** The import's outcome as sentences, most important first. */
+    const importSummary = $derived.by(() => {
+        const r = importResult;
+        if (r === null) return [];
+
+        const lines: string[] = [];
+        if (r.read === 0) {
+            lines.push('Nothing was applied.');
+        } else {
+            const did: string[] = [];
+            if (r.moved > 0) did.push(`${r.moved} ${r.moved === 1 ? 'move' : 'moves'}`);
+            if (r.created.length > 0) did.push(`${r.created.length} new`);
+            lines.push(
+                `Read ${r.read} ${r.read === 1 ? 'row' : 'rows'}` +
+                    (did.length > 0 ? `: ${did.join(', ')}.` : ', changing nothing.')
+            );
+        }
+        if (r.absent > 0) {
+            lines.push(
+                `${r.absent} ${r.absent === 1 ? 'person was' : 'people were'} not in the file, ` +
+                    'and were left as they are.'
+            );
+        }
+        if (r.oversized.length > 0) {
+            lines.push(`Now over ${TEAM_MAX}: ${r.oversized.join(', ')}.`);
+        }
+
+        return lines;
+    });
 
     function save() {
         savePayload.value = JSON.stringify(
@@ -447,6 +534,38 @@
             Clear all
         </button>
 
+        <!-- The escape hatch, for when a hundred people is more dragging than
+             anyone wants to do. The file is this page in a spreadsheet; what
+             comes back lands on the workspace and still waits for Save. -->
+        <a
+            href={resolve(`/my/hackathon/${hackathonId}/teams/manage/export`)}
+            class="btn btn-sm btn-ghost no-underline"
+            title="Everyone on this page, with the answers and preferences shown here"
+            download
+        >
+            <Download class="size-3" />
+            Download CSV
+        </a>
+        <!-- The rules, where somebody about to use it will meet them, rather
+             than as a paragraph everyone else has to read past. -->
+        <label
+            class="btn btn-sm btn-ghost cursor-pointer"
+            class:opacity-50={pending}
+            title={'Edit the project and team columns and upload the file back. ' +
+                'A blank team unassigns; anyone not in the file is left as they are; ' +
+                'nothing is deleted, and a renamed team reads as a new one.'}
+        >
+            <Upload class="size-3" />
+            Upload CSV
+            <input
+                type="file"
+                accept=".csv,text/csv"
+                class="hidden"
+                disabled={pending}
+                onchange={importFile}
+            />
+        </label>
+
         <div class="ml-auto flex items-center gap-3">
             {#if changes.total > 0}
                 <span class="text-xs text-ink-2">Unsaved: {changes.summary}</span>
@@ -471,6 +590,43 @@
             </button>
         </div>
     </div>
+
+    {#if importResult}
+        {@const bad = importResult.problems.length > 0}
+        <div
+            class="flex flex-col gap-2 rounded-card border px-3 py-2 text-xs {bad
+                ? 'border-warning bg-warning/10'
+                : 'border-success bg-success/10'}"
+            role="status"
+        >
+            <div class="flex items-start gap-3">
+                <p class="m-0 flex-1 {bad ? 'text-warning-ink' : 'text-success-ink'}">
+                    {importSummary.join(' ')}
+                </p>
+                <button
+                    type="button"
+                    class="shrink-0 text-ink-3 hover:text-ink"
+                    aria-label="Dismiss"
+                    onclick={() => (importResult = null)}
+                >
+                    <X class="size-3" />
+                </button>
+            </div>
+            {#if importResult.problems.length > 0}
+                <!-- Capped, because a file with the wrong id column has one
+                     problem per row and a hundred of them says nothing the
+                     first five did not. -->
+                <ul class="m-0 flex list-disc flex-col gap-0.5 pl-4 text-warning-ink">
+                    {#each importResult.problems.slice(0, 5) as problem (problem)}
+                        <li>{problem}</li>
+                    {/each}
+                    {#if importResult.problems.length > 5}
+                        <li>and {importResult.problems.length - 5} more.</li>
+                    {/if}
+                </ul>
+            {/if}
+        </div>
+    {/if}
 
     <!-- Only the fixed-list questions reach here: a code is a position in a list
          of options, so free text and tick-boxes have none. -->
