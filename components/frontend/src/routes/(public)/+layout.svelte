@@ -14,5 +14,5 @@
     <main class="flex-1">
         {@render children()}
     </main>
-    <AppFooter />
+    <AppFooter buildCommit={data.buildCommit ?? null} />
 </div>

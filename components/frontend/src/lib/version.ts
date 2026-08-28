@@ -17,3 +17,30 @@
  */
 export const APP_VERSION: string =
   typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "v0.0.0"
+
+/** A git object name: seven to forty lowercase hex digits. */
+const COMMIT_PATTERN = /^[0-9a-f]{7,40}$/
+
+/**
+ * What the footer shows, given the commit the running image reports.
+ *
+ * A deployed image cannot stamp its own commit at build time — the Nix sandbox
+ * builds from a fileset with no git history — so the image carries it as
+ * `HACKAGON_BUILD_COMMIT` instead and the root layout load hands it down. That
+ * value wins over `APP_VERSION`, which only knows what the build could see.
+ *
+ * In dev nothing sets the variable and `APP_VERSION` already carries the local
+ * commit, so it stands unchanged.
+ */
+export function displayVersion(buildCommit?: string | null): string {
+  const commit = buildCommit?.trim().toLowerCase()
+
+  // Ignore anything that is not a commit hash rather than rendering it. The
+  // value crosses a deployment boundary, and a footer showing a plausible but
+  // wrong identifier is worse than one honestly limited to the build stamp.
+  if (!commit || !COMMIT_PATTERN.test(commit)) return APP_VERSION
+
+  // Keep the declared version, drop any build-time commit or `-dirty` suffix:
+  // the runtime commit supersedes it.
+  return `${APP_VERSION.split("+")[0]}+${commit}`
+}

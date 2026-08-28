@@ -27,6 +27,22 @@ describe("AppFooter", () => {
     expect(APP_VERSION).not.toMatch(/^v0\.0\.0(\D|$)/)
   })
 
+  it("prefers the commit the running image reports", () => {
+    render(AppFooter, { props: { buildCommit: "abc1234" } })
+
+    // What a deployed image supplies through `HACKAGON_BUILD_COMMIT`. The
+    // build-time stamp cannot know it, so the runtime value has to win.
+    expect(screen.getByText(/\+abc1234$/)).toBeInTheDocument()
+  })
+
+  it("ignores a runtime commit that is not a commit", () => {
+    render(AppFooter, { props: { buildCommit: "latest" } })
+
+    // The value crosses a deployment boundary. Rendering whatever arrives would
+    // put a plausible-looking lie in the one field people quote in bug reports.
+    expect(screen.getByText(APP_VERSION)).toBeInTheDocument()
+  })
+
   it("links every off-site destination absolutely, and safely", () => {
     const { container } = render(AppFooter)
 
