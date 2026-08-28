@@ -359,6 +359,19 @@
 - [hackathon/messages/team_svc/assign_user_response.proto](#hackathon_messages_team_svc_assign_user_response-proto)
     - [AssignUserResponse](#hackathon-messages-team_svc-AssignUserResponse)
   
+- [hackathon/messages/team_svc/bulk_assign_users_request.proto](#hackathon_messages_team_svc_bulk_assign_users_request-proto)
+    - [BulkAssignUsersRequest](#hackathon-messages-team_svc-BulkAssignUsersRequest)
+    - [BulkAssignUsersRequest.Assignment](#hackathon-messages-team_svc-BulkAssignUsersRequest-Assignment)
+  
+- [hackathon/messages/team_svc/bulk_assign_users_response.proto](#hackathon_messages_team_svc_bulk_assign_users_response-proto)
+    - [BulkAssignUsersResponse](#hackathon-messages-team_svc-BulkAssignUsersResponse)
+  
+- [hackathon/messages/team_svc/bulk_remove_users_request.proto](#hackathon_messages_team_svc_bulk_remove_users_request-proto)
+    - [BulkRemoveUsersRequest](#hackathon-messages-team_svc-BulkRemoveUsersRequest)
+  
+- [hackathon/messages/team_svc/bulk_remove_users_response.proto](#hackathon_messages_team_svc_bulk_remove_users_response-proto)
+    - [BulkRemoveUsersResponse](#hackathon-messages-team_svc-BulkRemoveUsersResponse)
+  
 - [hackathon/messages/team_svc/create_request.proto](#hackathon_messages_team_svc_create_request-proto)
     - [CreateRequest](#hackathon-messages-team_svc-CreateRequest)
   
@@ -4437,6 +4450,138 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_team_svc_bulk_assign_users_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/bulk_assign_users_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-BulkAssignUsersRequest"></a>
+
+### BulkAssignUsersRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| assignments | [BulkAssignUsersRequest.Assignment](#hackathon-messages-team_svc-BulkAssignUsersRequest-Assignment) | repeated |  |
+
+
+
+
+
+
+<a name="hackathon-messages-team_svc-BulkAssignUsersRequest-Assignment"></a>
+
+### BulkAssignUsersRequest.Assignment
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user_id | [string](#string) |  |  |
+| team_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_bulk_assign_users_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/bulk_assign_users_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-BulkAssignUsersResponse"></a>
+
+### BulkAssignUsersResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_bulk_remove_users_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/bulk_remove_users_request.proto
+
+
+
+<a name="hackathon-messages-team_svc-BulkRemoveUsersRequest"></a>
+
+### BulkRemoveUsersRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+| user_ids | [string](#string) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_team_svc_bulk_remove_users_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/team_svc/bulk_remove_users_response.proto
+
+
+
+<a name="hackathon-messages-team_svc-BulkRemoveUsersResponse"></a>
+
+### BulkRemoveUsersResponse
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_team_svc_create_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -5496,6 +5641,8 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | Delete | [messages.team_svc.DeleteRequest](#hackathon-messages-team_svc-DeleteRequest) | [messages.team_svc.DeleteResponse](#hackathon-messages-team_svc-DeleteResponse) |  |
 | AssignUser | [messages.team_svc.AssignUserRequest](#hackathon-messages-team_svc-AssignUserRequest) | [messages.team_svc.AssignUserResponse](#hackathon-messages-team_svc-AssignUserResponse) |  |
 | RemoveUser | [messages.team_svc.RemoveUserRequest](#hackathon-messages-team_svc-RemoveUserRequest) | [messages.team_svc.RemoveUserResponse](#hackathon-messages-team_svc-RemoveUserResponse) |  |
+| BulkAssignUsers | [messages.team_svc.BulkAssignUsersRequest](#hackathon-messages-team_svc-BulkAssignUsersRequest) | [messages.team_svc.BulkAssignUsersResponse](#hackathon-messages-team_svc-BulkAssignUsersResponse) |  |
+| BulkRemoveUsers | [messages.team_svc.BulkRemoveUsersRequest](#hackathon-messages-team_svc-BulkRemoveUsersRequest) | [messages.team_svc.BulkRemoveUsersResponse](#hackathon-messages-team_svc-BulkRemoveUsersResponse) |  |
 | CreateSubmission | [messages.team_svc.CreateSubmissionRequest](#hackathon-messages-team_svc-CreateSubmissionRequest) | [messages.team_svc.CreateSubmissionResponse](#hackathon-messages-team_svc-CreateSubmissionResponse) |  |
 | GetSubmission | [messages.team_svc.GetSubmissionRequest](#hackathon-messages-team_svc-GetSubmissionRequest) | [messages.team_svc.GetSubmissionResponse](#hackathon-messages-team_svc-GetSubmissionResponse) |  |
 | ListSubmissions | [messages.team_svc.ListSubmissionsRequest](#hackathon-messages-team_svc-ListSubmissionsRequest) | [messages.team_svc.ListSubmissionsResponse](#hackathon-messages-team_svc-ListSubmissionsResponse) |  |

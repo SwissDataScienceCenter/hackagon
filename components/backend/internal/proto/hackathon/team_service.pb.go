@@ -25,7 +25,7 @@ var File_hackathon_team_service_proto protoreflect.FileDescriptor
 
 const file_hackathon_team_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1chackathon/team_service.proto\x12\thackathon\x1a5hackathon/messages/team_svc/assign_user_request.proto\x1a6hackathon/messages/team_svc/assign_user_response.proto\x1a0hackathon/messages/team_svc/create_request.proto\x1a1hackathon/messages/team_svc/create_response.proto\x1a;hackathon/messages/team_svc/create_submission_request.proto\x1a<hackathon/messages/team_svc/create_submission_response.proto\x1a0hackathon/messages/team_svc/delete_request.proto\x1a1hackathon/messages/team_svc/delete_response.proto\x1a.hackathon/messages/team_svc/edit_request.proto\x1a/hackathon/messages/team_svc/edit_response.proto\x1a=hackathon/messages/team_svc/finalize_submission_request.proto\x1a>hackathon/messages/team_svc/finalize_submission_response.proto\x1a-hackathon/messages/team_svc/get_request.proto\x1a.hackathon/messages/team_svc/get_response.proto\x1a8hackathon/messages/team_svc/get_submission_request.proto\x1a9hackathon/messages/team_svc/get_submission_response.proto\x1a.hackathon/messages/team_svc/list_request.proto\x1a/hackathon/messages/team_svc/list_response.proto\x1a:hackathon/messages/team_svc/list_submissions_request.proto\x1a;hackathon/messages/team_svc/list_submissions_response.proto\x1a5hackathon/messages/team_svc/remove_user_request.proto\x1a6hackathon/messages/team_svc/remove_user_response.proto2\xc4\t\n" +
+	"\x1chackathon/team_service.proto\x12\thackathon\x1a5hackathon/messages/team_svc/assign_user_request.proto\x1a6hackathon/messages/team_svc/assign_user_response.proto\x1a;hackathon/messages/team_svc/bulk_assign_users_request.proto\x1a<hackathon/messages/team_svc/bulk_assign_users_response.proto\x1a;hackathon/messages/team_svc/bulk_remove_users_request.proto\x1a<hackathon/messages/team_svc/bulk_remove_users_response.proto\x1a0hackathon/messages/team_svc/create_request.proto\x1a1hackathon/messages/team_svc/create_response.proto\x1a;hackathon/messages/team_svc/create_submission_request.proto\x1a<hackathon/messages/team_svc/create_submission_response.proto\x1a0hackathon/messages/team_svc/delete_request.proto\x1a1hackathon/messages/team_svc/delete_response.proto\x1a.hackathon/messages/team_svc/edit_request.proto\x1a/hackathon/messages/team_svc/edit_response.proto\x1a=hackathon/messages/team_svc/finalize_submission_request.proto\x1a>hackathon/messages/team_svc/finalize_submission_response.proto\x1a-hackathon/messages/team_svc/get_request.proto\x1a.hackathon/messages/team_svc/get_response.proto\x1a8hackathon/messages/team_svc/get_submission_request.proto\x1a9hackathon/messages/team_svc/get_submission_response.proto\x1a.hackathon/messages/team_svc/list_request.proto\x1a/hackathon/messages/team_svc/list_response.proto\x1a:hackathon/messages/team_svc/list_submissions_request.proto\x1a;hackathon/messages/team_svc/list_submissions_response.proto\x1a5hackathon/messages/team_svc/remove_user_request.proto\x1a6hackathon/messages/team_svc/remove_user_response.proto2\xc0\v\n" +
 	"\vTeamService\x12[\n" +
 	"\x04List\x12(.hackathon.messages.team_svc.ListRequest\x1a).hackathon.messages.team_svc.ListResponse\x12X\n" +
 	"\x03Get\x12'.hackathon.messages.team_svc.GetRequest\x1a(.hackathon.messages.team_svc.GetResponse\x12a\n" +
@@ -35,7 +35,9 @@ const file_hackathon_team_service_proto_rawDesc = "" +
 	"\n" +
 	"AssignUser\x12..hackathon.messages.team_svc.AssignUserRequest\x1a/.hackathon.messages.team_svc.AssignUserResponse\x12m\n" +
 	"\n" +
-	"RemoveUser\x12..hackathon.messages.team_svc.RemoveUserRequest\x1a/.hackathon.messages.team_svc.RemoveUserResponse\x12\x7f\n" +
+	"RemoveUser\x12..hackathon.messages.team_svc.RemoveUserRequest\x1a/.hackathon.messages.team_svc.RemoveUserResponse\x12|\n" +
+	"\x0fBulkAssignUsers\x123.hackathon.messages.team_svc.BulkAssignUsersRequest\x1a4.hackathon.messages.team_svc.BulkAssignUsersResponse\x12|\n" +
+	"\x0fBulkRemoveUsers\x123.hackathon.messages.team_svc.BulkRemoveUsersRequest\x1a4.hackathon.messages.team_svc.BulkRemoveUsersResponse\x12\x7f\n" +
 	"\x10CreateSubmission\x124.hackathon.messages.team_svc.CreateSubmissionRequest\x1a5.hackathon.messages.team_svc.CreateSubmissionResponse\x12v\n" +
 	"\rGetSubmission\x121.hackathon.messages.team_svc.GetSubmissionRequest\x1a2.hackathon.messages.team_svc.GetSubmissionResponse\x12|\n" +
 	"\x0fListSubmissions\x123.hackathon.messages.team_svc.ListSubmissionsRequest\x1a4.hackathon.messages.team_svc.ListSubmissionsResponse\x12\x85\x01\n" +
@@ -49,21 +51,25 @@ var file_hackathon_team_service_proto_goTypes = []any{
 	(*team_svc.DeleteRequest)(nil),              // 4: hackathon.messages.team_svc.DeleteRequest
 	(*team_svc.AssignUserRequest)(nil),          // 5: hackathon.messages.team_svc.AssignUserRequest
 	(*team_svc.RemoveUserRequest)(nil),          // 6: hackathon.messages.team_svc.RemoveUserRequest
-	(*team_svc.CreateSubmissionRequest)(nil),    // 7: hackathon.messages.team_svc.CreateSubmissionRequest
-	(*team_svc.GetSubmissionRequest)(nil),       // 8: hackathon.messages.team_svc.GetSubmissionRequest
-	(*team_svc.ListSubmissionsRequest)(nil),     // 9: hackathon.messages.team_svc.ListSubmissionsRequest
-	(*team_svc.FinalizeSubmissionRequest)(nil),  // 10: hackathon.messages.team_svc.FinalizeSubmissionRequest
-	(*team_svc.ListResponse)(nil),               // 11: hackathon.messages.team_svc.ListResponse
-	(*team_svc.GetResponse)(nil),                // 12: hackathon.messages.team_svc.GetResponse
-	(*team_svc.CreateResponse)(nil),             // 13: hackathon.messages.team_svc.CreateResponse
-	(*team_svc.EditResponse)(nil),               // 14: hackathon.messages.team_svc.EditResponse
-	(*team_svc.DeleteResponse)(nil),             // 15: hackathon.messages.team_svc.DeleteResponse
-	(*team_svc.AssignUserResponse)(nil),         // 16: hackathon.messages.team_svc.AssignUserResponse
-	(*team_svc.RemoveUserResponse)(nil),         // 17: hackathon.messages.team_svc.RemoveUserResponse
-	(*team_svc.CreateSubmissionResponse)(nil),   // 18: hackathon.messages.team_svc.CreateSubmissionResponse
-	(*team_svc.GetSubmissionResponse)(nil),      // 19: hackathon.messages.team_svc.GetSubmissionResponse
-	(*team_svc.ListSubmissionsResponse)(nil),    // 20: hackathon.messages.team_svc.ListSubmissionsResponse
-	(*team_svc.FinalizeSubmissionResponse)(nil), // 21: hackathon.messages.team_svc.FinalizeSubmissionResponse
+	(*team_svc.BulkAssignUsersRequest)(nil),     // 7: hackathon.messages.team_svc.BulkAssignUsersRequest
+	(*team_svc.BulkRemoveUsersRequest)(nil),     // 8: hackathon.messages.team_svc.BulkRemoveUsersRequest
+	(*team_svc.CreateSubmissionRequest)(nil),    // 9: hackathon.messages.team_svc.CreateSubmissionRequest
+	(*team_svc.GetSubmissionRequest)(nil),       // 10: hackathon.messages.team_svc.GetSubmissionRequest
+	(*team_svc.ListSubmissionsRequest)(nil),     // 11: hackathon.messages.team_svc.ListSubmissionsRequest
+	(*team_svc.FinalizeSubmissionRequest)(nil),  // 12: hackathon.messages.team_svc.FinalizeSubmissionRequest
+	(*team_svc.ListResponse)(nil),               // 13: hackathon.messages.team_svc.ListResponse
+	(*team_svc.GetResponse)(nil),                // 14: hackathon.messages.team_svc.GetResponse
+	(*team_svc.CreateResponse)(nil),             // 15: hackathon.messages.team_svc.CreateResponse
+	(*team_svc.EditResponse)(nil),               // 16: hackathon.messages.team_svc.EditResponse
+	(*team_svc.DeleteResponse)(nil),             // 17: hackathon.messages.team_svc.DeleteResponse
+	(*team_svc.AssignUserResponse)(nil),         // 18: hackathon.messages.team_svc.AssignUserResponse
+	(*team_svc.RemoveUserResponse)(nil),         // 19: hackathon.messages.team_svc.RemoveUserResponse
+	(*team_svc.BulkAssignUsersResponse)(nil),    // 20: hackathon.messages.team_svc.BulkAssignUsersResponse
+	(*team_svc.BulkRemoveUsersResponse)(nil),    // 21: hackathon.messages.team_svc.BulkRemoveUsersResponse
+	(*team_svc.CreateSubmissionResponse)(nil),   // 22: hackathon.messages.team_svc.CreateSubmissionResponse
+	(*team_svc.GetSubmissionResponse)(nil),      // 23: hackathon.messages.team_svc.GetSubmissionResponse
+	(*team_svc.ListSubmissionsResponse)(nil),    // 24: hackathon.messages.team_svc.ListSubmissionsResponse
+	(*team_svc.FinalizeSubmissionResponse)(nil), // 25: hackathon.messages.team_svc.FinalizeSubmissionResponse
 }
 var file_hackathon_team_service_proto_depIdxs = []int32{
 	0,  // 0: hackathon.TeamService.List:input_type -> hackathon.messages.team_svc.ListRequest
@@ -73,23 +79,27 @@ var file_hackathon_team_service_proto_depIdxs = []int32{
 	4,  // 4: hackathon.TeamService.Delete:input_type -> hackathon.messages.team_svc.DeleteRequest
 	5,  // 5: hackathon.TeamService.AssignUser:input_type -> hackathon.messages.team_svc.AssignUserRequest
 	6,  // 6: hackathon.TeamService.RemoveUser:input_type -> hackathon.messages.team_svc.RemoveUserRequest
-	7,  // 7: hackathon.TeamService.CreateSubmission:input_type -> hackathon.messages.team_svc.CreateSubmissionRequest
-	8,  // 8: hackathon.TeamService.GetSubmission:input_type -> hackathon.messages.team_svc.GetSubmissionRequest
-	9,  // 9: hackathon.TeamService.ListSubmissions:input_type -> hackathon.messages.team_svc.ListSubmissionsRequest
-	10, // 10: hackathon.TeamService.FinalizeSubmission:input_type -> hackathon.messages.team_svc.FinalizeSubmissionRequest
-	11, // 11: hackathon.TeamService.List:output_type -> hackathon.messages.team_svc.ListResponse
-	12, // 12: hackathon.TeamService.Get:output_type -> hackathon.messages.team_svc.GetResponse
-	13, // 13: hackathon.TeamService.Create:output_type -> hackathon.messages.team_svc.CreateResponse
-	14, // 14: hackathon.TeamService.Edit:output_type -> hackathon.messages.team_svc.EditResponse
-	15, // 15: hackathon.TeamService.Delete:output_type -> hackathon.messages.team_svc.DeleteResponse
-	16, // 16: hackathon.TeamService.AssignUser:output_type -> hackathon.messages.team_svc.AssignUserResponse
-	17, // 17: hackathon.TeamService.RemoveUser:output_type -> hackathon.messages.team_svc.RemoveUserResponse
-	18, // 18: hackathon.TeamService.CreateSubmission:output_type -> hackathon.messages.team_svc.CreateSubmissionResponse
-	19, // 19: hackathon.TeamService.GetSubmission:output_type -> hackathon.messages.team_svc.GetSubmissionResponse
-	20, // 20: hackathon.TeamService.ListSubmissions:output_type -> hackathon.messages.team_svc.ListSubmissionsResponse
-	21, // 21: hackathon.TeamService.FinalizeSubmission:output_type -> hackathon.messages.team_svc.FinalizeSubmissionResponse
-	11, // [11:22] is the sub-list for method output_type
-	0,  // [0:11] is the sub-list for method input_type
+	7,  // 7: hackathon.TeamService.BulkAssignUsers:input_type -> hackathon.messages.team_svc.BulkAssignUsersRequest
+	8,  // 8: hackathon.TeamService.BulkRemoveUsers:input_type -> hackathon.messages.team_svc.BulkRemoveUsersRequest
+	9,  // 9: hackathon.TeamService.CreateSubmission:input_type -> hackathon.messages.team_svc.CreateSubmissionRequest
+	10, // 10: hackathon.TeamService.GetSubmission:input_type -> hackathon.messages.team_svc.GetSubmissionRequest
+	11, // 11: hackathon.TeamService.ListSubmissions:input_type -> hackathon.messages.team_svc.ListSubmissionsRequest
+	12, // 12: hackathon.TeamService.FinalizeSubmission:input_type -> hackathon.messages.team_svc.FinalizeSubmissionRequest
+	13, // 13: hackathon.TeamService.List:output_type -> hackathon.messages.team_svc.ListResponse
+	14, // 14: hackathon.TeamService.Get:output_type -> hackathon.messages.team_svc.GetResponse
+	15, // 15: hackathon.TeamService.Create:output_type -> hackathon.messages.team_svc.CreateResponse
+	16, // 16: hackathon.TeamService.Edit:output_type -> hackathon.messages.team_svc.EditResponse
+	17, // 17: hackathon.TeamService.Delete:output_type -> hackathon.messages.team_svc.DeleteResponse
+	18, // 18: hackathon.TeamService.AssignUser:output_type -> hackathon.messages.team_svc.AssignUserResponse
+	19, // 19: hackathon.TeamService.RemoveUser:output_type -> hackathon.messages.team_svc.RemoveUserResponse
+	20, // 20: hackathon.TeamService.BulkAssignUsers:output_type -> hackathon.messages.team_svc.BulkAssignUsersResponse
+	21, // 21: hackathon.TeamService.BulkRemoveUsers:output_type -> hackathon.messages.team_svc.BulkRemoveUsersResponse
+	22, // 22: hackathon.TeamService.CreateSubmission:output_type -> hackathon.messages.team_svc.CreateSubmissionResponse
+	23, // 23: hackathon.TeamService.GetSubmission:output_type -> hackathon.messages.team_svc.GetSubmissionResponse
+	24, // 24: hackathon.TeamService.ListSubmissions:output_type -> hackathon.messages.team_svc.ListSubmissionsResponse
+	25, // 25: hackathon.TeamService.FinalizeSubmission:output_type -> hackathon.messages.team_svc.FinalizeSubmissionResponse
+	13, // [13:26] is the sub-list for method output_type
+	0,  // [0:13] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

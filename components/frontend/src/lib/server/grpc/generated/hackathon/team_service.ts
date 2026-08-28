@@ -8,6 +8,10 @@
 import type { CallContext, CallOptions } from "nice-grpc-common";
 import { AssignUserRequest } from "./messages/team_svc/assign_user_request";
 import { AssignUserResponse } from "./messages/team_svc/assign_user_response";
+import { BulkAssignUsersRequest } from "./messages/team_svc/bulk_assign_users_request";
+import { BulkAssignUsersResponse } from "./messages/team_svc/bulk_assign_users_response";
+import { BulkRemoveUsersRequest } from "./messages/team_svc/bulk_remove_users_request";
+import { BulkRemoveUsersResponse } from "./messages/team_svc/bulk_remove_users_response";
 import { CreateRequest } from "./messages/team_svc/create_request";
 import { CreateResponse } from "./messages/team_svc/create_response";
 import { CreateSubmissionRequest } from "./messages/team_svc/create_submission_request";
@@ -92,6 +96,22 @@ export const TeamServiceDefinition = {
       responseStream: false,
       options: {},
     },
+    bulkAssignUsers: {
+      name: "BulkAssignUsers",
+      requestType: BulkAssignUsersRequest as typeof BulkAssignUsersRequest,
+      requestStream: false,
+      responseType: BulkAssignUsersResponse as typeof BulkAssignUsersResponse,
+      responseStream: false,
+      options: {},
+    },
+    bulkRemoveUsers: {
+      name: "BulkRemoveUsers",
+      requestType: BulkRemoveUsersRequest as typeof BulkRemoveUsersRequest,
+      requestStream: false,
+      responseType: BulkRemoveUsersResponse as typeof BulkRemoveUsersResponse,
+      responseStream: false,
+      options: {},
+    },
     createSubmission: {
       name: "CreateSubmission",
       requestType: CreateSubmissionRequest as typeof CreateSubmissionRequest,
@@ -141,6 +161,14 @@ export interface TeamServiceImplementation<CallContextExt = {}> {
     request: RemoveUserRequest,
     context: CallContext & CallContextExt,
   ): Promise<DeepPartial<RemoveUserResponse>>;
+  bulkAssignUsers(
+    request: BulkAssignUsersRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<BulkAssignUsersResponse>>;
+  bulkRemoveUsers(
+    request: BulkRemoveUsersRequest,
+    context: CallContext & CallContextExt,
+  ): Promise<DeepPartial<BulkRemoveUsersResponse>>;
   createSubmission(
     request: CreateSubmissionRequest,
     context: CallContext & CallContextExt,
@@ -173,6 +201,14 @@ export interface TeamServiceClient<CallOptionsExt = {}> {
     request: DeepPartial<RemoveUserRequest>,
     options?: CallOptions & CallOptionsExt,
   ): Promise<RemoveUserResponse>;
+  bulkAssignUsers(
+    request: DeepPartial<BulkAssignUsersRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<BulkAssignUsersResponse>;
+  bulkRemoveUsers(
+    request: DeepPartial<BulkRemoveUsersRequest>,
+    options?: CallOptions & CallOptionsExt,
+  ): Promise<BulkRemoveUsersResponse>;
   createSubmission(
     request: DeepPartial<CreateSubmissionRequest>,
     options?: CallOptions & CallOptionsExt,
