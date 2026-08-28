@@ -3,7 +3,13 @@
     import Linkedin from 'lucide-svelte/icons/linkedin';
     import Youtube from 'lucide-svelte/icons/youtube';
     import Twitter from 'lucide-svelte/icons/twitter';
-    import { APP_VERSION } from '$lib/version';
+    import { displayVersion } from '$lib/version';
+
+    // Supplied by the root layout load from the image's HACKAGON_BUILD_COMMIT.
+    // Optional: the public shell can render without it, and dev never sets it.
+    let { buildCommit = null }: { buildCommit?: string | null } = $props();
+
+    const version = $derived(displayVersion(buildCommit));
 
     // Shaped after the datascience.ch footer: a brand column, link columns, the
     // parent institutions' logos, then a hairline and a bottom bar carrying the
@@ -161,7 +167,7 @@
                     class="tnum font-mono text-xs text-ink-3"
                     title="Build version — quote this in a bug report"
                 >
-                    {APP_VERSION}
+                    {version}
                 </span>
             </div>
         </div>

@@ -15,8 +15,12 @@ cnLib.build.buildNodePackage {
   pname = compName;
   version = cnComponents.readVersion compName;
 
+  # `VERSION` at the repo root, alongside the component itself: the build stamps
+  # it into the footer (see `vite.config.ts`), and a fileset holding only
+  # `components/frontend` left it unreadable, so every image reported `0.0.0`.
   src = cnFilesets.toSource [
     compName
+    (lib.fileset.unions [ (cnFilesets.rootDir + "/VERSION") ])
   ];
 
   target = "service";

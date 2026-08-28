@@ -47,6 +47,23 @@ function git(...args: string[]): string {
 }
 
 /**
+ * Whether git can tell us anything truthful about this tree.
+ *
+ * The Nix sandbox builds from a fileset with no history and then runs
+ * `git init .` for the sake of the tooling, which leaves a repo with no commits
+ * and several hundred untracked files. Asking `git status --porcelain` there
+ * answers "dirty" — so the image footer used to read `v0.0.0-dirty` on every
+ * build, which is a lie in both halves. A repo is only worth believing once it
+ * has a HEAD to compare against.
+ */
+function hasGitHistory(): boolean {
+  return (
+    git("rev-parse", "--is-inside-work-tree") === "true" &&
+    git("rev-parse", "--verify", "HEAD") !== ""
+  )
+}
+
+/**
  * What the footer shows. A clean checkout sitting on the tag that matches
  * `VERSION` is a release and gets a bare `v0.0.1`; anything else is a build of
  * some intermediate commit and says so, because a dev build claiming to be the
@@ -55,6 +72,13 @@ function git(...args: string[]): string {
  */
 function buildVersion(): string {
   const declared = declaredVersion()
+
+  // No history means no claim: fall back to the bare declared version rather
+  // than inventing a `-dirty` suffix out of a tree git has never seen. In a
+  // released image the commit arrives at runtime instead — see
+  // `$lib/version` and the `HACKAGON_BUILD_COMMIT` the image carries.
+  if (!hasGitHistory()) return `v${declared}`
+
   const commit = git("rev-parse", "--short=7", "HEAD")
   const dirty = git("status", "--porcelain") !== ""
   const onTag = git("tag", "--points-at", "HEAD")
