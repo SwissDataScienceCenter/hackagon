@@ -8,6 +8,8 @@
     type Person = {
         id: string;
         name: string;
+        /** Their fixed-list registration answers as codes, by question id. */
+        codes: Record<string, { code: string; label: string }>;
         preferredTitles: string[];
         preferredProjectIds: string[];
         /** Numbers of the preferred projects that have a row on this page. */
@@ -27,6 +29,55 @@
 
     const hackathonId = $derived(data.hackathonId);
     const projectRows = $derived(data.projectRows);
+    const answerQuestions = $derived(data.answerQuestions);
+
+    // Which registration answers ride along beside a name. A view preference of
+    // one organiser at one screen: a question carries no field saying it belongs
+    // here, so this is kept in their browser and a co-organiser's page is
+    // unaffected by it.
+    let shownIds: string[] = $state([]);
+
+    const storageKey = $derived(`hackagon:team-answers:${hackathonId}`);
+
+    // Restored rather than defaulted, and re-read whenever the load changes:
+    // saving reloads the page's data, and the ticks should survive that. Writing
+    // is `toggleQuestion`'s job and deliberately not this effect's — one that
+    // both read and wrote `shownIds` would overwrite the stored value with the
+    // empty default on first render.
+    $effect(() => {
+        const known = new Set(answerQuestions.map((q) => q.id));
+        let stored: unknown = null;
+        try {
+            stored = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
+        } catch {
+            // No storage, or something in it that is not ours. Nothing ticked.
+        }
+        shownIds = Array.isArray(stored)
+            ? stored.filter((id): id is string => typeof id === 'string' && known.has(id))
+            : [];
+    });
+
+    const shownQuestions = $derived(answerQuestions.filter((q) => shownIds.includes(q.id)));
+
+    function toggleQuestion(id: string) {
+        shownIds = shownIds.includes(id)
+            ? shownIds.filter((q) => q !== id)
+            : [...shownIds, id];
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(shownIds));
+        } catch {
+            // Private browsing, or a full quota. The ticks still hold for this visit.
+        }
+    }
+
+    /** The ticked questions this person answered, in question order. */
+    function codesFor(person: Person): { code: string; title: string }[] {
+        return shownQuestions.flatMap((q) => {
+            const answer = person.codes[q.id];
+
+            return answer ? [{ code: answer.code, title: `${q.label}: ${answer.label}` }] : [];
+        });
+    }
 
     // Drop target id for the unassigned pool; team keys are used as-is.
     const POOL = 'pool';
@@ -292,6 +343,7 @@
     projectNumber: number | null
 )}
     {@const matches = projectId !== null && person.preferredProjectIds.includes(projectId)}
+    {@const answerCodes = codesFor(person)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         draggable="true"
@@ -323,6 +375,13 @@
                     {person.preferredTitles.length > 0
                         ? 'Prefers nothing on offer'
                         : 'No preferences given'}
+                </span>
+            {/if}
+            {#if answerCodes.length > 0}
+                <span class="flex flex-wrap items-center gap-1 pt-0.5">
+                    {#each answerCodes as c (c.code)}
+                        <span class="badge badge-neutral tnum" title={c.title}>{c.code}</span>
+                    {/each}
                 </span>
             {/if}
         </div>
@@ -412,6 +471,52 @@
             </button>
         </div>
     </div>
+
+    <!-- Only the fixed-list questions reach here: a code is a position in a list
+         of options, so free text and tick-boxes have none. -->
+    {#if answerQuestions.length > 0}
+        <section class="card card-raised flex flex-col gap-3 p-3">
+            <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <h3 class="m-0 meta">Registration answers</h3>
+                {#each answerQuestions as q (q.id)}
+                    <label class="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            class="checkbox"
+                            checked={shownIds.includes(q.id)}
+                            onchange={() => toggleQuestion(q.id)}
+                        />
+                        <span class="text-xs text-ink-2">
+                            <span class="font-semibold">{q.letter}</span>
+                            {q.label}
+                        </span>
+                    </label>
+                {/each}
+            </div>
+
+            {#if shownQuestions.length === 0}
+                <p class="m-0 text-xs text-ink-3">
+                    Tick a question to mark everyone's answer beside their name.
+                </p>
+            {:else}
+                <dl class="m-0 flex flex-col gap-2 border-t border-line pt-3">
+                    {#each shownQuestions as q (q.id)}
+                        <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                            <dt class="text-xs font-semibold text-ink">{q.letter} · {q.label}</dt>
+                            <dd class="m-0 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                {#each q.options as o (o.code)}
+                                    <span class="flex items-center gap-1.5">
+                                        <span class="badge badge-neutral tnum">{o.code}</span>
+                                        <span class="text-xs text-ink-2">{o.label}</span>
+                                    </span>
+                                {/each}
+                            </dd>
+                        </div>
+                    {/each}
+                </dl>
+            {/if}
+        </section>
+    {/if}
 
     <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section class="card card-raised flex min-w-0 flex-col gap-4 p-3">

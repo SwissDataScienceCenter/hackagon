@@ -381,6 +381,14 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 			publicAnswers: false,
 		},
 		{
+			key:           "experience",
+			label:         "How much have you hacked before?",
+			qType:         hackEnts.QuestionType_QUESTION_TYPE_ENUM,
+			mandatory:     true,
+			options:       []string{"First time", "A few", "Many"},
+			publicAnswers: false,
+		},
+		{
 			key:           "remote",
 			label:         "I will be attending remotely",
 			qType:         hackEnts.QuestionType_QUESTION_TYPE_BOOL,
@@ -400,6 +408,14 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 		"Independent", "SDSC", "University of Basel", "ZHAW",
 	}
 	sizes := []string{"XS", "S", "M", "L", "XL", "XXL"}
+	// Weighted rather than uniform, because a cohort is mostly people in the
+	// middle. An even third each would make spreading the newcomers across the
+	// teams look like an easier problem than it is.
+	experience := []string{
+		"First time", "First time", "First time",
+		"A few", "A few", "A few", "A few", "A few",
+		"Many", "Many",
+	}
 	for _, who := range participants {
 		// Not everyone answers. An organizer chasing people needs a roster where
 		// some rows are genuinely empty, not one where everybody is done.
@@ -409,6 +425,7 @@ func (h *harness) seedH4(now time.Time, alice, bob, charles *actor) error {
 		answers := []answerSpec{
 			text("affiliation", affiliations[answerRng.Intn(len(affiliations))]),
 			text("tshirt_size", sizes[answerRng.Intn(len(sizes))]),
+			text("experience", experience[answerRng.Intn(len(experience))]),
 		}
 		// The optional one is answered less often, and "no" is an answer —
 		// distinct from not having answered at all.

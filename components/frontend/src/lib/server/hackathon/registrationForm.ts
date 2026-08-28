@@ -645,3 +645,120 @@ export function answeredParticipantIds(
 ): Set<string> {
   return new Set(answers.map((a) => a.participantId))
 }
+
+/** One fixed-list question, as the team-assignment legend spells it out. */
+export interface LegendQuestion {
+  id: string
+  label: string
+  /** `A`, `B`, `C` … fixed by question order. */
+  letter: string
+  /** The question's own options, in its own order, each with its code. */
+  options: AnswerCode[]
+}
+
+/** A code as it appears beside a name, and what it stands for. */
+export interface AnswerCode {
+  /** The letter of the question and the position of the option: `A2`. */
+  code: string
+  /** The option as it was written, for the tooltip. */
+  label: string
+}
+
+export interface AnswerLegend {
+  questions: LegendQuestion[]
+  /** Keyed by user id — `Answer.participantId` — then by question id. */
+  codesByParticipant: Record<string, Record<string, AnswerCode>>
+}
+
+/** 0 → `A`, 25 → `Z`, 26 → `AA`. Bijective base 26, so no index has no letter. */
+function letterAt(index: number): string {
+  let n = index
+  let letter = ""
+  do {
+    letter = String.fromCharCode(65 + (n % 26)) + letter
+    n = Math.floor(n / 26) - 1
+  } while (n >= 0)
+
+  return letter
+}
+
+/**
+ * The registration answers as codes short enough to sit beside a name, plus the
+ * key that says what each one means.
+ *
+ * For the team-assignment screen, where a card is sixteen rems wide and a
+ * participant already carries their name and their project preferences. "A2"
+ * fits there; "Experience level: Intermediate" does not, which is the same
+ * argument the page already makes for numbering the projects and printing the
+ * numbers rather than the titles on every row.
+ *
+ * **Fixed-list questions only.** A code is a position in a list of options, so a
+ * question without one has nothing to number: free text is a sentence, and a
+ * tick-box would need a second code shape ("the letter alone means yes") for two
+ * values. Questions the organizer cannot code are absent from the legend rather
+ * than present and empty, and the page offers no tick for them.
+ *
+ * Letters go to **every** enum question in question order, whether or not the
+ * organizer has chosen to show it. Assigning them to the shown ones instead
+ * would renumber the rest each time one is ticked, so a screenshot — or an
+ * organizer's memory of what A meant — would stop being true. The cost is that
+ * showing only the second and fourth questions displays B and D, which the
+ * legend beside them explains.
+ *
+ * An answer that is no longer one of the question's options keeps a mark —
+ * `A?`, with the answer itself in `label` — rather than disappearing. It should
+ * not arise, since the backend refuses an options change once anyone has
+ * answered, but a chip that silently drops an answer reads as "did not answer",
+ * which is a different fact.
+ *
+ * Pass the whole cohort's answers: they are grouped by answerer here, unlike
+ * `answerValues`, which wants one person's.
+ */
+export function answerLegend(
+  questions: readonly QuestionRow[],
+  answers: readonly Answer[],
+): AnswerLegend {
+  const legend: LegendQuestion[] = []
+  for (const q of questions) {
+    // An enum with no options is answerable by nobody — the builder refuses to
+    // save one, but the backend will store it — so it would be a tick that can
+    // never mark anything.
+    if (q.kind !== "enum" || q.options.length === 0) continue
+
+    const letter = letterAt(legend.length)
+    legend.push({
+      id: q.id,
+      label: q.label,
+      letter,
+      options: q.options.map((label, i) => ({
+        code: `${letter}${i + 1}`,
+        label,
+      })),
+    })
+  }
+
+  const byId = new Map(legend.map((q) => [q.id, q]))
+  const codesByParticipant: Record<string, Record<string, AnswerCode>> = {}
+
+  for (const a of answers) {
+    const q = byId.get(a.questionId)
+    // Text and tick-box answers land here too — they have no legend entry, so
+    // they have no code.
+    if (!q) continue
+
+    // `textValue` only: an enum answer stores the option's text, and reading a
+    // stray bool arm would be guessing at which option it meant.
+    const value = a.textValue
+    if (value === undefined || value === "") continue
+
+    const person =
+      codesByParticipant[a.participantId] ??
+      (codesByParticipant[a.participantId] = {})
+    person[q.id] = q.options.find((o) => o.label === value) ?? {
+      code: `${q.letter}?`,
+      label: value,
+    }
+  }
+
+  return { questions: legend, codesByParticipant }
+}
