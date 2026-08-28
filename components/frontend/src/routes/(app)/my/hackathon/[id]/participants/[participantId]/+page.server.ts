@@ -5,6 +5,7 @@ import {
   questionRows,
   type ParticipantAnswer,
 } from "$lib/server/hackathon/registrationForm"
+import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { error } from "@sveltejs/kit"
 
@@ -109,19 +110,24 @@ export const load: PageServerLoad = async (event) => {
   const user = member.user
 
   // Teams need an RPC of their own — `Hackathon` carries no teams edge. `List`
-  // gates on hackathon-scoped `hackathon:read` (`team_service.go:59`), the same
-  // permission the layout already passed, so every viewer who can open this page
-  // can make this call.
+  // gates on hackathon-scoped `team:read` (`team_service.go:59`), which a member
+  // holds only while `CAPABILITY_VIEW_TEAMS` is on — it asked for
+  // `hackathon:read` until that capability landed, so opening this page was once
+  // enough on its own.
   //
-  // A failure here is reported rather than swallowed: an empty teams list and a
-  // list that failed to load look identical on the page, and "not on a team yet"
-  // is a claim about this person that we would have no basis for.
+  // **Three outcomes, not two.** Nothing here may say "not on a team yet" unless
+  // that is actually known: it is a claim about this person, and neither a
+  // refused read nor a failed one is any basis for it. So `teamsPublished` false
+  // means the viewer is not allowed to know, `teamsFailed` means we tried and
+  // could not, and an empty `teams` with both false is the real answer.
   const projectTitles = new Map(hackathon.projects.map((p) => [p.id, p.title]))
   let teams: { id: string; name: string; projectTitle: string | null }[] = []
+  let teamsPublished = true
   let teamsFailed = false
   try {
-    const { teams: all } = await team.list({ hackathonId: event.params.id })
-    teams = all
+    const all = await listVisibleTeams(team, event.params.id)
+    teamsPublished = all !== undefined
+    teams = (all ?? [])
       .filter((t) => t.members.some((m) => m.id === user.id))
       .map((t) => ({
         id: t.id,
@@ -178,6 +184,7 @@ export const load: PageServerLoad = async (event) => {
       joinedAt: member.joinedAt,
     },
     teams,
+    teamsPublished,
     teamsFailed,
   }
 }

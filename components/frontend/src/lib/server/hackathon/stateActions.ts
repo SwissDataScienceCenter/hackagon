@@ -86,7 +86,7 @@ export async function setCurrentPhase(
 }
 
 /**
- * The six switches, saved together.
+ * The seven switches, saved together.
  *
  * `SetCapabilities` takes a full list of states rather than a delta, and
  * unchecked boxes submit nothing — hence building the list from

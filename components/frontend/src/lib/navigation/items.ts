@@ -110,10 +110,13 @@ export interface HackathonPageRef {
  * lead to a 403. They gate independently because the backend keeps them
  * separate: an organiser closes voting, checks the tally, then publishes.
  *
- * `teamCount` gates the third. Unlike the other two it is not a permission —
- * `TeamService.List` asks only for `hackathon:read`, which every confirmed
- * member has — it is whether the page has anything on it yet. Zero is the honest
- * default, the same way `manageNav` treats `trackCount`.
+ * `teamCount` gates the third, and now carries both meanings at once. It used to
+ * be purely "has the page anything on it yet", because `TeamService.List` asked
+ * only for `hackathon:read`; it now asks for `team:read`, which a member holds
+ * only while `CAPABILITY_VIEW_TEAMS` is on. So the caller counts what it is
+ * *allowed* to see (`listVisibleTeams`), and zero covers both "no teams yet" and
+ * "assignments not published" — two states that want the same nav either way.
+ * Zero is the honest default, the same way `manageNav` treats `trackCount`.
  *
  * `hasDescription` gates About on the same principle: the hackathon's
  * description is optional, and with none written the entry leads to a blank

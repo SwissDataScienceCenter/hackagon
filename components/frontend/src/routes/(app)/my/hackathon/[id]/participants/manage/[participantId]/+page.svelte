@@ -163,7 +163,14 @@
 
     <section class="flex flex-col gap-2">
         <h3 class="m-0 text-sm font-semibold text-ink">Teams</h3>
-        {#if data.teamsFailed}
+        <!-- Same three outcomes as the member-facing profile. An owner reads
+             teams whether or not they are published, so this branch is the
+             global-admin-who-is-not-the-owner case rather than the common one. -->
+        {#if !data.teamsPublished}
+            <p class="m-0 text-xs text-ink-3">
+                Team assignments have not been published in this hackathon yet.
+            </p>
+        {:else if data.teamsFailed}
             <p class="m-0 text-xs text-ink-3">
                 Teams could not be loaded. Reload the page to try again.
             </p>

@@ -1,6 +1,7 @@
 import type { VoteCategory } from "$lib/server/grpc/generated/vote/entities/vote_category"
 import type { VoteResult } from "$lib/server/grpc/generated/vote/entities/vote_result"
 import type { TeamServiceClient } from "$lib/server/grpc/generated/hackathon/team_service"
+import { listVisibleTeams } from "./teams"
 import { submissionVersions } from "./submissions"
 import { VotingMethod } from "$lib/server/grpc/generated/vote/entities/voting_method"
 import { VoterType } from "$lib/server/grpc/generated/vote/entities/voter_type"
@@ -97,6 +98,13 @@ export interface BallotSubmission {
  *
  * Returns only the teams whose submissions the viewer may actually read, which
  * for a participant is just their own — see the per-team catch below.
+ *
+ * Empty when team assignments are not published: `TeamService.List` needs
+ * `team:read`, and a member holds it only under `CAPABILITY_VIEW_TEAMS`. So
+ * **voting silently depends on that capability** — see
+ * `TODO(backend: voting-needs-view-teams)` in the voting load, which is where a
+ * participant is told, since a helper returning rows has no way to say why there
+ * are none.
  */
 export async function ballotSubmissions(
   team: TeamServiceClient,
@@ -104,7 +112,7 @@ export async function ballotSubmissions(
   projectTitles: Map<string, string>,
   viewerId?: string,
 ): Promise<BallotSubmission[]> {
-  const { teams } = await team.list({ hackathonId })
+  const teams = (await listVisibleTeams(team, hackathonId)) ?? []
 
   const entries = await Promise.all(
     teams.map(async (t) => {
@@ -121,9 +129,12 @@ export async function ballotSubmissions(
       // could resolve was their own team's, and that is the one entry
       // `SubmitVote` refuses (`vote_service.go:588`).
       //
-      // `Get` eager-loads a team's submissions and gates only on
-      // hackathon-scoped `hackathon:read` (`team_service.go:91-121`), so it is
-      // the one read that hands a participant another team's entry. Nothing
+      // `Get` eager-loads a team's submissions and gates on hackathon-scoped
+      // `team:read` (`team_service.go:114` — it asked for `hackathon:read`
+      // until the view-teams capability landed), so it is the one read that
+      // hands a participant another team's entry, and only while assignments
+      // are published. That is the same grant `List` above needs, so a viewer
+      // who got a list can resolve every row in it. Nothing
       // extra reaches the browser: `submissionVersions` keeps `latestFinal` and
       // this function returns only that, so the drafts `Get` over-shares are
       // dropped server-side — the same containment the team detail page relies

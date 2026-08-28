@@ -160,10 +160,14 @@
 
     <div class="flex flex-col gap-2">
         <h3 class="m-0 text-sm font-semibold text-ink">Teams</h3>
-        {#if data.teamsFailed}
-            <!-- Said outright rather than shown as an empty list: "not on a team"
-                 is a claim about this person, and a failed load is no basis for
-                 it. -->
+        <!-- Three outcomes, and only the third may say "not on a team": that is a
+             claim about this person, and neither a read we are not allowed to make
+             nor one that failed is any basis for it. -->
+        {#if !data.teamsPublished}
+            <p class="m-0 text-xs text-ink-3">
+                Team assignments have not been published in this hackathon yet.
+            </p>
+        {:else if data.teamsFailed}
             <p class="m-0 text-xs text-ink-3">
                 Teams could not be loaded. Reload the page to try again.
             </p>

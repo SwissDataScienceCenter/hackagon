@@ -9,6 +9,7 @@ const SET_TEAM_PREFERENCES = 3
 const CREATE_PROJECT_SUBMISSIONS = 4
 const VOTE = 5
 const VIEW_RESULTS = 6
+const VIEW_TEAMS = 7
 
 describe("capabilityHref", () => {
   it.each([
@@ -17,6 +18,7 @@ describe("capabilityHref", () => {
     [CREATE_PROJECT_SUBMISSIONS, "/my/hackathon/h1/submissions"],
     [VOTE, "/my/hackathon/h1/voting"],
     [VIEW_RESULTS, "/my/hackathon/h1/results"],
+    [VIEW_TEAMS, "/my/hackathon/h1/teams"],
   ])("sends capability %i to its own route", (capability, href) => {
     expect(capabilityHref("h1", capability)).toBe(href)
   })
@@ -43,6 +45,7 @@ describe("capabilityHref", () => {
       CREATE_PROJECT_SUBMISSIONS,
       VOTE,
       VIEW_RESULTS,
+      VIEW_TEAMS,
     ])
   })
 })
