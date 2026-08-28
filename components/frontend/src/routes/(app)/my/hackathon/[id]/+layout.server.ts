@@ -6,7 +6,7 @@ import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { viewerMembership } from "$lib/server/hackathon/membership"
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { listVisibleTeams } from "$lib/server/hackathon/teams"
-import { currentAndNextPhase, unmetPhaseCapabilities } from "$lib/utils/phase"
+import { currentAndNextPhase } from "$lib/utils/phase"
 import { error } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -145,7 +145,6 @@ export const load: LayoutServerLoad = async (event) => {
           description: current.description ?? "",
           startsAt: current.startsAt,
           endsAt: current.endsAt,
-          capabilities: current.capabilities as number[],
         }
       : null,
     nextPhase: next
@@ -156,12 +155,6 @@ export const load: LayoutServerLoad = async (event) => {
           endsAt: next.endsAt,
         }
       : null,
-    // Only ever computed against the *current* phase. A future phase planning a
-    // capability that is off is not a problem — it is simply not time yet.
-    unmet: unmetPhaseCapabilities(
-      (current?.capabilities as number[] | undefined) ?? [],
-      caps,
-    ),
     // Owner-or-admin, the same gate `manageNav` and the manage routes apply.
     // Decides who sees the banner and the organiser voice on the card; it offers
     // no action of its own, so nothing here needs the backend to agree.

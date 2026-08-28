@@ -202,12 +202,12 @@ export function currentAndNextPhase<
  * enum numbers are contract-stable, and the server still validates what comes
  * back (`defined_only`).
  *
- * **These are labels, not switches.** `Phase.capabilities` is informational —
- * `db/schema/phase.go:47` says so outright, and advancing to a phase grants
- * nobody anything. What a participant may actually do comes from
- * `HackathonState` plus its casbin rows, which only
- * `HackathonService.SetCapabilities` writes. Settled deliberately; see
- * `mydocs/docs/backend-tickets/project-preferences-capability.md`.
+ * **One list, one meaning.** These are the hackathon's actual switches:
+ * `HackathonState` plus its casbin rows, written only by
+ * `HackathonService.SetCapabilities`. `Phase.capabilities` — a per-phase tag the
+ * proto still carries — used to be rendered from this same list as a *plan*, and
+ * the frontend no longer reads or writes it. See
+ * `mydocs/docs/backend-tickets/phase-capabilities-unused.md`.
  *
  * The description is what the label cannot carry: "Set team preferences" reads
  * as a setting rather than as a permission handed to everyone in the hackathon.
@@ -269,8 +269,7 @@ const CAPABILITIES: {
 ]
 
 /** The seven in the order a hackathon runs, for rendering a row per capability. */
-export const PHASE_CAPABILITIES: { value: number; label: string }[] =
-  CAPABILITIES
+export const ALL_CAPABILITIES: { value: number; label: string }[] = CAPABILITIES
 
 /** Human label for one capability, or undefined if the value is unknown. */
 export const capabilityLabel = (c: number): string | undefined =>
@@ -279,74 +278,6 @@ export const capabilityLabel = (c: number): string | undefined =>
 /** One line on what a capability permits, or undefined for an unknown value. */
 export const capabilityDescription = (c: number): string | undefined =>
   CAPABILITIES.find((x) => x.value === c)?.description
-
-/** A value the enum has. Anything else can be neither labelled nor granted. */
-const isKnownCapability = (c: number): boolean =>
-  CAPABILITIES.some((x) => x.value === c)
-
-/**
- * Capabilities a phase says belong to it that are not actually switched on.
- *
- * This is the cost of keeping the two mechanisms separate, made visible.
- * Advancing to a phase tagged `vote` does **not** enable voting — nothing does
- * but `SetCapabilities` — so an organizer can sit in a phase whose whole point
- * is refused for everyone. Rather than have the phase silently enable things,
- * the UI names the gap and lets the organizer decide.
- *
- * Returns capability numbers, in the phase's own tag order. Unknown tag values
- * are dropped: they cannot be enabled, so reporting them as missing would be
- * noise.
- */
-export function unmetPhaseCapabilities(
-  phaseCapabilities: readonly number[],
-  enabled: readonly number[],
-): number[] {
-  const on = new Set(enabled)
-
-  return phaseCapabilities.filter((c) => isKnownCapability(c) && !on.has(c))
-}
-
-/**
- * Capabilities that are switched on but are not part of this phase's plan.
- *
- * The other half of the picture from `unmetPhaseCapabilities`: that one says what
- * the phase wants and lacks, this one what participants can do beyond it. Extras
- * are **not** a problem — registration is tagged on no phase yet legitimately
- * stays open across several — so this is shown as information, never as a warning.
- *
- * Sorted, so the order does not wander with whatever order the state arrived in.
- */
-export function extraEnabledCapabilities(
-  phaseCapabilities: readonly number[],
-  enabled: readonly number[],
-): number[] {
-  const planned = new Set(phaseCapabilities)
-
-  return enabled
-    .filter((c) => isKnownCapability(c) && !planned.has(c))
-    .sort((a, b) => a - b)
-}
-
-/**
- * What should be enabled after "enable what this phase expects".
- *
- * **Strictly additive: it never switches anything off.** An exact match to the
- * phase's tags would be destructive — Registration is tagged on no phase, so
- * "apply the Hacking phase" would close sign-ups as a side effect. Turning a
- * capability off stays a deliberate act on the switches.
- *
- * Unknown tag values are dropped rather than passed through: `SetCapabilities`
- * refuses anything outside the enum, so sending one would fail the whole call.
- * Result is sorted so it is stable to assert on.
- */
-export function withPhaseCapabilitiesEnabled(
-  enabled: readonly number[],
-  phaseCapabilities: readonly number[],
-): number[] {
-  const known = phaseCapabilities.filter(isKnownCapability)
-
-  return [...new Set([...enabled, ...known])].sort((a, b) => a - b)
-}
 
 /**
  * A `Date` as `datetime-local` wants it: `YYYY-MM-DDTHH:mm`, in the viewer's

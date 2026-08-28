@@ -42,7 +42,6 @@
 
     <PhaseForm
         phase={data.phase}
-        pages={data.pages}
         cancelHref={backHref}
         submitLabel="Save changes"
         message={form?.message}

@@ -1,7 +1,4 @@
-import {
-  Capability,
-  capabilityFromJSON,
-} from "$lib/server/grpc/generated/hackathon/entities/capability"
+import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import type { HackathonState } from "$lib/server/grpc/generated/hackathon/entities/hackathon_state"
 
 /**
@@ -74,9 +71,6 @@ export interface PhaseFormValues {
   description: string
   startsAt?: Date
   endsAt?: Date
-  /** Empty string means "no linked page". */
-  pageId: string
-  capabilities: Capability[]
 }
 
 export type PhaseFormResult =
@@ -115,7 +109,6 @@ function parseLocalDateTime(
 export function parsePhaseForm(form: FormData): PhaseFormResult {
   const rawName = form.get("name")
   const rawDescription = form.get("description")
-  const rawPageId = form.get("pageId")
 
   const name = typeof rawName === "string" ? rawName.trim() : ""
   if (name.length < 3) {
@@ -149,25 +142,6 @@ export function parsePhaseForm(form: FormData): PhaseFormResult {
     return { ok: false, message: "End must be after the start" }
   }
 
-  // Checkbox names repeat, so `getAll`. The values are the enum's own numbers —
-  // `capabilityFromJSON` takes those as readily as the names, and hands back
-  // UNRECOGNIZED for anything else. UNSPECIFIED and UNRECOGNIZED are then dropped
-  // rather than rejected: `defined_only` would refuse them and neither can come
-  // from a checkbox this page rendered. The Set covers `repeated.unique`.
-  const capabilities = [
-    ...new Set(
-      form
-        .getAll("capabilities")
-        .filter((v): v is string => typeof v === "string")
-        .map((v) => capabilityFromJSON(Number(v)))
-        .filter(
-          (c) =>
-            c !== Capability.CAPABILITY_UNSPECIFIED &&
-            c !== Capability.UNRECOGNIZED,
-        ),
-    ),
-  ]
-
   return {
     ok: true,
     values: {
@@ -175,8 +149,6 @@ export function parsePhaseForm(form: FormData): PhaseFormResult {
       description,
       startsAt,
       endsAt,
-      pageId: typeof rawPageId === "string" ? rawPageId : "",
-      capabilities,
     },
   }
 }

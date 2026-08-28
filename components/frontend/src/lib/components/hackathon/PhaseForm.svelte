@@ -1,11 +1,10 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
-    import { PHASE_CAPABILITIES, toDateTimeLocal } from '$lib/utils/phase';
+    import { toDateTimeLocal } from '$lib/utils/phase';
 
     let {
         phase,
-        pages,
         cancelHref,
         submitLabel,
         message,
@@ -16,12 +15,7 @@
             description: string;
             startsAt?: Date;
             endsAt?: Date;
-            /** Empty string when the phase links no page. */
-            pageId: string;
-            /** Raw `Capability` enum numbers, as `PHASE_CAPABILITIES` lists them. */
-            capabilities: number[];
         };
-        pages: { id: string; title: string }[];
         /** Unresolved path — `resolve()` is called here, at the anchor. */
         cancelHref: string;
         submitLabel: string;
@@ -101,51 +95,7 @@
                 timeline to schedule it.
             </span>
         {/if}
-
-        {#if pages.length > 0}
-            <label class="field-label sm:col-span-2">
-                Linked page (optional)
-                <select name="pageId" class="field">
-                    <option value="">No page</option>
-                    {#each pages as p (p.id)}
-                        <option value={p.id} selected={p.id === phase.pageId}>
-                            {p.title}
-                        </option>
-                    {/each}
-                </select>
-                <span class="font-normal text-ink-3">
-                    Participants can open this page from the timeline.
-                </span>
-            </label>
-        {/if}
     </div>
-
-    <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
-        <legend class="p-0 text-xs font-semibold text-ink-3">
-            What happens in this phase
-        </legend>
-        <!-- Labels, not switches. Tagging a phase grants nobody anything: what
-             participants may actually do lives on HackathonState and is turned on
-             separately. See PHASE_CAPABILITIES in $lib/utils/phase. -->
-        <p class="m-0 text-xs font-normal text-ink-3">
-            Describes the phase for participants. It does not turn these actions on
-            or off — that stays a separate decision.
-        </p>
-        <div class="grid gap-2 sm:grid-cols-2">
-            {#each PHASE_CAPABILITIES as capability (capability.value)}
-                <label class="flex items-center gap-2 text-xs text-ink">
-                    <input
-                        type="checkbox"
-                        name="capabilities"
-                        value={capability.value}
-                        checked={phase.capabilities.includes(capability.value)}
-                        class="checkbox"
-                    />
-                    {capability.label}
-                </label>
-            {/each}
-        </div>
-    </fieldset>
 
     <!-- Last and full width: the only field with no natural size, and the one
          where the room is worth having for the source and its preview both. -->

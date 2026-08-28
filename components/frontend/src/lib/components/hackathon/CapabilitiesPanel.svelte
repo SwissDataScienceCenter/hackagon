@@ -1,37 +1,19 @@
 <script lang="ts">
-    import { CircleAlert } from 'lucide-svelte';
     import { capabilityDescription, capabilityLabel } from '$lib/utils/phase';
 
     let {
-        currentPhaseName,
         hasState,
         capabilities,
-        unmet,
         message,
         saved = false,
     }: {
-        /** Named in the mismatch warning; empty when no phase is declared current. */
-        currentPhaseName: string;
         /** False when the hackathon has no HackathonState row to configure. */
         hasState: boolean;
         capabilities: { value: number; enabled: boolean }[];
-        /** Capabilities the current phase expects that are switched off. */
-        unmet: number[];
         /** Failure text from the last action, if it failed. */
         message?: string;
         saved?: boolean;
     } = $props();
-
-    // "vote and view results" / "vote, view results and register" — read out inside
-    // a sentence, so it has to be prose rather than a chip list.
-    const unmetNames = $derived(
-        unmet.map((c) => (capabilityLabel(c) ?? 'Unknown').toLowerCase())
-    );
-    const unmetSentence = $derived(
-        unmetNames.length <= 1
-            ? (unmetNames[0] ?? '')
-            : `${unmetNames.slice(0, -1).join(', ')} and ${unmetNames.at(-1)}`
-    );
 </script>
 
 <!-- Deliberately a different surface from the phase cards, which sit on
@@ -110,37 +92,6 @@
             </button>
         </form>
 
-        <!-- The gap between what a phase is for and what is actually switched on.
-             Nothing closes it automatically — that is the deliberate design — so
-             this names it and offers the one click. It lives here rather than on
-             the phase row because the fix is a switch. -->
-        {#if unmet.length > 0}
-            <div
-                class="flex flex-col gap-2 border border-warning/40 bg-warning/10 px-4 py-3"
-                role="status"
-            >
-                <div class="flex items-start gap-2">
-                    <CircleAlert
-                        class="mt-0.5 h-4 w-4 shrink-0 text-warning-ink"
-                        aria-hidden="true"
-                    />
-                    <p class="m-0 text-xs text-ink-2">
-                        <strong class="font-semibold text-ink">{currentPhaseName}</strong>
-                        is meant to include
-                        <strong class="font-semibold text-ink">{unmetSentence}</strong>,
-                        which participants cannot do yet.
-                    </p>
-                </div>
-                <form method="POST" action="?/applyPhaseCapabilities">
-                    <button type="submit" class="btn btn-sm w-fit btn-warning">
-                        {unmet.length === 1 ? 'Enable it' : `Enable those ${unmet.length}`}
-                    </button>
-                </form>
-                <span class="text-xs text-ink-3">
-                    Only switches things on — nothing already allowed is turned off.
-                </span>
-            </div>
-        {/if}
     {:else}
         <h3 id="capabilities-heading" class="m-0 text-section text-ink">
             What participants can do

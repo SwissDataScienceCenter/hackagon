@@ -32,6 +32,7 @@
         resultsVisible = false,
         teamCount = 0,
         trackCount = 0,
+        phaseCount = 0,
         hasDescription = false,
         stateNeedsAttention = false,
         isPrivate = false,
@@ -72,6 +73,13 @@
          */
         trackCount?: number;
         /**
+         * How many phases the hackathon has. Only the count is needed: it decides
+         * whether Timeline and Manage Timeline are offered at all — see
+         * `memberNav` and `manageNav`. Zero, and the way to the first phase is the
+         * "Where the hackathon is" card on Settings.
+         */
+        phaseCount?: number;
+        /**
          * Whether the hackathon has a description at all. Gates the About entry
          * — see `memberNav`. False, and there is nothing to read, so the entry
          * is not offered rather than leading to an empty page.
@@ -104,7 +112,15 @@
     const effectiveCollapsed = $derived(collapsed && isDesktop);
 
     const items = $derived(
-        memberNav(hackathonId, pages, votingEnabled, resultsVisible, teamCount, hasDescription),
+        memberNav(
+            hackathonId,
+            pages,
+            votingEnabled,
+            resultsVisible,
+            teamCount,
+            hasDescription,
+            phaseCount
+        ),
     );
     // Given the same `membership`/`isGlobalAdmin` as `badge` below, so the Manage
     // section and the "Owner" chip can never disagree about the role.
@@ -116,6 +132,7 @@
             stateNeedsAttention,
             trackCount,
             isPrivate,
+            phaseCount,
         ),
     );
 

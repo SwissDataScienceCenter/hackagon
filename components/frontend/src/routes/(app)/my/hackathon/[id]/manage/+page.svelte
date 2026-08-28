@@ -54,6 +54,7 @@
             false,
             data.tracks.length,
             isPrivate(data.visibility),
+            data.phaseCount,
         )
             .filter((i) => i.id !== 'manage:settings')
             .map((i) =>
@@ -134,6 +135,26 @@
     <section class="card flex flex-col gap-3 border-line-strong px-5 py-4">
         <span class="meta">Where the hackathon is</span>
 
+        <!-- With no phases at all this card is the only way to the first one:
+             Manage Timeline is not in the sidebar until a phase exists, exactly
+             as Manage Tracks waits for a track. So this says phases are optional
+             and links straight to the form, rather than naming a screen that
+             cannot be reached. Now and Next are not drawn — two empty boxes above
+             an "add one" button say nothing the button does not. -->
+        {#if data.phaseCount === 0}
+            <p class="m-0 text-sm text-ink-3">
+                An optional way to divide the hackathon into stretches of time, each with
+                its own dates and description. A hackathon runs perfectly well without
+                any.
+            </p>
+            <a
+                href={resolve(`/my/hackathon/${data.hackathonId}/timeline/manage/new`)}
+                class="btn btn-sm btn-outline w-fit no-underline"
+            >
+                <Plus class="h-3 w-3 shrink-0" aria-hidden="true" />
+                Add the first phase
+            </a>
+        {:else}
         <div class="grid gap-2 sm:grid-cols-2">
             <div class="card card-raised flex flex-col gap-1 px-4 py-3">
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -170,9 +191,19 @@
                     </span>
                 {:else}
                     <p class="m-0 text-sm text-ink-3">Nothing after this</p>
-                    <span class="text-xs text-ink-3">
-                        Add a phase on Manage Timeline to carry on.
-                    </span>
+                    <!-- Straight to the form rather than to the list it sits
+                         behind: this box exists because there is nothing after
+                         the current phase, and adding one is the only thing to
+                         do about that. -->
+                    <a
+                        href={resolve(
+                            `/my/hackathon/${data.hackathonId}/timeline/manage/new`
+                        )}
+                        class="w-fit text-xs font-semibold text-accent-ink no-underline
+                               hover:underline"
+                    >
+                        Add a phase to carry on &rarr;
+                    </a>
                 {/if}
             </div>
         </div>
@@ -212,15 +243,14 @@
             This only moves the marker. What participants are allowed to do is the panel
             below, and it never changes on its own.
         </p>
+        {/if}
     </section>
 
-    <!-- The switches, and the plan-vs-reality warning that belongs beside them
-         because the fix is one of them. -->
+    <!-- The switches. Nothing on this page reconciles them against a phase:
+         phases carry no plan any more, and advancing one never changes these. -->
     <CapabilitiesPanel
-        currentPhaseName={state.currentPhase?.name ?? ''}
         hasState={state.hasState}
         capabilities={data.capabilityStates}
-        unmet={state.unmet}
         message={form?.message}
         saved={form?.saved ?? false}
     />

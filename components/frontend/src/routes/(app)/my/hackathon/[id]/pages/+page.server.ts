@@ -18,14 +18,6 @@ export const load: PageServerLoad = async (event) => {
     error(403, "Only the hackathon organizer can manage pages")
   }
 
-  // The phase (if any) each page is linked from, for display only — the link
-  // itself is set on the phase's own edit form, not here.
-  const phaseNameByPageId = new Map(
-    hackathon.phases
-      .filter((p) => p.pageId)
-      .map((p) => [p.pageId as string, p.name]),
-  )
-
   // `hackathon.get` nests pages in whatever order ent returned them, not
   // `order` — unlike `PageService.List`, which sorts server-side. Sorting here
   // is what makes the list mean anything, since `order` is exactly what
@@ -36,7 +28,6 @@ export const load: PageServerLoad = async (event) => {
       id: p.id,
       title: p.title,
       visible: p.visible,
-      phaseName: phaseNameByPageId.get(p.id),
       // Flattened here rather than in the row so the bodies — 10 000 characters
       // each, and every page of the hackathon is in this list — never cross the
       // wire. The row only ever needs the opening line or two.

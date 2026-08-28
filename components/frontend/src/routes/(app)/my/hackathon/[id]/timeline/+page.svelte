@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { FileText } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import Countdown from '$lib/components/hackathon/Countdown.svelte';
-    import { PHASE_CAPABILITIES, formatPhaseRange } from '$lib/utils/phase';
+    import { ALL_CAPABILITIES, formatPhaseRange } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -20,7 +19,7 @@
     // What is actually switched on, in enum order rather than in whatever order
     // the state arrived in. `data.enabled` is HackathonState — the real thing —
     // not the live phase's capability tags, which are a plan and can disagree.
-    const open = $derived(PHASE_CAPABILITIES.filter((c) => data.enabled.includes(c.value)));
+    const open = $derived(ALL_CAPABILITIES.filter((c) => data.enabled.includes(c.value)));
     const openLine = $derived(open.map((c) => c.label).join(' · '));
 
     // The rail's two half-segments per row, coloured from that row's own status
@@ -176,20 +175,6 @@
                                         </span>
                                     {/if}
                                 {/if}
-
-                                {#if phase.pageId}
-                                    <a
-                                        href={resolve(
-                                            `/my/hackathon/${data.hackathonId}/pages/${phase.pageId}`
-                                        )}
-                                        class="inline-flex items-center gap-1 pt-1 text-xs
-                                               font-semibold text-accent-ink no-underline
-                                               hover:underline"
-                                    >
-                                        <FileText class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                        Read more
-                                    </a>
-                                {/if}
                             </div>
                         {:else}
                             <!-- Completed and upcoming read the same way and differ
@@ -203,20 +188,7 @@
                                 <h3 class="m-0 text-sm leading-snug text-ink-2">
                                     {phase.name}
                                     <span class="sr-only"> — {STATUS_LABEL[phase.status]}</span>
-                                </h3>
-                                {#if phase.pageId}
-                                    <a
-                                        href={resolve(
-                                            `/my/hackathon/${data.hackathonId}/pages/${phase.pageId}`
-                                        )}
-                                        class="inline-flex items-center gap-1 text-xs font-semibold
-                                               text-accent-ink no-underline hover:underline"
-                                    >
-                                        <FileText class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                        Read more
-                                    </a>
-                                {/if}
-                                <span class="ms-auto flex shrink-0 items-baseline gap-3">
+                                </h3>                                <span class="ms-auto flex shrink-0 items-baseline gap-3">
                                     <!-- Withheld while a phase is declared current:
                                          nothing but SetCurrentPhase starts the next
                                          one then, so its start date arriving does

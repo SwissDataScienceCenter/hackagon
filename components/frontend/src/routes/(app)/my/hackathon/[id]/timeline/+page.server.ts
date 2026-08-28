@@ -27,9 +27,6 @@ export const load: PageServerLoad = async (event) => {
     endsAt: p.endsAt,
     // A declared current phase wins over the dates — see `resolvePhaseStatus`.
     status: resolvePhaseStatus(p, currentPhaseId || undefined),
-    // The page a phase links to. `hackathon.get` nests the pages, so the link
-    // needs no lookup of its own; only phases with a page get one.
-    pageId: p.pageId ?? "",
   }))
 
   // Deliberately *not* `Phase.capabilities`. A phase's capability tags are a

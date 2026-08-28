@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { capabilityHref } from "./capabilityLinks"
-import { PHASE_CAPABILITIES } from "$lib/utils/phase"
+import { ALL_CAPABILITIES } from "$lib/utils/phase"
 
 // Capability numeric values.
 const REGISTER = 1
@@ -36,7 +36,7 @@ describe("capabilityHref", () => {
   // A capability added to the enum without a route here would render as a plain
   // chip rather than crash — but silently, so this states the current coverage.
   it("covers every capability but Register", () => {
-    const linked = PHASE_CAPABILITIES.filter(
+    const linked = ALL_CAPABILITIES.filter(
       (c) => capabilityHref("h1", c.value) !== undefined,
     ).map((c) => c.value)
     expect(linked).toEqual([

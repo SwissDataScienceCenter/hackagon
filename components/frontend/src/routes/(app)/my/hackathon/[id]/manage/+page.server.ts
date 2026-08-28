@@ -4,7 +4,6 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { CAPABILITY_ORDER } from "$lib/server/hackathon/phaseForm"
 import {
-  applyPhaseCapabilities,
   saveCapabilities,
   setCurrentPhase,
 } from "$lib/server/hackathon/stateActions"
@@ -49,6 +48,11 @@ export const load: PageServerLoad = async (event) => {
     // none the card below is the only way to the first. Nested in the layout's
     // `hackathon.get` already, so it costs nothing.
     tracks: hackathon.tracks.map((t) => ({ id: t.id, name: t.name })),
+    // Phases are optional the same way tracks are, and this is the page that
+    // says whether this hackathon has any: with none, the sidebar offers neither
+    // Timeline nor Manage Timeline, so the card below is the only way to the
+    // first one. Nested in the layout's `hackathon.get` already.
+    phaseCount: hackathon.phases.length,
     // The switches. Built here because `CAPABILITY_ORDER` is the generated enum
     // and is server-only; the on/off flags themselves ride on `hackathonState`.
     capabilityStates: CAPABILITY_ORDER.map((c) => ({
@@ -77,6 +81,4 @@ export const load: PageServerLoad = async (event) => {
 export const actions: Actions = {
   setCurrent: (event) => setCurrentPhase(event, event.params.id),
   saveCapabilities: (event) => saveCapabilities(event, event.params.id),
-  applyPhaseCapabilities: (event) =>
-    applyPhaseCapabilities(event, event.params.id),
 }

@@ -249,14 +249,6 @@
                                         {/if}
                                     </button>
                                 </form>
-                                {#if page.phaseName}
-                                    <!-- Which phase points here, not a state of the
-                                         page: neutral rather than one of the status
-                                         hues. -->
-                                    <span class="badge badge-neutral">
-                                        {page.phaseName}
-                                    </span>
-                                {/if}
                                 <!-- View is the excerpt's way out — the whole page,
                                      rendered as a participant gets it. Quiet beside
                                      Edit, which is what this screen is for. -->

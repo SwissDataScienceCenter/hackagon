@@ -21,7 +21,6 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     hackathonId: hackathon.id,
-    pages: hackathon.pages.map((p) => ({ id: p.id, title: p.title })),
   }
 }
 
@@ -50,12 +49,6 @@ export const actions: Actions = {
         // returns null for both. `Edit` sets them correctly, which is why
         // scheduling happens there. Send them here, and restore the fields in
         // `PhaseForm` via `datesEditable`, once Create stores them.
-        //
-        // Sending nothing for pageId means "no linked page" — `page_id` is
-        // optional and its CEL rule only checks the shape of a value that is
-        // present.
-        pageId: values.pageId !== "" ? values.pageId : undefined,
-        capabilities: values.capabilities,
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {
