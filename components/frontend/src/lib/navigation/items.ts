@@ -130,6 +130,7 @@ export function memberNav(
   resultsVisible = false,
   teamCount = 0,
   hasDescription = false,
+  phaseCount = 0,
 ): NavItem[] {
   return [
     {
@@ -228,12 +229,20 @@ export function memberNav(
           },
         ]
       : []),
-    {
-      id: "member:timeline",
-      label: "Timeline",
-      icon: CalendarClock,
-      href: resolve(`/my/hackathon/${hackathonId}/timeline`),
-    },
+    // Only once a phase exists. Phases are optional — a hackathon runs perfectly
+    // well as a single stretch of time — and with none this leads to a page
+    // reading "No phases yet" that a participant can do nothing about. Same
+    // treatment `teamCount` gives Teams and `trackCount` gives Manage Tracks.
+    ...(phaseCount > 0
+      ? [
+          {
+            id: "member:timeline",
+            label: "Timeline",
+            icon: CalendarClock,
+            href: resolve(`/my/hackathon/${hackathonId}/timeline`),
+          },
+        ]
+      : []),
     // Keyed by page id, never by title: titles are editable and need not be
     // unique, and two pages named the same would collide on a title-derived key
     // and take the sidebar's {#each} down.
@@ -318,6 +327,10 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * were not, when they are one tab away from it. The count that used to justify
  * the row now rides the Manage Participants tile on Settings.
  *
+ * `phaseCount` decides whether Manage Timeline is offered, on exactly the same
+ * grounds as `trackCount` below — phases are optional, and the first one is
+ * added from Settings.
+ *
  * `trackCount` decides whether Manage Tracks is offered at all: tracks are
  * optional, and a hackathon running without them should not carry a permanent
  * entry to a page listing nothing. Zero is the honest default — a caller that
@@ -347,6 +360,7 @@ export function manageNav(
   needsAttention = false,
   trackCount = 0,
   isPrivate = false,
+  phaseCount = 0,
 ): NavItem[] {
   if (!isGlobalAdmin && membership?.role !== OWNER) return []
 
@@ -448,14 +462,21 @@ export function manageNav(
       icon: UserRoundCog,
       href: resolve(`/my/hackathon/${hackathonId}/teams/manage`),
     },
-    // The whole timeline, not just phase creation: edit, delete, declare a phase
-    // current, and set the hackathon's capabilities all live on this one page.
-    {
-      id: "manage:timeline",
-      label: "Manage Timeline",
-      icon: CalendarCog,
-      href: resolve(`/my/hackathon/${hackathonId}/timeline/manage`),
-    },
+    // Editing, deleting and declaring a phase current — but only once there is a
+    // phase to do any of that to. Phases are optional, exactly like tracks, so
+    // the way to the *first* one is the "Where the hackathon is" card on
+    // Settings, which is always there and says so. `phaseCount` is the honest
+    // default at zero: a caller that has not looked cannot claim there are any.
+    ...(phaseCount > 0
+      ? [
+          {
+            id: "manage:timeline",
+            label: "Manage Timeline",
+            icon: CalendarCog,
+            href: resolve(`/my/hackathon/${hackathonId}/timeline/manage`),
+          },
+        ]
+      : []),
     // Shown whether or not voting is on, unlike the participant entry it nests
     // under: categories have to exist before voting opens, so gating the setup
     // screen on the capability would surface it only once it was too late.

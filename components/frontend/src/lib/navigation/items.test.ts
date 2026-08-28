@@ -34,14 +34,31 @@ describe("memberNav", () => {
     visible,
   })
 
+  // With a phase, so Timeline has an entry at all — it is optional, like Teams
+  // and About above it.
   it("orders the fixed destinations as a lifecycle", () => {
-    expectOrder(memberNav("hack-1"), [
+    expectOrder(memberNav("hack-1", [], false, false, 0, false, 1), [
       "member:overview",
       "member:participants",
       "member:projects",
       "member:submissions",
       "member:timeline",
     ])
+  })
+
+  // Phases are optional, so the entry is too — and unlike Teams, the organiser's
+  // half is gated on the same count, because Settings is what leads to the first
+  // phase.
+  describe("phaseCount", () => {
+    it("offers no Timeline entry with no phases", () => {
+      expect(idsOf(memberNav("hack-1"))).not.toContain("member:timeline")
+    })
+
+    it("offers Timeline once a phase exists", () => {
+      expect(
+        idsOf(memberNav("hack-1", [], false, false, 0, false, 1)),
+      ).toContain("member:timeline")
+    })
   })
 
   // The description is optional on a hackathon, so the entry is too: About with
@@ -163,7 +180,7 @@ describe("memberNav", () => {
   // The entries follow the hackathon's own order of events: you submit, then
   // people vote on what was submitted, then the tally is published.
   it("slots Voting and Results between Submissions and Timeline", () => {
-    expectOrder(memberNav("hack-1", [], true, true), [
+    expectOrder(memberNav("hack-1", [], true, true, 0, false, 1), [
       "member:submissions",
       "member:voting",
       "member:results",
@@ -340,7 +357,7 @@ describe("manageNav", () => {
   // Order follows the participant entries these extend, so the two sections read
   // down the page in the same sequence.
   it("follows the order of the participant entries it extends", () => {
-    expectOrder(manageNav("hack-1", owner, false, false, 3), [
+    expectOrder(manageNav("hack-1", owner, false, false, 3, false, 1), [
       "manage:settings",
       // One entry for both halves of the roster: the waitlist is its second tab,
       // not a row of its own.
@@ -353,6 +370,23 @@ describe("manageNav", () => {
       "manage:voting",
       "manage:pages",
     ])
+  })
+
+  // Same gate as the participant Timeline entry, and the reason it matters more
+  // here: with Manage Timeline hidden, the "Where the hackathon is" card on
+  // Settings is the only route to the first phase.
+  describe("phaseCount", () => {
+    it("offers no Manage Timeline entry with no phases", () => {
+      expect(idsOf(manageNav("hack-1", owner, false))).not.toContain(
+        "manage:timeline",
+      )
+    })
+
+    it("offers Manage Timeline once a phase exists", () => {
+      expect(
+        idsOf(manageNav("hack-1", owner, false, false, 0, false, 1)),
+      ).toContain("manage:timeline")
+    })
   })
 
   // On a private hackathon the sign-up path reads in order: the roster somebody
@@ -486,9 +520,18 @@ describe("manageNav", () => {
   // while you are assigning them.
   it("does not collide with memberNav, and wins the highlight on its own routes", () => {
     const items = [
-      ...memberNav("hack-1", [{ id: "p1", title: "Welcome", visible: true }]),
+      // With a phase, so both Timeline entries exist and can contest each other.
+      ...memberNav(
+        "hack-1",
+        [{ id: "p1", title: "Welcome", visible: true }],
+        false,
+        false,
+        0,
+        false,
+        1,
+      ),
       // With a track, so `/tracks` has an entry to light at all.
-      ...manageNav("hack-1", owner, false, false, 1),
+      ...manageNav("hack-1", owner, false, false, 1, false, 1),
     ]
 
     expect(new Set(idsOf(items)).size).toBe(items.length)
