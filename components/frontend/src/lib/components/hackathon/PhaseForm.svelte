@@ -5,7 +5,6 @@
 
     let {
         phase,
-        pages,
         cancelHref,
         submitLabel,
         message,
@@ -16,10 +15,7 @@
             description: string;
             startsAt?: Date;
             endsAt?: Date;
-            /** Empty string when the phase links no page. */
-            pageId: string;
         };
-        pages: { id: string; title: string }[];
         /** Unresolved path — `resolve()` is called here, at the anchor. */
         cancelHref: string;
         submitLabel: string;
@@ -98,23 +94,6 @@
                 Dates are set after the phase exists — save it, then use Edit on the
                 timeline to schedule it.
             </span>
-        {/if}
-
-        {#if pages.length > 0}
-            <label class="field-label sm:col-span-2">
-                Linked page (optional)
-                <select name="pageId" class="field">
-                    <option value="">No page</option>
-                    {#each pages as p (p.id)}
-                        <option value={p.id} selected={p.id === phase.pageId}>
-                            {p.title}
-                        </option>
-                    {/each}
-                </select>
-                <span class="font-normal text-ink-3">
-                    Participants can open this page from the timeline.
-                </span>
-            </label>
         {/if}
     </div>
 

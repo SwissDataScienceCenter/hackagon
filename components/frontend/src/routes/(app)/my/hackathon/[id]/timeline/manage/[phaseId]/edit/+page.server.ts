@@ -64,9 +64,7 @@ export const load: PageServerLoad = async (event) => {
       description: result.phase.description ?? "",
       startsAt: result.phase.startsAt,
       endsAt: result.phase.endsAt,
-      pageId: result.phase.pageId ?? "",
     },
-    pages: hackathon.pages.map((p) => ({ id: p.id, title: p.title })),
   }
 }
 
@@ -94,13 +92,10 @@ export const actions: Actions = {
         // cleared state here once the handler can accept it.
         startsAt: values.startsAt,
         endsAt: values.endsAt,
-        // Empty string is meaningful on Edit and unlinks the page — unlike
-        // Create, where it would fail the UUID rule.
-        pageId: values.pageId,
-        // `capabilities` deliberately omitted, which the wrapper reads as "no
-        // change" rather than "clear them": the tags are no longer authored here,
-        // and wiping what seeded or previously-saved phases carry is not this
-        // form's business. See the ticket.
+        // `pageId` and `capabilities` are both deliberately omitted, which the
+        // request reads as "no change" rather than "clear them". Neither is
+        // authored here any more, and wiping what seeded or previously-saved
+        // phases carry is not this form's business. See the tickets.
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {

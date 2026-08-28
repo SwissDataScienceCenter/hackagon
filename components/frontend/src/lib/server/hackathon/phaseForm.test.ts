@@ -43,7 +43,6 @@ describe("parsePhaseForm", () => {
       description: "Define your idea.",
       startsAt: undefined,
       endsAt: undefined,
-      pageId: "",
     })
   })
 
@@ -117,13 +116,13 @@ describe("parsePhaseForm", () => {
     })
   })
 
-  it("keeps an empty pageId, which Edit reads as 'unlink'", () => {
-    expect(values(form({ pageId: "" })).pageId).toBe("")
-  })
-
-  it("passes a pageId through for the backend to validate", () => {
-    const id = "019fce51-2334-740f-b243-b1ee1e92e501"
-    expect(values(form({ pageId: id })).pageId).toBe(id)
+  // A phase form carries a name, a description and its dates, and nothing else.
+  // Fields the form no longer renders are not parsed either — a hand-posted
+  // `pageId` or `capabilities` is ignored rather than passed to the RPC.
+  it("ignores fields the form no longer offers", () => {
+    const v = values(form({ pageId: "019fce51-2334-740f-b243-b1ee1e92e501" }))
+    expect(v).not.toHaveProperty("pageId")
+    expect(v).not.toHaveProperty("capabilities")
   })
 })
 

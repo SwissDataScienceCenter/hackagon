@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Check, FileText, Pencil, Plus, Settings2 } from 'lucide-svelte';
+    import { Check, Pencil, Plus, Settings2 } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import { formatPhaseRange } from '$lib/utils/phase';
@@ -122,18 +122,6 @@
                         {/if}
 
                         <div class="flex flex-wrap items-center gap-3 pt-1">
-                            {#if phase.pageId}
-                                <a
-                                    href={resolve(
-                                        `/my/hackathon/${data.hackathonId}/pages/${phase.pageId}`
-                                    )}
-                                    class="inline-flex items-center gap-1 text-xs font-semibold
-                                           text-accent-ink no-underline hover:underline"
-                                >
-                                    <FileText class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                    Read more
-                                </a>
-                            {/if}
                             <!-- Both are writes, so forms rather than links, and
                                  both move the pointer only — what participants
                                  may do is unchanged either way. Clearing sends no

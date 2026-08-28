@@ -15,7 +15,6 @@
         description: '',
         startsAt: undefined,
         endsAt: undefined,
-        pageId: '',
     };
 </script>
 
@@ -37,7 +36,6 @@
 
     <PhaseForm
         phase={blank}
-        pages={data.pages}
         cancelHref={backHref}
         submitLabel="Add phase"
         message={form?.message}

@@ -71,8 +71,6 @@ export interface PhaseFormValues {
   description: string
   startsAt?: Date
   endsAt?: Date
-  /** Empty string means "no linked page". */
-  pageId: string
 }
 
 export type PhaseFormResult =
@@ -111,7 +109,6 @@ function parseLocalDateTime(
 export function parsePhaseForm(form: FormData): PhaseFormResult {
   const rawName = form.get("name")
   const rawDescription = form.get("description")
-  const rawPageId = form.get("pageId")
 
   const name = typeof rawName === "string" ? rawName.trim() : ""
   if (name.length < 3) {
@@ -152,7 +149,6 @@ export function parsePhaseForm(form: FormData): PhaseFormResult {
       description,
       startsAt,
       endsAt,
-      pageId: typeof rawPageId === "string" ? rawPageId : "",
     },
   }
 }
