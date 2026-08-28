@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/casbin/casbin/v3"
 	"github.com/casbin/casbin/v3/log"
 	"github.com/casbin/casbin/v3/model"
+	"github.com/casbin/casbin/v3/util"
 	entadapter "github.com/casbin/ent-adapter"
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
@@ -163,9 +166,63 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 		return nil, err
 	}
 
+	// Register hierarchical domain matching for both g role lookups and the
+	// matcher. A request to /hackathon/h1/team/t1 matches a policy on
+	// /hackathon/h1 (and any glob pattern under it).
+	e.AddFunction("hasRoleInDomainOrAncestor", domainMatch(e))
 	return &Enforcer{enforcer: e}, nil
 }
+func parentDomain(domain string) string {
+	if domain == "" || domain == "/" {
+		return ""
+	}
+	domain = strings.Trim(domain, "/")
+	parts := strings.Split(domain, "/")
+	numPartsPerDomainSection := 2
+	if len(parts) <= numPartsPerDomainSection {
+		return ""
+	}
+	return "/" + strings.Join(parts[:len(parts)-numPartsPerDomainSection], "/")
+}
 
+func hasRoleInDomain(e *casbin.Enforcer, sub, role, domain string) bool {
+	roles := e.GetRolesForUserInDomain(sub, domain)
+	return slices.Contains(roles, role)
+}
+func domainMatch(e *casbin.Enforcer) func(args ...interface{}) (interface{}, error) {
+	return func(args ...interface{}) (interface{}, error) {
+		sub, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not convert sub to string: %v", sub)
+		}
+		role, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not convert role to string: %v", sub)
+		}
+		requestDomain, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not convert requestDomain to string: %v", sub)
+		}
+		policyDomain, ok := args[3].(string)
+		if !ok {
+			return nil, fmt.Errorf("could not convert policyDomain to string: %v", sub)
+		}
+
+		for d := requestDomain; d != ""; d = parentDomain(d) {
+			matched, err := util.GlobMatch(d, policyDomain)
+			if err != nil {
+				return false, err
+			}
+			if !matched {
+				continue
+			}
+			if role == "*" || hasRoleInDomain(e, sub, role, d) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+}
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons

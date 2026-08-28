@@ -209,11 +209,7 @@ func (s *TeamService) Edit(
 		ctx, hackathonID, m.Team, m.Write,
 		m.WithTeam(t.ID.String()),
 	); err != nil {
-		if err := s.enforcer.RequirePermission(
-			ctx, hackathonID, m.Team, m.Write,
-		); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	u, err := s.dbClient.User.Query().
@@ -1040,11 +1036,7 @@ func (s *TeamService) GetSubmission(
 		ctx, hackathonID, m.Submission, m.Read,
 		m.WithTeam(t.ID.String()),
 	); err != nil {
-		if err := s.enforcer.RequirePermission(
-			ctx, hackathonID, m.Submission, m.Read,
-		); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// Find the latest submission for this team (highest version).
@@ -1093,11 +1085,7 @@ func (s *TeamService) ListSubmissions(
 		ctx, hackathonID, m.Submission, m.Read,
 		m.WithTeam(t.ID.String()),
 	); err != nil {
-		if err := s.enforcer.RequirePermission(
-			ctx, hackathonID, m.Submission, m.Read,
-		); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	submissions, err := s.dbClient.Submission.Query().

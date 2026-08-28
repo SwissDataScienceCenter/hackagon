@@ -634,18 +634,14 @@ func (s *ProjectService) Edit(
 
 	hackathonID := project.Edges.Hackathon.ID
 
-	err = s.enforcer.RequirePermission(
+	if err := s.enforcer.RequirePermission(
 		ctx,
 		hackathonID.String(),
 		mw.Project,
 		mw.Write,
 		mw.WithProject(projectID.String()),
-	)
-	if err != nil {
-		err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write)
-		if err != nil {
-			return nil, status.Error(codes.PermissionDenied, "permission denied")
-		}
+	); err != nil {
+		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 
 	// Build the update query with only provided fields
@@ -746,18 +742,14 @@ func (s *ProjectService) Delete(
 
 	hackathonID := project.Edges.Hackathon.ID
 
-	err = s.enforcer.RequirePermission(
+	if err := s.enforcer.RequirePermission(
 		ctx,
 		hackathonID.String(),
 		mw.Project,
 		mw.Write,
 		mw.WithProject(projectID.String()),
-	)
-	if err != nil {
-		err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write)
-		if err != nil {
-			return nil, status.Error(codes.PermissionDenied, "permission denied")
-		}
+	); err != nil {
+		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 
 	// Delete the project
