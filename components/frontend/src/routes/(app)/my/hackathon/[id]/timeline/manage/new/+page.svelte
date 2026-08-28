@@ -16,7 +16,6 @@
         startsAt: undefined,
         endsAt: undefined,
         pageId: '',
-        capabilities: [] as number[],
     };
 </script>
 

@@ -10,18 +10,16 @@
 //
 // The two mechanisms stay strictly separate, as the backend keeps them:
 // `setCurrentPhase` moves the pointer and grants nobody anything, and
-// `setCapabilities` is the only thing that writes casbin rows. Nothing here
-// couples them — `applyPhaseCapabilities` is the one bridge, and an organiser
-// has to ask for it.
+// `saveCapabilities` is the only thing that writes casbin rows. Nothing here
+// couples them, and nothing here may: advancing a phase must never change what
+// participants are allowed to do.
 
 import type { RequestEvent } from "@sveltejs/kit"
 import { requireGrpc } from "$lib/server/grpc/client"
 import {
   CAPABILITY_ORDER,
   capabilityStates,
-  enabledCapabilities,
 } from "$lib/server/hackathon/phaseForm"
-import { withPhaseCapabilitiesEnabled } from "$lib/utils/phase"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
 
@@ -59,9 +57,9 @@ export function toCapabilityFailure(e: unknown) {
  * `SetCurrentPhase` reads an empty string as "clear", which is why the clearing
  * form simply omits the field.
  *
- * Deliberately does *not* touch capabilities. Moving between phases changes what
- * the timeline says, never what participants may do — that stays an explicit act
- * on the switches, or one click on `applyPhaseCapabilities`.
+ * Deliberately does *not* touch capabilities, and there is no longer anything
+ * that does: moving between phases changes what the timeline says, never what
+ * participants may do. That stays an explicit act on the switches.
  */
 export async function setCurrentPhase(
   event: RequestEvent,
@@ -111,53 +109,6 @@ export async function saveCapabilities(
 
   try {
     await hackathon.setCapabilities({
-      hackathonId,
-      capabilities: capabilityStates(enabled),
-    })
-  } catch (e) {
-    const failure = toCapabilityFailure(e)
-    if (failure) return failure
-    throw e
-  }
-
-  return { message: "", saved: true }
-}
-
-/**
- * Switch on whatever the current phase expects and is off.
- *
- * Additive only — see `withPhaseCapabilitiesEnabled`; nothing is ever switched
- * off here, so this cannot close registration as a side effect of moving through
- * phases.
- *
- * Reads the hackathon fresh rather than trusting the client for what is
- * currently enabled or which phase is current: the union is computed against
- * live state, so a stale page cannot switch something back on that was just
- * turned off.
- */
-export async function applyPhaseCapabilities(
-  event: RequestEvent,
-  hackathonId: string,
-) {
-  const grpc = requireGrpc(event.locals.grpc)
-
-  try {
-    const { hackathon } = await grpc.hackathon.get({ hackathonId })
-    const currentPhaseId = hackathon?.state?.currentPhaseId ?? ""
-    const current = (hackathon?.phases ?? []).find(
-      (p) => p.id === currentPhaseId,
-    )
-    if (!current) {
-      return fail(400, {
-        message: "This hackathon has no current phase to take settings from",
-      })
-    }
-
-    const enabled = withPhaseCapabilitiesEnabled(
-      enabledCapabilities(hackathon?.state),
-      current.capabilities as number[],
-    )
-    await grpc.hackathon.setCapabilities({
       hackathonId,
       capabilities: capabilityStates(enabled),
     })

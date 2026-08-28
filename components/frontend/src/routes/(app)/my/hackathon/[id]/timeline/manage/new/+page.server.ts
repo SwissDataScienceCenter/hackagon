@@ -55,7 +55,6 @@ export const actions: Actions = {
         // optional and its CEL rule only checks the shape of a value that is
         // present.
         pageId: values.pageId !== "" ? values.pageId : undefined,
-        capabilities: values.capabilities,
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {

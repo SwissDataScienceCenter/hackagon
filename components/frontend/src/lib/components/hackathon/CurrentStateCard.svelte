@@ -2,7 +2,7 @@
     import { ArrowRight, Check } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import { capabilityHref } from '$lib/navigation/capabilityLinks';
-    import { PHASE_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
+    import { ALL_CAPABILITIES, capabilityDescription, formatPhaseRange } from '$lib/utils/phase';
     import { nextBoundary } from '$lib/utils/relativeTime';
     import Countdown from './Countdown.svelte';
 
@@ -50,7 +50,7 @@
         enabled: number[];
     } = $props();
 
-    const open = $derived(PHASE_CAPABILITIES.filter((c) => enabled.includes(c.value)));
+    const open = $derived(ALL_CAPABILITIES.filter((c) => enabled.includes(c.value)));
 
     // Links only where following one leads somewhere the viewer is let in.
     //

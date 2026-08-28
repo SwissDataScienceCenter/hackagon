@@ -214,13 +214,11 @@
         </p>
     </section>
 
-    <!-- The switches, and the plan-vs-reality warning that belongs beside them
-         because the fix is one of them. -->
+    <!-- The switches. Nothing on this page reconciles them against a phase:
+         phases carry no plan any more, and advancing one never changes these. -->
     <CapabilitiesPanel
-        currentPhaseName={state.currentPhase?.name ?? ''}
         hasState={state.hasState}
         capabilities={data.capabilityStates}
-        unmet={state.unmet}
         message={form?.message}
         saved={form?.saved ?? false}
     />

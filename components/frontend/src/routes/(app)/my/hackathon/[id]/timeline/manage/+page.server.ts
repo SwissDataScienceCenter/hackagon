@@ -1,13 +1,8 @@
 import type { Actions, PageServerLoad } from "./$types"
-import {
-  extraEnabledCapabilities,
-  resolvePhaseStatus,
-  sortPhasesByStart,
-} from "$lib/utils/phase"
+import { resolvePhaseStatus, sortPhasesByStart } from "$lib/utils/phase"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { setCurrentPhase } from "$lib/server/hackathon/stateActions"
-import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { error } from "@sveltejs/kit"
 
 export const load: PageServerLoad = async (event) => {
@@ -31,7 +26,6 @@ export const load: PageServerLoad = async (event) => {
   // is absent on a hackathon with no state row, which no longer happens for
   // seeded or app-created ones but is still the shape the proto allows.
   const currentPhaseId = hackathon.state?.currentPhaseId ?? ""
-  const enabled = enabledCapabilities(hackathon.state)
 
   // Same ordering the participant timeline and the header bar use, so no two
   // surfaces disagree about the sequence.
@@ -43,35 +37,20 @@ export const load: PageServerLoad = async (event) => {
     endsAt: p.endsAt,
     // A declared current phase wins over the dates — see `resolvePhaseStatus`.
     status: resolvePhaseStatus(p, currentPhaseId || undefined),
-    // Raw enum numbers — `capabilityLabel` in `$lib/utils/phase` is keyed by
-    // them, so the page needs no server-only import to render them.
-    capabilities: p.capabilities as number[],
     // The page a phase links to. `hackathon.get` nests the pages, so the link
     // needs no lookup of its own; only phases with a page get one.
     pageId: p.pageId ?? "",
   }))
 
-  const current = phases.find((p) => p.id === currentPhaseId)
-
   return {
     hackathonId: hackathon.id,
     phases,
-    // Lets the page tick off which of the current phase's plans are actually
-    // live — for the current phase alone: marking a future phase's plan "not
-    // enabled" would read as broken when it is simply not time yet.
-    //
-    // Read-only here. The switches that change it moved to the overview, so what
-    // this page still needs is the comparison, not the control.
-    enabled,
-    // Switched on beyond what this phase planned for. Information, not a problem.
-    alsoEnabled: extraEnabledCapabilities(current?.capabilities ?? [], enabled),
   }
 }
 
 export const actions: Actions = {
-  // The one write left on this page. The capability switches moved to Manage
-  // Hackathon, taking `saveCapabilities` and `applyPhaseCapabilities` with them;
-  // this shares `setCurrentPhase` with that page, which advances to the next
-  // phase while these buttons pick any phase off the list.
+  // The one write on this page, and the only one a phase has ever had: move the
+  // marker. The capability switches live on Settings and are not mirrored here —
+  // a phase decides nothing about what participants may do.
   setCurrent: (event) => setCurrentPhase(event, event.params.id),
 }

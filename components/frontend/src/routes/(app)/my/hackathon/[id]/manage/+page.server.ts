@@ -4,7 +4,6 @@ import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role
 import { mayManagePhases } from "$lib/server/hackathon/capabilities"
 import { CAPABILITY_ORDER } from "$lib/server/hackathon/phaseForm"
 import {
-  applyPhaseCapabilities,
   saveCapabilities,
   setCurrentPhase,
 } from "$lib/server/hackathon/stateActions"
@@ -77,6 +76,4 @@ export const load: PageServerLoad = async (event) => {
 export const actions: Actions = {
   setCurrent: (event) => setCurrentPhase(event, event.params.id),
   saveCapabilities: (event) => saveCapabilities(event, event.params.id),
-  applyPhaseCapabilities: (event) =>
-    applyPhaseCapabilities(event, event.params.id),
 }

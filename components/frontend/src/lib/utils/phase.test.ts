@@ -1,22 +1,13 @@
 import { describe, it, expect } from "vitest"
 import {
-  PHASE_CAPABILITIES,
+  ALL_CAPABILITIES,
   capabilityDescription,
   capabilityLabel,
   currentAndNextPhase,
-  extraEnabledCapabilities,
   formatPhaseRange,
   resolvePhaseStatus,
   toDateTimeLocal,
-  unmetPhaseCapabilities,
-  withPhaseCapabilitiesEnabled,
 } from "./phase"
-
-// Capability numeric values.
-const PROPOSE = 2
-const SUBMISSIONS = 4
-const VOTE = 5
-const VIEW_RESULTS = 6
 
 const past = new Date(Date.now() - 86_400_000)
 const older = new Date(Date.now() - 172_800_000)
@@ -89,115 +80,6 @@ describe("resolvePhaseStatus", () => {
   })
 })
 
-describe("unmetPhaseCapabilities", () => {
-  it("reports tags that are not switched on", () => {
-    expect(unmetPhaseCapabilities([VOTE, VIEW_RESULTS], [VOTE])).toEqual([
-      VIEW_RESULTS,
-    ])
-  })
-
-  it("is empty when everything the phase expects is on", () => {
-    expect(
-      unmetPhaseCapabilities([SUBMISSIONS], [SUBMISSIONS, PROPOSE]),
-    ).toEqual([])
-  })
-
-  it("is empty for an untagged phase", () => {
-    expect(unmetPhaseCapabilities([], [PROPOSE])).toEqual([])
-  })
-
-  it("keeps the phase's own tag order", () => {
-    expect(unmetPhaseCapabilities([VIEW_RESULTS, PROPOSE], [])).toEqual([
-      VIEW_RESULTS,
-      PROPOSE,
-    ])
-  })
-
-  // An unknown tag cannot be switched on, so calling it missing would be noise.
-  it("drops unknown tag values", () => {
-    expect(unmetPhaseCapabilities([99, VOTE], [])).toEqual([VOTE])
-  })
-})
-
-describe("extraEnabledCapabilities", () => {
-  const REGISTER = 1
-
-  // The Climate Tech fixture while Judging is current: registration is planned
-  // for no phase, so it shows as "also enabled" rather than as a problem.
-  it("reports what is on but not planned for the phase", () => {
-    expect(extraEnabledCapabilities([VOTE], [REGISTER, PROPOSE, VOTE])).toEqual(
-      [REGISTER, PROPOSE],
-    )
-  })
-
-  it("is empty when everything on was planned", () => {
-    expect(extraEnabledCapabilities([VOTE, PROPOSE], [VOTE])).toEqual([])
-  })
-
-  it("is empty when nothing is enabled", () => {
-    expect(extraEnabledCapabilities([VOTE], [])).toEqual([])
-  })
-
-  it("lists everything enabled for an untagged phase", () => {
-    expect(extraEnabledCapabilities([], [PROPOSE, VOTE])).toEqual([
-      PROPOSE,
-      VOTE,
-    ])
-  })
-
-  it("sorts, so the order does not follow however the state arrived", () => {
-    expect(extraEnabledCapabilities([], [VOTE, REGISTER, PROPOSE])).toEqual([
-      REGISTER,
-      PROPOSE,
-      VOTE,
-    ])
-  })
-
-  it("drops unknown values", () => {
-    expect(extraEnabledCapabilities([], [99, VOTE])).toEqual([VOTE])
-  })
-})
-
-describe("withPhaseCapabilitiesEnabled", () => {
-  const REGISTER = 1
-
-  it("switches on what the phase expects", () => {
-    expect(withPhaseCapabilitiesEnabled([], [VOTE, VIEW_RESULTS])).toEqual([
-      VOTE,
-      VIEW_RESULTS,
-    ])
-  })
-
-  // The property the whole design rests on. Registration is tagged on no phase,
-  // so an exact match would close sign-ups just because Hacking does not
-  // mention them.
-  it("never switches anything off", () => {
-    expect(
-      withPhaseCapabilitiesEnabled([REGISTER, PROPOSE], [SUBMISSIONS]),
-    ).toEqual([REGISTER, PROPOSE, SUBMISSIONS])
-  })
-
-  it("is a no-op when the phase asks for nothing new", () => {
-    expect(withPhaseCapabilitiesEnabled([PROPOSE], [PROPOSE])).toEqual([
-      PROPOSE,
-    ])
-  })
-
-  it("is a no-op for an untagged phase", () => {
-    expect(withPhaseCapabilitiesEnabled([PROPOSE], [])).toEqual([PROPOSE])
-  })
-
-  // SetCapabilities refuses anything outside the enum, so one bad tag would fail
-  // the whole call rather than being ignored.
-  it("drops unknown tag values", () => {
-    expect(withPhaseCapabilitiesEnabled([], [99, VOTE])).toEqual([VOTE])
-  })
-
-  it("deduplicates", () => {
-    expect(withPhaseCapabilitiesEnabled([VOTE], [VOTE, VOTE])).toEqual([VOTE])
-  })
-})
-
 describe("capabilityLabel", () => {
   it("labels each of the seven capabilities", () => {
     expect(capabilityLabel(1)).toBe("Register")
@@ -213,17 +95,15 @@ describe("capabilityLabel", () => {
   })
 })
 
-describe("PHASE_CAPABILITIES", () => {
+describe("ALL_CAPABILITIES", () => {
   // The order a hackathon runs, which is not enum order: VIEW_TEAMS is numbered
   // 7 and sits fourth, between the preferences teams are formed from and the
   // submissions they are filed against. Pinned because the switch panel and the
   // participant-facing lists both read this sequence, and a reorder that touched
   // only one of them would have them disagree on screen.
   it("lists the seven in the order a hackathon runs", () => {
-    expect(PHASE_CAPABILITIES.map((c) => c.value)).toEqual([
-      1, 2, 3, 7, 4, 5, 6,
-    ])
-    expect(PHASE_CAPABILITIES.every((c) => c.label.length > 0)).toBe(true)
+    expect(ALL_CAPABILITIES.map((c) => c.value)).toEqual([1, 2, 3, 7, 4, 5, 6])
+    expect(ALL_CAPABILITIES.every((c) => c.label.length > 0)).toBe(true)
   })
 })
 
@@ -231,7 +111,7 @@ describe("capabilityDescription", () => {
   // One table holds both fields, so the pairing is structural — what is left to
   // check is that nobody left a sentence empty beside a switch.
   it("describes every capability the switches render", () => {
-    for (const c of PHASE_CAPABILITIES) {
+    for (const c of ALL_CAPABILITIES) {
       expect(capabilityDescription(c.value)).toBeTruthy()
     }
   })

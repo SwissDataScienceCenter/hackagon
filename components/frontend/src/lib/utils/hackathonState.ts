@@ -9,16 +9,10 @@
  * A configuration problem worth interrupting an organizer about.
  *
  * One kind, and the bar is deliberately that high: a *data* problem the
- * organizer did not choose and cannot express through any switch. Three
- * conditions were considered and are reported elsewhere instead, because a
- * banner nobody can clear becomes wallpaper and stops being read at all:
+ * organizer did not choose and cannot express through any switch. Two conditions
+ * were considered and are reported elsewhere instead, because a banner nobody can
+ * clear becomes wallpaper and stops being read at all:
  *
- *  - **the current phase plans a capability that is switched off.** Not a fault
- *    at all: `Phase.capabilities` is informational, and what participants may do
- *    is the organizer's decision, taken switch by switch. A hackathon that runs
- *    without project proposals is configured, not broken. `CapabilitiesPanel` on
- *    Settings still reports the mismatch, beside the switches that would
- *    change it, and Manage Timeline reports it on the phase rows.
  *  - **no phase declared current** while the hackathon is running. The timeline
  *    still works; nobody is blocked.
  *  - **the current phase's `endsAt` has passed.** Stale rather than broken, and

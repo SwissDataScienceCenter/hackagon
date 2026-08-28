@@ -2,7 +2,7 @@
     import { FileText } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import Countdown from '$lib/components/hackathon/Countdown.svelte';
-    import { PHASE_CAPABILITIES, formatPhaseRange } from '$lib/utils/phase';
+    import { ALL_CAPABILITIES, formatPhaseRange } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -20,7 +20,7 @@
     // What is actually switched on, in enum order rather than in whatever order
     // the state arrived in. `data.enabled` is HackathonState — the real thing —
     // not the live phase's capability tags, which are a plan and can disagree.
-    const open = $derived(PHASE_CAPABILITIES.filter((c) => data.enabled.includes(c.value)));
+    const open = $derived(ALL_CAPABILITIES.filter((c) => data.enabled.includes(c.value)));
     const openLine = $derived(open.map((c) => c.label).join(' · '));
 
     // The rail's two half-segments per row, coloured from that row's own status

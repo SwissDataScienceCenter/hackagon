@@ -1,11 +1,10 @@
 import { describe, it, expect } from "vitest"
 import { CAPABILITY_ORDER, capabilityStates, parsePhaseForm } from "./phaseForm"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
-import { PHASE_CAPABILITIES } from "$lib/utils/phase"
+import { ALL_CAPABILITIES } from "$lib/utils/phase"
 
-// Capability numeric values.
-const REGISTER = 1
-const PROPOSE_PROJECTS = 2
+// Capability numeric value. Only one is named now that the phase form parses no
+// capabilities: `capabilityStates` needs something to switch on.
 const VOTE = 5
 
 /** A form with the two always-required fields filled, plus whatever else. */
@@ -45,7 +44,6 @@ describe("parsePhaseForm", () => {
       startsAt: undefined,
       endsAt: undefined,
       pageId: "",
-      capabilities: [],
     })
   })
 
@@ -119,31 +117,6 @@ describe("parsePhaseForm", () => {
     })
   })
 
-  describe("capabilities", () => {
-    it("maps checkbox numbers to enum values", () => {
-      const v = values(form({ capabilities: ["1", "5"] }))
-      expect(v.capabilities).toEqual([REGISTER, VOTE])
-    })
-
-    it("is empty when nothing is checked, which Edit reads as 'clear them'", () => {
-      expect(values(form()).capabilities).toEqual([])
-    })
-
-    it("drops duplicates", () => {
-      expect(values(form({ capabilities: ["2", "2"] })).capabilities).toEqual([
-        PROPOSE_PROJECTS,
-      ])
-    })
-
-    // `defined_only` would refuse these; neither can come from a rendered
-    // checkbox, so they are dropped rather than turned into an error.
-    it("drops unspecified and unrecognised values", () => {
-      expect(
-        values(form({ capabilities: ["0", "99", "banana", "2"] })).capabilities,
-      ).toEqual([PROPOSE_PROJECTS])
-    })
-  })
-
   it("keeps an empty pageId, which Edit reads as 'unlink'", () => {
     expect(values(form({ pageId: "" })).pageId).toBe("")
   })
@@ -181,12 +154,12 @@ describe("CAPABILITY_ORDER", () => {
   })
 
   // The switch panel reads this list and the overview's state card reads
-  // `PHASE_CAPABILITIES`; both show the same seven labels to the same organiser.
+  // `ALL_CAPABILITIES`; both show the same seven labels to the same organiser.
   // Reordering one and not the other is the mistake this catches — it would not
   // fail a type check, and nothing on screen would look broken, it would just be
   // two different answers to "what order do these happen in".
   it("renders in the same order as the participant-facing list", () => {
-    expect(CAPABILITY_ORDER).toEqual(PHASE_CAPABILITIES.map((c) => c.value))
+    expect(CAPABILITY_ORDER).toEqual(ALL_CAPABILITIES.map((c) => c.value))
   })
 })
 

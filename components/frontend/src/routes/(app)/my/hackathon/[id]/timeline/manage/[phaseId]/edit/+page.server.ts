@@ -65,9 +65,6 @@ export const load: PageServerLoad = async (event) => {
       startsAt: result.phase.startsAt,
       endsAt: result.phase.endsAt,
       pageId: result.phase.pageId ?? "",
-      // Raw enum numbers — what the form's checkboxes carry, and what
-      // `capabilityLabel` in `$lib/utils/phase` is keyed by.
-      capabilities: result.phase.capabilities as number[],
     },
     pages: hackathon.pages.map((p) => ({ id: p.id, title: p.title })),
   }
@@ -100,9 +97,10 @@ export const actions: Actions = {
         // Empty string is meaningful on Edit and unlinks the page — unlike
         // Create, where it would fail the UUID rule.
         pageId: values.pageId,
-        // The wrapper distinguishes "no change" (omitted) from "clear them"
-        // (empty items), so the form can always send the full set.
-        capabilities: { items: values.capabilities },
+        // `capabilities` deliberately omitted, which the wrapper reads as "no
+        // change" rather than "clear them": the tags are no longer authored here,
+        // and wiping what seeded or previously-saved phases carry is not this
+        // form's business. See the ticket.
       })
     } catch (e) {
       if (e instanceof ClientError && e.code === Status.INVALID_ARGUMENT) {

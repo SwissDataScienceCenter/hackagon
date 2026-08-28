@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { Check, FileText, Pencil, Plus, Settings2, X } from 'lucide-svelte';
+    import { Check, FileText, Pencil, Plus, Settings2 } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
-    import { capabilityLabel, formatPhaseRange } from '$lib/utils/phase';
+    import { formatPhaseRange } from '$lib/utils/phase';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -35,10 +35,13 @@
   — there is no separate create-phase entry, the "Add phase" button below is the
   way in.
 
-  The capability switches used to sit at the top of this page and now live on
-  Settings, the organiser's overview. This page keeps the *phases*, and
-  each phase row still ticks its plan off against what is switched on — read
-  here, change there, with the link below as the one way across.
+  The capability switches live on Settings, the organiser's overview, and are
+  not reflected here at all. A phase used to carry a *plan* — a set of
+  capabilities it was "for" — which this page ticked off against what was
+  actually switched on. The plan granted nobody anything, so it was two lists of
+  the same seven labels where only one decided anything; it is gone, and the link
+  below is the way to the one that decides. A phase is now a name, a description,
+  some dates and a marker.
 
   Page shell: px-4 py-8 sm:px-10 md:px-20 (matches participants/teams/timeline).
 -->
@@ -116,74 +119,6 @@
                             <p class="m-0 text-xs leading-snug text-ink-2">
                                 {phase.description}
                             </p>
-                        {/if}
-
-                        <!-- What the phase is *planned* for — not permissions. Dimmed
-                             on every phase but the current one, because it is
-                             reference information; the switches above are what decide
-                             anything.
-
-                             On the current phase only, each plan is ticked off
-                             against what is actually switched on: green for live,
-                             warning for not yet. Doing that on a future phase would
-                             flag "vote not enabled" as a problem when it is simply
-                             not time yet. The participant timeline shows the same
-                             plans without the ticks, having nothing to switch. -->
-                        {#if phase.capabilities.length > 0}
-                            <div
-                                class="flex flex-wrap items-baseline gap-1 pt-0.5
-                                       {phase.status === 'current' ? '' : 'opacity-60'}"
-                            >
-                                <span class="meta">
-                                    Planned for this phase:
-                                </span>
-                                {#each phase.capabilities as capability (capability)}
-                                    {@const live =
-                                        phase.status === 'current' &&
-                                        data.enabled.includes(capability)}
-                                    {@const pending =
-                                        phase.status === 'current' &&
-                                        !data.enabled.includes(capability)}
-                                    <!-- Icon as well as colour: colour alone is not a
-                                         signal for anyone who cannot distinguish it. -->
-                                    <span
-                                        class="badge {live
-                                            ? 'badge-success'
-                                            : pending
-                                              ? 'badge-warning'
-                                              : 'badge-neutral'}"
-                                    >
-                                        {#if live}
-                                            <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                        {:else if pending}
-                                            <X class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                        {/if}
-                                        {capabilityLabel(capability) ?? 'Unknown'}
-                                        {#if live}
-                                            <span class="sr-only"> — enabled</span>
-                                        {:else if pending}
-                                            <span class="sr-only"> — not enabled yet</span>
-                                        {/if}
-                                    </span>
-                                {/each}
-                            </div>
-                        {/if}
-
-                        <!-- Switched on beyond this phase's plan. Only meaningful for
-                             the current phase, and never a warning: registration is
-                             planned for no phase yet legitimately spans several. -->
-                        {#if phase.status === 'current' && data.alsoEnabled.length > 0}
-                            <div class="flex flex-wrap items-baseline gap-1">
-                                <span class="meta">
-                                    Also enabled:
-                                </span>
-                                {#each data.alsoEnabled as capability (capability)}
-                                    <span class="badge badge-success">
-                                        <Check class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                        {capabilityLabel(capability) ?? 'Unknown'}
-                                    </span>
-                                {/each}
-                            </div>
                         {/if}
 
                         <div class="flex flex-wrap items-center gap-3 pt-1">
