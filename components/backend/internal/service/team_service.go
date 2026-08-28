@@ -149,6 +149,19 @@ func (s *TeamService) Create(
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "could not find hackathon: %v", err)
 	}
+
+	// Team creation is only allowed for approved projects.
+	project, err := s.dbClient.Project.Get(ctx, projectID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "project %s not found", projectID)
+	}
+	if project.Status != entproject.StatusApproved {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"can only create teams for approved projects",
+		)
+	}
+
 	if err := s.enforcer.RequirePermission(ctx, hackathon.ID.String(), m.Team, m.Create); err != nil {
 		return nil, err
 	}

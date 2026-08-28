@@ -89,6 +89,10 @@ var _ = Describe("VoteService", func() {
 			Description: "Project description",
 		})
 		Expect(err).NotTo(HaveOccurred())
+		_, err = projectClient.Approve(adminCtx(), &projectMsgs.ApproveRequest{
+			ProjectId: resp.GetProjectId(),
+		})
+		Expect(err).NotTo(HaveOccurred())
 		return resp.GetProjectId()
 	}
 
