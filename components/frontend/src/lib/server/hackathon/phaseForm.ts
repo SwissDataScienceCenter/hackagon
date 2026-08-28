@@ -30,10 +30,15 @@ export function enabledCapabilities(
 /**
  * The seven capabilities in the order the switches render.
  *
- * Registration first because it gates getting in at all. Enum order otherwise,
- * which is the same order `CAPABILITIES` in `$lib/utils/phase` uses — the two
- * lists render the same seven labels to the same person, so they share one
- * order rather than each arguing for its own.
+ * The order a hackathon runs, not enum order: register, propose, say who you
+ * want to work with, find out who you are with, submit, vote, read the results.
+ * `VIEW_TEAMS` is the one that differs — it is numbered seventh and belongs
+ * fourth. Enum numbers are the wire contract and are untouched; this is only
+ * where a switch sits on the screen.
+ *
+ * Same sequence `CAPABILITIES` in `$lib/utils/phase` uses — the two lists render
+ * the same seven labels to the same person, so they share one order rather than
+ * each arguing for its own.
  *
  * **A capability missing from this list can never be switched on.**
  * `SetCapabilities` takes a full list of states rather than a delta, so this is
@@ -45,10 +50,10 @@ export const CAPABILITY_ORDER: Capability[] = [
   Capability.CAPABILITY_REGISTER,
   Capability.CAPABILITY_PROPOSE_PROJECTS,
   Capability.CAPABILITY_SET_TEAM_PREFERENCES,
+  Capability.CAPABILITY_VIEW_TEAMS,
   Capability.CAPABILITY_CREATE_PROJECT_SUBMISSIONS,
   Capability.CAPABILITY_VOTE,
   Capability.CAPABILITY_VIEW_RESULTS,
-  Capability.CAPABILITY_VIEW_TEAMS,
 ]
 
 /** `SetCapabilities` input turning exactly `enabled` on and the rest off. */

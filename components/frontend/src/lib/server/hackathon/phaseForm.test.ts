@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { CAPABILITY_ORDER, capabilityStates, parsePhaseForm } from "./phaseForm"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
+import { PHASE_CAPABILITIES } from "$lib/utils/phase"
 
 // Capability numeric values.
 const REGISTER = 1
@@ -177,6 +178,15 @@ describe("CAPABILITY_ORDER", () => {
 
   it("names each one exactly once", () => {
     expect(new Set(CAPABILITY_ORDER).size).toBe(CAPABILITY_ORDER.length)
+  })
+
+  // The switch panel reads this list and the overview's state card reads
+  // `PHASE_CAPABILITIES`; both show the same seven labels to the same organiser.
+  // Reordering one and not the other is the mistake this catches — it would not
+  // fail a type check, and nothing on screen would look broken, it would just be
+  // two different answers to "what order do these happen in".
+  it("renders in the same order as the participant-facing list", () => {
+    expect(CAPABILITY_ORDER).toEqual(PHASE_CAPABILITIES.map((c) => c.value))
   })
 })
 

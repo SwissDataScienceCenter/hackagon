@@ -214,9 +214,14 @@ describe("capabilityLabel", () => {
 })
 
 describe("PHASE_CAPABILITIES", () => {
-  it("lists the seven in enum order, each with a label", () => {
+  // The order a hackathon runs, which is not enum order: VIEW_TEAMS is numbered
+  // 7 and sits fourth, between the preferences teams are formed from and the
+  // submissions they are filed against. Pinned because the switch panel and the
+  // participant-facing lists both read this sequence, and a reorder that touched
+  // only one of them would have them disagree on screen.
+  it("lists the seven in the order a hackathon runs", () => {
     expect(PHASE_CAPABILITIES.map((c) => c.value)).toEqual([
-      1, 2, 3, 4, 5, 6, 7,
+      1, 2, 3, 7, 4, 5, 6,
     ])
     expect(PHASE_CAPABILITIES.every((c) => c.label.length > 0)).toBe(true)
   })

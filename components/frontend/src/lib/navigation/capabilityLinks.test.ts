@@ -42,10 +42,10 @@ describe("capabilityHref", () => {
     expect(linked).toEqual([
       PROPOSE_PROJECTS,
       SET_TEAM_PREFERENCES,
+      VIEW_TEAMS,
       CREATE_PROJECT_SUBMISSIONS,
       VOTE,
       VIEW_RESULTS,
-      VIEW_TEAMS,
     ])
   })
 })

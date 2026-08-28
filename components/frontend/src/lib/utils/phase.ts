@@ -185,6 +185,17 @@ export function currentAndNextPhase<
  * PROPOSE_PROJECTS=2, SET_TEAM_PREFERENCES=3, CREATE_PROJECT_SUBMISSIONS=4,
  * VOTE=5, VIEW_RESULTS=6, VIEW_TEAMS=7.
  *
+ * **Listed in the order a hackathon runs, not in enum order.** The two agreed
+ * until `VIEW_TEAMS` was added seventh but belongs fourth — teams are formed from
+ * the preferences above it and are what the submissions below it hang off — and
+ * an organiser reading down this list is reading a sequence, not an enum. Enum
+ * numbers are the wire contract and stay exactly as the proto assigns them; where
+ * a label sits on the screen is ours.
+ *
+ * `CAPABILITY_ORDER` in `$lib/server/hackathon/phaseForm` repeats this sequence
+ * for the switch panel. The two render the same seven labels to the same person
+ * and must not disagree.
+ *
  * Raw numbers, like the other status helpers here, so the form component can
  * render the checkboxes without importing the generated `Capability` enum — it
  * lives under `$lib/server/grpc`, which a `.svelte` file may not touch. Proto
@@ -231,6 +242,15 @@ const CAPABILITIES: {
     label: "Set team preferences",
     description: "Mark preferred projects on the project list.",
   },
+  // Out of enum order, and deliberately: this is what the preferences above it
+  // lead to and what the submissions below it are filed against, so it reads
+  // here and nowhere else. It arrived last only because the backend added it
+  // last.
+  {
+    value: 7,
+    label: "See team assignments",
+    description: "See which teams have formed and who is on them.",
+  },
   {
     value: 4,
     label: "Submit project work",
@@ -246,20 +266,9 @@ const CAPABILITIES: {
     label: "View results",
     description: "See the results that have been published.",
   },
-  // Last because it arrived last, not because it happens last: a hackathon
-  // publishes its team assignments long before it publishes results. Appended
-  // rather than slotted in beside "Set team preferences", where it reads
-  // better, so that this list and `CAPABILITY_ORDER` stay in the same order —
-  // one of them is the switch panel and the other is what participants read,
-  // and two orders for one set of seven labels is worse than one odd position.
-  {
-    value: 7,
-    label: "See team assignments",
-    description: "See which teams have formed and who is on them.",
-  },
 ]
 
-/** The seven in enum order, for rendering a row per capability. */
+/** The seven in the order a hackathon runs, for rendering a row per capability. */
 export const PHASE_CAPABILITIES: { value: number; label: string }[] =
   CAPABILITIES
 
