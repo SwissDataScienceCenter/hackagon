@@ -473,6 +473,20 @@ func (s *HackathonService) PreviewInvite(
 	}, nil
 }
 
+// hackathonFinished reports whether the hackathon's scheduled end has passed.
+//
+// `ends_at` is `.Optional().Nillable()` in `db/schema/hackathon.go`, so ent
+// generates `*time.Time` and a hackathon created without dates has nil here.
+// `Before` has a value receiver, so calling it unguarded dereferences the nil
+// and takes the whole server down rather than answering the RPC.
+//
+// A missing end date reads as "not finished", the only interpretation
+// consistent with the schema and with the proto's `starts_at_requires_ends_at`
+// rule, both of which allow neither date to be set.
+func hackathonFinished(h *ent.Hackathon) bool {
+	return h.EndsAt != nil && h.EndsAt.Before(time.Now())
+}
+
 //nolint:gocognit // Joining is pretty complex, no way around that.
 func (s *HackathonService) Join(
 	ctx context.Context,
@@ -564,7 +578,7 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.PermissionDenied, "invalid or expired invitation")
 	}
 
-	if h.EndsAt.Before(time.Now()) {
+	if hackathonFinished(h) {
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
 	}
 

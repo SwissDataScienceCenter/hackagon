@@ -2,6 +2,7 @@ import type { PageServerLoad } from "./$types"
 import { requireGrpc } from "$lib/server/grpc/client"
 import { Capability } from "$lib/server/grpc/generated/hackathon/entities/capability"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
+import { listVisibleTeams } from "$lib/server/hackathon/teams"
 import { projectStatusLabel } from "$lib/utils/projectStatus"
 
 export const load: PageServerLoad = async (event) => {
@@ -23,7 +24,19 @@ export const load: PageServerLoad = async (event) => {
     count: approved.filter((p) => p.trackId === t.id).length,
   }))
 
-  const { teams } = await team.list({ hackathonId: event.params.id })
+  // `listVisibleTeams` rather than `team.list` directly. `TeamService.List`
+  // requires `team:read`, and a member holds that only while
+  // `CAPABILITY_VIEW_TEAMS` is switched on — off in every hackathon until an
+  // organiser publishes assignments, which is the steady state of a newly
+  // created one. An owner holds the grant unconditionally, so the bare call
+  // here only ever failed for members, and it turned that refusal into a 500 on
+  // the first page a member lands on.
+  //
+  // `undefined` (not published) is kept distinct from `[]` (published, nobody
+  // assigned): the card must not tell someone they are on no team when it has
+  // simply not been told.
+  const visibleTeams = await listVisibleTeams(team, event.params.id)
+  const teams = visibleTeams ?? []
 
   // The first team the viewer is on. Nothing stops a participant from being on
   // more than one, but ParticipationCard has room for a single team — the
@@ -78,6 +91,10 @@ export const load: PageServerLoad = async (event) => {
           submissionCount: myTeam.submissions.length,
         }
       : null,
+    // Whether `myTeam: null` means "not on a team" or "assignments are not
+    // published". The card says something different for each; only the first is
+    // a statement about this person.
+    teamsVisible: visibleTeams !== undefined,
     canSubmit,
     approvedCount: approved.length,
     trackCounts,

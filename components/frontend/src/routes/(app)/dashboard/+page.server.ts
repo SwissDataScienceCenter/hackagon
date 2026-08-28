@@ -108,10 +108,6 @@ export const actions: Actions = {
           closed: true,
           message: "Registration is closed for this hackathon",
         })
-      // TODO(backend: join-nil-ends-at): the finished case is unreachable for a
-      // hackathon with no end date — `Join` nil-derefs before it can answer.
-      // Correct as written; the branch just needs the backend to survive long
-      // enough to take it.
       if (e instanceof ClientError && e.code === Status.FAILED_PRECONDITION) {
         // `Join` answers FAILED_PRECONDITION both for a finished hackathon and
         // for unanswered mandatory questions, and those need opposite handling —
