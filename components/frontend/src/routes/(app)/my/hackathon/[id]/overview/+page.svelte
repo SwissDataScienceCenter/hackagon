@@ -79,7 +79,15 @@
                         {data.membershipLabel}
                     </span>
                 </div>
-                <p class="prose m-0 text-sm">You are not on a team yet.</p>
+                <!-- Two different facts, and only the first is about this person.
+                     Until an organiser switches on `CAPABILITY_VIEW_TEAMS` the page
+                     has not been told who is on which team, so saying "not on a team"
+                     there would be a claim with nothing behind it. -->
+                <p class="prose m-0 text-sm">
+                    {data.teamsVisible
+                        ? 'You are not on a team yet.'
+                        : 'Team assignments have not been published yet.'}
+                </p>
                 <!-- Somewhere to go, which the bare statement never gave them.
                      The projects list is where a team forms, and it is a page every
                      confirmed member may read. -->
