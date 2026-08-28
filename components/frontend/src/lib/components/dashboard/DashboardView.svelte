@@ -7,6 +7,7 @@
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { platformNav, type NavItem } from '$lib/navigation/items';
     import {
+        canManageHackathon,
         canOpenHackathon,
         membershipBadgeLabel,
         membershipBadgeVariant,
@@ -191,9 +192,18 @@
                 <div class="card overflow-hidden">
                     {#each myHackathons as h, i (h.id)}
                         {@const mem = h.viewerMembership}
-                        {@const href = canOpenHackathon(mem, isGlobalAdmin)
-                            ? `/my/hackathon/${h.id}/overview`
-                            : undefined}
+                        <!-- Two questions, not one: whether the row is a link at
+                             all, and which page it opens. Someone who runs this
+                             hackathon lands on Settings, everyone else on the
+                             member Overview — the same owner-or-admin rule that
+                             decides whether the sidebar offers a Manage section,
+                             asked once in `hackathonRole` so the row and the rail
+                             cannot disagree about whose hackathon this is. -->
+                        {@const href = !canOpenHackathon(mem, isGlobalAdmin)
+                            ? undefined
+                            : canManageHackathon(mem, isGlobalAdmin)
+                              ? `/my/hackathon/${h.id}/manage`
+                              : `/my/hackathon/${h.id}/overview`}
                         <!-- The hover tint lives here rather than on the link
                              inside `HackathonRow`, which only spans the row's
                              own content: the membership badge is its sibling,
@@ -209,12 +219,13 @@
                                 : ''}"
                         >
                             <div class="flex-1">
-                                <!-- Confirmed here: straight to the member view.
-                                     Waitlisted, and the row is not a link — joining
-                                     writes the participant row but not the casbin
-                                     `member` role, so the member view would answer
-                                     403 until an organiser approves you. The
-                                     Waitlisted badge beside it says why. -->
+                                <!-- Confirmed here: straight in, to whichever page
+                                     above decided. Waitlisted, and the row is not
+                                     a link — joining writes the participant row but
+                                     not the casbin `member` role, so the member
+                                     view would answer 403 until an organiser
+                                     approves you. The Waitlisted badge beside it
+                                     says why. -->
                                 <HackathonRow
                                     {href}
                                     name={h.name}

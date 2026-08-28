@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   canEditHackathon,
+  canManageHackathon,
   hackathonRoleBadge,
   membershipBadgeLabel,
   membershipBadgeVariant,
@@ -79,6 +80,41 @@ describe("canEditHackathon", () => {
 
   it("refuses someone with no relationship to the hackathon", () => {
     expect(canEditHackathon(undefined, false)).toBe(false)
+  })
+})
+
+describe("canManageHackathon", () => {
+  it("admits the owner", () => {
+    expect(
+      canManageHackathon({ role: ROLE_OWNER, isWaiting: false }, false),
+    ).toBe(true)
+  })
+
+  // The one place this parts company with canEditHackathon, and deliberately:
+  // the backend does not consult `isWaiting` for phase:write, page:write or
+  // track:write either, so a waitlisted owner reaches Settings and is refused
+  // only by the narrower rule, on the one form that needs it.
+  it("admits a waitlisted owner, unlike canEditHackathon", () => {
+    expect(
+      canManageHackathon({ role: ROLE_OWNER, isWaiting: true }, false),
+    ).toBe(true)
+    expect(canEditHackathon({ role: ROLE_OWNER, isWaiting: true }, false)).toBe(
+      false,
+    )
+  })
+
+  it("refuses a plain member", () => {
+    expect(
+      canManageHackathon({ role: ROLE_MEMBER, isWaiting: false }, false),
+    ).toBe(false)
+  })
+
+  it("admits a global admin with no membership row", () => {
+    expect(canManageHackathon(undefined, true)).toBe(true)
+  })
+
+  it("refuses someone with no relationship to the hackathon", () => {
+    expect(canManageHackathon(undefined, false)).toBe(false)
   })
 })
 

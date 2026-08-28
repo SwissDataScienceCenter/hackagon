@@ -12,7 +12,10 @@
 // rejects.
 import type { ComponentType } from "svelte"
 import { resolve } from "$app/paths"
-import { OWNER, type ViewerMembership } from "$lib/utils/hackathonRole"
+import {
+  canManageHackathon,
+  type ViewerMembership,
+} from "$lib/utils/hackathonRole"
 
 import LayoutDashboard from "lucide-svelte/icons/layout-dashboard"
 import Users from "lucide-svelte/icons/users"
@@ -362,7 +365,7 @@ export function manageNav(
   isPrivate = false,
   phaseCount = 0,
 ): NavItem[] {
-  if (!isGlobalAdmin && membership?.role !== OWNER) return []
+  if (!canManageHackathon(membership, isGlobalAdmin)) return []
 
   return [
     // First, and the organiser's counterpart to the member Overview above: what

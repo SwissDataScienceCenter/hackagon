@@ -64,6 +64,26 @@ export function canEditHackathon(
 }
 
 /**
+ * Whether the viewer runs this hackathon — the owner-or-admin gate every
+ * `/manage` route applies, and the one `manageNav` offers its section behind.
+ *
+ * Broader than `canEditHackathon`, deliberately: `isWaiting` is not consulted
+ * here, exactly as the backend does not consult it for `phase:write`,
+ * `page:write` or `track:write`. A waitlisted owner reaches Settings and is
+ * refused only by the narrower rule above, on the one form that needs it.
+ *
+ * Stated once here rather than inline at each call site, because it now decides
+ * two things that must not drift apart: which section of the sidebar an owner
+ * gets, and which page they land on when they open the hackathon at all.
+ */
+export function canManageHackathon(
+  membership: ViewerMembership | undefined,
+  isGlobalAdmin: boolean,
+): boolean {
+  return isGlobalAdmin || membership?.role === OWNER
+}
+
+/**
  * Whether the viewer may open a hackathon's member view at all — the backend's
  * `hackathon:read`, which `/my/hackathon/[id]`'s layout needs before it can
  * render anything.
