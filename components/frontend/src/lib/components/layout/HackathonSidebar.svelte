@@ -103,9 +103,19 @@
     let collapsed = $state(false);
     let mobileOpen = $state(false);
     let isDesktop = $state(true);
-    // Closed to start with, leaving just the heading and its chevron: a
-    // participant spine plus one thing to open, not a second nav of equal length.
-    let manageOpen = $state(false);
+    // For an owner these open the other way round from what you might expect:
+    // Manage out, Participant View folded to its heading. An owner arriving in a
+    // hackathon was landing on a wall of participant destinations with their own
+    // section shut underneath it, and read the whole rail as their nav with the
+    // controls missing. Folded and labelled, the participant entries stop being
+    // the default and start being what they are — the other side of the
+    // hackathon, one click away.
+    //
+    // Both are ignored for a participant: with no Manage section there is no
+    // heading and no chevron on the entries above it, so they are simply always
+    // out, exactly as before.
+    let manageOpen = $state(true);
+    let memberOpen = $state(false);
 
     // `collapsed` is a desktop-only preference (persisted below); on a narrow
     // viewport the drawer must always render fully expanded regardless of it.
@@ -149,22 +159,42 @@
     // one of the pages, not the way in. The way in is the heading, which is drawn
     // whatever the fold state.
     const insideManage = $derived(activeId?.startsWith('manage:') ?? false);
+    // Its counterpart, and deliberately not `!insideManage`: with no entry lit at
+    // all — a route neither section owns — neither section is forced open, and
+    // whatever the reader last chose stands.
+    const insideMember = $derived(activeId?.startsWith('member:') ?? false);
 
     // `membership.role` is sourced from casbin. It is absent for a global admin who
     // never joined, hence the second argument.
     const badge = $derived(hackathonRoleBadge(membership ?? undefined, isGlobalAdmin));
 
+    // A saved preference and an unset key are not the same thing here, which is
+    // why this reads three-valued rather than comparing to 'true': the defaults
+    // above are no longer both false, so `getItem(k) === 'true'` would quietly
+    // shut the Manage section for every reader who had never touched it.
+    function stored(key: string): boolean | undefined {
+        if (typeof localStorage === 'undefined') return undefined;
+        const value = localStorage.getItem(key);
+        return value === null ? undefined : value === 'true';
+    }
+
     $effect(() => {
-        if (typeof localStorage === 'undefined') return;
-        collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-        manageOpen = localStorage.getItem('sidebar-manage-open') === 'true';
+        collapsed = stored('sidebar-collapsed') ?? collapsed;
+        manageOpen = stored('sidebar-manage-open') ?? manageOpen;
+        memberOpen = stored('sidebar-member-open') ?? memberOpen;
     });
 
-    // Entering the section opens it, rather than pinning it open while you are in
+    // Entering a section opens it, rather than pinning it open while you are in
     // there: deriving the fold state from the route instead made the chevron a
-    // no-op on every Manage page, which reads as a broken control.
+    // no-op on every Manage page, which reads as a broken control. Declared after
+    // the restore above so the route wins over the saved preference on arrival —
+    // the section holding the lit row is never the folded one.
     $effect(() => {
         if (insideManage) manageOpen = true;
+    });
+
+    $effect(() => {
+        if (insideMember) memberOpen = true;
     });
 
     $effect(() => {
@@ -208,6 +238,11 @@
     function toggleManage() {
         manageOpen = !manageOpen;
         remember('sidebar-manage-open', manageOpen);
+    }
+
+    function toggleMember() {
+        memberOpen = !memberOpen;
+        remember('sidebar-member-open', memberOpen);
     }
 </script>
 
@@ -293,17 +328,38 @@
     </div>
 
     <nav class="flex-1 overflow-y-auto">
-        <!-- The participant entries carry no section label: the header directly
-             above already names the hackathon, and labelling this one too would
-             imply the Manage section below is a peer rather than an addition to
-             it. -->
-        <SidebarNavSection {items} {activeId} collapsed={effectiveCollapsed} />
+        <!-- Labelled and foldable only where there is a Manage section to tell it
+             apart from. For a participant these entries are simply the hackathon,
+             the header above already names it, and a heading over them would say
+             nothing — passing neither `label` nor `onToggle` leaves them an
+             unlabelled, unfoldable list, which is what they were.
 
-        <!-- Organiser-only. The heading is what makes the difference legible, so
-             unlike the section above this one needs it — and here it is the only
-             permanent row: it names the section, and its chevron discloses every
-             screen in it, Settings included. No entry is drawn as the section's
-             own, because none of them is.
+             For an owner the label is the whole fix. Unlabelled and first, this
+             list read as their own nav, and its participant shape read as
+             controls that had gone missing; owners kept asking why entering a
+             hackathon showed them a participant's view of it. Named, it stops
+             being a mistake and becomes a place to go on purpose — the thing an
+             owner actually wants from it is to see what participants see.
+
+             Still first, and every entry still in the same position it holds for
+             a participant: `manageNav` keeps the two spines aligned on purpose,
+             and folding this one gets the emphasis without moving a single
+             row. -->
+        <SidebarNavSection
+            label={manageItems.length > 0 ? 'Participant View' : undefined}
+            {items}
+            {activeId}
+            collapsed={effectiveCollapsed}
+            open={memberOpen}
+            onToggle={manageItems.length > 0 ? toggleMember : undefined}
+        />
+
+        <!-- Organiser-only, and open by default: for the viewer who has one, this
+             is the section they came for. The heading is the only permanent row —
+             it names the section, and its chevron discloses every screen in it,
+             Settings included. No entry is drawn as the section's own, because
+             none of them is. Its counterpart above is now labelled too, and the
+             pair of headings is what makes the two sides legible as two sides.
 
              Guarded here rather than left to SidebarNavSection, which keeps a
              labelled empty section on purpose so a role chip has somewhere to

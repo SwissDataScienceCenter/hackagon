@@ -100,6 +100,11 @@ export const actions: Actions = {
     // to the owners edge to find it. What ownership alone cannot do is let the
     // creator take part — voting, proposing and preferences all need the casbin
     // `member` role, which only ApproveParticipant grants.
-    redirect(303, `/my/hackathon/${hackathonId}/overview`)
+    // Settings, not `/overview`: the creator is the owner by construction, and
+    // what they want next is the thing they have just made ready to configure —
+    // phases, forms, capabilities. `/overview` is the participant's page, and
+    // landing on a participant's view of an empty hackathon you own reads as the
+    // wrong page rather than an empty one.
+    redirect(303, `/my/hackathon/${hackathonId}/manage`)
   },
 }
