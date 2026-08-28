@@ -564,7 +564,14 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.PermissionDenied, "invalid or expired invitation")
 	}
 
-	if h.EndsAt.Before(time.Now()) {
+	// `ends_at` is `.Optional().Nillable()` in `db/schema/hackathon.go`, so ent
+	// generates `*time.Time` and a hackathon created without dates arrives here
+	// nil. `Before` has a value receiver, so an unguarded call dereferences it
+	// and takes the whole server down. A missing end date reads as "not
+	// finished" — the only interpretation consistent with the schema and with
+	// the proto's `starts_at_requires_ends_at` rule, both of which allow
+	// neither date to be set.
+	if h.EndsAt != nil && h.EndsAt.Before(time.Now()) {
 		return nil, status.Error(codes.FailedPrecondition, "hackathon is already finished")
 	}
 

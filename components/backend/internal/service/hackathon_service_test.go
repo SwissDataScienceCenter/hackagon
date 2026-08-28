@@ -474,6 +474,101 @@ var _ = Describe("HackathonService", func() {
 			Expect(st.Code()).To(Equal(codes.NotFound))
 		})
 
+		It("allows joining a hackathon with no dates set", func() {
+			// A dateless hackathon is valid: `starts_at`/`ends_at` are nillable and
+			// the proto's `starts_at_requires_ends_at` rule permits neither being
+			// set. `Join` used to dereference `ends_at` unguarded, which panicked the
+			// server rather than answering.
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			createResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Dateless Join Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			datelessID := createResp.GetHackathonId()
+
+			_, err = client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: datelessID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			keycloakID := "non-admin-dateless"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername("test-join-user-dateless").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(keycloakID),
+				),
+			)
+
+			joinResp, err := client.Join(ctx, &msgs.JoinRequest{HackathonId: datelessID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(joinResp.GetHackathonId()).To(Equal(datelessID))
+		})
+
+		It("returns FAILED_PRECONDITION when the hackathon has already finished", func() {
+			// The guard added for the nil case must not weaken this one: a set
+			// `ends_at` in the past is still a refusal, not a join.
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			now := time.Now()
+			createResp, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Finished Join Test Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(-48 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(-24 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			finishedID := createResp.GetHackathonId()
+
+			_, err = client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+				HackathonId: finishedID,
+				Capabilities: []*msgs.CapabilityState{
+					{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			keycloakID := "non-admin-finished"
+			_, err = dbClient.User.Create().
+				SetKeycloakID(keycloakID).
+				SetUsername("test-join-user-finished").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs(
+					"authorization",
+					"Bearer "+testutils.CreateTestJWTToken(keycloakID),
+				),
+			)
+
+			_, err = client.Join(ctx, &msgs.JoinRequest{HackathonId: finishedID})
+			Expect(err).To(HaveOccurred())
+
+			st := status.Convert(err)
+			Expect(st.Code()).To(Equal(codes.FailedPrecondition))
+		})
+
 		It("returns FAILED_PRECONDITION when registrations are disabled", func() {
 			// Disable registrations via admin
 			adminToken := testutils.CreateTestJWTToken(testAdmin)
