@@ -4,6 +4,7 @@
         Code,
         Users,
         Lightbulb,
+        Mail,
         Upload,
         Vote,
     } from 'lucide-svelte';
@@ -48,6 +49,12 @@
 
     // The same destination AppFooter's "Contact" link points at.
     const SDSC_CONTACT_URL = 'https://datascience.ch/contact';
+
+    // The hero's own contact route reaches the hackathon team directly, rather
+    // than SDSC_CONTACT_URL's general web form: someone asking here has a
+    // hackathon in mind, and the reply should come from the people who run them.
+    const HACKATHON_CONTACT_EMAIL = 'hackathon@datascience.ch';
+    const HACKATHON_CONTACT_MAILTO = `mailto:${HACKATHON_CONTACT_EMAIL}`;
 </script>
 
 <!-- Hero (full-bleed width) -->
@@ -63,30 +70,56 @@
     <div class="pointer-events-none absolute inset-0 bg-canvas/65"></div>
 
     <div class="relative z-10 flex flex-col items-center gap-6">
-        <span class="badge badge-outline-accent">
-            <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
-            <span>ORD Hackathon 2026 — Registration open</span>
-        </span>
 
         <h1 class="max-w-2xl text-5xl font-bold leading-tight">
             SDSC Hackathon Platform
         </h1>
 
+        <!-- Reads on from the h1 rather than restating it, so the two lines
+             are one sentence: "SDSC Hackathon Platform for running professional
+             hackathons — …". Hence the lowercase opening. -->
         <p class="max-w-xl text-base leading-relaxed text-ink-2">
-            Propose projects, form teams, and build solutions together.
-            Hosted by SDSC for the Swiss scientific community.
+            for running professional hackathons — from registration, project
+            proposal, team formation, voting and showcasing the results.
         </p>
 
-        <!-- One button, not two. The other went to a hardcoded `ord-2026`,
-             which /hackathon/[id] now answers with a 404 because it reads real
-             hackathons. There is nothing else here to send a visitor to that
-             the list below does not cover. -->
-        <div class="flex items-center gap-3">
+        <p class="max-w-xl text-base leading-relaxed text-ink-2">
+            Want to organise your own hackathon with SDSC?
+        </p>
+
+        <!-- The two things a visitor can actually do from here: read the list
+             below, or ask about running one. A third button used to point at a
+             hardcoded `ord-2026`, which /hackathon/[id] answers with a 404 now
+             that it reads real hackathons, so it is not coming back.
+             `flex-wrap` because two buttons no longer fit a narrow phone. -->
+        <div class="flex flex-wrap items-center justify-center gap-3">
             <a href="#trending" class="btn btn-solid no-underline">
                 Browse Hackathons
                 <ArrowRight class="h-3.5 w-3.5 opacity-60" />
             </a>
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- mailto, not a route -->
+            <a href={HACKATHON_CONTACT_MAILTO} class="btn btn-outline no-underline">
+                <Mail class="h-3.5 w-3.5 opacity-60" />
+                Contact us
+            </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
         </div>
+
+        <!-- The address written out, because `mailto:` is not reliable: it only
+             opens something if the visitor's OS has a mail handler AND that
+             handler is configured. Where it is not, the browser drops the
+             navigation silently — no error, no dialog, nothing — and a button
+             that is the only route to us becomes a dead end. Printed here, the
+             address survives that: it can be read and copied either way.
+             `select-all` so one click takes the whole address, not a word. -->
+        <p class="text-xs text-ink-3">
+            or email
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- mailto, not a route -->
+            <a href={HACKATHON_CONTACT_MAILTO} class="select-all font-mono text-ink-2">
+                {HACKATHON_CONTACT_EMAIL}
+            </a>
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+        </p>
     </div>
 </section>
 
