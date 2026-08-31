@@ -1,8 +1,11 @@
 @import "tailwindcss";
 @import "./themes/hackagon.css";
 
-/* Colour mode is an attribute on <html>, not a media query: LightSwitch.svelte
- * owns it and persists the choice. The theme's own tokens key off the same
- * attribute, so this variant is only needed for the handful of places where a
- * non-colour property differs by mode — e.g. swapping the light/dark logo. */
+/* Colour mode is an attribute on <html>, never a bare media query: the theme's
+ * tokens and this variant have to agree, and they can only do that by keying off
+ * the same thing. `prefers-color-scheme` seeds the attribute before the first
+ * paint (app.html) and LightSwitch.svelte overrides it with a stored choice, so
+ * the browser preference is honoured without either side reading the query.
+ * This variant is only needed for the handful of places where a non-colour
+ * property differs by mode — e.g. swapping the light/dark logo. */
 @custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));

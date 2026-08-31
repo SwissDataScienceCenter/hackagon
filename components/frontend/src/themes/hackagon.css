@@ -6,9 +6,11 @@
  *   2. @theme      — exposes those tokens to Tailwind as utility classes.
  *   3. base/components — element defaults and the component class set.
  *
- * Dark is the default mode: `:root` holds the dark values and
- * `[data-mode="light"]` overrides them. `data-mode` is set on <html> by
- * app.html and flipped by LightSwitch.svelte.
+ * `:root` holds the dark values and `[data-mode="light"]` overrides them. That
+ * is a cascade baseline, not a product default — which mode a visitor gets is
+ * resolved from their stored choice, or failing that from the browser's
+ * `prefers-color-scheme`, before the first paint (app.html), and flipped
+ * afterwards by LightSwitch.svelte.
  *
  * Why tokens rather than a numeric palette: a token means one thing
  * ("the page background"), so a component names its intent instead of picking a
