@@ -1,6 +1,5 @@
 <script lang="ts">
     import {
-        ArrowRight,
         Code,
         Users,
         Lightbulb,
@@ -47,12 +46,10 @@
     // Matches AppFooter's LOGO_LINK.
     const LOGO_LINK = 'no-underline opacity-80 transition-opacity hover:opacity-100';
 
-    // The same destination AppFooter's "Contact" link points at.
-    const SDSC_CONTACT_URL = 'https://datascience.ch/contact';
-
-    // The hero's own contact route reaches the hackathon team directly, rather
-    // than SDSC_CONTACT_URL's general web form: someone asking here has a
-    // hackathon in mind, and the reply should come from the people who run them.
+    // Both asks on this page — the hero's and the one at the foot — reach the
+    // hackathon team directly, rather than the general web form AppFooter's
+    // "Contact" points at: someone asking here has a hackathon in mind, and the
+    // reply should come from the people who run them.
     const HACKATHON_CONTACT_EMAIL = 'hackathon@datascience.ch';
     const HACKATHON_CONTACT_MAILTO = `mailto:${HACKATHON_CONTACT_EMAIL}`;
 </script>
@@ -87,23 +84,18 @@
             Want to organise your own hackathon with SDSC?
         </p>
 
-        <!-- The two things a visitor can actually do from here: read the list
-             below, or ask about running one. A third button used to point at a
-             hardcoded `ord-2026`, which /hackathon/[id] answers with a 404 now
-             that it reads real hackathons, so it is not coming back.
-             `flex-wrap` because two buttons no longer fit a narrow phone. -->
-        <div class="flex flex-wrap items-center justify-center gap-3">
-            <a href="#trending" class="btn btn-solid no-underline">
-                Browse Hackathons
-                <ArrowRight class="h-3.5 w-3.5 opacity-60" />
-            </a>
-            <!-- eslint-disable svelte/no-navigation-without-resolve -- mailto, not a route -->
-            <a href={HACKATHON_CONTACT_MAILTO} class="btn btn-outline no-underline">
-                <Mail class="h-3.5 w-3.5 opacity-60" />
-                Contact us
-            </a>
-            <!-- eslint-enable svelte/no-navigation-without-resolve -->
-        </div>
+        <!-- One button, because this page has one action. A `Browse Hackathons`
+             button stood here jumping to the hackathon list, which is the very next
+             section — it promised browsing and delivered a scroll, and being a
+             second `btn-solid` for a different action it broke the theme's one
+             -solid-per-view rule against the CTA at the foot. The list speaks
+             for itself directly below. -->
+        <!-- eslint-disable svelte/no-navigation-without-resolve -- mailto, not a route -->
+        <a href={HACKATHON_CONTACT_MAILTO} class="btn btn-solid no-underline">
+            <Mail class="h-3.5 w-3.5 opacity-60" />
+            Contact us
+        </a>
+        <!-- eslint-enable svelte/no-navigation-without-resolve -->
 
         <!-- The address written out, because `mailto:` is not reliable: it only
              opens something if the visitor's OS has a mail handler AND that
@@ -219,12 +211,17 @@
     </div>
 </section>
 
+<!-- The hero's ask restated for anyone who read the whole page, so it lands
+     on the same inbox. No `external`: `target="_blank"` on a `mailto:` leaves an
+     orphan blank tab behind, and the "opens in a new tab" label it adds would
+     not be true. `note` carries the address for the same reason the hero prints
+     it — a browser with no mail handler drops the click in silence. -->
 <CtaSection
     heading="Want to host your own hackathon?"
     subtitle="SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it."
-    buttonLabel="Contact Us"
-    buttonHref={SDSC_CONTACT_URL}
-    external
+    buttonLabel="Contact us"
+    buttonHref={HACKATHON_CONTACT_MAILTO}
+    note={HACKATHON_CONTACT_EMAIL}
 />
 
 </div>
