@@ -1,6 +1,5 @@
 <script lang="ts">
     import {
-        Code,
         Users,
         Lightbulb,
         Mail,
@@ -9,11 +8,45 @@
     } from 'lucide-svelte';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
-    import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant, isFinished } from '$lib/utils/hackathonStatus';
     import { formatDateRange } from '$lib/utils/hackathonDates';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
+
+    type Hackathon = PageData['hackathons'][number];
+
+    // `status` is computed server-side from the dates (`mappers.go`
+    // computeHackathonStatus), so FINISHED is the only thing that means "over".
+    // PENDING covers both "starts later" and "no dates set yet", and ACTIVE is
+    // running right now — neither belongs under Past.
+    //
+    // Both groups are re-sorted here because the backend returns every public
+    // hackathon oldest-created-first, which is insertion order and tells a
+    // reader nothing. Sorting client-side is safe only while the whole list
+    // arrives in one response; if List ever paginates, the order has to move
+    // server-side.
+    const time = (d?: Date) => d?.getTime();
+
+    // Soonest first. An undated hackathon sorts last — there is no date on which
+    // to promise it.
+    const upcoming = $derived(
+        data.hackathons
+            .filter((h) => !isFinished(h.status))
+            // `.sort` in place is safe: `.filter` above already returned a new
+            // array, so `data.hackathons` is untouched.
+            .sort((a, b) => (time(a.startsAt) ?? Infinity) - (time(b.startsAt) ?? Infinity)),
+    );
+
+    // Most recently finished first, so the newest history is at the top.
+    const past = $derived(
+        data.hackathons
+            .filter((h) => isFinished(h.status))
+            .sort(
+                (a, b) =>
+                    (time(b.endsAt ?? b.startsAt) ?? 0) - (time(a.endsAt ?? a.startsAt) ?? 0),
+            ),
+    );
 
     // See DashboardView for why these are token-derived rather than palette steps.
     const GRADIENTS = [
@@ -116,35 +149,47 @@
 </section>
 
 <div class="mx-auto w-full max-w-7xl">
-<!-- Trending -->
-<section id="trending" class="px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-title">Trending this month</h2>
-
-    <div class="mt-6 flex gap-1 border-b border-line">
-        <button class="chip chip-active">
-            <Code class="h-3.5 w-3.5" />
-            <span>Hackathons</span>
-        </button>
-    </div>
-
-    <div class="mt-0 divide-y divide-line">
-        {#if data.hackathons.length === 0}
-            <p class="py-6 text-sm text-ink-3">No hackathons available yet.</p>
-        {:else}
-            {#each data.hackathons as h, i (h.id)}
-                <HackathonRow
-                    href="/hackathon/{h.id}"
-                    name={h.name}
-                    meta={formatDateRange(h)}
-                    badge={statusLabel(h.status)}
-                    badgeVariant={statusBadgeVariant(h.status)}
-                    gradFrom={gradient(i).from}
-                    gradTo={gradient(i).to}
-                />
-            {/each}
+<!-- The hackathon list, split in two. This heading used to read "Trending
+     this month" above a single list that was neither ranked nor filtered by
+     date, over a one-tab `chip` strip left behind when its sibling tabs were
+     removed. Upcoming and past is a split the data can actually answer.
+     Each group renders only when it holds something, so a fresh instance shows
+     one honest line rather than two empty headings. -->
+<section id="hackathons" class="px-4 py-12 sm:px-10 md:px-20">
+    {#if data.hackathons.length === 0}
+        <h2 class="text-title">Hackathons</h2>
+        <p class="py-6 text-sm text-ink-3">No hackathons available yet.</p>
+    {:else}
+        {#if upcoming.length > 0}
+            <!-- Not "Upcoming": an ACTIVE hackathon is running right now, and
+                 calling that upcoming would be the same kind of untruth as the
+                 heading this replaced. Each row's badge still says which. -->
+            <h2 class="text-title">Current &amp; upcoming</h2>
+            {@render rows(upcoming)}
         {/if}
-    </div>
+
+        {#if past.length > 0}
+            <h2 class="text-title {upcoming.length > 0 ? 'mt-12' : ''}">Past</h2>
+            {@render rows(past)}
+        {/if}
+    {/if}
 </section>
+
+{#snippet rows(items: Hackathon[])}
+    <div class="mt-6 divide-y divide-line">
+        {#each items as h, i (h.id)}
+            <HackathonRow
+                href="/hackathon/{h.id}"
+                name={h.name}
+                meta={formatDateRange(h)}
+                badge={statusLabel(h.status)}
+                badgeVariant={statusBadgeVariant(h.status)}
+                gradFrom={gradient(i).from}
+                gradTo={gradient(i).to}
+            />
+        {/each}
+    </div>
+{/snippet}
 
 <!-- Features -->
 <section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
