@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { UserPlus } from 'lucide-svelte';
+    // Mail, not UserPlus: this section's button asks the reader to get in
+    // touch, not to sign up for anything.
+    import { Mail } from 'lucide-svelte';
 
     let {
         heading,
@@ -31,7 +33,7 @@
         aria-label={external ? `${buttonLabel} (opens in a new tab)` : undefined}
         class="btn btn-solid no-underline"
     >
-        <UserPlus class="h-4 w-4" />
+        <Mail class="h-4 w-4" />
         {buttonLabel}
     </a>
     <!-- eslint-enable svelte/no-navigation-without-resolve -->

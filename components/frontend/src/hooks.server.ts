@@ -37,6 +37,10 @@ const PUBLIC_ROUTE_PATTERNS = [
   // the token, not the session, is what the backend checks (`PreviewInvite`
   // performs no casbin check at all and serves anonymous callers).
   /^\/invite(\/|$)/,
+  // The footer links this from every page, signed in or out, so it has to
+  // answer anonymously — and it says nothing a visitor needs an account for.
+  // `($|\/)`, not a bare prefix, so a future /aboutus is not silently public.
+  /^\/about($|\/)/,
   /^\/signin($|\/)/,
   /^\/signout($|\/)/,
   /^\/auth($|\/)/,

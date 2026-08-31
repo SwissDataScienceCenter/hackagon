@@ -1,9 +1,43 @@
 <!doctype html>
-<html lang="en" data-mode="dark">
+<html lang="en" data-mode="light" style="color-scheme: light">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      Resolve the colour mode before the first paint.
+
+      `data-mode` must be set, and correct, by the time the body renders: the
+      theme's tokens and Tailwind's `dark:` variant both key off it, so a
+      visitor whose preference differs from the attribute above would otherwise
+      see a flash of the wrong theme.
+
+      Inline and standalone on purpose — a pre-paint script cannot wait for the
+      app bundle. It restates the rule in `$lib/utils/mode.ts` (an explicit
+      choice outranks the system preference); keep the two in step.
+
+      The attribute above is the answer for a visitor without JavaScript, and it
+      is light because that is the mode datascience.ch serves.
+    -->
+    <script>
+      ;(function () {
+        var stored = null
+        try {
+          stored = localStorage.getItem("mode")
+        } catch (e) {
+          /* storage blocked (private mode); fall through to the OS preference */
+        }
+        var mode =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+        document.documentElement.setAttribute("data-mode", mode)
+        document.documentElement.style.colorScheme = mode
+      })()
+    </script>
     %sveltekit.head%
   </head>
   <body

@@ -72,10 +72,15 @@
                     <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
                 </a>
                 <p class="max-w-sm text-sm leading-relaxed text-ink-2">
-                    Hackagon is the Swiss Data Science Center's platform for running hackathons —
-                    from proposing projects and forming teams through to submissions, judging and
+                    This is the SDSC platform for running professional hackathons — from
+                    registration, project proposal, team formation, voting and showcasing the
                     results.
                 </p>
+                <!-- The one internal link here that is not the home page. The
+                     footer this replaced pointed at /about when no such route
+                     existed, so it 404'd on every public page; AppFooter.test.ts
+                     guards against that and names the routes that do exist. -->
+                <a href={resolve('/(public)/about')} class={LINK}>About this platform</a>
             </div>
 
             <nav class="flex flex-col gap-3" aria-label="Platform">
@@ -97,20 +102,67 @@
             </nav>
         </div>
 
-        <!-- The parent institutions, as datascience.ch presents them. The source
-             assets are light-on-transparent, so light mode inverts them — an
-             asset-level swap, not a hand-rolled colour mode. -->
+        <!-- The institutions behind SDSC, in the order and the bare form
+             datascience.ch's own footer presents them: EPFL, ETH, PSI, Biopôle,
+             with no label in front. The label here used to read "A joint venture
+             of", which was true of ETH and EPFL but became a claim about PSI and
+             Biopôle once they joined the row. Dropping it is what the official
+             site does, and it makes the row state an affiliation rather than a
+             legal relationship.
+
+             Sizing and light/dark handling is per-logo below, because the assets
+             do not share a treatment. -->
         <div class="flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
-            <span class="meta">A joint venture of</span>
+            <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
+                <!-- EPFL in its own red, so no `invert`: the rule its
+                     neighbours rely on turns red into cyan. The asset is the
+                     same paths as epfl.svg with the fill swapped. -->
+                <img src="/images/logos/epfl-red.svg" alt="EPFL" class="h-4" />
+            </a>
             <a href="https://ethz.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
+                <!-- Pure white paths, so the CSS invert is a real asset swap
+                     here — the only logo in the row it still works for. -->
                 <img
                     src="/images/logos/eth-zurich.svg"
                     alt="ETH Zurich"
                     class="h-4 invert dark:invert-0"
                 />
             </a>
-            <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
-                <img src="/images/logos/epfl.svg" alt="EPFL" class="h-4 invert dark:invert-0" />
+            <!-- PSI and Biopôle ship as light/dark pairs rather than through the
+                 `invert` above. Both were supplied drawn for a dark background,
+                 and `invert` flips hue as well as luminance: it turned Biopôle's
+                 green (#90c000) into purple. The light-mode asset instead has
+                 its luminance flipped only where the artwork is achromatic, so
+                 the type reverses and the green survives.
+
+                 `h-6`, not the `h-4` of the two wordmarks beside them: a shared
+                 box height is not a shared apparent size. EPFL's ink IS its cap
+                 height, while PSI's lettering fills only 59% of its asset (the
+                 sphere is twice as tall as the letters) and Biopôle's 53% (it is
+                 lowercase, with ascenders and an accent above the x-height). At
+                 a common `h-4` their type rendered around half the size of
+                 EPFL's, which is what datascience.ch's own footer does not do. -->
+            <a
+                href="https://www.psi.ch/en"
+                target="_blank"
+                rel="noopener noreferrer"
+                class={LOGO_LINK}
+            >
+                <img src="/images/logos/psi.png" alt="PSI" class="block h-6 dark:hidden" />
+                <img src="/images/logos/psi-white.png" alt="PSI" class="hidden h-6 dark:block" />
+            </a>
+            <a
+                href="https://www.biopole.ch/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class={LOGO_LINK}
+            >
+                <img src="/images/logos/biopole.png" alt="Biopole" class="block h-6 dark:hidden" />
+                <img
+                    src="/images/logos/biopole-white.png"
+                    alt="Biopole"
+                    class="hidden h-6 dark:block"
+                />
             </a>
         </div>
     </div>
