@@ -17,8 +17,9 @@
 
     // Back to this very link after Keycloak, not to the dashboard: a private
     // hackathon they have not joined appears nowhere there, so anywhere else is
-    // a dead end. `returnTo` is not used — the app writes it but nothing reads
-    // it — so the callback is named explicitly.
+    // a dead end. Named explicitly rather than left to `returnTo`, which the
+    // header's Log in reads: only the login *bounce* writes that, and this route
+    // is public, so nothing bounces anybody here.
     const returnHere = $derived(`/invite/${data.token}`);
 </script>
 

@@ -18,8 +18,9 @@ describe("isProtectedRoute", () => {
   it("should leave an invitation link public", () => {
     // The token in the URL is the credential, and the whole point of the page is
     // that an invitee sees what they were invited to before signing in. Protect
-    // this and every invitation bounces to a login wall — and then to `/`, since
-    // nothing in the app reads the `returnTo` the bounce writes.
+    // this and every invitation bounces to a login wall before showing what it
+    // is an invitation to — a wall the header's Log in can now return them from
+    // (`safeReturnTo`), which makes it survivable rather than correct.
     expect(
       isProtectedRoute("/invite/01a03d5c-7e20-75c4-ba9c-01be44e94c70"),
     ).toBe(false)
