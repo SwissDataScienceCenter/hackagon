@@ -10,6 +10,8 @@ import {
   type ProjectFilter,
 } from "$lib/utils/projectFilter"
 import { error } from "@sveltejs/kit"
+import { markdownExcerpt } from "$lib/utils/markdown"
+import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
 
 // The review queue: every project in the hackathon, one status at a time.
 //
@@ -97,7 +99,7 @@ export const load: PageServerLoad = async (event) => {
     id: p.id,
     num: shown.length - i,
     title: p.title,
-    description: p.description,
+    excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: memberNames.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,

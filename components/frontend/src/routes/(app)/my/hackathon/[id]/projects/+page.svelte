@@ -89,7 +89,7 @@
                 <ProjectCard
                     num={proposal.num}
                     title={proposal.title}
-                    description={proposal.description}
+                    excerpt={proposal.excerpt}
                     creator={proposal.creator}
                     track={proposal.track}
                     imageUrl={proposal.imageUrl}
@@ -115,7 +115,7 @@
                 <ProjectCard
                     num={project.num}
                     title={project.title}
-                    description={project.description}
+                    excerpt={project.excerpt}
                     creator={project.creator}
                     track={project.track}
                     imageUrl={project.imageUrl}
