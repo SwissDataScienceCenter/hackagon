@@ -66,7 +66,7 @@
     // Organisations that have run a hackathon with us. Deliberately not SDSC,
     // ETH or EPFL, which stood here before: SDSC *is* the ETH/EPFL joint
     // venture, so listing them under "Trusted by" is listing ourselves. They
-    // keep their proper billing in AppFooter's "A joint venture of" row.
+    // keep their billing in AppFooter's row of institution logos.
     //
     // A dark asset where one is needed, and no `invert` fallback — the rule the
     // institution logos relied on does not survive a coloured mark. Inverting
