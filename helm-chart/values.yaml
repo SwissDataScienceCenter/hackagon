@@ -86,6 +86,12 @@ backend:
     server:
       port: "3000"
       adminemail: "admin@{baseDomain}"
+      # -- Keycloak user id of the platform admin. Must equal the `id` of the
+      # `hackagon-admin` user in realmJson: casbin grants the `admin` role to
+      # exactly this id, and the backend seeds the admin row by it. Importing
+      # the realm keeps the two in step; an admin created by hand in the
+      # console gets a fresh uuid instead, which leaves nobody an admin and
+      # reports no error. Required — the backend refuses to start when empty.
       adminkeycloakid: ""
     database:
       driver: postgres
@@ -124,7 +130,14 @@ keycloak:
   hostname:
     hostname: "" # e.g. "https://auth.{baseDomain}"
 
-  # -- Admin credentials (password from realm JSON, but username needed)
+  # -- Keycloak's own console admin, which lives in the `master` realm. Its
+  # password is NOT in realmJson: a realm export carries only that realm's
+  # users, and this account is not one of them. This chart declares no password
+  # for it — set the keycloak subchart's own bootstrap-admin password, from a
+  # Secret.
+  # Mind the name collision: `hackagon-admin` is also a user *inside* the
+  # hackagon realm (the platform admin, see server.adminkeycloakid below). Two
+  # different accounts, two different passwords.
   admin:
     username: hackagon-admin
 

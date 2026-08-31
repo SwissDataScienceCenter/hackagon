@@ -175,7 +175,34 @@ export const getAuthOptions = (
     //debug: process.env.NODE_ENV !== 'production', // Enable logs in dev
     logger: {
       error: (error: unknown) => {
-        logger.error({ error }, "Unhandled error caught by SvelteKitAuth")
+        // Auth.js puts only a documentation link in `message`; the reason it
+        // actually failed hangs off `cause`, wrapped once more as `cause.err`
+        // (see AuthError in @auth/core). Both are non-enumerable, so logging
+        // `{ error }` recorded the link and nothing else — a spent state cookie
+        // was indistinguishable from a refused token exchange without reading
+        // Keycloak's own event log to rule the exchange out.
+        //
+        // Fields are whitelisted rather than spread: `cause` is shaped by
+        // @auth/core and oauth4webapi, and neither promises to keep request
+        // parameters or token material out of it.
+        const err = error as (Error & { cause?: unknown }) | undefined
+        const cause = err?.cause as
+          | { err?: unknown; provider?: string }
+          | undefined
+        const inner = (cause?.err ?? cause) as Error | undefined
+
+        logger.error(
+          {
+            error: { name: err?.name, message: err?.message },
+            cause: {
+              name: inner?.name,
+              message: inner?.message,
+              stack: inner?.stack,
+            },
+            provider: cause?.provider,
+          },
+          "Unhandled error caught by SvelteKitAuth",
+        )
       },
     },
   }
