@@ -7,6 +7,7 @@
     import X from 'lucide-svelte/icons/x';
     import type { Session } from '@auth/sveltekit';
     import LightSwitch from './LightSwitch.svelte';
+    import { safeReturnTo } from '$lib/utils/returnTo';
 
     // The header carries identity, theme and sign-out — no administration entry.
     // That moved to the dashboard's Manage platform section, which is the single
@@ -37,6 +38,23 @@
     } = $props();
 
     let mobileOpen = $state(false);
+
+    // Where Keycloak sends them back to.
+    //
+    // `returnTo` first: a bounced deep link is exactly the situation this button
+    // is standing next to. `hooks.server.ts` answers a protected route with
+    // `/?returnTo=<path>` and this is the only thing that reads it — without it
+    // the callback below is `/`, the page they were bounced *to*, and they land
+    // on the dashboard having asked for somewhere specific.
+    //
+    // Otherwise the page they are on, `search` included: `pathname` alone dropped
+    // the query string, which on a filtered list or a form step is half the
+    // destination. `safeReturnTo` is what keeps a hand-crafted `?returnTo=` from
+    // turning our own login into somebody else's landing page.
+    const loginTarget = $derived(
+        safeReturnTo($page.url.searchParams.get('returnTo')) ??
+            $page.url.pathname + $page.url.search,
+    );
 
     const userName = $derived(session?.user?.name ?? 'User');
     const initial = $derived(userName.charAt(0).toUpperCase());
@@ -175,7 +193,7 @@
                      a signed-out visitor is here, so it should not need a tap to
                      find. -->
                 <button
-                    onclick={() => signIn('keycloak', { callbackUrl: $page.url.pathname })}
+                    onclick={() => signIn('keycloak', { callbackUrl: loginTarget })}
                     class="btn btn-sm btn-outline-accent"
                 >
                     Log in
