@@ -128,20 +128,28 @@
                     class="h-4 invert dark:invert-0"
                 />
             </a>
-            <!-- PSI and Biopole ship as light/dark pairs rather than through the
+            <!-- PSI and Biopôle ship as light/dark pairs rather than through the
                  `invert` above. Both were supplied drawn for a dark background,
-                 and `invert` flips hue as well as luminance: it turned Biopole's
+                 and `invert` flips hue as well as luminance: it turned Biopôle's
                  green (#90c000) into purple. The light-mode asset instead has
                  its luminance flipped only where the artwork is achromatic, so
-                 the type reverses and the green survives. -->
+                 the type reverses and the green survives.
+
+                 `h-6`, not the `h-4` of the two wordmarks beside them: a shared
+                 box height is not a shared apparent size. EPFL's ink IS its cap
+                 height, while PSI's lettering fills only 59% of its asset (the
+                 sphere is twice as tall as the letters) and Biopôle's 53% (it is
+                 lowercase, with ascenders and an accent above the x-height). At
+                 a common `h-4` their type rendered around half the size of
+                 EPFL's, which is what datascience.ch's own footer does not do. -->
             <a
                 href="https://www.psi.ch/en"
                 target="_blank"
                 rel="noopener noreferrer"
                 class={LOGO_LINK}
             >
-                <img src="/images/logos/psi.png" alt="PSI" class="block h-4 dark:hidden" />
-                <img src="/images/logos/psi-white.png" alt="PSI" class="hidden h-4 dark:block" />
+                <img src="/images/logos/psi.png" alt="PSI" class="block h-6 dark:hidden" />
+                <img src="/images/logos/psi-white.png" alt="PSI" class="hidden h-6 dark:block" />
             </a>
             <a
                 href="https://www.biopole.ch/"
@@ -149,11 +157,11 @@
                 rel="noopener noreferrer"
                 class={LOGO_LINK}
             >
-                <img src="/images/logos/biopole.png" alt="Biopole" class="block h-4 dark:hidden" />
+                <img src="/images/logos/biopole.png" alt="Biopole" class="block h-6 dark:hidden" />
                 <img
                     src="/images/logos/biopole-white.png"
                     alt="Biopole"
-                    class="hidden h-4 dark:block"
+                    class="hidden h-6 dark:block"
                 />
             </a>
         </div>
