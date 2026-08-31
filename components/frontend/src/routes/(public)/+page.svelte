@@ -62,22 +62,29 @@
         return GRADIENTS[i % GRADIENTS.length]!;
     }
 
-    // Same shape and light/dark handling as OrganizersSection: a dark asset when
-    // one exists, otherwise invert the light-on-transparent source. Only these
-    // three have logo assets in static/ today.
-    const INSTITUTIONS = [
+    // Organisations that have run a hackathon with us. Deliberately not SDSC,
+    // ETH or EPFL, which stood here before: SDSC *is* the ETH/EPFL joint
+    // venture, so listing them under "Trusted by" is listing ourselves. They
+    // keep their proper billing in AppFooter's "A joint venture of" row.
+    //
+    // A dark asset where one is needed, and no `invert` fallback — the rule the
+    // institution logos relied on does not survive a coloured mark. Inverting
+    // J&J's red gives cyan; inverting Richemont's navy gives pale orange.
+    const TRUSTED_BY = [
         {
-            name: 'SDSC',
-            url: 'https://datascience.ch',
-            logoUrl: '/logos/sdsc.svg',
-            logoDarkUrl: '/logos/sdsc_white.svg',
+            name: 'Johnson & Johnson',
+            // Red reads on both canvases, so one asset serves both.
+            logoUrl: '/images/logos/johnson-and-johnson.webp',
         },
-        { name: 'ETH Zurich', url: 'https://ethz.ch', logoUrl: '/images/logos/eth-zurich.svg' },
-        { name: 'EPFL', url: 'https://epfl.ch', logoUrl: '/images/logos/epfl.svg' },
+        {
+            name: 'Richemont',
+            // Navy all but vanishes on the dark canvas, so this one ships as a
+            // light/dark pair — the same failure that made Durham University
+            // invisible on the experimental branch.
+            logoUrl: '/images/logos/richemont.webp',
+            logoDarkUrl: '/images/logos/richemont-white.webp',
+        },
     ];
-
-    // Matches AppFooter's LOGO_LINK.
-    const LOGO_LINK = 'no-underline opacity-80 transition-opacity hover:opacity-100';
 
     // Both asks on this page — the hero's and the one at the foot — reach the
     // hackathon team directly, rather than the general web form AppFooter's
@@ -100,7 +107,6 @@
     <div class="pointer-events-none absolute inset-0 bg-canvas/65"></div>
 
     <div class="relative z-10 flex flex-col items-center gap-6">
-
         <h1 class="max-w-2xl text-5xl font-bold leading-tight">
             SDSC Hackathon Platform
         </h1>
@@ -194,7 +200,7 @@
 <!-- Features -->
 <section class="bg-raised px-4 py-12 sm:px-10 md:px-20">
     <div class="flex flex-col items-center gap-2 text-center">
-        <h2 class="text-display">The hackathon platform for science</h2>
+        <h2 class="text-display">The SDSC platform for professional hackathons</h2>
         <p class="text-base text-ink-3">
             Everything you need to run or participate in a hackathon.
         </p>
@@ -221,37 +227,34 @@
 
 <!-- Orgs -->
 <section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-title">Trusted by Swiss research institutions</h2>
+    <h2 class="text-title">Trusted by</h2>
+    <!-- Sized by height with the width left to follow, rather than each logo
+         dropped into one shared box. Both of these are wide wordmarks — 10.6:1
+         and 16.1:1 — and a fixed 112x28 box fits them by width, which put
+         Richemont at a 5px cap height. Matching cap heights is what makes a
+         logo row look even anyway.
+
+         Unlinked on purpose: AppFooter's rule is that an off-site href is read
+         from the source rather than guessed, and a wrong link on a customer's
+         logo is worse than no link. -->
     <div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-        {#each INSTITUTIONS as org, i (i)}
-            <!-- eslint-disable svelte/no-navigation-without-resolve -- off-site institution URL -->
-            <a
-                href={org.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="{org.name} (opens in a new tab)"
-                class="flex h-7 w-28 items-center justify-center {LOGO_LINK}"
-            >
+        {#each TRUSTED_BY as org (org.name)}
+            <div class="flex h-4 items-center sm:h-5">
                 {#if org.logoDarkUrl}
                     <img
                         src={org.logoUrl}
                         alt={org.name}
-                        class="block max-h-full max-w-full object-contain dark:hidden"
+                        class="block h-full w-auto max-w-full dark:hidden"
                     />
                     <img
                         src={org.logoDarkUrl}
                         alt={org.name}
-                        class="hidden max-h-full max-w-full object-contain dark:block"
+                        class="hidden h-full w-auto max-w-full dark:block"
                     />
                 {:else}
-                    <img
-                        src={org.logoUrl}
-                        alt={org.name}
-                        class="max-h-full max-w-full object-contain invert dark:invert-0"
-                    />
+                    <img src={org.logoUrl} alt={org.name} class="h-full w-auto max-w-full" />
                 {/if}
-            </a>
-            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+            </div>
         {/each}
     </div>
 </section>
@@ -262,7 +265,7 @@
      not be true. `note` carries the address for the same reason the hero prints
      it — a browser with no mail handler drops the click in silence. -->
 <CtaSection
-    heading="Want to host your own hackathon?"
+    heading="Want to organise your own hackathon with SDSC?"
     subtitle="SDSC provides the platform, tools, and expertise. Bring your challenge — we'll help you run it."
     buttonLabel="Contact us"
     buttonHref={HACKATHON_CONTACT_MAILTO}
