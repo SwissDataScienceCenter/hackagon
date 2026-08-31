@@ -10,6 +10,8 @@ import {
 import { enabledCapabilities } from "$lib/server/hackathon/phaseForm"
 import { fail } from "@sveltejs/kit"
 import { ClientError, Status } from "nice-grpc-common"
+import { markdownExcerpt } from "$lib/utils/markdown"
+import { PROJECT_EXCERPT_CHARS } from "$lib/utils/projectExcerpt"
 
 // No owner/admin check here: reviewing proposals is an organiser action and
 // lives under Manage Projects, which gates itself (see $lib/navigation's
@@ -136,7 +138,7 @@ export const load: PageServerLoad = async (event) => {
     id: p.id,
     num: ordered.length - i,
     title: p.title,
-    description: p.description,
+    excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: memberNames.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
@@ -159,7 +161,7 @@ export const load: PageServerLoad = async (event) => {
     id: p.id,
     num: myProposals.length - i,
     title: p.title,
-    description: p.description,
+    excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
     creator: memberNames.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,

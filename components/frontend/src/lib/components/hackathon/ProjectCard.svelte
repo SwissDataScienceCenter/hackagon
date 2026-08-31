@@ -7,7 +7,7 @@
     let {
         num,
         title,
-        description,
+        excerpt,
         creator,
         track,
         imageUrl,
@@ -19,7 +19,10 @@
     }: {
         num: number;
         title: string;
-        description: string;
+        /** The description, flattened out of markdown and cut to a row's worth
+         *  by the loader — never the raw body. Absent when the project has no
+         *  description, or has one with nothing quotable in it. */
+        excerpt?: string;
         /** Who proposed it. Omitted when the creator is no longer a member. */
         creator?: string;
         /** Track name. Omitted when the project has no track, or its track was
@@ -76,10 +79,20 @@
         </div>
         <!-- The description is the one genuinely prose-shaped thing on the card,
              so it takes the sans face. `max-width` in `ch` rather than `w-2/3`
-             keeps the measure readable at any container width. -->
-        <p class="prose m-0 max-w-[52ch] text-xs leading-snug text-ink-2">
-            {description}
-        </p>
+             keeps the measure readable at any container width.
+
+             Two lines and no more. The loader already cut the text to a hundred
+             characters, so the clamp is only what holds on a narrow screen,
+             where those hundred characters still run to three lines and the row
+             stops being scannable. -->
+        {#if excerpt}
+            <p
+                class="prose m-0 line-clamp-2 max-w-[52ch] text-xs leading-snug
+                       text-ink-2"
+            >
+                {excerpt}
+            </p>
+        {/if}
         <!-- Author and track on one line, each behind its own icon, so the two
              facts read as attributes of the row rather than sentences. The
              icons carry no information a sighted reader needs spelling out and

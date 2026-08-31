@@ -103,7 +103,7 @@
                 <ProjectCard
                     num={project.num}
                     title={project.title}
-                    description={project.description}
+                    excerpt={project.excerpt}
                     creator={project.creator}
                     track={project.track}
                     imageUrl={project.imageUrl}
