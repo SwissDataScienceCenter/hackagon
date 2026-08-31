@@ -76,19 +76,30 @@
                     registration, project proposal, team formation, voting and showcasing the
                     results.
                 </p>
-                <!-- The one internal link here that is not the home page. The
-                     footer this replaced pointed at /about when no such route
-                     existed, so it 404'd on every public page; AppFooter.test.ts
-                     guards against that and names the routes that do exist. -->
-                <a href={resolve('/(public)/about')} class={LINK}>About this platform</a>
             </div>
 
             <nav class="flex flex-col gap-3" aria-label="Platform">
                 <h2 class="meta">Platform</h2>
                 <!-- Written out rather than looped: svelte/no-navigation-without-resolve
-                     only recognizes a literal resolve() in the attribute. -->
+                     only recognizes a literal resolve() in the attribute.
+
+                     No Dashboard link. This footer renders on the public pages
+                     too, where it was the only route to it — and /dashboard
+                     needs a session, so a signed-out visitor pressing it landed
+                     on the login wall instead. Signed-in visitors lose nothing:
+                     NavBar carries Dashboard in both its desktop and mobile nav
+                     wherever the app shell is rendered.
+
+                     "About this platform" rather than "About": the SDSC column
+                     beside this one has its own About, pointing at
+                     datascience.ch, and two adjacent columns both offering
+                     "About" would not say which is which. It is also the only
+                     internal link here other than the home page — the footer
+                     this replaced pointed at /about when no such route existed
+                     and 404'd on every public page, which is what the internal
+                     allowlist in AppFooter.test.ts exists to catch. -->
                 <a href={resolve('/')} class={LINK}>Hackathons</a>
-                <a href={resolve('/(app)/dashboard')} class={LINK}>Dashboard</a>
+                <a href={resolve('/(public)/about')} class={LINK}>About this platform</a>
             </nav>
 
             <nav class="flex flex-col gap-3" aria-label="Swiss Data Science Center">
