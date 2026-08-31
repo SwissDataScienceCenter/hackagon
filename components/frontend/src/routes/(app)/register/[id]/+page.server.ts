@@ -152,16 +152,18 @@ export const actions: Actions = {
       }
     } catch (e) {
       if (e instanceof ClientError) {
-        // TODO(backend: answer-upsert-sql): every answer write fails today.
-        // Both `Join` and `SubmitAnswers` build their upsert as
-        // `OnConflict().UpdateNewValues()` with no conflict target, which
-        // Postgres rejects at parse time — so this branch is currently the
-        // *only* outcome of a filled-in form, whatever the answers say.
+        // A server fault, reported rather than thrown: a `fail` leaves them on
+        // the form they just filled in, where a 500 page would lose it.
+        //
+        // This branch used to say answers could not be saved *at all* — both
+        // handlers built their upsert with no conflict target, which Postgres
+        // rejects at parse time, so it was the only outcome a filled-in form
+        // could have. Both now name `(question_id, user_id)`, matched by the
+        // unique index the schema already declared.
         if (e.code === Status.INTERNAL)
           return fail(500, {
             message:
-              "Answers cannot be saved yet — the backend refuses every " +
-              "registration answer. This is a known backend defect.",
+              "Something went wrong saving your answers. Please try again.",
           })
         // Names the offending key ("missing mandatory answers: [conduct]"),
         // which is more use than anything generic. Also covers a closed
