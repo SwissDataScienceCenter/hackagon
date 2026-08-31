@@ -41,5 +41,20 @@ result
 # Helm dev values with passwords
 helm-chart/values.dev.yaml
 helm-chart/charts/
+
+# Keycloak production handover (tools/keycloak-handover). Matched repo-wide, not
+# just in that directory, because the scripts take an output path and a generated
+# realm dropped elsewhere would otherwise be unprotected.
+#
+# Placeholders only, but generated — regenerate rather than commit a copy that
+# drifts from the dev realm:
+realm-hackagon-prod.json
+realm-hardening-report.md
+# Real admin password and client secret in plain text:
+realm-hackagon-prod.filled.json
+hackagon-realm-handover.tar
+# Every age-encrypted file. If the team later keeps encrypted secrets in git
+# (sops-style), negate this for that path rather than dropping the rule.
+*.age
 ## ============================================================================
 
