@@ -64,15 +64,16 @@ describe("AppFooter", () => {
     const { container } = render(AppFooter)
 
     // The footer this replaced linked /privacy, /terms and /about, none of which
-    // are routes — they 404'd on every public page. Legal pages now go to SDSC's
-    // real ones, so nothing internal may point outside this set.
+    // were routes — they 404'd on every public page. Legal pages now go to
+    // SDSC's real ones, and /about is a real route now, so nothing internal may
+    // point outside this set. Add to it only alongside the route itself.
     const internal = Array.from(
       container.querySelectorAll<HTMLAnchorElement>('a[href^="/"]'),
     ).map((a) => a.getAttribute("href"))
 
     expect(internal.length).toBeGreaterThan(0)
     for (const href of internal) {
-      expect(["/", "/dashboard"]).toContain(href)
+      expect(["/", "/about", "/dashboard"]).toContain(href)
     }
   })
 

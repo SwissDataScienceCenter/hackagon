@@ -38,6 +38,16 @@ describe("isProtectedRoute", () => {
     expect(isProtectedRoute("/welcome/")).toBe(true)
   })
 
+  it("should leave the about page public", () => {
+    // Linked from AppFooter on every page, including the signed-out shell.
+    expect(isProtectedRoute("/about")).toBe(false)
+    expect(isProtectedRoute("/about/")).toBe(false)
+  })
+
+  it("should not treat a route merely starting with 'about' as public", () => {
+    expect(isProtectedRoute("/aboutus")).toBe(true)
+  })
+
   it("should protect unknown routes by default", () => {
     expect(isProtectedRoute("/dashboard")).toBe(true)
     expect(isProtectedRoute("/settings")).toBe(true)

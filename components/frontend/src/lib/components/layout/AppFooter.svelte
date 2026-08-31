@@ -72,10 +72,15 @@
                     <img src="/logos/sdsc.svg" alt="SDSC" class="block h-7 dark:hidden" />
                 </a>
                 <p class="max-w-sm text-sm leading-relaxed text-ink-2">
-                    Hackagon is the Swiss Data Science Center's platform for running hackathons —
-                    from proposing projects and forming teams through to submissions, judging and
+                    This is the SDSC platform for running professional hackathons — from
+                    registration, project proposal, team formation, voting and showcasing the
                     results.
                 </p>
+                <!-- The one internal link here that is not the home page. The
+                     footer this replaced pointed at /about when no such route
+                     existed, so it 404'd on every public page; AppFooter.test.ts
+                     guards against that and names the routes that do exist. -->
+                <a href={resolve('/(public)/about')} class={LINK}>About this platform</a>
             </div>
 
             <nav class="flex flex-col gap-3" aria-label="Platform">
@@ -110,7 +115,10 @@
                 />
             </a>
             <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
-                <img src="/images/logos/epfl.svg" alt="EPFL" class="h-4 invert dark:invert-0" />
+                <!-- EPFL in its own red, so no `invert`: the rule its
+                     neighbours rely on turns red into cyan. The asset is the
+                     same paths as epfl.svg with the fill swapped. -->
+                <img src="/images/logos/epfl-red.svg" alt="EPFL" class="h-4" />
             </a>
         </div>
     </div>

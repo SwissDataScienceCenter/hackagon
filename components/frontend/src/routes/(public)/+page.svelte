@@ -10,6 +10,7 @@
     import CtaSection from '$lib/components/hackathon/CtaSection.svelte';
     import { statusLabel, statusBadgeVariant, isFinished } from '$lib/utils/hackathonStatus';
     import { formatDateRange } from '$lib/utils/hackathonDates';
+    import { HACKATHON_CONTACT_EMAIL, HACKATHON_CONTACT_MAILTO } from '$lib/utils/contact';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -86,12 +87,6 @@
         },
     ];
 
-    // Both asks on this page — the hero's and the one at the foot — reach the
-    // hackathon team directly, rather than the general web form AppFooter's
-    // "Contact" points at: someone asking here has a hackathon in mind, and the
-    // reply should come from the people who run them.
-    const HACKATHON_CONTACT_EMAIL = 'hackathon@datascience.ch';
-    const HACKATHON_CONTACT_MAILTO = `mailto:${HACKATHON_CONTACT_EMAIL}`;
 </script>
 
 <!-- Hero (full-bleed width) -->
