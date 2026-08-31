@@ -3,6 +3,7 @@
 
 Reads  tools/configs/keycloak/realm-hackagon.json  (the committed DEV realm)
 Writes realm-hackagon-prod.json                    (hardened; placeholders, no secrets)
+       realm-hardening-report.md                   (what changed, and why)
 
 The two credential slots are left as __REPLACE_* placeholders for
 fill-and-encrypt.sh to fill at handover time, so no secret is ever written by
@@ -17,7 +18,7 @@ import json, sys, pathlib
 
 SRC = pathlib.Path(sys.argv[1])
 DST = pathlib.Path(sys.argv[2])
-LOG = DST.parent / "CHANGES.md"
+LOG = DST.parent / "realm-hardening-report.md"
 
 # The backend pins this UUID (backend.config.server.adminkeycloakid) and casbin
 # grants the `admin` group to it. It MUST survive unchanged.

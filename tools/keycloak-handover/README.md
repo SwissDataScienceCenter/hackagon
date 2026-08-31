@@ -16,9 +16,9 @@ python3 harden-realm.py \
 
 Takes the dev realm and produces a production one: dev users removed,
 self-registration off, brute-force protection on, a password policy added, and
-both clients made confidential. It writes a `CHANGES.md` beside the output
-listing every setting it changed and why, and aborts if the `hackagon-admin`
-user's id is not the one the backend expects.
+both clients made confidential. It writes a `realm-hardening-report.md` beside
+the output listing every setting it changed and why, and aborts if the
+`hackagon-admin` user's id is not the one the backend expects.
 
 The result is generated, not committed — regenerate it whenever the dev realm
 changes.
