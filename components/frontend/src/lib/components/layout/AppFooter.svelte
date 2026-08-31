@@ -115,52 +115,37 @@
 
         <!-- The institutions behind SDSC, in the order and the bare form
              datascience.ch's own footer presents them: EPFL, ETH, PSI, Biopôle,
-             with no label in front. The label here used to read "A joint venture
-             of", which was true of ETH and EPFL but became a claim about PSI and
-             Biopôle once they joined the row. Dropping it is what the official
-             site does, and it makes the row state an affiliation rather than a
-             legal relationship.
+             with no label in front.
 
-             Sizing and light/dark handling is per-logo below, because the assets
-             do not share a treatment. -->
+             All four are monochrome white artwork inverted for light mode — one
+             asset and one rule each, which is the point of doing it this way.
+             Colour needed a second asset per mode and produced a bug every
+             time: EPFL's red could not be inverted at all, Biopôle's green
+             inverted to purple, and Richemont's navy vanished against the dark
+             canvas. Keep any replacement asset white-on-transparent.
+
+             Heights differ because a shared box height is not a shared apparent
+             size. Measured against EPFL's cap height, PSI's lettering fills 48%
+             of its asset and Biopôle's 55%, the rest being their graphic marks —
+             so h-5 for those two against h-4 for the two bare wordmarks. -->
         <div class="flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
             <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
-                <!-- EPFL in its own red, so no `invert`: the rule its
-                     neighbours rely on turns red into cyan. The asset is the
-                     same paths as epfl.svg with the fill swapped. -->
-                <img src="/images/logos/epfl-red.svg" alt="EPFL" class="h-4" />
+                <img src="/images/logos/epfl.svg" alt="EPFL" class="h-4 invert dark:invert-0" />
             </a>
             <a href="https://ethz.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
-                <!-- Pure white paths, so the CSS invert is a real asset swap
-                     here — the only logo in the row it still works for. -->
                 <img
                     src="/images/logos/eth-zurich.svg"
                     alt="ETH Zurich"
                     class="h-4 invert dark:invert-0"
                 />
             </a>
-            <!-- PSI and Biopôle ship as light/dark pairs rather than through the
-                 `invert` above. Both were supplied drawn for a dark background,
-                 and `invert` flips hue as well as luminance: it turned Biopôle's
-                 green (#90c000) into purple. The light-mode asset instead has
-                 its luminance flipped only where the artwork is achromatic, so
-                 the type reverses and the green survives.
-
-                 `h-6`, not the `h-4` of the two wordmarks beside them: a shared
-                 box height is not a shared apparent size. EPFL's ink IS its cap
-                 height, while PSI's lettering fills only 59% of its asset (the
-                 sphere is twice as tall as the letters) and Biopôle's 53% (it is
-                 lowercase, with ascenders and an accent above the x-height). At
-                 a common `h-4` their type rendered around half the size of
-                 EPFL's, which is what datascience.ch's own footer does not do. -->
             <a
                 href="https://www.psi.ch/en"
                 target="_blank"
                 rel="noopener noreferrer"
                 class={LOGO_LINK}
             >
-                <img src="/images/logos/psi.png" alt="PSI" class="block h-6 dark:hidden" />
-                <img src="/images/logos/psi-white.png" alt="PSI" class="hidden h-6 dark:block" />
+                <img src="/images/logos/psi.png" alt="PSI" class="h-5 invert dark:invert-0" />
             </a>
             <a
                 href="https://www.biopole.ch/"
@@ -168,11 +153,10 @@
                 rel="noopener noreferrer"
                 class={LOGO_LINK}
             >
-                <img src="/images/logos/biopole.png" alt="Biopole" class="block h-6 dark:hidden" />
                 <img
-                    src="/images/logos/biopole-white.png"
-                    alt="Biopole"
-                    class="hidden h-6 dark:block"
+                    src="/images/logos/biopole.webp"
+                    alt="Biopôle"
+                    class="h-5 invert dark:invert-0"
                 />
             </a>
         </div>
