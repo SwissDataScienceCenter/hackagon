@@ -1,5 +1,6 @@
 <script lang="ts">
     import HeroSection from '$lib/components/hackathon/HeroSection.svelte';
+    import JoinCta from '$lib/components/hackathon/JoinCta.svelte';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
     import { statusLabel } from '$lib/utils/hackathonStatus';
@@ -37,4 +38,14 @@
             </p>
         {/if}
     </section>
+
+    <!-- The way in, at the foot of the page: everything above is what the
+         hackathon is, and this is what to do about it. One `btn-solid` on the
+         page, which is the theme's rule — the hero above carries no action. -->
+    <JoinCta
+        hackathonId={hackathon.id}
+        name={hackathon.name}
+        status={hackathon.status}
+        signedIn={data.signedIn}
+    />
 </div>
