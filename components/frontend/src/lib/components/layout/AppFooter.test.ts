@@ -67,13 +67,18 @@ describe("AppFooter", () => {
     // were routes — they 404'd on every public page. Legal pages now go to
     // SDSC's real ones, and /about is a real route now, so nothing internal may
     // point outside this set. Add to it only alongside the route itself.
+    //
+    // /dashboard is deliberately absent: it needs a session, and this footer
+    // renders on the public pages as well, so linking it bounced signed-out
+    // visitors to the login wall. Keeping it out of this set is what stops it
+    // coming back.
     const internal = Array.from(
       container.querySelectorAll<HTMLAnchorElement>('a[href^="/"]'),
     ).map((a) => a.getAttribute("href"))
 
     expect(internal.length).toBeGreaterThan(0)
     for (const href of internal) {
-      expect(["/", "/about", "/dashboard"]).toContain(href)
+      expect(["/", "/about"]).toContain(href)
     }
   })
 
