@@ -84,7 +84,7 @@
 
         <ImageUrlField
             name="image"
-            label="Image URL (optional)"
+            label="Project image URL (optional)"
             value={project.image ?? ''}
             class={tracks.length > 0 ? '' : 'sm:col-span-2'}
         />

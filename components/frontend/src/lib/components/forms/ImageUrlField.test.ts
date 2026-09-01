@@ -76,7 +76,10 @@ describe("ImageUrlField", () => {
     await fireEvent.load(preview(container)!)
     await tick()
 
-    expect(screen.getByText(/what will be shown/)).toBeTruthy()
+    // The wording is deliberately about the link and the picture rather than
+    // about the page: the field cannot promise how a given page draws it, and
+    // a project still crops its image to a round thumbnail.
+    expect(screen.getByText(/this is the picture/i)).toBeTruthy()
     expect(preview(container)).not.toBeNull()
   })
 

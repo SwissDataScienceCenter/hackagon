@@ -115,7 +115,15 @@
                 {#if checking}
                     <span class="text-ink-3">Checking the link…</span>
                 {:else if showImage}
-                    <span class="text-ink-2">This is what will be shown.</span>
+                    <!-- What this field can honestly claim: the address loads, and
+                         this is the picture it loads. Not "this is what will be
+                         shown" — that is a promise about a page, and it only held
+                         where the page draws with `StoredImage` too. A project's
+                         image is still cropped to a round thumbnail, so the
+                         sentence was false there. The page-level claim belongs to
+                         the preview on Manage Public Page, which is an actual
+                         rendering of the page. -->
+                    <span class="text-ink-2">The link works — this is the picture.</span>
                 {:else}
                     <!-- Two separate claims, so two lines: the first is
                          demonstrated, the second is a guess at the cause and is
