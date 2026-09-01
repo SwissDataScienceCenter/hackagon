@@ -1,6 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import { Calendar, MapPin, Users } from 'lucide-svelte';
+    import { usableImage } from '$lib/utils/imageUrl';
 
     // Only the name and the breadcrumbs are required. Everything else is
     // optional because a hackathon may genuinely not have it: dates are
@@ -28,6 +29,14 @@
         capacity?: number;
     } = $props();
 
+    // The banner is a URL an organiser typed — there is no upload — so a link
+    // that serves a web page instead of an image is the ordinary mistake. It
+    // has to switch off `min-h-96` as well as the `<img>`: a 24rem band holding
+    // a broken image, or nothing at all, is worse than the short hero every
+    // hackathon without a logo already gets.
+    let failedSrc: string | undefined = $state(undefined);
+    const hasImage = $derived(usableImage(imageUrl, failedSrc));
+
     // Only a pair says anything; one half of it is a fragment, not a fact.
     const hasCounts = $derived(registered !== undefined && capacity !== undefined);
     const hasMeta = $derived(Boolean(dates) || Boolean(venue) || hasCounts);
@@ -39,18 +48,26 @@
 <section
     class="relative flex flex-col justify-end gap-4 overflow-hidden px-4 pt-8 pb-12
            sm:px-10 md:px-20"
-    class:min-h-96={imageUrl}
+    class:min-h-96={hasImage}
 >
-    {#if imageUrl}
+    <!-- Two dimmers stack here, and it is their product that matters: the image
+         at 55% under a 55%-opaque scrim shows about a quarter of itself (0.55 x
+         0.45), 18% in dark mode. It was 30% under a 70% scrim — 9% — which is
+         not a picture but a faint tint, and read as a rendering fault rather
+         than a backdrop. Raise either number alone and the pair drifts apart
+         again, so change them together. The same values are on the landing
+         page's hero, which is the only other surface doing this. -->
+    {#if hasImage}
         <img
             src={imageUrl}
             alt=""
-            class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30 dark:opacity-20"
+            onerror={() => (failedSrc = imageUrl)}
+            class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-55 dark:opacity-40"
         />
     {/if}
     <!-- One scrim, not a light/dark pair: `canvas` already flips with the mode,
          so the two variants collapse into a single token. -->
-    <div class="pointer-events-none absolute inset-0 bg-canvas/70"></div>
+    <div class="pointer-events-none absolute inset-0 bg-canvas/55"></div>
 
     <div class="relative z-10 flex flex-col gap-4">
         <nav class="flex items-center gap-1.5 text-xs text-ink-2">

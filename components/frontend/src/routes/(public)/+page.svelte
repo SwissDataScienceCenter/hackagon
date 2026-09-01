@@ -70,12 +70,15 @@
     class="relative flex min-h-[30rem] flex-col items-center justify-center gap-6 overflow-hidden
            px-4 pt-8 pb-12 text-center sm:px-10 md:px-20"
 >
+    <!-- Image opacity and scrim multiply out to ~25% of the picture (18% dark),
+         matching HeroSection — see the arithmetic there. Change the two
+         together. -->
     <img
         src="/images/hackathon-ord-2024/ambiance/ambiance_1.webp"
         alt=""
-        class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40 dark:opacity-25"
+        class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-55 dark:opacity-40"
     />
-    <div class="pointer-events-none absolute inset-0 bg-canvas/65"></div>
+    <div class="pointer-events-none absolute inset-0 bg-canvas/55"></div>
 
     <div class="relative z-10 flex flex-col items-center gap-6">
         <h1 class="max-w-2xl text-5xl font-bold leading-tight">
@@ -158,6 +161,7 @@
             <HackathonRow
                 href="/hackathon/{h.id}"
                 name={h.name}
+                imageUrl={h.logo}
                 meta={formatDateRange(h)}
                 badge={statusLabel(h.status)}
                 badgeVariant={statusBadgeVariant(h.status)}
