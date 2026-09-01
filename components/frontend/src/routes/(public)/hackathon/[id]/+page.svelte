@@ -1,9 +1,5 @@
 <script lang="ts">
-    import HeroSection from '$lib/components/hackathon/HeroSection.svelte';
-    import JoinCta from '$lib/components/hackathon/JoinCta.svelte';
-    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
-    import { formatDateRange } from '$lib/utils/hackathonDates';
-    import { statusLabel } from '$lib/utils/hackathonStatus';
+    import PublicHackathonView from '$lib/components/hackathon/PublicHackathonView.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -11,41 +7,15 @@
     const hackathon = $derived(data.hackathon);
 </script>
 
-<HeroSection
-    title={hackathon.name}
-    dates={formatDateRange(hackathon)}
-    status={statusLabel(hackathon.status)}
-    breadcrumbs={[
-        { label: 'Hackathons', href: '/' },
-        { label: hackathon.name, href: `/hackathon/${hackathon.id}` },
-    ]}
+<!-- The page itself is the component, so the organiser's preview of it cannot
+     be showing something else. See PublicHackathonView. -->
+<PublicHackathonView
+    id={hackathon.id}
+    name={hackathon.name}
+    description={hackathon.description}
+    logo={hackathon.logo}
+    startsAt={hackathon.startsAt}
+    endsAt={hackathon.endsAt}
+    status={hackathon.status}
+    signedIn={data.signedIn}
 />
-
-<div class="mx-auto w-full max-w-7xl">
-    <section class="px-4 py-12 sm:px-10 md:px-20">
-        {#if hackathon.description}
-            <!-- The organizer's own markdown, through the same component the
-                 editor previews with, so what they wrote is what shows. -->
-            <div class="max-w-3xl">
-                <MarkdownContent content={hackathon.description} />
-            </div>
-        {:else}
-            <!-- Said plainly rather than filled with something inviting: this
-                 page has one job, and an empty description means the organizer
-                 has not done it yet. -->
-            <p class="text-sm text-ink-3">
-                The organizers have not written a description for this hackathon yet.
-            </p>
-        {/if}
-    </section>
-
-    <!-- The way in, at the foot of the page: everything above is what the
-         hackathon is, and this is what to do about it. One `btn-solid` on the
-         page, which is the theme's rule — the hero above carries no action. -->
-    <JoinCta
-        hackathonId={hackathon.id}
-        name={hackathon.name}
-        status={hackathon.status}
-        signedIn={data.signedIn}
-    />
-</div>

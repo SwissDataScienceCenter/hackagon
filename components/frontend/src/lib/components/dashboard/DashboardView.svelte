@@ -23,6 +23,8 @@
     interface HackathonEntry {
         id: string;
         name: string;
+        /** The hackathon's logo, drawn in the row's thumbnail when it loads. */
+        logo?: string;
         startsAt?: Date;
         endsAt?: Date;
         status: number;
@@ -89,22 +91,6 @@
     // the section vanish entirely for everyone else.
     const adminItems = $derived(platformNav({ isGlobalAdmin }));
 
-    // Decorative thumbnails for hackathons with no image of their own. Each
-    // stop is derived from a theme token and darkened rather than naming a
-    // palette step, so the set retunes with the theme instead of drifting from
-    // it — and so it survives the secondary/tertiary palettes being removed.
-    const GRADIENTS = [
-        { from: 'var(--color-accent)', to: 'color-mix(in oklab, var(--color-accent) 35%, black)' },
-        { from: 'var(--color-info)', to: 'color-mix(in oklab, var(--color-info) 35%, black)' },
-        {
-            from: 'var(--color-success)',
-            to: 'color-mix(in oklab, var(--color-success) 35%, black)',
-        },
-    ];
-
-    function gradient(i: number) {
-        return GRADIENTS[i % GRADIENTS.length]!;
-    }
 
     function formatMeta(h: HackathonEntry): string {
         const fmt = (d: Date) =>
@@ -190,7 +176,7 @@
                 <p class="text-sm text-ink-3">You are not connected to any hackathons yet.</p>
             {:else}
                 <div class="card overflow-hidden">
-                    {#each myHackathons as h, i (h.id)}
+                    {#each myHackathons as h (h.id)}
                         {@const mem = h.viewerMembership}
                         <!-- Two questions, not one: whether the row is a link at
                              all, and which page it opens. Someone who runs this
@@ -229,11 +215,10 @@
                                 <HackathonRow
                                     {href}
                                     name={h.name}
+                                    imageUrl={h.logo}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
                                     badgeVariant={statusBadgeVariant(h.status)}
-                                    gradFrom={gradient(i).from}
-                                    gradTo={gradient(i).to}
                                 />
                             </div>
                             <!-- The row's only trailing element. Editing a
@@ -276,7 +261,7 @@
                 <p class="text-sm text-ink-3">No other hackathons available.</p>
             {:else}
                 <div class="card overflow-hidden">
-                    {#each otherHackathons as h, i (h.id)}
+                    {#each otherHackathons as h (h.id)}
                         <div class="flex items-center border-b border-line last:border-0">
                             <div class="flex-1">
                                 <!-- No href: a non-member holds no `hackathon:read`
@@ -285,11 +270,10 @@
                                      403. Joining is the only thing offered here. -->
                                 <HackathonRow
                                     name={h.name}
+                                    imageUrl={h.logo}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
                                     badgeVariant={statusBadgeVariant(h.status)}
-                                    gradFrom={gradient(i).from}
-                                    gradTo={gradient(i).to}
                                 />
                             </div>
                             <!-- A finished hackathon gets no button and no label:

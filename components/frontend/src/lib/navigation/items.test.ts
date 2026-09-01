@@ -498,10 +498,19 @@ describe("manageNav", () => {
 
   // Mirrors the backend, which does not consult isWaiting for track:write or
   // phase:write either.
-  it("does not withhold management from a waitlisted owner", () => {
-    expect(
-      idsOf(manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false)),
-    ).toEqual(idsOf(manageNav("hack-1", owner, false)))
+  // Manage Public Page is the one entry a waitlisted owner does not get, because
+  // its page answers anyone unconfirmed with a 403 (`canEditHackathon`, enforced
+  // in that route's load). Withholding it is the nav keeping its stronger
+  // promise — never offer a link that then refuses. Every other entry is offered
+  // to a waitlisted owner exactly as to a confirmed one.
+  it("withholds only the public-page entry from a waitlisted owner", () => {
+    const waiting = idsOf(
+      manageNav("hack-1", { role: ROLE_OWNER, isWaiting: true }, false),
+    )
+    const confirmed = idsOf(manageNav("hack-1", owner, false))
+
+    expect(confirmed).toContain("manage:public")
+    expect(waiting).toEqual(confirmed.filter((id) => id !== "manage:public"))
   })
 
   // The exact paths are the compiler's job — `resolve()` takes SvelteKit's
@@ -558,11 +567,11 @@ describe("manageNav", () => {
         "manage:participants",
       ],
       ["/my/hackathon/hack-1/teams/manage", "manage:teams"],
-      // The hackathon's own edit form, for the same reason as the phase forms
-      // below: it is reached from Settings and nests under it, so that entry
-      // stays lit rather than nothing being lit at all.
       ["/my/hackathon/hack-1/manage", "manage:settings"],
-      ["/my/hackathon/hack-1/manage/edit", "manage:settings"],
+      // The public page editor has an entry of its own now, so it lights that
+      // rather than leaving Settings lit beneath it. It still nests under
+      // `/manage`, which is what longest-match has to resolve correctly.
+      ["/my/hackathon/hack-1/manage/edit", "manage:public"],
       // Nested under Settings too, but with an entry of its own — longest match
       // is what keeps Settings from swallowing it.
       ["/my/hackathon/hack-1/manage/forms", "manage:forms"],

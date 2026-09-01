@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { usableImage } from '$lib/utils/imageUrl';
+
     let {
         src,
         initials,
@@ -16,12 +18,10 @@
     // otherwise leave the browser's broken-image glyph in the circle — which
     // looks like a bug in the app rather than a bad link. `image` is free text
     // the proposer types, so this is the ordinary case, not the edge one.
-    //
-    // Recorded as *which* src failed rather than a boolean, so a new src is tried
-    // afresh: a component reused across rows (or an image corrected by an edit)
-    // must not stay failed because an earlier URL was.
+    // `usableImage` is where the rule lives; every surface drawing a stored
+    // address shares it.
     let failedSrc: string | undefined = $state(undefined);
-    const usable = $derived(src !== undefined && src !== '' && failedSrc !== src);
+    const usable = $derived(usableImage(src, failedSrc));
 </script>
 
 <!--

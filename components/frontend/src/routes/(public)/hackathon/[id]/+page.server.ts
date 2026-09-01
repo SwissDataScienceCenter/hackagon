@@ -102,6 +102,7 @@ export const load: PageServerLoad = async (event) => {
       id: hackathon.id,
       name: hackathon.name,
       description: hackathon.description ?? "",
+      logo: hackathon.logo,
       startsAt: hackathon.startsAt,
       endsAt: hackathon.endsAt,
       status: hackathon.status,

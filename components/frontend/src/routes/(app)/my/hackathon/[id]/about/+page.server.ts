@@ -15,5 +15,9 @@ export const load: PageServerLoad = async (event) => {
   return {
     name: hackathon.name,
     description: hackathon.description,
+    // The same address the overview's hero draws. Carried here because About is
+    // the one member page whose subject *is* the hackathon — everywhere else the
+    // picture would be decoration above someone's real errand.
+    logo: hackathon.logo,
   }
 }

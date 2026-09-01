@@ -1,4 +1,6 @@
 <script lang="ts">
+    import StoredImage from './StoredImage.svelte';
+
     let {
         title,
         dates,
@@ -35,14 +37,12 @@
     class="flex flex-col gap-4 bg-raised px-4 py-4 sm:px-10 sm:py-6 md:flex-row md:items-center
            md:gap-8 md:px-20 md:py-4 min-h-0 md:min-h-44"
 >
-    {#if imageUrl}
-        <div
-            class="aspect-[4/3] w-full max-w-md shrink-0 overflow-hidden border
-                   border-line sm:aspect-auto sm:max-w-none sm:h-36 sm:w-56"
-        >
-            <img src={imageUrl} alt={title} class="h-full w-full object-cover" />
-        </div>
-    {/if}
+    <!-- The same picture, drawn the same way, as the public page and About. It
+         used to be `object-cover` in a fixed 224x144 box, which cropped whatever
+         was pasted to that shape — a square wordmark lost its top and bottom.
+         The height cap keeps this hero's height where it was; the width now
+         follows the image instead of the other way round. -->
+    <StoredImage src={imageUrl} alt={title} maxHeight="max-h-36" class="shrink-0" />
 
     <div class="flex min-w-0 flex-1 flex-col gap-1.5">
         <span class="text-xs font-semibold text-accent-ink">{dates}</span>
