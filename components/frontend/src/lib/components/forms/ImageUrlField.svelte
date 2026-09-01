@@ -1,11 +1,12 @@
 <script lang="ts">
     import { adviseImageUrl, usableImage } from '$lib/utils/imageUrl';
     import { isHttpUrl } from '$lib/utils/url';
+    import StoredImage from '$lib/components/hackathon/StoredImage.svelte';
 
     let {
         name,
         label,
-        value = '',
+        value = $bindable(''),
         placeholder = 'https://…',
         fieldClass = 'field',
         labelClass = 'field-label',
@@ -34,14 +35,17 @@
     // this field ends up holding. So the field has to be where a bad link is
     // caught — after the save there is nothing left but a broken image on
     // somebody else's page, with no hint of which link did it.
-    let url = $state(value);
+    //
+    // `value` is that text and it is bindable, so a page previewing what it is
+    // about to save reads the address from the field itself rather than keeping
+    // a second copy of it that can drift.
 
     // The address the preview is currently trying. A beat behind the field, so a
     // half-typed host is not requested character by character and the verdict
     // below does not contradict itself mid-word.
     let probed = $state(value.trim());
     $effect(() => {
-        const next = url.trim();
+        const next = value.trim();
         const timer = setTimeout(() => (probed = next), 500);
         return () => clearTimeout(timer);
     });
@@ -70,36 +74,41 @@
         type="url"
         {name}
         {placeholder}
-        bind:value={url}
+        bind:value={value}
         class={fieldClass}
     />
 
+    <!-- The instruction, not just the rule. "A link to the image file itself"
+         describes the destination without saying how to get one, and the way to
+         get one is a menu item most people have never had a reason to notice. -->
     <span class="font-normal text-ink-3">
-        A link to the image file itself — a share or page link will not render.
+        A link to the image file itself — a share or page link will not render. In
+        most browsers: right-click the picture and choose
+        <span class="text-ink-2">Copy image address</span>
+        (Firefox calls it <span class="text-ink-2">Copy Image Link</span>).
     </span>
 
     {#if probed !== ''}
         <!-- Deliberately not `aria-live`: this settles a beat after typing stops
              and would interrupt somebody still filling the form in. It sits
              beside the field they are already looking at. -->
-        <div class="flex items-start gap-3 pt-1 font-normal">
+        <div class="flex flex-col items-start gap-2 pt-1 font-normal">
             {#if showImage}
-                <span
-                    class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden
-                           border border-line bg-raised"
-                >
-                    <!-- Kept in the tree while it loads rather than swapped in on
-                         success: the load *is* the check, so something has to be
-                         doing it. -->
-                    <img
-                        src={probed}
-                        alt=""
-                        onload={() => (loaded = probed)}
-                        onerror={() => (failed = probed)}
-                        class="h-full w-full object-contain"
-                        class:opacity-0={checking}
-                    />
-                </span>
+                <!-- The same component the public page and About draw with, at a
+                     smaller height cap. A 64px square box stood here saying "this
+                     is what will be shown", which was true of no shape but a
+                     square: a wide banner was boxed and a poster shrunk to a
+                     stamp, and neither looked like the page it was previewing.
+                     Kept in the tree while it loads rather than swapped in on
+                     success — the load *is* the check, so something has to be
+                     doing it, which is what the opacity is for. -->
+                <StoredImage
+                    src={probed}
+                    maxHeight="max-h-40"
+                    class="max-w-sm {checking ? 'opacity-0' : ''}"
+                    onload={() => (loaded = probed)}
+                    onerror={() => (failed = probed)}
+                />
             {/if}
 
             <span class="flex min-w-0 flex-col items-start gap-1">
@@ -130,7 +139,7 @@
                     <button
                         type="button"
                         class="btn btn-sm btn-outline"
-                        onclick={() => (url = advice.direct ?? url)}
+                        onclick={() => (value = advice.direct ?? value)}
                     >
                         Use the direct link
                     </button>

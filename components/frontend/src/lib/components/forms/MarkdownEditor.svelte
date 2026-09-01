@@ -28,7 +28,7 @@
     let {
         id,
         name,
-        value = '',
+        value = $bindable(''),
         rows = 8,
         placeholder = '',
         required = false,
@@ -46,7 +46,6 @@
         maxlength?: number;
     } = $props();
 
-    let text = $state(value);
     let mode: 'write' | 'preview' = $state('write');
     let area: HTMLTextAreaElement | undefined = $state();
 
@@ -98,10 +97,10 @@
     async function apply(transform: (edit: Edit) => Edit | null) {
         if (!area) return;
 
-        const next = transform({ value: text, start: area.selectionStart, end: area.selectionEnd });
+        const next = transform({ value, start: area.selectionStart, end: area.selectionEnd });
         if (!next) return;
 
-        const { from, to, text: inserted } = diffRange(text, next.value);
+        const { from, to, text: inserted } = diffRange(value, next.value);
         // No transform currently returns its input unchanged, but if one ever
         // does, `execCommand('delete')` on a collapsed selection below would eat
         // the character before the caret instead of doing nothing.
@@ -116,7 +115,7 @@
                 ? document.execCommand('insertText', false, inserted)
                 : document.execCommand('delete'));
 
-        if (!undoable) text = next.value;
+        if (!undoable) value = next.value;
 
         await tick();
         area.setSelectionRange(next.start, next.end);
@@ -132,7 +131,7 @@
             // the decision and the edit cannot disagree.
             if (!area) return;
             const next = continueList({
-                value: text,
+                value,
                 start: area.selectionStart,
                 end: area.selectionEnd,
             });
@@ -151,7 +150,7 @@
         void apply(run);
     }
 
-    const remaining = $derived(maxlength ? maxlength - text.length : 0);
+    const remaining = $derived(maxlength ? maxlength - value.length : 0);
 </script>
 
 <div class="flex flex-col gap-2">
@@ -220,7 +219,7 @@
         {id}
         {name}
         bind:this={area}
-        bind:value={text}
+        bind:value={value}
         {rows}
         {placeholder}
         {required}
@@ -246,8 +245,8 @@
              markup behind `display: none`. On the 10,000-character
              descriptions four of these forms allow, that is not free. -->
         {#if mode === 'preview'}
-            {#if text.trim()}
-                <MarkdownContent content={text} />
+            {#if value.trim()}
+                <MarkdownContent content={value} />
             {:else}
                 <p class="m-0 text-ink-3">Nothing to preview yet.</p>
             {/if}
