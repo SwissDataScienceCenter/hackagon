@@ -1,18 +1,10 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import { questionKindLabel } from '$lib/utils/question';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
-
-    // A tick-box answer is a boolean and has to be said in words; text and enum
-    // answers are already the words. Yes/No matches the tally above the list, so
-    // the two halves of a tick-box question read the same way.
-    function spoken(value: string | boolean): string {
-        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-
-        return value;
-    }
 
     const people = $derived(
         data.rosterSize === 1 ? '1 participant' : `${data.rosterSize} participants`
@@ -122,7 +114,9 @@
                                     <span class="text-ink-2 {answer.departed ? 'italic' : ''}">
                                         {answer.name}
                                     </span>
-                                    <span class="text-ink">{spoken(answer.value)}</span>
+                                    <span class="min-w-0 break-words text-ink">
+                                        <AnswerText value={answer.value} />
+                                    </span>
                                 </li>
                             {/each}
                         </ul>
@@ -142,7 +136,7 @@
                                      answer is a sentence somebody wrote. Wrapped so a
                                      pasted paragraph does not stretch the card. -->
                                 <p class="prose m-0 text-sm break-words text-ink">
-                                    {spoken(answer.value)}
+                                    <AnswerText value={answer.value} />
                                 </p>
                             </li>
                         {/each}

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import type { PageData } from './$types';
 
     let { data }: { data: PageData } = $props();
@@ -152,12 +153,11 @@
                                 {answer.label}
                             </dt>
                             <dd class="m-0 flex flex-wrap items-center gap-2">
-                                <span class="text-body leading-snug text-ink">
-                                    {#if typeof answer.value === 'boolean'}
-                                        {answer.value ? 'Yes' : 'No'}
-                                    {:else}
-                                        {answer.value}
-                                    {/if}
+                                <!-- `min-w-0` so a pasted address wraps: a flex item
+                                     will not shrink below its content, and one long
+                                     URL would otherwise widen the whole row. -->
+                                <span class="min-w-0 break-words text-body leading-snug text-ink">
+                                    <AnswerText value={answer.value} />
                                 </span>
                                 <!-- Only on your own profile: on anyone else's every
                                      entry is shared, so a chip on all of them says

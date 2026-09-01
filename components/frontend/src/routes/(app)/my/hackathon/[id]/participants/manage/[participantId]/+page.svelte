@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import AnswerText from '$lib/components/hackathon/AnswerText.svelte';
     import { membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import type { ActionData, PageData } from './$types';
 
@@ -145,12 +146,10 @@
                 {#each data.answers as answer (answer.questionId)}
                     <div class="flex flex-wrap items-center gap-x-2">
                         <dt class="text-xs text-ink-3">{answer.label}</dt>
-                        <dd class="m-0 text-xs text-ink">
-                            {#if typeof answer.value === 'boolean'}
-                                {answer.value ? 'Yes' : 'No'}
-                            {:else}
-                                {answer.value}
-                            {/if}
+                        <!-- `min-w-0` so a pasted address wraps rather than
+                             widening the row: see the participant profile. -->
+                        <dd class="m-0 min-w-0 break-words text-xs text-ink">
+                            <AnswerText value={answer.value} />
                         </dd>
                         {#if answer.publicAnswers}
                             <span class="badge badge-neutral">Shared</span>
