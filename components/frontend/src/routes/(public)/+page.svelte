@@ -63,30 +63,6 @@
         return GRADIENTS[i % GRADIENTS.length]!;
     }
 
-    // Organisations that have run a hackathon with us. Deliberately not SDSC,
-    // ETH or EPFL, which stood here before: SDSC *is* the ETH/EPFL joint
-    // venture, so listing them under "Trusted by" is listing ourselves. They
-    // keep their billing in AppFooter's row of institution logos.
-    //
-    // A dark asset where one is needed, and no `invert` fallback — the rule the
-    // institution logos relied on does not survive a coloured mark. Inverting
-    // J&J's red gives cyan; inverting Richemont's navy gives pale orange.
-    const TRUSTED_BY = [
-        {
-            name: 'Johnson & Johnson',
-            // Red reads on both canvases, so one asset serves both.
-            logoUrl: '/images/logos/johnson-and-johnson.webp',
-        },
-        {
-            name: 'Richemont',
-            // Navy all but vanishes on the dark canvas, so this one ships as a
-            // light/dark pair — the same failure that made Durham University
-            // invisible on the experimental branch.
-            logoUrl: '/images/logos/richemont.webp',
-            logoDarkUrl: '/images/logos/richemont-white.webp',
-        },
-    ];
-
 </script>
 
 <!-- Hero (full-bleed width) -->
@@ -215,40 +191,6 @@
                 <Icon class="h-6 w-6 text-accent-ink" />
                 <h3 class="text-section">{feat.title}</h3>
                 <p class="text-sm leading-relaxed text-ink-3">{feat.desc}</p>
-            </div>
-        {/each}
-    </div>
-</section>
-
-<!-- Orgs -->
-<section class="flex flex-col items-center gap-8 px-4 py-12 sm:px-10 md:px-20">
-    <h2 class="text-title">Trusted by</h2>
-    <!-- Sized by height with the width left to follow, rather than each logo
-         dropped into one shared box. Both of these are wide wordmarks — 10.6:1
-         and 16.1:1 — and a fixed 112x28 box fits them by width, which put
-         Richemont at a 5px cap height. Matching cap heights is what makes a
-         logo row look even anyway.
-
-         Unlinked on purpose: AppFooter's rule is that an off-site href is read
-         from the source rather than guessed, and a wrong link on a customer's
-         logo is worse than no link. -->
-    <div class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-        {#each TRUSTED_BY as org (org.name)}
-            <div class="flex h-4 items-center sm:h-5">
-                {#if org.logoDarkUrl}
-                    <img
-                        src={org.logoUrl}
-                        alt={org.name}
-                        class="block h-full w-auto max-w-full dark:hidden"
-                    />
-                    <img
-                        src={org.logoDarkUrl}
-                        alt={org.name}
-                        class="hidden h-full w-auto max-w-full dark:block"
-                    />
-                {:else}
-                    <img src={org.logoUrl} alt={org.name} class="h-full w-auto max-w-full" />
-                {/if}
             </div>
         {/each}
     </div>
