@@ -49,20 +49,6 @@
             ),
     );
 
-    // See DashboardView for why these are token-derived rather than palette steps.
-    const GRADIENTS = [
-        { from: 'var(--color-accent)', to: 'color-mix(in oklab, var(--color-accent) 35%, black)' },
-        { from: 'var(--color-info)', to: 'color-mix(in oklab, var(--color-info) 35%, black)' },
-        {
-            from: 'var(--color-success)',
-            to: 'color-mix(in oklab, var(--color-success) 35%, black)',
-        },
-    ];
-
-    function gradient(i: number) {
-        return GRADIENTS[i % GRADIENTS.length]!;
-    }
-
 </script>
 
 <!-- Hero (full-bleed width) -->
@@ -157,7 +143,7 @@
 
 {#snippet rows(items: Hackathon[])}
     <div class="mt-6 divide-y divide-line">
-        {#each items as h, i (h.id)}
+        {#each items as h (h.id)}
             <HackathonRow
                 href="/hackathon/{h.id}"
                 name={h.name}
@@ -165,8 +151,6 @@
                 meta={formatDateRange(h)}
                 badge={statusLabel(h.status)}
                 badgeVariant={statusBadgeVariant(h.status)}
-                gradFrom={gradient(i).from}
-                gradTo={gradient(i).to}
             />
         {/each}
     </div>

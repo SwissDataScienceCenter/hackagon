@@ -12,8 +12,6 @@
         badge,
         badgeVariant = 'badge-accent',
         count,
-        gradFrom,
-        gradTo,
         size = 'default',
     }: {
         /**
@@ -26,21 +24,19 @@
         org?: string;
         meta: string;
         /**
-         * The hackathon's logo. The gradient below is not a placeholder waiting
-         * to be replaced — it stays the answer for a hackathon with no logo, and
-         * for one whose logo does not load.
+         * The hackathon's logo — the picture an organiser chose, and the only
+         * picture this row ever shows. A hackathon without one gets an empty
+         * ground of the same size rather than a generated stand-in.
          */
         imageUrl?: string;
         badge?: string;
         badgeVariant?: string;
         count?: string;
-        gradFrom: string;
-        gradTo: string;
         size?: 'default' | 'compact';
     } = $props();
 
     // A logo is typed in, never uploaded, so a link that serves a web page is
-    // the ordinary mistake rather than the rare one; the gradient absorbs it.
+    // the ordinary mistake rather than the rare one; the empty ground absorbs it.
     let failedSrc: string | undefined = $state(undefined);
     const hasImage = $derived(usableImage(imageUrl, failedSrc));
 
@@ -79,10 +75,12 @@
             />
         </div>
     {:else}
-        <div
-            class="{thumbSize} shrink-0 rounded-field"
-            style="background: linear-gradient(135deg, {gradFrom}, {gradTo})"
-        ></div>
+        <!-- An empty ground, not a generated picture. The colour used to be
+             picked by the row's position in the list, so a hackathon's tile
+             changed colour whenever the backend returned the list in another
+             order — a picture nobody chose, and a different one each visit. The
+             box stays so rows with and without a logo keep one left edge. -->
+        <div class="{thumbSize} shrink-0 rounded-field border border-line bg-overlay"></div>
     {/if}
     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
         <!-- The organisation is an eyebrow above the name rather than sharing a
