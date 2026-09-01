@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import ImageUrlField from '$lib/components/forms/ImageUrlField.svelte';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import type { ActionData } from './$types';
 
@@ -68,10 +69,7 @@
                 <input type="date" name="endsAt" class="field" />
             </label>
 
-            <label class="field-label sm:col-span-2">
-                Logo URL (optional)
-                <input type="url" name="logo" placeholder="https://…" class="field" />
-            </label>
+            <ImageUrlField name="logo" label="Logo URL (optional)" class="sm:col-span-2" />
         </div>
 
         <!-- Last and full width: the only field with no natural size, and the one

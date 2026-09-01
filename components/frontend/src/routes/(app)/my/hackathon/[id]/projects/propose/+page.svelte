@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import ImageUrlField from '$lib/components/forms/ImageUrlField.svelte';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import type { ActionData, PageData } from './$types';
 
@@ -63,13 +64,11 @@
                     </label>
                 {/if}
 
-                <label class="field-label {data.tracks.length > 0 ? '' : 'sm:col-span-2'}">
-                    Image URL (optional)
-                    <input type="url" name="image" placeholder="https://…" class="field" />
-                    <span class="font-normal text-ink-3">
-                        A link to the image file itself — a share or page link will not render.
-                    </span>
-                </label>
+                <ImageUrlField
+                    name="image"
+                    label="Image URL (optional)"
+                    class={data.tracks.length > 0 ? '' : 'sm:col-span-2'}
+                />
             </div>
 
             <!-- Last and full width: the only field with no natural size, and the one

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import ImageUrlField from '$lib/components/forms/ImageUrlField.svelte';
     import MarkdownEditor from '$lib/components/forms/MarkdownEditor.svelte';
     import type { ActionData, PageData } from './$types';
 
@@ -111,16 +112,14 @@
                 </p>
             {/if}
 
-            <label class="{LABEL_CLASS} sm:col-span-2">
-                Logo URL (optional)
-                <input
-                    type="url"
-                    name="logo"
-                    placeholder="https://…"
-                    value={hackathon.logo ?? ''}
-                    class={FIELD_CLASS}
-                />
-            </label>
+            <ImageUrlField
+                name="logo"
+                label="Logo URL (optional)"
+                value={hackathon.logo ?? ''}
+                fieldClass={FIELD_CLASS}
+                labelClass={LABEL_CLASS}
+                class="sm:col-span-2"
+            />
         </div>
 
         <!-- Last and full width: the only field with no natural size, and the one
