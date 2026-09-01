@@ -14,6 +14,7 @@
 <HeroSection
     title={hackathon.name}
     dates={formatDateRange(hackathon)}
+    imageUrl={hackathon.logo}
     status={statusLabel(hackathon.status)}
     breadcrumbs={[
         { label: 'Hackathons', href: '/' },

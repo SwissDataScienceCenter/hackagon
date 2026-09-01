@@ -23,6 +23,8 @@
     interface HackathonEntry {
         id: string;
         name: string;
+        /** The hackathon's logo, drawn in the row's thumbnail when it loads. */
+        logo?: string;
         startsAt?: Date;
         endsAt?: Date;
         status: number;
@@ -229,6 +231,7 @@
                                 <HackathonRow
                                     {href}
                                     name={h.name}
+                                    imageUrl={h.logo}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
                                     badgeVariant={statusBadgeVariant(h.status)}
@@ -285,6 +288,7 @@
                                      403. Joining is the only thing offered here. -->
                                 <HackathonRow
                                     name={h.name}
+                                    imageUrl={h.logo}
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
                                     badgeVariant={statusBadgeVariant(h.status)}
