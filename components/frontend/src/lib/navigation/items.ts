@@ -13,6 +13,7 @@
 import type { ComponentType } from "svelte"
 import { resolve } from "$app/paths"
 import {
+  canEditHackathon,
   canManageHackathon,
   type ViewerMembership,
 } from "$lib/utils/hackathonRole"
@@ -28,6 +29,7 @@ import UserRoundCog from "lucide-svelte/icons/user-round-cog"
 import Send from "lucide-svelte/icons/send"
 import Ticket from "lucide-svelte/icons/ticket"
 import CalendarClock from "lucide-svelte/icons/calendar-clock"
+import Globe from "lucide-svelte/icons/globe"
 import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
 import Info from "lucide-svelte/icons/info"
@@ -307,13 +309,14 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
  * management route's own load, all reduce to owner-or-admin — casbin grants
  * `hackathon:write` / `phase:write` / `page:write` / `track:write` to `Owner`
  * outright and to an admin through the global escape hatch, with no capability
- * gating any of them. So this never offers a link that then refuses. Add a
- * per-entry gate the day an entry needs a narrower one rather than widening this
- * one: `/edit` would be the first, since `canEditHackathon` also requires the
- * owner be confirmed — which is why it is offered on the Settings page itself,
- * behind that check of its own, rather than listed here. It nests under
- * `/manage` like every other single-record form, so Settings stays lit while it
- * is open. `isWaiting` is deliberately not consulted; nor does the backend.
+ * gating any of them. So this never offers a link that then refuses. Where an
+ * entry needs a narrower gate it carries its own rather than widening this one:
+ * Manage Public Page is the one such entry, because `canEditHackathon` also
+ * requires the owner be confirmed. It nests under `/manage` like every other
+ * single-record form, but it is a destination of its own, so it is listed here
+ * rather than reached from a control on the Settings page. `isWaiting` is not
+ * consulted for any other entry, and nor does the backend consult it for the
+ * capabilities behind them.
  *
  * Entries follow the order of the participant entries they extend, and most are
  * nested under that entry's route (`/teams/manage` under `/teams`) so
@@ -388,6 +391,25 @@ export function manageNav(
         ? { badge: "!", badgeVariant: "badge-warning" as const }
         : {}),
     },
+    // The hackathon as everyone outside it sees it: the name, dates, picture and
+    // description on the public page, with that page previewed beside the fields
+    // as they are typed. A tab of its own rather than a pencil tucked into
+    // Settings — it is a destination an organiser returns to, not a one-off
+    // correction to the row it sat on.
+    // Gated on its own rather than on the section gate above, which is the
+    // per-entry check the note on `manageNav` anticipated: `canEditHackathon`
+    // additionally requires the owner be confirmed, so listing it unconditionally
+    // would offer a manager a form the backend then refuses.
+    ...(canEditHackathon(membership, isGlobalAdmin)
+      ? [
+          {
+            id: "manage:public",
+            label: "Manage Public Page",
+            icon: Globe,
+            href: resolve(`/my/hackathon/${hackathonId}/manage/edit`),
+          },
+        ]
+      : []),
     // Both halves of the roster: the confirmed people, and the queue waiting to
     // be let in, as two tabs of the one destination. The participant page lists
     // the same confirmed people and offers nothing to act on — every decision

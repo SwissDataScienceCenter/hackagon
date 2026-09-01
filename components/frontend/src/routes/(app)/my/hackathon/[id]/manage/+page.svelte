@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { ArrowRight, Pencil, Plus } from 'lucide-svelte';
+    import { ArrowRight, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import CapabilitiesPanel from '$lib/components/hackathon/CapabilitiesPanel.svelte';
     import { manageNav } from '$lib/navigation/items';
-    import { canEditHackathon } from '$lib/utils/hackathonRole';
     import { isPrivate } from '$lib/utils/hackathonStatus';
     import { formatPhaseRange } from '$lib/utils/phase';
     import type { ActionData, PageData } from './$types';
@@ -16,7 +15,6 @@
     // owner-or-admin: `hackathon:write` also wants the owner confirmed, so a
     // waitlisted owner reaches this page and would land on a 403 in the form.
     // The backend decides either way; this only decides whether to offer it.
-    const mayEdit = $derived(canEditHackathon(data.myMembership ?? undefined, data.isGlobalAdmin));
 
     // The other organiser destinations, minus this page. Read from `manageNav`
     // rather than listed again here, so an entry added to the sidebar reaches
@@ -102,10 +100,10 @@
 -->
 <div class="flex flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
     <!-- Editing the hackathon's own record — name, dates, visibility, logo,
-         description — rides in the heading rather than among the tiles below:
-         those lead to the things *inside* a hackathon, this one changes the
-         hackathon itself, which is what this page is named after. Outline, not
-         solid: advancing the phase below is this view's one solid action. -->
+         description — is Manage Public Page in the sidebar, not a control up
+         here. It stopped being one the moment it grew a preview: a pencil beside
+         a heading reads as a correction to that heading, and this is a page an
+         organiser goes back to. -->
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex min-w-0 flex-col gap-1">
             <h2 class="m-0 text-title text-ink">Settings</h2>
@@ -114,15 +112,6 @@
                 projects are grouped.
             </span>
         </div>
-        {#if mayEdit}
-            <a
-                href={resolve(`/my/hackathon/${data.hackathonId}/manage/edit`)}
-                class="btn btn-sm btn-outline no-underline"
-            >
-                <Pencil class="h-3 w-3 shrink-0" aria-hidden="true" />
-                Edit details
-            </a>
-        {/if}
     </div>
 
     <!-- The phase marker. Its own box above the switches, because the two are
