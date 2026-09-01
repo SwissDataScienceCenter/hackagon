@@ -528,6 +528,21 @@
     outline-offset: -1px;
   }
 
+  /* A field whose answer the page has just refused. Keyed off `aria-invalid`
+   * rather than `:user-invalid` on purpose: the register form carries
+   * `novalidate`, so the browser runs no submit-time check of its own, and a
+   * control the person never touched — the untouched required select this was
+   * written for — never becomes "user-invalid" at all. The attribute is set by
+   * whoever renders the message, so the border and the sentence under it cannot
+   * disagree, and a screen reader is told the same thing the border says. */
+  .field[aria-invalid="true"],
+  .field[aria-invalid="true"]:focus {
+    border-color: var(--color-danger);
+  }
+  .field[aria-invalid="true"]:focus-visible {
+    outline-color: var(--color-danger);
+  }
+
   /* `.field` for anything that wraps: textareas and the panes rendered beside
    * them. The fixed control height is what makes it single-line, so this drops
    * it and pays the padding back vertically. */
@@ -570,6 +585,9 @@
   .checkbox:checked {
     border-color: var(--color-accent);
     background-color: var(--color-accent);
+  }
+  .checkbox[aria-invalid="true"] {
+    border-color: var(--color-danger);
   }
 
   .chip {

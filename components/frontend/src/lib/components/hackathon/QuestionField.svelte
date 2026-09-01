@@ -4,7 +4,8 @@
     let {
         question,
         value,
-        readonly = false
+        readonly = false,
+        error
     }: {
         question: {
             id: string;
@@ -19,6 +20,12 @@
         value?: string | boolean;
         /** Someone else's answers, shown but not editable. */
         readonly?: boolean;
+        /**
+         * What is wrong with the answer, in our own words. Set by the page that
+         * ran the check — see $lib/utils/formValidation — and shown under the
+         * field instead of the browser's tooltip, which no stylesheet can reach.
+         */
+        error?: string;
     } = $props();
 
     const name = $derived(answerFieldName(question.id));
@@ -37,7 +44,17 @@
     // is someone else's answer being displayed — there it is not a warning, it is
     // the reason the answer is on screen at all.
     const shared = $derived(question.publicAnswers && !readonly);
+
+    // Marks the control for the theme and for assistive tech at once: `.field`
+    // and `.checkbox` both colour their border off this attribute.
+    const invalid = $derived(error ? 'true' : undefined);
 </script>
+
+<!-- The message is inside the <label>, so it becomes part of the control's
+     accessible name and is read out when focus lands there — which is where the
+     page puts it after a refused submit. Deliberately no `role="alert"`: three
+     of these appear at once on a form with three unanswered questions, and the
+     browser it replaces only ever spoke about one field at a time. -->
 
 {#if question.kind === 'bool'}
     <!-- A tick-box carries its label to the right of it, unlike the fields
@@ -51,6 +68,7 @@
             value="true"
             checked={ticked}
             disabled={readonly}
+            aria-invalid={invalid}
             class="checkbox mt-0.5 shrink-0"
         />
         <span class="flex flex-col gap-0.5 text-sm text-ink">
@@ -65,6 +83,9 @@
                     Your answer is shown to everyone taking part.
                 </span>
             {/if}
+            {#if error}
+                <span class="text-meta text-danger-ink">{error}</span>
+            {/if}
         </span>
     </label>
 {:else if question.kind === 'enum'}
@@ -73,7 +94,7 @@
         {#if question.mandatory}
             <span class="text-danger-ink" aria-hidden="true">*</span>
         {/if}
-        <select {name} {required} disabled={readonly} class="field">
+        <select {name} {required} disabled={readonly} aria-invalid={invalid} class="field">
             <!-- An empty first option so a fresh optional question starts
                  unanswered rather than silently defaulting to whatever happens
                  to be first in the list. -->
@@ -87,6 +108,9 @@
                 Your answer is shown to everyone taking part.
             </span>
         {/if}
+        {#if error}
+            <span class="text-meta text-danger-ink">{error}</span>
+        {/if}
     </label>
 {:else}
     <label class="field-label">
@@ -94,11 +118,22 @@
         {#if question.mandatory}
             <span class="text-danger-ink" aria-hidden="true">*</span>
         {/if}
-        <input type="text" {name} {required} value={text} readonly={readonly} class="field" />
+        <input
+            type="text"
+            {name}
+            {required}
+            value={text}
+            readonly={readonly}
+            aria-invalid={invalid}
+            class="field"
+        />
         {#if shared}
             <span class="text-meta text-ink-3">
                 Your answer is shown to everyone taking part.
             </span>
+        {/if}
+        {#if error}
+            <span class="text-meta text-danger-ink">{error}</span>
         {/if}
     </label>
 {/if}
