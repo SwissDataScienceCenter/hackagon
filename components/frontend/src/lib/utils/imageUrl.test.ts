@@ -17,7 +17,7 @@ describe("adviseImageUrl", () => {
 
   it("rejects what is not a web address", () => {
     expect(adviseImageUrl("logo.png").problem).toMatch(/https:\/\//)
-    expect(adviseImageUrl("/images/logos/psi.png").problem).toMatch(
+    expect(adviseImageUrl("/images/logos/psi.svg").problem).toMatch(
       /https:\/\//,
     )
   })
