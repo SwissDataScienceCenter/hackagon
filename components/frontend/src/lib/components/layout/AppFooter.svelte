@@ -32,9 +32,12 @@
         { label: 'Contact', href: 'https://datascience.ch/contact' },
     ];
 
+    // No Terms of Service. datascience.ch/terms-of-service is a 404 — SDSC's own
+    // footer offers no such page — so the entry sent every visitor who pressed it
+    // to a dead end. Re-add it only once a real page answers, not because the
+    // other legal links have one.
     const LEGAL_LINKS = [
         { label: 'Privacy Policy', href: 'https://datascience.ch/privacy-policy' },
-        { label: 'Terms of Service', href: 'https://datascience.ch/terms-of-service' },
         { label: 'Impressum', href: 'https://datascience.ch/impressum' },
     ];
 
