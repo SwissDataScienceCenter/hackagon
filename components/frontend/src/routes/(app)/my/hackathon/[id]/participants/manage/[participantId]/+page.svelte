@@ -70,8 +70,15 @@
   This is also the only page that shows an organizer the *whole* registration
   form. `participants/[participantId]` stays the participant view and shows the
   shared answers only, to an organizer included.
+
+  Set the same way as that page, deliberately: same capped column, same card per
+  section, same two-column answer grid, same type roles. The two show one person
+  and differ only in what they are allowed to say and do about them, so an
+  organizer moving between them should be reading the same page in two states
+  rather than learning a second layout.
 -->
-<div class="flex w-full flex-col gap-6 px-4 py-8 sm:px-10 md:px-20">
+<div class="flex w-full flex-col px-4 py-8 sm:px-10 md:px-20">
+  <div class="flex w-full max-w-3xl flex-col gap-6">
     <a
         href="{resolve(
             `/my/hackathon/${data.hackathonId}/participants/manage`
@@ -119,21 +126,21 @@
         </div>
     </div>
 
-    <section class="flex flex-col gap-2">
-        <h3 class="m-0 text-sm font-semibold text-ink">Registration answers</h3>
+    <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
+        <h3 class="m-0 text-section text-ink">Registration answers</h3>
         {#if data.answersFailed}
             <!-- Said outright rather than shown as an empty form: "answered
                  nothing" is what an organizer decides on, and a failed call is no
                  basis for it. -->
-            <p class="m-0 text-xs text-ink-3">
+            <p class="prose m-0 text-sm text-ink-3">
                 Answers could not be loaded. Reload the page to try again.
             </p>
         {:else if data.questionCount === 0}
-            <p class="m-0 text-xs text-ink-3">
+            <p class="prose m-0 text-sm text-ink-3">
                 This hackathon's registration form asks nothing yet.
             </p>
         {:else if data.answers.length === 0}
-            <p class="m-0 text-xs text-ink-3">
+            <p class="prose m-0 text-sm text-ink-3">
                 {data.participant.name} has not answered the registration form.
             </p>
         {:else}
@@ -142,59 +149,82 @@
                  here, including the ones the event keeps between the organizers
                  and the applicant — the chip marks which of them the rest of the
                  hackathon can also read. -->
-            <dl class="m-0 flex flex-col gap-1 border-l border-line pl-3">
+            <dl
+                class="m-0 grid gap-x-6
+                       sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:gap-y-2.5"
+            >
                 {#each data.answers as answer (answer.questionId)}
-                    <div class="flex flex-wrap items-center gap-x-2">
-                        <dt class="text-xs text-ink-3">{answer.label}</dt>
-                        <!-- `min-w-0` so a pasted address wraps rather than
-                             widening the row: see the participant profile. -->
-                        <dd class="m-0 min-w-0 break-words text-xs text-ink">
+                    <!-- The row gap lives on the label, not on the grid: below sm
+                         the grid is one column, and a uniform row gap would put as
+                         much space between a label and its own answer as between
+                         one question and the next. -->
+                    <dt
+                        class="mt-3 text-xs leading-snug text-ink-3 first:mt-0
+                               sm:mt-0 sm:pt-1"
+                    >
+                        {answer.label}
+                    </dt>
+                    <!-- `min-w-0` so a pasted address wraps rather than widening
+                         the column: see the participant profile. -->
+                    <dd class="m-0 flex min-w-0 flex-wrap items-center gap-2">
+                        <span class="min-w-0 break-words text-body leading-snug text-ink">
                             <AnswerText value={answer.value} />
-                        </dd>
+                        </span>
                         {#if answer.publicAnswers}
                             <span class="badge badge-neutral">Shared</span>
                         {/if}
-                    </div>
+                    </dd>
                 {/each}
             </dl>
         {/if}
     </section>
 
-    <section class="flex flex-col gap-2">
-        <h3 class="m-0 text-sm font-semibold text-ink">Teams</h3>
+    <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
+        <h3 class="m-0 text-section text-ink">Teams</h3>
         <!-- Same three outcomes as the member-facing profile. An owner reads
              teams whether or not they are published, so this branch is the
              global-admin-who-is-not-the-owner case rather than the common one. -->
         {#if !data.teamsPublished}
-            <p class="m-0 text-xs text-ink-3">
+            <p class="prose m-0 text-sm text-ink-3">
                 Team assignments have not been published in this hackathon yet.
             </p>
         {:else if data.teamsFailed}
-            <p class="m-0 text-xs text-ink-3">
+            <p class="prose m-0 text-sm text-ink-3">
                 Teams could not be loaded. Reload the page to try again.
             </p>
         {:else if data.teams.length === 0}
-            <p class="m-0 text-xs text-ink-3">
+            <p class="prose m-0 text-sm text-ink-3">
                 {data.participant.name} is not on a team in this hackathon yet.
             </p>
         {:else}
-            {#each data.teams as team (team.id)}
-                <a
-                    href={resolve(`/my/hackathon/${data.hackathonId}/teams/${team.id}`)}
-                    class="card card-raised box-border flex w-full flex-col gap-1 px-5 py-4
-                           no-underline hover:border-accent"
-                >
-                    <span class="text-sm leading-snug text-ink">{team.name}</span>
-                    {#if team.projectTitle}
-                        <span class="text-xs leading-snug text-ink-2">{team.projectTitle}</span>
-                    {/if}
-                </a>
-            {/each}
+            <!-- Rows separated by hairlines rather than nested cards: the section
+                 is already a card, and a card inside a card reads as two frames
+                 for one thing. -->
+            <div class="flex flex-col">
+                {#each data.teams as team (team.id)}
+                    <a
+                        href={resolve(`/my/hackathon/${data.hackathonId}/teams/${team.id}`)}
+                        class="group flex flex-col gap-0.5 border-t border-line py-3
+                               no-underline first:border-t-0 first:pt-0 last:pb-0"
+                    >
+                        <span
+                            class="text-body leading-snug text-ink group-hover:text-accent-ink"
+                        >
+                            {team.name}
+                        </span>
+                        {#if team.projectTitle}
+                            <span class="text-xs leading-snug text-ink-2">
+                                {team.projectTitle}
+                            </span>
+                        {/if}
+                    </a>
+                {/each}
+            </div>
         {/if}
     </section>
 
-    <section class="flex flex-col gap-3">
-        <h3 class="m-0 text-sm font-semibold text-ink">Manage</h3>
+    <section class="card box-border flex w-full flex-col gap-3 px-5 py-4">
+        <h3 class="m-0 text-section text-ink">Manage</h3>
 
         {#if form?.message}
             <p class="m-0 text-xs text-danger-ink" role="alert">{form.message}</p>
@@ -209,7 +239,7 @@
                  project reject form takes the page over: nothing else here should
                  be one mis-click away from a deletion. -->
             <div class="flex flex-col gap-2">
-                <p class="m-0 max-w-[60ch] text-xs text-ink-2">
+                <p class="prose m-0 text-sm text-ink-2">
                     {#if data.participant.isWaiting}
                         Declining deletes {data.participant.name}'s application. There is no
                         rejected state to come back to — they can ask to join again, and
@@ -276,7 +306,7 @@
             <!-- Why an owner has no Remove, said rather than left as a missing
                  button: the two-step is the path, not a refusal. -->
             {#if data.isOwner}
-                <p class="m-0 max-w-[60ch] text-xs text-ink-3">
+                <p class="prose m-0 text-sm text-ink-3">
                     {#if data.isMe}
                         You cannot remove your own owner role here — it is what this page
                         runs on. Another owner can, on this page.
@@ -288,4 +318,5 @@
             {/if}
         {/if}
     </section>
+  </div>
 </div>

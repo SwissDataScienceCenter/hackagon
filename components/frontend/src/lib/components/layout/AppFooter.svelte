@@ -125,9 +125,23 @@
              canvas. Keep any replacement asset white-on-transparent.
 
              Heights differ because a shared box height is not a shared apparent
-             size. Measured against EPFL's cap height, PSI's lettering fills 48%
+             size. Measured against EPFL's cap height, PSI's lettering fills 50%
              of its asset and Biopôle's 55%, the rest being their graphic marks —
-             so h-5 for those two against h-4 for the two bare wordmarks. -->
+             so h-5 for those two against h-4 for the two bare wordmarks.
+
+             PSI is the one that had to be vector rather than a PNG. Its mark is
+             a stipple — a cloud of separate dots — and a 91x40 bitmap of that
+             scaled down to 20px moirés into a mottled blob on any 1x display,
+             which is what "the logo looks brownish" turned out to be. Nothing
+             tinted it: every pixel of that PNG was neutral grey. It was the
+             dither collapsing. Vector dots stay dots at every DPI.
+
+             Source: commons.wikimedia.org/wiki/File:Paul_Scherrer_Institute_Logo.svg
+             ({{PD-textlogo}} — simple shapes and text, below the threshold of
+             originality, so public domain; the trademark is PSI's and this is
+             nominative use, same as the three beside it). Recoloured white on
+             the root <svg>; the file declares no other fill, which is why one
+             attribute is enough. -->
         <div class="flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
             <a href="https://epfl.ch" target="_blank" rel="noopener noreferrer" class={LOGO_LINK}>
                 <img src="/images/logos/epfl.svg" alt="EPFL" class="h-4 invert dark:invert-0" />
@@ -145,7 +159,7 @@
                 rel="noopener noreferrer"
                 class={LOGO_LINK}
             >
-                <img src="/images/logos/psi.png" alt="PSI" class="h-5 invert dark:invert-0" />
+                <img src="/images/logos/psi.svg" alt="PSI" class="h-5 invert dark:invert-0" />
             </a>
             <a
                 href="https://www.biopole.ch/"
