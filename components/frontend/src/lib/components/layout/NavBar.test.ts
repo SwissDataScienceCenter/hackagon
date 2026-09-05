@@ -36,6 +36,30 @@ describe("NavBar", () => {
     expect(screen.queryByRole("button", { name: "Log in" })).toBeNull()
   })
 
+  // Identity is the only way to the account page from the bar — there is no
+  // third control — so the name being a link is the whole affordance rather than
+  // a decoration on it.
+  it("makes identity the link to the account page when signed in", () => {
+    render(NavBar, { session: signedIn })
+
+    const links = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("href") === "/account")
+
+    expect(links.length).toBeGreaterThan(0)
+    expect(links[0]).toHaveAccessibleName(/Your account/)
+  })
+
+  it("offers no account link when signed out", () => {
+    render(NavBar, { session: null })
+
+    expect(
+      screen
+        .queryAllByRole("link")
+        .filter((a) => a.getAttribute("href") === "/account"),
+    ).toHaveLength(0)
+  })
+
   it("offers Log in and names nobody when signed out", () => {
     render(NavBar, { session: null })
 
