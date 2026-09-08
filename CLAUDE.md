@@ -67,7 +67,9 @@ components/backend/
 ├── internal/logx/logx.go         # slog setup + Fatal helper
 └── Schema.md                     # human-readable DB reference (auto-generated)
 components/frontend/              # SvelteKit; generated gRPC clients under src/lib/server/grpc/generated/
+helm-chart/                       # Helm chart; published as an OCI artifact on a v* tag
 mydocs/docs/backend-tickets/      # known gaps, one file per issue (README inside)
+tools/helm/lint-values.yaml       # throwaway values so the chart can be rendered in CI
 tools/nix/                        # Nix flake + process-compose config (toolchain.nix)
 tools/just/*.just                 # just modules — see Dev commands
 justfile                          # root justfile, imports the modules above
@@ -98,7 +100,13 @@ just check::lint -c backend     # also: build, test, format; -c frontend
 just ci::all                    # everything CI runs, locally
 
 just version::show              # declared version + what a build stamps in the footer
-just version::bump patch|minor|major   # edit VERSION, commit, annotated tag
+just version::check             # fail if a component version has drifted from VERSION
+just version::bump patch|minor|major   # edit VERSION everywhere, commit, annotated tag
+
+just helm::lint                 # helm lint + full render against tools/helm/lint-values.yaml
+just helm::template [args]      # render the chart to stdout
+just helm::check-bump           # fail if helm-chart/ changed without a version bump
+just helm::publish              # push the chart if Chart.yaml's version is unpublished
 ```
 
 Backend listens on **:3000**, frontend on **:8081**. Dev users (Keycloak
@@ -139,11 +147,20 @@ These hold across the whole codebase; the skills explain the mechanisms.
   running server — see **backend-api-explore**. Any inventory committed to a
   markdown file is a snapshot that starts rotting immediately, this one
   included.
-- **`VERSION` at the repo root is the only declared version.** Bump it through
-  `just version::bump`, never by hand — the recipe is what also commits it, tags
-  it, and keeps `components/frontend/package.json` in step. The frontend reads
-  it at build time (`vite.config.ts` → `$lib/version` → the footer), so a
-  version edited without a rebuild will not show up.
+- **`VERSION` at the repo root is the app's only declared version.** Bump it
+  with `just version::bump`, never by hand — the recipe moves `VERSION`, both
+  `components/*/.component.yaml` versions and `components/frontend/package.json`
+  together, then commits and tags. A component version _is_ its published image
+  tag, so `just version::check` (a CI stage) fails a tree where these disagree.
+  The frontend reads `VERSION` at build time (`vite.config.ts` → `$lib/version`
+  → the footer), so editing it without a rebuild changes nothing.
+- **The chart versions itself; `VERSION` never touches it.**
+  `helm-chart/Chart.yaml` holds two hand-edited numbers: `version` is the
+  chart's own release, `appVersion` is the app release it deploys.
+  `just helm::publish` reads both and injects nothing, so a chart is published
+  only when its own `version` changes — never as a side effect of an app
+  release. It skips without failing when that version is already published, or
+  when `appVersion` has no images yet.
 
 ## Don't
 

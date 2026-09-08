@@ -1,0 +1,29 @@
+# Throwaway values, used only to make the chart renderable so `helm lint` and
+# `helm template` can check it.
+#
+# Used by `just helm::lint`.
+
+baseDomain: lint.invalid
+
+backend:
+  config:
+    server:
+      adminkeycloakid: "00000000-0000-0000-0000-000000000000"
+    database:
+      postgresPassword: "placeholder-not-a-real-password"
+
+keycloak:
+  hostname:
+    hostname: "https://auth.lint.invalid"
+  database:
+    external:
+      host: "hackagon-postgresql"
+      password: "placeholder-not-a-real-password"
+
+postgresql:
+  auth:
+    postgresPassword: "placeholder-not-a-real-password"
+
+frontendSecrets:
+  clientSecret: "placeholder-not-a-real-secret"
+  authSecret: "placeholder-not-a-real-secret"
