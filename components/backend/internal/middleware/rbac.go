@@ -25,6 +25,11 @@ var modelFile string
 
 const minPolicyFields = 2 // casbin policy tuples have at least 2 fields: subject and role
 
+// anySubject is the policy subject the matcher treats as "any caller at all"
+// (`p.sub=="*"` in casbin_model.conf), the anonymous one included. It is how a
+// grant is made to the public rather than to a role.
+const anySubject = "*"
+
 type Role int
 
 const (
@@ -333,22 +338,77 @@ func (e *Enforcer) RemoveGlobalRole(user string, role Role) (bool, error) {
 	return e.enforcer.RemoveNamedGroupingPolicy("g2", user, role.String())
 }
 
-func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
-	return e.enforcer.AddPolicy(
-		"*",
-		hackathonIdToPath(hackathonId),
-		Hackathon.String(),
-		Read.String(),
-	)
+// publicGrant is one row of what "this hackathon is public" means, written with
+// the `*` subject the matcher reads as "any caller" (casbin_model.conf). An
+// unauthenticated request is not rejected — the auth interceptor gives it the
+// subject `anonymous` (auth.go) and lets casbin decide — so these rows are what
+// an anonymous visitor's reads actually rest on.
+type publicGrant struct {
+	obj  ObjectType
+	perm Permission
 }
 
+// publicHackathonGrants is the whole of that meaning, in one place, so allowing
+// and revoking cannot drift apart.
+//
+// `page:read` sits beside `hackathon:read` because a public hackathon whose
+// information pages answer PermissionDenied is not much of a public hackathon:
+// the landing page could name the event but not show its schedule, rules or
+// FAQ. Granting it wholesale is safe — PageService.List drops pages with
+// `visible = false` for every caller that lacks `page:write`, and no anonymous
+// caller will ever hold write, so an organizer's drafts stay unpublished.
+//
+// This is hackathon-wide on purpose: every visible page of a public hackathon
+// is public. Marking individual pages public while their siblings stay
+// members-only needs a field on the page itself, which is a schema change and a
+// separate piece of work.
+var publicHackathonGrants = []publicGrant{
+	{Hackathon, Read},
+	{Page, Read},
+}
+
+// AllowPublicHackathonAccess grants every publicHackathonGrants row to `*`.
+//
+// One AddPolicy per row rather than AddPolicies: the batch form is all-or-
+// nothing and reports failure if *any* row is already present, which is exactly
+// the state a hackathon made public before `page:read` joined this list is in.
+// Row by row, an existing row is simply a no-op, which is what makes this safe
+// to call on a hackathon that is already public — the reconcile at startup
+// depends on that.
+func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
+	domain := hackathonIdToPath(hackathonId)
+	changed := false
+	for _, g := range publicHackathonGrants {
+		added, err := e.enforcer.AddPolicy(anySubject, domain, g.obj.String(), g.perm.String())
+		if err != nil {
+			return changed, err
+		}
+		changed = changed || added
+	}
+
+	return changed, nil
+}
+
+// RemovePublicHackathonAccess revokes what AllowPublicHackathonAccess granted.
+// Row by row for the mirror-image reason: a hackathon that never had the
+// `page:read` row must still lose its `hackathon:read` one.
 func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error) {
-	return e.enforcer.RemovePolicy(
-		"*",
-		hackathonIdToPath(hackathonId),
-		Hackathon.String(),
-		Read.String(),
-	)
+	domain := hackathonIdToPath(hackathonId)
+	changed := false
+	for _, g := range publicHackathonGrants {
+		removed, err := e.enforcer.RemovePolicy(
+			anySubject,
+			domain,
+			g.obj.String(),
+			g.perm.String(),
+		)
+		if err != nil {
+			return changed, err
+		}
+		changed = changed || removed
+	}
+
+	return changed, nil
 }
 
 func (e *Enforcer) AddPolicy(
@@ -360,7 +420,7 @@ func (e *Enforcer) AddPolicy(
 ) error {
 	var actualRole string
 	if role == nil {
-		actualRole = "*"
+		actualRole = anySubject
 	} else {
 		actualRole = role.String()
 	}
@@ -378,7 +438,7 @@ func (e *Enforcer) RemovePolicy(
 ) error {
 	var actualRole string
 	if role == nil {
-		actualRole = "*"
+		actualRole = anySubject
 	} else {
 		actualRole = role.String()
 	}

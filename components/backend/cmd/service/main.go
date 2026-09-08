@@ -10,10 +10,12 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime" // registers schema hooks and default values
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
+	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 )
 
@@ -37,6 +39,38 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 		return fmt.Errorf("create admin user: %w", err)
 	}
 	slog.Info("seeded admin user", "keycloak_id", cfg.Server.AdminKeycloakID)
+
+	return nil
+}
+
+// reconcilePublicAccess re-grants the public casbin rows for every hackathon
+// whose visibility already says public.
+//
+// Visibility is stored on the hackathon row, but what it *does* is a set of
+// casbin rows written at the moment Create or Edit runs. The two can therefore
+// disagree, and today they do: `page:read` only recently joined that set, so
+// every hackathon made public before it carries the old half-grant and answers
+// an anonymous PageService.List with PermissionDenied. Nothing re-runs Edit on
+// those, so nothing would ever repair them.
+//
+// It runs on every boot rather than as a migration script somebody has to
+// remember per environment, which it can afford to do because
+// AllowPublicHackathonAccess is a no-op per row that already exists. It also
+// makes the DB the authority: whatever the casbin table holds, visibility wins.
+func reconcilePublicAccess(ctx context.Context, dbClient *ent.Client, enf *mw.Enforcer) error {
+	public, err := dbClient.Hackathon.Query().
+		Where(enthackathon.VisibilityEQ(enthackathon.VisibilityPublic)).
+		IDs(ctx)
+	if err != nil {
+		return fmt.Errorf("query public hackathons: %w", err)
+	}
+
+	for _, id := range public {
+		if _, err := enf.AllowPublicHackathonAccess(id.String()); err != nil {
+			return fmt.Errorf("grant public access to hackathon %s: %w", id, err)
+		}
+	}
+	slog.Info("reconciled public hackathon access", "hackathons", len(public))
 
 	return nil
 }
@@ -72,11 +106,17 @@ func main() {
 	}
 
 	// Create server with all middleware and services
-	server, cleanup, _, err := service.NewServer(dbClient, cfg, nil)
+	server, cleanup, enforcer, err := service.NewServer(dbClient, cfg, nil)
 	if err != nil {
 		logx.Fatal("create server", "err", err)
 	}
 	defer cleanup()
+
+	// After NewServer, because that is what builds the enforcer, and before
+	// Serve, so no request is answered against a half-written policy table.
+	if err := reconcilePublicAccess(context.Background(), dbClient, enforcer); err != nil {
+		logx.Fatal("reconcile public hackathon access", "err", err)
+	}
 
 	// Listen
 	lc := net.ListenConfig{} //nolint:exhaustruct // all fields optional

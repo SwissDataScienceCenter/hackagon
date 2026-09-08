@@ -1,10 +1,12 @@
 import { error, redirect } from "@sveltejs/kit"
-import type { PageServerLoad } from "./$types"
+import type { LayoutServerLoad } from "./$types"
 import {
   createAuthorizedGrpc,
   publicHackathonClient,
+  publicPageClient,
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { ClientError, Status } from "nice-grpc-common"
 // Shared and tested, because it is subtle: a session can carry a user and a
 // stale accessToken at once. See $lib/server/session.
 import { usableSession } from "$lib/server/session"
@@ -32,7 +34,7 @@ import type { CustomSession } from "../../../../auth.d"
  * which the hook only creates for protected routes.
  */
 async function isParticipant(
-  event: Parameters<PageServerLoad>[0],
+  event: Parameters<LayoutServerLoad>[0],
 ): Promise<boolean> {
   const session = (await event.locals.auth()) as CustomSession | null
   if (!usableSession(session) || !session?.accessToken) return false
@@ -53,7 +55,51 @@ async function isParticipant(
   }
 }
 
-export const load: PageServerLoad = async (event) => {
+/**
+ * The hackathon's public content pages, in the order the organizer arranged
+ * them, or none at all.
+ *
+ * Refusal is a real answer here rather than an error: a hackathon carries the
+ * `page, read` grant only from the moment it is made public, and a backend that
+ * predates that grant refuses every one of these calls. Neither is a reason to
+ * take the landing page down — the page is what the visitor came for, and the
+ * tabs are an addition to it — so a refusal reads as "this hackathon publishes
+ * no pages" and the strip does not draw.
+ *
+ * Only PERMISSION_DENIED is swallowed. Anything else is a backend that is
+ * actually broken, and hiding that would turn an outage into a hackathon that
+ * quietly lost its schedule.
+ */
+async function publicPages(
+  hackathonId: string,
+): Promise<{ id: string; title: string }[]> {
+  try {
+    const { pages } = await publicPageClient().list({ hackathonId })
+
+    // Two fields, because two fields are what the tab strip draws. The rest of
+    // the entity — content, author, timestamps — is the individual page's
+    // business, and this load runs on every route in the subtree.
+    return pages.map((p) => ({ id: p.id, title: p.title }))
+  } catch (e) {
+    if (e instanceof ClientError && e.code === Status.PERMISSION_DENIED) {
+      return []
+    }
+    throw e
+  }
+}
+
+/**
+ * A layout load, not a page load, because every route under /hackathon/<id>
+ * needs the same three answers: is this hackathon public, is the visitor
+ * already a member of it, and what pages does it publish. The tab strip has to
+ * be identical on the overview and on each page, which it cannot be if each
+ * route fetches its own.
+ *
+ * It also puts the member redirect in front of the whole subtree rather than
+ * the landing page alone. Somebody who is a participant should land in the
+ * member view wherever they entered from, including a link straight to a page.
+ */
+export const load: LayoutServerLoad = async (event) => {
   // `locals.session`, not a second `auth()` call, for "is anybody signed in":
   // the hook has already decided this, and it decides it correctly — it stores
   // only a session that can call the backend (`clientView`), so a visitor
@@ -92,6 +138,10 @@ export const load: PageServerLoad = async (event) => {
   // is not something an anonymous visitor should be able to detect. Its own
   // unlisted landing page needs a backend that will serve it to a stranger
   // holding the link, which is a separate piece of work.
+  //
+  // This guard covers the pages underneath as well: a page id belonging to a
+  // private hackathon cannot be read through this subtree, whatever the backend
+  // would have said about the page itself.
   if (!hackathon) error(404, "Hackathon not found")
 
   return {
@@ -107,5 +157,6 @@ export const load: PageServerLoad = async (event) => {
       endsAt: hackathon.endsAt,
       status: hackathon.status,
     },
+    pages: await publicPages(event.params.id),
   }
 }
