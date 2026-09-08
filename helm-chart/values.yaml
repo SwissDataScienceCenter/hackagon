@@ -5,12 +5,30 @@ baseDomain: "example.com"
 # realmJson: ""
 
 # ============================================================
+# Images
+# ============================================================
+# An image address is `repository:tag`. Two repositories exist:
+#   release/    one image per `v*` tag       — what you deploy
+#   temporary/  one image per push to main   — for testing, moves constantly
+#
+# If there is no `tag` specified: then the chart then uses its the
+# `appVersion` from Chart.yaml,
+#
+# But for test deploys you might want to override this, with a
+# tagged image from the `temporary/` repository.
+#
+# To test against the head of `main`, override both keys, e.g.:
+#   --set frontend.image.repository=<registry>/temporary/frontend-service
+#   --set frontend.image.tag=latest
+#
+# ============================================================
 # Frontend
 # ============================================================
 frontend:
   image:
-    repository: ghcr.io/swissdatasciencecenter/hackagon/temporary/frontend-service
-    tag: "latest"
+    repository: ghcr.io/swissdatasciencecenter/hackagon/release/frontend-service
+    # Empty: falls back to .Chart.AppVersion — see the Images note above.
+    tag: ""
     pullPolicy: IfNotPresent
 
   replicaCount: 1
@@ -67,8 +85,9 @@ frontend:
 # ============================================================
 backend:
   image:
-    repository: ghcr.io/swissdatasciencecenter/hackagon/temporary/backend-service
-    tag: "latest"
+    repository: ghcr.io/swissdatasciencecenter/hackagon/release/backend-service
+    # Empty: falls back to .Chart.AppVersion — see the Images note above.
+    tag: ""
     pullPolicy: IfNotPresent
 
   replicaCount: 1

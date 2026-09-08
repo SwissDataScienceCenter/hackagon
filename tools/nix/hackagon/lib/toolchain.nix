@@ -448,6 +448,10 @@ let
             pkgs.hackagon.quitsh
             pkgs.podman
 
+            # helm chart deployment and testing
+            pkgs.kubernetes-helm
+            pkgs.skopeo
+
             pkgs.openssh # SSH agent
           ];
         }

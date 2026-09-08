@@ -5,6 +5,11 @@ root_dir := `git rev-parse --show-toplevel`
 version_file := root_dir + "/VERSION"
 pkg_file := root_dir + "/components/frontend/package.json"
 
+# Components whose `.component.yaml` version becomes an OCI image tag. Not
+# `tools/quitsh`: vendored, carries its own upstream version, builds no image.
+# The Helm chart is deliberately absent — see helm.just.
+image_comps := "backend frontend"
+
 [private]
 default:
     just --list --unsorted -f "{{ source_file() }}"
@@ -23,14 +28,17 @@ help:
     echo -e "  ${cyan}just version::show${reset}"
     echo -e "  ${dim}Print the declared version and what a build stamps into the footer${reset}"
     echo ""
+    echo -e "  ${cyan}just version::check${reset}"
+    echo -e "  ${dim}Fail if any component version has drifted from VERSION${reset}"
+    echo ""
     echo -e "  ${cyan}just version::bump${reset} patch|minor|major"
-    echo -e "  ${dim}Edit VERSION, commit it, and create the matching annotated tag${reset}"
+    echo -e "  ${dim}Edit VERSION, propagate it to every component, commit, and tag${reset}"
     echo ""
     echo -e "  ${cyan}just version::tag${reset}"
     echo -e "  ${dim}Tag HEAD with the version already declared in VERSION${reset}"
     echo ""
-    echo -e "  ${dim}VERSION at the repo root is the single source of truth. The${reset}"
-    echo -e "  ${dim}frontend reads it at build time — see components/frontend/vite.config.ts.${reset}"
+    echo -e "  ${dim}VERSION covers the app only: the per-component copies become the${reset}"
+    echo -e "  ${dim}published image tags. The Helm chart versions itself — see just helm::help.${reset}"
     echo ""
 
 # Print the declared version and the string a build stamps into the footer.
@@ -64,7 +72,52 @@ show:
     echo "build     $build"
     echo "tags      $(git -C "{{ root_dir }}" tag --list 'v*' | tr '\n' ' ' | sed 's/ $//' || true)"
 
-# Bump VERSION, commit it, and create the matching annotated tag.
+    echo "images"
+    for comp in {{ image_comps }}; do
+        v=$(sed -n 's/^version: *//p' "{{ root_dir }}/components/$comp/.component.yaml" | head -1)
+        marker=""
+        if [ "$v" != "$declared" ]; then
+            marker="   <- drifted from VERSION"
+        fi
+        echo "          $comp-service:$v$marker"
+    done
+
+# Fail if VERSION, the component versions and package.json disagree.
+# The component version is the published image tag, so a drifted tree releases
+# an image named after the wrong version — and a second such release collides
+# with the existing tag and is refused (tools/quitsh/pkg/image/upload.go).
+[group('version')]
+check:
+    #!/usr/bin/env bash
+    set -eu
+    declared=$(tr -d '[:space:]' <"{{ version_file }}")
+    failed=0
+
+    for comp in {{ image_comps }}; do
+        f="{{ root_dir }}/components/$comp/.component.yaml"
+        v=$(sed -n 's/^version: *//p' "$f" | head -1)
+        if [ "$v" != "$declared" ]; then
+            echo "  $comp: .component.yaml declares '$v', VERSION declares '$declared'" >&2
+            failed=1
+        fi
+    done
+
+    v=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "{{ pkg_file }}" | head -1)
+    if [ "$v" != "$declared" ]; then
+        echo "  frontend: package.json declares '$v', VERSION declares '$declared'" >&2
+        failed=1
+    fi
+
+    if [ "$failed" -ne 0 ]; then
+        echo "" >&2
+        echo "Version drift. Run 'just version::bump' to move every file at once," >&2
+        echo "or align them by hand if this was an intentional out-of-band edit." >&2
+        exit 1
+    fi
+
+    echo "All versions agree on $declared."
+
+# Bump VERSION, propagate it to the components, commit, and tag.
 # Usage: just version::bump patch|minor|major
 [group('version')]
 bump part="patch":
@@ -102,12 +155,31 @@ bump part="patch":
 
     echo "$next" >"{{ version_file }}"
 
-    # package.json is private and never published, but a stale version field
-    # there is a trap for anyone who reads it as authoritative. Written without
-    # `sed -i`, whose syntax differs between GNU and BSD.
-    tmp=$(mktemp)
-    sed "s/\"version\": \"$current\"/\"version\": \"$next\"/" "{{ pkg_file }}" >"$tmp"
-    mv "$tmp" "{{ pkg_file }}"
+    # Replace whatever version a file holds, not `$current`: bump must work even
+    # when the files already disagree. `awk` because `sed -i` differs GNU/BSD
+    # and cannot portably stop at the first match.
+    replace_first() {
+        local file="$1" pattern="$2" replacement="$3" tmp
+        tmp=$(mktemp)
+        awk -v pat="$pattern" -v rep="$replacement" '
+            !done && $0 ~ pat { sub(pat, rep); done = 1 }
+            { print }
+        ' "$file" >"$tmp"
+        mv "$tmp" "$file"
+    }
+
+    for comp in {{ image_comps }}; do
+        f="{{ root_dir }}/components/$comp/.component.yaml"
+        replace_first "$f" "^version: .*" "version: $next"
+        if ! grep -qx "version: $next" "$f"; then
+            echo "Failed to update the version field in $f." >&2
+            exit 1
+        fi
+        git -C "{{ root_dir }}" add "$f"
+    done
+
+    # Never published, but a stale version here misleads anyone reading it.
+    replace_first "{{ pkg_file }}" "\"version\": \"[^\"]*\"" "\"version\": \"$next\""
     if ! grep -q "\"version\": \"$next\"" "{{ pkg_file }}"; then
         echo "Failed to update the version field in {{ pkg_file }}." >&2
         exit 1
@@ -119,6 +191,9 @@ bump part="patch":
 
     echo ""
     echo "  VERSION  $current -> $next"
+    for comp in {{ image_comps }}; do
+        echo "  image    $comp-service:$next"
+    done
     echo "  commit   chore(release): v$next"
     echo "  tag      v$next (annotated)"
     echo ""
@@ -137,6 +212,10 @@ tag:
         echo "Tag v$declared already exists at $(git -C "{{ root_dir }}" rev-parse --short=7 "v$declared^{commit}")." >&2
         exit 1
     fi
+
+    # Pushing this tag triggers the release image build, and CI reads the
+    # component versions rather than this one.
+    just version::check
 
     git -C "{{ root_dir }}" tag -a "v$declared" -m "v$declared"
     echo "  tag      v$declared (annotated) at $(git -C "{{ root_dir }}" rev-parse --short=7 HEAD)"

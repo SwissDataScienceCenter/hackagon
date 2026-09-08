@@ -45,21 +45,76 @@ Woodpecker, Drone, GitLab CI, etc.
 
 ## Pipeline stages
 
-Single `ci.yml` workflow triggered on PR and push to `main`:
+Single `ci.yml` workflow triggered on PR, push to `main`, and `v*` tags:
 
-| #   | Stage                            | Command                                                                                                          | Purpose                                                                                                                                                                             |
-| --- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Setup Nix + cache                | `cachix/install-nix-action` + `cachix/cachix-action`                                                             | Avoid rebuilding toolchains every run                                                                                                                                               |
-| 2   | Verify generated code is in sync | `just ci::codegen-check`                                                                                         | Catch PRs that forgot to regenerate stubs; uses `default` shell (buf + codegen tools not in CI shell); pnpm install required because `protoc-gen-ts_proto` is a node_modules binary |
-| 3   | Format check                     | `just ci::run just check::format`                                                                                | Backstop for developers who haven't opted into the githooks framework                                                                                                               |
-| 4   | Lint                             | `just ci::run bash -c "just check::lint -c backend && just check::lint -c frontend"`                             | Delegates to quitsh → golangci-lint, eslint, svelte-check, typos, yamllint                                                                                                          |
-| 5   | Build                            | `just ci::run bash -c "just build -c backend && just build -c frontend"`                                         | All components via quitsh; catches compilation errors before running tests                                                                                                          |
-| 6   | Test                             | `just ci::run bash -c "just check::test -c backend && just check::test -c frontend"`                             | Go unit tests + Vitest; coverage upload per [codecov.yaml](../tools/configs/codecov/codecov.yaml)                                                                                   |
-| 7   | Container images _(main only)_   | `nix build ./tools/nix#backend-service-dev` and `#frontend-service-dev`                                          | Reproducible OCI images                                                                                                                                                             |
-| 8   | Publish _(tag/main only)_        | Push images to registry; attach image digests or registry references to the GitHub release via `gh release edit` | Gated behind release trigger; links the release to its artifacts                                                                                                                    |
+| #   | Stage                       | Command                                    | Purpose                                                                                    |
+| --- | --------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| 1   | Setup Nix + cache           | `install-nix-action` + `cachix-action`     | Avoid rebuilding toolchains every run                                                      |
+| 2   | Codegen in sync             | `just ci::codegen-check`                   | Catch PRs that forgot to regenerate stubs; uses the `default` shell, where buf lives       |
+| 3   | Format check                | `just ci::run just check::format`          | Backstop for developers who haven't opted into the githooks framework                      |
+| 4   | Lint                        | `just ci::run just check::lint -c <comp>`  | golangci-lint, eslint, svelte-check, typos, yamllint                                       |
+| 5   | Version consistency         | `just ci::run just version::check`         | `VERSION` of the app, both `.component.yaml` versions and `package.json` must agree        |
+| 6   | Helm chart lint             | `just ci::run just helm::lint`             | `helm lint` plus a full render — the chart cannot render with its own defaults             |
+| 7   | Chart version bumped _(PR)_ | `just ci::run just helm::check-bump`       | A chart change without a version bump can never reach a cluster                            |
+| 8   | Build                       | `just ci::run just check::build -c <comp>` | All components via quitsh                                                                  |
+| 9   | Test                        | `just ci::run just check::test -c <comp>`  | Go unit tests + Vitest; coverage per [codecov.yaml](../tools/configs/codecov/codecov.yaml) |
+| 10  | Container images            | `quitsh image` (the `images` job)          | PR: build only. `main`: push to `temporary/`. Tag: push to `release/`                      |
+| 11  | Publish chart               | `just helm::publish`                       | Pushes the chart when Chart.yaml holds an unpublished version; no-ops otherwise            |
 
-Stages 2–6 are PR-blocking. Stage 7 runs on `main` only. Stage 8 only on tagged
-releases.
+Stages 2–9 are PR-blocking. Stage 10 builds on every PR and pushes on `main` and
+on tags. Stage 11 runs on every push and does nothing unless the chart version
+has moved.
+
+## Two release trains
+
+The app and the chart version are independent from each other: a chart fix with
+no app change should not force an app release, and an app release should not
+republish an unchanged chart.
+
+**The app** is versioned by `VERSION` at the repo root. `just version::bump`
+moves it along with `.component.yaml` versions and `package.json`, commits, and
+tags. Pushing that `v*` tag builds and pushes:
+
+```
+ghcr.io/swissdatasciencecenter/hackagon/release/backend-service:X.Y.Z
+ghcr.io/swissdatasciencecenter/hackagon/release/frontend-service:X.Y.Z
+```
+
+Stage 5 refuses a tree where those files disagree, because the component version
+_is_ the image tag.
+
+**The chart** is versioned by `helm-chart/Chart.yaml`, by hand:
+
+- `version` — the chart's own release. Bump it whenever anything under
+  `helm-chart/` changes; stage 7 fails the PR if you forget.
+- `appVersion` — the app release this chart deploys. The deployment templates
+  fall back to it for the image tag, so it decides what a cluster actually runs.
+
+`just helm::publish` reads both from Chart.yaml and injects nothing. It pushes
+to `oci://ghcr.io/swissdatasciencecenter/hackagon/charts/hackagon` and gives up
+early in two cases, both reported and neither a failure:
+
+- **the chart version is already published** — the normal case on most pushes
+- **`appVersion` has no published images** — the chart would not be installable
+
+The second is what makes "bump appVersion to an unreleased version" safe: the
+chart waits, and the run that finally builds those images publishes it.
+
+Two consequences worth knowing:
+
+- **A new GHCR package is private by default.** The first `v*` tag creates
+  `release/*`, and the first chart publish creates `charts/hackagon`; until
+  someone sets those to public in the org's package settings, a cluster needs an
+  `imagePullSecret`. The existing `temporary/*` packages are already public.
+- **A release image is never overwritten.** quitsh refuses to push a release tag
+  that already exists ([upload.go](../tools/quitsh/pkg/image/upload.go)), so
+  re-tagging a version fails rather than replacing an artifact someone has
+  deployed. Bump the version instead.
+
+To deploy the head of `main` rather than a release, override the image
+repository and tag to the `temporary/` package — see the Images note in
+
+[helm-chart/values.yaml](../helm-chart/values.yaml).
 
 ## Parallelism
 
@@ -88,10 +143,10 @@ Run the full CI pipeline locally from the repo root:
 just ci::all
 ```
 
-This mirrors stages 2–6 exactly as they run on GitHub Actions (generate check →
-format → lint → build → test). Works from a bare shell or from a direnv-managed
-shell — `ci::all` handles the Nix shell itself, so do **not** call it from
-inside `nix develop`.
+This mirrors stages 2–9 exactly as they run on GitHub Actions (generate check →
+format → lint → version → helm → chart → build → test). Works from a bare shell
+or from a direnv-managed shell — `ci::all` handles the Nix shell itself, so do
+**not** call it from inside `nix develop`.
 
 Before pushing: `just ci::all` → if it passes locally, CI passes.
 
@@ -120,8 +175,11 @@ Individual stages can also be isolated from the repo root:
 just ci::codegen-check                   # stage 2 — uses default shell
 just ci::run just check::format          # stage 3
 just ci::run just check::lint -c backend # stage 4 (one component)
-just ci::run just build -c backend       # stage 5 (one component)
-just ci::run just check::test -c backend # stage 6 (one component)
+just ci::run just version::check         # stage 5
+just ci::run just helm::lint             # stage 6
+just ci::run just helm::check-bump       # stage 7
+just ci::run just build -c backend       # stage 8 (one component)
+just ci::run just check::test -c backend # stage 9 (one component)
 ```
 
 On CI failure: copy the failing command from the workflow YAML, run it locally,

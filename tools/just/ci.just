@@ -62,6 +62,9 @@ all:
         "codegen   | just ci::codegen-check"
         "format    | just ci::run just check::format"
         "lint      | just ci::run bash -c 'just check::lint -c backend && just check::lint -c frontend'"
+        "version   | just ci::run just version::check"
+        "helm      | just ci::run just helm::lint"
+        "chart     | just ci::run just helm::check-bump"
         "build     | just ci::run bash -c 'just build -c backend && just build -c frontend'"
         "test      | just ci::run bash -c 'just check::test -c backend && just check::test -c frontend'"
     )
