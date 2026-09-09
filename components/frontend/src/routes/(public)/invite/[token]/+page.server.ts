@@ -5,6 +5,7 @@ import {
   createAuthorizedGrpc,
   publicHackathonClient,
 } from "$lib/server/grpc/client"
+import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import {
   parseAnswers,
   questionRows,
@@ -25,17 +26,27 @@ import type { CustomSession } from "../../../../auth.d"
 // permission check at all and serves anonymous callers — so demanding a session
 // first would add a login wall in front of information the link already grants.
 //
-// **Redeeming grants visibility, not membership.** `Join` writes a waitlisted
-// row and the organiser still confirms it, so a link forwarded beyond the people
-// it was meant for cannot insert a stranger into the roster.
+// **Redeeming a private hackathon's link grants membership outright.** `Join`
+// confirms the joiner itself when the hackathon is private: the invitation is
+// the organizer's decision about who takes part, and requiring a second
+// confirmation left the invitee holding no role and therefore unable to see the
+// event at all. The flip side is that the link *is* admission — a link forwarded
+// beyond the people it was meant for lets a stranger in, and revoking it or
+// removing the participant are the controls, both after the fact.
 //
-// This page is also where somebody comes *back* to. A waitlisted participant in
-// a private hackathon holds no `hackathon:read` — that arrives with the `Member`
-// role on approval — so the event is filtered out of `List`
-// (`hackathon_service.go:1473`) and appears nowhere on their dashboard. Until
-// they are approved, this link is the only trace of what they asked for, which
-// is why `alreadyParticipant` gets a real state on screen rather than a silent
-// redirect somewhere emptier.
+// A public hackathon reached through a link still waitlists, so `autoApproves`
+// below decides which of the two the page describes. Invites are not restricted
+// to private hackathons (`CreateInvite` performs no visibility check), so this
+// cannot be assumed from the route.
+//
+// This page is also where somebody comes *back* to, which still matters for the
+// public case: a waitlisted participant holds no `Member` role, so a private
+// hackathon they are waiting in is filtered out of `List`
+// (`hackathon_service.go:1473`) and appears nowhere on their dashboard. That is
+// now only reachable for somebody waitlisted before auto-approval existed, or
+// whose confirmation half-failed — and it is exactly why `alreadyParticipant`
+// still gets a real state on screen rather than a silent redirect somewhere
+// emptier.
 
 interface Preview {
   hackathonId: string
@@ -44,6 +55,9 @@ interface Preview {
   startsAt?: Date
   endsAt?: Date
   status: number
+  /** Whether `Join` confirms on the spot here, which it does for a private
+   * hackathon. Decides whether this page offers a place or asks for one. */
+  autoApproves: boolean
   questions: QuestionRow[]
   alreadyParticipant: boolean
 }
@@ -97,6 +111,7 @@ async function preview(token: string): Promise<Preview> {
     startsAt: res.hackathon.startsAt,
     endsAt: res.hackathon.endsAt,
     status: res.hackathon.status as number,
+    autoApproves: res.hackathon.visibility === Visibility.VISIBILITY_PRIVATE,
     questions: questionRows(res.questions),
     alreadyParticipant: res.alreadyParticipant,
   }
@@ -141,6 +156,7 @@ export const load: PageServerLoad = async (event) => {
     },
     questions: p.questions,
     alreadyParticipant: p.alreadyParticipant,
+    autoApproves: p.autoApproves,
     approved,
     signedIn,
   }

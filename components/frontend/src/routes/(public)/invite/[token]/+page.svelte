@@ -13,6 +13,11 @@
     // Either they just asked, or they had already asked before this visit. The
     // page reads the same both ways: what matters is that they are on the list.
     const onTheList = $derived(Boolean(form?.joined) || data.alreadyParticipant);
+    // A private hackathon confirms the joiner in `Join`, so following this link
+    // is joining rather than applying, and the copy has to say which. Not
+    // assumable from the route: an invite can be minted for a public hackathon
+    // too, and that one still goes to the waitlist.
+    const admitsOnJoin = $derived(data.autoApproves);
     const hasMandatory = $derived(data.questions.some((q) => q.mandatory));
 
     // Back to this very link after Keycloak, not to the dashboard: a private
@@ -58,10 +63,13 @@
     <div class="flex flex-col gap-3 border-t border-line pt-6">
         {#if onTheList}
             <!-- The end of the road for this page, and deliberately not a
-                 redirect: until an organiser approves them they hold no role
-                 here, so this private event is filtered out of every list they
-                 can see. This link is their only way back to it. -->
-            <h2 class="m-0 text-section text-ink">You're on the list</h2>
+                 redirect. A confirmed member gets the link into the event
+                 itself; somebody still waiting holds no role, so the event is
+                 filtered out of every list they can see and this link is their
+                 only way back to it. -->
+            <h2 class="m-0 text-section text-ink">
+                {data.approved ? "You're in" : "You're on the list"}
+            </h2>
             {#if data.approved}
                 <p class="m-0 text-sm text-ink-2">
                     Your place is confirmed. The event is on your dashboard now.
@@ -80,9 +88,13 @@
                 </p>
             {/if}
         {:else if data.signedIn}
-            <h2 class="m-0 text-section text-ink">Ask for a place</h2>
+            <h2 class="m-0 text-section text-ink">
+                {admitsOnJoin ? 'Take your place' : 'Ask for a place'}
+            </h2>
             <p class="m-0 text-sm text-ink-2">
-                This puts you on the organizers' list. They decide who takes part.
+                {admitsOnJoin
+                    ? 'This invitation is your place — accepting it puts you straight in.'
+                    : "This puts you on the organizers' list. They decide who takes part."}
             </p>
 
             <form method="POST" action="?/join" class="flex flex-col gap-5">
@@ -101,7 +113,7 @@
                     </section>
                 {/if}
                 <button type="submit" class="btn btn-sm btn-solid w-fit">
-                    Request a place
+                    {admitsOnJoin ? 'Join' : 'Request a place'}
                 </button>
             </form>
         {:else}
