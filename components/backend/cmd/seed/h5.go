@@ -65,8 +65,8 @@ func (h *harness) seedH5(now time.Time, alice, dana *actor) error {
 				"Two days with the SDSC data partners, working on the datasets " +
 				"nobody can publish yet. Attendance is by invitation: there is no " +
 				"public sign-up page and this event is not listed anywhere.\n\n" +
-				"If you were sent a link, you are in the right place — request a " +
-				"place below and one of the organizers will confirm it.",
+				"If you were sent a link, you are in the right place — the " +
+				"invitation is your place, so accepting it puts you straight in.",
 		),
 		StartsAt: timestamppb.New(startsAt),
 		EndsAt:   timestamppb.New(endsAt),
@@ -113,14 +113,19 @@ func (h *harness) seedH5(now time.Time, alice, dana *actor) error {
 		return err
 	}
 
-	// dana joins on the live link and stays waitlisted: approval is a separate
-	// act, and somebody sitting in the queue is what gives the organizer's
-	// waitlist something to approve.
+	// dana follows the live link and is a confirmed member the moment she does:
+	// this hackathon is private, and `Join` treats the invitation as the decision
+	// rather than parking her on a waiting list nobody can see her on. So this
+	// call is the fixture for the whole invite-to-membership path, end to end.
+	//
+	// H5 therefore has an empty waitlist, deliberately. The organizer's
+	// waitlist-with-somebody-on-it lives in H1, which is public and where
+	// approval is still a separate act.
 	//
 	// Before the form below exists, which is the same order H1 uses and for the
 	// same reason: `Join` refuses a signup that leaves a mandatory question
-	// unanswered, and `joinWithInvite` sends no answers. So dana is the fixture
-	// for somebody who got in before the form went up — waitlisted, with
+	// unanswered, and `joinWithInvite` sends no answers. So dana is also the
+	// fixture for somebody who got in before the form went up — a member with
 	// nothing on file for an organizer to read.
 	if err := h.joinWithInvite(dana, id, live.GetToken()); err != nil {
 		return err

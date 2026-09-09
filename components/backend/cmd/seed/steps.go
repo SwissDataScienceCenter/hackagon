@@ -146,8 +146,10 @@ func (h *harness) revokeInvite(owner *actor, inviteID string) error {
 	return nil
 }
 
-// join signs somebody up. Join always writes a waitlisted row — approval is a
-// separate act — so this on its own is the fixture's waitlisted participant.
+// join signs somebody up. In a **public** hackathon Join writes a waitlisted row
+// and approval is a separate act, so this on its own is the fixture's waitlisted
+// participant. In a private one Join confirms on the spot, so this leaves a full
+// member and there is nothing left to approve.
 //
 // It sends no answers, which only works while the hackathon asks nothing
 // mandatory. Where the fixture wants both a registration form and somebody who
@@ -162,7 +164,9 @@ func (h *harness) join(who *actor, hackathonID string) error {
 // An empty token means none, which is what every public hackathon sends: Join
 // only looks at the token when the hackathon is private, and admits anyone who
 // can read the hackathon regardless. Pass a real one and it is the token that
-// gets somebody into a hackathon they cannot see.
+// gets somebody into a hackathon they cannot see — and, in a private hackathon,
+// straight into membership: the invitation is the decision, so Join confirms
+// them itself rather than leaving them for an organizer.
 func (h *harness) joinWithInvite(who *actor, hackathonID, token string) error {
 	// Absent rather than empty on the wire. The handler compares the token
 	// against "" before parsing it as a uuid, so an empty string would take the
@@ -196,6 +200,10 @@ func (h *harness) joinAndApprove(owner *actor, hackathonID string, who ...*actor
 // The same invitation admits everyone in `who`: an invite is a link rather than
 // a per-person ticket, and one link passed around is how a private hackathon
 // actually fills up.
+//
+// The approval half is redundant in a private hackathon, where Join confirms
+// people itself, and kept anyway: `ApproveParticipant` is idempotent in both
+// halves, and this helper is also how public fixtures are filled.
 func (h *harness) joinAndApproveWithInvite(
 	owner *actor,
 	hackathonID, token string,
