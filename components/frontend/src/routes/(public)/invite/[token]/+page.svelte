@@ -18,6 +18,15 @@
     // assumable from the route: an invite can be minted for a public hackathon
     // too, and that one still goes to the waitlist.
     const admitsOnJoin = $derived(data.autoApproves);
+    // A private hackathon confirms its joiners in `Join`, so this combination
+    // should not exist: on the list, yet not confirmed. It means the backend's
+    // auto-approval half-failed (it logs and lets the join stand). Joining again
+    // re-runs the confirmation, which is idempotent, so this is the retry.
+    //
+    // `data.approved` comes from a best-effort lookup that falls back to false,
+    // so a failed one shows this to somebody already in. Pressing Join then is
+    // harmless — the backend skips a participant who is not waiting.
+    const needsRetry = $derived(onTheList && !data.approved && admitsOnJoin);
     const hasMandatory = $derived(data.questions.some((q) => q.mandatory));
 
     // Back to this very link after Keycloak, not to the dashboard: a private
@@ -36,6 +45,30 @@
     <title>You're invited</title>
     <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
+
+<!-- Shared by the first attempt and the retry inside it. The questions ride
+     along both times: `Join` refuses a submission that leaves a mandatory
+     answer empty, so a retry posting a bare button would come back rejected as
+     invalid rather than finishing the job. -->
+{#snippet joinForm(label: string)}
+    <form method="POST" action="?/join" class="flex flex-col gap-5">
+        {#if data.questions.length > 0}
+            <section class="card flex flex-col gap-5 px-5 py-4">
+                <span class="meta">A few questions first</span>
+                {#each data.questions as question (question.id)}
+                    <QuestionField {question} />
+                {/each}
+                {#if hasMandatory}
+                    <p class="m-0 text-meta text-ink-3">
+                        <span class="text-danger-ink" aria-hidden="true">*</span>
+                        Required.
+                    </p>
+                {/if}
+            </section>
+        {/if}
+        <button type="submit" class="btn btn-sm btn-solid w-fit">{label}</button>
+    </form>
+{/snippet}
 
 <section class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-12 sm:px-10">
     <div class="flex flex-col gap-3">
@@ -68,7 +101,13 @@
                  filtered out of every list they can see and this link is their
                  only way back to it. -->
             <h2 class="m-0 text-section text-ink">
-                {data.approved ? "You're in" : "You're on the list"}
+                {#if data.approved}
+                    You're in
+                {:else if needsRetry}
+                    Almost in
+                {:else}
+                    You're on the list
+                {/if}
             </h2>
             {#if data.approved}
                 <p class="m-0 text-sm text-ink-2">
@@ -80,6 +119,12 @@
                 >
                     Open {h.name}
                 </a>
+            {:else if needsRetry}
+                <p class="m-0 text-sm text-ink-2">
+                    Your place is held, but the last step did not finish — which is why
+                    the event is still hidden from you. Joining again completes it.
+                </p>
+                {@render joinForm('Finish joining')}
             {:else}
                 <p class="m-0 text-sm text-ink-2">
                     The organizers review each request and will confirm your place. Until
@@ -97,25 +142,7 @@
                     : "This puts you on the organizers' list. They decide who takes part."}
             </p>
 
-            <form method="POST" action="?/join" class="flex flex-col gap-5">
-                {#if data.questions.length > 0}
-                    <section class="card flex flex-col gap-5 px-5 py-4">
-                        <span class="meta">A few questions first</span>
-                        {#each data.questions as question (question.id)}
-                            <QuestionField {question} />
-                        {/each}
-                        {#if hasMandatory}
-                            <p class="m-0 text-meta text-ink-3">
-                                <span class="text-danger-ink" aria-hidden="true">*</span>
-                                Required.
-                            </p>
-                        {/if}
-                    </section>
-                {/if}
-                <button type="submit" class="btn btn-sm btn-solid w-fit">
-                    {admitsOnJoin ? 'Join' : 'Request a place'}
-                </button>
-            </form>
+            {@render joinForm(admitsOnJoin ? 'Join' : 'Request a place')}
         {:else}
             <h2 class="m-0 text-section text-ink">Sign in to continue</h2>
             <p class="m-0 text-sm text-ink-2">
