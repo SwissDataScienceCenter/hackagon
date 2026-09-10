@@ -74,6 +74,11 @@ report identifies the code that produced it. Reading `VERSION` from a file
 rather than from `git describe` means a shallow clone or an unpacked tarball
 still builds with a truthful version.
 
+`bump` also stamps [CHANGELOG.md](CHANGELOG.md): whatever has accumulated under
+`[Unreleased]` becomes the notes for the version being cut, so write the entry
+in the pull request that makes the change. [RELEASING.md](RELEASING.md) covers
+the branch model and how a release reaches a cluster.
+
 ## Component READMEs
 
 - [Frontend](components/frontend/README.md)

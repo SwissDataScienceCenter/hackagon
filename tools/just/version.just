@@ -4,6 +4,8 @@ set shell := ["bash", "-cue"]
 root_dir := `git rev-parse --show-toplevel`
 version_file := root_dir + "/VERSION"
 pkg_file := root_dir + "/components/frontend/package.json"
+changelog_file := root_dir + "/CHANGELOG.md"
+repo_url := "https://github.com/SwissDataScienceCenter/hackagon"
 
 # Components whose `.component.yaml` version becomes an OCI image tag. Not
 # `tools/quitsh`: vendored, carries its own upstream version, builds no image.
@@ -32,13 +34,18 @@ help:
     echo -e "  ${dim}Fail if any component version has drifted from VERSION${reset}"
     echo ""
     echo -e "  ${cyan}just version::bump${reset} patch|minor|major"
-    echo -e "  ${dim}Edit VERSION, propagate it to every component, commit, and tag${reset}"
+    echo -e "  ${dim}Edit VERSION, propagate it to every component, roll the${reset}"
+    echo -e "  ${dim}changelog, commit, and tag${reset}"
     echo ""
     echo -e "  ${cyan}just version::tag${reset}"
     echo -e "  ${dim}Tag HEAD with the version already declared in VERSION${reset}"
     echo ""
     echo -e "  ${dim}VERSION covers the app only: the per-component copies become the${reset}"
     echo -e "  ${dim}published image tags. The Helm chart versions itself — see just helm::help.${reset}"
+    echo ""
+    echo -e "  ${dim}bump also stamps CHANGELOG.md: whatever sits under [Unreleased]${reset}"
+    echo -e "  ${dim}becomes the notes for the version being cut. Write the entry in the${reset}"
+    echo -e "  ${dim}pull request that makes the change — see RELEASING.md.${reset}"
     echo ""
 
 # Print the declared version and the string a build stamps into the footer.
@@ -117,7 +124,7 @@ check:
 
     echo "All versions agree on $declared."
 
-# Bump VERSION, propagate it to the components, commit, and tag.
+# Bump VERSION, propagate it to the components, roll CHANGELOG.md, commit and tag.
 # Usage: just version::bump patch|minor|major
 [group('version')]
 bump part="patch":
@@ -185,6 +192,103 @@ bump part="patch":
         exit 1
     fi
 
+    # Stamp the accumulated [Unreleased] section with this version, so the
+    # release notes for v$next are whatever was written while it was built.
+    # A missing CHANGELOG.md is not fatal — a checkout without one can still
+    # release — but a CHANGELOG.md we cannot parse is, because silently
+    # publishing a version with no notes is worse than a failed release.
+    changelog_note=""
+    if [ -f "{{ changelog_file }}" ]; then
+        today=$(date +%F)
+        tmp=$(mktemp)
+
+        # Lift the body out of [Unreleased], put a fresh empty [Unreleased] in
+        # its place, and re-head the body with the version, its compare link
+        # and today's date. Subsection headings nobody wrote under are dropped
+        # rather than shipped empty.
+        awk -v ver="$next" -v date="$today" \
+            -v link="{{ repo_url }}/compare/v$current...v$next" '
+            function flush() {
+                print "## [Unreleased]"
+                print ""
+                print "### Added"
+                print ""
+                print "### Changed"
+                print ""
+                print "### Fixed"
+                print ""
+                # The compare link lives in the heading, not in a link
+                # definition at the foot of the file: prettier hard-wraps a
+                # definition line past 80 columns but never wraps a heading,
+                # and a wrapped definition is one the next release cannot find.
+                print "## [" ver "](" link ") - " date
+
+                for (i = 1; i <= n; i++) {
+                    if (body[i] ~ /^### /) {
+                        keep = 0
+                        for (j = i + 1; j <= n; j++) {
+                            if (body[j] ~ /^### /) break
+                            if (body[j] !~ /^[[:space:]]*$/) { keep = 1; break }
+                        }
+                        skip = !keep
+                        if (skip) continue
+                    }
+                    if (skip && body[i] ~ /^[[:space:]]*$/) continue
+                    out[++m] = body[i]
+                }
+
+                while (m > 0 && out[m] ~ /^[[:space:]]*$/) m--
+                s = 1
+                while (s <= m && out[s] ~ /^[[:space:]]*$/) s++
+
+                print ""
+                for (i = s; i <= m; i++) print out[i]
+                if (m >= s) print ""
+            }
+            state == 0 {
+                if ($0 ~ /^## \[Unreleased\]/) { state = 1; found = 1; next }
+                print
+                next
+            }
+            state == 1 {
+                # The next top-level heading closes the section; so does EOF.
+                if ($0 ~ /^## /) { flush(); state = 2; print; next }
+                body[++n] = $0
+                next
+            }
+            state == 2 { print }
+            END {
+                if (state == 1) flush()
+                if (!found) exit 3
+                # Report an empty release section to the caller, not an error:
+                # a release with no user-visible changes is unusual, not wrong.
+                if (m >= s) exit 0
+                exit 4
+            }
+        ' "{{ changelog_file }}" >"$tmp" || rc=$?
+        rc=${rc:-0}
+
+        if [ "$rc" = "3" ]; then
+            rm -f "$tmp"
+            echo "{{ changelog_file }} has no '## [Unreleased]' heading, so there" >&2
+            echo "is nothing to stamp as v$next. Restore the heading, or delete" >&2
+            echo "the file if this repo no longer keeps a changelog." >&2
+            exit 1
+        elif [ "$rc" != "0" ] && [ "$rc" != "4" ]; then
+            rm -f "$tmp"
+            echo "Failed to roll {{ changelog_file }} (awk exited $rc)." >&2
+            exit 1
+        fi
+
+        if [ "$rc" = "4" ]; then
+            changelog_note="  (empty — nobody recorded a change)"
+        fi
+
+        mv "$tmp" "{{ changelog_file }}"
+
+        git -C "{{ root_dir }}" add "{{ changelog_file }}"
+    fi
+
     git -C "{{ root_dir }}" add "{{ version_file }}" "{{ pkg_file }}"
     git -C "{{ root_dir }}" commit -m "chore(release): v$next"
     git -C "{{ root_dir }}" tag -a "v$next" -m "v$next"
@@ -194,6 +298,9 @@ bump part="patch":
     for comp in {{ image_comps }}; do
         echo "  image    $comp-service:$next"
     done
+    if [ -n "$changelog_note" ] || [ -f "{{ changelog_file }}" ]; then
+        echo "  notes    CHANGELOG.md [Unreleased] -> [$next]$changelog_note"
+    fi
     echo "  commit   chore(release): v$next"
     echo "  tag      v$next (annotated)"
     echo ""

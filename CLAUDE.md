@@ -68,7 +68,8 @@ components/backend/
 └── Schema.md                     # human-readable DB reference (auto-generated)
 components/frontend/              # SvelteKit; generated gRPC clients under src/lib/server/grpc/generated/
 helm-chart/                       # Helm chart; published as an OCI artifact on a v* tag
-mydocs/docs/backend-tickets/      # known gaps, one file per issue (README inside)
+CHANGELOG.md                      # user-visible changes; the entry lands in the PR
+RELEASING.md                      # branch model + how a change reaches a cluster
 tools/helm/lint-values.yaml       # throwaway values so the chart can be rendered in CI
 tools/nix/                        # Nix flake + process-compose config (toolchain.nix)
 tools/just/*.just                 # just modules — see Dev commands
@@ -150,10 +151,19 @@ These hold across the whole codebase; the skills explain the mechanisms.
 - **`VERSION` at the repo root is the app's only declared version.** Bump it
   with `just version::bump`, never by hand — the recipe moves `VERSION`, both
   `components/*/.component.yaml` versions and `components/frontend/package.json`
-  together, then commits and tags. A component version _is_ its published image
-  tag, so `just version::check` (a CI stage) fails a tree where these disagree.
+  together, rolls `CHANGELOG.md`'s `[Unreleased]` section into a heading for the
+  new version, then commits and tags. A component version _is_ its published
+  image tag, so `just version::check` (a CI stage) fails where these disagree.
   The frontend reads `VERSION` at build time (`vite.config.ts` → `$lib/version`
-  → the footer), so editing it without a rebuild changes nothing.
+  → the footer) and displays it.
+- **`main` is the only long-lived branch, and merging to it reaches the running
+  app.** One focused pull request per change, each carrying its `CHANGELOG.md`
+  entry. Every push to `main` moves `temporary/*:latest`, and a deployment at
+  running https://app.hackagon.dev.renku.ch/ that tag with
+  `imagePullPolicy: Always` picks it up on _any_ container restart. This
+  deployment is just temporary. The real deployment happens via Chart where an
+  `appVersion` is pinned. Charts have there own decoupled Chart version. See
+  `RELEASING.md`.
 - **The chart versions itself; `VERSION` never touches it.**
   `helm-chart/Chart.yaml` holds two hand-edited numbers: `version` is the
   chart's own release, `appVersion` is the app release it deploys.
