@@ -59,20 +59,42 @@
             {countLabel} &middot; nobody here is in the hackathon yet, and only
             organizers can see them
         </span>
+        <!-- A private hackathon admits its invitees in `Join`, so a queue here
+             is not the normal path — it is a join whose auto-approval failed, or
+             somebody who applied before that existed. Said plainly, because the
+             fix is the same Review-then-Approve as any other row and an
+             organizer should not have to wonder whether it is safe. -->
+        {#if !data.waitlistsJoiners && data.waiting.length > 0}
+            <span class="text-xs text-ink-3">
+                An invitation to this private hackathon admits its holder on the
+                spot, so nobody should be queued here. Approving these people is
+                what puts them in.
+            </span>
+        {/if}
     </div>
 
+    <!-- Always, even for a private hackathon with nobody waiting: this page is
+         still reachable by link and by bookmark, and one that hid its own tab
+         would leave whoever followed one with no way back to the roster. -->
     <ParticipantsManageTabs
         hackathonId={data.hackathonId}
         current="waitlist"
         confirmedCount={data.confirmedCount}
         waitingCount={data.waiting.length}
+        showWaitlist={true}
     />
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.waiting.length === 0}
             <p class="m-0 py-6 text-center text-sm text-ink-3">
-                Nobody is waiting to join. Approved participants are on the
-                Participants tab.
+                {#if data.waitlistsJoiners}
+                    Nobody is waiting to join. Approved participants are on the
+                    Participants tab.
+                {:else}
+                    Nobody is waiting, and in a private hackathon nobody should
+                    be: an invitation admits its holder outright, so people join
+                    straight onto the Participants tab.
+                {/if}
             </p>
         {:else}
             {#each data.waiting as person (person.id)}

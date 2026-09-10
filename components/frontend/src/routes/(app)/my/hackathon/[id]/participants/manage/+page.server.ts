@@ -1,4 +1,5 @@
 import type { PageServerLoad } from "./$types"
+import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { membershipBadgeLabel } from "$lib/utils/hackathonRole"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { answeredParticipantIds } from "$lib/server/hackathon/registrationForm"
@@ -43,6 +44,32 @@ async function answerStatus(
   } catch {
     return { questionCount: 0, answered: new Set() }
   }
+}
+
+/** Whether this hackathon puts joiners on the waitlist at all.
+ *
+ * Only a public one does. `Join` confirms a private hackathon's joiners itself
+ * (`hackathon_service.go:693`), because the invitation already *is* the
+ * organizer's decision about who takes part — so a private waitlist is not the
+ * front door, it is an anomaly.
+ *
+ * Not the same question as "is the waitlist empty", and the difference is why
+ * the tab is not simply hidden whenever nothing is in it:
+ *
+ *   - A **public** hackathon waitlists everybody, so an empty queue means "no
+ *     requests yet" — real information, on the page an organizer checks for it.
+ *     A tab that vanished as the last person was approved would take that away
+ *     at exactly the moment they looked again.
+ *   - A **private** one should never have a queue, so an empty one is worth no
+ *     tab. A non-empty one is worth the tab badly: auto-approval failure is
+ *     logged rather than returned (`hackathon_service.go:694`), which leaves a
+ *     waitlisted row that Approve — behind this tab — is the repair for. Hiding
+ *     it by visibility alone would strand that person with nothing on screen
+ *     and no control that fixes them. `Update` can also flip a hackathon to
+ *     private (`:961`) while people are queued in it.
+ */
+function waitlistsJoiners(visibility: Visibility): boolean {
+  return visibility === Visibility.VISIBILITY_PUBLIC
 }
 
 export const load: PageServerLoad = async (event) => {
@@ -104,5 +131,8 @@ export const load: PageServerLoad = async (event) => {
     waitingCount: hackathon.members.filter(
       (m) => m.user !== undefined && m.isWaiting,
     ).length,
+    // A plain boolean, not the enum: this crosses to a `.svelte` file, which
+    // may not import from `$lib/server` — the generated `Visibility` included.
+    waitlistsJoiners: waitlistsJoiners(hackathon.visibility),
   }
 }

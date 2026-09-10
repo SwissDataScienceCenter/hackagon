@@ -99,11 +99,18 @@
         </div>
     </div>
 
+    <!-- Public: always, because an empty queue there means "no requests yet",
+         which is what an organizer opens this page to check. Private: only when
+         somebody is actually in it, which should never happen and is the one
+         case where the tab matters most — Approve behind it is the repair for a
+         half-failed auto-approval. `waitlistsJoiners` in the load has the
+         full reasoning. -->
     <ParticipantsManageTabs
         hackathonId={data.hackathonId}
         current="roster"
         confirmedCount={data.participants.length}
         waitingCount={data.waitingCount}
+        showWaitlist={data.waitlistsJoiners || data.waitingCount > 0}
     />
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
