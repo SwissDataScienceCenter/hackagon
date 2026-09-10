@@ -4,6 +4,7 @@ import type { Actions, PageServerLoad } from "./$types"
 import {
   createAuthorizedGrpc,
   publicHackathonClient,
+  type AuthorizedGrpc,
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import {
@@ -74,11 +75,40 @@ function authorizedFor(session: CustomSession | null) {
     : undefined
 }
 
+/** Ask `PreviewInvite` — as the caller when there is one, anonymously otherwise.
+ *
+ * Who asks decides one field. The RPC performs no permission check and serves
+ * anonymous callers, but it fills `already_participant` by looking the *caller*
+ * up (`hackathon_service.go:454`), so an anonymous preview always reports false
+ * — which is how somebody a private hackathon had just admitted was told
+ * "You're on the list" on the way back to this page.
+ *
+ * A dead access token must not cost a public page its content, so an auth
+ * refusal falls back to the anonymous call: everything but that one field is
+ * identical, and the page's whole point is being readable before signing in.
+ * `usableSession` already screens out the refusal Auth.js reports, but a token
+ * can also lapse between refreshes, and the backend answers that with INTERNAL
+ * rather than UNAUTHENTICATED — see `TODO(backend: jwt-error-codes)` below.
+ */
+function askPreview(token: string, grpc?: AuthorizedGrpc) {
+  if (!grpc) return publicHackathonClient().previewInvite({ token })
+
+  return grpc.hackathon.previewInvite({ token }).catch((e) => {
+    if (
+      e instanceof ClientError &&
+      (e.code === Status.UNAUTHENTICATED || e.code === Status.INTERNAL)
+    ) {
+      return publicHackathonClient().previewInvite({ token })
+    }
+    throw e
+  })
+}
+
 /** Exchange the token for what the page renders. */
-async function preview(token: string): Promise<Preview> {
+async function preview(token: string, grpc?: AuthorizedGrpc): Promise<Preview> {
   let res
   try {
-    res = await publicHackathonClient().previewInvite({ token })
+    res = await askPreview(token, grpc)
   } catch (e) {
     if (e instanceof ClientError) {
       // One answer for all four dead cases, because the backend gives one:
@@ -118,12 +148,15 @@ async function preview(token: string): Promise<Preview> {
 }
 
 export const load: PageServerLoad = async (event) => {
-  const p = await preview(event.params.token)
   const session = (await event.locals.auth()) as CustomSession | null
   // A stale session counts as signed out here: the page then offers the sign-in
   // button, which is the one control that fixes it. Offering "Request a place"
   // to somebody holding a dead token is how this page produced a 500.
   const signedIn = usableSession(session)
+  // Before the preview, not after: the session is what decides who asks, and
+  // asking anonymously is what made `alreadyParticipant` below meaningless.
+  const grpc = authorizedFor(session)
+  const p = await preview(event.params.token, grpc)
 
   // Whether an existing participant has been approved yet, derived rather than
   // asked: `PreviewInvite` reports only *that* somebody holds a participant row,
@@ -132,16 +165,13 @@ export const load: PageServerLoad = async (event) => {
   // exactly what approval grants — so its presence in their own list is the
   // answer, and it costs one call nobody else on this page makes.
   let approved = false
-  if (signedIn && p.alreadyParticipant) {
-    const grpc = authorizedFor(session)
-    if (grpc) {
-      approved = await grpc.hackathon
-        .list({ statusFilter: [] })
-        .then((r) => r.hackathons.some((h) => h.id === p.hackathonId))
-        // A failure here costs the link into the event, not the page: they are
-        // on the list either way, and that is the part they came to read.
-        .catch(() => false)
-    }
+  if (signedIn && p.alreadyParticipant && grpc) {
+    approved = await grpc.hackathon
+      .list({ statusFilter: [] })
+      .then((r) => r.hackathons.some((h) => h.id === p.hackathonId))
+      // A failure here costs the link into the event, not the page: they are
+      // on the list either way, and that is the part they came to read.
+      .catch(() => false)
   }
 
   return {
@@ -180,7 +210,7 @@ export const actions: Actions = {
     // Re-read the questions rather than trusting the form: the answers are
     // parsed against them, and an organiser may have changed the form while this
     // page sat open in somebody's mail client for a week.
-    const p = await preview(event.params.token)
+    const p = await preview(event.params.token, grpc)
     const answers = parseAnswers(await event.request.formData(), p.questions)
 
     try {
