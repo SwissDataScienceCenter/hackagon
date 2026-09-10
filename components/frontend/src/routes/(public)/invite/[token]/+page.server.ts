@@ -184,6 +184,21 @@ export const actions: Actions = {
     const answers = parseAnswers(await event.request.formData(), p.questions)
 
     try {
+      // Provision the platform user before joining. `hooks.server.ts` does this
+      // (`:182`) for **protected** routes only, and this route is public on
+      // purpose — so somebody who signs in *from the invitation* and accepts it
+      // on the spot reaches `Join` holding a Keycloak account and no `users`
+      // row. `Join` answers that with NOT_FOUND (`hackathon_service.go:605`),
+      // which the branch below reports as an invalid invitation: exactly how a
+      // live link looked broken to the one person it was written for, somebody
+      // whose first ever visit to the platform is this page.
+      //
+      // `Register` is idempotent — it returns the existing user, syncing the
+      // profile fields Keycloak holds — so this is safe on every join rather
+      // than only a first one, and it needs no "have they registered?" call in
+      // front of it.
+      await grpc.user.register({})
+
       await grpc.hackathon.join({
         hackathonId: p.hackathonId,
         answers,
