@@ -23,9 +23,11 @@ import { signIn } from "@auth/sveltekit/client"
 
 /**
  * Keycloak's application-initiated action for setting a new password. Enabled
- * as a required action on the realm, which is the precondition Keycloak checks
- * before honouring it — with it disabled, Keycloak logs a warning and ignores
- * the parameter, and the user would land on a plain sign-in instead.
+ * as a required action on the realm already, which is the precondition Keycloak
+ * checks before honouring it — with it disabled, Keycloak logs a warning and
+ * ignores the parameter, and the user would land on a plain sign-in instead.
+ *
+ * That it is already enabled is why this page needs no Keycloak change at all.
  */
 export const UPDATE_PASSWORD_ACTION = "UPDATE_PASSWORD"
 

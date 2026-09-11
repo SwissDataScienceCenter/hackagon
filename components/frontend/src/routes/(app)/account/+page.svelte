@@ -81,9 +81,13 @@
             <button onclick={changePassword} class="btn btn-solid">Change password</button>
         </div>
 
-        <!-- The gap named rather than hidden: there is no self-service reset
-             because the realm has no mail server, so somebody locked out has to
-             be told who can actually help them. -->
+        <!-- The gap named rather than hidden. There is no self-service reset:
+             the realm sets resetPasswordAllowed false because it has no mail
+             server, and Keycloak only ever delivers a reset link by email. So
+             somebody locked out cannot be sent anywhere — they have to be told
+             who can set a new password for them, which is a platform
+             administrator and deliberately nobody else, since a credential is
+             platform-wide and a hackathon role is not. -->
         <p class="prose m-0 text-xs text-ink-3">
             Forgotten your password? There is no self-service reset yet — ask a platform
             administrator to set a new one for you.
