@@ -18,6 +18,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.9.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.8.0...v0.9.0) - 2026-09-11
+
+### Added
+
 - You can now change your own password. Your name in the top right opens a new
   Account page, whose Change password button takes you to the sign-in service
   and brings you back. It asks you to sign in once more on the way, which is
