@@ -299,7 +299,8 @@ var _ = Describe("HackathonService", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("allows authorized user to join hackathon", func() {
+		It("waitlists an authorized joiner on a public hackathon, "+
+			"for an organizer to confirm", func() {
 			// Create a non-admin test user
 			nonAdminKeycloakID := "non-admin"
 			token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
@@ -4607,7 +4608,8 @@ var _ = Describe("HackathonService", func() {
 				inviteToken = resp.GetInvite().GetToken()
 			})
 
-			It("allows join with valid invite token on private hackathon", func() {
+			It("confirms the joiner outright on a private hackathon, "+
+				"clearing is_waiting and granting the role that makes it readable", func() {
 				nonAdminKeycloakID := "invite-join-user"
 				token := testutils.CreateTestJWTToken(nonAdminKeycloakID)
 				ctx := metadata.NewOutgoingContext(
@@ -4639,7 +4641,55 @@ var _ = Describe("HackathonService", func() {
 					WithUser().
 					Only(context.Background())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(participant.IsWaiting).To(BeTrue())
+				Expect(participant.IsWaiting).To(BeFalse())
+
+				got, err := client.Get(ctx, &msgs.GetRequest{HackathonId: privateHackathonID})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.GetHackathon().GetId()).To(Equal(privateHackathonID))
+			})
+
+			It("confirms a joiner who is still waiting, so a half-failed "+
+				"confirmation heals on the next join", func() {
+				waitingKeycloakID := "invite-rejoin-user"
+				waitingUser, err := dbClient.User.Create().
+					SetKeycloakID(waitingKeycloakID).
+					SetUsername("invite-rejoin-user-username").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				// The state a half-failed confirmation leaves: a committed row
+				// that still says waiting, and no Member role.
+				_, err = dbClient.Participant.Create().
+					SetHackathonID(uuid.MustParse(privateHackathonID)).
+					SetUserID(waitingUser.ID).
+					SetIsWaiting(true).
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken(waitingKeycloakID)
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.Join(ctx, &msgs.JoinRequest{
+					HackathonId: privateHackathonID,
+					InviteToken: &inviteToken,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				participant, err := dbClient.Participant.Query().
+					Where(
+						entparticipant.HackathonIDEQ(uuid.MustParse(privateHackathonID)),
+						entparticipant.UserID(waitingUser.ID),
+					).
+					Only(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(participant.IsWaiting).To(BeFalse())
+
+				got, err := client.Get(ctx, &msgs.GetRequest{HackathonId: privateHackathonID})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.GetHackathon().GetId()).To(Equal(privateHackathonID))
 			})
 
 			It("rejects join without invite token on private hackathon", func() {

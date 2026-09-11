@@ -487,7 +487,45 @@ func hackathonFinished(h *ent.Hackathon) bool {
 	return h.EndsAt != nil && h.EndsAt.Before(time.Now())
 }
 
-//nolint:gocognit // Joining is pretty complex, no way around that.
+// inviteAdmits says whether `token` is a valid invitation to this hackathon.
+func (s *HackathonService) inviteAdmits(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	token string,
+) (bool, error) {
+	if token == "" {
+		return false, nil
+	}
+
+	inviteID, err := uuid.Parse(token)
+	if err != nil {
+		return false, status.Error(codes.InvalidArgument, "invalid invite token")
+	}
+
+	invite, err := s.dbClient.HackathonInvite.Query().
+		Where(
+			enthackathoninvite.Token(inviteID),
+			enthackathoninvite.HasHackathonWith(enthackathon.IDEQ(hackathonID)),
+		).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, status.Error(codes.NotFound, "invite not found")
+		}
+		slog.Error("query invite", "err", err)
+
+		return false, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	if invite.RevokedAt != nil {
+		return false, status.Error(codes.FailedPrecondition, "this invite is not valid anymore")
+	}
+	if invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()) {
+		return false, status.Error(codes.FailedPrecondition, "this invite expired")
+	}
+
+	return true, nil
+}
+
 func (s *HackathonService) Join(
 	ctx context.Context,
 	req *msgs.JoinRequest,
@@ -522,43 +560,10 @@ func (s *HackathonService) Join(
 	}
 
 	inviteValid := false
-	//nolint:nestif // Complexity is ok here.
 	if h.Visibility == enthackathon.VisibilityPrivate {
-		inviteToken := req.GetInviteToken()
-		if inviteToken != "" {
-			inviteID, parseErr := uuid.Parse(inviteToken)
-			if parseErr != nil {
-				return nil, status.Error(codes.InvalidArgument, "invalid invite token")
-			}
-			invite, err := s.dbClient.HackathonInvite.Query().
-				Where(
-					enthackathoninvite.Token(inviteID),
-					enthackathoninvite.HasHackathonWith(enthackathon.IDEQ(id)),
-				).Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					return nil, status.Errorf(
-						codes.NotFound,
-						"invite not found",
-					)
-				}
-				slog.Error("query hackathon", "err", err)
-
-				return nil, status.Error(codes.Internal, "couldn't query database")
-			}
-			if invite.RevokedAt != nil {
-				return nil, status.Errorf(
-					codes.FailedPrecondition,
-					"this invite is not valid anymore",
-				)
-			}
-			if invite.ExpiresAt != nil && invite.ExpiresAt.Before(time.Now()) {
-				return nil, status.Errorf(
-					codes.FailedPrecondition,
-					"this invite expired",
-				)
-			}
-			inviteValid = true
+		inviteValid, err = s.inviteAdmits(ctx, id, req.GetInviteToken())
+		if err != nil {
+			return nil, err
 		}
 	}
 	// a hackathon need to have join permission enabled(== registration phase open), and
@@ -655,7 +660,67 @@ func (s *HackathonService) Join(
 		return nil, status.Error(codes.Internal, "couldn't commit transaction")
 	}
 
+	// A private hackathon confirms the joiner right here. The invitation was
+	// already the organizer's decision, and asking for a second one left the
+	// invitee holding no role — so the event they had just joined was hidden
+	// from them. Public hackathons still waitlist.
+	//
+	// Keyed on the row still waiting, not on this call having created it. Both
+	// halves below are idempotent, so a confirmation that half-failed earlier is
+	// retried and healed the next time the invitee joins — the old guard skipped
+	// the whole block once a row existed, which meant nobody but an organizer
+	// could ever repair it.
+	//
+	// A failure is still logged rather than returned: the join above is already
+	// committed, and what is left is a waitlisted row that either the next Join
+	// or the organizer's Approve clears.
+	if h.Visibility == enthackathon.VisibilityPrivate && participant.IsWaiting {
+		if err := s.grantMembership(ctx, id, user); err != nil {
+			// grantMembership already logged the cause; this says who it hit.
+			slog.Error("private join not auto-approved", "hackathon", id, "user", user.ID)
+		}
+	}
+
 	return &msgs.JoinResponse{HackathonId: h.ID.String()}, nil
+}
+
+// grantMembership confirms a participant: casbin `Member` role first, then
+// `is_waiting` cleared. Both matter — the role is what makes the hackathon
+// visible to them, the flag is what the rosters show.
+//
+// The order is deliberate. Casbin and the database cannot share one transaction,
+// so if the second write fails the order decides what is left behind. Role first
+// leaves somebody who can use the hackathon but still shows as waiting, and
+// Approve — which calls this same function — repairs that. The reverse would
+// show "Approved" over an account that can see nothing, with no control to fix
+// it.
+//
+// Failures are logged here and returned as a status error, like the other
+// helpers in this package.
+func (s *HackathonService) grantMembership(
+	ctx context.Context,
+	hackathonID uuid.UUID,
+	user *ent.User,
+) error {
+	if _, err := s.enforcer.AddRole(user.KeycloakID, mw.Member, hackathonID.String()); err != nil {
+		slog.Error("add hackathon member", "err", err)
+
+		return status.Error(codes.Internal, "couldn't set hackathon member permission")
+	}
+
+	if _, err := s.dbClient.Participant.Update().
+		Where(
+			entparticipant.HackathonIDEQ(hackathonID),
+			entparticipant.UserID(user.ID),
+		).
+		SetIsWaiting(false).
+		Save(ctx); err != nil {
+		slog.Error("clear is_waiting", "err", err)
+
+		return status.Error(codes.Internal, "couldn't approve participant")
+	}
+
+	return nil
 }
 
 func (s *HackathonService) ApproveParticipant(
@@ -722,23 +787,9 @@ func (s *HackathonService) ApproveParticipant(
 		return nil, status.Error(codes.Internal, "couldn't query database")
 	}
 
-	// Update participant record to set is_waiting=false (approved)
-	_, err = s.dbClient.Participant.Update().
-		Where(
-			entparticipant.HackathonIDEQ(id),
-			entparticipant.UserID(user.ID),
-		).
-		SetIsWaiting(false).
-		Save(ctx)
-	if err != nil {
-		slog.Error("update participant", "err", err)
-
-		return nil, status.Errorf(codes.Internal, "couldn't approve participant")
-	}
-	if _, err := s.enforcer.AddRole(user.KeycloakID, mw.Member, h.ID.String()); err != nil {
-		slog.Error("add hackathon member", "err", err)
-
-		return nil, status.Errorf(codes.Internal, "couldn't set hackathon member permission")
+	// The same confirmation a private hackathon does for itself in `Join`.
+	if err := s.grantMembership(ctx, h.ID, user); err != nil {
+		return nil, err
 	}
 
 	return &msgs.ApproveParticipantResponse{}, nil

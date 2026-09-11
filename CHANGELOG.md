@@ -20,7 +20,23 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- Following an invitation link into a private hackathon now admits you straight
+  away, rather than putting you on a list for an organiser to approve. The
+  invitation is the decision. Public hackathons are unchanged.
+- Manage Participants no longer shows a Waitlist tab on a private hackathon,
+  where nobody should ever be waiting. It reappears if somebody is.
+
 ### Fixed
+
+- Invitation links no longer fail with "This invitation is no longer valid" for
+  people who have never used Hackagon before. The link was always fine — their
+  account had simply never been created.
+- After accepting an invitation to a private hackathon, the page told people
+  they were on a list and that organisers would confirm their place, when they
+  were already full members. It now says "You're in" and links into the event.
+- An invitation that only half went through used to leave somebody holding a
+  place they could not see, with nothing they could do about it. The invitation
+  page now offers "Finish joining", which completes it.
 
 ## [0.8.0](https://github.com/SwissDataScienceCenter/hackagon/releases/tag/v0.8.0) - 2026-09-08
 

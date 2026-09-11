@@ -4,7 +4,9 @@ import type { Actions, PageServerLoad } from "./$types"
 import {
   createAuthorizedGrpc,
   publicHackathonClient,
+  type AuthorizedGrpc,
 } from "$lib/server/grpc/client"
+import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import {
   parseAnswers,
   questionRows,
@@ -25,17 +27,27 @@ import type { CustomSession } from "../../../../auth.d"
 // permission check at all and serves anonymous callers — so demanding a session
 // first would add a login wall in front of information the link already grants.
 //
-// **Redeeming grants visibility, not membership.** `Join` writes a waitlisted
-// row and the organiser still confirms it, so a link forwarded beyond the people
-// it was meant for cannot insert a stranger into the roster.
+// **Redeeming a private hackathon's link grants membership outright.** `Join`
+// confirms the joiner itself when the hackathon is private: the invitation is
+// the organizer's decision about who takes part, and requiring a second
+// confirmation left the invitee holding no role and therefore unable to see the
+// event at all. The flip side is that the link *is* admission — a link forwarded
+// beyond the people it was meant for lets a stranger in, and revoking it or
+// removing the participant are the controls, both after the fact.
 //
-// This page is also where somebody comes *back* to. A waitlisted participant in
-// a private hackathon holds no `hackathon:read` — that arrives with the `Member`
-// role on approval — so the event is filtered out of `List`
-// (`hackathon_service.go:1473`) and appears nowhere on their dashboard. Until
-// they are approved, this link is the only trace of what they asked for, which
-// is why `alreadyParticipant` gets a real state on screen rather than a silent
-// redirect somewhere emptier.
+// A public hackathon reached through a link still waitlists, so `autoApproves`
+// below decides which of the two the page describes. Invites are not restricted
+// to private hackathons (`CreateInvite` performs no visibility check), so this
+// cannot be assumed from the route.
+//
+// This page is also where somebody comes *back* to, which still matters for the
+// public case: a waitlisted participant holds no `Member` role, so a private
+// hackathon they are waiting in is filtered out of `List`
+// (`hackathon_service.go:1473`) and appears nowhere on their dashboard. That is
+// now only reachable for somebody waitlisted before auto-approval existed, or
+// whose confirmation half-failed — and it is exactly why `alreadyParticipant`
+// still gets a real state on screen rather than a silent redirect somewhere
+// emptier.
 
 interface Preview {
   hackathonId: string
@@ -44,6 +56,9 @@ interface Preview {
   startsAt?: Date
   endsAt?: Date
   status: number
+  /** Whether `Join` confirms on the spot here, which it does for a private
+   * hackathon. Decides whether this page offers a place or asks for one. */
+  autoApproves: boolean
   questions: QuestionRow[]
   alreadyParticipant: boolean
 }
@@ -60,11 +75,40 @@ function authorizedFor(session: CustomSession | null) {
     : undefined
 }
 
+/** Ask `PreviewInvite` — as the caller when there is one, anonymously otherwise.
+ *
+ * Who asks decides one field. The RPC performs no permission check and serves
+ * anonymous callers, but it fills `already_participant` by looking the *caller*
+ * up (`hackathon_service.go:454`), so an anonymous preview always reports false
+ * — which is how somebody a private hackathon had just admitted was told
+ * "You're on the list" on the way back to this page.
+ *
+ * A dead access token must not cost a public page its content, so an auth
+ * refusal falls back to the anonymous call: everything but that one field is
+ * identical, and the page's whole point is being readable before signing in.
+ * `usableSession` already screens out the refusal Auth.js reports, but a token
+ * can also lapse between refreshes, and the backend answers that with INTERNAL
+ * rather than UNAUTHENTICATED — see `TODO(backend: jwt-error-codes)` below.
+ */
+function askPreview(token: string, grpc?: AuthorizedGrpc) {
+  if (!grpc) return publicHackathonClient().previewInvite({ token })
+
+  return grpc.hackathon.previewInvite({ token }).catch((e) => {
+    if (
+      e instanceof ClientError &&
+      (e.code === Status.UNAUTHENTICATED || e.code === Status.INTERNAL)
+    ) {
+      return publicHackathonClient().previewInvite({ token })
+    }
+    throw e
+  })
+}
+
 /** Exchange the token for what the page renders. */
-async function preview(token: string): Promise<Preview> {
+async function preview(token: string, grpc?: AuthorizedGrpc): Promise<Preview> {
   let res
   try {
-    res = await publicHackathonClient().previewInvite({ token })
+    res = await askPreview(token, grpc)
   } catch (e) {
     if (e instanceof ClientError) {
       // One answer for all four dead cases, because the backend gives one:
@@ -97,18 +141,22 @@ async function preview(token: string): Promise<Preview> {
     startsAt: res.hackathon.startsAt,
     endsAt: res.hackathon.endsAt,
     status: res.hackathon.status as number,
+    autoApproves: res.hackathon.visibility === Visibility.VISIBILITY_PRIVATE,
     questions: questionRows(res.questions),
     alreadyParticipant: res.alreadyParticipant,
   }
 }
 
 export const load: PageServerLoad = async (event) => {
-  const p = await preview(event.params.token)
   const session = (await event.locals.auth()) as CustomSession | null
   // A stale session counts as signed out here: the page then offers the sign-in
   // button, which is the one control that fixes it. Offering "Request a place"
   // to somebody holding a dead token is how this page produced a 500.
   const signedIn = usableSession(session)
+  // Before the preview, not after: the session is what decides who asks, and
+  // asking anonymously is what made `alreadyParticipant` below meaningless.
+  const grpc = authorizedFor(session)
+  const p = await preview(event.params.token, grpc)
 
   // Whether an existing participant has been approved yet, derived rather than
   // asked: `PreviewInvite` reports only *that* somebody holds a participant row,
@@ -117,16 +165,13 @@ export const load: PageServerLoad = async (event) => {
   // exactly what approval grants — so its presence in their own list is the
   // answer, and it costs one call nobody else on this page makes.
   let approved = false
-  if (signedIn && p.alreadyParticipant) {
-    const grpc = authorizedFor(session)
-    if (grpc) {
-      approved = await grpc.hackathon
-        .list({ statusFilter: [] })
-        .then((r) => r.hackathons.some((h) => h.id === p.hackathonId))
-        // A failure here costs the link into the event, not the page: they are
-        // on the list either way, and that is the part they came to read.
-        .catch(() => false)
-    }
+  if (signedIn && p.alreadyParticipant && grpc) {
+    approved = await grpc.hackathon
+      .list({ statusFilter: [] })
+      .then((r) => r.hackathons.some((h) => h.id === p.hackathonId))
+      // A failure here costs the link into the event, not the page: they are
+      // on the list either way, and that is the part they came to read.
+      .catch(() => false)
   }
 
   return {
@@ -141,6 +186,7 @@ export const load: PageServerLoad = async (event) => {
     },
     questions: p.questions,
     alreadyParticipant: p.alreadyParticipant,
+    autoApproves: p.autoApproves,
     approved,
     signedIn,
   }
@@ -164,10 +210,25 @@ export const actions: Actions = {
     // Re-read the questions rather than trusting the form: the answers are
     // parsed against them, and an organiser may have changed the form while this
     // page sat open in somebody's mail client for a week.
-    const p = await preview(event.params.token)
+    const p = await preview(event.params.token, grpc)
     const answers = parseAnswers(await event.request.formData(), p.questions)
 
     try {
+      // Provision the platform user before joining. `hooks.server.ts` does this
+      // (`:182`) for **protected** routes only, and this route is public on
+      // purpose — so somebody who signs in *from the invitation* and accepts it
+      // on the spot reaches `Join` holding a Keycloak account and no `users`
+      // row. `Join` answers that with NOT_FOUND (`hackathon_service.go:605`),
+      // which the branch below reports as an invalid invitation: exactly how a
+      // live link looked broken to the one person it was written for, somebody
+      // whose first ever visit to the platform is this page.
+      //
+      // `Register` is idempotent — it returns the existing user, syncing the
+      // profile fields Keycloak holds — so this is safe on every join rather
+      // than only a first one, and it needs no "have they registered?" call in
+      // front of it.
+      await grpc.user.register({})
+
       await grpc.hackathon.join({
         hackathonId: p.hackathonId,
         answers,

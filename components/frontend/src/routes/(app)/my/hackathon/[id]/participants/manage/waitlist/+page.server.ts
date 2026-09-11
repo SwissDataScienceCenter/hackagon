@@ -1,4 +1,5 @@
 import type { PageServerLoad } from "./$types"
+import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { mayManageParticipants } from "$lib/server/hackathon/capabilities"
 import { answeredParticipantIds } from "$lib/server/hackathon/registrationForm"
 import { requireGrpc } from "$lib/server/grpc/client"
@@ -80,5 +81,11 @@ export const load: PageServerLoad = async (event) => {
     confirmedCount: hackathon.members.filter(
       (m) => m.user !== undefined && !m.isWaiting,
     ).length,
+    // Not for the tab — this page always shows its own — but for the copy: an
+    // empty queue means "no requests yet" in a public hackathon and "nothing
+    // went wrong" in a private one, and a queue that is *not* empty in a
+    // private one is the anomaly worth naming. See the roster's
+    // `waitlistsJoiners`, which decides the tab from the same fact.
+    waitlistsJoiners: hackathon.visibility === Visibility.VISIBILITY_PUBLIC,
   }
 }
