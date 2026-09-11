@@ -87,17 +87,13 @@ function authorizedFor(session: CustomSession | null) {
  * refusal falls back to the anonymous call: everything but that one field is
  * identical, and the page's whole point is being readable before signing in.
  * `usableSession` already screens out the refusal Auth.js reports, but a token
- * can also lapse between refreshes, and the backend answers that with INTERNAL
- * rather than UNAUTHENTICATED — see `TODO(backend: jwt-error-codes)` below.
+ * can also lapse between refreshes, and that arrives here as UNAUTHENTICATED.
  */
 function askPreview(token: string, grpc?: AuthorizedGrpc) {
   if (!grpc) return publicHackathonClient().previewInvite({ token })
 
   return grpc.hackathon.previewInvite({ token }).catch((e) => {
-    if (
-      e instanceof ClientError &&
-      (e.code === Status.UNAUTHENTICATED || e.code === Status.INTERNAL)
-    ) {
+    if (e instanceof ClientError && e.code === Status.UNAUTHENTICATED) {
       return publicHackathonClient().previewInvite({ token })
     }
     throw e
@@ -263,21 +259,21 @@ export const actions: Actions = {
           return fail(400, {
             message: e.details || "Some answers are not valid.",
           })
-        // The backend refusing the token itself. UNAUTHENTICATED is what the
-        // middleware means to send.
-        //
-        // TODO(backend: jwt-error-codes): INTERNAL is in this branch because it
-        // is what actually arrives. `errors.go` matches jwt/**v4**'s
-        // `*ValidationError` while `auth.go` parses with **v5**, which removed
-        // that type — so `errors.As` never matches and every auth failure falls
-        // past the `unauthenticatedErrors` list to `codes.Internal`. Drop
-        // INTERNAL from here once that is fixed; until then a genuine server
-        // fault during a join is reported to the user as an expired session,
-        // which is the lesser of the two wrong answers available.
-        if (e.code === Status.UNAUTHENTICATED || e.code === Status.INTERNAL)
+        // The backend refusing the token itself.
+        if (e.code === Status.UNAUTHENTICATED)
           return fail(401, {
             message:
               "Your sign-in has expired. Sign in again — this invitation still works.",
+          })
+        // A real server fault, and now distinguishable from one: INTERNAL used
+        // to arrive for every rejected token too, so this page had to read it
+        // as an expired session. It no longer does, so a fault can say so and
+        // the invitation can be described as still good — which it is.
+        if (e.code === Status.INTERNAL)
+          return fail(500, {
+            message:
+              "Something went wrong on our side. Your invitation is still " +
+              "valid — please try again.",
           })
       }
       throw e

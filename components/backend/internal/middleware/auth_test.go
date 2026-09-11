@@ -10,7 +10,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
@@ -84,6 +86,7 @@ var _ = Describe("Auth Middleware", func() {
 			_, err := validator.AuthFunc()(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("token is malformed"))
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
 		})
 
 		It("rejects expired tokens", func() {
@@ -96,6 +99,7 @@ var _ = Describe("Auth Middleware", func() {
 			_, err := validator.AuthFunc()(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("token is expired"))
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
 		})
 
 		It("rejects tokens with future not-before", func() {
@@ -119,6 +123,21 @@ var _ = Describe("Auth Middleware", func() {
 			_, err = validator.AuthFunc()(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("token is not valid yet"))
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
+		})
+
+		It("rejects a token from the wrong issuer", func() {
+			tokenString := testutils.GenerateTestToken(
+				"wrong-issuer-user", 24*time.Hour, "https://not-our-issuer.example",
+			)
+			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+				"authorization", "Bearer "+tokenString,
+			))
+
+			validator := middleware.NewTestJWTValidator(cfg, keyfunc)
+			_, err := validator.AuthFunc()(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
 		})
 	})
 
@@ -158,6 +177,7 @@ var _ = Describe("Auth Middleware", func() {
 			_, err := validator.AuthFunc()(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("token is malformed"))
+			Expect(status.Code(err)).To(Equal(codes.Unauthenticated))
 		})
 	})
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -35,25 +35,40 @@ func handleError(err error, setErrorCodes bool) error {
 	return err
 }
 
+// handleJwtError translates a failure from the jwt library into one of this
+// package's own errors, which `setGrpcErrorCodes` then turns into
+// `Unauthenticated`.
+//
+// Matched with `errors.Is` against the library's sentinel values. v5 reports a
+// bad token by wrapping those sentinels; it has no error *type* to match on —
+// the `*jwt.ValidationError` of v4 was removed. This file went on matching the
+// v4 type while `auth.go` parsed with v5, so nothing here ever matched and
+// every expired, malformed or badly signed token fell through to `Internal`,
+// reported to callers as a server fault rather than a rejected login.
+//
+// Anything unrecognised is returned untouched, so an error raised by `auth.go`
+// itself (a missing header, an unknown key id) reaches `setGrpcErrorCodes` as
+// the sentinel it already is.
 func handleJwtError(errIn error) error {
-	var err *jwt.ValidationError
-	if errors.As(errIn, &err) {
-		switch {
-		case err.Is(jwt.ErrTokenExpired):
-			return ErrTokenExpired
-		case err.Is(jwt.ErrTokenMalformed):
-			return ErrTokenMalformed
-		case err.Is(jwt.ErrTokenNotValidYet):
-			return ErrTokenNotValidYet
-		case err.Is(jwt.ErrTokenUsedBeforeIssued):
-			return ErrTokenUsedBeforeIssued
-		case err.Is(jwt.ErrTokenSignatureInvalid):
-			if strings.Contains(err.Error(), "signing method") {
-				return ErrBadAlgorithm
-			}
-
-			return ErrSignatureInvalid
+	switch {
+	case errors.Is(errIn, jwt.ErrTokenExpired):
+		return ErrTokenExpired
+	case errors.Is(errIn, jwt.ErrTokenMalformed):
+		return ErrTokenMalformed
+	case errors.Is(errIn, jwt.ErrTokenNotValidYet):
+		return ErrTokenNotValidYet
+	case errors.Is(errIn, jwt.ErrTokenUsedBeforeIssued):
+		return ErrTokenUsedBeforeIssued
+	case errors.Is(errIn, jwt.ErrTokenInvalidIssuer):
+		return ErrTokenInvalidIssuer
+	case errors.Is(errIn, jwt.ErrTokenSignatureInvalid):
+		// `WithValidMethods` rejects a wrong algorithm through the same
+		// sentinel, and only the message tells the two apart.
+		if strings.Contains(errIn.Error(), "signing method") {
+			return ErrBadAlgorithm
 		}
+
+		return ErrSignatureInvalid
 	}
 
 	return errIn
