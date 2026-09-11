@@ -28,6 +28,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- A server problem while joining a hackathon no longer claims that your sign-in
+  has expired. A rejected login and a real fault are told apart again.
 - Invitation links no longer fail with "This invitation is no longer valid" for
   people who have never used Hackagon before. The link was always fine — their
   account had simply never been created.

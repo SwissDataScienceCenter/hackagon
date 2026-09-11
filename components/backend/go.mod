@@ -19,7 +19,6 @@ require (
 	github.com/MicahParks/keyfunc/v3 v3.8.0
 	github.com/casbin/casbin/v3 v3.8.1
 	github.com/casbin/ent-adapter v1.4.0
-	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
