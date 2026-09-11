@@ -33,6 +33,24 @@ export function publicHackathonClient() {
   )
 }
 
+// Unauthenticated page client, for the content pages of a *public* hackathon.
+//
+// The backend decides, not this client: making a hackathon public writes a
+// `*, /hackathon/<id>, page, read` casbin row alongside the hackathon one
+// (`AllowPublicHackathonAccess`), and without that row these calls come back
+// PERMISSION_DENIED. So a private hackathon's pages stay refused even though
+// the call carries no token, and pages an organizer has marked `visible: false`
+// are filtered out server-side, because that filter keys off `page:write`,
+// which nobody anonymous will ever hold.
+//
+// Used even for a signed-in visitor on the public route. They are, by
+// definition, not a member — members are redirected to /my/hackathon/<id> — so
+// their token would buy them nothing here, and one code path is one behaviour
+// to reason about.
+export function publicPageClient() {
+  return createClientFactory().create(PageServiceDefinition, backendChannel())
+}
+
 // Per-request authorized client bundle (created by hooks.server.ts)
 export interface AuthorizedGrpc {
   user: UserServiceClient

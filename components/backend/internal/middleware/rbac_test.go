@@ -118,7 +118,60 @@ var _ = Describe("RBAC Enforcer", func() {
 			Entry("eve owner reads h2", "eve", "h2", Hackathon, Read, true),
 			Entry("eve owner writes h2", "eve", "h2", Hackathon, Write, true),
 			Entry("eve cannot read h1", "eve", "h1", Hackathon, Read, false),
+
+			// The anonymous subject is what an unauthenticated call arrives as
+			// (auth.go), so these are the entries that say what a visitor with no
+			// account can actually do. Reading the hackathon was never enough on
+			// its own: a landing page that cannot name the schedule or the rules
+			// is a public hackathon in name only.
+			Entry("anonymous reads public h2", AnonSubject, "h2", Hackathon, Read, true),
+			Entry("anonymous reads public h2 pages", AnonSubject, "h2", Page, Read, true),
+			// Private stays private, and the page grant is scoped to the one
+			// hackathon that was made public — not to `/hackathon/*`.
+			Entry("anonymous cannot read h1", AnonSubject, "h1", Hackathon, Read, false),
+			Entry("anonymous cannot read h1 pages", AnonSubject, "h1", Page, Read, false),
+			// Load-bearing, not a formality: PageService.List decides whether to
+			// filter out `visible: false` pages by asking for `page:write`
+			// (page_service.go). If the public grant ever reached write, every
+			// unpublished draft would be served to the internet.
+			Entry("anonymous cannot write public h2 pages", AnonSubject, "h2", Page, Write, false),
 		)
+
+		It("revokes page read along with hackathon read", func() {
+			ctx := CtxWithClaims(AnonSubject)
+
+			// Both halves of the grant go, so a hackathon flipped back to private
+			// cannot keep serving its pages to anonymous readers — the failure
+			// that a per-row revoke written to match a per-row grant is there to
+			// prevent.
+			_, err := enf.RemovePublicHackathonAccess("h2")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(enf.Enforce(ctx, "h2", Hackathon, Read)).To(BeFalse())
+			Expect(enf.Enforce(ctx, "h2", Page, Read)).To(BeFalse())
+		})
+
+		It("is idempotent over a hackathon that predates the page grant", func() {
+			ctx := CtxWithClaims(AnonSubject)
+
+			// The state every hackathon made public before `page:read` joined the
+			// grant is in: one row present, one missing. A batch AddPolicies
+			// refuses the pair outright in that case and repairs nothing, which
+			// is why the grant is written row by row and why the startup
+			// reconcile in cmd/service can afford to run on every boot.
+			_, err := enf.RemovePublicHackathonAccess("h2")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				enf.AddPolicy(nil, "h2", Hackathon, Read),
+			).To(Succeed())
+			Expect(enf.Enforce(ctx, "h2", Page, Read)).To(BeFalse())
+
+			_, err = enf.AllowPublicHackathonAccess("h2")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(enf.Enforce(ctx, "h2", Hackathon, Read)).To(BeTrue())
+			Expect(enf.Enforce(ctx, "h2", Page, Read)).To(BeTrue())
+		})
 	})
 
 	Describe("Admin Access", func() {
