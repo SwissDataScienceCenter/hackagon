@@ -10,7 +10,11 @@
     import { safeReturnTo } from '$lib/utils/returnTo';
 
     // The header carries identity, theme and sign-out — no administration entry.
-    // That moved to the dashboard's Manage platform section, which is the single
+    // Identity doubles as the way to the account page: the monogram and name link
+    // there rather than the bar growing a third control. Clicking your own name is
+    // where people already look for it, and it is what keeps the bar inside 320px
+    // and keeps a rare action from sitting beside a common one.
+    // Administration moved to the dashboard's Manage platform section, the single
     // place the platform pages are offered from. The trade is deliberate: from
     // inside a hackathon an admin now returns to the dashboard first, via the
     // wordmark, rather than jumping straight there from the header — on a phone
@@ -64,6 +68,8 @@
     const onHackathons = $derived(
         $page.url.pathname === '/' || $page.url.pathname.startsWith('/dashboard')
     );
+
+    const onAccount = $derived($page.url.pathname.startsWith('/account'));
 
     // The row vocabulary is SidebarNavSection's, so the two navigations read as
     // one system rather than drifting into separate dialects of the same idea.
@@ -161,18 +167,26 @@
                 <!-- A quiet outlined tile, not an accent-filled disc: a monogram is
                      identity, not an action to be drawn toward. The header's accent
                      is spent on the active-nav underline instead. -->
-                <div class="flex min-w-0 items-center gap-2">
+                <a
+                    href={resolve('/(app)/account')}
+                    title={userName}
+                    class="flex min-w-0 items-center gap-2 no-underline hover:text-accent-ink"
+                >
+                    <!-- The name is hidden below sm, which would leave the link
+                         announcing a single letter, so the purpose is stated for
+                         a screen reader either way. -->
+                    <span class="sr-only">Your account</span>
                     <span
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-field
                            border border-line-strong bg-raised text-sm font-semibold text-ink-2"
-                        title={userName}
+                        aria-hidden="true"
                     >
                         {initial}
                     </span>
                     <span class="hidden max-w-40 truncate text-sm font-medium sm:inline">
                         {userName}
                     </span>
-                </div>
+                </a>
                 <!-- Desktop only. Below md it moves into the panel, and the width
                      that frees is what keeps the bar from overflowing at 320px. -->
                 <button
@@ -247,6 +261,16 @@
                 {/if}
             {/if}
             {#if session?.user}
+                <!-- The monogram links here as well, but it is a 32px target next
+                     to the panel trigger, so the panel names the destination
+                     rather than relying on anyone aiming for it. -->
+                <a
+                    href={resolve('/(app)/account')}
+                    aria-current={onAccount ? 'page' : undefined}
+                    class="{ROW} {onAccount ? ROW_ACTIVE : ROW_IDLE}"
+                >
+                    Account
+                </a>
                 <button
                     onclick={() => signOut({ callbackUrl: '/' })}
                     class="btn btn-sm btn-quiet mt-1 self-start"
