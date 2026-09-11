@@ -6,10 +6,10 @@ type: application
 
 # The chart's own version. Bumped by hand when the chart changes, and
 # independent of the app: the CI publishes whatever it finds here.
-version: 0.2.0
+version: 0.3.0
 # The app release this chart deploys. A new app release does
 # not become deployable until someone points the chart at it.
-appVersion: "0.8.0"
+appVersion: "0.9.1"
 
 dependencies:
   - name: postgresql
