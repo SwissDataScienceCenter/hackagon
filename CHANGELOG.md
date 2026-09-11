@@ -21,8 +21,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - You can now change your own password. Your name in the top right opens a new
   Account page, whose Change password button takes you to the sign-in service
   and brings you back. It asks you to sign in once more on the way, which is
-  what proves it is you. Forgetting a password is still not self-service, so
-  the page says to ask a platform administrator instead.
+  what proves it is you. Forgetting a password is still not self-service, so the
+  page says to ask a platform administrator instead.
 
 ### Changed
 
