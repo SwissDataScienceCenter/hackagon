@@ -263,6 +263,38 @@ var _ = Describe("HackathonService", func() {
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.NotFound))
 		})
+
+		It("denies an anonymous caller, though the hackathon is public", func() {
+			_, err := client.Get(context.Background(), &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies a signed-in caller who is not a participant", func() {
+			token := testutils.CreateTestJWTToken("get-outsider")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.Get(ctx, &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+		It("still serves a member", func() {
+			_, err := enf.AddRole("get-member", middleware.Member, createdID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken("get-member")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := client.Get(ctx, &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetHackathon().GetId()).To(Equal(createdID))
+		})
 	})
 
 	Describe("Join", func() {

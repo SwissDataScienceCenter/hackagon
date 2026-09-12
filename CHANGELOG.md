@@ -22,6 +22,13 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- A public hackathon no longer hands out its participants' personal details to
+  strangers. Anyone at all — without signing in — could read the full
+  participant list of any public hackathon, including every person's email
+  address and who was still waiting to be accepted. That list is now visible
+  only to the hackathon's own members, owners and administrators. The public
+  hackathon page itself is unchanged; it never showed participants.
+
 ## [0.9.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.0...v0.9.1) - 2026-09-11
 
 ## [0.9.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.8.0...v0.9.0) - 2026-09-11

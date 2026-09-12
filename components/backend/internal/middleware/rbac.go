@@ -441,6 +441,55 @@ func (e *Enforcer) GetHackathonRole(
 	}
 }
 
+// IsHackathonInsider reports whether the caller belongs to this hackathon — as
+// a member, owner, or global admin.
+//
+// It can't just check hackathon:read: a public hackathon grants read to `*`
+// (see AllowPublicHackathonAccess), so every caller passes, anonymous ones
+// included. Membership needs a different question, and two probes to answer it
+// since neither covers everyone:
+//   - GetHackathonRole catches member and owner, but ignores g2 — admins are invisible to it.
+//   - hackathon:write catches owners and, via the matcher's `|| g2(r.sub,"admin")`,
+//     admins. It's never granted to `*`, which is what makes it a usable probe where read isn't.
+func (e *Enforcer) IsHackathonInsider(ctx context.Context, hackathonId string) (bool, error) {
+	sub, err := GetSubject(ctx)
+	if err != nil {
+		return false, err
+	}
+	// Named explicitly rather than left to the probes below. Both would refuse
+	// the anonymous subject anyway, but only by accident of it holding no rows.
+	if sub == AnonSubject {
+		return false, nil
+	}
+
+	role, err := e.GetHackathonRole(sub, hackathonId)
+	if err != nil {
+		return false, err
+	}
+	if role != hackEnts.HackathonRole_HACKATHON_ROLE_UNSPECIFIED {
+		return true, nil
+	}
+
+	return e.CheckPermission(sub, hackathonId, Hackathon, Write)
+}
+
+// RequireHackathonInsider is IsHackathonInsider as a handler guard, returning
+// the same opaque PermissionDenied as RequirePermission so that a refusal says
+// nothing about whether the hackathon exists.
+func (e *Enforcer) RequireHackathonInsider(ctx context.Context, hackathonId string) error {
+	ok, err := e.IsHackathonInsider(ctx, hackathonId)
+	if err != nil {
+		slog.Error("check hackathon insider", "err", err)
+
+		return status.Error(codes.Internal, "authorization error")
+	}
+	if !ok {
+		return status.Error(codes.PermissionDenied, "permission denied")
+	}
+
+	return nil
+}
+
 //exhaustruct:optional
 type enforceOptions struct {
 	teamID    string

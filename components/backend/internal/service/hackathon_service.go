@@ -146,6 +146,11 @@ func (s *HackathonService) Get(
 		return nil, err
 	}
 
+	// The public view has its own path and carries no users at all
+	if err := s.enforcer.RequireHackathonInsider(ctx, id.String()); err != nil {
+		return nil, err
+	}
+
 	h, err := s.dbClient.Hackathon.Query().
 		Where(enthackathon.IDEQ(id)).
 		WithCreator().
