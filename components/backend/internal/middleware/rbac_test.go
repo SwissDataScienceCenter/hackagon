@@ -69,6 +69,11 @@ var _ = Describe("RBAC Enforcer", func() {
 			Entry("eve owner reads h2", "eve", "h2", Hackathon, Read, true),
 			Entry("eve owner writes h2", "eve", "h2", Hackathon, Write, true),
 			Entry("eve cannot read h1", "eve", "h1", Hackathon, Read, false),
+			// View is granted to these roles explicitly, because casbin has no
+			// action hierarchy and Read would not imply it.
+			Entry("alice owner views h1", "alice", "h1", Hackathon, View, true),
+			Entry("bob member views h1", "bob", "h1", Hackathon, View, true),
+			Entry("alice cannot view h2", "alice", "h2", Hackathon, View, false),
 		)
 	})
 
