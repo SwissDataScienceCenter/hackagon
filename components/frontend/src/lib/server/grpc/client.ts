@@ -7,6 +7,8 @@ import { UserServiceDefinition } from "./generated/user/user_service"
 import { HackathonServiceDefinition } from "./generated/hackathon/hackathon_service"
 import { TeamServiceDefinition } from "./generated/hackathon/team_service"
 import { PageServiceDefinition } from "./generated/hackathon/page_service"
+import { PublicServiceDefinition } from "./generated/hackathon/public_service"
+import type { PublicServiceClient } from "./generated/hackathon/public_service"
 import { ProjectServiceDefinition } from "./generated/hackathon/project_service"
 import { PhaseServiceDefinition } from "./generated/hackathon/phase_service"
 import { TrackServiceDefinition } from "./generated/hackathon/track_service"
@@ -31,6 +33,23 @@ export function publicHackathonClient() {
     HackathonServiceDefinition,
     backendChannel(),
   )
+}
+
+/**
+ * The backend's PublicService: everything a visitor with no account may read,
+ * and the only service the (public) routes should call.
+ *
+ * Its responses come from the backend's Public* message family, which has no
+ * user type anywhere in it — no email address, no Keycloak id — so these routes
+ * cannot render a participant's personal details by accident. The
+ * participant-facing services carry all of that nested throughout, which is why
+ * the public side has a service of its own rather than a filter over theirs.
+ *
+ * A function, not a const, for the same reason as above: the channel only
+ * exists once config has loaded.
+ */
+export function publicClient(): PublicServiceClient {
+  return createClientFactory().create(PublicServiceDefinition, backendChannel())
 }
 
 // Per-request authorized client bundle (created by hooks.server.ts)

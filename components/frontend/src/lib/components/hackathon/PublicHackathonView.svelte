@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import HeroSection from './HeroSection.svelte';
     import JoinCta from './JoinCta.svelte';
@@ -15,6 +16,7 @@
         status,
         signedIn,
         preview = false,
+        nav,
     }: {
         id: string;
         name: string;
@@ -33,6 +35,18 @@
          * enrol the organiser in their own hackathon by accident.
          */
         preview?: boolean;
+        /**
+         * Navigation drawn between the hero and the description — the public
+         * route's tab strip.
+         *
+         * A snippet the caller supplies rather than a list this component turns
+         * into links: which entry is current is known by the route, and this
+         * component's job is only where the strip sits. The preview passes
+         * none, for the same reason it draws no Join block — chrome that leads
+         * somewhere is not something an organiser checking their own copy
+         * should be able to click out through.
+         */
+        nav?: Snippet;
     } = $props();
 
     // Derived here, not passed in, for the same reason the whole view is one
@@ -61,6 +75,10 @@
             { label: name, href: `/hackathon/${id}` },
         ]}
     />
+
+    {#if nav}
+        {@render nav()}
+    {/if}
 
     <div class="mx-auto w-full max-w-7xl">
         <section class="px-4 py-12 sm:px-10 md:px-20">
