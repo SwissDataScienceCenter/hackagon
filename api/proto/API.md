@@ -58,6 +58,28 @@
 - [hackathon/entities/project_preference.proto](#hackathon_entities_project_preference-proto)
     - [ProjectWithPreferences](#hackathon-entities-ProjectWithPreferences)
   
+- [hackathon/entities/public_page.proto](#hackathon_entities_public_page-proto)
+    - [PublicPage](#hackathon-entities-PublicPage)
+  
+- [hackathon/entities/public_phase.proto](#hackathon_entities_public_phase-proto)
+    - [PublicPhase](#hackathon-entities-PublicPhase)
+  
+- [hackathon/entities/public_project.proto](#hackathon_entities_public_project-proto)
+    - [PublicProject](#hackathon-entities-PublicProject)
+  
+- [hackathon/entities/public_submission.proto](#hackathon_entities_public_submission-proto)
+    - [PublicSubmission](#hackathon-entities-PublicSubmission)
+  
+- [hackathon/entities/public_team.proto](#hackathon_entities_public_team-proto)
+    - [PublicTeam](#hackathon-entities-PublicTeam)
+  
+- [hackathon/entities/public_track.proto](#hackathon_entities_public_track-proto)
+    - [PublicTrack](#hackathon-entities-PublicTrack)
+  
+- [hackathon/entities/public_hackathon.proto](#hackathon_entities_public_hackathon-proto)
+    - [PublicHackathon](#hackathon-entities-PublicHackathon)
+    - [PublicHackathonSummary](#hackathon-entities-PublicHackathonSummary)
+  
 - [hackathon/entities/question.proto](#hackathon_entities_question-proto)
     - [Question](#hackathon-entities-Question)
   
@@ -353,6 +375,18 @@
 - [hackathon/messages/project_svc/set_preference_response.proto](#hackathon_messages_project_svc_set_preference_response-proto)
     - [SetPreferenceResponse](#hackathon-messages-project_svc-SetPreferenceResponse)
   
+- [hackathon/messages/public_svc/get_hackathon_request.proto](#hackathon_messages_public_svc_get_hackathon_request-proto)
+    - [GetHackathonRequest](#hackathon-messages-public_svc-GetHackathonRequest)
+  
+- [hackathon/messages/public_svc/get_hackathon_response.proto](#hackathon_messages_public_svc_get_hackathon_response-proto)
+    - [GetHackathonResponse](#hackathon-messages-public_svc-GetHackathonResponse)
+  
+- [hackathon/messages/public_svc/list_hackathons_request.proto](#hackathon_messages_public_svc_list_hackathons_request-proto)
+    - [ListHackathonsRequest](#hackathon-messages-public_svc-ListHackathonsRequest)
+  
+- [hackathon/messages/public_svc/list_hackathons_response.proto](#hackathon_messages_public_svc_list_hackathons_response-proto)
+    - [ListHackathonsResponse](#hackathon-messages-public_svc-ListHackathonsResponse)
+  
 - [hackathon/messages/team_svc/assign_user_request.proto](#hackathon_messages_team_svc_assign_user_request-proto)
     - [AssignUserRequest](#hackathon-messages-team_svc-AssignUserRequest)
   
@@ -470,6 +504,9 @@
   
 - [hackathon/project_service.proto](#hackathon_project_service-proto)
     - [ProjectService](#hackathon-ProjectService)
+  
+- [hackathon/public_service.proto](#hackathon_public_service-proto)
+    - [PublicService](#hackathon-PublicService)
   
 - [hackathon/team_service.proto](#hackathon_team_service-proto)
     - [TeamService](#hackathon-TeamService)
@@ -1287,6 +1324,289 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | track_id | [string](#string) |  |  |
 | hackathon_id | [string](#string) |  |  |
 | preferences | [user.entities.User](#user-entities-User) | repeated | List of users who have this project as their preference |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_page-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_page.proto
+
+
+
+<a name="hackathon-entities-PublicPage"></a>
+
+### PublicPage
+A content page as the public sees it. Carries no author and no timestamps.
+Only pages with visible = true ever become one of these.
+See PublicHackathon for why this entity exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| content | [string](#string) |  |  |
+| order | [int32](#int32) |  |  |
+| phase_id | [string](#string) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_phase-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_phase.proto
+
+
+
+<a name="hackathon-entities-PublicPhase"></a>
+
+### PublicPhase
+A phase as the public sees it. Carries no capabilities.
+See PublicHackathon for why this entity exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_project-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_project.proto
+
+
+
+<a name="hackathon-entities-PublicProject"></a>
+
+### PublicProject
+A project as the public sees it. Only approved projects and no comments.
+See PublicHackathon for why this entity exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| title | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| image | [string](#string) | optional |  |
+| track_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_submission-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_submission.proto
+
+
+
+<a name="hackathon-entities-PublicSubmission"></a>
+
+### PublicSubmission
+A final submission as the public sees it. Only approved projects and no comments.
+See PublicHackathon for why this entity exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| result | [string](#string) | optional |  |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_team-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_team.proto
+
+
+
+<a name="hackathon-entities-PublicTeam"></a>
+
+### PublicTeam
+A team as the public sees it: a member_count rather than members.
+See PublicHackathon for why this entity exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) | optional |  |
+| project_id | [string](#string) |  |  |
+| member_count | [int32](#int32) |  |  |
+| submissions | [PublicSubmission](#hackathon-entities-PublicSubmission) | repeated | Final submissions only; see PublicSubmission. |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_track-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_track.proto
+
+
+
+<a name="hackathon-entities-PublicTrack"></a>
+
+### PublicTrack
+A track as the public sees it.
+See PublicHackathon for why this entity exists.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_entities_public_hackathon-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/entities/public_hackathon.proto
+
+
+
+<a name="hackathon-entities-PublicHackathon"></a>
+
+### PublicHackathon
+The public view of one hackathon: everything a visitor with no account may
+see, and nothing else.
+
+These Public* messages exist as a family separate from Hackathon, Team,
+Project and the rest for one reason to avoid leaking user information so to be
+sure that the site complies with GDPR.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| logo | [string](#string) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| status | [HackathonStatus](#hackathon-entities-HackathonStatus) |  | Computed server-side from the dates, as on the participant-facing message. |
+| pages | [PublicPage](#hackathon-entities-PublicPage) | repeated | Only pages the organizers have made visible. |
+| tracks | [PublicTrack](#hackathon-entities-PublicTrack) | repeated |  |
+| phases | [PublicPhase](#hackathon-entities-PublicPhase) | repeated |  |
+| projects | [PublicProject](#hackathon-entities-PublicProject) | repeated | Approved projects only — a proposal nobody has accepted is not public. |
+| teams | [PublicTeam](#hackathon-entities-PublicTeam) | repeated |  |
+
+
+
+
+
+
+<a name="hackathon-entities-PublicHackathonSummary"></a>
+
+### PublicHackathonSummary
+One row of the public hackathon directory.
+Deliberately not PublicHackathon with the collections left empty
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| logo | [string](#string) | optional |  |
+| starts_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| ends_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
+| status | [HackathonStatus](#hackathon-entities-HackathonStatus) |  |  |
 
 
 
@@ -4392,6 +4712,125 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 
 
 
+<a name="hackathon_messages_public_svc_get_hackathon_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/public_svc/get_hackathon_request.proto
+
+
+
+<a name="hackathon-messages-public_svc-GetHackathonRequest"></a>
+
+### GetHackathonRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon_id | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_public_svc_get_hackathon_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/public_svc/get_hackathon_response.proto
+
+
+
+<a name="hackathon-messages-public_svc-GetHackathonResponse"></a>
+
+### GetHackathonResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathon | [hackathon.entities.PublicHackathon](#hackathon-entities-PublicHackathon) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_public_svc_list_hackathons_request-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/public_svc/list_hackathons_request.proto
+
+
+
+<a name="hackathon-messages-public_svc-ListHackathonsRequest"></a>
+
+### ListHackathonsRequest
+Request for public hackathons served to the public.
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="hackathon_messages_public_svc_list_hackathons_response-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/messages/public_svc/list_hackathons_response.proto
+
+
+
+<a name="hackathon-messages-public_svc-ListHackathonsResponse"></a>
+
+### ListHackathonsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hackathons | [hackathon.entities.PublicHackathonSummary](#hackathon-entities-PublicHackathonSummary) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
 <a name="hackathon_messages_team_svc_assign_user_request-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -5609,6 +6048,36 @@ casbin role for this hackathon; `is_waiting` is false once approved.
 | ExportPreferences | [messages.project_svc.ExportPreferencesRequest](#hackathon-messages-project_svc-ExportPreferencesRequest) | [messages.project_svc.ExportPreferencesResponse](#hackathon-messages-project_svc-ExportPreferencesResponse) |  |
 | Edit | [messages.project_svc.EditRequest](#hackathon-messages-project_svc-EditRequest) | [messages.project_svc.EditResponse](#hackathon-messages-project_svc-EditResponse) |  |
 | Delete | [messages.project_svc.DeleteRequest](#hackathon-messages-project_svc-DeleteRequest) | [messages.project_svc.DeleteResponse](#hackathon-messages-project_svc-DeleteResponse) |  |
+
+ 
+
+
+
+<a name="hackathon_public_service-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## hackathon/public_service.proto
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="hackathon-PublicService"></a>
+
+### PublicService
+Everything an anonymous visitor may read, and the only service that serves
+them. Every method here is readable without a token and returns data for public
+hackathons only. A private hackathon is answered as NotFound rather than
+PermissionDenied: its existence is not a visitor&#39;s business either.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| ListHackathons | [messages.public_svc.ListHackathonsRequest](#hackathon-messages-public_svc-ListHackathonsRequest) | [messages.public_svc.ListHackathonsResponse](#hackathon-messages-public_svc-ListHackathonsResponse) | The public hackathon directory. |
+| GetHackathon | [messages.public_svc.GetHackathonRequest](#hackathon-messages-public_svc-GetHackathonRequest) | [messages.public_svc.GetHackathonResponse](#hackathon-messages-public_svc-GetHackathonResponse) | One public hackathon and everything published about it, in a single call. |
 
  
 

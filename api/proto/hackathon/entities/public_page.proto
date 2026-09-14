@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// A content page as the public sees it. Carries no author and no timestamps.
+// Only pages with visible = true ever become one of these.
+// See PublicHackathon for why this entity exists.
+message PublicPage {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  int32 order = 4;
+  optional string phase_id = 5;
+}

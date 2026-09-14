@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package hackathon;
+
+import "hackathon/messages/public_svc/get_hackathon_request.proto";
+import "hackathon/messages/public_svc/get_hackathon_response.proto";
+import "hackathon/messages/public_svc/list_hackathons_request.proto";
+import "hackathon/messages/public_svc/list_hackathons_response.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon";
+
+// Everything an anonymous visitor may read, and the only service that serves
+// them. Every method here is readable without a token and returns data for public
+// hackathons only. A private hackathon is answered as NotFound rather than
+// PermissionDenied: its existence is not a visitor's business either.
+service PublicService {
+  // The public hackathon directory.
+  rpc ListHackathons(hackathon.messages.public_svc.ListHackathonsRequest) returns (hackathon.messages.public_svc.ListHackathonsResponse);
+  // One public hackathon and everything published about it, in a single call.
+  rpc GetHackathon(hackathon.messages.public_svc.GetHackathonRequest) returns (hackathon.messages.public_svc.GetHackathonResponse);
+}

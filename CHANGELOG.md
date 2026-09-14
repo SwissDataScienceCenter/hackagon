@@ -18,6 +18,16 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- A public hackathon now has a public site. Anyone can browse it without an
+  account: the information pages the organisers wrote — schedule, rules, FAQ —
+  plus the projects being built and the teams building them, reached from a row
+  of tabs. Until now a visitor saw a single page carrying the hackathon's name
+  and description and nothing else.
+- Teams on that public site are shown as a headcount rather than a list of
+  names. People registered for these hackathons without being told their name
+  would appear on a public web page, so no participant's name or email address
+  is published.
+
 ### Changed
 
 ### Fixed

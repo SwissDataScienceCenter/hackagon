@@ -62,6 +62,29 @@ func computeHackathonStatus(startsAt, endsAt *time.Time, now time.Time) hackEnts
 	return hackEnts.HackathonStatus_HACKATHON_STATUS_ACTIVE
 }
 
+// optionalString renders an ent optional string as the proto3 optional it maps
+// to. Ent stores "not set" as the empty string; proto3 cannot tell empty from
+// unset for a plain string, so an optional field is generated as a pointer and
+// nil is what "unset" looks like.
+func optionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+
+	return &s
+}
+
+// optionalTime renders an ent nullable time as a proto timestamp, nil staying
+// nil. Dereferencing is guarded because a hackathon with no dates is an
+// ordinary row, not an error.
+func optionalTime(t *time.Time) *timestamppb.Timestamp {
+	if t == nil {
+		return nil
+	}
+
+	return timestamppb.New(*t)
+}
+
 func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon {
 	e := &hackEnts.Hackathon{
 		Id:         h.ID.String(),

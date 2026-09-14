@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// A track as the public sees it.
+// See PublicHackathon for why this entity exists.
+message PublicTrack {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
