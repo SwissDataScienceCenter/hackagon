@@ -78,14 +78,15 @@
     // from becoming a hydration mismatch.
     const boundary = $derived(nextBoundary(currentPhase, nextPhase, new Date(), declared));
 
-    // The two conditions deliberately kept out of the banner (see `stateAlerts`):
-    // untidy rather than blocking, so an organiser reads them here without being
-    // interrupted by them elsewhere.
+    // Deliberately kept out of the banner (see `stateAlerts`): untidy rather than
+    // blocking, so an organiser reads it here without being interrupted by it
+    // elsewhere. Organiser-only, because it is a prompt to act.
     //
-    // Both stay organiser-only, because both are prompts to act. A participant
-    // reading "no phase is declared current" learns nothing they can use — with no
-    // declaration the dates decide, which is what a timeline looks like anyway.
-    const noCurrentPhase = $derived(organiserVoice && hasState && currentPhase === null);
+    // Its counterpart — "no phase is declared current" — used to sit beside it and
+    // is gone, along with the whole heading block below. With no phase running the
+    // card had a heading that named nothing and a footnote restating it; what an
+    // organiser can act on is the capability list, and what a participant wants is
+    // the timeline. Neither needs announcing that there is nothing to announce.
     const phaseEnded = $derived(
         organiserVoice && currentPhase?.endsAt !== undefined && currentPhase.endsAt < new Date(),
     );
@@ -135,31 +136,34 @@
   leads the page and is different in kind from the cards below it. Same
   distinction CapabilitiesPanel draws for the same reason.
 -->
-<section class="card flex flex-col gap-4 border-line-strong p-5" aria-labelledby="right-now">
-    <span class="meta">Right now</span>
+<section
+    class="card flex flex-col gap-4 border-line-strong p-5"
+    aria-labelledby={currentPhase ? 'right-now' : undefined}
+    aria-label={currentPhase ? undefined : 'Right now'}
+>
+    <!-- The whole header is the phase, so with no phase there is no header: the
+         card opens on what is actually open. The section keeps its name for a
+         screen reader either way — an unnamed <section> is not a landmark. -->
+    {#if currentPhase}
+        <span class="meta">Right now</span>
 
-    <div class="flex flex-col gap-1">
-        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            {#if currentPhase}
+        <div class="flex flex-col gap-1">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <h2 class="m-0 text-section text-ink" id="right-now">{currentPhase.name}</h2>
                 <span class="badge badge-info">{phaseBadge}</span>
-            {:else}
-                <h2 class="m-0 text-section text-ink-3" id="right-now">No phase is running</h2>
-            {/if}
-            {#if boundary}
-                <span class="ms-auto"><Countdown {boundary} /></span>
-            {/if}
-        </div>
+                {#if boundary}
+                    <span class="ms-auto"><Countdown {boundary} /></span>
+                {/if}
+            </div>
 
-        {#if currentPhase}
             <span class="tnum text-xs text-ink-3">
                 {formatPhaseRange(currentPhase.startsAt, currentPhase.endsAt)}
             </span>
             {#if currentPhase.description}
                 <p class="prose m-0 pt-1 text-xs">{currentPhase.description}</p>
             {/if}
-        {/if}
-    </div>
+        </div>
+    {/if}
 
     {#if !hasState}
         <!-- Nothing is enabled and nothing can be, so listing six closed
@@ -264,16 +268,17 @@
                 class="h-3 w-3 shrink-0 self-center text-ink-3 group-hover:text-accent-ink"
                 aria-hidden="true"
             />
+            {#if !currentPhase && boundary}
+                <!-- With no phase heading this is the countdown's only home, and it
+                     belongs here anyway: with nothing running it counts to the next
+                     phase's start, which is the phase this line names. -->
+                <span class="ms-auto"><Countdown {boundary} /></span>
+            {/if}
         </a>
     {/if}
 
-    {#if noCurrentPhase || phaseEnded || datesAreAGuide}
+    {#if phaseEnded || datesAreAGuide}
         <div class="flex flex-col gap-1 border-t border-line pt-3">
-            {#if noCurrentPhase}
-                <span class="text-xs text-ink-3">
-                    No phase is declared current, so the timeline follows the dates alone.
-                </span>
-            {/if}
             {#if phaseEnded}
                 <span class="text-xs text-ink-3">
                     This phase's dates have passed — it stays current until you change it.

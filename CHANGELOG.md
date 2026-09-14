@@ -20,6 +20,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- A hackathon overview with no phase running no longer opens with "No phase is
+  running" and a footnote saying the timeline follows the dates alone. The card
+  now starts with what people can actually do; if a phase is coming up, the
+  countdown to it sits on the "Next" line at the foot.
+
 ### Fixed
 
 ## [0.9.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.0...v0.9.1) - 2026-09-11
