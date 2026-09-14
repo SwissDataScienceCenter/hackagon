@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package hackathon.messages.public_svc;
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/messages/public_svc";
+
+// Request for public hackathons served to the public.
+message ListHackathonsRequest {}

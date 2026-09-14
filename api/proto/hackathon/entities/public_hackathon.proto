@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package hackathon.entities;
+
+import "google/protobuf/timestamp.proto";
+import "hackathon/entities/hackathon_status.proto";
+import "hackathon/entities/public_page.proto";
+import "hackathon/entities/public_phase.proto";
+import "hackathon/entities/public_project.proto";
+import "hackathon/entities/public_team.proto";
+import "hackathon/entities/public_track.proto";
+
+option go_package = "github.com/swissdatasciencecenter/hackagon/components/backend/internal/proto/hackathon/entities";
+
+// The public view of one hackathon: everything a visitor with no account may
+// see, and nothing else.
+//
+// These Public* messages exist as a family separate from Hackathon, Team,
+// Project and the rest for one reason to avoid leaking user information so to be
+// sure that the site complies with GDPR.
+message PublicHackathon {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  optional string logo = 4;
+  optional google.protobuf.Timestamp starts_at = 5;
+  optional google.protobuf.Timestamp ends_at = 6;
+  // Computed server-side from the dates, as on the participant-facing message.
+  HackathonStatus status = 7;
+
+  // Only pages the organizers have made visible.
+  repeated PublicPage pages = 8;
+  repeated PublicTrack tracks = 9;
+  repeated PublicPhase phases = 10;
+  // Approved projects only — a proposal nobody has accepted is not public.
+  repeated PublicProject projects = 11;
+  repeated PublicTeam teams = 12;
+}
+
+// One row of the public hackathon directory.
+// Deliberately not PublicHackathon with the collections left empty
+message PublicHackathonSummary {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  optional string logo = 4;
+  optional google.protobuf.Timestamp starts_at = 5;
+  optional google.protobuf.Timestamp ends_at = 6;
+  HackathonStatus status = 7;
+}

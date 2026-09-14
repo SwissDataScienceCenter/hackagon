@@ -68,6 +68,9 @@ func NewServer(
 	userService := NewUserService(dbClient, enf)
 	hackathonService := NewHackathonService(dbClient, enf)
 	pageService := NewPageService(dbClient, enf)
+	// No enforcer: its callers are anonymous, so the gate is the hackathon's own
+	// visibility column rather than a casbin subject. See PublicService.
+	publicService := NewPublicService(dbClient)
 	phaseService := NewPhaseService(dbClient, enf)
 	trackService := NewTrackService(dbClient, enf)
 	projectService := NewProjectService(dbClient, enf)
@@ -79,6 +82,7 @@ func NewServer(
 	userSvc.RegisterUserServiceServer(server, userService)
 	hackathonSvc.RegisterHackathonServiceServer(server, hackathonService)
 	hackathonSvc.RegisterPageServiceServer(server, pageService)
+	hackathonSvc.RegisterPublicServiceServer(server, publicService)
 	hackathonSvc.RegisterPhaseServiceServer(server, phaseService)
 	hackathonSvc.RegisterTrackServiceServer(server, trackService)
 	hackathonSvc.RegisterProjectServiceServer(server, projectService)
