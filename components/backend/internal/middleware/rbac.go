@@ -104,14 +104,7 @@ const (
 	Create
 	Propose
 	Join
-	// View is "you may see that this hackathon exists and what it asks of
-	// you". Read is the members' verb and carries the participant roster.
-	// Keeping them apart is what lets AllowPublicHackathonAccess grant the
-	// first without the second, and it fails safe: a new handler gated on
-	// Read is private until somebody types View.
-	//
-	// Casbin has no action hierarchy, so Read does not imply View. The roles
-	// that hold Read are granted View explicitly in defaultPolicies.
+	// Read is restricted to people who have joined the hackathon, but View is for anyone.
 	View
 )
 
@@ -183,7 +176,7 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{HackathonOrganizer.String(), "/hackathon/*", Hackathon.String(), Create.String()},
 		// Owner can read owned hackathon
 		{Owner.String(), "/hackathon/*", Hackathon.String(), Read.String()},
-		// ...and view it, which Read does not imply. See the Permission enum.
+		// Owners can view it, which Read does not imply.
 		{Owner.String(), "/hackathon/*", Hackathon.String(), View.String()},
 		// Owner can write owned hackathon
 		{Owner.String(), "/hackathon/*", Hackathon.String(), Write.String()},
@@ -209,7 +202,7 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "/hackathon/*", Project.String(), Propose.String()},
 		// Member can read joined hackathon
 		{Member.String(), "/hackathon/*", Hackathon.String(), Read.String()},
-		// ...and view it, for the same reason as the Owner row above.
+		// Member can view it, which Read does not imply.
 		{Member.String(), "/hackathon/*", Hackathon.String(), View.String()},
 		// Member can read hackathon pages
 		{Member.String(), "/hackathon/*", Page.String(), Read.String()},
@@ -244,13 +237,7 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		{Owner.String(), "/hackathon/*", Vote.String(), Read.String()},
 	}
 
-	// AddPoliciesEx, not AddPolicies. The plain form is all-or-nothing: casbin
-	// reports the batch as already present if *any single* row of it is
-	// (model.HasPolicies returns on the first hit) and then writes none of
-	// them, returning false and no error. On every database that already holds
-	// these rows -- which is every deployed one -- that silently discards any
-	// row added to this table. The Ex form adds what is missing and skips the
-	// rest, which is what this function has always meant.
+	// AddPoliciesEx adds what is missing and skips the rest.
 	if _, err := e.AddPoliciesEx(policies); err != nil {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
 	}
