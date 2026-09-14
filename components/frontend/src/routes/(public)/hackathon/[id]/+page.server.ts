@@ -5,6 +5,7 @@ import {
   publicHackathonClient,
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
+import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
 // Shared and tested, because it is subtle: a session can carry a user and a
 // stale accessToken at once. See $lib/server/session.
 import { usableSession } from "$lib/server/session"
@@ -13,15 +14,24 @@ import { usableSession } from "$lib/server/session"
 import type { CustomSession } from "../../../../auth.d"
 
 /**
- * Whether this visitor already holds a participant row in this hackathon.
+ * Whether this visitor is a *confirmed* member of this hackathon — one the
+ * member view will actually serve.
  *
- * `list({ participantId })` is the only call that answers it. Every other read
- * reports a public hackathon to everybody — `Create` and `Edit` write the
- * `*, /hackathon/<id>, hackathon, read` casbin row for a public one
- * (`hackathon_service.go:93`, `:934`) — so presence in an unfiltered list proves
- * nothing, and `Get` returns the roster without saying which member is the
- * caller. `ViewerMembership` is populated on `list` only when `participantId` is
- * supplied (`hackathon_service.go:1514`), which is the same filter.
+ * The casbin role, not the participant row. Joining a public hackathon writes a
+ * waitlisted row and no role at all (`hackathon_service.go:629`), and
+ * `hackathon.get` — which the `/my/hackathon/[id]` layout calls first — wants
+ * `hackathon:read`, which only a role carries. So "has a participant row" sends
+ * somebody still waiting to a page that answers 403, and this page has just
+ * redirected them away from the one page they can read.
+ *
+ * `is_waiting` would nearly do, but not quite: `grantMembership` writes the role
+ * first and clears the flag second, so a confirmation that failed halfway leaves
+ * a member who still shows as waiting. The role is what the backend enforces, so
+ * the role is what decides.
+ *
+ * `list({ participantId })` is the only call that answers it — `ViewerMembership`
+ * is populated only when `participantId` is supplied
+ * (`hackathon_service.go:1514`).
  *
  * The filter takes the *platform* user's uuid, not Keycloak's `sub`, hence
  * `whoAmI` first: `locals.platformUser` is set by the hook for protected routes
@@ -31,7 +41,7 @@ import type { CustomSession } from "../../../../auth.d"
  * An authorized client built here rather than taken from `event.locals.grpc`,
  * which the hook only creates for protected routes.
  */
-async function isParticipant(
+async function isConfirmedMember(
   event: Parameters<PageServerLoad>[0],
 ): Promise<boolean> {
   const session = (await event.locals.auth()) as CustomSession | null
@@ -42,8 +52,12 @@ async function isParticipant(
     const { user } = await grpc.user.whoAmI({})
     if (!user) return false
     const { hackathons } = await grpc.hackathon.list({ participantId: user.id })
+    const mine = hackathons.find((h) => h.id === event.params.id)
 
-    return hackathons.some((h) => h.id === event.params.id)
+    return (
+      mine?.viewerMembership?.role !== undefined &&
+      mine.viewerMembership.role !== HackathonRole.HACKATHON_ROLE_UNSPECIFIED
+    )
   } catch {
     // NOT_FOUND from `whoAmI` is a first sign-in whose platform row nothing has
     // created yet — the (app) hook does that on the first protected request, and
@@ -63,24 +77,25 @@ export const load: PageServerLoad = async (event) => {
   // them back, leaving them unable to read even the public page.
   const signedIn = Boolean(event.locals.session?.user)
 
-  // Members get the member view of the same hackathon. Only *members* — being
-  // signed in used to be enough, and the layout below refuses anyone who is not
-  // a confirmed participant, so a signed-in visitor following a link to a public
-  // hackathon was answered with "You are not a confirmed member of this
-  // hackathon". That is the one person this page exists for: the join CTA at the
-  // foot is what they came for, so they now get the public page and its button.
+  // Confirmed members get the member view of the same hackathon. Only confirmed
+  // ones — being signed in used to be enough, and the layout below refuses
+  // anyone who is not a confirmed member, so a signed-in visitor following a
+  // link to a public hackathon was answered with "You are not a confirmed member
+  // of this hackathon". That is the one person this page exists for: the join
+  // CTA at the foot is what they came for, so they get the public page and its
+  // button.
   //
-  // A waitlisted participant is redirected too, and lands somewhere real: they
-  // hold the public read row like everybody else, so `hackathon.get` serves them
-  // and the overview names them "Waitlisted".
-  if (signedIn && (await isParticipant(event))) {
+  // A waitlisted visitor stays here too, and that is the fix rather than a
+  // shortfall: the public page is genuinely everything they may read until an
+  // organizer approves them.
+  if (signedIn && (await isConfirmedMember(event))) {
     redirect(302, `/my/hackathon/${event.params.id}/overview`)
   }
 
-  // `list` filtered to public, not `get`. Both are readable anonymously for a
-  // public hackathon, but `get` also returns the member roster, and an about
-  // page has no business handing that to the internet. `list` carries
-  // everything this page renders — name, description, dates, status.
+  // `list` filtered to public, not `get`. `get` is closed to anybody who has not
+  // joined, because it returns the member roster and an about page has no
+  // business handing that to the internet. `list` carries everything this page
+  // renders — name, description, dates, status.
   //
   // It takes no id filter, so the match happens here.
   const { hackathons } = await publicHackathonClient().list({
