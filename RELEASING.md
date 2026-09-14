@@ -24,13 +24,16 @@ chart lint, build, tests, and an image build. That is the only gate in front of
 
 ## Deployment
 
-There are two deployments. Only one of them exists today.
+Two clusters, both installed from the Helm chart by the GitOps setup in
+`sdsc-ordes/cloud-infra` — a base `values.yaml` plus per-cluster overrides. The
+only thing that differs between them is which images they pull.
 
-### The temporary one — <https://app.hackagon.dev.renku.ch>
+| Cluster | Images                                       | Moves when                       |
+| ------- | -------------------------------------------- | -------------------------------- |
+| dev     | `temporary/*:latest`, `pullPolicy: Always`   | anything is merged to `main`     |
+| prod    | chart defaults — `release/*` at `appVersion` | a new chart version is installed |
 
-It runs `temporary/*:latest` with `imagePullPolicy: Always`. Every push to
-`main` rebuilds that tag, so this site serves whatever was merged last — from
-the next container restart onwards.
+### dev follows `main`
 
 ```
 merge to main ──► CI rebuilds temporary/*:latest ──► next container restart
@@ -46,23 +49,30 @@ kubectl rollout restart deploy/hackagon-frontend
 
 To see which build it is serving, read the version at the bottom of the page.
 
+`pullPolicy: Always` is what makes this work. The chart defaults to
+`IfNotPresent`, which never re-pulls a moving tag — the node would keep serving
+the image it first fetched.
+
 Every push also publishes an immutable tag beside `latest` — the version plus
-the first 12 characters of the commit, e.g. `0.8.0-efc7c9ace429`. `latest` gets
+the first 12 characters of the commit, e.g. `0.9.1-848209cd2c52`. `latest` gets
 overwritten; those never do, so a specific build can be pinned:
 
 ```bash
---set frontend.image.tag=0.8.0-efc7c9ace429
+--set frontend.image.tag=0.9.1-848209cd2c52
 --set frontend.image.pullPolicy=IfNotPresent
 ```
 
 `skopeo list-tags docker://<repository>` shows which tags exist.
 
-### The real one — not set up yet
+### prod follows releases
 
-dev and prod will be installed from the Helm chart, which names the app release
-it deploys in `appVersion`. Such a deployment ignores `latest` completely and
-changes only when someone installs a new chart version. How it will be set up is
-not decided yet, so this file does not describe it.
+No image overrides at all. With `tag: ""` the chart falls back to `appVersion`,
+and release builds tag their images with the bare version, so
+`appVersion: "0.9.1"` resolves to `release/backend-service:0.9.1` — an image
+that exists because a `v*` tag built it.
+
+Nothing merged to `main` can reach prod. It changes only when someone bumps
+`appVersion`, publishes the chart, and installs that chart version.
 
 ## Three version numbers
 

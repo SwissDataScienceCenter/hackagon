@@ -8,18 +8,22 @@ baseDomain: "example.com"
 # Images
 # ============================================================
 # An image address is `repository:tag`. Two repositories exist:
-#   release/    one image per `v*` tag       — what you deploy
-#   temporary/  one image per push to main   — for testing, moves constantly
+#   release/    one image per `v*` tag       — what prod runs
+#   temporary/  one image per push to main   — what dev runs, moves constantly
 #
-# If there is no `tag` specified: then the chart then uses its the
-# `appVersion` from Chart.yaml,
+# With no `tag` set, the chart falls back to `appVersion` from Chart.yaml.
+# Release builds tag their images with the bare version, so that resolves to an
+# image that exists. This is the prod arrangement: no image overrides at all.
 #
-# But for test deploys you might want to override this, with a
-# tagged image from the `temporary/` repository.
-#
-# To test against the head of `main`, override both keys, e.g.:
+# A cluster that should follow `main` instead overrides three keys per
+# component:
 #   --set frontend.image.repository=<registry>/temporary/frontend-service
 #   --set frontend.image.tag=latest
+#   --set frontend.image.pullPolicy=Always
+#
+# The pull policy is not optional there. The default `IfNotPresent` below never
+# re-pulls a moving tag, so the node would keep serving whichever image it
+# fetched first.
 #
 # ============================================================
 # Frontend
