@@ -43,7 +43,7 @@ func publicHackathon(ctx context.Context, dbClient *ent.Client, name string) str
 }
 
 var _ = Describe("Run", func() {
-	It("drops the wildcard read row an older build left behind", func() {
+	It("moves a hackathon published by an older build onto view", func() {
 		ctx := context.Background()
 		dbClient, _, enf := testutils.CreateTestServer()
 
@@ -62,6 +62,11 @@ var _ = Describe("Run", func() {
 		leaked, err = enf.CheckPermission("a-stranger", id, mw.Hackathon, mw.Read)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(leaked).To(BeFalse(), "a stranger can no longer read the hackathon")
+
+		// The other half: it is still public, so signing up still works.
+		canView, err := enf.CheckPermission("a-stranger", id, mw.Hackathon, mw.View)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(canView).To(BeTrue(), "a stranger can still view the hackathon")
 	})
 
 	It("is safe to run on a database that never had the row", func() {

@@ -351,6 +351,9 @@ type publicGrant struct {
 }
 
 // publicHackathonGrants is what "this hackathon is public" means: anyone can view it.
+//
+// Create and Edit write these rows, so a row added here reaches new public
+// hackathons and no existing one. Backfill it with a migration in internal/migrate.
 var publicHackathonGrants = []publicGrant{
 	{Hackathon, View},
 }
