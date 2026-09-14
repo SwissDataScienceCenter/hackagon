@@ -115,7 +115,10 @@ var _ = Describe("RBAC Enforcer", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(allowed).To(BeEquivalentTo(expected))
 			},
-			Entry("alice can read public h2", "alice", "h2", Hackathon, Read, true),
+			Entry("alice can view public h2", "alice", "h2", Hackathon, View, true),
+			Entry("alice cannot read public h2", "alice", "h2", Hackathon, Read, false),
+			Entry("a stranger can view public h2", "mallory", "h2", Hackathon, View, true),
+			Entry("a stranger cannot read public h2", "mallory", "h2", Hackathon, Read, false),
 			Entry("alice can't write public h1", "alice", "h1", Hackathon, Write, true),
 			Entry("bob can read public h2", "bob", "h1", Hackathon, Read, true),
 			Entry("bob can't write public h1", "bob", "h1", Hackathon, Write, false),

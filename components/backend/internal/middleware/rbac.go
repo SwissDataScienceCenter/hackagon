@@ -25,6 +25,9 @@ var modelFile string
 
 const minPolicyFields = 2 // casbin policy tuples have at least 2 fields: subject and role
 
+// anySubject including anonymous users.
+const anySubject = "*"
+
 type Role int
 
 const (
@@ -342,22 +345,49 @@ func (e *Enforcer) RemoveGlobalRole(user string, role Role) (bool, error) {
 	return e.enforcer.RemoveNamedGroupingPolicy("g2", user, role.String())
 }
 
-func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
-	return e.enforcer.AddPolicy(
-		"*",
-		hackathonIdToPath(hackathonId),
-		Hackathon.String(),
-		Read.String(),
-	)
+type publicGrant struct {
+	obj  ObjectType
+	perm Permission
 }
 
+// publicHackathonGrants is what "this hackathon is public" means: anyone can view it.
+var publicHackathonGrants = []publicGrant{
+	{Hackathon, View},
+}
+
+// AllowPublicHackathonAccess grants every publicHackathonGrants row to anyone.
+func (e *Enforcer) AllowPublicHackathonAccess(hackathonId string) (bool, error) {
+	domain := hackathonIdToPath(hackathonId)
+	changed := false
+	for _, g := range publicHackathonGrants {
+		added, err := e.enforcer.AddPolicy(anySubject, domain, g.obj.String(), g.perm.String())
+		if err != nil {
+			return changed, err
+		}
+		changed = changed || added
+	}
+
+	return changed, nil
+}
+
+// RemovePublicHackathonAccess revokes what AllowPublicHackathonAccess granted.
 func (e *Enforcer) RemovePublicHackathonAccess(hackathonId string) (bool, error) {
-	return e.enforcer.RemovePolicy(
-		"*",
-		hackathonIdToPath(hackathonId),
-		Hackathon.String(),
-		Read.String(),
-	)
+	domain := hackathonIdToPath(hackathonId)
+	changed := false
+	for _, g := range publicHackathonGrants {
+		removed, err := e.enforcer.RemovePolicy(
+			anySubject,
+			domain,
+			g.obj.String(),
+			g.perm.String(),
+		)
+		if err != nil {
+			return changed, err
+		}
+		changed = changed || removed
+	}
+
+	return changed, nil
 }
 
 func (e *Enforcer) AddPolicy(
@@ -369,7 +399,7 @@ func (e *Enforcer) AddPolicy(
 ) error {
 	var actualRole string
 	if role == nil {
-		actualRole = "*"
+		actualRole = anySubject
 	} else {
 		actualRole = role.String()
 	}
@@ -387,7 +417,7 @@ func (e *Enforcer) RemovePolicy(
 ) error {
 	var actualRole string
 	if role == nil {
-		actualRole = "*"
+		actualRole = anySubject
 	} else {
 		actualRole = role.String()
 	}

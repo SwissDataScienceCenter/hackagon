@@ -263,6 +263,41 @@ var _ = Describe("HackathonService", func() {
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.NotFound))
 		})
+
+		// Get answers with the participant roster, so being public must not be
+		// enough to reach it. Public grants View; this handler wants Read.
+		It("denies an anonymous caller, though the hackathon is public", func() {
+			_, err := client.Get(context.Background(), &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies a signed-in caller who is not a participant", func() {
+			token := testutils.CreateTestJWTToken("get-outsider")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.Get(ctx, &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("still serves a member", func() {
+			_, err := enf.AddRole("get-member", middleware.Member, createdID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken("get-member")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := client.Get(ctx, &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetHackathon().GetId()).To(Equal(createdID))
+		})
 	})
 
 	Describe("Join", func() {
@@ -2913,7 +2948,7 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetQuestions()).To(BeEmpty())
 			})
 
-			It("requires Read permission on a private hackathon", func() {
+			It("requires View permission on a private hackathon", func() {
 				// Narrowed from "requires Read" outright: a public hackathon's
 				// questions must be answerable before Join, and a non-member holds
 				// no read grant — so requiring one deadlocked signup. A private

@@ -10,10 +10,13 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent"
+	enthackathon "github.com/swissdatasciencecenter/hackagon/components/backend/ent/hackathon"
 	_ "github.com/swissdatasciencecenter/hackagon/components/backend/ent/runtime" // registers schema hooks and default values
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
+	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/migrate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 )
 
@@ -37,6 +40,36 @@ func seedAdminUser(ctx context.Context, dbClient *ent.Client, cfg *config.Config
 		return fmt.Errorf("create admin user: %w", err)
 	}
 	slog.Info("seeded admin user", "keycloak_id", cfg.Server.AdminKeycloakID)
+
+	return nil
+}
+
+// ensurePublicGrants re-grants publicHackathonGrants to every hackathon whose
+// visibility already says public.
+//
+// Visibility lives on the hackathon row, but what it *does* is a set of casbin
+// rows written when Create or Edit last ran, so the two can disagree: a grant
+// added to that set later reaches new public hackathons and no existing one,
+// because nothing re-runs Edit on them. This makes the visibility column the
+// authority on every boot, which it can afford to do because each grant is a
+// no-op once written.
+//
+// Not a migration -- it earns its keep every time publicHackathonGrants grows.
+// One-off repairs live in internal/migrate.
+func ensurePublicGrants(ctx context.Context, dbClient *ent.Client, enf *mw.Enforcer) error {
+	public, err := dbClient.Hackathon.Query().
+		Where(enthackathon.VisibilityEQ(enthackathon.VisibilityPublic)).
+		IDs(ctx)
+	if err != nil {
+		return fmt.Errorf("query public hackathons: %w", err)
+	}
+
+	for _, id := range public {
+		if _, err := enf.AllowPublicHackathonAccess(id.String()); err != nil {
+			return fmt.Errorf("grant public view on hackathon %s: %w", id, err)
+		}
+	}
+	slog.Info("ensured public hackathon grants", "hackathons", len(public))
 
 	return nil
 }
@@ -72,11 +105,22 @@ func main() {
 	}
 
 	// Create server with all middleware and services
-	server, cleanup, _, err := service.NewServer(dbClient, cfg, nil)
+	server, cleanup, enforcer, err := service.NewServer(dbClient, cfg, nil)
 	if err != nil {
 		logx.Fatal("create server", "err", err)
 	}
 	defer cleanup()
+
+	// After NewServer, which builds the enforcer, and before Serve, so no
+	// request is answered against a half-migrated policy table. Grants first:
+	// they add the rows the migration then makes obsolete, so a public
+	// hackathon is never briefly unreachable.
+	if err := ensurePublicGrants(context.Background(), dbClient, enforcer); err != nil {
+		logx.Fatal("ensure public grants", "err", err)
+	}
+	if err := migrate.Run(context.Background(), dbClient, enforcer); err != nil {
+		logx.Fatal("run migrations", "err", err)
+	}
 
 	// Listen
 	lc := net.ListenConfig{} //nolint:exhaustruct // all fields optional

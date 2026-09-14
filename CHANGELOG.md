@@ -27,6 +27,11 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Fixed
 
+- A public hackathon no longer hands its participant list to the internet.
+  Anyone could read the name, e-mail address and account id of everybody signed
+  up, without an account of their own. Signing up for a public hackathon, and
+  reading its registration questions before you do, work exactly as before.
+
 ## [0.9.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.0...v0.9.1) - 2026-09-11
 
 ## [0.9.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.8.0...v0.9.0) - 2026-09-11
