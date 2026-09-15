@@ -1,6 +1,7 @@
 {
   pkgs,
   service,
+  cnLib,
   ...
 }:
 pkgs.dockerTools.buildLayeredImage {
@@ -8,21 +9,20 @@ pkgs.dockerTools.buildLayeredImage {
   tag = service.version;
 
   contents = [
+    cnLib.image.etcGroupAndPasswd
     service
   ];
 
+  # Users come from a static /etc/passwd rather than `shadowSetup`, so the
+  # build needs no chroot: `enableFakechroot` relies on `proot`, which does
+  # not work on Darwin. Paths are relative to the image root, which is the
+  # working directory of the restricted fakeroot environment.
   fakeRootCommands = ''
-    ${pkgs.dockerTools.shadowSetup}
-    # Link API files, to execution folder.
-    mkdir -p /workspace/data/api
+    mkdir -p workspace/data/api
 
-    groupadd -r non-root -g 1000
-    useradd -r -g non-root -u 1000 non-root
-    chown -R non-root:non-root /workspace
-    chmod -R u+rw /workspace
+    chown -R 1000:1000 workspace
+    chmod -R u+rw workspace
   '';
-
-  enableFakechroot = true;
 
   config = {
     Entrypoint = [ "${service}/bin/${service.pname}" ];
