@@ -40,6 +40,7 @@ export interface Hackathon {
   tracks: Track[];
   projects: Project[];
   pages: Page[];
+  /** Also populated on List responses. */
   phases: Phase[];
   /**
    * Populated in List responses only when participant_id filter is set.
@@ -54,6 +55,8 @@ export interface Hackathon {
     | undefined;
   /** Populated in Get responses only. */
   owners: User[];
+  /** How many confirmed participants this hackathon has. */
+  participantCount?: number | undefined;
 }
 
 function createBaseHackathon(): Hackathon {
@@ -78,6 +81,7 @@ function createBaseHackathon(): Hackathon {
     viewerMembership: undefined,
     state: undefined,
     owners: [],
+    participantCount: undefined,
   };
 }
 
@@ -142,6 +146,9 @@ export const Hackathon: MessageFns<Hackathon> = {
     }
     for (const v of message.owners) {
       User.encode(v!, writer.uint32(162).fork()).join();
+    }
+    if (message.participantCount !== undefined) {
+      writer.uint32(168).int32(message.participantCount);
     }
     return writer;
   },
@@ -313,6 +320,14 @@ export const Hackathon: MessageFns<Hackathon> = {
           message.owners.push(User.decode(reader, reader.uint32()));
           continue;
         }
+        case 21: {
+          if (tag !== 168) {
+            break;
+          }
+
+          message.participantCount = reader.int32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -368,6 +383,11 @@ export const Hackathon: MessageFns<Hackathon> = {
         : undefined,
       state: isSet(object.state) ? HackathonState.fromJSON(object.state) : undefined,
       owners: globalThis.Array.isArray(object?.owners) ? object.owners.map((e: any) => User.fromJSON(e)) : [],
+      participantCount: isSet(object.participantCount)
+        ? globalThis.Number(object.participantCount)
+        : isSet(object.participant_count)
+        ? globalThis.Number(object.participant_count)
+        : undefined,
     };
   },
 
@@ -433,6 +453,9 @@ export const Hackathon: MessageFns<Hackathon> = {
     if (message.owners?.length) {
       obj.owners = message.owners.map((e) => User.toJSON(e));
     }
+    if (message.participantCount !== undefined) {
+      obj.participantCount = Math.round(message.participantCount);
+    }
     return obj;
   },
 
@@ -469,6 +492,7 @@ export const Hackathon: MessageFns<Hackathon> = {
       ? HackathonState.fromPartial(object.state)
       : undefined;
     message.owners = object.owners?.map((e) => User.fromPartial(e)) || [];
+    message.participantCount = object.participantCount ?? undefined;
     return message;
   },
 };

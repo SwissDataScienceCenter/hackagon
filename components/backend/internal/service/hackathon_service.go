@@ -1497,6 +1497,53 @@ func (s *HackathonService) RemoveOwner(
 	return &msgs.RemoveOwnerResponse{}, nil
 }
 
+// confirmedParticipantCounts counts the non-waiting participants of each given
+// hackathon, in one grouped query rather than one per row.
+//
+// Not taken from the participants edge: List already loads that edge filtered to
+// a single user when `participant_id` is set, so its length answers a different
+// question there. A separate aggregate cannot be confused with the roster, which
+// is the point — this number is safe to show anybody who may see the hackathon,
+// and the roster is not.
+func (s *HackathonService) confirmedParticipantCounts(
+	ctx context.Context,
+	hs []*ent.Hackathon,
+) (map[uuid.UUID]int, error) {
+	ids := make([]uuid.UUID, 0, len(hs))
+	for _, h := range hs {
+		ids = append(ids, h.ID)
+	}
+	counts := make(map[uuid.UUID]int, len(ids))
+	if len(ids) == 0 {
+		return counts, nil
+	}
+
+	// Tags are the DB column names, not Go's json convention: ent's GroupBy scan
+	// matches them against the columns it selected.
+	var rows []struct {
+		HackathonID uuid.UUID `json:"hackathon_id"` //nolint:tagliatelle // ent column name
+		Count       int       `json:"count"`
+	}
+	err := s.dbClient.Participant.Query().
+		Where(
+			entparticipant.HackathonIDIn(ids...),
+			entparticipant.IsWaitingEQ(false),
+		).
+		GroupBy(entparticipant.FieldHackathonID).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		slog.Error("count participants", "err", err)
+
+		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+	for _, r := range rows {
+		counts[r.HackathonID] = r.Count
+	}
+
+	return counts, nil
+}
+
 func (s *HackathonService) List(
 	ctx context.Context,
 	req *msgs.ListRequest,
@@ -1533,11 +1580,22 @@ func (s *HackathonService) List(
 				pq.Where(entparticipant.UserIDEQ(uid)).WithUser()
 			})
 	}
-	hs, err := q.Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
+	// Phases travel with every entry, because the public page has only List to
+	// ask and a schedule is what somebody deciding whether to take part wants.
+	// Creator and modifier come along because phaseEntryFromEnt reads both
+	// without a nil check.
+	hs, err := q.WithPhases(func(pq *ent.PhaseQuery) {
+		pq.WithCreator().WithModifier().WithPage()
+	}).Order(ent.Asc(enthackathon.FieldCreatedAt)).All(ctx)
 	if err != nil {
 		slog.Error("query hackathon", "err", err)
 
 		return nil, status.Error(codes.Internal, "couldn't query database")
+	}
+
+	counts, err := s.confirmedParticipantCounts(ctx, hs)
+	if err != nil {
+		return nil, err
 	}
 
 	now := time.Now()
@@ -1562,6 +1620,8 @@ func (s *HackathonService) List(
 			}
 		}
 		e := hackathonEntryFromEnt(h, now)
+		c := int32(counts[h.ID]) //nolint:gosec // a participant count cannot overflow int32
+		e.ParticipantCount = &c
 		if len(wanted) > 0 {
 			if _, ok := wanted[e.GetStatus()]; !ok {
 				continue

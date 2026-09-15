@@ -35,9 +35,17 @@ const VISIBILITY_LABEL: Partial<Record<number, string>> = {
   1: "Public",
   2: "Private",
 }
+// Visibility is a property, not a lifecycle state, so it spends as little of the
+// status palette as it can. Private was `badge-danger` — red on a perfectly
+// ordinary setting, which read as something having gone wrong rather than as a
+// hackathon nobody outside is meant to see.
+//
+// The tint goes on the exception instead: public is what a hackathon on a list of
+// hackathons is assumed to be, so it says so in neutral, and private is the one
+// worth catching an eye. The padlock and globe beside them carry the rest.
 const VISIBILITY_VARIANT: Partial<Record<number, string>> = {
-  1: "badge-info",
-  2: "badge-danger",
+  1: "badge-neutral",
+  2: "badge-info",
 }
 
 export function visibilityLabel(v: number): string | undefined {

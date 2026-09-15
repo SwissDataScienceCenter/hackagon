@@ -1,5 +1,6 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
+    import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
     import CurrentStateCard from '$lib/components/hackathon/CurrentStateCard.svelte';
     import ParticipationCard from '$lib/components/hackathon/ParticipationCard.svelte';
     import TrackBreakdown from '$lib/components/hackathon/TrackBreakdown.svelte';
@@ -110,4 +111,22 @@
             />
         {/if}
     </div>
+
+    <!-- What the hackathon is, in the organiser's own words and through the same
+         component the public page and the editor's preview use.
+
+         Last, and deliberately: what a member came back for is their state, and
+         this is what they read once. But a member who never opens the About tab
+         never saw it at all, while a stranger gets nothing else — which is a
+         strange way round. Heading rather than bare prose, because after a column
+         of cards an unlabelled block of text reads as something that failed to
+         load. -->
+    {#if data.description}
+        <section class="flex flex-col gap-3">
+            <h2 class="text-title">About this hackathon</h2>
+            <div class="max-w-3xl">
+                <MarkdownContent content={data.description} />
+            </div>
+        </section>
+    {/if}
 </div>

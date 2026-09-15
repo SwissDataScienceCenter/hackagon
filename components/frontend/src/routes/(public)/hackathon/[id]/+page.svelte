@@ -17,6 +17,8 @@
     startsAt={hackathon.startsAt}
     endsAt={hackathon.endsAt}
     status={hackathon.status}
+    phases={hackathon.phases}
+    participantCount={hackathon.participantCount}
     signedIn={data.signedIn}
-    waitlisted={data.waitlisted}
+    standing={data.standing}
 />
