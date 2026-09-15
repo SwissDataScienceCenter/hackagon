@@ -1,9 +1,5 @@
-// Package migrate holds one-off repairs to data that an older build wrote
-// differently.
-//
-// Everything here is meant to be deleted. Once every live database has booted
-// the build that introduced a migration, that migration can never fire again;
-// each one says which release it can go after.
+// Package migrate holds one-off repairs to data an older build wrote
+// differently. Everything here is meant to be deleted; each says when.
 package migrate
 
 import (
@@ -16,28 +12,16 @@ import (
 	mw "github.com/swissdatasciencecenter/hackagon/components/backend/internal/middleware"
 )
 
-// Run applies every outstanding migration. Called once at startup, after the
-// enforcer is built and before the server serves.
+// Run applies every outstanding migration, once at startup.
 func Run(ctx context.Context, dbClient *ent.Client, enf *mw.Enforcer) error {
 	return publicHackathonsGrantViewNotRead(ctx, dbClient, enf)
 }
 
-// publicHackathonsGrantViewNotRead moves already-public hackathons onto the
-// `view` grant and takes away the `read` one they were published with.
+// publicHackathonsGrantViewNotRead moves already-public hackathons onto `view`
+// and drops the `*` `read` row they were published with.
 //
-// `read` is what HackathonService.Get asks for, and Get answers with the
-// participant roster, so granting it to `*` put every participant's name and
-// e-mail address on the open internet. Public access is a `view` grant now, but
-// the rows are written when Create or Edit runs and nothing re-runs Edit on a
-// hackathon that is already public.
-//
-// Grant before revoke, so a public hackathon is never briefly unreachable.
-//
-// The revoke covers every hackathon, not only the public ones: the invariant is
-// that no hackathon carries such a row at all, and scoping it to public ones
-// would trust the old un-publish path to have cleaned up after itself. A nil
-// role is the `*` subject (see Enforcer.RemovePolicy), so this is the legacy row
-// exactly, and no method on the enforcer has to outlive the migration wanting it.
+// Grant before revoke, so none is briefly unreachable. The revoke covers every
+// hackathon, not just the public ones.
 //
 // Delete after 0.9.2.
 func publicHackathonsGrantViewNotRead(
@@ -62,6 +46,7 @@ func publicHackathonsGrantViewNotRead(
 		return fmt.Errorf("query hackathons: %w", err)
 	}
 	for _, id := range all {
+		// A nil role is the `*` subject, so this is the legacy row exactly.
 		if err := enf.RemovePolicy(nil, id.String(), mw.Hackathon, mw.Read); err != nil {
 			return fmt.Errorf("drop legacy public read on hackathon %s: %w", id, err)
 		}
