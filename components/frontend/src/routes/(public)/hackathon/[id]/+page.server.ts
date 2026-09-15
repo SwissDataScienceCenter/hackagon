@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit"
+import { error } from "@sveltejs/kit"
 import type { PageServerLoad } from "./$types"
 import {
   createAuthorizedGrpc,
@@ -23,9 +23,8 @@ type Membership = "member" | "waiting" | "none"
  * The casbin role, not the participant row. Joining a public hackathon writes a
  * waitlisted row and no role at all (`hackathon_service.go:629`), and
  * `hackathon.get` — which the `/my/hackathon/[id]` layout calls first — wants
- * `hackathon:read`, which only a role carries. So "has a participant row" sends
- * somebody still waiting to a page that answers 403, and this page has just
- * redirected them away from the one page they can read.
+ * `hackathon:read`, which only a role carries. So "has a participant row" would
+ * offer somebody still waiting a way into a page that answers 403.
  *
  * `is_waiting` would nearly do, but not quite: `grantMembership` writes the role
  * first and clears the flag second, so a confirmation that failed halfway leaves
@@ -38,8 +37,9 @@ type Membership = "member" | "waiting" | "none"
  * "neither": a participant row exists either way, a role does not.
  *
  * The three cases are kept apart rather than collapsed to a boolean because the
- * page says something different to each — the member leaves, the waiting are
- * told they are waiting, and everybody else is invited to register.
+ * foot of the page says something different to each — the member is offered the
+ * way in, the waiting are told they are waiting, and everybody else is invited
+ * to register.
  *
  * The filter takes the *platform* user's uuid, not Keycloak's `sub`, hence
  * `whoAmI` first: `locals.platformUser` is set by the hook for protected routes
@@ -86,22 +86,15 @@ export const load: PageServerLoad = async (event) => {
   // them back, leaving them unable to read even the public page.
   const signedIn = Boolean(event.locals.session?.user)
 
-  // Confirmed members get the member view of the same hackathon. Only confirmed
-  // ones — being signed in used to be enough, and the layout below refuses
-  // anyone who is not a confirmed member, so a signed-in visitor following a
-  // link to a public hackathon was answered with "You are not a confirmed member
-  // of this hackathon". That is the one person this page exists for: the join
-  // CTA at the foot is what they came for, so they get the public page and its
-  // button.
+  // Nobody is redirected away from here any more, member or not. This is the
+  // hackathon's one address, and what changes with your standing is the block at
+  // the foot: register, wait, or go in. Bouncing a member to a different-looking
+  // page the moment they signed in was the thing that made the two feel like two
+  // products rather than one seen from outside and in.
   //
-  // A waitlisted visitor stays here, and that is the fix rather than a
-  // shortfall: the public page is genuinely everything they may read until an
-  // organizer approves them. The CTA at the foot says so instead of offering to
-  // register them a second time.
+  // It is also what makes a link back out of the member area possible at all —
+  // before, following one landed you straight back where you came from.
   const standing = signedIn ? await membership(event) : "none"
-  if (standing === "member") {
-    redirect(302, `/my/hackathon/${event.params.id}/overview`)
-  }
 
   // `list` filtered to public, not `get`. `get` is closed to anybody who has not
   // joined, because it returns the member roster and an about page has no
@@ -122,10 +115,10 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     // What the CTA at the foot of the page switches on: register, sign in
-    // first, or wait. Not `session` itself — nothing on this page renders the
-    // visitor.
+    // first, wait, or go in. Not `session` itself — nothing on this page renders
+    // the visitor.
     signedIn,
-    waitlisted: standing === "waiting",
+    standing,
     hackathon: {
       id: hackathon.id,
       name: hackathon.name,

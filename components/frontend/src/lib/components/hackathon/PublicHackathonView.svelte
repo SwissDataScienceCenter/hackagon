@@ -14,7 +14,7 @@
         endsAt,
         status,
         signedIn,
-        waitlisted = false,
+        standing = 'none',
         preview = false,
     }: {
         id: string;
@@ -28,7 +28,7 @@
         /** Unused when `preview` is set — the preview draws no Join block. */
         signedIn?: boolean;
         /** Likewise unused in the preview. See JoinCta. */
-        waitlisted?: boolean;
+        standing?: 'member' | 'waiting' | 'none';
         /**
          * Drawn for an organiser checking their own page rather than for a
          * visitor. Everything is rendered the same; only the interaction is
@@ -97,7 +97,7 @@
                 {name}
                 {status}
                 signedIn={signedIn ?? false}
-                {waitlisted}
+                {standing}
             />
         {/if}
     </div>

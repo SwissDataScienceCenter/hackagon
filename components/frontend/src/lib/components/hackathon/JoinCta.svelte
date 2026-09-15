@@ -1,7 +1,7 @@
 <script lang="ts">
     // UserPlus, not the Mail of CtaSection: this section asks the reader to sign
     // up for something, not to get in touch about it.
-    import { UserPlus } from 'lucide-svelte';
+    import { UserPlus, ArrowRight } from 'lucide-svelte';
     import { signIn } from '@auth/sveltekit/client';
     import { resolve } from '$app/paths';
     import { isFinished } from '$lib/utils/hackathonStatus';
@@ -15,19 +15,20 @@
         name,
         status,
         signedIn,
-        waitlisted = false,
+        standing = 'none',
     }: {
         hackathonId: string;
         name: string;
         /** Raw HackathonStatus number, as the loader returns it. */
         status: number;
         /**
-         * Registered, and waiting for an organizer to confirm it. They are here
-         * rather than inside the hackathon because this page is all they may
-         * read until then, so offering them "Register" would invite them to do
-         * again the thing they are waiting on.
+         * This visitor's relationship to the hackathon, which is the only thing
+         * that changes between the page a stranger sees and the page a member
+         * sees. `member` is offered the way in, `waiting` is told they are
+         * waiting — offering either of them "Register" would invite them to do
+         * again the thing they have already done.
          */
-        waitlisted?: boolean;
+        standing?: 'member' | 'waiting' | 'none';
         /**
          * A session that can actually call the backend — not merely a cookie
          * carrying an identity. The loader decides this with `usableSession`, so
@@ -54,17 +55,36 @@
                sm:px-10 md:px-20"
     >
         <h2 class="text-display">
-            {waitlisted ? 'You have registered for ' + name : 'Take part in ' + name}
+            <!-- Three different sentences, because the three standings are three
+                 different situations: an invitation, a wait, and a door. -->
+            {standing === 'member'
+                ? 'You are taking part in ' + name
+                : standing === 'waiting'
+                  ? 'You have registered for ' + name
+                  : 'Take part in ' + name}
         </h2>
 
-        {#if waitlisted}
+        {#if standing === 'member'}
+            <!-- The one control a member needs here. Everything above is the
+                 hackathon as anybody sees it; this is the door. -->
+            <span class="badge {membershipBadgeVariant(false)}">
+                {membershipBadgeLabel(false, 0)}
+            </span>
+            <a
+                href={resolve(`/my/hackathon/${hackathonId}/overview`)}
+                class="btn btn-solid no-underline"
+            >
+                Enter the hackathon
+                <ArrowRight class="h-4 w-4" />
+            </a>
+        {:else if standing === 'waiting'}
             <!-- The same chip the dashboard row carries, so the word and the
                  colour for this state are decided in one place. The role
                  argument is inert while waiting — `membershipBadgeLabel`
                  answers "Waitlisted" whatever it is given — but it is passed
                  rather than dropped so the helper keeps one shape. -->
-            <span class="badge {membershipBadgeVariant(waitlisted)}">
-                {membershipBadgeLabel(waitlisted, 0)}
+            <span class="badge {membershipBadgeVariant(true)}">
+                {membershipBadgeLabel(true, 0)}
             </span>
             <p class="text-sm text-ink-2">
                 You are on the waiting list. The organizers confirm who takes part,

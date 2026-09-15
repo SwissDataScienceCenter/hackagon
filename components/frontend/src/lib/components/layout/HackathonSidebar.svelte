@@ -5,6 +5,8 @@
     import X from 'lucide-svelte/icons/x';
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
+    import ExternalLink from 'lucide-svelte/icons/external-link';
+    import { resolve } from '$app/paths';
     import SidebarNavSection from './SidebarNavSection.svelte';
     import { manageNav, memberNav } from '$lib/navigation/items';
     import { activeNavId } from '$lib/navigation/active';
@@ -382,4 +384,28 @@
             />
         {/if}
     </nav>
+
+    <!-- The way back out, at the foot and on every page of the hackathon rather
+         than in the hero, which the overview alone renders — somebody deep in
+         Submissions who wants to see what a visitor sees should not have to go
+         home first. Quiet, because leaving is not what this rail is for.
+
+         Only for a public hackathon: a private one has no page out there, and a
+         link to a 404 is worse than no link. -->
+    {#if !isPrivate}
+        <div class="shrink-0 border-t border-line p-2">
+            <a
+                href={resolve(`/hackathon/${hackathonId}`)}
+                title="Public page"
+                class="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-ink-3
+                       hover:bg-raised hover:text-ink-2
+                       {effectiveCollapsed ? 'justify-center px-0' : ''}"
+            >
+                <ExternalLink class="h-4 w-4 shrink-0" />
+                {#if !effectiveCollapsed}
+                    <span class="truncate">Public page</span>
+                {/if}
+            </a>
+        </div>
+    {/if}
 </aside>
