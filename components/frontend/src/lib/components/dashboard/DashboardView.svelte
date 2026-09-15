@@ -5,12 +5,12 @@
     import Plus from 'lucide-svelte/icons/plus';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import MembershipBadge from '$lib/components/hackathon/MembershipBadge.svelte';
+    import ExternalLink from 'lucide-svelte/icons/external-link';
     import { platformNav, type NavItem } from '$lib/navigation/items';
     import {
         canManageHackathon,
         canOpenHackathon,
-        membershipBadgeLabel,
-        membershipBadgeVariant,
     } from '$lib/utils/hackathonRole';
     import { isFinished, isPrivate, statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
     import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
@@ -233,20 +233,45 @@
                                     meta={formatMeta(h)}
                                     badge={statusLabel(h.status)}
                                     badgeVariant={statusBadgeVariant(h.status)}
+                                    visibility={h.visibility}
                                 />
                             </div>
-                            <!-- The row's only trailing element. Editing a
-                                 hackathon is offered on its own Settings
-                                 page, not from here: this list is for finding a
-                                 hackathon, and the edit form belongs beside the
-                                 rest of what an organiser sets. -->
+                            <!-- The row's trailing elements. Editing a hackathon
+                                 is offered on its own Settings page, not from
+                                 here: this list is for finding a hackathon, and
+                                 the edit form belongs beside the rest of what an
+                                 organiser sets. -->
                             {#if mem}
-                                <span
-                                    class="badge {membershipBadgeVariant(mem.isWaiting)} mr-4 shrink-0"
-                                >
-                                    {membershipBadgeLabel(mem.isWaiting, mem.role)}
-                                </span>
+                                <div class="shrink-0">
+                                    <MembershipBadge isWaiting={mem.isWaiting} role={mem.role} />
+                                </div>
                             {/if}
+                            <!-- Two destinations for one hackathon, which is the
+                                 whole point of the pair: the row goes in, this
+                                 goes out to what everybody else sees. A sibling
+                                 of the row rather than inside it, because the row
+                                 is itself a link and links do not nest.
+
+                                 Only where there is a page to reach — a private
+                                 hackathon has none, and its Private chip on the
+                                 row already says why nothing is offered here. -->
+                            <!-- A fixed slot, kept even when empty, so the
+                                 membership chips line up down the column instead
+                                 of each row packing right to a different edge
+                                 depending on whether its hackathon has a public
+                                 page. -->
+                            <div class="ml-3 mr-4 w-28 shrink-0 text-right">
+                                {#if !isPrivate(h.visibility)}
+                                    <a
+                                        href={resolve(`/hackathon/${h.id}`)}
+                                        class="inline-flex items-center gap-1 text-xs text-ink-3
+                                               hover:text-ink-2"
+                                    >
+                                        <ExternalLink class="h-3 w-3 shrink-0" aria-hidden="true" />
+                                        Public page
+                                    </a>
+                                {/if}
+                            </div>
                         </div>
                     {/each}
                 </div>

@@ -10,6 +10,9 @@
     import type { LayoutData } from './$types';
     import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant, isPrivate } from '$lib/utils/hackathonStatus';
     import { membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
+    import UserRound from 'lucide-svelte/icons/user-round';
+    import Lock from 'lucide-svelte/icons/lock';
+    import Globe from 'lucide-svelte/icons/globe';
     import { resolvePhaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -56,10 +59,20 @@
         const chips: { label: string; variant: string }[] = [];
         const sl = statusLabel(hackathon.status);
         if (sl) chips.push({ label: sl, variant: statusBadgeVariant(hackathon.status) ?? 'badge-neutral' });
+        // A closed padlock or an open world: who may see this hackathon is the
+        // one chip an organiser most needs to be sure of at a glance, and the
+        // two states are opposites rather than shades of one thing.
         const vl = visibilityLabel(hackathon.visibility);
-        if (vl) chips.push({ label: vl, variant: visibilityBadgeVariant(hackathon.visibility) ?? 'badge-neutral' });
+        if (vl)
+            chips.push({
+                label: vl,
+                variant: visibilityBadgeVariant(hackathon.visibility) ?? 'badge-neutral',
+                icon: isPrivate(hackathon.visibility) ? Lock : Globe,
+            });
         const mem = data.myMembership;
-        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), variant: membershipBadgeVariant(mem.isWaiting) });
+        // The only chip here about the reader rather than the hackathon, so the
+        // only one carrying a person. Same pairing as MembershipBadge.
+        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), variant: membershipBadgeVariant(mem.isWaiting), icon: UserRound });
         return chips;
     })());
 

@@ -6,6 +6,7 @@
     import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import ExternalLink from 'lucide-svelte/icons/external-link';
+    import UserRound from 'lucide-svelte/icons/user-round';
     import { resolve } from '$app/paths';
     import SidebarNavSection from './SidebarNavSection.svelte';
     import { manageNav, memberNav } from '$lib/navigation/items';
@@ -337,7 +338,10 @@
             </div>
             <div class="flex min-w-0 items-center gap-2">
                 {#if badge}
-                    <span class="badge shrink-0 badge-accent">{badge}</span>
+                    <span class="badge shrink-0 badge-accent">
+                        <UserRound class="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {badge}
+                    </span>
                 {/if}
                 {#if !isPrivate}
                     <a

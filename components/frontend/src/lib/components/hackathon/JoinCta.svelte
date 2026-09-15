@@ -6,7 +6,7 @@
     import { signIn } from '@auth/sveltekit/client';
     import { resolve } from '$app/paths';
     import { isFinished } from '$lib/utils/hackathonStatus';
-    import { membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
+    import MembershipBadge from './MembershipBadge.svelte';
 
     let {
         hackathonId,
@@ -58,9 +58,7 @@
                border-line px-4 py-3 sm:px-10 md:px-20"
     >
         {#if standing === 'member'}
-            <span class="badge {membershipBadgeVariant(false)}">
-                {membershipBadgeLabel(false, 0)}
-            </span>
+            <MembershipBadge />
             <a
                 href={resolve(`/my/hackathon/${hackathonId}/overview`)}
                 class="btn btn-sm btn-solid no-underline"
@@ -69,9 +67,7 @@
                 <ArrowRight class="h-4 w-4" />
             </a>
         {:else if standing === 'waiting'}
-            <span class="badge {membershipBadgeVariant(true)}">
-                {membershipBadgeLabel(true, 0)}
-            </span>
+            <MembershipBadge isWaiting />
             <p class="m-0 font-sans text-sm text-ink-2">
                 The organizers confirm who takes part.
             </p>

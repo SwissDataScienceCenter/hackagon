@@ -1,7 +1,9 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import { Users } from 'lucide-svelte';
+    import Lock from 'lucide-svelte/icons/lock';
     import { usableImage } from '$lib/utils/imageUrl';
+    import { isPrivate, visibilityLabel, visibilityBadgeVariant } from '$lib/utils/hackathonStatus';
 
     let {
         href,
@@ -11,6 +13,7 @@
         imageUrl,
         badge,
         badgeVariant = 'badge-accent',
+        visibility,
         count,
         size = 'default',
     }: {
@@ -31,6 +34,14 @@
         imageUrl?: string;
         badge?: string;
         badgeVariant?: string;
+        /**
+         * Raw Visibility number, and only a private hackathon draws a chip from
+         * it. Public is what a row on a list of hackathons is assumed to be, so
+         * saying it on every one of them is noise; saying "Private" on the few
+         * that are is what explains why they have no public page and no link to
+         * one. Omit it where every row is public anyway.
+         */
+        visibility?: number;
         count?: string;
         size?: 'default' | 'compact';
     } = $props();
@@ -92,6 +103,12 @@
         <span class="truncate text-sm font-semibold text-ink">{name}</span>
         <span class="tnum text-xs text-ink-3">{meta}</span>
     </div>
+    {#if visibility !== undefined && isPrivate(visibility)}
+        <span class="badge {visibilityBadgeVariant(visibility) ?? 'badge-neutral'} shrink-0">
+            <Lock class="h-3 w-3 shrink-0" aria-hidden="true" />
+            {visibilityLabel(visibility)}
+        </span>
+    {/if}
     {#if badge}
         <span class="badge {badgeVariant} shrink-0">
             {badge}

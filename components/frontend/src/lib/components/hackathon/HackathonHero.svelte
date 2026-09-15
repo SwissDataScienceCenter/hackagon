@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { ComponentType } from 'svelte';
     import { resolve } from '$app/paths';
     import { Calendar, MapPin, Users } from 'lucide-svelte';
     import StoredImage from './StoredImage.svelte';
@@ -33,7 +34,12 @@
         dates?: string;
         venue?: string;
         imageUrl?: string;
-        badges?: { label: string; variant: string }[];
+        /**
+         * `icon` is optional and only the membership chip uses one: it is the one
+         * chip that says something about the reader rather than about the
+         * hackathon. See MembershipBadge, which draws the same pair elsewhere.
+         */
+        badges?: { label: string; variant: string; icon?: ComponentType }[];
         participantCount?: number;
         /**
          * TODO(backend: hackathon-venue-capacity): omitted by every caller —
@@ -87,7 +93,13 @@
     {#if badges.length > 0}
         <div class="flex flex-wrap gap-1.5 {compact ? '' : 'justify-center'}">
             {#each badges as b (b.label)}
-                <span class="badge {b.variant}">{b.label}</span>
+                {@const Icon = b.icon}
+                <span class="badge {b.variant}">
+                    {#if Icon}
+                        <Icon class="h-3 w-3 shrink-0" aria-hidden="true" />
+                    {/if}
+                    {b.label}
+                </span>
             {/each}
         </div>
     {/if}
