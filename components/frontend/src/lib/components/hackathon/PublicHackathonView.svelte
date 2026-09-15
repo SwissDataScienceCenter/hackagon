@@ -1,9 +1,9 @@
 <script lang="ts">
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
-    import HeroSection from './HeroSection.svelte';
+    import HackathonHero from './HackathonHero.svelte';
     import JoinCta from './JoinCta.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
-    import { statusLabel } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
 
     let {
         id,
@@ -54,11 +54,20 @@
   URL they pasted.
 -->
 <div inert={preview}>
-    <HeroSection
+    <HackathonHero
         title={name}
         {dates}
         imageUrl={logo}
-        status={statusLabel(status)}
+        badges={statusLabel(status)
+            ? [
+                  {
+                      label: statusLabel(status) ?? '',
+                      // The same variant the member hero gives this status, so
+                      // "Upcoming" is not one colour outside and another inside.
+                      variant: statusBadgeVariant(status) ?? 'badge-neutral',
+                  },
+              ]
+            : []}
         breadcrumbs={[
             { label: 'Hackathons', href: '/' },
             { label: name, href: `/hackathon/${id}` },

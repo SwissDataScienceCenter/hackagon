@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
+    import HackathonHero from '$lib/components/hackathon/HackathonHero.svelte';
     import OrganizerStateAlert from '$lib/components/hackathon/OrganizerStateAlert.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import HackathonSidebar from '$lib/components/layout/HackathonSidebar.svelte';
@@ -114,13 +114,13 @@
               then shows the member count with no denominator and no location line.
               Nothing to change here once the fields land beyond passing them through.
             -->
-            <HeroCompact
+            <HackathonHero
+                compact
                 {title}
                 {dates}
                 venue=""
                 imageUrl={hackathon.logo}
                 {participantCount}
-                organizers={[]}
                 badges={heroBadges}
             />
 
