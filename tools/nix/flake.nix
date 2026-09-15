@@ -50,10 +50,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # The list of platforms to build for. Declared so quitsh can follow it:
+    # quitsh declares its own as a relative `path:` input, which nix cannot
+    # lock, and an unlocked input is fatal when CI evaluates a pinned flake.
+    systems.url = "github:nix-systems/default";
+
     # Quitsh functionality.
     quitsh = {
       url = "github:sdsc-ordes/quitsh?ref=main&dir=tools/nix";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.systems.follows = "systems";
     };
 
     # Importing flake-parts modules recursively.
