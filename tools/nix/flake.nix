@@ -26,18 +26,18 @@
     # - for codecov.
     # FIXME: https://github.com/getsentry/prevent-cli/issues/107
     # Last working version.
-    nixpkgs-codecov.url = "github:nixos/nixpkgs?ref=b6a8526db03f735b89dd5ff348f53f752e7ddc8e";
+    nixpkgs-codecov.url = "github:nixos/nixpkgs";
     # ===================================
 
     # The devenv module to create good development shells.
     # The `nixpkgs-devenv` must aligned with the pinned version.
     devenv = {
-      url = "github:cachix/devenv?ref=v1.11.1";
+      url = "github:cachix/devenv";
       inputs.nixpkgs.follows = "nixpkgs-devenv";
     };
     # This is the rolling nixpkgs with what devenv was tested.
     nixpkgs-devenv = {
-      url = "github:cachix/devenv-nixpkgs?ref=d1c30452ebecfc55185ae6d1c983c09da0c274ff";
+      url = "github:cachix/devenv-nixpkgs";
     };
     devenv-root = {
       url = "file+file:///dev/null";
