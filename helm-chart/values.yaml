@@ -52,7 +52,6 @@ frontend:
       useSecure: true
     oidc:
       clientId: hackagon-frontend
-      issuer: "https://auth.{baseDomain}/realms/hackagon"
       audience: hackagon-backend
 
   service:
@@ -70,15 +69,17 @@ frontend:
       nginx.ingress.kubernetes.io/proxy-buffers: 8 16k
       nginx.ingress.kubernetes.io/proxy_busy_buffers_size: 32k
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # -- Public hostname of the app. The TLS host below and the realm's login
+    # redirects follow the first entry.
     hosts:
-      - host: "app.{baseDomain}"
+      - host: "app.{{ .Values.baseDomain }}"
         paths:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: "{releaseName}-frontend-tls"
+      - secretName: '{{ .Release.Name }}-frontend-tls'
         hosts:
-          - "app.{baseDomain}"
+          - '{{ include "hackagon.frontendHost" . }}'
 
 # ============================================================
 # Backend
@@ -104,7 +105,7 @@ backend:
   config:
     server:
       port: "3000"
-      adminemail: "admin@{baseDomain}"
+      adminemail: "admin@{{ .Values.baseDomain }}"
       # -- Keycloak user id of the platform admin. Must equal the `id` of the
       # `hackagon-admin` user in realmJson: casbin grants the `admin` role to
       # exactly this id, and the backend seeds the admin row by it. Importing
@@ -123,10 +124,7 @@ backend:
       # -- Where the backend fetches Keycloak's signing keys.
       # With an external Keycloak (keycloak.enabled: false),
       # override this with a url the backend pod can actually reach.
-      jwksurl: "http://{keycloakService}:8080/realms/hackagon/protocol/openid-connect/certs"
-      # -- Must stay the PUBLIC url: this is the `iss` claim Keycloak stamps into
-      # tokens, and the backend rejects any token whose issuer does not match.
-      issuerurl: "https://auth.{baseDomain}/realms/hackagon"
+      jwksurl: 'http://{{ include "hackagon.keycloakServiceName" . }}:8080/realms/hackagon/protocol/openid-connect/certs'
       algorithm: RS256
     logging:
       level: info
@@ -145,9 +143,11 @@ keycloak:
   # -- Production mode requires hostname and database
   mode: production
 
-  # -- Hostname for Keycloak (public admin UI)
+  # -- Public url Keycloak runs under; the auth hostname and the OIDC issuer
+  # derive from it. Required. Passed verbatim to the subchart, so `{...}`
+  # placeholders are not substituted here. e.g. "https://auth.example.com"
   hostname:
-    hostname: "" # e.g. "https://auth.{baseDomain}"
+    hostname: ""
 
   # -- Keycloak's own console admin, which lives in the `master` realm. Its
   # password is NOT in realmJson: a realm export carries only that realm's

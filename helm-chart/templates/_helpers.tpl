@@ -64,10 +64,12 @@ Create the name of the service account to use
 {{/*
 First ingress host is the canonical frontend hostname.
 (in case we have multiple urls)
+Rendered with `tpl`, like every other host value; keep this one free of
+`hackagon.frontendHost` or it recurses.
 */}}
 {{- define "hackagon.frontendHost" -}}
 {{- $first := first (.Values.frontend.ingress.hosts | default list) | required "frontend.ingress.hosts must name at least one host: it is the app's public name" }}
-{{- $first.host | replace "{baseDomain}" .Values.baseDomain | replace "{releaseName}" .Release.Name }}
+{{- tpl $first.host . }}
 {{- end }}
 
 {{/*

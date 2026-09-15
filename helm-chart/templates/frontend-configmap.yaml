@@ -16,5 +16,5 @@ data:
       useSecure: {{ .Values.frontend.config.cookies.useSecure }}
     oidc:
       clientId: {{ .Values.frontend.config.oidc.clientId | quote }}
-      issuer: {{ .Values.frontend.config.oidc.issuer | replace "{baseDomain}" .Values.baseDomain | quote }}
+      issuer: {{ include "hackagon.oidcIssuer" . | quote }}
       audience: {{ .Values.frontend.config.oidc.audience | quote }}
