@@ -1,7 +1,7 @@
 <script lang="ts">
     // UserPlus, not the Mail of CtaSection: this section asks the reader to sign
     // up for something, not to get in touch about it.
-    import { UserPlus, ArrowRight } from 'lucide-svelte';
+    import { UserPlus } from 'lucide-svelte';
     import { signIn } from '@auth/sveltekit/client';
     import { resolve } from '$app/paths';
     import { isFinished } from '$lib/utils/hackathonStatus';
@@ -23,10 +23,9 @@
         status: number;
         /**
          * This visitor's relationship to the hackathon, which is the only thing
-         * that changes between the page a stranger sees and the page a member
-         * sees. `member` is offered the way in, `waiting` is told they are
-         * waiting — offering either of them "Register" would invite them to do
-         * again the thing they have already done.
+         * that changes between the page a stranger sees and the page somebody
+         * already registered sees. A member never reaches this block — their way
+         * in sits under the hero, because navigation is not a call to action.
          */
         standing?: 'member' | 'waiting' | 'none';
         /**
@@ -55,29 +54,10 @@
                sm:px-10 md:px-20"
     >
         <h2 class="text-display">
-            <!-- Three different sentences, because the three standings are three
-                 different situations: an invitation, a wait, and a door. -->
-            {standing === 'member'
-                ? 'You are taking part in ' + name
-                : standing === 'waiting'
-                  ? 'You have registered for ' + name
-                  : 'Take part in ' + name}
+            {standing === 'waiting' ? 'You have registered for ' + name : 'Take part in ' + name}
         </h2>
 
-        {#if standing === 'member'}
-            <!-- The one control a member needs here. Everything above is the
-                 hackathon as anybody sees it; this is the door. -->
-            <span class="badge {membershipBadgeVariant(false)}">
-                {membershipBadgeLabel(false, 0)}
-            </span>
-            <a
-                href={resolve(`/my/hackathon/${hackathonId}/overview`)}
-                class="btn btn-solid no-underline"
-            >
-                Enter the hackathon
-                <ArrowRight class="h-4 w-4" />
-            </a>
-        {:else if standing === 'waiting'}
+        {#if standing === 'waiting'}
             <!-- The same chip the dashboard row carries, so the word and the
                  colour for this state are decided in one place. The role
                  argument is inert while waiting — `membershipBadgeLabel`

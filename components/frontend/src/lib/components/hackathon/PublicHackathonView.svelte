@@ -1,5 +1,8 @@
 <script lang="ts">
+    import { resolve } from '$app/paths';
+    import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import { membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
     import HackathonHero from './HackathonHero.svelte';
     import JoinCta from './JoinCta.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
@@ -74,6 +77,28 @@
         ]}
     />
 
+    <!-- A member's way in, directly under the hero rather than at the foot with
+         the join block. They are not deciding whether to take part — they have
+         taken part — so this is navigation, and navigation does not belong below
+         a page of markdown somebody has already read. -->
+    {#if !preview && standing === 'member'}
+        <div
+            class="flex flex-wrap items-center justify-center gap-3 border-b border-line
+                   px-4 py-3 sm:px-10 md:px-20"
+        >
+            <span class="badge {membershipBadgeVariant(false)}">
+                {membershipBadgeLabel(false, 0)}
+            </span>
+            <a
+                href={resolve(`/my/hackathon/${id}/overview`)}
+                class="btn btn-sm btn-solid no-underline"
+            >
+                Enter the hackathon
+                <ArrowRight class="h-4 w-4" />
+            </a>
+        </div>
+    {/if}
+
     <div class="mx-auto w-full max-w-7xl">
         <section class="px-4 py-12 sm:px-10 md:px-20">
             {#if description}
@@ -100,7 +125,7 @@
              nothing on the form beside it changes what it says, so in the editor
              it is a fixed footer taking the room the organiser wants for their
              own content. -->
-        {#if !preview}
+        {#if !preview && standing !== 'member'}
             <JoinCta
                 hackathonId={id}
                 {name}
