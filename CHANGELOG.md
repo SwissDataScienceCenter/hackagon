@@ -20,6 +20,16 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- A deployment can now be reached under any hostnames, not only
+  `app.<domain>` and `auth.<domain>`. The app's hostname is the first entry of
+  `frontend.ingress.hosts`, Keycloak's is `keycloak.hostname.hostname`, and the
+  chart derives the ingresses, the TLS certificates, the OIDC issuer urls and
+  the realm's login redirect urls from those two. Previously the subdomains were
+  fixed in the chart's templates, so changing either value pointed the traffic
+  at one name while the login flow still expected the other. Both values are now
+  required: the chart refuses to render rather than guessing a hostname nothing
+  is served under.
+
 - A hackathon overview with no phase running no longer opens with "No phase is
   running" and a footnote saying the timeline follows the dates alone. The card
   now starts with what people can actually do; if a phase is coming up, the
