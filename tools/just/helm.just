@@ -193,5 +193,7 @@ publish:
     echo ""
     echo "  Install with:"
     echo "    helm install hackagon {{ oci_repo }}/hackagon --version $chart_v \\"
-    echo "      --set baseDomain=example.com --set-file realmJson=@path/to/realm.json"
+    echo "      --set baseDomain=example.com \\"
+    echo "      --set keycloak.hostname.hostname=https://auth.example.com \\"
+    echo "      --set-file realmJson=@path/to/realm.json"
     echo ""
