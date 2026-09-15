@@ -5,6 +5,10 @@
     import { signIn } from '@auth/sveltekit/client';
     import { resolve } from '$app/paths';
     import { isFinished } from '$lib/utils/hackathonStatus';
+    import {
+        membershipBadgeLabel,
+        membershipBadgeVariant,
+    } from '$lib/utils/hackathonRole';
 
     let {
         hackathonId,
@@ -54,6 +58,14 @@
         </h2>
 
         {#if waitlisted}
+            <!-- The same chip the dashboard row carries, so the word and the
+                 colour for this state are decided in one place. The role
+                 argument is inert while waiting — `membershipBadgeLabel`
+                 answers "Waitlisted" whatever it is given — but it is passed
+                 rather than dropped so the helper keeps one shape. -->
+            <span class="badge {membershipBadgeVariant(waitlisted)}">
+                {membershipBadgeLabel(waitlisted, 0)}
+            </span>
             <p class="text-sm text-ink-2">
                 You are on the waiting list. The organizers confirm who takes part,
                 and you will find {name} under "Your hackathons" once they do.
