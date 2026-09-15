@@ -263,6 +263,41 @@ var _ = Describe("HackathonService", func() {
 			st := status.Convert(err)
 			Expect(st.Code()).To(Equal(codes.NotFound))
 		})
+
+		// Get answers with the participant roster, so being public must not be
+		// enough to reach it. Public grants View; this handler wants Read.
+		It("denies an anonymous caller, though the hackathon is public", func() {
+			_, err := client.Get(context.Background(), &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("denies a signed-in caller who is not a participant", func() {
+			token := testutils.CreateTestJWTToken("get-outsider")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			_, err := client.Get(ctx, &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).To(HaveOccurred())
+			Expect(status.Convert(err).Code()).To(Equal(codes.PermissionDenied))
+		})
+
+		It("still serves a member", func() {
+			_, err := enf.AddRole("get-member", middleware.Member, createdID)
+			Expect(err).NotTo(HaveOccurred())
+
+			token := testutils.CreateTestJWTToken("get-member")
+			ctx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+token),
+			)
+
+			resp, err := client.Get(ctx, &msgs.GetRequest{HackathonId: createdID})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.GetHackathon().GetId()).To(Equal(createdID))
+		})
 	})
 
 	Describe("Join", func() {
@@ -2913,7 +2948,7 @@ var _ = Describe("HackathonService", func() {
 				Expect(resp.GetQuestions()).To(BeEmpty())
 			})
 
-			It("requires Read permission on a private hackathon", func() {
+			It("requires View permission on a private hackathon", func() {
 				// Narrowed from "requires Read" outright: a public hackathon's
 				// questions must be answerable before Join, and a non-member holds
 				// no read grant — so requiring one deadlocked signup. A private
@@ -3562,6 +3597,83 @@ var _ = Describe("HackathonService", func() {
 					SetUserID(adminUser.ID).
 					SetIsWaiting(false).
 					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("lets a waitlisted joiner correct their answers", func() {
+				adminToken := testutils.CreateTestJWTToken(testAdmin)
+				adminCtx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+adminToken),
+				)
+
+				now := time.Now()
+				created, err := client.Create(adminCtx, &msgs.CreateRequest{
+					Name:       "Waitlist Answers Hackathon",
+					Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+					StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+					EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				hid := created.GetHackathonId()
+
+				_, err = client.SetCapabilities(adminCtx, &msgs.SetCapabilitiesRequest{
+					HackathonId: hid,
+					Capabilities: []*msgs.CapabilityState{
+						{Capability: entities.Capability_CAPABILITY_REGISTER, Enabled: true},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				q, err := client.CreateQuestion(adminCtx, &msgs.CreateQuestionRequest{
+					HackathonId: hid,
+					Key:         "company",
+					Label:       "Company",
+					Type:        entities.QuestionType_QUESTION_TYPE_TEXT,
+					Mandatory:   true,
+					Order:       1,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = dbClient.User.Create().
+					SetKeycloakID("waitlisted-answerer").
+					SetUsername("waitlisted-answerer").
+					Save(context.Background())
+				Expect(err).NotTo(HaveOccurred())
+
+				token := testutils.CreateTestJWTToken("waitlisted-answerer")
+				ctx := metadata.NewOutgoingContext(
+					context.Background(),
+					metadata.Pairs("authorization", "Bearer "+token),
+				)
+
+				_, err = client.Join(ctx, &msgs.JoinRequest{
+					HackathonId: hid,
+					Answers: []*entities.Answer{{
+						QuestionId: q.GetQuestionId(),
+						Value:      &entities.Answer_TextValue{TextValue: "Acme"},
+					}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Joining a public hackathon confirms nobody, so they hold no
+				// casbin role -- only the `*` view grant that makes it public.
+				role, err := enf.GetHackathonRole("waitlisted-answerer", hid)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(role).
+					To(Equal(entities.HackathonRole_HACKATHON_ROLE_UNSPECIFIED))
+
+				// Which is still enough. They reached SubmitAnswers through the
+				// wildcard `read` row before, and reach it through `view` now --
+				// the waiting list is where corrections matter most, so moving
+				// the gate must not have cost them.
+				_, err = client.SubmitAnswers(ctx, &msgs.SubmitAnswersRequest{
+					HackathonId: hid,
+					Answers: []*entities.Answer{{
+						QuestionId: q.GetQuestionId(),
+						Value:      &entities.Answer_TextValue{TextValue: "Globex"},
+					}},
+				})
 				Expect(err).NotTo(HaveOccurred())
 			})
 

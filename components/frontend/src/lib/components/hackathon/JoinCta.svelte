@@ -5,17 +5,29 @@
     import { signIn } from '@auth/sveltekit/client';
     import { resolve } from '$app/paths';
     import { isFinished } from '$lib/utils/hackathonStatus';
+    import {
+        membershipBadgeLabel,
+        membershipBadgeVariant,
+    } from '$lib/utils/hackathonRole';
 
     let {
         hackathonId,
         name,
         status,
         signedIn,
+        waitlisted = false,
     }: {
         hackathonId: string;
         name: string;
         /** Raw HackathonStatus number, as the loader returns it. */
         status: number;
+        /**
+         * Registered, and waiting for an organizer to confirm it. They are here
+         * rather than inside the hackathon because this page is all they may
+         * read until then, so offering them "Register" would invite them to do
+         * again the thing they are waiting on.
+         */
+        waitlisted?: boolean;
         /**
          * A session that can actually call the backend — not merely a cookie
          * carrying an identity. The loader decides this with `usableSession`, so
@@ -41,9 +53,34 @@
         class="flex flex-col items-center gap-4 border-t border-line px-4 py-12
                sm:px-10 md:px-20"
     >
-        <h2 class="text-display">Take part in {name}</h2>
+        <h2 class="text-display">
+            {waitlisted ? 'You have registered for ' + name : 'Take part in ' + name}
+        </h2>
 
-        {#if signedIn}
+        {#if waitlisted}
+            <!-- The same chip the dashboard row carries, so the word and the
+                 colour for this state are decided in one place. The role
+                 argument is inert while waiting — `membershipBadgeLabel`
+                 answers "Waitlisted" whatever it is given — but it is passed
+                 rather than dropped so the helper keeps one shape. -->
+            <span class="badge {membershipBadgeVariant(waitlisted)}">
+                {membershipBadgeLabel(waitlisted, 0)}
+            </span>
+            <p class="text-sm text-ink-2">
+                You are on the waiting list. The organizers confirm who takes part,
+                and you will find {name} under "Your hackathons" once they do.
+            </p>
+            <!-- Quiet, because it is not what this page is for: the answers are
+                 what the organizers read to decide, so a mistyped one is worth
+                 being able to correct while waiting. Saving comes straight back
+                 here. -->
+            <a
+                href={resolve(`/register/${hackathonId}`)}
+                class="btn btn-ghost btn-sm no-underline"
+            >
+                Review your answers
+            </a>
+        {:else if signedIn}
             <p class="text-sm text-ink-2">
                 Registering puts you on the organizers' list. They confirm who takes part.
             </p>

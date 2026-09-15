@@ -14,6 +14,7 @@ import (
 	"github.com/swissdatasciencecenter/hackagon/components/backend/ent/user"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/config"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/logx"
+	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/migrate"
 	"github.com/swissdatasciencecenter/hackagon/components/backend/internal/service"
 )
 
@@ -72,11 +73,17 @@ func main() {
 	}
 
 	// Create server with all middleware and services
-	server, cleanup, _, err := service.NewServer(dbClient, cfg, nil)
+	server, cleanup, enforcer, err := service.NewServer(dbClient, cfg, nil)
 	if err != nil {
 		logx.Fatal("create server", "err", err)
 	}
 	defer cleanup()
+
+	// After NewServer, which builds the enforcer, and before Serve, so no
+	// request is answered against a half-migrated policy table.
+	if err := migrate.Run(context.Background(), dbClient, enforcer); err != nil {
+		logx.Fatal("run migrations", "err", err)
+	}
 
 	// Listen
 	lc := net.ListenConfig{} //nolint:exhaustruct // all fields optional

@@ -82,7 +82,7 @@ func (h *harness) setCaps(owner *actor, hackathonID string, on ...hackEnts.Capab
 // createInvite mints one invitation to a hackathon and hands back its token.
 //
 // Only a private hackathon needs one: `Join` lets anybody through who can
-// already read the hackathon, which on a public one is everybody. On a private
+// already view the hackathon, which on a public one is everybody. On a private
 // one nobody outside can, so an invite is the only way in — see joinWithInvite.
 //
 // `ExpiresAt` is left unset deliberately. CreateInvite then defaults it to the
@@ -163,7 +163,7 @@ func (h *harness) join(who *actor, hackathonID string) error {
 //
 // An empty token means none, which is what every public hackathon sends: Join
 // only looks at the token when the hackathon is private, and admits anyone who
-// can read the hackathon regardless. Pass a real one and it is the token that
+// can view the hackathon regardless. Pass a real one and it is the token that
 // gets somebody into a hackathon they cannot see — and, in a private hackathon,
 // straight into membership: the invitation is the decision, so Join confirms
 // them itself rather than leaving them for an organizer.

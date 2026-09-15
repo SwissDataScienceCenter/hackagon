@@ -69,6 +69,10 @@ var _ = Describe("RBAC Enforcer", func() {
 			Entry("eve owner reads h2", "eve", "h2", Hackathon, Read, true),
 			Entry("eve owner writes h2", "eve", "h2", Hackathon, Write, true),
 			Entry("eve cannot read h1", "eve", "h1", Hackathon, Read, false),
+			// View is granted to these roles explicitly, because Read does not imply View.
+			Entry("alice owner views h1", "alice", "h1", Hackathon, View, true),
+			Entry("bob member views h1", "bob", "h1", Hackathon, View, true),
+			Entry("alice cannot view h2", "alice", "h2", Hackathon, View, false),
 		)
 	})
 
@@ -111,7 +115,10 @@ var _ = Describe("RBAC Enforcer", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(allowed).To(BeEquivalentTo(expected))
 			},
-			Entry("alice can read public h2", "alice", "h2", Hackathon, Read, true),
+			Entry("alice can view public h2", "alice", "h2", Hackathon, View, true),
+			Entry("alice cannot read public h2", "alice", "h2", Hackathon, Read, false),
+			Entry("a stranger can view public h2", "mallory", "h2", Hackathon, View, true),
+			Entry("a stranger cannot read public h2", "mallory", "h2", Hackathon, Read, false),
 			Entry("alice can't write public h1", "alice", "h1", Hackathon, Write, true),
 			Entry("bob can read public h2", "bob", "h1", Hackathon, Read, true),
 			Entry("bob can't write public h1", "bob", "h1", Hackathon, Write, false),

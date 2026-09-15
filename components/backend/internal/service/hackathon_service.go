@@ -142,6 +142,8 @@ func (s *HackathonService) Get(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
+	// Read, so members, owners and admins only — this response carries the
+	// participant roster. A public hackathon grants View, not Read.
 	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
 		return nil, err
 	}
@@ -567,19 +569,19 @@ func (s *HackathonService) Join(
 		}
 	}
 	// a hackathon need to have join permission enabled(== registration phase open), and
-	// the user needs to either have read on the hackathon (can see the hackathon) or have
-	// a valid invite to join
+	// the user needs to either be able to view the hackathon (a public one is
+	// viewable by anyone) or have a valid invite to join
 	if err = s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Join); err != nil {
 		return nil, err
 	}
 
-	hasRead, err := s.enforcer.CheckPermission(uid, id.String(), mw.Hackathon, mw.Read)
+	canView, err := s.enforcer.CheckPermission(uid, id.String(), mw.Hackathon, mw.View)
 	if err != nil {
 		slog.Error("check permission", "err", err)
 		return nil, status.Error(codes.Internal, "authorization error")
 	}
 
-	if !inviteValid && !hasRead {
+	if !inviteValid && !canView {
 		return nil, status.Error(codes.PermissionDenied, "invalid or expired invitation")
 	}
 
@@ -1546,6 +1548,8 @@ func (s *HackathonService) List(
 
 	entries := make([]*ents.Hackathon, 0, len(hs))
 	for _, h := range hs {
+		// Only private ones are checked, so this never leaned on the public
+		// wildcard row and stays on Read.
 		if h.Visibility == enthackathon.VisibilityPrivate {
 			ok, err := s.enforcer.Enforce(ctx, h.ID.String(), mw.Hackathon, mw.Read)
 			if err != nil {
@@ -1835,7 +1839,9 @@ func (s *HackathonService) ListQuestions(
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
-	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.Read); err != nil {
+	// View, not Read: the registration form is fetched by people who have not
+	// joined yet, which is the whole point of it.
+	if err := s.enforcer.RequirePermission(ctx, id.String(), mw.Hackathon, mw.View); err != nil {
 		return nil, err
 	}
 
@@ -1873,7 +1879,8 @@ func (s *HackathonService) SubmitAnswers(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Read); err != nil {
+	// View, for the same reason as ListQuestions above.
+	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.View); err != nil {
 		return nil, err
 	}
 

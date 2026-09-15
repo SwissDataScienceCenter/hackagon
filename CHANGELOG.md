@@ -25,7 +25,18 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   now starts with what people can actually do; if a phase is coming up, the
   countdown to it sits on the "Next" line at the foot.
 
+- While you are on a hackathon's waiting list you no longer see the inside of
+  it. Waiting for approval used to show you the same view as a confirmed
+  participant, the list of everyone taking part included. You now stay on the
+  hackathon's public page until an organiser approves you, and can still go back
+  and correct your registration answers from there.
+
 ### Fixed
+
+- A public hackathon no longer hands its participant list to the internet.
+  Anyone could read the name, e-mail address and account id of everybody signed
+  up, without an account of their own. Signing up for a public hackathon, and
+  reading its registration questions before you do, work exactly as before.
 
 ## [0.9.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.0...v0.9.1) - 2026-09-11
 

@@ -18,4 +18,5 @@
     endsAt={hackathon.endsAt}
     status={hackathon.status}
     signedIn={data.signedIn}
+    waitlisted={data.waitlisted}
 />
