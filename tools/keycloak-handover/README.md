@@ -49,6 +49,7 @@ decryptable by you, which is how you know the recipient key took effect.
 helm upgrade --install hackagon ../../helm-chart \
   --set-file realmJson=./realm.json \
   --set baseDomain=<domain> \
+  --set keycloak.hostname.hostname=https://auth.<domain> \
   --set backend.config.server.adminkeycloakid=1183370a-46a2-4dad-b8fd-dd927d083e14 \
   --set frontendSecrets.clientSecret=<from CREDENTIALS.md>
 ```

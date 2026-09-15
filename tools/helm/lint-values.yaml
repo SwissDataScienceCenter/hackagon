@@ -5,6 +5,14 @@
 
 baseDomain: lint.invalid
 
+frontend:
+  ingress:
+    hosts:
+      - host: "hackagon-app.lint.invalid"
+        paths:
+          - path: /
+            pathType: Prefix
+
 backend:
   config:
     server:
@@ -14,7 +22,7 @@ backend:
 
 keycloak:
   hostname:
-    hostname: "https://auth.lint.invalid"
+    hostname: "https://hackagon-auth.lint.invalid"
   database:
     external:
       host: "hackagon-postgresql"

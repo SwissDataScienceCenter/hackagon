@@ -25,7 +25,7 @@
         pkgs.codecov-cli;
 
       pkgsPinned = {
-        go = pkgs.go_1_25;
+        go = pkgs.go_1_26;
         python = pkgs.python314;
         inherit codecov-cli;
         nodejs = pkgs.nodejs_22;
