@@ -130,7 +130,7 @@ func (h *harness) seedH3(now time.Time, admin, alice, dana *actor) error {
 
 	// Private, so getting in takes an invitation — and an invitation is all it
 	// takes: `Join` confirms a private hackathon's joiners itself. It admits
-	// anyone who can already read the hackathon — which on the public fixtures is
+	// anyone who can already view the hackathon — which on the public fixtures is
 	// everybody — and refuses everyone else outright unless they carry a valid
 	// invite token.
 	// Neither alice nor dana holds a role here before joining, so without this
