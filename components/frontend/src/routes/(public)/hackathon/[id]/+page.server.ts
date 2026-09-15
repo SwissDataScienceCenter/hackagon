@@ -6,6 +6,7 @@ import {
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
+import { resolvePhaseStatus, sortPhasesByStart } from "$lib/utils/phase"
 // Shared and tested, because it is subtle: a session can carry a user and a
 // stale accessToken at once. See $lib/server/session.
 import { usableSession } from "$lib/server/session"
@@ -139,6 +140,19 @@ export const load: PageServerLoad = async (event) => {
       startsAt: hackathon.startsAt,
       endsAt: hackathon.endsAt,
       status: hackathon.status,
+      // Resolved the same way the member layout resolves it, so the strip says
+      // the same thing on both sides. No `currentPhaseId` to pass — that lives
+      // on `state`, which only Get carries — so the status falls back to the
+      // dates, which is the honest answer for a visitor anyway.
+      phases: sortPhasesByStart(hackathon.phases).map((ph) => ({
+        name: ph.name,
+        status: resolvePhaseStatus(ph, undefined),
+      })),
+      // Omitted at zero rather than shown as "0 participants": this is the page
+      // that has to make somebody want to join, and an empty count argues the
+      // other way. It counts confirmed participants only, so a hackathon whose
+      // sign-ups are all still waiting reads as empty here.
+      participantCount: hackathon.participantCount || undefined,
     },
   }
 }

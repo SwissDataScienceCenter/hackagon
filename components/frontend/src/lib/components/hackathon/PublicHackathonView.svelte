@@ -1,5 +1,6 @@
 <script lang="ts">
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
+    import PhaseTimeline from './PhaseTimeline.svelte';
     import HackathonHero from './HackathonHero.svelte';
     import JoinCta from './JoinCta.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
@@ -15,6 +16,8 @@
         status,
         signedIn,
         standing = 'none',
+        phases = [],
+        participantCount,
         preview = false,
     }: {
         id: string;
@@ -29,6 +32,10 @@
         signedIn?: boolean;
         /** Likewise unused in the preview. See JoinCta. */
         standing?: 'member' | 'waiting' | 'none';
+        /** The same strip the member area draws above its content. */
+        phases?: { name: string; status: 'completed' | 'active' | 'upcoming' | 'current' }[];
+        /** Confirmed participants. An aggregate — this page never names one. */
+        participantCount?: number;
         /**
          * Drawn for an organiser checking their own page rather than for a
          * visitor. Everything is rendered the same; only the interaction is
@@ -68,11 +75,18 @@
                   },
               ]
             : []}
+        {participantCount}
         breadcrumbs={[
             { label: 'Hackathons', href: '/' },
             { label: name, href: `/hackathon/${id}` },
         ]}
     />
+
+    <!-- Directly under the hero, where the member area puts it too: what happens
+         and when is the question a visitor has after "what is this". -->
+    {#if phases.length > 0}
+        <PhaseTimeline {phases} />
+    {/if}
 
     {#if !preview}
         <JoinCta hackathonId={id} {status} signedIn={signedIn ?? false} {standing} />
