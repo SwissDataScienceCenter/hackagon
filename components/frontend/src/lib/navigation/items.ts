@@ -269,6 +269,19 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
         "Everyone registered on the platform. Grant or revoke the Admin and " +
         "Hackathon Organizer roles.",
     },
+    // The dashboard's two lists are "hackathons you are in" and "public
+    // hackathons", so a private one an admin neither owns nor joined appears in
+    // neither — and was unreachable from the UI, though casbin lets an admin do
+    // anything to it. This is the way in.
+    {
+      id: "platform:hackathons",
+      label: "Hackathons",
+      icon: CalendarClock,
+      href: resolve("/(app)/manage/hackathons"),
+      description:
+        "Every hackathon on the platform, private ones included. Open any of " +
+        "them without being a member.",
+    },
   ]
 }
 

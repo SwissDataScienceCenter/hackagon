@@ -1,9 +1,10 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
     import { resolve } from '$app/paths';
     import { Users } from 'lucide-svelte';
     import Lock from 'lucide-svelte/icons/lock';
     import { usableImage } from '$lib/utils/imageUrl';
-    import { isPrivate, visibilityLabel, visibilityBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { isPrivate, visibilityLabel } from '$lib/utils/hackathonStatus';
 
     let {
         href,
@@ -16,6 +17,7 @@
         visibility,
         count,
         size = 'default',
+        titleExtra,
     }: {
         /**
          * Where the row goes, or absent for a hackathon the viewer holds no
@@ -44,6 +46,13 @@
         visibility?: number;
         count?: string;
         size?: 'default' | 'compact';
+        /**
+         * Rendered on the title's own line, immediately after the name. For a
+         * control that belongs to the hackathon rather than to the row's own
+         * destination — a link out to its public page, say. Sits above the
+         * overlay link, so a click on it does not open the row.
+         */
+        titleExtra?: Snippet;
     } = $props();
 
     // A logo is typed in, never uploaded, so a link that serves a web page is
@@ -58,17 +67,27 @@
     const layout = `flex ${rowHeight} items-center gap-4 px-4`;
 </script>
 
-{#if href}
-    <a href={resolve(href)} class="{layout} no-underline transition-colors hover:bg-raised">
-        {@render row()}
-    </a>
-{:else}
-    <!-- No hover affordance: the row is content, and reacting to the pointer
-         would promise a click that goes nowhere. -->
-    <div class={layout}>
-        {@render row()}
-    </div>
-{/if}
+<!-- The row's link covers the row without wrapping it: an absolutely positioned
+     anchor over the whole area, with the content beside it rather than inside.
+
+     Wrapping was simpler, but it made anything else in the row an anchor inside
+     an anchor, which is invalid and which browsers resolve by closing the outer
+     one early. That is why the link out to a hackathon's public page used to sit
+     in a column of its own on the far right: there was nowhere on the title line
+     it could legally go. Raised above the overlay with `relative`, it can.
+
+     The overlay carries the name, because a link whose whole content is an empty
+     box has nothing to announce. -->
+<div class="relative {layout} {href ? 'transition-colors hover:bg-raised' : ''}">
+    {#if href}
+        <a
+            href={resolve(href)}
+            aria-label={name}
+            class="absolute inset-0 no-underline"
+        ></a>
+    {/if}
+    {@render row()}
+</div>
 
 {#snippet row()}
     {#if hasImage}
@@ -100,15 +119,25 @@
         {#if org}
             <span class="meta truncate">{org}</span>
         {/if}
-        <span class="truncate text-sm font-semibold text-ink">{name}</span>
+        <span class="flex min-w-0 items-center gap-1.5">
+            <!-- A mark beside the name rather than a chip beside the status: who
+                 may see a hackathon is a property of it, not a state it is
+                 passing through, and a full badge gave it more weight than the
+                 name it qualifies. Public gets nothing at all — it is what a
+                 hackathon on a list of hackathons is assumed to be. -->
+            {#if visibility !== undefined && isPrivate(visibility)}
+                <Lock
+                    class="h-3.5 w-3.5 shrink-0 text-ink-3"
+                    aria-label={visibilityLabel(visibility)}
+                />
+            {/if}
+            <span class="truncate text-sm font-semibold text-ink">{name}</span>
+            {#if titleExtra}
+                <span class="relative shrink-0">{@render titleExtra()}</span>
+            {/if}
+        </span>
         <span class="tnum text-xs text-ink-3">{meta}</span>
     </div>
-    {#if visibility !== undefined && isPrivate(visibility)}
-        <span class="badge {visibilityBadgeVariant(visibility) ?? 'badge-neutral'} shrink-0">
-            <Lock class="h-3 w-3 shrink-0" aria-hidden="true" />
-            {visibilityLabel(visibility)}
-        </span>
-    {/if}
     {#if badge}
         <span class="badge {badgeVariant} shrink-0">
             {badge}

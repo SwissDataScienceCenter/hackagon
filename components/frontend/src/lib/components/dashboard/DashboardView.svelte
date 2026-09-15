@@ -277,7 +277,29 @@
                                     imageUrl={h.logo}
                                     meta={whenMeta(h)}
                                     visibility={h.visibility}
-                                />
+                                >
+                                    <!-- The way out to this hackathon's public
+                                         page, on the title line rather than in a
+                                         column of its own. Only where there is
+                                         one to reach: a private hackathon has
+                                         none, and the padlock beside its name
+                                         says so. -->
+                                    {#snippet titleExtra()}
+                                        {#if !isPrivate(h.visibility)}
+                                            <a
+                                                href={resolve(`/hackathon/${h.id}`)}
+                                                class="inline-flex items-center gap-1 text-xs
+                                                       text-ink-3 hover:text-ink-2"
+                                            >
+                                                <ExternalLink
+                                                    class="h-3 w-3 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                                Public page
+                                            </a>
+                                        {/if}
+                                    {/snippet}
+                                </HackathonRow>
                             </div>
                             <!-- The row's trailing elements. Editing a hackathon
                                  is offered on its own Settings page, not from
@@ -298,23 +320,7 @@
                                  Only where there is a page to reach — a private
                                  hackathon has none, and its Private chip on the
                                  row already says why nothing is offered here. -->
-                            <!-- A fixed slot, kept even when empty, so the
-                                 membership chips line up down the column instead
-                                 of each row packing right to a different edge
-                                 depending on whether its hackathon has a public
-                                 page. -->
-                            <div class="ml-3 mr-4 w-28 shrink-0 text-right">
-                                {#if !isPrivate(h.visibility)}
-                                    <a
-                                        href={resolve(`/hackathon/${h.id}`)}
-                                        class="inline-flex items-center gap-1 text-xs text-ink-3
-                                               hover:text-ink-2"
-                                    >
-                                        <ExternalLink class="h-3 w-3 shrink-0" aria-hidden="true" />
-                                        Public page
-                                    </a>
-                                {/if}
-                            </div>
+                            <div class="mr-4"></div>
                         </div>
                             {/each}
                         </div>
