@@ -15,6 +15,9 @@ help:
     echo -e "  ${cyan}just check::test${reset} -c <component>"
     echo -e "  ${dim}e.g. just check::test -c frontend${reset}"
     echo ""
+    echo -e "  ${cyan}just check::smoke${reset}"
+    echo -e "  ${dim}Smoke-test a running stack (needs 'just deploy::up' + 'just db::seed')${reset}"
+    echo ""
     echo -e "  ${cyan}just check::format${reset} -c <component>"
     echo -e "  ${dim}e.g. just check::format -c backend${reset}"
     echo ""
@@ -50,6 +53,18 @@ test *args:
     # about to happen regenerates all of it.
     rm -rf .output/*/coverage/data
     just quitsh test "$@"
+
+# Smoke-test a running stack. Needs `just deploy::up` and `just db::seed` first.
+# Usage: just check::smoke
+[group('checks')]
+smoke *args:
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{root_dir}}/components/backend"
+    # `-count=1` because Go's test cache keys on source and inputs, and knows
+    # nothing about the stack these specs talk to. A cached PASS from a run
+    # against a different deployment is worse than no result at all.
+    go test -tags 'test integration' -count=1 -v ./test/smoke/ "$@"
 
 # Lint a component. Usage: just check::lint -c backend
 [group('checks')]
