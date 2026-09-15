@@ -389,8 +389,6 @@ let
               quitsh.config = lib.mkForce "tools/configs/quitsh/config.yaml";
               quitsh.configUser = "tools/configs/quitsh/config.user.yaml";
 
-              dotenv.enable = true;
-
               packages = [
                 # Essentials.
                 pkgs.git
