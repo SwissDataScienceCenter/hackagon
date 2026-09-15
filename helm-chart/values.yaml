@@ -8,18 +8,16 @@ baseDomain: "example.com"
 # Images
 # ============================================================
 # An image address is `repository:tag`. Two repositories exist:
-#   release/    one image per `v*` tag       — what you deploy
-#   temporary/  one image per push to main   — for testing, moves constantly
+#   release/    one image per `v*` tag       — what prod runs
+#   temporary/  one image per push to main   — what dev runs, moves constantly
 #
-# If there is no `tag` specified: then the chart then uses its the
-# `appVersion` from Chart.yaml,
+# Image tags default to the Chart's appVersion.
 #
-# But for test deploys you might want to override this, with a
-# tagged image from the `temporary/` repository.
-#
-# To test against the head of `main`, override both keys, e.g.:
+# A cluster that should follow `main` instead overrides two keys per component:
 #   --set frontend.image.repository=<registry>/temporary/frontend-service
 #   --set frontend.image.tag=latest
+#
+# `pullPolicy` is empty below so Kubernetes can apply its own rule.
 #
 # ============================================================
 # Frontend
@@ -27,9 +25,10 @@ baseDomain: "example.com"
 frontend:
   image:
     repository: ghcr.io/swissdatasciencecenter/hackagon/release/frontend-service
-    # Empty: falls back to .Chart.AppVersion — see the Images note above.
+    # Empty: falls back to .Chart.AppVersion.
     tag: ""
-    pullPolicy: IfNotPresent
+    # Empty: the field is omitted and Kubernetes picks.
+    pullPolicy: ""
 
   replicaCount: 1
   annotations: {}
@@ -87,9 +86,10 @@ frontend:
 backend:
   image:
     repository: ghcr.io/swissdatasciencecenter/hackagon/release/backend-service
-    # Empty: falls back to .Chart.AppVersion — see the Images note above.
+    # Empty: falls back to .Chart.AppVersion.
     tag: ""
-    pullPolicy: IfNotPresent
+    # Empty: the field is omitted and Kubernetes picks.
+    pullPolicy: ""
 
   replicaCount: 1
   annotations: {}

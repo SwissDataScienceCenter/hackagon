@@ -25,7 +25,9 @@ spec:
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          {{- with .Values.backend.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
           args:
             - "--config-dir=/etc/hackagon/"
           ports:
