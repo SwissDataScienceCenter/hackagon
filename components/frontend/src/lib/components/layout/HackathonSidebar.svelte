@@ -35,7 +35,6 @@
         teamCount = 0,
         trackCount = 0,
         phaseCount = 0,
-        hasDescription = false,
         stateNeedsAttention = false,
         isPrivate = false,
     }: {
@@ -86,7 +85,6 @@
          * — see `memberNav`. False, and there is nothing to read, so the entry
          * is not offered rather than leading to an empty page.
          */
-        hasDescription?: boolean;
         /**
          * Badges the Settings entry — the page the capability switches
          * live on. Organiser-only by construction, since the whole Manage
@@ -130,7 +128,6 @@
             votingEnabled,
             resultsVisible,
             teamCount,
-            hasDescription,
             phaseCount
         ),
     );
@@ -285,10 +282,18 @@
            md:h-[calc(100vh-3.5rem)] md:translate-x-0 md:self-start md:transition-[width]
            {mobileOpen ? 'translate-x-0' : ''} {collapsed ? 'md:w-16' : 'md:w-64'}"
 >
-    <div
-        class="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4
-               {effectiveCollapsed ? 'justify-center px-0' : 'justify-between'}"
-    >
+    <!-- Two lines, not one. The name, its role chip and the collapse control
+         were competing for a 16rem rail, and the name — the thing the header is
+         for — lost, truncating to "Climate Tech …" while a badge sat beside it
+         at full width. The name now has the first line to itself.
+
+         The second carries the chip and the way out to the public page, which
+         belongs with the hackathon's identity rather than among the member
+         entries below: it is the same hackathon seen from outside, not another
+         place inside it. Omitted for a private hackathon, which has no such
+         page, so the line can collapse to the chip alone. -->
+    <div class="flex shrink-0 flex-col gap-1 border-b border-line px-4 py-2
+                {effectiveCollapsed ? 'items-center px-0' : ''}">
         {#if effectiveCollapsed}
             <button
                 onclick={toggleCollapsed}
@@ -298,34 +303,53 @@
             >
                 <PanelLeftOpen class="h-4 w-4" />
             </button>
+            {#if !isPrivate}
+                <a
+                    href={resolve(`/hackathon/${hackathonId}`)}
+                    title="Public page"
+                    aria-label="Public page"
+                    class="btn btn-icon btn-sm btn-quiet"
+                >
+                    <ExternalLink class="h-4 w-4" />
+                </a>
+            {/if}
         {:else}
             <!-- The heading is load-bearing rather than decorative: these entries
                  all belong to one hackathon, and once the shell-wide sidebar is
-                 gone this is the only place its name appears on pages that carry no
-                 hero. The role chip rides along with it — SidebarNavSection only
-                 renders a badge beside a section label, and there is none here. -->
-            <div class="flex min-w-0 items-baseline gap-2">
-                <span class="min-w-0 truncate text-sm font-bold">{hackathonName}</span>
+                 gone this is the only place its name appears on pages that carry
+                 no hero. -->
+            <div class="flex items-center gap-2">
+                <span class="min-w-0 flex-1 truncate text-sm font-bold">{hackathonName}</span>
+                <button
+                    onclick={toggleCollapsed}
+                    aria-label="Collapse sidebar"
+                    class="btn btn-icon btn-sm hidden shrink-0 md:inline-flex"
+                >
+                    <PanelLeftClose class="h-4 w-4" />
+                </button>
+                <button
+                    onclick={() => (mobileOpen = false)}
+                    aria-label="Close hackathon navigation"
+                    class="btn btn-icon btn-sm shrink-0 md:hidden"
+                >
+                    <X class="h-4 w-4" />
+                </button>
+            </div>
+            <div class="flex min-w-0 items-center gap-2">
                 {#if badge}
-                    <span class="badge shrink-0 badge-accent">
-                        {badge}
-                    </span>
+                    <span class="badge shrink-0 badge-accent">{badge}</span>
+                {/if}
+                {#if !isPrivate}
+                    <a
+                        href={resolve(`/hackathon/${hackathonId}`)}
+                        class="ml-auto inline-flex shrink-0 items-center gap-1 text-xs
+                               text-ink-3 hover:text-ink-2"
+                    >
+                        <ExternalLink class="h-3 w-3" />
+                        Public page
+                    </a>
                 {/if}
             </div>
-            <button
-                onclick={toggleCollapsed}
-                aria-label="Collapse sidebar"
-                class="btn btn-icon btn-sm hidden md:inline-flex"
-            >
-                <PanelLeftClose class="h-4 w-4" />
-            </button>
-            <button
-                onclick={() => (mobileOpen = false)}
-                aria-label="Close hackathon navigation"
-                class="btn btn-icon btn-sm md:hidden"
-            >
-                <X class="h-4 w-4" />
-            </button>
         {/if}
     </div>
 
@@ -385,27 +409,4 @@
         {/if}
     </nav>
 
-    <!-- The way back out, at the foot and on every page of the hackathon rather
-         than in the hero, which the overview alone renders — somebody deep in
-         Submissions who wants to see what a visitor sees should not have to go
-         home first. Quiet, because leaving is not what this rail is for.
-
-         Only for a public hackathon: a private one has no page out there, and a
-         link to a 404 is worse than no link. -->
-    {#if !isPrivate}
-        <div class="shrink-0 border-t border-line p-2">
-            <a
-                href={resolve(`/hackathon/${hackathonId}`)}
-                title="Public page"
-                class="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-ink-3
-                       hover:bg-raised hover:text-ink-2
-                       {effectiveCollapsed ? 'justify-center px-0' : ''}"
-            >
-                <ExternalLink class="h-4 w-4 shrink-0" />
-                {#if !effectiveCollapsed}
-                    <span class="truncate">Public page</span>
-                {/if}
-            </a>
-        </div>
-    {/if}
 </aside>

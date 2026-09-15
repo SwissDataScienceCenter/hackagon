@@ -60,6 +60,10 @@ export const load: PageServerLoad = async (event) => {
   )
 
   return {
+    // The hackathon's own words, at the foot of the page a member lands on.
+    // Already on `hackathon` from the layout's `get`, so no call of its own —
+    // the About tab it also feeds takes it the same way.
+    description: hackathon.description,
     // Waitlisted members reach this page too — the badge should say so rather
     // than claim they are registered. The flag travels alongside the label so
     // the badge colour keys off it rather than string-matching the label.

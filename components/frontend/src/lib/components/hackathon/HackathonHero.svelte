@@ -95,11 +95,7 @@
     <!-- The one element whose size differs rather than only its spacing: the
          name is the page's subject on both sides, and it stopped reading that way
          when the member hero shrank it to a label above a participant count. -->
-    <h1
-        class="whitespace-pre-line {compact
-            ? 'text-title'
-            : 'max-w-2xl text-3xl font-bold leading-tight sm:text-4xl'}"
-    >
+    <h1 class="whitespace-pre-line {compact ? 'text-title' : 'max-w-2xl text-display'}">
         {title}
     </h1>
 

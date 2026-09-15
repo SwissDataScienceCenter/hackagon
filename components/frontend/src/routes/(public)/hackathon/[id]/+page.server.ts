@@ -31,10 +31,11 @@ type Membership = "member" | "waiting" | "none"
  * a member who still shows as waiting. The role is what the backend enforces, so
  * the role is what decides.
  *
- * `list({ participantId })` is the only call that answers it — `ViewerMembership`
- * is populated only when `participantId` is supplied
- * (`hackathon_service.go:1514`). Its presence is what separates "waiting" from
- * "neither": a participant row exists either way, a role does not.
+ * `list({ participantId })` answers it for somebody who joined —
+ * `ViewerMembership` is populated only when `participantId` is supplied
+ * (`hackathon_service.go:1514`), and its presence separates "waiting" from
+ * "neither": a participant row exists either way, a role does not. An owner
+ * never joined, so `list({ ownerId })` answers for them instead.
  *
  * The three cases are kept apart rather than collapsed to a boolean because the
  * foot of the page says something different to each — the member is offered the
@@ -59,11 +60,22 @@ async function membership(
   try {
     const { user } = await grpc.user.whoAmI({})
     if (!user) return "none"
-    const { hackathons } = await grpc.hackathon.list({ participantId: user.id })
-    const mine = hackathons.find((h) => h.id === event.params.id)
-    if (!mine?.viewerMembership) return "none"
+    // Two lists, because owning a hackathon and taking part in one are separate
+    // records. `Create` grants the casbin Owner role and the owners edge and
+    // never writes a Participant row, so an organiser reading their own
+    // hackathon's public page carries no `viewerMembership` at all — and was
+    // offered "Register" for an event they run. The dashboard pairs the same two
+    // calls for the same reason.
+    const [mine, owned] = await Promise.all([
+      grpc.hackathon.list({ participantId: user.id }),
+      grpc.hackathon.list({ ownerId: user.id }),
+    ])
+    if (owned.hackathons.some((h) => h.id === event.params.id)) return "member"
 
-    return mine.viewerMembership.role !==
+    const entry = mine.hackathons.find((h) => h.id === event.params.id)
+    if (!entry?.viewerMembership) return "none"
+
+    return entry.viewerMembership.role !==
       HackathonRole.HACKATHON_ROLE_UNSPECIFIED
       ? "member"
       : "waiting"
