@@ -177,20 +177,15 @@ export const actions: Actions = {
           return fail(400, {
             message: e.details || "Some answers are not valid.",
           })
-        // TODO(backend: waitlisted-answers): a waitlisted participant cannot
-        // save. `SubmitAnswers` takes `hackathon:read`, and the `Member` role
-        // that carries it is granted by `ApproveParticipant`, not by `Join` —
-        // so someone on the waiting list holds a participant row and no role.
-        // Their answers are exactly what an organizer reads to decide, so this
-        // reports the refusal accurately rather than pretending it cannot happen.
+        // A waitlisted participant is no longer a case here. `SubmitAnswers`
+        // takes `hackathon:view`, which a public hackathon grants to everybody,
+        // so holding no role no longer stops them saving — which matters,
+        // because their answers are exactly what an organizer reads to decide.
         if (e.code === Status.PERMISSION_DENIED)
           return fail(403, {
-            message:
-              target.isMember && target.isWaiting
-                ? "Your answers cannot be changed while you are on the waiting list."
-                : target.isMember
-                  ? "You are not registered for this hackathon."
-                  : "Registration is closed for this hackathon.",
+            message: target.isMember
+              ? "You are not registered for this hackathon."
+              : "Registration is closed for this hackathon.",
           })
         if (e.code === Status.NOT_FOUND)
           return fail(404, { message: "This hackathon no longer exists" })
@@ -198,10 +193,17 @@ export const actions: Actions = {
       throw e
     }
 
-    // A first-time answer ends the signup, so it leaves for the dashboard, where
-    // the hackathon has moved into "Your hackathons" with its badge. An edit
-    // stays put: the person came to change one answer, not to go somewhere.
+    // Saving always goes somewhere, because a form that stays put after a
+    // successful post says nothing about what it did.
+    //
+    // A first-time answer ends the signup and leaves for the dashboard, where
+    // the hackathon has moved into "Your hackathons" with its badge. Somebody
+    // still waiting goes back to the hackathon's public page, which is the page
+    // that tells them they are waiting — and the only one they may read until an
+    // organizer approves them. A confirmed member stays put: they came to change
+    // one answer on a page they can reach whenever they like.
     if (!target.isMember) redirect(303, "/dashboard")
+    if (target.isWaiting) redirect(303, `/hackathon/${hackathonId}`)
 
     return { saved: true }
   },

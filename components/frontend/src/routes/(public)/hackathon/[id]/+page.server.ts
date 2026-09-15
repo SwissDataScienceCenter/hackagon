@@ -13,9 +13,12 @@ import { usableSession } from "$lib/server/session"
 // on Session — the same one hooks.server.ts relies on.
 import type { CustomSession } from "../../../../auth.d"
 
+/** Confirmed member, registered but unapproved, or no relationship at all. */
+type Membership = "member" | "waiting" | "none"
+
 /**
- * Whether this visitor is a *confirmed* member of this hackathon — one the
- * member view will actually serve.
+ * This visitor's standing in this hackathon: a confirmed member the member view
+ * will serve, somebody still waiting on an organizer, or neither.
  *
  * The casbin role, not the participant row. Joining a public hackathon writes a
  * waitlisted row and no role at all (`hackathon_service.go:629`), and
@@ -31,7 +34,12 @@ import type { CustomSession } from "../../../../auth.d"
  *
  * `list({ participantId })` is the only call that answers it — `ViewerMembership`
  * is populated only when `participantId` is supplied
- * (`hackathon_service.go:1514`).
+ * (`hackathon_service.go:1514`). Its presence is what separates "waiting" from
+ * "neither": a participant row exists either way, a role does not.
+ *
+ * The three cases are kept apart rather than collapsed to a boolean because the
+ * page says something different to each — the member leaves, the waiting are
+ * told they are waiting, and everybody else is invited to register.
  *
  * The filter takes the *platform* user's uuid, not Keycloak's `sub`, hence
  * `whoAmI` first: `locals.platformUser` is set by the hook for protected routes
@@ -41,29 +49,30 @@ import type { CustomSession } from "../../../../auth.d"
  * An authorized client built here rather than taken from `event.locals.grpc`,
  * which the hook only creates for protected routes.
  */
-async function isConfirmedMember(
+async function membership(
   event: Parameters<PageServerLoad>[0],
-): Promise<boolean> {
+): Promise<Membership> {
   const session = (await event.locals.auth()) as CustomSession | null
-  if (!usableSession(session) || !session?.accessToken) return false
+  if (!usableSession(session) || !session?.accessToken) return "none"
 
   const grpc = createAuthorizedGrpc(session.accessToken)
   try {
     const { user } = await grpc.user.whoAmI({})
-    if (!user) return false
+    if (!user) return "none"
     const { hackathons } = await grpc.hackathon.list({ participantId: user.id })
     const mine = hackathons.find((h) => h.id === event.params.id)
+    if (!mine?.viewerMembership) return "none"
 
-    return (
-      mine?.viewerMembership?.role !== undefined &&
-      mine.viewerMembership.role !== HackathonRole.HACKATHON_ROLE_UNSPECIFIED
-    )
+    return mine.viewerMembership.role !==
+      HackathonRole.HACKATHON_ROLE_UNSPECIFIED
+      ? "member"
+      : "waiting"
   } catch {
     // NOT_FOUND from `whoAmI` is a first sign-in whose platform row nothing has
     // created yet — the (app) hook does that on the first protected request, and
     // somebody who has never made one is certainly not a participant. Any other
     // failure degrades to the public page, which is the page they asked for.
-    return false
+    return "none"
   }
 }
 
@@ -85,10 +94,12 @@ export const load: PageServerLoad = async (event) => {
   // CTA at the foot is what they came for, so they get the public page and its
   // button.
   //
-  // A waitlisted visitor stays here too, and that is the fix rather than a
+  // A waitlisted visitor stays here, and that is the fix rather than a
   // shortfall: the public page is genuinely everything they may read until an
-  // organizer approves them.
-  if (signedIn && (await isConfirmedMember(event))) {
+  // organizer approves them. The CTA at the foot says so instead of offering to
+  // register them a second time.
+  const standing = signedIn ? await membership(event) : "none"
+  if (standing === "member") {
     redirect(302, `/my/hackathon/${event.params.id}/overview`)
   }
 
@@ -110,9 +121,11 @@ export const load: PageServerLoad = async (event) => {
   if (!hackathon) error(404, "Hackathon not found")
 
   return {
-    // What the CTA at the foot of the page switches on: register, or sign in
-    // first. Not `session` itself — nothing on this page renders the visitor.
+    // What the CTA at the foot of the page switches on: register, sign in
+    // first, or wait. Not `session` itself — nothing on this page renders the
+    // visitor.
     signedIn,
+    waitlisted: standing === "waiting",
     hackathon: {
       id: hackathon.id,
       name: hackathon.name,

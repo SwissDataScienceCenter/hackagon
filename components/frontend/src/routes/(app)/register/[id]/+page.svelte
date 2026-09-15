@@ -64,15 +64,9 @@
     </div>
 
     {#if data.isWaiting}
-        <!-- TODO(backend: waitlisted-answers): saying they cannot change them is
-             the truth today, not the intent. `SubmitAnswers` needs
-             `hackathon:read`, and the role carrying it is granted on approval
-             rather than on joining — so the waiting list is exactly where
-             editing stops working. Restore "you can still change them" once the
-             gate moves to the participant row. -->
         <p class="m-0 text-xs text-ink-3">
             You are on the waiting list. Your answers are what the organizers read
-            when they review it; they cannot be changed until you are approved.
+            when they review it, so you can still change them while you wait.
         </p>
     {/if}
 
