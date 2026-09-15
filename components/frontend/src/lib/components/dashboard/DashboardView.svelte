@@ -12,7 +12,7 @@
         membershipBadgeLabel,
         membershipBadgeVariant,
     } from '$lib/utils/hackathonRole';
-    import { isFinished, statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { isFinished, isPrivate, statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
     import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
 
     interface HackathonMember {
@@ -28,6 +28,8 @@
         startsAt?: Date;
         endsAt?: Date;
         status: number;
+        /** Raw Visibility number. Read through `isPrivate`, never compared here. */
+        visibility: number;
         viewerMembership?: HackathonMember;
     }
 
@@ -184,12 +186,23 @@
                              member Overview — the same owner-or-admin rule that
                              decides whether the sidebar offers a Manage section,
                              asked once in `hackathonRole` so the row and the rail
-                             cannot disagree about whose hackathon this is. -->
-                        {@const href = !canOpenHackathon(mem, isGlobalAdmin)
-                            ? undefined
-                            : canManageHackathon(mem, isGlobalAdmin)
+                             cannot disagree about whose hackathon this is.
+
+                             Somebody still on the waiting list opens the public
+                             page instead. It is the one page they may read until
+                             an organiser approves them, and it now says so and
+                             offers their answers back — so a row that went
+                             nowhere would be the only place left that told them
+                             nothing. Only for a public hackathon: the public page
+                             serves no other kind, so linking a private one would
+                             be a 404 drawn by us. -->
+                        {@const href = canOpenHackathon(mem, isGlobalAdmin)
+                            ? canManageHackathon(mem, isGlobalAdmin)
                               ? `/my/hackathon/${h.id}/manage`
-                              : `/my/hackathon/${h.id}/overview`}
+                              : `/my/hackathon/${h.id}/overview`
+                            : mem?.isWaiting && !isPrivate(h.visibility)
+                              ? `/hackathon/${h.id}`
+                              : undefined}
                         <!-- The hover tint lives here rather than on the link
                              inside `HackathonRow`, which only spans the row's
                              own content: the membership badge is its sibling,
@@ -206,12 +219,13 @@
                         >
                             <div class="flex-1">
                                 <!-- Confirmed here: straight in, to whichever page
-                                     above decided. Waitlisted, and the row is not
-                                     a link — joining writes the participant row but
+                                     above decided. Waitlisted, and it is the public
+                                     page — joining writes the participant row but
                                      not the casbin `member` role, so the member
                                      view would answer 403 until an organiser
                                      approves you. The Waitlisted badge beside it
-                                     says why. -->
+                                     says why the destination is the outside of the
+                                     hackathon rather than the inside. -->
                                 <HackathonRow
                                     {href}
                                     name={h.name}
