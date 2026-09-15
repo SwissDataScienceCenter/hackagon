@@ -62,24 +62,35 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Base domain with substitution
-*/}}
-{{- define "hackagon.baseDomain" -}}
-{{- .Values.baseDomain | replace "{baseDomain}" .Values.baseDomain }}
-{{- end }}
-
-{{/*
-Frontend host with substitution
+First ingress host is the canonical frontend hostname.
+(in case we have multiple urls)
 */}}
 {{- define "hackagon.frontendHost" -}}
-{{- printf "app.%s" (include "hackagon.baseDomain" .) | replace "{baseDomain}" .Values.baseDomain }}
+{{- $first := first (.Values.frontend.ingress.hosts | default list) | required "frontend.ingress.hosts must name at least one host: it is the app's public name" }}
+{{- $first.host | replace "{baseDomain}" .Values.baseDomain | replace "{releaseName}" .Release.Name }}
 {{- end }}
 
 {{/*
-Keycloak host with substitution
+Public url Keycloak runs under. Required `enabled` or not: browsers are sent
+here, and it is the `iss` claim in every token.
+*/}}
+{{- define "hackagon.keycloakUrl" -}}
+{{- .Values.keycloak.hostname.hostname | required "keycloak.hostname.hostname is required (e.g. \"https://auth.example.com\")" | trimSuffix "/" }}
+{{- end }}
+
+{{/*
+The `iss` claim; the backend rejects a token that does not match it. The realm
+is `hackagon` chart-wide, so this is derived rather than configurable.
+*/}}
+{{- define "hackagon.oidcIssuer" -}}
+{{- printf "%s/realms/hackagon" (include "hackagon.keycloakUrl" .) }}
+{{- end }}
+
+{{/*
+The Keycloak url as a bare hostname, for an ingress `host:` field.
 */}}
 {{- define "hackagon.keycloakHost" -}}
-{{- printf "auth.%s" (include "hackagon.baseDomain" .) | replace "{baseDomain}" .Values.baseDomain }}
+{{- include "hackagon.keycloakUrl" . | trimPrefix "https://" | trimPrefix "http://" }}
 {{- end }}
 
 {{/*

@@ -28,7 +28,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   fixed in the chart's templates, so changing either value pointed the traffic
   at one name while the login flow still expected the other. Both values are now
   required: the chart refuses to render rather than guessing a hostname nothing
-  is served under.
+  is served under, and the two OIDC issuer settings are gone from `values.yaml`
+  because they only ever had one working value.
 
 - A hackathon overview with no phase running no longer opens with "No phase is
   running" and a footnote saying the timeline follows the dates alone. The card
