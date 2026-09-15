@@ -29,7 +29,7 @@
          * that changes between the page a stranger sees and the page somebody
          * already registered sees.
          */
-        standing?: 'member' | 'waiting' | 'none';
+        standing?: 'member' | 'waiting' | 'admin' | 'none';
     } = $props();
 
     // Back to this very page after Keycloak rather than to the dashboard: they
@@ -40,7 +40,8 @@
     // A finished hackathon offers no way in — the hero's own badge is already the
     // reason, and saying it twice reads as a fault. A member is the exception:
     // their hackathon does not stop being theirs when it ends.
-    const show = $derived(standing === 'member' || !isFinished(status));
+    const canGoIn = $derived(standing === 'member' || standing === 'admin');
+    const show = $derived(canGoIn || !isFinished(status));
 </script>
 
 <!--
@@ -57,8 +58,17 @@
         class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-b
                border-line px-4 py-3 sm:px-10 md:px-20"
     >
-        {#if standing === 'member'}
-            <MembershipBadge />
+        {#if canGoIn}
+            <!-- The chip only for a member. An admin may open this hackathon
+                 without taking part in it, and a Member chip would claim
+                 otherwise; the sentence says how they got the door instead. -->
+            {#if standing === 'member'}
+                <MembershipBadge />
+            {:else}
+                <p class="m-0 font-sans text-sm text-ink-2">
+                    Open to you as a platform administrator.
+                </p>
+            {/if}
             <a
                 href={resolve(`/my/hackathon/${hackathonId}/overview`)}
                 class="btn btn-sm btn-solid no-underline"

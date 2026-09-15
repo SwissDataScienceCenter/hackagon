@@ -6,6 +6,7 @@ import {
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
 import { resolvePhaseStatus, sortPhasesByStart } from "$lib/utils/phase"
 // Shared and tested, because it is subtle: a session can carry a user and a
 // stale accessToken at once. See $lib/server/session.
@@ -14,8 +15,11 @@ import { usableSession } from "$lib/server/session"
 // on Session — the same one hooks.server.ts relies on.
 import type { CustomSession } from "../../../../auth.d"
 
-/** Confirmed member, registered but unapproved, or no relationship at all. */
-type Membership = "member" | "waiting" | "none"
+/**
+ * Confirmed member, registered but unapproved, able to open anything, or no
+ * relationship at all.
+ */
+type Membership = "member" | "waiting" | "admin" | "none"
 
 /**
  * This visitor's standing in this hackathon: a confirmed member the member view
@@ -61,6 +65,12 @@ async function membership(
   try {
     const { user } = await grpc.user.whoAmI({})
     if (!user) return "none"
+    // A platform admin can open every hackathon and act in it — the casbin
+    // matcher ends with `|| g2(r.sub, "admin")`, outside all four of its tests.
+    // Kept apart from `member` rather than folded into it: they can go in, but
+    // they are not taking part, and a Member chip would say they were.
+    if (user.roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN)) return "admin"
+
     // Two lists, because owning a hackathon and taking part in one are separate
     // records. `Create` grants the casbin Owner role and the owners edge and
     // never writes a Participant row, so an organiser reading their own

@@ -31,7 +31,7 @@
         /** Unused when `preview` is set — the preview draws no Join block. */
         signedIn?: boolean;
         /** Likewise unused in the preview. See JoinCta. */
-        standing?: 'member' | 'waiting' | 'none';
+        standing?: 'member' | 'waiting' | 'admin' | 'none';
         /** The same strip the member area draws above its content. */
         phases?: { name: string; status: 'completed' | 'active' | 'upcoming' | 'current' }[];
         /** Confirmed participants. An aggregate — this page never names one. */
