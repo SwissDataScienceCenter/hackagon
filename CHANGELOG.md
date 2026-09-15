@@ -20,8 +20,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
-- A deployment can now be reached under any hostnames, not only
-  `app.<domain>` and `auth.<domain>`. The app's hostname is the first entry of
+- A deployment can now be reached under any hostnames, not only `app.<domain>`
+  and `auth.<domain>`. The app's hostname is the first entry of
   `frontend.ingress.hosts`, Keycloak's is `keycloak.hostname.hostname`, and the
   chart derives the ingresses, the TLS certificates, the OIDC issuer urls and
   the realm's login redirect urls from those two. Previously the subdomains were
