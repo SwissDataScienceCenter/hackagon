@@ -85,6 +85,12 @@ func hackathonEntryFromEnt(h *ent.Hackathon, now time.Time) *hackEnts.Hackathon 
 		l := h.Logo
 		e.Logo = &l
 	}
+	// Empty unless the caller eager-loaded them, which List does and the other
+	// users of this mapper do not — an absent edge is an empty slice, not a nil
+	// dereference, so this is safe either way.
+	for _, ph := range h.Edges.Phases {
+		e.Phases = append(e.Phases, phaseEntryFromEnt(ph, h.ID))
+	}
 
 	return e
 }
