@@ -156,14 +156,14 @@ These hold across the whole codebase; the skills explain the mechanisms.
   image tag, so `just version::check` (a CI stage) fails where these disagree.
   The frontend reads `VERSION` at build time (`vite.config.ts` → `$lib/version`
   → the footer) and displays it.
-- **`main` is the only long-lived branch, and merging to it reaches the running
-  app.** One focused pull request per change, each carrying its `CHANGELOG.md`
-  entry. Every push to `main` moves `temporary/*:latest`, and a deployment at
-  running https://app.hackagon.dev.renku.ch/ that tag with
-  `imagePullPolicy: Always` picks it up on _any_ container restart. This
-  deployment is just temporary. The real deployment happens via Chart where an
-  `appVersion` is pinned. Charts have there own decoupled Chart version. See
-  `RELEASING.md`.
+- **`main` is the only long-lived branch, and merging to it deploys to dev.**
+  One focused pull request per change, each carrying its manually added
+  `CHANGELOG.md` entry. Both clusters install the same chart from the GitOps
+  setup in `sdsc-ordes/cloud-infra` and differ only in image overrides: **dev**
+  runs `temporary/*:latest` with `pullPolicy: Always`, so every push to `main`
+  reaches it on the next container restart; **prod** takes the chart defaults,
+  `release/*` at `appVersion`, so nothing merged can reach it until someone
+  bumps `appVersion` and installs the new chart version. See `RELEASING.md`.
 - **The chart versions itself; `VERSION` never touches it.**
   `helm-chart/Chart.yaml` holds two hand-edited numbers: `version` is the
   chart's own release, `appVersion` is the app release it deploys.
