@@ -25,7 +25,9 @@ spec:
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          {{- with .Values.frontend.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
           args:
             - "--config-dir=/etc/hackagon"
           env:
