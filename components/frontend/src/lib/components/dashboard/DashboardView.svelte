@@ -12,7 +12,8 @@
         canManageHackathon,
         canOpenHackathon,
     } from '$lib/utils/hackathonRole';
-    import { isFinished, isPrivate, statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { isFinished, isPrivate } from '$lib/utils/hackathonStatus';
+    import { relativeWhen, whenGroup, type WhenGroup } from '$lib/utils/hackathonWhen';
     import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
 
     interface HackathonMember {
@@ -93,6 +94,37 @@
     // the section vanish entirely for everyone else.
     const adminItems = $derived(platformNav({ isGlobalAdmin }));
 
+
+    // Recomputed rather than captured once, so a dashboard left open overnight
+    // does not keep insisting a finished hackathon starts tomorrow.
+    const now = $derived(new Date());
+
+    // Three groups, in the order time runs. Built from `status`, which the
+    // backend computes from these same two dates on every entry — grouping by a
+    // rule of our own would be a second implementation of it.
+    const GROUPS: { key: WhenGroup; label: string }[] = [
+        { key: 'now', label: 'Happening now' },
+        { key: 'upcoming', label: 'Coming up' },
+        { key: 'finished', label: 'Finished' },
+    ];
+    const groupBy = (items: HackathonEntry[]) =>
+        GROUPS.map((g) => ({
+            ...g,
+            items: items.filter((h) => whenGroup(h.status) === g.key),
+        })).filter((g) => g.items.length > 0);
+    const grouped = $derived(groupBy(myHackathons));
+    const groupedOther = $derived(groupBy(otherHackathons));
+
+    // The relative phrase first, because "starts in 4 days" is the thing being
+    // asked and the dates are the reference for it. Absent where there is nothing
+    // honest to say, and then the dates stand alone as before.
+    function whenMeta(h: HackathonEntry): string {
+        const rel = relativeWhen(h, now);
+        const abs = formatMeta(h);
+        if (!rel) return abs;
+
+        return abs ? `${rel} · ${abs}` : rel;
+    }
 
     function formatMeta(h: HackathonEntry): string {
         const fmt = (d: Date) =>
@@ -177,9 +209,22 @@
             {#if myHackathons.length === 0}
                 <p class="text-sm text-ink-3">You are not connected to any hackathons yet.</p>
             {:else}
-                <div class="card overflow-hidden">
-                    {#each myHackathons as h (h.id)}
-                        {@const mem = h.viewerMembership}
+                {#each grouped as group (group.key)}
+                    <!-- A heading per group rather than a status chip per row:
+                         the chip said which of these three a hackathon was in,
+                         and the group it sits in says the same thing without
+                         repeating it on every line. The running ones get the
+                         accent rail, which is the one full-strength mark on the
+                         page — the same rule the phase timeline follows. -->
+                    <div class="flex flex-col gap-2">
+                        <h3 class="meta">{group.label}</h3>
+                        <div
+                            class="card overflow-hidden {group.key === 'now'
+                                ? 'border-l-2 border-l-accent'
+                                : ''}"
+                        >
+                            {#each group.items as h (h.id)}
+                                {@const mem = h.viewerMembership}
                         <!-- Two questions, not one: whether the row is a link at
                              all, and which page it opens. Someone who runs this
                              hackathon lands on Settings, everyone else on the
@@ -230,9 +275,7 @@
                                     {href}
                                     name={h.name}
                                     imageUrl={h.logo}
-                                    meta={formatMeta(h)}
-                                    badge={statusLabel(h.status)}
-                                    badgeVariant={statusBadgeVariant(h.status)}
+                                    meta={whenMeta(h)}
                                     visibility={h.visibility}
                                 />
                             </div>
@@ -273,8 +316,10 @@
                                 {/if}
                             </div>
                         </div>
-                    {/each}
-                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/each}
             {/if}
         </section>
 
@@ -299,8 +344,19 @@
             {#if otherHackathons.length === 0}
                 <p class="text-sm text-ink-3">No other hackathons available.</p>
             {:else}
-                <div class="card overflow-hidden">
-                    {#each otherHackathons as h (h.id)}
+                {#each groupedOther as group (group.key)}
+                    <!-- Grouped the same way as the list above, for the same
+                         reason: a hackathon you could join is worth finding by
+                         when it runs, and a Finished heading explains a missing
+                         Join button better than a chip beside it did. -->
+                    <div class="flex flex-col gap-2">
+                        <h3 class="meta">{group.label}</h3>
+                        <div
+                            class="card overflow-hidden {group.key === 'now'
+                                ? 'border-l-2 border-l-accent'
+                                : ''}"
+                        >
+                            {#each group.items as h (h.id)}
                         <div class="flex items-center border-b border-line last:border-0">
                             <div class="flex-1">
                                 <!-- No href: a non-member holds no `hackathon:read`
@@ -310,9 +366,7 @@
                                 <HackathonRow
                                     name={h.name}
                                     imageUrl={h.logo}
-                                    meta={formatMeta(h)}
-                                    badge={statusLabel(h.status)}
-                                    badgeVariant={statusBadgeVariant(h.status)}
+                                    meta={whenMeta(h)}
                                 />
                             </div>
                             <!-- A finished hackathon gets no button and no label:
@@ -358,8 +412,10 @@
                                 </form>
                             {/if}
                         </div>
-                    {/each}
-                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/each}
             {/if}
         </section>
 
