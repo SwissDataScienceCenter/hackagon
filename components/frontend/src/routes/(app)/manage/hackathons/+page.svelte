@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { resolve } from '$app/paths';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
@@ -9,7 +10,13 @@
 
     type Row = PageData['hackathons'][number];
 
-    const now = $derived(new Date());
+    // Filled in on mount, never during SSR: the relative phrases count local
+    // calendar days, and the server's are not the reader's. Undefined until the
+    // browser answers, which `relativeWhen` reads as "say nothing yet".
+    let now = $state<Date | undefined>(undefined);
+    onMount(() => {
+        now = new Date();
+    });
 
     // The same three groups, in the same order, as the dashboard's lists: an
     // administrator looking for a hackathon is asking the same question about it

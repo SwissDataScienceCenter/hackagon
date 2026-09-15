@@ -18,9 +18,15 @@ export const load: PageServerLoad = async (event) => {
   const { hackathon } = requireGrpc(event.locals.grpc)
 
   // The sidebar offers this page to a global admin only, but the URL is
-  // guessable. A non-admin gets a shorter list rather than a refusal — List
-  // filters instead of denying — so the guard is ours to make explicit.
-  if (!event.locals.platformUser) error(403, "You are not signed in")
+  // guessable — and `List` answers a non-admin with a *shorter list* rather than
+  // a refusal, so without this they would get a page headed "every hackathon on
+  // the platform" showing some of them. Nothing leaks either way; the page would
+  // simply be lying about what it is. The role comes from the (app) layout,
+  // which already read it off `platformUser`.
+  const { isGlobalAdmin } = await event.parent()
+  if (!isGlobalAdmin) {
+    error(403, "You don't have permission to list every hackathon")
+  }
 
   try {
     const { hackathons } = await hackathon.list({})

@@ -76,6 +76,15 @@ describe("relativeWhen", () => {
     )
   })
 
+  // Rendered on the server, these would be counted in the container's timezone
+  // rather than the reader's. Callers pass `now` only once the browser can say
+  // what it is, and until then the dates stand alone.
+  it("says nothing without a clock it can trust", () => {
+    const h = { status: 1, startsAt: d("2026-09-19T09:00:00") }
+
+    expect(relativeWhen(h, undefined)).toBeUndefined()
+  })
+
   // A hackathon nobody dated is "Upcoming" for ever, and a countdown to a date
   // that does not exist would be an invention.
   it("says nothing at all when there are no dates", () => {

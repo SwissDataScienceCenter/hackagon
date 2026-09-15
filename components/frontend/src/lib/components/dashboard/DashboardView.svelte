@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
     import { SvelteSet } from 'svelte/reactivity';
@@ -95,9 +96,13 @@
     const adminItems = $derived(platformNav({ isGlobalAdmin }));
 
 
-    // Recomputed rather than captured once, so a dashboard left open overnight
-    // does not keep insisting a finished hackathon starts tomorrow.
-    const now = $derived(new Date());
+    // Filled in on mount, never during SSR: the relative phrases count local
+    // calendar days, and the server's are not the reader's. Undefined until the
+    // browser answers, which `relativeWhen` reads as "say nothing yet".
+    let now = $state<Date | undefined>(undefined);
+    onMount(() => {
+        now = new Date();
+    });
 
     // Three groups, in the order time runs. Built from `status`, which the
     // backend computes from these same two dates on every entry — grouping by a

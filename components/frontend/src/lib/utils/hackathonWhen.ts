@@ -61,8 +61,18 @@ function agoDays(d: number): string {
  */
 export function relativeWhen(
   h: { status: number; startsAt?: Date; endsAt?: Date },
-  now: Date,
+  now: Date | undefined,
 ): string | undefined {
+  // `now` is optional, and absent is the server's answer.
+  //
+  // These phrases are counted in *local* calendar days, so rendering them during
+  // SSR would count them in the container's timezone rather than the reader's: a
+  // UTC server tells somebody in Zurich a hackathon starts "in 2 days" between
+  // 22:00 and midnight, and the client then re-renders it to "tomorrow". Callers
+  // fill `now` in on mount instead, so the phrase simply is not there until the
+  // browser can say it — and the dates beside it, which are absolute, are.
+  if (!now) return undefined
+
   const group = whenGroup(h.status)
   if (group === "upcoming") {
     return h.startsAt ? inDays(daysBetween(now, h.startsAt)) : undefined
