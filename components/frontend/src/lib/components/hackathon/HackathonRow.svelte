@@ -120,7 +120,8 @@
             <span class="meta truncate">{org}</span>
         {/if}
         <span class="flex min-w-0 items-center gap-1.5">
-            <!-- A mark beside the name rather than a chip beside the status: who
+            <span class="truncate text-sm font-semibold text-ink">{name}</span>
+            <!-- A mark after the name rather than a chip beside the status: who
                  may see a hackathon is a property of it, not a state it is
                  passing through, and a full badge gave it more weight than the
                  name it qualifies. Public gets nothing at all — it is what a
@@ -131,7 +132,6 @@
                     aria-label={visibilityLabel(visibility)}
                 />
             {/if}
-            <span class="truncate text-sm font-semibold text-ink">{name}</span>
             {#if titleExtra}
                 <span class="relative shrink-0">{@render titleExtra()}</span>
             {/if}

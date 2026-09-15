@@ -2,6 +2,7 @@
     import type { ComponentType } from 'svelte';
     import { resolve } from '$app/paths';
     import { Calendar, MapPin, Users } from 'lucide-svelte';
+    import Lock from 'lucide-svelte/icons/lock';
     import StoredImage from './StoredImage.svelte';
 
     // One hero, two densities — not two heroes that happen to sit above the same
@@ -22,6 +23,7 @@
         venue,
         imageUrl,
         badges = [],
+        isPrivate = false,
         participantCount,
         participantCapacity,
         organizers = [],
@@ -40,6 +42,12 @@
          * hackathon. See MembershipBadge, which draws the same pair elsewhere.
          */
         badges?: { label: string; variant: string; icon?: ComponentType }[];
+        /**
+         * Draws a padlock after the title. The same mark a list row carries, for
+         * the same reason: visibility qualifies the name, so it belongs beside
+         * it rather than in the row of chips describing the event's state.
+         */
+        isPrivate?: boolean;
         participantCount?: number;
         /**
          * TODO(backend: hackathon-venue-capacity): omitted by every caller —
@@ -107,8 +115,15 @@
     <!-- The one element whose size differs rather than only its spacing: the
          name is the page's subject on both sides, and it stopped reading that way
          when the member hero shrank it to a label above a participant count. -->
-    <h1 class="whitespace-pre-line {compact ? 'text-title' : 'max-w-2xl text-display'}">
+    <h1
+        class="flex items-center gap-2 whitespace-pre-line {compact
+            ? 'text-title'
+            : 'max-w-2xl text-display'}"
+    >
         {title}
+        {#if isPrivate}
+            <Lock class="h-[0.8em] w-[0.8em] shrink-0 text-ink-3" aria-label="Private" />
+        {/if}
     </h1>
 
     {#if hasMeta}

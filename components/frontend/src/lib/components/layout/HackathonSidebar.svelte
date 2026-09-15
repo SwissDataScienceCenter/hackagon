@@ -7,6 +7,7 @@
     import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
     import ExternalLink from 'lucide-svelte/icons/external-link';
     import UserRound from 'lucide-svelte/icons/user-round';
+    import Lock from 'lucide-svelte/icons/lock';
     import { resolve } from '$app/paths';
     import SidebarNavSection from './SidebarNavSection.svelte';
     import { manageNav, memberNav } from '$lib/navigation/items';
@@ -320,7 +321,13 @@
                  gone this is the only place its name appears on pages that carry
                  no hero. -->
             <div class="flex items-center gap-2">
-                <span class="min-w-0 flex-1 truncate text-sm font-bold">{hackathonName}</span>
+                <span class="min-w-0 truncate text-sm font-bold">{hackathonName}</span>
+                <!-- The same padlock the list rows and the hero carry, in the
+                     same place: after the name it qualifies. -->
+                {#if isPrivate}
+                    <Lock class="h-3.5 w-3.5 shrink-0 text-ink-3" aria-label="Private" />
+                {/if}
+                <span class="flex-1"></span>
                 <button
                     onclick={toggleCollapsed}
                     aria-label="Collapse sidebar"
