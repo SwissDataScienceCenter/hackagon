@@ -69,8 +69,10 @@ frontend:
       nginx.ingress.kubernetes.io/proxy_busy_buffers_size: 32k
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
     # -- Public hostname of the app. The TLS host below and the realm's login
-    # redirects follow the first entry.
+    # Redirects follow the first entry.
     hosts:
+      # You can overwrite this default to any hard-coded custom domain,
+      # e.g. host: "hackagon.datascience.ch".
       - host: "app.{{ .Values.baseDomain }}"
         paths:
           - path: /
