@@ -15,7 +15,7 @@ func Register(
 
 	e := factory.Register(
 		DocSphinxRunnerID,
-		runner.RunnerData{ //nolint:exhaustruct
+		runner.RunnerData{ //nolint:exhaustruct_v5
 			Creator: func(_config step.AuxConfig) (runner.IRunner, error) {
 				return NewSphinxBuildRunner()
 			},

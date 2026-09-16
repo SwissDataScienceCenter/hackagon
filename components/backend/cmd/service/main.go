@@ -86,7 +86,7 @@ func main() {
 	}
 
 	// Listen
-	lc := net.ListenConfig{} //nolint:exhaustruct // all fields optional
+	lc := net.ListenConfig{} //nolint:exhaustruct_v5 // all fields optional
 	lis, err := lc.Listen(context.Background(), "tcp", fmt.Sprintf(":%s", cfg.Server.Port))
 	if err != nil {
 		logx.Fatal("listen", "err", err)

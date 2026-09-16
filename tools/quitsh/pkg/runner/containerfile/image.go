@@ -89,7 +89,7 @@ func (r *ContainerfileBuildRunner) Run(ctx runner.IContext) error {
 		}
 
 		pkgs = append(pkgs,
-			cnImages.ImagePackage{ //nolint:exhaustruct
+			cnImages.ImagePackage{ //nolint:exhaustruct_v5
 				Version:       comp.Version().String(),
 				Name:          imgPkgName,
 				ContainerFile: p,

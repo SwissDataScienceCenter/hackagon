@@ -173,71 +173,78 @@ func NewRBACEnforcer(cfg *config.Config) (*Enforcer, error) {
 	return &Enforcer{enforcer: e}, nil
 }
 
+// Casbin domain patterns. The `*` stands in for any id, so a policy written
+// against these applies in every hackathon rather than to one in particular.
+const (
+	anyHackathonPath = "/hackathon/*"
+	anyTeamPath      = "/hackathon/*/team/*"
+)
+
 func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 	policies := [][]string{
 		// HackathonOrganizer can create new hackathons
-		{HackathonOrganizer.String(), "/hackathon/*", Hackathon.String(), Create.String()},
+		{HackathonOrganizer.String(), anyHackathonPath, Hackathon.String(), Create.String()},
 		// Owner can read owned hackathon
-		{Owner.String(), "/hackathon/*", Hackathon.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Hackathon.String(), Read.String()},
 		// Owners can view it, which Read does not imply.
-		{Owner.String(), "/hackathon/*", Hackathon.String(), View.String()},
+		{Owner.String(), anyHackathonPath, Hackathon.String(), View.String()},
 		// Owner can write owned hackathon
-		{Owner.String(), "/hackathon/*", Hackathon.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Hackathon.String(), Write.String()},
 		// Owner can write owned hackathon pages
-		{Owner.String(), "/hackathon/*", Page.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Page.String(), Write.String()},
 		// Owner can write owned hackathon pages
-		{Owner.String(), "/hackathon/*", Page.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Page.String(), Read.String()},
 		// Owner can write owned hackathon phases
-		{Owner.String(), "/hackathon/*", Phase.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Phase.String(), Write.String()},
 		// Owner can write owned hackathon phases
-		{Owner.String(), "/hackathon/*", Phase.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Phase.String(), Read.String()},
 		// Owner can write owned hackathon tracks
-		{Owner.String(), "/hackathon/*", Track.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Track.String(), Write.String()},
 		// Owner can read owned hackathon tracks
-		{Owner.String(), "/hackathon/*", Track.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Track.String(), Read.String()},
 		// Owner can write owned hackathon projects
-		{Owner.String(), "/hackathon/*", Project.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Project.String(), Write.String()},
 		// Project Owner can write owned  project
 		{Owner.String(), "/hackathon/*/project/*", Project.String(), Write.String()},
 		// Owner can read owned hackathon projects
-		{Owner.String(), "/hackathon/*", Project.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Project.String(), Read.String()},
 		// Owner can propose owned hackathon projects
-		{Owner.String(), "/hackathon/*", Project.String(), Propose.String()},
+		{Owner.String(), anyHackathonPath, Project.String(), Propose.String()},
 		// Member can read joined hackathon
-		{Member.String(), "/hackathon/*", Hackathon.String(), Read.String()},
+		{Member.String(), anyHackathonPath, Hackathon.String(), Read.String()},
 		// Member can view it, which Read does not imply.
-		{Member.String(), "/hackathon/*", Hackathon.String(), View.String()},
+		{Member.String(), anyHackathonPath, Hackathon.String(), View.String()},
 		// Member can read hackathon pages
-		{Member.String(), "/hackathon/*", Page.String(), Read.String()},
+		{Member.String(), anyHackathonPath, Page.String(), Read.String()},
 		// Member can read hackathon phases
-		{Member.String(), "/hackathon/*", Phase.String(), Read.String()},
+		{Member.String(), anyHackathonPath, Phase.String(), Read.String()},
 		// Member can read hackathon tracks
-		{Member.String(), "/hackathon/*", Track.String(), Read.String()},
+		{Member.String(), anyHackathonPath, Track.String(), Read.String()},
 		// Member can read hackathon projects
-		{Member.String(), "/hackathon/*", Project.String(), Read.String()},
+		{Member.String(), anyHackathonPath, Project.String(), Read.String()},
 		// Owner can create teams
-		{Owner.String(), "/hackathon/*", Team.String(), Create.String()},
+		{Owner.String(), anyHackathonPath, Team.String(), Create.String()},
 		// Owner can read teams
-		{Owner.String(), "/hackathon/*", Team.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Team.String(), Read.String()},
 		// Owner can edit teams
-		{Owner.String(), "/hackathon/*", Team.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Team.String(), Write.String()},
 		// Team member can edit team
-		{Member.String(), "/hackathon/*/team/*", Team.String(), Write.String()},
+		{Member.String(), anyTeamPath, Team.String(), Write.String()},
 		// Team member can edit a submission
-		{Member.String(), "/hackathon/*/team/*", Submission.String(), Write.String()},
+		{Member.String(), anyTeamPath, Submission.String(), Write.String()},
 		// Team member can read a submission
-		{Member.String(), "/hackathon/*/team/*", Submission.String(), Read.String()},
+		{Member.String(), anyTeamPath, Submission.String(), Read.String()},
 		// Hackathon owner can read a submission
-		{Owner.String(), "/hackathon/*", Submission.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, Submission.String(), Read.String()},
 		// Owner can manage vote categories
-		{Owner.String(), "/hackathon/*", VoteCategory.String(), Create.String()},
-		{Owner.String(), "/hackathon/*", VoteCategory.String(), Read.String()},
-		{Owner.String(), "/hackathon/*", VoteCategory.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, VoteCategory.String(), Create.String()},
+		{Owner.String(), anyHackathonPath, VoteCategory.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, VoteCategory.String(), Write.String()},
 		// Owner can manage vote results
-		{Owner.String(), "/hackathon/*", VoteResult.String(), Create.String()},
-		{Owner.String(), "/hackathon/*", VoteResult.String(), Read.String()},
-		{Owner.String(), "/hackathon/*", VoteResult.String(), Write.String()},
-		{Owner.String(), "/hackathon/*", Vote.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, VoteResult.String(), Create.String()},
+		{Owner.String(), anyHackathonPath, VoteResult.String(), Read.String()},
+		{Owner.String(), anyHackathonPath, VoteResult.String(), Write.String()},
+		{Owner.String(), anyHackathonPath, Vote.String(), Read.String()},
 	}
 
 	// AddPoliciesEx adds what is missing and skips the rest.

@@ -210,7 +210,6 @@ func (s *PhaseService) Create(
 	}
 
 	// Handle page linkage (nil = no old page to unlink)
-	//nolint:protogetter // we have to pass PageId reference
 	if err := s.handlePhasePageLinkage(ctx, txn, p.ID, hackathonID, nil, req.PageId); err != nil {
 		if rbErr := txn.Rollback(); rbErr != nil {
 			slog.Error(
@@ -332,7 +331,6 @@ func (s *PhaseService) Edit(
 		p := phase.Edges.Page.ID
 		oldPageID = &p
 	}
-	//nolint:protogetter // we have to pass PageId reference
 	if err := s.handlePhasePageLinkage(
 		ctx,
 		txn,
