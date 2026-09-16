@@ -85,7 +85,7 @@ export function linkify(text: string): AnswerSegment[] {
   let cursor = 0
 
   URL_CANDIDATE.lastIndex = 0
-  for (let match = URL_CANDIDATE.exec(text); match; ) {
+  for (let match = URL_CANDIDATE.exec(text); match;) {
     const href = trimSentence(match[0])
 
     // `https://` with nothing after it, or a run that trimmed down to one.

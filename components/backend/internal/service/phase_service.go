@@ -42,7 +42,12 @@ func (s *PhaseService) List(
 	}
 
 	// Check Phase.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Phase, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Phase,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -112,7 +117,12 @@ func (s *PhaseService) Get(
 	hackathonID := phase.Edges.Hackathon.ID
 
 	// Check Phase.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Phase, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Phase,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -136,7 +146,12 @@ func (s *PhaseService) Create(
 	}
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Phase, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Phase,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -250,7 +265,12 @@ func (s *PhaseService) Edit(
 	hackathonID := phase.Edges.Hackathon.ID
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Phase, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Phase,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -313,7 +333,14 @@ func (s *PhaseService) Edit(
 		oldPageID = &p
 	}
 	//nolint:protogetter // we have to pass PageId reference
-	if err := s.handlePhasePageLinkage(ctx, txn, phaseID, hackathonID, oldPageID, req.PageId); err != nil {
+	if err := s.handlePhasePageLinkage(
+		ctx,
+		txn,
+		phaseID,
+		hackathonID,
+		oldPageID,
+		req.PageId,
+	); err != nil {
 		if rbErr := txn.Rollback(); rbErr != nil {
 			slog.Error(
 				"rollback transaction after page linkage failure",
@@ -382,7 +409,12 @@ func (s *PhaseService) Delete(
 	hackathonID := phase.Edges.Hackathon.ID
 
 	// Check Phase.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Phase, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Phase,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 

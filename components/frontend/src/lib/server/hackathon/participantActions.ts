@@ -23,8 +23,7 @@ import { ClientError, Status } from "nice-grpc-common"
  * the union here is what keeps `{form?.message}` type-checking on both pages.
  */
 export type ParticipantActionResult =
-  | ActionFailure<{ message: string }>
-  | Record<string, never>
+  ActionFailure<{ message: string }> | Record<string, never>
 
 /**
  * Whether one of these actions refused.

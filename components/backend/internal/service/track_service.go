@@ -41,7 +41,12 @@ func (s *TrackService) List(
 	}
 
 	// Check Track.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Track, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Track,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +110,12 @@ func (s *TrackService) Get(
 	hackathonID := track.Edges.Hackathon.ID
 
 	// Check Track.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Track, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Track,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +137,12 @@ func (s *TrackService) Create(
 	}
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Track, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Track,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -205,7 +220,12 @@ func (s *TrackService) Edit(
 	hackathonID := track.Edges.Hackathon.ID
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Track, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Track,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -285,7 +305,12 @@ func (s *TrackService) Delete(
 	hackathonID := track.Edges.Hackathon.ID
 
 	// Check Track.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Track, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Track,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 

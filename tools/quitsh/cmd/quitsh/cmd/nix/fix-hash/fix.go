@@ -264,7 +264,13 @@ func fixHashes(
 
 			hashOldNew[oldHash.Hash] = newHash
 		} else {
-			log.Info("Fixed output derivation has current hash.", "package", p.AttrPath, "hash", newHash)
+			log.Info(
+				"Fixed output derivation has current hash.",
+				"package",
+				p.AttrPath,
+				"hash",
+				newHash,
+			)
 		}
 
 		return nil

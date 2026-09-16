@@ -369,7 +369,12 @@ func (s *HackathonService) RevokeInvite(
 
 	// Check write permission on the invite's hackathon
 	hackID := invite.Edges.Hackathon.ID
-	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackID.String(),
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1187,7 +1192,12 @@ func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long
 	// Apply all policy changes at once
 	for _, c := range policyChanges {
 		if c.enable {
-			if err := s.enforcer.AddPolicy(c.role, id.String(), c.obj, c.perm, c.opts...); err != nil {
+			if err := s.enforcer.AddPolicy(
+				c.role,
+				id.String(),
+				c.obj,
+				c.perm,
+				c.opts...); err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
 					"couldn't add policy for %s %s",
@@ -1196,8 +1206,18 @@ func (s *HackathonService) SetCapabilities( //nolint:funlen // this is just long
 				)
 			}
 		} else {
-			if err := s.enforcer.RemovePolicy(c.role, id.String(), c.obj, c.perm, c.opts...); err != nil {
-				return nil, status.Errorf(codes.Internal, "couldn't remove policy for %s %s", c.obj, c.perm)
+			if err := s.enforcer.RemovePolicy(
+				c.role,
+				id.String(),
+				c.obj,
+				c.perm,
+				c.opts...); err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"couldn't remove policy for %s %s",
+					c.obj,
+					c.perm,
+				)
 			}
 		}
 	}
@@ -1243,7 +1263,12 @@ func (s *HackathonService) SetCurrentPhase(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1335,7 +1360,12 @@ func (s *HackathonService) AddOwner(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1415,7 +1445,12 @@ func (s *HackathonService) RemoveOwner(
 	}
 
 	// Check Write permission on hackathon
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1694,7 +1729,12 @@ func (s *HackathonService) EditQuestion(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackID.String(),
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1799,7 +1839,12 @@ func (s *HackathonService) RemoveQuestion(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackID.String(),
+		mw.Hackathon,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -1880,7 +1925,12 @@ func (s *HackathonService) SubmitAnswers(
 	}
 
 	// View, for the same reason as ListQuestions above.
-	if err := s.enforcer.RequirePermission(ctx, hackID.String(), mw.Hackathon, mw.View); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackID.String(),
+		mw.Hackathon,
+		mw.View,
+	); err != nil {
 		return nil, err
 	}
 

@@ -12,8 +12,7 @@ export interface PageFormValues {
 }
 
 export type PageFormResult =
-  | { ok: true; values: PageFormValues }
-  | { ok: false; message: string }
+  { ok: true; values: PageFormValues } | { ok: false; message: string }
 
 /**
  * Validate a page create/edit submission.
