@@ -1,7 +1,7 @@
 Hackagon has been deployed!
 
 Frontend:  https://{{ include "hackagon.frontendHost" . }}
-Keycloak:  https://{{ include "hackagon.keycloakHost" . }}
+Keycloak:  {{ include "hackagon.keycloakUrl" . }}
 
 To get the generated frontend OIDC secrets, run:
 
