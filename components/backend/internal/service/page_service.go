@@ -42,7 +42,12 @@ func (s *PageService) List(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -64,7 +69,12 @@ func (s *PageService) List(
 	// Query pages ordered by order field with creator and modifier
 	pageQuery := s.dbClient.Page.Query().
 		Where(entpage.HasHackathonWith(enthackathon.IDEQ(hackathonID)))
-	if err = s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+	if err = s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil {
 		// user can't write pages, so we don't return hidden pages
 		pageQuery = pageQuery.Where(entpage.VisibleEQ(true))
 	}
@@ -116,10 +126,20 @@ func (s *PageService) Get(
 
 	hackathonID := page.Edges.Hackathon.ID
 
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil &&
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil &&
 		!page.Visible {
 		// page is not visible and user does not have write permissions
 		return nil, err
@@ -145,7 +165,12 @@ func (s *PageService) Create(
 	}
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -240,7 +265,12 @@ func (s *PageService) Edit(
 	hackathonID := page.Edges.Hackathon.ID
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -326,7 +356,12 @@ func (s *PageService) Delete(
 	hackathonID := page.Edges.Hackathon.ID
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -471,7 +506,12 @@ func (s *PageService) movePages(
 	hackathonID := page.Edges.Hackathon.ID
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil {
 		return 0, err
 	}
 
@@ -574,7 +614,12 @@ func (s *PageService) SetOrder(
 	}
 
 	// Check Page.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Page, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Page,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 

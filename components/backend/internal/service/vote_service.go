@@ -48,7 +48,12 @@ func (s *VoteService) ListVoteCategories(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.VoteCategory, m.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		m.VoteCategory,
+		m.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +122,12 @@ func (s *VoteService) CreateVoteCategory(
 		return nil, status.Errorf(codes.InvalidArgument, "invalid hackathon_id: %v", err)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.VoteCategory, m.Create); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		m.VoteCategory,
+		m.Create,
+	); err != nil {
 		return nil, err
 	}
 
@@ -160,7 +170,10 @@ func (s *VoteService) CreateVoteCategory(
 				"max_points is required for points-based voting",
 			)
 		} else if req.GetMaxPoints() <= 0 {
-			return nil, status.Errorf(codes.InvalidArgument, "max_points must be greater than or equal to 1")
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"max_points must be greater than or equal to 1",
+			)
 		}
 	}
 	create := s.dbClient.VoteCategory.Create().
@@ -288,7 +301,12 @@ func (s *VoteService) EditVoteCategory(
 	}
 
 	// Delete existing votes if voting method changed
-	if err := s.applyVotingMethodChange(ctx, categoryID, category.VotingMethod, effectiveVotingMethod); err != nil {
+	if err := s.applyVotingMethodChange(
+		ctx,
+		categoryID,
+		category.VotingMethod,
+		effectiveVotingMethod,
+	); err != nil {
 		return nil, err
 	}
 
@@ -436,7 +454,12 @@ func (s *VoteService) SubmitVote(
 
 	switch v := req.GetVote().(type) {
 	case *voteMsgs.SubmitVoteRequest_SingleChoice:
-		votes, err = s.submitSingleChoice(ctx, categoryID, voter.ID, v.SingleChoice.GetSubmissionId())
+		votes, err = s.submitSingleChoice(
+			ctx,
+			categoryID,
+			voter.ID,
+			v.SingleChoice.GetSubmissionId(),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -776,7 +799,12 @@ func (s *VoteService) ListVotes(
 
 	// user can read own votes, otherwise use RBAC
 	if voterID := req.GetVoterId(); voterID == "" || voterID != u.ID.String() {
-		if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), m.Vote, m.Read); err != nil {
+		if err := s.enforcer.RequirePermission(
+			ctx,
+			hackathonID.String(),
+			m.Vote,
+			m.Read,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -896,7 +924,9 @@ func (s *VoteService) exportVotesCSV(votes []*ent.Vote) ([]byte, error) {
 	w := csv.NewWriter(&sb)
 
 	// Header
-	if err := w.Write([]string{"vote_id", "voter_keycloak_id", "submission_id", "vote_type", "value"}); err != nil {
+	if err := w.Write(
+		[]string{"vote_id", "voter_keycloak_id", "submission_id", "vote_type", "value"},
+	); err != nil {
 		return nil, err
 	}
 

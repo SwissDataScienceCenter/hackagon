@@ -245,7 +245,10 @@ func defaultPolicies(cfg *config.Config, e *casbin.Enforcer) error {
 		return fmt.Errorf("couldn't load grouping policies: %w", err)
 	}
 
-	if _, err := e.AddNamedGroupingPolicy("g2", []string{cfg.Server.AdminKeycloakID, "admin"}); err != nil {
+	if _, err := e.AddNamedGroupingPolicy(
+		"g2",
+		[]string{cfg.Server.AdminKeycloakID, "admin"},
+	); err != nil {
 		return fmt.Errorf("couldn't add default admin: %w", err)
 	}
 

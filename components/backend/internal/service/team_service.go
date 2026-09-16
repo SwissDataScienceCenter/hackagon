@@ -162,7 +162,12 @@ func (s *TeamService) Create(
 		)
 	}
 
-	if err := s.enforcer.RequirePermission(ctx, hackathon.ID.String(), m.Team, m.Create); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathon.ID.String(),
+		m.Team,
+		m.Create,
+	); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +295,9 @@ func (s *TeamService) Delete(
 
 	// Remove members first to avoid FK constraint violation.
 	if len(t.Edges.Members) > 0 {
-		if err := s.dbClient.Team.UpdateOne(t).RemoveMembers(t.Edges.Members...).Exec(ctx); err != nil {
+		if err := s.dbClient.Team.UpdateOne(t).
+			RemoveMembers(t.Edges.Members...).
+			Exec(ctx); err != nil {
 			slog.Error("remove team members", "err", err)
 			return nil, status.Errorf(codes.Internal, "couldn't remove team members: %v", err)
 		}

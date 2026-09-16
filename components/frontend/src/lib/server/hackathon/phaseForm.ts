@@ -74,8 +74,7 @@ export interface PhaseFormValues {
 }
 
 export type PhaseFormResult =
-  | { ok: true; values: PhaseFormValues }
-  | { ok: false; message: string }
+  { ok: true; values: PhaseFormValues } | { ok: false; message: string }
 
 /**
  * One `datetime-local` field as a `Date`.
