@@ -34,6 +34,16 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Changed
 
+- A deployment can now be reached under any hostnames, not only `app.<domain>`
+  and `auth.<domain>`. The app's hostname is the first entry of
+  `frontend.ingress.hosts`, Keycloak's is `keycloak.hostname.hostname`, and the
+  chart derives the ingresses, the TLS certificates, the OIDC issuer urls and
+  the realm's login redirect urls from those two. Previously the subdomains were
+  fixed in the chart's templates, so changing either value pointed the traffic
+  at one name while the login flow still expected the other. Both values are now
+  required: the chart refuses to render rather than guessing a hostname nothing
+  is served under, and the two OIDC issuer settings are gone from `values.yaml`
+  because they only ever had one working value.
 - Your hackathon lists are now grouped by when they happen — Happening now,
   Coming up, Finished — and each one says how far away it is: "starts in 4
   days", "day 1 of 4", "ended 3 days ago". The dates are still there behind the

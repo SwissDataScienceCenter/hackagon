@@ -15,7 +15,7 @@ spec:
   ingressClassName: {{ .Values.frontend.ingress.ingressClass }}
   rules:
     {{- range .Values.frontend.ingress.hosts }}
-    - host: {{ .host | replace "{baseDomain}" $.Values.baseDomain | replace "{releaseName}" $.Release.Name }}
+    - host: {{ tpl .host $ }}
       http:
         paths:
           {{- range .paths }}
@@ -30,12 +30,6 @@ spec:
     {{- end }}
   {{- with .Values.frontend.ingress.tls }}
   tls:
-    {{- range . }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | replace "{baseDomain}" $.Values.baseDomain | replace "{releaseName}" $.Release.Name }}
-        {{- end }}
-      secretName: {{ .secretName | replace "{releaseName}" $.Release.Name }}
-    {{- end }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
   {{- end }}
 {{- end }}
