@@ -19,7 +19,7 @@ func (c *RunnerConfigTest) Validate() error {
 
 // UnmarshalTestConfig is the unmarshaller for the [RunnerConfigTest].
 func UnmarshalTestConfig(raw step.AuxConfigRaw) (step.AuxConfig, error) {
-	config := &RunnerConfigTest{} //nolint:exhaustruct,nolintlint
+	config := &RunnerConfigTest{} //nolint:exhaustruct_v5,nolintlint
 	err := defaults.Set(config)
 	if err != nil {
 		return nil, err

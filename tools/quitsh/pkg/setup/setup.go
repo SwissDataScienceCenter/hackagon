@@ -65,7 +65,7 @@ func LinkConfigFiles(rootDir string) error {
 		lazyExist bool
 	}
 
-	//nolint:exhaustruct
+	//nolint:exhaustruct_v5
 	links := []P{
 		{src: "./tools/configs/typos/typos.toml", dest: ".typos.toml"},
 		{src: "./tools/configs/prettier/prettierrc.yaml", dest: ".prettierrc.yaml"},

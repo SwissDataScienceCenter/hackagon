@@ -194,7 +194,7 @@ let
                     echo "Formatting realm export ..."
                     ${pkgs.jq}/bin/jq --sort-keys . "${realm-file}" > "${realm-file}.mod"
                     mv "${realm-file}.mod" "${realm-file}"
-                    ${pkgs.nodePackages_latest.prettier}/bin/prettier -w "${realm-file}"
+                    ${pkgs.prettier}/bin/prettier -w "${realm-file}"
                     echo "Restart keycloak..."
                     ${config.process.managers.process-compose.package}/bin/process-compose \
                       --unix-socket "$PC_SOCKET_PATH" process start keycloak
@@ -388,8 +388,6 @@ let
 
               quitsh.config = lib.mkForce "tools/configs/quitsh/config.yaml";
               quitsh.configUser = "tools/configs/quitsh/config.user.yaml";
-
-              dotenv.enable = true;
 
               packages = [
                 # Essentials.

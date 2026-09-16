@@ -17,7 +17,7 @@ func (c *RunnerConfigContainerfile) Validate() error {
 
 // The unmarshaller for the ImageConfig.
 func UnmarshalImageConfig(raw step.AuxConfigRaw) (step.AuxConfig, error) {
-	config := &RunnerConfigContainerfile{} //nolint:exhaustruct
+	config := &RunnerConfigContainerfile{} //nolint:exhaustruct_v5
 	err := defaults.Set(config)
 	if err != nil {
 		return nil, err

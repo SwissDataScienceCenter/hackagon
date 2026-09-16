@@ -123,8 +123,7 @@ export interface QuestionFormValues {
 }
 
 export type QuestionFormResult =
-  | { ok: true; values: QuestionFormValues }
-  | { ok: false; message: string }
+  { ok: true; values: QuestionFormValues } | { ok: false; message: string }
 
 /**
  * Options as typed into the textarea: one per line.
