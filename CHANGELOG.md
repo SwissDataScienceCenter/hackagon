@@ -16,8 +16,6 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
-### Added
-
 - A hackathon now has one address, whether you are signed in or not. Opening it
   shows the same page to everybody, with a way in at the top if you are already
   taking part — signing in used to move you to a different-looking page, and
@@ -60,6 +58,29 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 - Pages an organiser has not published no longer appear in the hackathon's
   navigation. They are reached through Manage Pages, which has moved above
   Manage Voting.
+- Hackagon can now run against a Postgres it does not install — a managed cloud
+  database, or one an operator provisions. Set `postgresql.enabled` to `false`,
+  point `backend.config.database.host` and `keycloak.database.external.host` at
+  your server, and create the two databases yourself. Previously the chart
+  always addressed a server named after its own release, so there was no way to
+  reach anything else.
+- The database password can now be read from a Kubernetes Secret you already
+  hold, via `backend.config.database.existingSecret` and
+  `existingSecretPasswordKey` (and the equivalent keys under
+  `keycloak.database.external`). This is what a secret store or a Postgres
+  operator needs: it writes the credentials, the chart reads them, and nobody
+  has to copy a password into a values file.
+
+### Changed
+
+- The backend's database password is no longer written into a ConfigMap. The
+  chart puts it in a Secret — its own, or the one you named — and hands it to
+  the backend as an environment variable. Before, anyone able to list ConfigMaps
+  in the namespace could read the database password.
+- Fixed `keycloak.database.external.database` and `.user` being silently
+  ignored: the Keycloak chart calls them `name` and `username`, so a non-default
+  database name or user never reached Keycloak and it quietly used `keycloak`
+  for both. The values are now named to match and the setting takes effect.
 
 - A hackathon overview with no phase running no longer opens with "No phase is
   running" and a footnote saying the timeline follows the dates alone. The card

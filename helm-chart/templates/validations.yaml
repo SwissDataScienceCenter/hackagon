@@ -1,0 +1,25 @@
+{{/*
+Value combinations the chart cannot render. Deliberately produces no manifest;
+it exists so these failures are reported in one place with a usable message
+rather than as a `required` deep inside an unrelated template.
+*/}}
+
+{{- $db := .Values.backend.config.database }}
+
+{{/*
+The bundled postgres bootstraps its databases from an initdb SQL script, which
+is a ConfigMap: it can only be written with a password the chart can read.
+*/}}
+{{- if and .Values.postgresql.enabled $db.existingSecret }}
+{{- fail "backend.config.database.existingSecret is set, but postgresql.enabled is true: the bundled postgres creates the hackagon role from an init script and cannot read a Secret. Either set backend.config.database.postgresPassword instead, or set postgresql.enabled=false and provision the database on your own postgres." }}
+{{- end }}
+
+{{- if .Values.keycloak.enabled }}
+{{- if and .Values.postgresql.enabled .Values.keycloak.database.external.existingSecret }}
+{{- fail "keycloak.database.external.existingSecret is set, but postgresql.enabled is true: the bundled postgres creates the keycloak role from an init script and cannot read a Secret. Either set keycloak.database.external.password instead, or set postgresql.enabled=false and provision the database on your own postgres." }}
+{{- end }}
+{{- $_ := .Values.keycloak.database.external.host | required "keycloak.database.external.host is required (e.g. \"hackagon-postgresql\", or the hostname of an external postgres)" }}
+{{- if not .Values.keycloak.database.external.existingSecret }}
+{{- $_ := .Values.keycloak.database.external.password | required "keycloak.database.external.password is required unless keycloak.database.external.existingSecret is set" }}
+{{- end }}
+{{- end }}

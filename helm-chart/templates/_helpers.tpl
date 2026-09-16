@@ -133,6 +133,34 @@ PostgreSQL service name (bitnami chart names it <release>-postgresql)
 {{- end }}
 
 {{/*
+The postgres host the backend connects to. `backend.config.database.host` wins;
+empty falls back to the bundled subchart's service, which is where this chart
+puts postgres when `postgresql.enabled`. Rendered with `tpl`, like every other
+host value.
+*/}}
+{{- define "hackagon.backendDatabaseHost" -}}
+{{- $host := tpl (.Values.backend.config.database.host | default "") . }}
+{{- $host | default (include "hackagon.postgresqlServiceName" .) }}
+{{- end }}
+
+{{/*
+Secret holding the backend's database password. An `existingSecret` is used as
+given; otherwise the chart manages its own, so the password never lands in the
+backend ConfigMap either way.
+*/}}
+{{- define "hackagon.backendDatabaseSecretName" -}}
+{{- .Values.backend.config.database.existingSecret | default (printf "%s-backend-db" (include "hackagon.fullname" .)) }}
+{{- end }}
+
+{{/*
+Key within that Secret. The chart-managed Secret is written under the same key,
+so both paths read the same way.
+*/}}
+{{- define "hackagon.backendDatabaseSecretKey" -}}
+{{- .Values.backend.config.database.existingSecretPasswordKey | default "password" }}
+{{- end }}
+
+{{/*
 Get password: use provided value or generate one
 */}}
 {{- define "hackagon.getPassword" -}}

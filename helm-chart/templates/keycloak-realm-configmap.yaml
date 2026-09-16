@@ -1,5 +1,3 @@
-{{- $host := .Values.keycloak.database.external.host | required "keycloak.database.external.host is required (e.g. \"hackagon-postgresql\")" -}}
-{{- $keycloakPassword := .Values.keycloak.database.external.password | required "keycloak.database.external.password is required" -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -8,11 +8,17 @@ To get the generated frontend OIDC secrets, run:
   kubectl get secret {{ include "hackagon.fullname" . }}-frontend-secrets \
     -n {{ .Release.Namespace }} -o jsonpath='{.data.secrets\.yaml}' | base64 -d
 
-Passwords are set in your values files. Retrieve them with:
+The backend reads its database password from a Secret:
 
-  # Platform (hackagon) user password
-  kubectl get secret {{ include "hackagon.fullname" . }}-postgresql \
+  kubectl get secret {{ include "hackagon.backendDatabaseSecretName" . }} \
+    -n {{ .Release.Namespace }} -o jsonpath='{.data.{{ include "hackagon.backendDatabaseSecretKey" . }}}' | base64 -d
+{{- if .Values.postgresql.enabled }}
+
+The bundled postgres superuser password:
+
+  kubectl get secret {{ .Release.Name }}-postgresql \
     -n {{ .Release.Namespace }} -o jsonpath='{.data.postgres-password}' | base64 -d
+{{- end }}
 
 Check the status of your release:
 

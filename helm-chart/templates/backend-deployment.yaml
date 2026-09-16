@@ -30,6 +30,14 @@ spec:
           {{- end }}
           args:
             - "--config-dir=/etc/hackagon/"
+          env:
+            # Overrides `database.password` from the mounted config.yaml, which
+            # deliberately leaves it unset.
+            - name: HACKAGON_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "hackagon.backendDatabaseSecretName" . }}
+                  key: {{ include "hackagon.backendDatabaseSecretKey" . }}
           ports:
             - name: grpc
               containerPort: 3000
