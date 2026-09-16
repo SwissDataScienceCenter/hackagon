@@ -69,7 +69,8 @@ Rendered with `tpl`, like every other host value; keep this one free of
 */}}
 {{- define "hackagon.frontendHost" -}}
 {{- $first := first (.Values.frontend.ingress.hosts | default list) | required "frontend.ingress.hosts must name at least one host: it is the app's public name" }}
-{{- tpl $first.host . }}
+{{- $host := $first.host | required "frontend.ingress.hosts[0].host is required: it is the app's public name" }}
+{{- tpl $host . | required "frontend.ingress.hosts[0].host must render to a non-empty hostname" }}
 {{- end }}
 
 {{/*
