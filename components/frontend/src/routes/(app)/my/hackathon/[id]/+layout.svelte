@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import HeroCompact from '$lib/components/hackathon/HeroCompact.svelte';
+    import HackathonHero from '$lib/components/hackathon/HackathonHero.svelte';
     import OrganizerStateAlert from '$lib/components/hackathon/OrganizerStateAlert.svelte';
     import PhaseTimeline from '$lib/components/hackathon/PhaseTimeline.svelte';
     import HackathonSidebar from '$lib/components/layout/HackathonSidebar.svelte';
@@ -8,8 +8,9 @@
 
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
-    import { statusLabel, statusBadgeVariant, visibilityLabel, visibilityBadgeVariant, isPrivate } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant, isPrivate } from '$lib/utils/hackathonStatus';
     import { membershipBadgeLabel, membershipBadgeVariant } from '$lib/utils/hackathonRole';
+    import UserRound from 'lucide-svelte/icons/user-round';
     import { resolvePhaseStatus, sortPhasesByStart } from '$lib/utils/phase';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -56,10 +57,10 @@
         const chips: { label: string; variant: string }[] = [];
         const sl = statusLabel(hackathon.status);
         if (sl) chips.push({ label: sl, variant: statusBadgeVariant(hackathon.status) ?? 'badge-neutral' });
-        const vl = visibilityLabel(hackathon.visibility);
-        if (vl) chips.push({ label: vl, variant: visibilityBadgeVariant(hackathon.visibility) ?? 'badge-neutral' });
         const mem = data.myMembership;
-        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), variant: membershipBadgeVariant(mem.isWaiting) });
+        // The only chip here about the reader rather than the hackathon, so the
+        // only one carrying a person. Same pairing as MembershipBadge.
+        if (mem) chips.push({ label: membershipBadgeLabel(mem.isWaiting, mem.role), variant: membershipBadgeVariant(mem.isWaiting), icon: UserRound });
         return chips;
     })());
 
@@ -94,7 +95,6 @@
         teamCount={data.teamCount}
         trackCount={hackathon.tracks.length}
         phaseCount={hackathon.phases.length}
-        hasDescription={Boolean(hackathon.description)}
         stateNeedsAttention={alerts.length > 0}
         isPrivate={isPrivate(hackathon.visibility)}
     />
@@ -114,14 +114,15 @@
               then shows the member count with no denominator and no location line.
               Nothing to change here once the fields land beyond passing them through.
             -->
-            <HeroCompact
+            <HackathonHero
+                compact
                 {title}
                 {dates}
                 venue=""
                 imageUrl={hackathon.logo}
                 {participantCount}
-                organizers={[]}
                 badges={heroBadges}
+                isPrivate={isPrivate(hackathon.visibility)}
             />
 
             {#if phases.length > 0}

@@ -7,7 +7,7 @@
   - [Usage](#usage)
   - [Database Schema](#database-schema)
   - [Development](#development) - [Prerequisites](#prerequisites) -
-  [Building](#building) - [Running Tests](#running-tests)
+    [Building](#building) - [Running Tests](#running-tests)
   <!--toc:end-->
 
 A gRPC-based microservice for Hackagon.

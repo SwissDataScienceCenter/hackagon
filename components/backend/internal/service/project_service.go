@@ -42,7 +42,12 @@ func (s *ProjectService) List(
 	}
 
 	// Check Project.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -112,7 +117,12 @@ func (s *ProjectService) Get(
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check Project.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +144,12 @@ func (s *ProjectService) Propose(
 	}
 
 	// Check Project.Propose permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Propose); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Propose,
+	); err != nil {
 		return nil, err
 	}
 
@@ -217,7 +232,12 @@ func (s *ProjectService) Propose(
 		return nil, status.Errorf(codes.Internal, "couldn't create project in database")
 	}
 
-	if _, err = s.enforcer.AddRole(uid, mw.Owner, hackathonID.String(), mw.WithProject(p.ID.String())); err != nil {
+	if _, err = s.enforcer.AddRole(
+		uid,
+		mw.Owner,
+		hackathonID.String(),
+		mw.WithProject(p.ID.String()),
+	); err != nil {
 		return nil, status.Errorf(codes.Internal, "couldn't add project owner permission: %v", err)
 	}
 
@@ -271,7 +291,12 @@ func (s *ProjectService) Reject(
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check Project.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 
@@ -352,7 +377,12 @@ func (s *ProjectService) setApproval(
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check Project.Write permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Write,
+	); err != nil {
 		return err
 	}
 
@@ -401,7 +431,12 @@ func (s *ProjectService) SetPreference(
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check set_team_preferences capability (Join on Project)
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Join); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Join,
+	); err != nil {
 		return nil, err
 	}
 
@@ -444,7 +479,12 @@ func (s *ProjectService) GetPreference(
 	}
 
 	// Check Project.Read permission
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Read); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Read,
+	); err != nil {
 		return nil, err
 	}
 
@@ -521,7 +561,12 @@ func (s *ProjectService) RemovePreference(
 	hackathonID := project.Edges.Hackathon.ID
 
 	// Check set_team_preferences capability (Join on Project)
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Join); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Join,
+	); err != nil {
 		return nil, err
 	}
 
@@ -562,7 +607,12 @@ func (s *ProjectService) ExportPreferences(
 	}
 
 	// Check Project.Write permission (organizers need Write access)
-	if err := s.enforcer.RequirePermission(ctx, hackathonID.String(), mw.Project, mw.Write); err != nil {
+	if err := s.enforcer.RequirePermission(
+		ctx,
+		hackathonID.String(),
+		mw.Project,
+		mw.Write,
+	); err != nil {
 		return nil, err
 	}
 

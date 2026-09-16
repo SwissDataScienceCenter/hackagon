@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit"
+import { error } from "@sveltejs/kit"
 import type { PageServerLoad } from "./$types"
 import {
   createAuthorizedGrpc,
@@ -6,6 +6,8 @@ import {
 } from "$lib/server/grpc/client"
 import { Visibility } from "$lib/server/grpc/generated/hackathon/entities/visibility"
 import { HackathonRole } from "$lib/server/grpc/generated/hackathon/entities/hackathon_role"
+import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { resolvePhaseStatus, sortPhasesByStart } from "$lib/utils/phase"
 // Shared and tested, because it is subtle: a session can carry a user and a
 // stale accessToken at once. See $lib/server/session.
 import { usableSession } from "$lib/server/session"
@@ -13,8 +15,11 @@ import { usableSession } from "$lib/server/session"
 // on Session — the same one hooks.server.ts relies on.
 import type { CustomSession } from "../../../../auth.d"
 
-/** Confirmed member, registered but unapproved, or no relationship at all. */
-type Membership = "member" | "waiting" | "none"
+/**
+ * Confirmed member, registered but unapproved, able to open anything, or no
+ * relationship at all.
+ */
+type Membership = "member" | "waiting" | "admin" | "none"
 
 /**
  * This visitor's standing in this hackathon: a confirmed member the member view
@@ -23,23 +28,24 @@ type Membership = "member" | "waiting" | "none"
  * The casbin role, not the participant row. Joining a public hackathon writes a
  * waitlisted row and no role at all (`hackathon_service.go:629`), and
  * `hackathon.get` — which the `/my/hackathon/[id]` layout calls first — wants
- * `hackathon:read`, which only a role carries. So "has a participant row" sends
- * somebody still waiting to a page that answers 403, and this page has just
- * redirected them away from the one page they can read.
+ * `hackathon:read`, which only a role carries. So "has a participant row" would
+ * offer somebody still waiting a way into a page that answers 403.
  *
  * `is_waiting` would nearly do, but not quite: `grantMembership` writes the role
  * first and clears the flag second, so a confirmation that failed halfway leaves
  * a member who still shows as waiting. The role is what the backend enforces, so
  * the role is what decides.
  *
- * `list({ participantId })` is the only call that answers it — `ViewerMembership`
- * is populated only when `participantId` is supplied
- * (`hackathon_service.go:1514`). Its presence is what separates "waiting" from
- * "neither": a participant row exists either way, a role does not.
+ * `list({ participantId })` answers it for somebody who joined —
+ * `ViewerMembership` is populated only when `participantId` is supplied
+ * (`hackathon_service.go:1514`), and its presence separates "waiting" from
+ * "neither": a participant row exists either way, a role does not. An owner
+ * never joined, so `list({ ownerId })` answers for them instead.
  *
  * The three cases are kept apart rather than collapsed to a boolean because the
- * page says something different to each — the member leaves, the waiting are
- * told they are waiting, and everybody else is invited to register.
+ * foot of the page says something different to each — the member is offered the
+ * way in, the waiting are told they are waiting, and everybody else is invited
+ * to register.
  *
  * The filter takes the *platform* user's uuid, not Keycloak's `sub`, hence
  * `whoAmI` first: `locals.platformUser` is set by the hook for protected routes
@@ -59,11 +65,28 @@ async function membership(
   try {
     const { user } = await grpc.user.whoAmI({})
     if (!user) return "none"
-    const { hackathons } = await grpc.hackathon.list({ participantId: user.id })
-    const mine = hackathons.find((h) => h.id === event.params.id)
-    if (!mine?.viewerMembership) return "none"
+    // A platform admin can open every hackathon and act in it — the casbin
+    // matcher ends with `|| g2(r.sub, "admin")`, outside all four of its tests.
+    // Kept apart from `member` rather than folded into it: they can go in, but
+    // they are not taking part, and a Member chip would say they were.
+    if (user.roles.includes(GlobalRole.GLOBAL_ROLE_ADMIN)) return "admin"
 
-    return mine.viewerMembership.role !==
+    // Two lists, because owning a hackathon and taking part in one are separate
+    // records. `Create` grants the casbin Owner role and the owners edge and
+    // never writes a Participant row, so an organiser reading their own
+    // hackathon's public page carries no `viewerMembership` at all — and was
+    // offered "Register" for an event they run. The dashboard pairs the same two
+    // calls for the same reason.
+    const [mine, owned] = await Promise.all([
+      grpc.hackathon.list({ participantId: user.id }),
+      grpc.hackathon.list({ ownerId: user.id }),
+    ])
+    if (owned.hackathons.some((h) => h.id === event.params.id)) return "member"
+
+    const entry = mine.hackathons.find((h) => h.id === event.params.id)
+    if (!entry?.viewerMembership) return "none"
+
+    return entry.viewerMembership.role !==
       HackathonRole.HACKATHON_ROLE_UNSPECIFIED
       ? "member"
       : "waiting"
@@ -86,22 +109,15 @@ export const load: PageServerLoad = async (event) => {
   // them back, leaving them unable to read even the public page.
   const signedIn = Boolean(event.locals.session?.user)
 
-  // Confirmed members get the member view of the same hackathon. Only confirmed
-  // ones — being signed in used to be enough, and the layout below refuses
-  // anyone who is not a confirmed member, so a signed-in visitor following a
-  // link to a public hackathon was answered with "You are not a confirmed member
-  // of this hackathon". That is the one person this page exists for: the join
-  // CTA at the foot is what they came for, so they get the public page and its
-  // button.
+  // Nobody is redirected away from here any more, member or not. This is the
+  // hackathon's one address, and what changes with your standing is the block at
+  // the foot: register, wait, or go in. Bouncing a member to a different-looking
+  // page the moment they signed in was the thing that made the two feel like two
+  // products rather than one seen from outside and in.
   //
-  // A waitlisted visitor stays here, and that is the fix rather than a
-  // shortfall: the public page is genuinely everything they may read until an
-  // organizer approves them. The CTA at the foot says so instead of offering to
-  // register them a second time.
+  // It is also what makes a link back out of the member area possible at all —
+  // before, following one landed you straight back where you came from.
   const standing = signedIn ? await membership(event) : "none"
-  if (standing === "member") {
-    redirect(302, `/my/hackathon/${event.params.id}/overview`)
-  }
 
   // `list` filtered to public, not `get`. `get` is closed to anybody who has not
   // joined, because it returns the member roster and an about page has no
@@ -122,10 +138,10 @@ export const load: PageServerLoad = async (event) => {
 
   return {
     // What the CTA at the foot of the page switches on: register, sign in
-    // first, or wait. Not `session` itself — nothing on this page renders the
-    // visitor.
+    // first, wait, or go in. Not `session` itself — nothing on this page renders
+    // the visitor.
     signedIn,
-    waitlisted: standing === "waiting",
+    standing,
     hackathon: {
       id: hackathon.id,
       name: hackathon.name,
@@ -134,6 +150,19 @@ export const load: PageServerLoad = async (event) => {
       startsAt: hackathon.startsAt,
       endsAt: hackathon.endsAt,
       status: hackathon.status,
+      // Resolved the same way the member layout resolves it, so the strip says
+      // the same thing on both sides. No `currentPhaseId` to pass — that lives
+      // on `state`, which only Get carries — so the status falls back to the
+      // dates, which is the honest answer for a visitor anyway.
+      phases: sortPhasesByStart(hackathon.phases).map((ph) => ({
+        name: ph.name,
+        status: resolvePhaseStatus(ph, undefined),
+      })),
+      // Omitted at zero rather than shown as "0 participants": this is the page
+      // that has to make somebody want to join, and an empty count argues the
+      // other way. It counts confirmed participants only, so a hackathon whose
+      // sign-ups are all still waiting reads as empty here.
+      participantCount: hackathon.participantCount || undefined,
     },
   }
 }

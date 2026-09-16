@@ -111,7 +111,7 @@ func (r *NixImageRunner) Run(ctx runner.IContext) error {
 
 		pkgs = append(
 			pkgs,
-			cnImages.ImagePackage{ //nolint:exhaustruct
+			cnImages.ImagePackage{ //nolint:exhaustruct_v5
 				Component:      config.Name,
 				Version:        comp.Version().String(),
 				Name:           imagePkgName,

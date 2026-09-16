@@ -17,7 +17,7 @@ type (
 
 // UnmarshalDiffConfig unmarshals for the [RunnerDiffConfig].
 func UnmarshalDiffConfig(raw step.AuxConfigRaw) (step.AuxConfig, error) {
-	config := &RunnerDiffConfig{} //nolint:exhaustruct
+	config := &RunnerDiffConfig{} //nolint:exhaustruct_v5
 	err := defaults.Set(config)
 	if err != nil {
 		return nil, err

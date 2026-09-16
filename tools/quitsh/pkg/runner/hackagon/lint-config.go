@@ -11,7 +11,7 @@ type (
 )
 
 func UnmarshalLintConfig(raw step.AuxConfigRaw) (step.AuxConfig, error) {
-	config := &GeneralConfig{} //nolint: exhaustruct
+	config := &GeneralConfig{} //nolint: exhaustruct_v5
 	err := defaults.Set(config)
 	if err != nil {
 		return nil, err

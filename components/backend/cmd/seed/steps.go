@@ -252,7 +252,7 @@ func (h *harness) createQuestions(
 			Label:         spec.label,
 			Type:          spec.qType,
 			Mandatory:     spec.mandatory,
-			Order:         int32(i + 1), //nolint:gosec // a form has a handful of fields
+			Order:         int32(i + 1),
 			Options:       spec.options,
 			PublicAnswers: spec.publicAnswers,
 		})

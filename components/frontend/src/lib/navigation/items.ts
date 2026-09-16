@@ -32,8 +32,6 @@ import CalendarClock from "lucide-svelte/icons/calendar-clock"
 import Globe from "lucide-svelte/icons/globe"
 import CalendarCog from "lucide-svelte/icons/calendar-cog"
 import FileText from "lucide-svelte/icons/file-text"
-import Info from "lucide-svelte/icons/info"
-import EyeOff from "lucide-svelte/icons/eye-off"
 import Pencil from "lucide-svelte/icons/pencil"
 import SlidersHorizontal from "lucide-svelte/icons/sliders-horizontal"
 import Tag from "lucide-svelte/icons/tag"
@@ -123,10 +121,6 @@ export interface HackathonPageRef {
  * "assignments not published" — two states that want the same nav either way.
  * Zero is the honest default, the same way `manageNav` treats `trackCount`.
  *
- * `hasDescription` gates About on the same principle: the hackathon's
- * description is optional, and with none written the entry leads to a blank
- * page. False by default, so a caller that has not looked cannot claim there is
- * one.
  */
 export function memberNav(
   hackathonId: string,
@@ -134,7 +128,6 @@ export function memberNav(
   votingEnabled = false,
   resultsVisible = false,
   teamCount = 0,
-  hasDescription = false,
   phaseCount = 0,
 ): NavItem[] {
   return [
@@ -144,21 +137,6 @@ export function memberNav(
       icon: LayoutDashboard,
       href: resolve(`/my/hackathon/${hackathonId}/overview`),
     },
-    // Second, straight after Overview: it is what the hackathon *is*, so it is
-    // what a first visit wants and what every later visit skips. It used to be
-    // a clamped subtitle in the overview's hero, which rendered the organiser's
-    // markdown as literal `##` and `-` characters and had room for two lines of
-    // it. A destination of its own is what markdown needs.
-    ...(hasDescription
-      ? [
-          {
-            id: "member:about",
-            label: "About",
-            icon: Info,
-            href: resolve(`/my/hackathon/${hackathonId}/about`),
-          },
-        ]
-      : []),
     {
       id: "member:participants",
       label: "Participants",
@@ -252,20 +230,18 @@ export function memberNav(
     // unique, and two pages named the same would collide on a title-derived key
     // and take the sidebar's {#each} down.
     //
-    // A page participants cannot see is badged, not omitted — this list is the
-    // only place an organiser sees their pages. `EyeOff` carries the same
-    // distinction on the collapsed rail, where the badge is not rendered.
-    // "Hidden" rather than "Draft": `visible` says who may see the page, not how
-    // finished it is.
-    ...pages.map((p) => ({
-      id: `member:page:${p.id}`,
-      label: p.title,
-      icon: p.visible ? FileText : EyeOff,
-      href: resolve(`/my/hackathon/${hackathonId}/pages/${p.id}`),
-      ...(p.visible
-        ? {}
-        : { badge: "Hidden", badgeVariant: "badge-warning" as const }),
-    })),
+    // Only the published ones. A hidden page is a draft, and the member rail is
+    // the spine an owner and a participant discuss — an entry only one of them
+    // can see makes it two different spines. Its organiser reaches it through
+    // Manage Pages, which is the screen for pages that are not finished.
+    ...pages
+      .filter((p) => p.visible)
+      .map((p) => ({
+        id: `member:page:${p.id}`,
+        label: p.title,
+        icon: FileText,
+        href: resolve(`/my/hackathon/${hackathonId}/pages/${p.id}`),
+      })),
   ]
 }
 
@@ -292,6 +268,19 @@ export function platformNav(roles: { isGlobalAdmin: boolean }): NavItem[] {
       description:
         "Everyone registered on the platform. Grant or revoke the Admin and " +
         "Hackathon Organizer roles.",
+    },
+    // The dashboard's two lists are "hackathons you are in" and "public
+    // hackathons", so a private one an admin neither owns nor joined appears in
+    // neither — and was unreachable from the UI, though casbin lets an admin do
+    // anything to it. This is the way in.
+    {
+      id: "platform:hackathons",
+      label: "Hackathons",
+      icon: CalendarClock,
+      href: resolve("/(app)/manage/hackathons"),
+      description:
+        "Every hackathon on the platform, private ones included. Open any of " +
+        "them without being a member.",
     },
   ]
 }
@@ -506,17 +495,18 @@ export function manageNav(
     // under: categories have to exist before voting opens, so gating the setup
     // screen on the capability would surface it only once it was too late.
     {
-      id: "manage:voting",
-      label: "Manage Voting",
-      icon: Vote,
-      href: resolve(`/my/hackathon/${hackathonId}/voting/manage`),
-    },
-    // Last, because the page list it acts on is last in `memberNav`.
-    {
       id: "manage:pages",
       label: "Manage Pages",
       icon: Pencil,
       href: resolve(`/my/hackathon/${hackathonId}/pages`),
+    },
+    // Last, because voting is the last thing that happens: everything above is
+    // set up before or during the hackathon, and this is run at the end of it.
+    {
+      id: "manage:voting",
+      label: "Manage Voting",
+      icon: Vote,
+      href: resolve(`/my/hackathon/${hackathonId}/voting/manage`),
     },
   ]
 }

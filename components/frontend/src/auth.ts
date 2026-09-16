@@ -187,8 +187,7 @@ export const getAuthOptions = (
         // parameters or token material out of it.
         const err = error as (Error & { cause?: unknown }) | undefined
         const cause = err?.cause as
-          | { err?: unknown; provider?: string }
-          | undefined
+          { err?: unknown; provider?: string } | undefined
         const inner = (cause?.err ?? cause) as Error | undefined
 
         logger.error(

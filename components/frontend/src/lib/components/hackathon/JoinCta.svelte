@@ -1,33 +1,22 @@
 <script lang="ts">
-    // UserPlus, not the Mail of CtaSection: this section asks the reader to sign
-    // up for something, not to get in touch about it.
+    // UserPlus, not the Mail of CtaSection: this asks the reader to sign up for
+    // something, not to get in touch about it.
     import { UserPlus } from 'lucide-svelte';
+    import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import { signIn } from '@auth/sveltekit/client';
     import { resolve } from '$app/paths';
     import { isFinished } from '$lib/utils/hackathonStatus';
-    import {
-        membershipBadgeLabel,
-        membershipBadgeVariant,
-    } from '$lib/utils/hackathonRole';
+    import MembershipBadge from './MembershipBadge.svelte';
 
     let {
         hackathonId,
-        name,
         status,
         signedIn,
-        waitlisted = false,
+        standing = 'none',
     }: {
         hackathonId: string;
-        name: string;
         /** Raw HackathonStatus number, as the loader returns it. */
         status: number;
-        /**
-         * Registered, and waiting for an organizer to confirm it. They are here
-         * rather than inside the hackathon because this page is all they may
-         * read until then, so offering them "Register" would invite them to do
-         * again the thing they are waiting on.
-         */
-        waitlisted?: boolean;
         /**
          * A session that can actually call the backend — not merely a cookie
          * carrying an identity. The loader decides this with `usableSession`, so
@@ -35,88 +24,102 @@
          * control that fixes it.
          */
         signedIn: boolean;
+        /**
+         * This reader's relationship to the hackathon, which is the only thing
+         * that changes between the page a stranger sees and the page somebody
+         * already registered sees.
+         */
+        standing?: 'member' | 'waiting' | 'admin' | 'none';
     } = $props();
 
     // Back to this very page after Keycloak rather than to the dashboard: they
-    // came to register for *this* hackathon, and the button that does it is the
-    // one standing here when they return. The invitation page names its own URL
-    // for the same reason.
+    // came to register for *this* hackathon, and the control that does it is the
+    // one standing here when they return.
     const returnHere = $derived(`/hackathon/${hackathonId}`);
+
+    // A finished hackathon offers no way in — the hero's own badge is already the
+    // reason, and saying it twice reads as a fault. A member is the exception:
+    // their hackathon does not stop being theirs when it ends.
+    const canGoIn = $derived(standing === 'member' || standing === 'admin');
+    const show = $derived(canGoIn || !isFinished(status));
 </script>
 
-<!-- A finished hackathon gets no CTA at all — not a disabled button and not a
-     note. The hero's own "Finished" badge is already the reason there is no way
-     in, and saying it twice reads as a fault. Same rule the dashboard's Join
-     column follows. -->
-{#if !isFinished(status)}
-    <section
-        class="flex flex-col items-center gap-4 border-t border-line px-4 py-12
-               sm:px-10 md:px-20"
-    >
-        <h2 class="text-display">
-            {waitlisted ? 'You have registered for ' + name : 'Take part in ' + name}
-        </h2>
+<!--
+  One bar, directly under the hero, whatever the reader's standing.
 
-        {#if waitlisted}
-            <!-- The same chip the dashboard row carries, so the word and the
-                 colour for this state are decided in one place. The role
-                 argument is inert while waiting — `membershipBadgeLabel`
-                 answers "Waitlisted" whatever it is given — but it is passed
-                 rather than dropped so the helper keeps one shape. -->
-            <span class="badge {membershipBadgeVariant(waitlisted)}">
-                {membershipBadgeLabel(waitlisted, 0)}
-            </span>
-            <p class="text-sm text-ink-2">
-                You are on the waiting list. The organizers confirm who takes part,
-                and you will find {name} under "Your hackathons" once they do.
+  It used to be a full section at the foot of the page under a display-sized
+  heading that repeated the hackathon's name three lines below the hero already
+  saying it. Worse, it put a member's way in below the whole of the organiser's
+  description — so the one reader who was not deciding anything had the furthest
+  to scroll. Everyone's control is in the same place now, at the same weight.
+-->
+{#if show}
+    <div
+        class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-b
+               border-line px-4 py-3 sm:px-10 md:px-20"
+    >
+        {#if canGoIn}
+            <!-- The chip only for a member. An admin may open this hackathon
+                 without taking part in it, and a Member chip would claim
+                 otherwise; the sentence says how they got the door instead. -->
+            {#if standing === 'member'}
+                <MembershipBadge />
+            {:else}
+                <p class="m-0 font-sans text-sm text-ink-2">
+                    Open to you as a platform administrator.
+                </p>
+            {/if}
+            <a
+                href={resolve(`/my/hackathon/${hackathonId}/overview`)}
+                class="btn btn-sm btn-solid no-underline"
+            >
+                Enter the hackathon
+                <ArrowRight class="h-4 w-4" />
+            </a>
+        {:else if standing === 'waiting'}
+            <MembershipBadge isWaiting />
+            <p class="m-0 font-sans text-sm text-ink-2">
+                The organizers confirm who takes part.
             </p>
-            <!-- Quiet, because it is not what this page is for: the answers are
-                 what the organizers read to decide, so a mistyped one is worth
-                 being able to correct while waiting. Saving comes straight back
-                 here. -->
+            <!-- Quiet: the answers are what the organizers read to decide, so a
+                 mistyped one is worth correcting while waiting, but correcting it
+                 is not what this page is for. -->
             <a
                 href={resolve(`/register/${hackathonId}`)}
-                class="btn btn-ghost btn-sm no-underline"
+                class="btn btn-sm btn-ghost no-underline"
             >
                 Review your answers
             </a>
         {:else if signedIn}
-            <p class="text-sm text-ink-2">
-                Registering puts you on the organizers' list. They confirm who takes part.
+            <p class="m-0 font-sans text-sm text-ink-2">
+                Registering puts you on the organizers' list.
             </p>
             <!-- Straight to the registration form rather than joining from here.
                  That page is the one place that knows both halves of signing up:
                  it answers the hackathon's questions if it asks any, and offers a
-                 bare "Join" if it does not. Posting a join from this page would
-                 need a second copy of its gRPC error handling, and a hackathon
-                 with mandatory questions would refuse it anyway. -->
+                 bare "Join" if it does not. -->
             <a
                 href={resolve(`/register/${hackathonId}`)}
-                class="btn btn-solid no-underline"
+                class="btn btn-sm btn-solid no-underline"
             >
                 <UserPlus class="h-4 w-4" />
                 Register
             </a>
         {:else}
-            <p class="text-sm text-ink-2">
-                You need an account to register. You'll come straight back to this page.
+            <p class="m-0 font-sans text-sm text-ink-2">
+                You need an account to register. You'll come straight back here.
             </p>
             <!-- A button, not a link: signing in is a client-side Auth.js call,
-                 and it is the only way to name where to return to.
-
-                 One control for both halves of "register or log in". Keycloak's
-                 own login screen carries the "Register" link — the realm sets
-                 `registrationAllowed: true` — so the fork happens there, on the
-                 page that owns account creation, rather than here with a second
-                 button pointing at an endpoint nothing else in the app knows. -->
+                 and it is the only way to name where to return to. Keycloak's own
+                 screen carries the "Register" link, so the fork happens there. -->
             <button
                 type="button"
-                class="btn btn-solid"
+                class="btn btn-sm btn-solid"
                 onclick={() => signIn('keycloak', { callbackUrl: returnHere })}
             >
                 <UserPlus class="h-4 w-4" />
                 Sign in or create an account
             </button>
         {/if}
-    </section>
+    </div>
 {/if}

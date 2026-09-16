@@ -1,9 +1,10 @@
 <script lang="ts">
     import MarkdownContent from '$lib/components/forms/MarkdownContent.svelte';
-    import HeroSection from './HeroSection.svelte';
+    import PhaseTimeline from './PhaseTimeline.svelte';
+    import HackathonHero from './HackathonHero.svelte';
     import JoinCta from './JoinCta.svelte';
     import { formatDateRange } from '$lib/utils/hackathonDates';
-    import { statusLabel } from '$lib/utils/hackathonStatus';
+    import { statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
 
     let {
         id,
@@ -14,7 +15,9 @@
         endsAt,
         status,
         signedIn,
-        waitlisted = false,
+        standing = 'none',
+        phases = [],
+        participantCount,
         preview = false,
     }: {
         id: string;
@@ -28,7 +31,11 @@
         /** Unused when `preview` is set — the preview draws no Join block. */
         signedIn?: boolean;
         /** Likewise unused in the preview. See JoinCta. */
-        waitlisted?: boolean;
+        standing?: 'member' | 'waiting' | 'admin' | 'none';
+        /** The same strip the member area draws above its content. */
+        phases?: { name: string; status: 'completed' | 'active' | 'upcoming' | 'current' }[];
+        /** Confirmed participants. An aggregate — this page never names one. */
+        participantCount?: number;
         /**
          * Drawn for an organiser checking their own page rather than for a
          * visitor. Everything is rendered the same; only the interaction is
@@ -54,16 +61,36 @@
   URL they pasted.
 -->
 <div inert={preview}>
-    <HeroSection
+    <HackathonHero
         title={name}
         {dates}
         imageUrl={logo}
-        status={statusLabel(status)}
+        badges={statusLabel(status)
+            ? [
+                  {
+                      label: statusLabel(status) ?? '',
+                      // The same variant the member hero gives this status, so
+                      // "Upcoming" is not one colour outside and another inside.
+                      variant: statusBadgeVariant(status) ?? 'badge-neutral',
+                  },
+              ]
+            : []}
+        {participantCount}
         breadcrumbs={[
             { label: 'Hackathons', href: '/' },
             { label: name, href: `/hackathon/${id}` },
         ]}
     />
+
+    <!-- Directly under the hero, where the member area puts it too: what happens
+         and when is the question a visitor has after "what is this". -->
+    {#if phases.length > 0}
+        <PhaseTimeline {phases} />
+    {/if}
+
+    {#if !preview}
+        <JoinCta hackathonId={id} {status} signedIn={signedIn ?? false} {standing} />
+    {/if}
 
     <div class="mx-auto w-full max-w-7xl">
         <section class="px-4 py-12 sm:px-10 md:px-20">
@@ -91,14 +118,6 @@
              nothing on the form beside it changes what it says, so in the editor
              it is a fixed footer taking the room the organiser wants for their
              own content. -->
-        {#if !preview}
-            <JoinCta
-                hackathonId={id}
-                {name}
-                {status}
-                signedIn={signedIn ?? false}
-                {waitlisted}
-            />
-        {/if}
+
     </div>
 </div>

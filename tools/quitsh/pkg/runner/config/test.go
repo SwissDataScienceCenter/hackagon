@@ -33,7 +33,7 @@ func NewTestSettings(
 	showTestLog bool,
 	args []string,
 ) TestSettings {
-	return TestSettings{ //nolint:exhaustruct
+	return TestSettings{ //nolint:exhaustruct_v5
 		BuildType:   buildType,
 		Args:        args,
 		ShowTestLog: showTestLog,

@@ -15,9 +15,7 @@
 
 /** A form control the browser will validate, as opposed to a fieldset or button. */
 type ValidatableControl =
-  | HTMLInputElement
-  | HTMLSelectElement
-  | HTMLTextAreaElement
+  HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 
 export interface FormCheck {
   /** One message per control that failed, keyed by the control's `name`. */

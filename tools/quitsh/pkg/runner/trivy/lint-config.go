@@ -13,7 +13,7 @@ type (
 
 // The unmarshaller for the .
 func UnmarshalTrivyConfig(raw step.AuxConfigRaw) (step.AuxConfig, error) {
-	config := &RunnerConfigLint{} //nolint:exhaustruct
+	config := &RunnerConfigLint{} //nolint:exhaustruct_v5
 	err := defaults.Set(config)
 	if err != nil {
 		return nil, err

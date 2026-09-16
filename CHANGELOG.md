@@ -18,6 +18,20 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- A hackathon now has one address, whether you are signed in or not. Opening it
+  shows the same page to everybody, with a way in at the top if you are already
+  taking part — signing in used to move you to a different-looking page, and
+  members could not see the public one at all. The member area links back out to
+  it from the sidebar.
+
+- A hackathon's public page now shows its schedule and how many people are
+  taking part, so you can see what happens and when before deciding to register.
+  It never names a participant.
+
+- Platform administrators get a Hackathons page beside Users, listing every
+  hackathon including the private ones. A private hackathon an administrator had
+  neither created nor joined could not be reached from anywhere in the app.
+
 ### Changed
 
 - A deployment can now be reached under any hostnames, not only `app.<domain>`
@@ -30,6 +44,22 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   required: the chart refuses to render rather than guessing a hostname nothing
   is served under, and the two OIDC issuer settings are gone from `values.yaml`
   because they only ever had one working value.
+- Your hackathon lists are now grouped by when they happen — Happening now,
+  Coming up, Finished — and each one says how far away it is: "starts in 4
+  days", "day 1 of 4", "ended 3 days ago". The dates are still there behind the
+  phrase, and the status label is gone, since the heading above the row says the
+  same thing.
+
+- A private hackathon is marked with a small padlock after its name, in the
+  lists, on its own page and in its sidebar. Public hackathons are not marked:
+  that is what a hackathon is taken to be.
+
+- The About tab inside a hackathon is gone. What the organisers wrote is on the
+  Overview now, which is the page you land on.
+
+- Pages an organiser has not published no longer appear in the hackathon's
+  navigation. They are reached through Manage Pages, which has moved above
+  Manage Voting.
 
 - A hackathon overview with no phase running no longer opens with "No phase is
   running" and a footnote saying the timeline follows the dates alone. The card

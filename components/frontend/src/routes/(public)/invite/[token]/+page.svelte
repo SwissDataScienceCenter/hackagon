@@ -97,9 +97,16 @@
         {#if onTheList}
             <!-- The end of the road for this page, and deliberately not a
                  redirect. A confirmed member gets the link into the event
-                 itself; somebody still waiting holds no role, so the event is
-                 filtered out of every list they can see and this link is their
-                 only way back to it. -->
+                 itself.
+
+                 Somebody still waiting is no longer stranded: an invite minted
+                 for a *public* hackathon waitlists them, and a participant row
+                 is enough to put it on their dashboard, whose row opens the
+                 hackathon's public page and says there that they are waiting.
+                 Only a private hackathon whose auto-approval half-failed leaves
+                 them holding no role, and so filtered out of every list — the
+                 "Almost in" branch below — and for that one this link really is
+                 the only way back. -->
             <h2 class="m-0 text-section text-ink">
                 {#if data.approved}
                     You're in

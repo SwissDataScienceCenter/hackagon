@@ -37,7 +37,7 @@ describe("memberNav", () => {
   // With a phase, so Timeline has an entry at all — it is optional, like Teams
   // and About above it.
   it("orders the fixed destinations as a lifecycle", () => {
-    expectOrder(memberNav("hack-1", [], false, false, 0, false, 1), [
+    expectOrder(memberNav("hack-1", [], false, false, 0, 1), [
       "member:overview",
       "member:participants",
       "member:projects",
@@ -55,38 +55,9 @@ describe("memberNav", () => {
     })
 
     it("offers Timeline once a phase exists", () => {
-      expect(
-        idsOf(memberNav("hack-1", [], false, false, 0, false, 1)),
-      ).toContain("member:timeline")
-    })
-  })
-
-  // The description is optional on a hackathon, so the entry is too: About with
-  // nothing on it is a destination that wastes the trip.
-  describe("hasDescription", () => {
-    it("offers no About entry when there is no description", () => {
-      expect(
-        idsOf(memberNav("hack-1", [], true, true, 1, false)),
-      ).not.toContain("member:about")
-    })
-
-    // False by default, so a caller that has not looked cannot claim there is
-    // one — the same contract `teamCount` and `trackCount` give.
-    it("defaults to offering no About entry", () => {
-      expect(idsOf(memberNav("hack-1"))).not.toContain("member:about")
-    })
-
-    it("offers it second, right after Overview", () => {
-      const items = memberNav("hack-1", [], false, false, 0, true)
-
-      expectOrder(items, [
-        "member:overview",
-        "member:about",
-        "member:participants",
-      ])
-      const item = items.find((i) => i.id === "member:about")
-      expect(item?.label).toBe("About")
-      expect(item?.href).toBe("/my/hackathon/hack-1/about")
+      expect(idsOf(memberNav("hack-1", [], false, false, 0, 1))).toContain(
+        "member:timeline",
+      )
     })
   })
 
@@ -180,7 +151,7 @@ describe("memberNav", () => {
   // The entries follow the hackathon's own order of events: you submit, then
   // people vote on what was submitted, then the tally is published.
   it("slots Voting and Results between Submissions and Timeline", () => {
-    expectOrder(memberNav("hack-1", [], true, true, 0, false, 1), [
+    expectOrder(memberNav("hack-1", [], true, true, 0, 1), [
       "member:submissions",
       "member:voting",
       "member:results",
@@ -243,16 +214,16 @@ describe("memberNav", () => {
   // PageService.List only filters hidden pages out for callers without
   // `page:write`, so an organiser's list arrives with them mixed in. Rendering one
   // identically to a published page leaves them no way to tell what is live.
-  it("badges a page participants cannot see", () => {
-    const item = memberNav("hack-1", [pg("p1", "Judging notes", false)]).at(-1)
+  it("leaves out a page participants cannot see", () => {
+    const ids = idsOf(
+      memberNav("hack-1", [pg("p1", "Judging notes", false), pg("p2", "Live")]),
+    )
 
-    // "Hidden", not "Draft": the flag is about who may see the page, not how
-    // finished it is.
-    expect(item?.badge).toBe("Hidden")
-    // A state, so a status hue and never the accent, which means role.
-    expect(item?.badgeVariant).toBe("badge-warning")
-    // Still linked: its organiser is exactly who needs to open it.
-    expect(item?.href).toBe("/my/hackathon/hack-1/pages/p1")
+    // The member rail is the spine an owner and a participant discuss, so an
+    // entry only one of them can see would make it two different spines. Its
+    // organiser reaches a draft through Manage Pages instead.
+    expect(ids).not.toContain("member:page:p1")
+    expect(ids).toContain("member:page:p2")
   })
 
   it("leaves a published page unbadged", () => {
@@ -263,13 +234,6 @@ describe("memberNav", () => {
 
   // The badge is dropped on the collapsed icon rail, so the icon has to carry the
   // distinction on its own.
-  it("gives a hidden page a different icon from a published one", () => {
-    const hidden = memberNav("hack-1", [pg("p1", "Notes", false)]).at(-1)
-    const live = memberNav("hack-1", [pg("p2", "Live")]).at(-1)
-
-    expect(hidden?.icon).not.toBe(live?.icon)
-  })
-
   // Page titles are editable and need not be unique. Keying on them would give
   // two same-named pages the same key, which takes the sidebar's {#each} down.
   it("keys same-titled pages distinctly", () => {
@@ -367,8 +331,8 @@ describe("manageNav", () => {
       "manage:tracks",
       "manage:teams",
       "manage:timeline",
-      "manage:voting",
       "manage:pages",
+      "manage:voting",
     ])
   })
 
@@ -536,7 +500,6 @@ describe("manageNav", () => {
         false,
         false,
         0,
-        false,
         1,
       ),
       // With a track, so `/tracks` has an entry to light at all.

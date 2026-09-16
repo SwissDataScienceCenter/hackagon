@@ -18,7 +18,7 @@ func (c *RunnerConfigLint) Validate() error {
 
 // The unmarshaller for the [RunnerConfigLint].
 func UnmarshalLintConfig(raw step.AuxConfigRaw) (step.AuxConfig, error) {
-	config := &RunnerConfigLint{} //nolint:exhaustruct // intentional
+	config := &RunnerConfigLint{} //nolint:exhaustruct_v5 // intentional
 	err := defaults.Set(config)
 	if err != nil {
 		return nil, err
