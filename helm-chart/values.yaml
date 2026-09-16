@@ -127,6 +127,7 @@ backend:
       # -- Where the backend fetches Keycloak's signing keys.
       # With an external Keycloak (keycloak.enabled: false),
       # override this with a url the backend pod can actually reach.
+      # the issuer is derived from the keycloak hostname and injected in configmaps.
       jwksurl: 'http://{{ include "hackagon.keycloakServiceName" . }}:8080/realms/hackagon/protocol/openid-connect/certs'
       algorithm: RS256
     logging:
