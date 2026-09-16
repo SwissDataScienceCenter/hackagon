@@ -78,7 +78,8 @@ frontend:
     tls:
       - secretName: '{{ .Release.Name }}-frontend-tls'
         hosts:
-          - '{{ include "hackagon.frontendHost" . }}'
+          # Evaluates to the first host in frontend.ingress.hosts
+          - '{{ include "hackagon.frontendHost" . }}'  
 
 # ============================================================
 # Backend
