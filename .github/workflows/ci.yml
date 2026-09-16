@@ -95,10 +95,15 @@ jobs:
         run: |
           just ci::run just check::test -c backend
           just ci::run just check::test -c frontend
-      - name: Seed
+      # Brings the real stack up (Postgres, Keycloak, backend), fills it, and
+      # then actually asks it something. The unit suites run on SQLite behind a
+      # mock keyfunc over bufconn, so the Postgres schema, the Keycloak token
+      # exchange and the gRPC port are only ever exercised here.
+      - name: Seed and smoke test
         run: |
           just ci::run just deploy::up
           just ci::run just db::seed
+          just ci::run just check::smoke
 
   images:
     runs-on: ubuntu-24.04
