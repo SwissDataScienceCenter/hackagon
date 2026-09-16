@@ -1,18 +1,20 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { resolve } from '$app/paths';
     import { enhance } from '$app/forms';
     import { SvelteSet } from 'svelte/reactivity';
     import Plus from 'lucide-svelte/icons/plus';
     import ArrowRight from 'lucide-svelte/icons/arrow-right';
     import HackathonRow from '$lib/components/hackathon/HackathonRow.svelte';
+    import MembershipBadge from '$lib/components/hackathon/MembershipBadge.svelte';
+    import ExternalLink from 'lucide-svelte/icons/external-link';
     import { platformNav, type NavItem } from '$lib/navigation/items';
     import {
         canManageHackathon,
         canOpenHackathon,
-        membershipBadgeLabel,
-        membershipBadgeVariant,
     } from '$lib/utils/hackathonRole';
-    import { isFinished, isPrivate, statusLabel, statusBadgeVariant } from '$lib/utils/hackathonStatus';
+    import { isFinished, isPrivate } from '$lib/utils/hackathonStatus';
+    import { relativeWhen, whenGroup, type WhenGroup } from '$lib/utils/hackathonWhen';
     import { displayableGlobalRoles, globalRoleBadgeVariant, globalRoleLabel } from '$lib/utils/globalRole';
 
     interface HackathonMember {
@@ -93,6 +95,41 @@
     // the section vanish entirely for everyone else.
     const adminItems = $derived(platformNav({ isGlobalAdmin }));
 
+
+    // Filled in on mount, never during SSR: the relative phrases count local
+    // calendar days, and the server's are not the reader's. Undefined until the
+    // browser answers, which `relativeWhen` reads as "say nothing yet".
+    let now = $state<Date | undefined>(undefined);
+    onMount(() => {
+        now = new Date();
+    });
+
+    // Three groups, in the order time runs. Built from `status`, which the
+    // backend computes from these same two dates on every entry — grouping by a
+    // rule of our own would be a second implementation of it.
+    const GROUPS: { key: WhenGroup; label: string }[] = [
+        { key: 'now', label: 'Happening now' },
+        { key: 'upcoming', label: 'Coming up' },
+        { key: 'finished', label: 'Finished' },
+    ];
+    const groupBy = (items: HackathonEntry[]) =>
+        GROUPS.map((g) => ({
+            ...g,
+            items: items.filter((h) => whenGroup(h.status) === g.key),
+        })).filter((g) => g.items.length > 0);
+    const grouped = $derived(groupBy(myHackathons));
+    const groupedOther = $derived(groupBy(otherHackathons));
+
+    // The relative phrase first, because "starts in 4 days" is the thing being
+    // asked and the dates are the reference for it. Absent where there is nothing
+    // honest to say, and then the dates stand alone as before.
+    function whenMeta(h: HackathonEntry): string {
+        const rel = relativeWhen(h, now);
+        const abs = formatMeta(h);
+        if (!rel) return abs;
+
+        return abs ? `${rel} · ${abs}` : rel;
+    }
 
     function formatMeta(h: HackathonEntry): string {
         const fmt = (d: Date) =>
@@ -177,9 +214,22 @@
             {#if myHackathons.length === 0}
                 <p class="text-sm text-ink-3">You are not connected to any hackathons yet.</p>
             {:else}
-                <div class="card overflow-hidden">
-                    {#each myHackathons as h (h.id)}
-                        {@const mem = h.viewerMembership}
+                {#each grouped as group (group.key)}
+                    <!-- A heading per group rather than a status chip per row:
+                         the chip said which of these three a hackathon was in,
+                         and the group it sits in says the same thing without
+                         repeating it on every line. The running ones get the
+                         accent rail, which is the one full-strength mark on the
+                         page — the same rule the phase timeline follows. -->
+                    <div class="flex flex-col gap-2">
+                        <h3 class="meta">{group.label}</h3>
+                        <div
+                            class="card overflow-hidden {group.key === 'now'
+                                ? 'border-l-2 border-l-accent'
+                                : ''}"
+                        >
+                            {#each group.items as h (h.id)}
+                                {@const mem = h.viewerMembership}
                         <!-- Two questions, not one: whether the row is a link at
                              all, and which page it opens. Someone who runs this
                              hackathon lands on Settings, everyone else on the
@@ -230,26 +280,57 @@
                                     {href}
                                     name={h.name}
                                     imageUrl={h.logo}
-                                    meta={formatMeta(h)}
-                                    badge={statusLabel(h.status)}
-                                    badgeVariant={statusBadgeVariant(h.status)}
-                                />
-                            </div>
-                            <!-- The row's only trailing element. Editing a
-                                 hackathon is offered on its own Settings
-                                 page, not from here: this list is for finding a
-                                 hackathon, and the edit form belongs beside the
-                                 rest of what an organiser sets. -->
-                            {#if mem}
-                                <span
-                                    class="badge {membershipBadgeVariant(mem.isWaiting)} mr-4 shrink-0"
+                                    meta={whenMeta(h)}
+                                    visibility={h.visibility}
                                 >
-                                    {membershipBadgeLabel(mem.isWaiting, mem.role)}
-                                </span>
+                                    <!-- The way out to this hackathon's public
+                                         page, on the title line rather than in a
+                                         column of its own. Only where there is
+                                         one to reach: a private hackathon has
+                                         none, and the padlock beside its name
+                                         says so. -->
+                                    {#snippet titleExtra()}
+                                        {#if !isPrivate(h.visibility)}
+                                            <a
+                                                href={resolve(`/hackathon/${h.id}`)}
+                                                class="inline-flex items-center gap-1 text-xs
+                                                       text-ink-3 hover:text-ink-2"
+                                            >
+                                                <ExternalLink
+                                                    class="h-3 w-3 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                                Public page
+                                            </a>
+                                        {/if}
+                                    {/snippet}
+                                </HackathonRow>
+                            </div>
+                            <!-- The row's trailing elements. Editing a hackathon
+                                 is offered on its own Settings page, not from
+                                 here: this list is for finding a hackathon, and
+                                 the edit form belongs beside the rest of what an
+                                 organiser sets. -->
+                            {#if mem}
+                                <div class="shrink-0">
+                                    <MembershipBadge isWaiting={mem.isWaiting} role={mem.role} />
+                                </div>
                             {/if}
+                            <!-- Two destinations for one hackathon, which is the
+                                 whole point of the pair: the row goes in, this
+                                 goes out to what everybody else sees. A sibling
+                                 of the row rather than inside it, because the row
+                                 is itself a link and links do not nest.
+
+                                 Only where there is a page to reach — a private
+                                 hackathon has none, and its Private chip on the
+                                 row already says why nothing is offered here. -->
+                            <div class="mr-4"></div>
                         </div>
-                    {/each}
-                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/each}
             {/if}
         </section>
 
@@ -274,8 +355,19 @@
             {#if otherHackathons.length === 0}
                 <p class="text-sm text-ink-3">No other hackathons available.</p>
             {:else}
-                <div class="card overflow-hidden">
-                    {#each otherHackathons as h (h.id)}
+                {#each groupedOther as group (group.key)}
+                    <!-- Grouped the same way as the list above, for the same
+                         reason: a hackathon you could join is worth finding by
+                         when it runs, and a Finished heading explains a missing
+                         Join button better than a chip beside it did. -->
+                    <div class="flex flex-col gap-2">
+                        <h3 class="meta">{group.label}</h3>
+                        <div
+                            class="card overflow-hidden {group.key === 'now'
+                                ? 'border-l-2 border-l-accent'
+                                : ''}"
+                        >
+                            {#each group.items as h (h.id)}
                         <div class="flex items-center border-b border-line last:border-0">
                             <div class="flex-1">
                                 <!-- No href: a non-member holds no `hackathon:read`
@@ -285,9 +377,7 @@
                                 <HackathonRow
                                     name={h.name}
                                     imageUrl={h.logo}
-                                    meta={formatMeta(h)}
-                                    badge={statusLabel(h.status)}
-                                    badgeVariant={statusBadgeVariant(h.status)}
+                                    meta={whenMeta(h)}
                                 />
                             </div>
                             <!-- A finished hackathon gets no button and no label:
@@ -333,8 +423,10 @@
                                 </form>
                             {/if}
                         </div>
-                    {/each}
-                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/each}
             {/if}
         </section>
 

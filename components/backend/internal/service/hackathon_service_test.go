@@ -300,6 +300,72 @@ var _ = Describe("HackathonService", func() {
 		})
 	})
 
+	Describe("List carries what a public page needs", func() {
+		It("reports phases and a count of confirmed participants", func() {
+			adminToken := testutils.CreateTestJWTToken(testAdmin)
+			adminCtx := metadata.NewOutgoingContext(
+				context.Background(),
+				metadata.Pairs("authorization", "Bearer "+adminToken),
+			)
+
+			now := time.Now()
+			created, err := client.Create(adminCtx, &msgs.CreateRequest{
+				Name:       "Listed Hackathon",
+				Visibility: entities.Visibility_VISIBILITY_PUBLIC,
+				StartsAt:   timestamppb.New(now.Add(24 * time.Hour)),
+				EndsAt:     timestamppb.New(now.Add(48 * time.Hour)),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			hid := created.GetHackathonId()
+
+			_, err = phaseClient.Create(adminCtx, &phaseMsgs.CreateRequest{
+				HackathonId: hid,
+				Name:        "Hacking",
+				Description: "Where the work happens",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// One confirmed and one still waiting, so the count has something to
+			// be wrong about.
+			confirmed, err := dbClient.User.Create().
+				SetKeycloakID("listed-confirmed").SetUsername("listed-confirmed").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			waiting, err := dbClient.User.Create().
+				SetKeycloakID("listed-waiting").SetUsername("listed-waiting").
+				Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(hid)).SetUserID(confirmed.ID).
+				SetIsWaiting(false).Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			_, err = dbClient.Participant.Create().
+				SetHackathonID(uuid.MustParse(hid)).SetUserID(waiting.ID).
+				SetIsWaiting(true).Save(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+
+			// Anonymously: this is exactly the call the public page makes.
+			resp, err := client.List(context.Background(), &msgs.ListRequest{
+				VisibilityFilter: entities.Visibility_VISIBILITY_PUBLIC.Enum(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			var listed *entities.Hackathon
+			for _, h := range resp.GetHackathons() {
+				if h.GetId() == hid {
+					listed = h
+				}
+			}
+			Expect(listed).NotTo(BeNil())
+			Expect(listed.GetPhases()).To(HaveLen(1))
+			Expect(listed.GetPhases()[0].GetName()).To(Equal("Hacking"))
+			Expect(listed.GetParticipantCount()).To(BeEquivalentTo(1))
+
+			// An aggregate, never a roster: the leak this must not reopen.
+			Expect(listed.GetMembers()).To(BeEmpty())
+		})
+	})
+
 	Describe("Join", func() {
 		var createdHackathonID string
 
