@@ -127,9 +127,8 @@ backend:
       dbname: hackagon
       user: hackagon
       # -- Password for `user`. The chart puts it in a Secret of its own and
-      # injects it as an env var, never into the backend ConfigMap. Ignored
-      # when `existingSecret` is set.
-      postgresPassword: ""
+      # injects it as an env var, never into the backend ConfigMap. 
+      postgresPassword: "" # Only use it existingSecret is empty
       # -- Read the password from a Secret you already have instead of letting
       # the chart manage one. Required by a postgres operator or an external
       # secret store, which writes the credentials before the chart runs.
@@ -192,14 +191,13 @@ keycloak:
       port: 5432
       name: keycloak
       username: keycloak
-      # -- Ignored when `existingSecret` is set.
-      password: ""
+      password: "" # Only use it existingSecret is empty
       # -- Read the password from a Secret you already have. Handled by the
       # keycloak subchart. Incompatible with `postgresql.enabled`, for the same
       # reason as the backend's.
       existingSecret: ""
       # -- Key inside `existingSecret` holding the password.
-      existingSecretPasswordKey: db-password
+      existingSecretPasswordKey: password
 
   # -- Realm import from ConfigMap
   realmImport:
