@@ -16,7 +16,7 @@ is a ConfigMap: it can only be written with a password the chart can read.
 
 {{- if and $db.existingSecret $db.postgresPassword }}
   {{- fail "backend.config.database.existingSecret and backend.config.database.password cannot be set at the same time. Choose one." }}
-}}
+{{- end }}
 
 {{- if .Values.keycloak.enabled }}
   {{- if and .Values.postgresql.enabled .Values.keycloak.database.external.existingSecret }}
