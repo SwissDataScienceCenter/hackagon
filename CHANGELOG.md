@@ -16,6 +16,8 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ## [Unreleased]
 
+### Added
+
 - A hackathon now has one address, whether you are signed in or not. Opening it
   shows the same page to everybody, with a way in at the top if you are already
   taking part — signing in used to move you to a different-looking page, and
