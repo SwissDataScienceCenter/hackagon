@@ -118,11 +118,25 @@ backend:
       adminkeycloakid: ""
     database:
       driver: postgres
-      host: "" # Auto-generated from release name in template
+      # -- Postgres host the backend connects to. Empty falls back to the
+      # bundled subchart's service (`<release>-postgresql`). Set it to reach a
+      # postgres this chart does not manage — a managed provider, or one
+      # installed under a different release name. Rendered with `tpl`.
+      host: ""
       port: 5432
       dbname: hackagon
       user: hackagon
-      postgresPassword: ""
+      # -- Password for `user`. The chart puts it in a Secret of its own and
+      # injects it as an env var, never into the backend ConfigMap. 
+      postgresPassword: "" # Only use it existingSecret is empty
+      # -- Read the password from a Secret you already have instead of letting
+      # the chart manage one. Required by a postgres operator or an external
+      # secret store, which writes the credentials before the chart runs.
+      # Incompatible with `postgresql.enabled`: the bundled postgres bootstraps
+      # its roles from an init script and cannot read a Secret.
+      existingSecret: ""
+      # -- Key inside `existingSecret` holding the password.
+      existingSecretPasswordKey: password
     oidc:
       # -- Where the backend fetches Keycloak's signing keys.
       # With an external Keycloak (keycloak.enabled: false),
@@ -164,15 +178,26 @@ keycloak:
   admin:
     username: hackagon-admin
 
-  # -- External database (reuse the same postgres instance)
+  # -- External database. Points at the bundled postgres by default, but any
+  # reachable postgres works. These keys are passed to the keycloak subchart
+  # verbatim, so they must use its names (`name`/`username`, not
+  # `database`/`user`).
   database:
     external:
       vendor: postgres
-      host: "" # Required: set to <release>-postgresql (e.g. "hackagon-postgresql")
+      # -- Required: <release>-postgresql (e.g. "hackagon-postgresql") for the
+      # bundled postgres, otherwise the external host.
+      host: ""
       port: 5432
-      database: keycloak
-      user: keycloak
-      password: ""
+      name: keycloak
+      username: keycloak
+      password: "" # Only use it existingSecret is empty
+      # -- Read the password from a Secret you already have. Handled by the
+      # keycloak subchart. Incompatible with `postgresql.enabled`, for the same
+      # reason as the backend's.
+      existingSecret: ""
+      # -- Key inside `existingSecret` holding the password.
+      existingSecretPasswordKey: password
 
   # -- Realm import from ConfigMap
   realmImport:
@@ -211,11 +236,18 @@ keycloakIngress:
 # ============================================================
 # PostgreSQL (bitnami) — two databases, two users
 # ============================================================
+# Set `enabled: false` to run against a postgres this chart does not install.
+# Then create the `hackagon` and `keycloak` roles and databases yourself, point
+# `backend.config.database.host` and `keycloak.database.external.host` at it,
+# and supply the passwords — either directly or from existing Secrets.
 postgresql:
   enabled: true
   auth:
     username: postgres
     database: postgres
+    # -- The bitnami subchart also accepts `auth.existingSecret` together with
+    # `auth.secretKeys.adminPasswordKey`, if you would rather not put the
+    # superuser password in values.
     postgresPassword: ""
 
   primary:

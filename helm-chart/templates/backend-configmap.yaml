@@ -16,11 +16,14 @@ data:
       adminkeycloakid: {{ .Values.backend.config.server.adminkeycloakid | quote }}
     database:
       driver: {{ .Values.backend.config.database.driver | quote }}
-      host: {{ include "hackagon.postgresqlServiceName" . | quote }}
+      host: {{ include "hackagon.backendDatabaseHost" . | quote }}
       port: {{ .Values.backend.config.database.port }}
       dbname: {{ .Values.backend.config.database.dbname | quote }}
       user: {{ .Values.backend.config.database.user | quote }}
-      password: {{ .Values.backend.config.database.postgresPassword | required "postgresql.auth.postgresPassword is required" | quote }}
+      # No `password` here on purpose: a ConfigMap is world-readable to anything
+      # that can read the namespace. The backend reads it from the environment
+      # instead (HACKAGON_DATABASE_PASSWORD, set from a Secret in
+      # backend-deployment.yaml), which koanf layers over this file.
     oidc:
       jwksurl: {{ tpl .Values.backend.config.oidc.jwksurl . | quote }}
       issuerurl: {{ include "hackagon.oidcIssuer" . | quote }}

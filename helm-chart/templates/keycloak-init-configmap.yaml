@@ -1,3 +1,10 @@
+{{- if .Values.postgresql.enabled }}
+{{/*
+Bootstraps the roles and databases inside the postgres this chart installs. An
+external postgres is expected to have them already, so with
+`postgresql.enabled: false` this ConfigMap is not rendered at all and neither
+password has to be given to the chart in plaintext.
+*/}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,9 +14,12 @@ metadata:
     {{- include "hackagon.labels" . | nindent 4 }}
 data:
   01-create-keycloak-db.sql: |
-    CREATE USER keycloak WITH PASSWORD '{{ .Values.keycloak.database.external.password | required "keycloak.database.external.password is required" }}';
-    CREATE DATABASE keycloak OWNER keycloak;
-    GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
-    CREATE USER hackagon WITH PASSWORD '{{ .Values.backend.config.database.postgresPassword | required "backend.config.database.postgresPassword" }}';
-    CREATE DATABASE hackagon OWNER hackagon;
-    GRANT ALL PRIVILEGES ON DATABASE hackagon TO hackagon;
+    {{- if .Values.keycloak.enabled }}
+    CREATE USER {{ .Values.keycloak.database.external.username }} WITH PASSWORD '{{ .Values.keycloak.database.external.password }}';
+    CREATE DATABASE {{ .Values.keycloak.database.external.name }} OWNER {{ .Values.keycloak.database.external.username }};
+    GRANT ALL PRIVILEGES ON DATABASE {{ .Values.keycloak.database.external.name }} TO {{ .Values.keycloak.database.external.username }};
+    {{- end }}
+    CREATE USER {{ .Values.backend.config.database.user }} WITH PASSWORD '{{ .Values.backend.config.database.postgresPassword | required "backend.config.database.postgresPassword is required when postgresql.enabled is true" }}';
+    CREATE DATABASE {{ .Values.backend.config.database.dbname }} OWNER {{ .Values.backend.config.database.user }};
+    GRANT ALL PRIVILEGES ON DATABASE {{ .Values.backend.config.database.dbname }} TO {{ .Values.backend.config.database.user }};
+{{- end }}
