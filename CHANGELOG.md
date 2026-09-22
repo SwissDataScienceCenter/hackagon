@@ -73,8 +73,6 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   operator needs: it writes the credentials, the chart reads them, and nobody
   has to copy a password into a values file.
 
-### Changed
-
 - The backend's database password is no longer written into a ConfigMap. The
   chart puts it in a Secret — its own, or the one you named — and hands it to
   the backend as an environment variable. Before, anyone able to list ConfigMaps
@@ -101,6 +99,13 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   Anyone could read the name, e-mail address and account id of everybody signed
   up, without an account of their own. Signing up for a public hackathon, and
   reading its registration questions before you do, work exactly as before.
+
+- Organisers can open Manage Teams again. On a deployment upgraded from an older
+  build, the rule granting an organiser access to their own hackathon's teams
+  was never written to the permissions table, so the page failed with an
+  unexplained error for everyone except platform administrators. Permission
+  rules added in a new version now reach a database that already holds the older
+  ones.
 
 ## [0.9.1](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.0...v0.9.1) - 2026-09-11
 
