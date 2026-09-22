@@ -18,6 +18,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.10.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.1...v0.10.0) - 2026-09-22
+
+### Added
+
 - A hackathon now has one address, whether you are signed in or not. Opening it
   shows the same page to everybody, with a way in at the top if you are already
   taking part — signing in used to move you to a different-looking page, and
