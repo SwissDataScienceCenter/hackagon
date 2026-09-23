@@ -109,3 +109,33 @@ export function viewerMembership(
 
   return owner !== undefined ? ownerMembership(owner, createdAt) : null
 }
+
+/**
+ * Everybody a `Get` response can put a name to, by backend user id.
+ *
+ * Reads the owners edge as well as the member list, because those are two
+ * different records and `Create` writes only the first: an organiser who made a
+ * hackathon and never joined it as a participant is in `owners` and in no
+ * member row at all. That is the same asymmetry `viewerMembership` exists to
+ * close, and looking a project's `creatorId` up in the member list alone leaves
+ * every proposal that organiser made with no author against it — in the seed
+ * fixture, ten of the fifteen projects in "Data for Good Hackathon 2026".
+ *
+ * A member row wins where somebody holds both. The names are identical today,
+ * but the member row is the record the rest of the page reads.
+ *
+ * An id this returns nothing for belongs to somebody who has genuinely left, so
+ * every caller decides what to show in their place — never a raw uuid.
+ */
+export function namesByUserId(
+  members: HackathonMember[],
+  owners: User[],
+): Map<string, string> {
+  const named = new Map<string, string>()
+  for (const o of owners) named.set(o.id, o.displayName || o.username)
+  for (const m of members) {
+    if (m.user) named.set(m.user.id, m.user.displayName || m.user.username)
+  }
+
+  return named
+}

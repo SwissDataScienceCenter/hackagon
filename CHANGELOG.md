@@ -18,6 +18,16 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+- Manage Projects now has a "Download CSV" button, next to the status tabs. The
+  file lists every project in the hackathon — its name, who proposed it, whether
+  it is awaiting review, approved or rejected, and the description in full — so
+  an organizer can read through the proposals in a spreadsheet or share them
+  with people who are not on the platform. A spreadsheet renders no markdown, so
+  the description arrives as prose: the headings, bold and link syntax are taken
+  off, while the paragraphs, list markers and link addresses stay. Manage
+  Participants and Manage Teams already had an export; the project list had to
+  be copied off the screen a card at a time.
+
 ### Changed
 
 ### Fixed

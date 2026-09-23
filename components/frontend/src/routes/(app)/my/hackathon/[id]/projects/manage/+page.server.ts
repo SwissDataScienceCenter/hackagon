@@ -1,6 +1,7 @@
 import type { PageServerLoad } from "./$types"
 import { ProjectStatus } from "$lib/server/grpc/generated/hackathon/entities/project_status"
 import { GlobalRole } from "$lib/server/grpc/generated/user/entities/global_role"
+import { namesByUserId } from "$lib/server/hackathon/membership"
 import { mayReviewProjects } from "$lib/server/hackathon/capabilities"
 import {
   DEFAULT_PROJECT_FILTER,
@@ -78,15 +79,14 @@ export const load: PageServerLoad = async (event) => {
     DEFAULT_PROJECT_FILTER
   const shown = ordered.filter((p) => matches[filter](p.status))
 
-  // `Project` carries only `creatorId`, so the name comes from the membership
-  // list that arrived in the same response. A creator who has since left the
-  // hackathon resolves to nothing and the card omits the line — better than
-  // printing a raw uuid at someone.
-  const memberNames = new Map(
-    hackathon.members
-      .filter((m) => m.user !== undefined)
-      .map((m) => [m.user!.id, m.user!.displayName || m.user!.username]),
-  )
+  // `Project` carries only `creatorId`, so the name comes from the people the
+  // same response already named — the member list **and the owners edge**. The
+  // second half matters most here: an organiser who never joined their own
+  // hackathon holds no member row, so their own proposals are exactly the ones
+  // whose cards used to show no author at all. A creator who has genuinely left
+  // resolves to nothing and the card omits the line — better than printing a
+  // raw uuid at someone.
+  const names = namesByUserId(hackathon.members, hackathon.owners)
 
   const trackNames = new Map(hackathon.tracks.map((t) => [t.id, t.name]))
 
@@ -100,7 +100,7 @@ export const load: PageServerLoad = async (event) => {
     num: shown.length - i,
     title: p.title,
     excerpt: markdownExcerpt(p.description, PROJECT_EXCERPT_CHARS),
-    creator: memberNames.get(p.creatorId),
+    creator: names.get(p.creatorId),
     track: p.trackId ? trackNames.get(p.trackId) : undefined,
     imageUrl: p.image,
     status: p.status,

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import type { HackathonMember } from "$lib/server/grpc/generated/hackathon/entities/hackathon_member"
 import type { User } from "$lib/server/grpc/generated/user/entities/user"
 import {
+  namesByUserId,
   ownerMembership,
   participantRowFor,
   viewerMembership,
@@ -114,5 +115,50 @@ describe("viewerMembership", () => {
         CREATED_AT,
       ),
     ).toBeNull()
+  })
+})
+
+describe("namesByUserId", () => {
+  const named = (id: string, displayName = "", username = "") =>
+    ({ id, displayName, username }) as User
+
+  it("names a participant", () => {
+    const names = namesByUserId(
+      [{ ...member(ALICE, MEMBER), user: named(ALICE, "Alice Doe", "alice") }],
+      [],
+    )
+
+    expect(names.get(ALICE)).toBe("Alice Doe")
+  })
+
+  it("names an owner who never joined as a participant", () => {
+    const names = namesByUserId([], [named(ALICE, "Alice Doe", "alice")])
+
+    expect(names.get(ALICE)).toBe("Alice Doe")
+  })
+
+  it("falls back to the username when there is no display name", () => {
+    expect(namesByUserId([], [named(ALICE, "", "alice")]).get(ALICE)).toBe(
+      "alice",
+    )
+  })
+
+  it("prefers the member row where somebody holds both records", () => {
+    const names = namesByUserId(
+      [{ ...member(ALICE, OWNER), user: named(ALICE, "Alice Doe", "alice") }],
+      [named(ALICE, "A. Doe", "alice")],
+    )
+
+    expect(names.get(ALICE)).toBe("Alice Doe")
+  })
+
+  it("has nothing for somebody in neither collection", () => {
+    expect(namesByUserId([], [named(ALICE)]).get(BOB)).toBeUndefined()
+  })
+
+  it("skips a member row carrying no user", () => {
+    expect(
+      namesByUserId([{ ...member(ALICE, MEMBER), user: undefined }], []).size,
+    ).toBe(0)
   })
 })
