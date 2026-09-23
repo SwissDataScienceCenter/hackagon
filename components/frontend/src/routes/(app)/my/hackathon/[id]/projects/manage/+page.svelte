@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Plus } from 'lucide-svelte';
+    import { Download, Plus } from 'lucide-svelte';
     import { resolve } from '$app/paths';
     import ManageHubBackLink from '$lib/components/hackathon/ManageHubBackLink.svelte';
     import ProjectCard from '$lib/components/hackathon/ProjectCard.svelte';
@@ -78,11 +78,32 @@
         </a>
     </div>
 
-    <ProjectStatusTabs
-        hackathonId={data.hackathonId}
-        current={data.filter}
-        counts={data.counts}
-    />
+    <!-- The tabs and the export in one row: both are about the list itself,
+         which is what keeps them apart from the header's New Project. Wraps on
+         a narrow screen rather than squeezing the tabs. -->
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <ProjectStatusTabs
+            hackathonId={data.hackathonId}
+            current={data.filter}
+            counts={data.counts}
+        />
+        <!-- Every project at every status, deliberately not the tab you happen
+             to be on: a download whose contents depend on screen state is a
+             trap, the same one the participant export refuses. The Status
+             column is what makes carrying all three safe, and the endpoint
+             names the file after the hackathon. -->
+        <a
+            href={resolve(
+                `/my/hackathon/${data.hackathonId}/projects/manage/export`
+            )}
+            class="btn btn-sm btn-ghost no-underline"
+            title="Every project, with who proposed it and the full description"
+            download
+        >
+            <Download class="h-3 w-3 shrink-0" aria-hidden="true" />
+            Download CSV
+        </a>
+    </div>
 
     <div class="flex w-full flex-col items-stretch gap-2 self-start">
         {#if data.projects.length === 0}
