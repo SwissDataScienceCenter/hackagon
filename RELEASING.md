@@ -127,8 +127,8 @@ commits as `chore(release): v0.9.0` and creates the annotated tag. It pushes
 nothing — it prints the two `git push` commands so the release is never a side
 effect of running it.
 
-Name the bump every time. With no argument `bump` defaults to a `patch`
-and the first place it tells you which one it chose is the commit it has already made.
+Name the bump every time. With no argument `bump` defaults to a `patch` and the
+first place it tells you which one it chose is the commit it has already made.
 
 Pushing the tag builds and pushes `release/backend-service:0.9.0` and
 `release/frontend-service:0.9.0`. A release image is never overwritten, so a
