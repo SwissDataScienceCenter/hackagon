@@ -117,7 +117,7 @@ From an up-to-date, clean `main`:
 
 ```bash
 just version::check           # the versions already agree
-just version::bump minor      # or patch / major
+just version::bump minor      # patch / minor / major — always say which
 git show                      # read the release commit before it leaves
 git push && git push origin v0.9.0
 ```
@@ -127,9 +127,22 @@ commits as `chore(release): v0.9.0` and creates the annotated tag. It pushes
 nothing — it prints the two `git push` commands so the release is never a side
 effect of running it.
 
+Name the bump every time. With no argument `bump` defaults to a `patch`
+and the first place it tells you which one it chose is the commit it has already made.
+
 Pushing the tag builds and pushes `release/backend-service:0.9.0` and
 `release/frontend-service:0.9.0`. A release image is never overwritten, so a
 botched tag is fixed by bumping again, not by re-tagging.
+
+### If you bumped the wrong way
+
+`bump` commits and tags locally and pushes nothing, so a release you have not
+pushed yet is thrown away without anybody else learning of it:
+
+```bash
+git reset --hard origin/main
+git tag -d v0.9.0
+```
 
 If `main` has moved past something you cannot ship and a released version needs
 a fix, branch from the tag rather than from `main`:
