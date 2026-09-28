@@ -18,6 +18,14 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.11.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.10.0...v0.11.0) - 2026-09-28
+
+### Added
+
 - Manage Projects now has a "Download CSV" button, next to the status tabs. The
   file lists every project in the hackathon — its name, who proposed it, whether
   it is awaiting review, approved or rejected, and the description in full — so
@@ -27,10 +35,6 @@ written while it was being built. See [RELEASING.md](RELEASING.md).
   off, while the paragraphs, list markers and link addresses stay. Manage
   Participants and Manage Teams already had an export; the project list had to
   be copied off the screen a card at a time.
-
-### Changed
-
-### Fixed
 
 ## [0.10.0](https://github.com/SwissDataScienceCenter/hackagon/compare/v0.9.1...v0.10.0) - 2026-09-22
 
