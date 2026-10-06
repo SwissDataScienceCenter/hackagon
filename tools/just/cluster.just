@@ -68,9 +68,16 @@ backup context:
     just -f "{{source_file()}}" _guard "{{context}}"
     mkdir -p "{{backup_dir}}"
     out="{{backup_dir}}/{{context}}-$(date +%Y%m%d-%H%M%S).sql"
+
+    # Dump to a .partial file and rename it only once the dump succeeded, so a
+    # failed run never leaves behind something that looks like a backup.
+    discard_partial() { rm -f "$out.partial"; }
+    trap discard_partial EXIT
+
     echo "==> Backing up to $out"
     kubectl --context "{{context}}" -n "{{namespace}}" exec "sts/{{postgres_sts}}" -- \
-        sh -c '{{pg_as_superuser}}' sh pg_dumpall -h 127.0.0.1 -U postgres > "$out"
+        sh -c '{{pg_as_superuser}}' sh pg_dumpall -h 127.0.0.1 -U postgres > "$out.partial"
+    mv "$out.partial" "$out"
     echo "✓ $(du -h "$out" | cut -f1) written"
 
 # Back up, then drop and recreate the app database; dev restarts empty.
@@ -80,6 +87,18 @@ wipe context:
     set -euo pipefail
     just -f "{{source_file()}}" _confirm "{{context}}" "WIPE the app database"
     just -f "{{source_file()}}" backup "{{context}}"
+
+    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    replicas="$("${kc[@]}" get "deploy/{{backend_deploy}}" -o jsonpath='{.spec.replicas}')"
+    [ "${replicas:-0}" -gt 0 ] || replicas=1
+
+    restore_backend() {
+        echo "==> Scaling backend back to $replicas (it recreates the schema on startup)"
+        "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
+    }
+    # _wipe-db leaves the backend down; bring it back however this ends.
+    trap restore_backend EXIT
+
     just -f "{{source_file()}}" _wipe-db "{{context}}"
 
 # Back up, wipe, then seed the dev fixture from this checkout.
@@ -89,10 +108,107 @@ reseed context:
     set -euo pipefail
     cd "{{root_dir}}"
 
-    # The seed migrates the schema before it writes anything, so its backend
-    # code must be the code dev is serving — temporary/*:latest is built from
-    # origin/main. Changes outside components/backend (these recipes, docs)
-    # do not matter, so a branch that only touches those may seed.
+    just -f "{{source_file()}}" _backend-matches-main
+    just -f "{{source_file()}}" _guard "{{context}}"
+
+    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+    tmp="$(mktemp -d)"
+    pf_pid=""
+    backend_down=""
+
+    restore_backend() {
+        # Starting fresh is also what loads the casbin rows the seed wrote.
+        echo "==> Scaling backend back to $replicas"
+        "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
+    }
+    # However this ends: close the tunnel, delete the temp dir, and bring the
+    # backend back if _wipe-db was reached (it leaves the backend down).
+    cleanup() {
+        [ -n "$pf_pid" ] && kill "$pf_pid" 2>/dev/null || true
+        rm -rf "$tmp"
+        [ -z "$backend_down" ] || restore_backend
+    }
+    trap cleanup EXIT
+
+    # Everything that can fail without changing the cluster happens first, so
+    # a failure here leaves dev exactly as it was.
+    echo "==> Building the seed"
+    (cd components/backend && go build -o "$tmp/seed" ./cmd/seed/)
+
+    echo "==> Fetching backend config and database password from the cluster"
+    "${kc[@]}" get cm "{{backend_config}}" -o jsonpath='{.data.config\.yaml}' > "$tmp/config.yaml"
+    [ -s "$tmp/config.yaml" ] || { echo "✗ {{backend_config}} has no config.yaml." >&2; exit 1; }
+    db_password="$("${kc[@]}" get secret "{{backend_db_secret}}" -o jsonpath='{.data.password}' | base64 -d)"
+    [ -n "$db_password" ] || { echo "✗ {{backend_db_secret}} has no password." >&2; exit 1; }
+
+    replicas="$("${kc[@]}" get "deploy/{{backend_deploy}}" -o jsonpath='{.spec.replicas}')"
+    [ "${replicas:-0}" -gt 0 ] || replicas=1
+
+    just -f "{{source_file()}}" _confirm "{{context}}" "WIPE and RESEED the app database"
+    just -f "{{source_file()}}" backup "{{context}}"
+
+    # Wipe the app database, leaving keycloak untouched. The seed creates the schema.
+    backend_down=yes
+    just -f "{{source_file()}}" _wipe-db "{{context}}"
+
+    echo "==> Port-forwarding postgres to localhost:{{local_pg_port}}"
+    "${kc[@]}" port-forward "svc/{{postgres_sts}}" "{{local_pg_port}}:5432" >/dev/null &
+    pf_pid=$!
+
+    # Wait up to 10s for the tunnel to open.
+    for _ in $(seq 20); do
+        nc -z 127.0.0.1 "{{local_pg_port}}" 2>/dev/null && break
+        sleep 0.5
+    done
+    nc -z 127.0.0.1 "{{local_pg_port}}" 2>/dev/null \
+        || { echo "✗ The port-forward to postgres did not open within 10s." >&2; exit 1; }
+
+    echo "==> Seeding"
+    cd components/backend
+    HACKAGON_DATABASE_HOST=127.0.0.1 \
+    HACKAGON_DATABASE_PORT="{{local_pg_port}}" \
+    HACKAGON_DATABASE_PASSWORD="$db_password" \
+        "$tmp/seed" --config-dir "$tmp/"
+    echo "✓ Seeded"
+
+# Scale the backend down, then drop and recreate the app database. Leaves the
+# backend down: scaling it back up is the caller's job, done in an EXIT trap set
+# before calling, so it happens even when this fails halfway.
+[private]
+_wipe-db context:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Guard the context, so a recipe pointed at the prod context by mistake stops before touching anything.
+    just -f "{{source_file()}}" _guard "{{context}}"
+    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
+
+    backend_pods() { "${kc[@]}" get pods -o name | grep "{{backend_deploy}}-" || true; }
+
+    echo "==> Scaling backend to 0"
+    "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas=0
+
+    # Wait up to 2 minutes for its pods to be gone.
+    for _ in $(seq 60); do
+        [ -z "$(backend_pods)" ] && break
+        sleep 2
+    done
+    [ -z "$(backend_pods)" ] \
+        || { echo "✗ Backend pods still running after 2 minutes." >&2; exit 1; }
+
+    echo "==> Recreating database {{app_db}}"
+    "${kc[@]}" exec "sts/{{postgres_sts}}" -- sh -c '{{pg_as_superuser}}' sh \
+        psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+        -c 'DROP DATABASE IF EXISTS {{app_db}} WITH (FORCE);' \
+        -c 'CREATE DATABASE {{app_db}} OWNER {{app_db_owner}};'
+    echo "✓ Database {{app_db}} is empty"
+
+# Refuse unless this checkout's backend is the code dev serves.
+[private]
+_backend-matches-main:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{root_dir}}"
     git fetch --quiet origin main
     if ! git merge-base --is-ancestor origin/main HEAD; then
         echo "✗ This checkout is behind origin/main. Rebase or merge main first." >&2
@@ -106,74 +222,7 @@ reseed context:
         echo "✗ components/backend has uncommitted changes." >&2
         exit 1
     fi
-
-    just -f "{{source_file()}}" _confirm "{{context}}" "WIPE and RESEED the app database"
-    just -f "{{source_file()}}" backup "{{context}}"
-
-    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
-    replicas="$("${kc[@]}" get "deploy/{{backend_deploy}}" -o jsonpath='{.spec.replicas}')"
-    [ "${replicas:-0}" -gt 0 ] || replicas=1
-    tmp="$(mktemp -d)"
-    cleanup() {
-        [ -n "${pf_pid:-}" ] && kill "$pf_pid" 2>/dev/null || true
-        rm -rf "$tmp"
-        # Starting fresh is also what loads the casbin rows the seed wrote.
-        echo "==> Scaling backend back to $replicas"
-        "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
-    }
-    trap cleanup EXIT
-
-    KEEP_BACKEND_DOWN=1 just -f "{{source_file()}}" _wipe-db "{{context}}"
-
-    "${kc[@]}" get cm "{{backend_config}}" -o jsonpath='{.data.config\.yaml}' > "$tmp/config.yaml"
-
-    echo "==> Port-forwarding postgres to localhost:{{local_pg_port}}"
-    "${kc[@]}" port-forward "svc/{{postgres_sts}}" "{{local_pg_port}}:5432" >/dev/null &
-    pf_pid=$!
-    for _ in $(seq 20); do
-        nc -z 127.0.0.1 "{{local_pg_port}}" 2>/dev/null && break
-        sleep 0.5
-    done
-
-    echo "==> Seeding"
-    cd components/backend
-    HACKAGON_DATABASE_HOST=127.0.0.1 \
-    HACKAGON_DATABASE_PORT="{{local_pg_port}}" \
-    HACKAGON_DATABASE_PASSWORD="$("${kc[@]}" get secret "{{backend_db_secret}}" -o jsonpath='{.data.password}' | base64 -d)" \
-        go run ./cmd/seed/ --config-dir "$tmp/"
-    echo "✓ Seeded"
-
-# Scale the backend down, drop and recreate the app database, scale it back up.
-[private]
-_wipe-db context:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # [private] only hides a recipe from --list; it can still be called directly.
-    just -f "{{source_file()}}" _guard "{{context}}"
-    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
-
-    replicas="$("${kc[@]}" get "deploy/{{backend_deploy}}" -o jsonpath='{.spec.replicas}')"
-    [ "${replicas:-0}" -gt 0 ] || replicas=1
-
-    # Under reseed the caller scales the backend back up after seeding;
-    # otherwise bring it back whether or not the wipe succeeded.
-    if [ -z "${KEEP_BACKEND_DOWN:-}" ]; then
-        trap 'echo "==> Scaling backend back to $replicas (it recreates the schema on startup)"
-              "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"' EXIT
-    fi
-
-    echo "==> Scaling backend to 0"
-    "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas=0
-    while [ -n "$("${kc[@]}" get pods -o name | grep "{{backend_deploy}}-" || true)" ]; do
-        sleep 2
-    done
-
-    echo "==> Recreating database {{app_db}}"
-    "${kc[@]}" exec "sts/{{postgres_sts}}" -- sh -c '{{pg_as_superuser}}' sh \
-        psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
-        -c 'DROP DATABASE IF EXISTS {{app_db}} WITH (FORCE);' \
-        -c 'CREATE DATABASE {{app_db}} OWNER {{app_db_owner}};'
-    echo "✓ Database {{app_db}} is empty"
+    echo "✓ components/backend matches origin/main"
 
 # Refuse a context whose hackagon ingress does not serve the dev domain.
 [private]
