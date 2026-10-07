@@ -15,6 +15,7 @@ mod codegen "./tools/just/codegen.just"
 mod clean "./tools/just/clean.just"
 mod version "./tools/just/version.just"
 mod helm "./tools/just/helm.just"
+mod cluster "./tools/just/cluster.just"
 
 [private]
 default:

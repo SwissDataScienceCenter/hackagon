@@ -108,6 +108,11 @@ just helm::lint                 # helm lint + full render against tools/helm/lin
 just helm::template [args]      # render the chart to stdout
 just helm::check-bump           # fail if helm-chart/ changed without a version bump
 just helm::publish              # push the chart if Chart.yaml's version is unpublished
+
+# Deployed dev instance only — takes the kube context, refuses any other cluster
+just cluster::backup <context>  # pg_dumpall to ~/hackagon-backups
+just cluster::wipe <context>    # backup, then drop + recreate the app DB; dev restarts empty
+just cluster::reseed <context>  # backup, wipe, then seed; refuses if components/backend differs from origin/main
 ```
 
 Backend listens on **:3000**, frontend on **:8081**. Dev users (Keycloak
