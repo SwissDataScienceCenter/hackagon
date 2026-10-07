@@ -860,8 +860,8 @@
             <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <h3 class="m-0 meta">Registration questions</h3>
                 <p class="m-0 text-xs text-ink-3">
-                    Click an answer to filter Unassigned; the number is how many unassigned people
-                    gave it. Tick "Show on cards" to see that answer beside every name.
+                    Click an answer to filter Unassigned (the number is how many unassigned people
+                    gave it).
                 </p>
             </div>
             <ul class="m-0 flex list-none flex-col divide-y divide-line border-t border-line p-0">
@@ -878,7 +878,7 @@
                             <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
                                 <input
                                     type="search"
-                                    class="field h-7 w-52 px-2 text-xs"
+                                    class="field h-7 w-44 px-2 text-xs"
                                     placeholder="Filter: answer contains…"
                                     aria-label={`Filter Unassigned by ${q.label}`}
                                     value={filters.texts[q.id] ?? ''}
@@ -893,11 +893,14 @@
                                 {#each q.options as o (o.code)}
                                     {@const picked =
                                         filters.answers[q.id]?.includes(o.label) ?? false}
+                                    <!-- Real buttons, styled as the toolbar's are: on
+                                         a raised card a fill-only control has no
+                                         edge and reads as plain text. -->
                                     <button
                                         type="button"
-                                        class="tally {picked
-                                            ? 'bg-accent/20 text-accent-ink'
-                                            : 'hover:text-ink'}"
+                                        class="btn btn-sm {picked
+                                            ? 'btn-outline-accent bg-accent/20'
+                                            : 'btn-outline hover:bg-overlay'}"
                                         aria-pressed={picked}
                                         title={picked
                                             ? 'Stop filtering by this answer'
@@ -1085,7 +1088,7 @@
                     {#each activeFilters as f (f.key)}
                         <button
                             type="button"
-                            class="tally bg-accent/20 text-accent-ink"
+                            class="btn btn-sm btn-outline-accent bg-accent/20"
                             title="Remove this filter"
                             onclick={f.remove}
                         >
