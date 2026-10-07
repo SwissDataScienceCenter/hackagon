@@ -98,9 +98,11 @@ wipe context:
         echo "==> Scaling backend back to $replicas (it recreates the schema on startup)"
         "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
     }
-    # _wipe-db leaves the backend down; bring it back however this ends.
+    # The backend must be off while its database is replaced; bring it back
+    # however this ends, including when stopping it or the wipe fails halfway.
     trap restore_backend EXIT
 
+    just -f "{{source_file()}}" _backend-down "{{context}}"
     just -f "{{source_file()}}" _wipe-db "{{context}}"
 
 # Back up, wipe, then seed the dev fixture from this checkout.
@@ -124,7 +126,7 @@ reseed context:
         "${kc[@]}" scale "deploy/{{backend_deploy}}" --replicas="$replicas"
     }
     # However this ends: close the tunnel, delete the temp dir, and bring the
-    # backend back if _wipe-db was reached (it leaves the backend down).
+    # backend back if it was taken down.
     cleanup() {
         [ -n "$pf_pid" ] && kill "$pf_pid" 2>/dev/null || true
         rm -rf "$tmp"
@@ -149,8 +151,13 @@ reseed context:
     just -f "{{source_file()}}" _confirm "{{context}}" "WIPE and RESEED the app database"
     just -f "{{source_file()}}" backup "{{context}}"
 
-    # Wipe the app database, leaving keycloak untouched. The seed creates the schema.
+    # The backend stays off until the seed is done: started on the empty
+    # database it would create the tables at the same time as the seed, and it
+    # would load its casbin policy before the seed has written any.
     backend_down=yes
+    just -f "{{source_file()}}" _backend-down "{{context}}"
+
+    # Wipe the app database, leaving keycloak untouched. The seed creates the schema.
     just -f "{{source_file()}}" _wipe-db "{{context}}"
 
     echo "==> Port-forwarding postgres to localhost:{{local_pg_port}}"
@@ -173,11 +180,11 @@ reseed context:
         "$tmp/seed" --config-dir "$tmp/"
     echo "✓ Seeded"
 
-# Scale the backend down, then drop and recreate the app database. Leaves the
-# backend down: scaling it back up is the caller's job, done in an EXIT trap set
-# before calling, so it happens even when this fails halfway.
+# Scale the backend to 0 and wait until its pods are gone. Scaling it back up is
+# the caller's job, in an EXIT trap set before calling, so it happens even when
+# this or a later step fails halfway.
 [private]
-_wipe-db context:
+_backend-down context:
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -197,6 +204,17 @@ _wipe-db context:
     done
     [ -z "$(backend_pods)" ] \
         || { echo "✗ Backend pods still running after 2 minutes." >&2; exit 1; }
+
+# Drop and recreate the app database and run _backend-down first,
+# so the backend does not try to connect to it while it is being replaced.
+[private]
+_wipe-db context:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Guard the context, so a recipe pointed at the prod context by mistake stops before touching anything.
+    just -f "{{source_file()}}" _guard "{{context}}"
+    kc=(kubectl --context "{{context}}" -n "{{namespace}}")
 
     echo "==> Recreating database {{app_db}}"
     "${kc[@]}" exec "sts/{{postgres_sts}}" -- sh -c '{{pg_as_superuser}}' sh \
